@@ -16,14 +16,21 @@ import edi.app
 // a point shows that dataset, here and on the Pattern tab; a line marks the shown one. The pointer zooms as on the
 // pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
 // resets. Before any dataset is fitted the selector already lists every free parameter, and the chart has no axes,
-// only its empty state.
+// only its empty state. The Report page gives it the report model's series instead of a project (edi ADR-0035): it
+// then draws the chosen parameter from them, as the HTML report does, with a plain selector and no dataset to show.
 Item {
     id: chart
 
     objectName: "evolution"
 
     property ProjectViewModel project: null
-    readonly property EvolutionViewModel evolution: project ? project.evolution : null
+    // The report model's `evolution`: per parameter its name, x title and points ({x, y, su, text}).
+    property var reportSeries: null
+    property int reportCurrent: 0
+    readonly property bool fromReport: reportSeries !== null
+    readonly property var reportShown: fromReport ? (reportSeries[reportCurrent] ?? null) : null
+    readonly property var reportPoints: reportShown ? reportShown.points : []
+    readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
     // The tab is the one the window shows; the points are drawn once it is.
     property bool shown: true
 
@@ -36,7 +43,23 @@ Item {
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
     property list<real> zoom: []
     // Some dataset has its results: the axes, the titles and the points are drawn.
-    readonly property bool fitted: evolution !== null && evolution.fitted
+    readonly property bool fitted: fromReport ? reportPoints.length > 0 : evolution !== null && evolution.fitted
+    // A report's ranges, with the margins the view model gives the tab's: [xMin, xMax, yMin, yMax].
+    readonly property var reportRange: {
+        if (reportPoints.length === 0)
+            return [0, 1, 0, 1];
+        let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+        for (const point of reportPoints) {
+            const su = typeof point.su === "number" && isFinite(point.su) ? point.su : 0;
+            xMin = Math.min(xMin, point.x);
+            xMax = Math.max(xMax, point.x);
+            yMin = Math.min(yMin, point.y - su);
+            yMax = Math.max(yMax, point.y + su);
+        }
+        const xPad = Math.max((xMax - xMin) * 0.06, 0.5);
+        const yPad = Math.max((yMax - yMin) * 0.16, Math.abs(yMax) * 1e-6 + 1e-12);
+        return [xMin - xPad, xMax + xPad, yMin - yPad, yMax + yPad];
+    }
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
@@ -60,6 +83,7 @@ Item {
         objectName: "evolution.toolbar.x"
         x: chart.sideMargin
         y: chart.em
+        visible: !chart.fromReport
         enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
         toolTip: qsTr("X axis")
         model: chart.evolution ? chart.evolution.xModes : []
@@ -71,6 +95,7 @@ Item {
     // The parameter drawn, one of those results.csv records, with the previous and next buttons.
     BlockSelector {
         objectName: "evolution.parameters"
+        visible: !chart.fromReport
         x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
         y: xBox.y + (xBox.height - height) / 2
         width: Math.max(0, chart.width - x - chart.toolbarRightInset)
@@ -80,6 +105,20 @@ Item {
         blockKind: "parameter"
         blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
         onBlockActivated: index => chart.evolution.currentParameter = index
+    }
+
+    // The report's parameter, chosen as the HTML report chooses it.
+    ToolbarComboBox {
+        objectName: chart.fromReport ? "report.evolution.parameters" : ""
+        x: chart.sideMargin
+        y: chart.em
+        width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
+        visible: chart.fromReport
+        enabled: chart.fromReport && chart.reportSeries.length > 1
+        toolTip: qsTr("Parameter")
+        model: chart.fromReport ? chart.reportSeries.map(series => series.name) : []
+        currentIndex: chart.reportCurrent
+        onActivated: index => chart.reportCurrent = index
     }
 
     GraphsView {
@@ -110,8 +149,8 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.evolution ? chart.evolution.xMin : 0
-            max: chart.evolution ? chart.evolution.xMax : 1
+            min: chart.fromReport ? chart.reportRange[0] : chart.evolution ? chart.evolution.xMin : 0
+            max: chart.fromReport ? chart.reportRange[1] : chart.evolution ? chart.evolution.xMax : 1
             tickInterval: chart.niceStep(max - min, 8)
             tickAnchor: 0
             lineVisible: false
@@ -120,8 +159,8 @@ Item {
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.evolution ? chart.evolution.yMin : 0
-            max: chart.evolution ? chart.evolution.yMax : 1
+            min: chart.fromReport ? chart.reportRange[2] : chart.evolution ? chart.evolution.yMin : 0
+            max: chart.fromReport ? chart.reportRange[3] : chart.evolution ? chart.evolution.yMax : 1
             tickInterval: chart.niceStep(max - min, 6)
             tickAnchor: 0
             lineVisible: false
@@ -258,6 +297,8 @@ Item {
                 }
             }
             onClicked: mouse => {
+                if (chart.evolution === null)
+                    return;
                 const reach = chart.em * 0.6;
                 const dataset = chart.evolution.datasetAt(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
                 if (dataset >= 0)
@@ -342,6 +383,22 @@ Item {
             chart.zoom = [];
         }
     }
+    onReportCurrentChanged: zoom = []
+    // A rebuilt report keeps the chosen parameter while it still has it.
+    onReportSeriesChanged: {
+        if (fromReport && reportCurrent >= reportSeries.length)
+            reportCurrent = 0;
+    }
+
+    // A report's points go to the layer whenever the chosen parameter changes.
+    onReportPointsChanged: {
+        if (fromReport)
+            layer.setPoints(reportPoints);
+    }
+    Component.onCompleted: {
+        if (fromReport)
+            layer.setPoints(reportPoints);
+    }
 
     // The layer is the model's to fill while the tab is shown.
     Binding {
@@ -359,7 +416,7 @@ Item {
         // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
         x: (chart.sideMargin - width) / 2
         y: plot.y + (plot.height - height) / 2
-        text: chart.evolution ? chart.evolution.yTitle : ""
+        text: chart.reportShown ? chart.reportShown.name : chart.evolution ? chart.evolution.yTitle : ""
     }
     EaElements.Label {
         objectName: "evolution.title.x"
@@ -367,7 +424,7 @@ Item {
         x: plot.x + (plot.width - width) / 2
         y: chart.height - chart.em - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
         color: EaStyle.Colors.chartLabels
-        text: chart.evolution ? chart.evolution.xTitle : ""
+        text: chart.reportShown ? chart.reportShown.x_title : chart.evolution ? chart.evolution.xTitle : ""
     }
     // Results the template has changed since stay drawn, marked out of date until the next run.
     EaElements.Label {
@@ -381,14 +438,14 @@ Item {
     }
     EaElements.Label {
         anchors.centerIn: plot
-        visible: chart.fitted && chart.evolution.count === 0
+        visible: chart.fitted && chart.evolution !== null && chart.evolution.count === 0
         color: EaStyle.Colors.themeForegroundMinor
         text: qsTr("No fitted values yet: the scan's results appear here as the datasets are fitted")
     }
     EmptyStateLabel {
         objectName: "evolution.empty"
         anchors.centerIn: parent
-        visible: chart.evolution !== null && !chart.fitted
+        visible: (chart.fromReport || chart.evolution !== null) && !chart.fitted
         width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
         text: qsTr("No fitted results yet")
     }

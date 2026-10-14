@@ -48,7 +48,8 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    the analysis rows are `analysis_categories`; `correlations` and, for a scan, `evolution` (per listed parameter its
    `name`, `x_title` and points with `x`, `y`, `su` and `text`) sit at the root. Each pattern carries its `title`, the
    experiment's Rwp and χ² (`reliability_text`), and `legend`, false: its y titles name the series in their colours.
-   The HTML report draws the evolution as the tab does, one parameter at a time chosen from a list.
+   The HTML report draws the evolution as the tab does, one parameter at a time chosen from a list, and the Report
+   page's preview draws it with the Evolution tab's chart given the model's series instead of the project's.
 5. **Numbers.** Every value with a standard uncertainty carries the number, its s.u. and the text spelled by the
    project's rule, so no renderer writes a bracket itself.
 6. **The static PDF is the app's.** The core also writes the report as static HTML in the subset Qt's rich text reads

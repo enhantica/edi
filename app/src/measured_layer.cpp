@@ -7,6 +7,7 @@
 #include <QQuickWindow>
 #include <QSGImageNode>
 #include <QSGTexture>
+#include <QVariantMap>
 #include <cmath>
 
 namespace edi_app {
@@ -48,6 +49,23 @@ void MeasuredLayer::setData(const QList<QPointF>& points, const QList<double>& l
     }
     emit revisionChanged();
     update();
+}
+
+void MeasuredLayer::setPoints(const QVariantList& points) {
+    QList<QPointF> at;
+    QList<double> low, high;
+    for (const QVariant& point : points) {
+        const QVariantMap map = point.toMap();
+        const double x = map.value(QStringLiteral("x")).toDouble();
+        const double y = map.value(QStringLiteral("y")).toDouble();
+        const QVariant su = map.value(QStringLiteral("su"));
+        const double error = su.isValid() && !su.isNull() ? su.toDouble() : 0.0;
+        const double bar = std::isfinite(error) ? error : 0.0;
+        at.append(QPointF(x, y));
+        low.append(y - bar);
+        high.append(y + bar);
+    }
+    setData(at, low, high);
 }
 
 // Every marker and every bar is painted into one image, which the scene graph draws as one textured node.
