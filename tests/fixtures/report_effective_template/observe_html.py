@@ -60,7 +60,7 @@ def surface_matrix(folder, surface):
 
 def main():
     folder = Path(sys.argv[1])
-    result = {"binding": str(edi._edi.__file__)}
+    result = {'binding': str(edi._edi.__file__)}
     for surface in ('python', 'cli'):
         try:
             result[surface] = surface_matrix(folder, surface)
