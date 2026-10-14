@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T02:55:22Z
+# measured_utc = 2026-10-14T06:48:20Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 10471 banked, 0 stale row(s) dropped)
-# Collected tests: 11369; with a reported duration: 6151
+# Recorded from: measured test run (4 node(s) measured once, 10471 banked, 0 stale row(s) dropped)
+# Collected tests: 11373; with a reported duration: 6151
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11369
+# inventory_python = 11373
 # inventory_cpp = 328
-# inventory_measured = 10471
+# inventory_measured = 10475
 # inventory_unmeasured = 1226
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
@@ -5383,6 +5383,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[independent]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[sequential]
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
+0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[clipped]
+0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[nested]
+0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[rotated]
+0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[translated]
 0.220	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[independent]
 0.230	tests/integration/py/test_phase_scan.py::test_failure_after_solver_step_is_recorded_and_scan_continues[sequential]
 0.160	tests/integration/py/test_phase_scan.py::test_fit_from_fitted_start_keeps_dependent_in_range[phase_sum]
