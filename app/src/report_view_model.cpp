@@ -4,6 +4,8 @@
 #include <QByteArray>
 #include <QDateTime>
 #include <QDir>
+#include <QLocale>
+#include <QTimeZone>
 #include <QFile>
 #include <QHash>
 #include <QImage>
@@ -234,9 +236,15 @@ QVariantList ReportViewModel::savedReports() const {
                 state = QStringLiteral("out of date");
             }
         }
+        // Shown in the user's local time, in the pattern of the project's own dates.
+        const QString saved = QString::fromStdString(file->saved.value());
+        const QDateTime when = QDateTime::fromString(saved, Qt::ISODate);
         rows.append(QVariantMap{{QStringLiteral("name"), name},
                                 {QStringLiteral("format"), QString::fromStdString(format)},
-                                {QStringLiteral("saved"), QString::fromStdString(file->saved.value())},
+                                {QStringLiteral("saved"),
+                                 when.isValid()
+                                     ? QLocale::c().toString(when.toLocalTime(), QStringLiteral("dd MMM yyyy HH:mm:ss"))
+                                     : saved},
                                 {QStringLiteral("state"), state}});
     }
     return rows;
@@ -267,8 +275,13 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
         edi::ReportFile row;
         row.name = name.toStdString();
         row.format = std::string(format);
-        row.saved = QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss 'UTC'")).toStdString();
-        row.project_last_modified = project.metadata.last_modified;
+        // Both times as ISO 8601 UTC, machine-readable as the files' other times; the project's from its STAR stamp.
+        row.saved = QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toStdString();
+        QDateTime modified = QLocale::c().toDateTime(QString::fromStdString(project.metadata.last_modified),
+                                                     QStringLiteral("dd MMM yyyy HH:mm:ss"));
+        modified.setTimeZone(QTimeZone::UTC);
+        row.project_last_modified = modified.isValid() ? modified.toString(Qt::ISODate).toStdString()
+                                                       : project.metadata.last_modified;
         row.digest = digest;
         rows.push_back(std::move(row));
         written.append(reports.filePath(name));

@@ -41,8 +41,9 @@ class ReportViewModel : public QObject {
     Q_PROPERTY(bool writesHtml READ writesHtml WRITE setWritesHtml NOTIFY writesHtmlChanged)
     Q_PROPERTY(bool writesPdf READ writesPdf WRITE setWritesPdf NOTIFY writesPdfChanged)
     Q_PROPERTY(bool writesCif READ writesCif WRITE setWritesCif NOTIFY writesCifChanged)
-    // The reports Save report wrote, one map per `_report_file` row: `name`, `format`, `saved` (when, UTC) and `state`,
-    // "current", "out of date" (the report the project would make now differs from the one written) or "missing".
+    // The reports Save report wrote, one map per `_report_file` row: `name`, `format`, `saved` (when, in local time)
+    // and `state`, "current", "out of date" (the report the project would make now differs from the one written) or
+    // "missing".
     Q_PROPERTY(QVariantList savedReports READ savedReports NOTIFY savedReportsChanged)
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
