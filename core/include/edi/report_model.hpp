@@ -135,6 +135,7 @@ struct ReportEvolution {
     std::string name;     ///< the parameter's unique name, or its results column
     std::string x_title;  ///< the first extract rule's column heading, or "file index"
     std::vector<ReportEvolutionPoint> points;
+    std::string units;  ///< the parameter's units as the report writes them; empty without
 };
 
 /// The viewport a report's structure drawing is prepared for (ADR-0035 §1), in logical pixels, with room at the sides

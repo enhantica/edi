@@ -62,8 +62,8 @@ void breakPages(QTextDocument& document, double page_height) {
             auto* table = qobject_cast<QTextTable*>(frame);
             const QRectF box = layout->frameBoundingRect(frame);
             QTextFrameFormat format = frame->frameFormat();
-            // A figure is its table's one cell, kept whole at any height a page holds.
-            const bool figure = table != nullptr && table->rows() == 1 && table->columns() == 1;
+            // A figure, or a row of evolution charts, is a table of one row, kept whole at any height a page holds.
+            const bool figure = table != nullptr && table->rows() == 1;
             if (table == nullptr || box.height() >= (figure ? page_height : page_height / 3) ||
                 (format.pageBreakPolicy() & QTextFormat::PageBreak_AlwaysBefore) != 0 ||
                 page_at(box.top()) == page_at(box.bottom() - 1)) {

@@ -150,6 +150,12 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
                       const std::string& parameter, bool by_value,
                       const std::function<void(const EvolutionPoint&)>& visit);
 
+/// The same for several parameters in one read of the file: `visit` gets each point with its parameter's place in
+/// `parameters`, row by row. A report draws every parameter's chart from one read.
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::vector<std::string>& parameters, bool by_value,
+                      const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
+
 /// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
 /// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.
 void check_scan_template_file(const Project& project, const std::string& file);
