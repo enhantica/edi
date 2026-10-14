@@ -161,6 +161,57 @@ Rectangle {
             verify(!facts.error, "I40 the signed correlation PDF is independently readable: " + facts.error);
             verify(Object.values(reference.correlation_rgb).every(colour => facts.colours.includes(colour)), "I40 coefficients minus one, zero and one use the independent red, white and blue in the PDF table");
         }
+        function test_saved_pdf_figures_fit_the_text_column_whole_data() {
+            return [
+                {
+                    tag: "ordinary",
+                    longDescription: false
+                },
+                {
+                    tag: "page-break",
+                    longDescription: true
+                }
+            ];
+        }
+        function test_saved_pdf_figures_fit_the_text_column_whole(data) {
+            prepare();
+            if (data.longDescription)
+                Session.project.description = Array.from({
+                    length: 36
+                }, (_, i) => "Independent pagination line " + (i + 1) + ": " + "a complete figure moves to the following page with its entire frame ".repeat(2)).join("\n");
+            setChecked(box("PDF"), true);
+            saveReport();
+            tryVerify(() => SettingsProof.fileFacts(location, reportName("pdf")).bytes > 100, 15000, "The figure-bounds witness reaches the actual saved app PDF");
+            const facts = SettingsProof.pdfFacts(SettingsProof.childUrl(location, reportName("pdf")));
+            verify(!facts.error, "The saved PDF figure matrices and clip bounds are independently readable: " + facts.error);
+            if (data.longDescription)
+                verify(facts.text.includes("Independent pagination line 36"), "The saved long-description PDF actually reaches its final declared pagination line");
+            const mm = 72 / 25.4, left = 25 * mm, right = left + 160 * mm;
+            let figures = 0;
+            const failures = [];
+            for (let pageIndex = 0; pageIndex < facts.pages.length; ++pageIndex) {
+                const page = facts.pages[pageIndex];
+                verify(page.image_draws !== undefined && typeof page.image_draws.length === "number", "Each saved PDF page exposes its actual drawn image placements; actual=" + JSON.stringify(page));
+                for (const image of page.image_draws) {
+                    ++figures;
+                    const b = image.bounds, clip = image.clip;
+                    if (b[0] < left - 1 || b[2] > right + 1)
+                        failures.push("160 mm column: page=" + pageIndex + " bounds=" + JSON.stringify(b));
+                    if (b[1] < 25 * mm - 1 || b[3] > page.box[3] - 25 * mm + 1)
+                        failures.push("whole page: page=" + pageIndex + " bounds=" + JSON.stringify(b));
+                    if (b[0] < clip[0] - 0.1 || b[1] < clip[1] - 0.1 || b[2] > clip[2] + 0.1 || b[3] > clip[3] + 0.1)
+                        failures.push("cropped: page=" + pageIndex + " bounds=" + JSON.stringify(b) + " clip=" + JSON.stringify(clip));
+                    // Allow one-pixel quantisation on both raster extents.
+                    const pixel = Math.max(image.edge_width / image.pixels[0], image.edge_height / image.pixels[1]);
+                    if (Math.abs(image.edge_width - image.edge_height * image.pixels[0] / image.pixels[1]) > 2 * pixel)
+                        failures.push("aspect: page=" + pageIndex + " scales=" + image.edge_width + "/" + image.edge_height + " pixels=" + JSON.stringify(image.pixels));
+                    if (data.longDescription && pageIndex === 0)
+                        failures.push("long-description figure did not move whole beyond the first page");
+                }
+            }
+            verify(figures >= 2, "The bounds gate reaches both actual structure and pattern figures rather than an empty PDF");
+            compare(failures.length, 0, "Every saved PDF figure with its frame fits the 160 mm column and page whole, keeps its aspect and is never clipped; actual failures: " + failures.join("; "));
+        }
         function test_unticking_pdf_keeps_its_file_and_row_and_save_as_copies_both_reports() {
             prepare();
             const pdf = box("PDF");
