@@ -40,7 +40,7 @@ Item {
     // About one tick per six ems across the chart and two up its plot (the chart less its toolbar row, its x labels and
     // its x title), at most the tab's eight and six, so a report's small chart keeps its labels apart.
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
-    readonly property int yTicks: Math.max(2, Math.min(6, Math.round((height - em * 7 - xTitleHeight) / (em * 2))))
+    readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
     readonly property real toolbarRightInset: sideMargin
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)

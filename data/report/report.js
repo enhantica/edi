@@ -310,15 +310,15 @@ function drawEvolution(figure, series) {
   }
   const style = patternStyle('meas.0');
   const trace = {
+    // Points with their s.u. bars and no line, as the Evolution tab draws them.
     type: 'scatter',
-    mode: 'lines+markers',
+    mode: 'markers',
     name: series.name,
     x: series.points.map(point => point.x),
     y: series.points.map(point => point.y),
-    error_y: { type: 'data', array: series.points.map(point => point.su), visible: true, thickness: 1 },
+    error_y: { type: 'data', array: series.points.map(point => point.su), visible: true, thickness: 1, color: style.light },
     text: series.points.map(point => point.text),
     hovertemplate: '%{x}: %{text}<extra></extra>',
-    line: { color: style.light, width: 1 },
     marker: { color: style.light, size: 6 },
   };
   const layout = {
