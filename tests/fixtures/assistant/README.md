@@ -61,6 +61,8 @@ bounds are unchanged. `reference/fullprof-affine/` now retains a concrete unequa
 sites retain codeword `181`. The native `.new` values `0.16557` and `1.14316` preserve the initial difference
 `0.97759`, rather than forcing absolute equality. Its provenance records all input/output hashes and the exact
 executable. `affine.dat` is the existing `cosio.dat` named in that provenance, not an additional data copy.
+`generate_fullprof_affine.py --source-dir <that-family> --output-dir <new-private-dir> --fp2k <executable>`
+reproduces the source edit and native calculation after checking the declared independent input/binary hashes.
 The persistent native run reached `Normal end`; the final interactive stdin EOF returns exit 24 as already
 documented for this binary. FullProf conversion gates and positive/refused source cases remain a separate unit.
 

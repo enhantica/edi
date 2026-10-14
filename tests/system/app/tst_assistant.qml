@@ -92,9 +92,11 @@ TestCase {
         const composer = Ui.find(window.contentItem, "assistant.composer");
         verify(composer !== null, "I16: chat exposes the actual editable composer");
         tryVerify(() => composer.activeFocus, 500, "I16: keyboard opening focuses the composer");
-        keyClicks("PbSO4");
+        for (const character of "PbSO4")
+            keyClick(character);
         keyClick(Qt.Key_Return, Qt.ShiftModifier);
-        keyClicks("units");
+        for (const character of "units")
+            keyClick(character);
         verify(String(composer.text).includes("\n"), "I16: Shift+Enter inserts a line without sending");
         verify(String(composer.text).includes("units"), "I16: multiline keyboard editing remains usable");
     }

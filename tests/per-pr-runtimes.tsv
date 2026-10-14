@@ -10,10 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T22:24:22Z
+# measured_utc = 2026-10-14T23:31:48Z
 #
-# Recorded from: tests-desktop-final-red.log and completed-node fixture artifact; red nodes stay unmeasured
-# All earlier rows and module costs preserved; canonical whole collection awaits the native extension
+# Recorded from: tests-seq2-focused-a.log, completed-node artifact; unchanged prior bank rows/holes preserved
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -28,10 +27,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12998
+# inventory_python = 13001
 # inventory_cpp = 333
-# inventory_measured = 11774
-# inventory_unmeasured = 1557
+# inventory_measured = 11779
+# inventory_unmeasured = 1555
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6317,11 +6316,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_no
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_second_wavelength_has_its_own_bragg_position_and_lorentz_factor
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_zero_ratio_is_bitwise_single_wavelength_boundary
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_page_inventory.py::test_xray_page_filename_delta_preserves_prior_pages_and_adds_exactly_three
-UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_app_lifetime_survives_project_and_page_changes]
-UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_both_themes_and_live_opposite_placement]
-UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
-UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_keyboard_toggle_focus_and_multiline_composer]
-UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_narrow_panel_keeps_controls_accessible]
+0.002	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_app_lifetime_survives_project_and_page_changes]
+0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_both_themes_and_live_opposite_placement]
+0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
+0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_keyboard_toggle_focus_and_multiline_composer]
+0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_narrow_panel_keeps_controls_accessible]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Bani-0]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Uani-0]
 0.560	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-beta-0]
@@ -9861,6 +9860,9 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[app]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[core]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
@@ -13383,7 +13385,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 3.207	tests/system/app/test_e11_t5_assistant_panel.py
+# module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
