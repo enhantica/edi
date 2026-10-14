@@ -1,0 +1,62 @@
+[
+  {
+    "file": "NXPbSO4.gpx",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II-tutorials/master/CIFtutorial/data/NXPbSO4.gpx",
+    "sha256": "05f78024156b62d4ed3483e3824cf37af144d5b39fa830269d595137cb91e79c",
+    "bytes": 787754
+  },
+  {
+    "file": "PbSO4-Wyckoff.cif",
+    "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/PythonScript/data/PbSO4-Wyckoff.cif",
+    "sha256": "9bc19d0995561afd78a5f0563599c032751621da994e36c7570b4f515d9f0e2f",
+    "bytes": 1516
+  },
+  {
+    "file": "PBSO4.CWN",
+    "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/PythonScript/data/PBSO4.CWN",
+    "sha256": "59462ba6d7c72c9800b0b6bf41903f9933ed5ac5adab101d27022d5d25cf18ba",
+    "bytes": 24190
+  },
+  {
+    "file": "inst_d1a.prm",
+    "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/PythonScript/data/inst_d1a.prm",
+    "sha256": "a1031174a9b509f889377752f5c095a1dad49a25fb0a72c057f184f7b321fcea",
+    "bytes": 971
+  },
+  {
+    "file": "GSASII-LICENSE",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II/main/LICENSE",
+    "sha256": "eb80a17984592b28cd7624238a93abc3dfd6f7cb27233a88ba3bbf5448e947c2",
+    "bytes": 3563
+  },
+  {
+    "file": "upstream-GSASIImath.txt",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II/c67a261f771a71461f6080a77efd91ab265abdf2/GSASII/GSASIImath.py",
+    "sha256": "ac185868ff7c9cf378e996b0c93f560b20a86ce60ed309d25e8e3e7cd6f74990",
+    "bytes": 249315
+  },
+  {
+    "file": "upstream-GSASIIpwd.txt",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II/c67a261f771a71461f6080a77efd91ab265abdf2/GSASII/GSASIIpwd.py",
+    "sha256": "d9acd151d815dff52e96253c59220ca09ffc310594da0a7150c7fcd754d49f67",
+    "bytes": 248185
+  },
+  {
+    "file": "upstream-GSASIIstrMath.txt",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II/c67a261f771a71461f6080a77efd91ab265abdf2/GSASII/GSASIIstrMath.py",
+    "sha256": "b180d88195ae424f55f55a9095c9fd81d367bf2d2fcb82b6c1183decd6c97d2f",
+    "bytes": 279297
+  },
+  {
+    "file": "upstream-imports-G2pwd_fxye.txt",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II/c67a261f771a71461f6080a77efd91ab265abdf2/GSASII/imports/G2pwd_fxye.py",
+    "sha256": "7e35fd7f4b8773a41f2d1a0269720de7cf4fc9f16a5bbeb9eaf9b5373c082b50",
+    "bytes": 18255
+  },
+  {
+    "file": "upstream-GSASIIscriptable.txt",
+    "url": "https://raw.githubusercontent.com/AdvancedPhotonSource/GSAS-II/c67a261f771a71461f6080a77efd91ab265abdf2/GSASII/GSASIIscriptable.py",
+    "sha256": "465d0902d3e16b064806d6b57149f6763505f0bb838962a7de76e8eae9ca2895",
+    "bytes": 344410
+  }
+]
