@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T12:33:15Z
+# measured_utc = 2026-10-14T00:44:43Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 10422 banked, 0 stale row(s) dropped)
-# Collected tests: 11239; with a reported duration: 6140
-# Module-scoped fixture costs recorded: 43
+# Recorded from: measured test run (50 node(s) measured once, 11173 banked, 49 stale row(s) dropped)
+# Collected tests: 12039; with a reported duration: 6748
+# Module-scoped fixture costs recorded: 44
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,11 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12038
+# inventory_python = 12039
 # inventory_cpp = 312
-# inventory_measured = 11176
-# inventory_unmeasured = 1174
+# inventory_measured = 11223
+# inventory_unmeasured = 1128
+
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_filter_recovers_from_red_and_commits_element]
@@ -8040,28 +8041,31 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_value_contract_preserves_comparisons_and_selected_operands[value-9]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[pull_request]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[push]
-0.570	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[pull_request]
-0.570	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[push]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_linux_task_closure_cannot_reduce_the_frozen_execution[pull_request]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_linux_task_closure_cannot_reduce_the_frozen_execution[push]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_macos_smoke_and_nightly_select_real_frozen_identities
+0.070	tests/system/py/test_ci_cadence.py::test_deferred_scale_assertions_and_regular_small_scan_are_preserved
 0.010	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[accepted-token]
 0.000	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[changed-pin]
 0.000	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[changed-sdk-output]
 0.000	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[no-qualification]
 0.000	tests/system/py/test_ci_cadence.py::test_main_sdk_token_adaptation_preserves_the_frozen_qualification_closure[unchanged]
-1.170	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_nightly_and_regular_workflows_cannot_cancel_each_other_or_active_rounds
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_nightly_workflow_executes_the_group_and_retains_result_artifacts[schedule]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_nightly_workflow_executes_the_group_and_retains_result_artifacts[workflow_dispatch]
+0.090	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-0]
+0.090	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-10]
+0.100	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-11]
+0.070	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-12]
+0.020	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-13]
+0.090	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-1]
+0.090	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-2]
+0.110	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-3]
+0.380	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-4]
+0.110	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-5]
+0.190	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-6]
+0.060	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-7]
+0.110	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-8]
+0.070	tests/system/py/test_ci_cadence.py::test_moved_tests_gain_no_skip_or_xfail[batch-9]
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[extra-skip]
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[reason]
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[skipif-condition]
 0.000	tests/system/py/test_ci_cadence.py::test_nonexecution_check_ignores_only_skip_reason_text[xfail-condition]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_regular_macos_invokes_the_real_smoke_group[pull_request]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_regular_macos_invokes_the_real_smoke_group[push]
 0.070	tests/system/py/test_ci_cadence.py::test_regular_macos_keeps_native_build_and_sdk_qualification
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_restored_scale_assertions_and_regular_small_scan_are_preserved
 0.010	tests/system/py/test_ci_cadence.py::test_scale_semantics_gate_rejects_weakened_bodies_and_limits[assertion]
 0.010	tests/system/py/test_ci_cadence.py::test_scale_semantics_gate_rejects_weakened_bodies_and_limits[fixture]
 0.010	tests/system/py/test_ci_cadence.py::test_scale_semantics_gate_rejects_weakened_bodies_and_limits[limit]
@@ -8072,6 +8076,27 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_restored_
 0.000	tests/system/py/test_ci_cadence.py::test_selection_auditor_reaches_each_inventory_escape[empty]
 0.000	tests/system/py/test_ci_cadence.py::test_selection_auditor_reaches_each_inventory_escape[omitted]
 0.000	tests/system/py/test_ci_cadence.py::test_selection_auditor_reaches_each_inventory_escape[unknown]
+2.020	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[advisory-job]
+1.990	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[advisory-step]
+1.780	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[drop-step]
+1.940	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[mask-exit]
+2.470	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[omit-cohort]
+1.620	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[skip-job]
+2.170	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[skip-step]
+1.880	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[unmet-prerequisite]
+2.770	tests/system/py/test_ci_cadence.py::test_shipped_cadence_gate_reaches_each_execution_escape[wrong-platform]
+0.100	tests/system/py/test_ci_cadence.py::test_shipped_groups_retain_the_frozen_inventory[full]
+0.100	tests/system/py/test_ci_cadence.py::test_shipped_groups_retain_the_frozen_inventory[quick]
+0.010	tests/system/py/test_ci_cadence.py::test_shipped_nightly_cohort_is_explicit_nonempty_and_retained
+0.130	tests/system/py/test_ci_cadence.py::test_shipped_nightly_has_clock_and_manual_triggers_separate_from_pr_requests
+0.930	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-pull_request]
+1.940	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-push]
+0.960	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-schedule]
+1.100	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[linux-64-workflow_dispatch]
+0.980	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-pull_request]
+1.350	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-push]
+0.960	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-schedule]
+0.960	tests/system/py/test_ci_cadence.py::test_shipped_suite_paths_execute_their_cohort_and_propagate_failures[osx-arm64-workflow_dispatch]
 0.000	tests/system/py/test_ci_cadence.py::test_skip_reason_normalization_preserves_argument_shape_and_module_flags[argument-count]
 0.000	tests/system/py/test_ci_cadence.py::test_skip_reason_normalization_preserves_argument_shape_and_module_flags[keyword-flag]
 0.000	tests/system/py/test_ci_cadence.py::test_skip_reason_normalization_preserves_argument_shape_and_module_flags[missing-reason]
@@ -8705,43 +8730,20 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_ci_cadence.py::test_restored_
 0.000	tests/system/py/test_ci_execution_paths.py::test_smoke_auditor_rejects_same_keyword_non_witnesses[scalar]
 0.000	tests/system/py/test_ci_execution_paths.py::test_smoke_auditor_rejects_same_keyword_non_witnesses[simd]
 0.000	tests/system/py/test_ci_execution_paths.py::test_smoke_auditor_rejects_same_keyword_non_witnesses[thread]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_empty_expected_selection_is_rejected_even_with_empty_green_report
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[attempt]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[duplicate]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[empty]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[fail]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[head]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[malformed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[omit]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[platform]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[run]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[skip]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[unknown]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_executed_identity_receipt_requires_full_results_and_current_provenance[xfail]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_only_frozen_platform_nonexecution_is_admitted
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[failed-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[failed-macos-smoke-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[failed-nightly-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[failed-nightly-full-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[failed-quick-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[passed-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[passed-macos-smoke-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[passed-nightly-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[passed-nightly-full-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[passed-quick-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[skipped-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[skipped-macos-smoke-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[skipped-nightly-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[skipped-nightly-full-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[skipped-quick-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[xfailed-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[xfailed-macos-smoke-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[xfailed-nightly-full-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[xfailed-nightly-full-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_group_collector_retains_the_execution_that_the_workflow_uploads[xfailed-quick-linux-64]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_native_collector_reports_the_executed_binary_not_only_its_plan[failed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_native_collector_reports_the_executed_binary_not_only_its_plan[passed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_ci_execution_receipts.py::test_real_native_collector_reports_the_executed_binary_not_only_its_plan[skipped]
+0.070	tests/system/py/test_ci_execution_receipts.py::test_empty_deferred_cohort_refuses_before_execution
+0.010	tests/system/py/test_ci_execution_receipts.py::test_invalid_driver_selection_refuses_before_execution
+0.150	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-1]
+0.040	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-2]
+0.030	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-3]
+0.190	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-1]
+0.100	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-2]
+0.270	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-3]
+0.210	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-1]
+0.030	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-2]
+0.270	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-3]
+0.230	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-1]
+0.300	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-2]
+0.110	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-3]
 0.167	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[scalar]
 0.000	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[simd]
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = 1/0]

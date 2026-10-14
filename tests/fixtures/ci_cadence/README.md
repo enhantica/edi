@@ -1,36 +1,43 @@
-# Temporary macOS cadence contract
+# Shipped CI cadence and reshaped E09-T79 policy
 
-The baseline comes from the Git object named in `baseline.json`. Its test identities, workflow, group declaration and task definitions were captured before the cadence change. They are independent acceptance inputs, not generated from candidate workflows. Regenerate only from that same object with `generate.py`.
+The owner reshaped E09-T79 on 2026-10-11. The packet's governing Reshaped scope
+section says the macOS and heavy Linux deferrals already shipped, and limits
+remaining acceptance gates to the remaining work. Nightly health reports a
+failed run with an issue; merge blocking is deferred. The earlier proposed
+`macos-smoke`/`nightly-full` groups, separate `ci-nightly.yml`, and JSON execution
+collector/validator interface are not requirements of this remaining task.
 
-Linux regular CI keeps `quick` on pull requests and `full` on main pushes. Both retain every baseline identity and Linux gate command. The macOS groups are `macos-smoke` and `nightly-full`, declared in `tests/test-groups.json`. A group contains `tiers` (relative to `tests/`) and optional exact `nodes`; their union must be nonempty and contain no duplicate or unknown identity. The smoke retains the native unit tier, including arm64 numeric pins, and Python thread, scalar/SIMD, import and CLI witnesses. The nightly includes every baseline test. Edi adds the restored scale cases on Linux and macOS without changing their assertions or limits.
+Before this correction, the passenger gates still demanded that superseded
+interface and froze Linux's pre-deferral selection. After, the gates retain the
+independently merged fast-path policy and exercise the drivers it actually uses.
+`generate-shipped-policy.py` captures named accepted Git objects (crysta
+`c7cfdf62`, edi `bd72193`) into `shipped-policy.json`; it never reads candidate
+files. These are labelled regression inputs. The normative expectation is the
+committed owner cadence policy: retained tests still execute in their declared
+platform/event cohorts and failed execution cannot become successful evidence.
 
-`ci-nightly.yml` schedules full main runs and supports manual candidate runs. Nightly and regular workflows have separate concurrency identities and do not cancel active work. A nightly does not publish an SDK unless its producer jobs retain the regular qualification cohort.
+The original `baseline.json` remains immutable and retains every frozen identity
+and source-level nonexecution obligation. The old inventory generator still
+reproduces that named Git object. The source audit is split into bounded batches,
+with every original file and assertion retained. Edi's pre-existing deferred
+scale source remains preserved, with its body/limit/fixture mutation controls;
+restoring it was part of the superseded nightly design, not the reshaped scope.
 
-The group authority declares `execution_report.command`: an argv array for its result validator. Tests append:
+The current workflow's suite steps run as real Bash with an observed Pixi process
+boundary. Accepted main supplies the required task calls and deferral environment.
+Controls remove, skip, make advisory, swallow, relocate or empty a selected step.
+The shipped Python-tier/system-part Bash drivers also execute: only their
+expensive pytest/coverage subprocess is replaced. Assertions check the exact
+selected roots, nightly exclusions, partition arguments and propagated process
+exit status. Empty or invalid configuration must refuse before that boundary.
+No test claims that these local controls are hosted CI evidence.
 
-```
---expected PLAN.json --report RESULTS.json --head SHA --run-id ID --attempt N --platform PLATFORM
-```
-
-`PLAN.json` is a nonempty JSON array of exact test identities. `RESULTS.json` contains `head`, integer `run_id`, integer `attempt`, `platform`, and `tests`, an array of objects with `nodeid` and `outcome`. An admissible receipt has each planned identity exactly once, all with `outcome: passed` except the exact pre-existing platform outcomes in the frozen `platform_nonexecution` map, and matching provenance. That map preserves the Linux-only filesystem injection and edi cases whose frozen default delegates execution to the WebAssembly job. It admits no xfails and no new exception; a passing result for a formerly skipped case remains valid. Empty selections, substitutions at equal counts, duplicate identities, skips, expected failures, failures and foreign provenance refuse. The normal workflow must produce and validate these records from actual execution; standalone validator controls do not establish that a full nightly has run.
-
-The independent gates are under the repository's hidden system tier. The fixtures contain no passing candidate implementation and never supply merge evidence.
-
-The independently authored `policy.json` fixes exact behavioral smoke witnesses and full-nightly job/step identities. These expectations do not come from new workflows or their candidate health contract. Each required event and platform must connect its real selected Pixi environment, task closure, collector, validator, and artifact in one required job. Conditions, runner architecture, prerequisite jobs, failure propagation and qualification are checked at that boundary. Workflow and job concurrency are evaluated across branches, workflows and consecutive runs: queued predecessors must also survive, so a shared concurrency group is insufficient even with cancellation disabled.
-
-Declare `execution_report.run.command` as the collector argv. The process controls append `--group GROUP --platform PLATFORM --output-dir DIR`; native controls additionally append `--native-binary PATH` to execute a planted doctest-shaped transport. The collector writes `DIR/expected.json` and `DIR/results.json`, binds GitHub head/run/attempt variables, and returns nonzero for failed or unexecuted selections. Python controls execute planted nodes in every Python tier, including edi app integration; native controls execute unit, integration and system identities. The normal workflow validates and uploads that exact directory. The planted transports make no product numerical claim.
-
-The new `test_ci_native_modes.py` witness runs the selected SDK in separate scalar and SIMD processes, checks real dispatch counters, and compares the same nontrivial Jorgensen–von Dreele pattern with the existing ADR-0035 tolerances. It replaces no native unit pin.
-
-Execution tracing supports the default Bash shell and explicit `bash`, the repository-root working directory, and merged workflow/job/step environment values. Custom shells, other working directories and shell-initialization/probe overrides refuse explicitly. Named collector tasks accept no trailing arguments or `--skip-deps`; the frozen SDK pack task forwards its required positional arguments. These bounded forms are exercised on Linux regular groups, macOS smoke and both scheduled/manual full groups. Collector and validator overrides are exercised separately. SDK qualification uses the same boundary; crysta controls admit paired Linux/macOS producers before independently damaging either producer. The tracer runs in its own temporary directory and cannot perform relative build cleanup in the product checkout.
-
-Concurrency resolves each configured supported event and its matching main, slot or repair ref. Consecutive push, schedule and manual runs receive the same queued-successor protection as PR runs, at workflow and job scope.
-
-The restored scale source is compared against the frozen executable AST, including imports, fixtures, assertions and limits; only the module docstring may change. Mutation controls reject weakened or missing bodies. Both regular Linux groups must retain every frozen small-scan identity.
-
-Direct collector/validator arguments accept separated and equals-form values, require nonempty values, and refuse duplicates across both spellings. Each configured schedule contributes its own cron payload; non-PR events have absent PR properties. Every supported configured event and positive branch pattern must have a valid representative, otherwise the bounded checker refuses rather than proving an empty loop. The full-task policy stays stronger than the fast-path schedule-separated supersession.
-
-`accepted-main-sdk-source.json` independently pins main commit `7d04d1c`: only its desktop token fallback may extend the original SDK source closure; every other byte remains frozen. Skip inventory compares explicit empty AST fields across pinned Python versions and ignores only the direct `pytest.skip` diagnostic reason, retaining call counts and skip/xfail conditions.
+The earlier synthetic execution-path interpreter controls remain as regression
+coverage of Actions expression, shell/environment, prerequisite, SDK qualification
+and concurrency interpretation. Their planted JSON interface is a model input,
+not a required product API. Actual nightly health and request retention are
+independently gated in the hub. The real workflow uses schedule-separated
+concurrency; preserving PR work is the coalescing requester's responsibility.
 
 The bounded Actions model uses the documented loose numeric equality, case-insensitive string comparison and lowercase boolean rendering. Single-quoted literal contents are preserved, and `&&`/`||` retain the selected operand. Unsupported syntax, values and string conversions refuse explicitly. Runner-label arrays resolve structurally; they are not converted as expression strings. The cadence, prerequisite, execution-environment and SDK qualification consumers share this model. Concurrency compares case-insensitive group identities and distinguishes actual job keys and matrix instances independently of display names. Expectations come from the [Actions expression specification](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions) and [concurrency specification](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency), with edi's existing `e09_t75_workflow.py::actions_equal` as prior art; candidate workflows supply no expected semantic values.
 
