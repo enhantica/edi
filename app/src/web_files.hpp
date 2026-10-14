@@ -6,6 +6,7 @@
 #include <QHash>
 #include <QList>
 #include <QObject>
+#include <QPair>
 #include <QString>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -47,10 +48,17 @@ class WebFiles : public QObject {
     Q_INVOKABLE QUrl saveLocation(const QString& name);
     // Packs the project directory into `<directory name>.zip` and hands it to the browser to download.
     Q_INVOKABLE bool downloadProject(const QString& directory);
+    // Hands `data` to the browser to download as `name`. False on the desktop.
+    static bool download(const QByteArray& data, const QString& name);
+    // A file of the app's site, by its path relative to the page (the report's chart libraries, which the site
+    // carries so the app does not). Empty when it cannot be read, and on the desktop.
+    static QByteArray siteFile(const QString& path);
 
     // The archive format, on every platform (the unit tier proves it natively). `pack` stores every file
     // under `directory`, with paths relative to its parent: one top-level folder named as the directory.
     static QByteArray pack(const QString& directory);
+    // An archive of the given files, each stored under its path (e.g. reports/<name>.html), in the order given.
+    static QByteArray packFiles(const QList<QPair<QString, QByteArray>>& files);
     // Unpacks `archive` into the empty directory `target` and returns the project directory in it — the one
     // holding project.edi, at the top or in the one top-level folder — or an empty string with `error` set.
     // An entry whose path climbs out of `target` (a `..` component) refuses the whole archive; Qt's reader itself

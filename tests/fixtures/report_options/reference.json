@@ -1,0 +1,107 @@
+{
+  "source": "Reviewed report-option seam; hand-derived strongest-correlation thresholds",
+  "reference": "diffraction-lib 0d9f10e4 display/plotting.py correlation filter",
+  "graphs": {
+    "pairs": {
+      "names": [
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5",
+        "P6"
+      ],
+      "default": 0.1,
+      "pairs": {
+        "P1,P2": 0.99,
+        "P3,P4": 0.95,
+        "P5,P6": 0.9
+      }
+    },
+    "nontrivial": {
+      "names": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "default": 0.1,
+      "pairs": {
+        "A,B": 0.99,
+        "A,C": 0.97,
+        "B,C": 0.95,
+        "D,E": 0.82,
+        "D,F": 0.81,
+        "E,F": 0.4
+      }
+    },
+    "clique": {
+      "names": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "default": 0.3,
+      "pairs": {
+        "A,B": 0.9,
+        "A,C": 0.9,
+        "B,C": 0.9
+      }
+    }
+  },
+  "counts": [
+    {
+      "graph": "pairs",
+      "requested": null,
+      "level": 0.95,
+      "kept": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ]
+    },
+    {
+      "graph": "pairs",
+      "requested": 5,
+      "level": 0.95,
+      "kept": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ]
+    },
+    {
+      "graph": "pairs",
+      "requested": 2,
+      "level": 0.99,
+      "kept": [
+        "P1",
+        "P2"
+      ]
+    },
+    {
+      "graph": "pairs",
+      "requested": 1,
+      "level": 0.99,
+      "kept": [
+        "P1",
+        "P2"
+      ]
+    },
+    {
+      "graph": "clique",
+      "requested": 2,
+      "level": 0.9,
+      "kept": [
+        "A",
+        "B",
+        "C"
+      ]
+    }
+  ]
+}

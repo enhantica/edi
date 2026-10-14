@@ -13,8 +13,8 @@ name: CI
 on:
   push:
     branches: [main]
-  # Every night the declared group runs on main on both platforms, including the nightly group's files
-  # that macOS pull requests leave out (tests/test-groups.json).
+  # Every night the declared group runs on main on both platforms, with the nightly-only group's files that
+  # pull requests and main pushes leave out (tests/test-groups.json).
   schedule:
     - cron: '45 1 * * *'
   pull_request:
@@ -278,9 +278,11 @@ jobs:
   # next run's split.
   system:
     name: system · ${{ matrix.platform }} · ${{ matrix.part }}/3
-    if: github.event.pull_request.head.repo.fork == false
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false }}
     environment: crysta-sdk
-    needs: changes
+    # The tests that drive the app run the one the app job built (edi-app-<platform>), so no system job
+    # compiles the app.
+    needs: [changes, app]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     strategy:
@@ -343,6 +345,21 @@ jobs:
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Fetch the app the app job built
+        if: needs.app.result == 'success'
+        uses: actions/cache/restore@v4
+        with:
+          path: build/app/app/edi_app
+          key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
+          fail-on-cache-miss: true
+      - name: Make the app executable
+        if: needs.app.result == 'success'
+        run: chmod +x build/app/app/edi_app
+      # The app loads Qt and its other libraries from the app environment, which this job does not
+      # otherwise install.
+      - name: Install the app's environment
+        if: needs.app.result == 'success'
+        run: pixi install -e app
       - name: Restore the recorded test durations
         uses: actions/cache/restore@v4
         with:
@@ -353,8 +370,8 @@ jobs:
         run: pixi run system-tests-part ${{ matrix.part }} 3
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-          # A macOS pull request leaves out the nightly group's files (tests/test-groups.json); Linux runs them.
-          EDI_SKIP_NIGHTLY_GROUP: ${{ github.event_name == 'pull_request' && matrix.platform == 'macOS' }}
+          # Only the nightly schedule runs the nightly-only group's files (tests/test-groups.json).
+          EDI_RUN_NIGHTLY_ONLY: ${{ github.event_name == 'schedule' }}
       - name: Keep the part's durations
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -362,6 +379,57 @@ jobs:
           name: system-${{ matrix.platform }}-${{ matrix.part }}
           path: build/test-durations-${{ matrix.part }}.json
           if-no-files-found: warn
+
+  # On a pull request, each system shard may take at most 1.2 times as long as the same shard in main's
+  # latest push run whose system shards all passed.
+  system-time:
+    name: system time
+    # A shard that did not finish leaves the comparison incomplete, which refuses.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'pull_request' }}
+    needs: [changes, system]
+    runs-on: *linux
+    permissions:
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-pixi
+      - name: Fetch this run's and main's job records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          api="repos/$GITHUB_REPOSITORY/actions"
+          record() {
+            gh api --paginate "$api/runs/$1/jobs?per_page=100" --jq '.jobs[]' | jq -s . >"$RUNNER_TEMP/jobs.json"
+            gh api "$api/runs/$1" | jq --slurpfile jobs "$RUNNER_TEMP/jobs.json" '. + {jobs: $jobs[0]}'
+          }
+          # Each record declares its shards from the matrix of the workflow its run used.
+          declare_shards() {
+            git show "$2:.github/workflows/ci.yml" >"$RUNNER_TEMP/ci.yml"
+            count='import collections, json, sys, yaml
+          rows = yaml.safe_load(open(sys.argv[1]))["jobs"]["system"]["strategy"]["matrix"]["include"]
+          print(json.dumps(collections.Counter(row["platform"] for row in rows)))'
+            jq --argjson d "$(pixi run python -c "$count" "$RUNNER_TEMP/ci.yml")" \
+              '. + {expected_system_shards: $d}' "$1" >"$1.new"
+            mv "$1.new" "$1"
+          }
+          record "$GITHUB_RUN_ID" >"$RUNNER_TEMP/current.json"
+          declare_shards "$RUNNER_TEMP/current.json" HEAD
+          for id in $(gh api "$api/workflows/ci.yml/runs?branch=main&event=push&status=completed&per_page=20" \
+              --jq '.workflow_runs[].id'); do
+            record "$id" >"$RUNNER_TEMP/main.json"
+            if jq -e '[.jobs[] | select(.name | startswith("system · "))] | length > 0 and all(.conclusion == "success")' \
+                "$RUNNER_TEMP/main.json" >/dev/null; then
+              sha="$(jq -r .head_sha "$RUNNER_TEMP/main.json")"
+              git fetch -q --depth=1 origin "$sha"
+              declare_shards "$RUNNER_TEMP/main.json" "$sha"
+              break
+            fi
+            rm "$RUNNER_TEMP/main.json"
+          done
+      - name: Compare the system shards with main
+        run: >-
+          python3 tools/ci/system_shard_time.py --current "$RUNNER_TEMP/current.json" --main "$RUNNER_TEMP/main.json"
+          --run-id "$GITHUB_RUN_ID" --head-sha '${{ github.event.pull_request.head.sha }}'
 
   # On main, the three parts' durations become the recorded times the next runs split by.
   system-durations:
@@ -629,20 +697,28 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Compiler cache statistics
         run: pixi run -e app ccache --show-stats
+      # The system jobs run this app rather than building their own. It goes through this run's cache, not an
+      # artifact: anyone can download a public repository's artifacts, and the app is a binary.
+      - name: Keep the app for the system jobs
+        uses: actions/cache/save@v4
+        with:
+          path: build/app/app/edi_app
+          key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
       - name: qmllint over edi's QML (zero warnings)
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
         run: pixi run -e app --skip-deps app-format-check
-      - name: The app's Qt Quick Test tier
-        if: false
-        run: pixi run -e app --skip-deps app-test
       - name: The app group's Python tests (tests/integration/app)
         run: pixi run --skip-deps group-app
+      # The app's own tests run only at night and on a manual run.
+      - name: The app's Qt Quick Test tier
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+        run: pixi run -e app --skip-deps app-test
       - name: The UI test against the one committed image set
-        if: false
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         run: pixi run -e app --skip-deps app-ui-test
       - name: Upload the UI test's images and similarity maps
-        if: false
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         uses: actions/upload-artifact@v4
         with:
           name: app-ui-${{ matrix.platform }}

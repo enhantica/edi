@@ -6,6 +6,7 @@ from pathlib import Path
 import edi as engine
 import pytest
 
+from tests.fixtures.report_units.iucr_reference import rounded_correlation
 from tests.integration.py.test_newest_project_format import OLDER
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -101,8 +102,8 @@ def test_current_numeric_row_endpoint_and_coefficient_text_roundtrip(endpoint, p
     assert current in saved.split(), (
         'A declared numeric row id is current, never an ordinal escape'
     )
-    assert COEFFICIENT in saved.split(), (
-        'Endpoint validation must retain the original coefficient text'
+    assert rounded_correlation(COEFFICIENT) in saved.split(), (
+        f'Endpoint validation retains identity and writes the IUCr coefficient; actual={saved}'
     )
     if per_file:
         assert FILE in saved.split(), 'A scan file path is not a parameter-name validation surface'
@@ -125,8 +126,8 @@ def test_current_historical_numeric_endpoint_survives_without_its_live_row(
     assert identity in saved.split(), (
         'A current numeric historical endpoint remains valid after its live row is absent'
     )
-    assert COEFFICIENT in saved.split(), (
-        'Historical identity retention preserves the original correlation coefficient text'
+    assert rounded_correlation(COEFFICIENT) in saved.split(), (
+        f'Historical endpoints retain the independently IUCr-rounded coefficient; actual={saved}'
     )
     engine.Project.load(tmp_path / 'first').save_as(tmp_path / 'second')
     assert (tmp_path / 'second/analysis/analysis.edi').read_bytes() == saved.encode(), (

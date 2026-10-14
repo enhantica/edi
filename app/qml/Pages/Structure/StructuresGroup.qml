@@ -34,6 +34,7 @@ EaElements.GroupBox {
             objectName: "structures.list"
             defaultInfoText: qsTr("No structures defined")
             sourceModel: group.project ? group.project.structures : null
+            marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1
 
             columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]

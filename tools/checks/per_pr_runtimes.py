@@ -72,8 +72,9 @@ _TIER_THRESHOLD_RE = re.compile(
 )
 # `12.34s call     tests/x.py::test_y` — pytest's --durations line. `setup`/`call`/`teardown` are
 # summed per node: a module-scoped fixture's cost is charged to the test that triggers it, and a
-# per-PR budget cares about the total the runner actually spends.
-_DURATION_RE = re.compile(r'^([0-9]+\.[0-9]+)s\s+(setup|call|teardown)\s+(\S+)')
+# per-PR budget cares about the total the runner actually spends. A parametrized id may contain
+# spaces (`[Noto Sans]`), so the node id is the rest of the line.
+_DURATION_RE = re.compile(r'^([0-9]+\.[0-9]+)s\s+(setup|call|teardown)\s+(.+?)\s*$')
 
 # Owner ruling 53/54 (extended to edi): PER-TIER thresholds replace the single global 30 s.
 # The global one was inert - nothing here came within 17 s of it - and a bound nothing
@@ -998,7 +999,7 @@ def _refuse_parallel_log(log_path: Path, text: str) -> None:
 
 # Node ids pytest reported as failing/erroring in this run. P1.28: a failing node records the
 # COST OF ERRORING, not the cost of running, so it must stay UNMEASURED until it is green.
-_OUTCOME_RE = re.compile(r'^(?:FAILED|ERROR)\s+(\S+?)(?:\s+-.*)?$', re.MULTILINE)
+_OUTCOME_RE = re.compile(r'^(?:FAILED|ERROR)\s+(.+?)(?:\s+-\s.*)?$', re.MULTILINE)
 
 
 def failing_nodeids(text: str) -> set[str]:

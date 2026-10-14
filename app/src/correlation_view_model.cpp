@@ -9,6 +9,7 @@
 #include <limits>
 #include <map>
 
+#include "edi/correlation_matrix.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -29,16 +30,13 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
     } else if (experiment < 0 || experiment >= experiments || !fitted) {
         show({}, {}, {}, tr("Not in the last fit"));
     } else {
-        // Another experiment's parameters are named by its datablock key (io.cpp's parameter slot walk).
-        std::vector<std::string> others;
-        for (int i = 0; i < experiments; ++i) {
-            if (i != experiment) {
-                others.push_back(edi::datablock_key(project.experiments[static_cast<std::size_t>(i)]->name,
-                                                    "experiment") +
-                                 ".");
-            }
+        // The shown experiment's parameters only, as the report shows them (one core rule).
+        std::vector<std::string> names;
+        for (const auto& item : project.experiments) {
+            names.push_back(item->name.value());
         }
-        show({}, rows, others, tr("No correlations for this experiment"));
+        show({}, rows, edi::other_experiment_prefixes(names, static_cast<std::size_t>(experiment)),
+             tr("No correlations for this experiment"));
     }
 }
 
@@ -139,39 +137,63 @@ void CorrelationViewModel::settle(const QString& reason) {
         reason_ = reason;
         n = 0;
     }
-    // Each parameter's strongest correlation with another, and those strengths from the strongest down.
-    strength_.assign(n, 0.0);
-    for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t j = 0; j < n; ++j) {
-            const double value = matrix_[i * n + j];
-            if (i != j && std::isfinite(value)) {
-                strength_[i] = std::max(strength_[i], std::abs(value));
-            }
-        }
-    }
-    ranked_ = strength_;
-    std::sort(ranked_.begin(), ranked_.end(), std::greater<>());
-    // A new matrix keeps the parameter count and sets the level from it.
+    // Each parameter's strongest correlation with another (the core filter, which the report shares).
+    strength_ = edi::correlation_strengths(edi::CorrelationMatrix{names_, matrix_});
     if (n >= 2) {
-        setMaxParameters(max_parameters_);
+        show();
     } else {
         rebuild();
     }
 }
 
+// The project's threshold (ADR-0036 §7): with one, the level is it; without, the count asked for sets it.
+void CorrelationViewModel::show() {
+    if (threshold_) {
+        apply(*threshold_, static_cast<int>(edi::correlation_count_for_level(strength_, *threshold_)));
+        return;
+    }
+    // The level follows the count by ADR-0036 §7's rule: the lowest that keeps at most that many, a tie kept
+    // whole; the count then shows how many it keeps.
+    const double level = edi::correlation_level_for_count(strength_, static_cast<std::size_t>(wanted_));
+    apply(level, static_cast<int>(edi::correlation_count_for_level(strength_, level)));
+}
+
+void CorrelationViewModel::setThreshold(std::optional<double> threshold) {
+    if (threshold == threshold_) {
+        return;
+    }
+    threshold_ = threshold;
+    if (strength_.size() >= 2) {
+        show();
+    }
+}
+
 void CorrelationViewModel::setLevel(double level) {
     level = std::isfinite(level) ? std::clamp(level, 0.0, 1.0) : 0.0;
-    // The count follows: the parameters whose strongest correlation reaches the level (owner, 2026-10-11).
-    const int count = static_cast<int>(std::count_if(strength_.begin(), strength_.end(),
-                                                     [level](double strength) { return strength >= level; }));
-    apply(level, strength_.size() >= 2 ? count : max_parameters_);
+    // The project keeps the level as its threshold; the count follows, the parameters reaching it (owner, 2026-10-11).
+    ask(level);
 }
 
 void CorrelationViewModel::setMaxParameters(int count) {
     const int available = static_cast<int>(strength_.size());
     count = std::clamp(count, 2, std::max(2, available));
-    // The level follows: the strongest correlation of the count-th most correlated parameter, so that many remain.
-    apply(available >= count ? ranked_[static_cast<std::size_t>(count - 1)] : level_, count);
+    wanted_ = count;
+    if (available < 2) {
+        apply(level_, count);
+        return;
+    }
+    // The count sets the level by ADR-0036 §7's rule, and the project keeps that level.
+    ask(edi::correlation_level_for_count(strength_, static_cast<std::size_t>(count)));
+}
+
+void CorrelationViewModel::ask(double level) {
+    // The project applies it as an undoable edit and shows it back (setThreshold); a tab without one applies it here.
+    if (receivers(SIGNAL(levelAsked(double))) > 0) {
+        emit levelAsked(level);
+    } else {
+        threshold_ = level;
+        show();
+    }
 }
 
 void CorrelationViewModel::apply(double level, int count) {
@@ -194,31 +216,18 @@ void CorrelationViewModel::rebuild() {
     QString empty_text = reason_;
     const std::size_t n = names_.size();
     if (n >= 2) {
-        // The parameters whose strongest correlation reaches the level, as diffraction-lib's
-        // _filter_correlation_dataframe keeps them, and the most correlated of these.
-        const std::vector<double>& strength = strength_;
-        std::vector<std::size_t> kept;
-        for (std::size_t i = 0; i < n; ++i) {
-            if (strength[i] >= level_) {
-                kept.push_back(i);
-            }
-        }
-        std::stable_sort(kept.begin(), kept.end(),
-                         [&strength](std::size_t a, std::size_t b) { return strength[a] > strength[b]; });
-        kept.resize(std::min(kept.size(), static_cast<std::size_t>(max_parameters_)));
-        std::sort(kept.begin(), kept.end());
-        if (kept.size() < 2) {
+        // Every parameter whose strongest correlation reaches the level, as diffraction-lib's
+        // _filter_correlation_dataframe keeps them and as the report shows them (the core filter), with every pair
+        // among them, whatever its size (owner, 2026-10-11).
+        const edi::CorrelationSelection shown = edi::correlation_matrix(edi::CorrelationMatrix{names_, matrix_}, level_, n);
+        if (shown.labels.size() < 2) {
             empty_text = tr("No pairs at this level");
         } else {
-            for (std::size_t row : kept) {
-                labels.append(QString::fromStdString(names_[row]));
-                for (std::size_t column : kept) {
-                    const double value = matrix_[row * n + column];
-                    // Every pair among the shown parameters, whatever its size; the level chose the parameters
-                    // (owner, 2026-10-11).
-                    values.append(column < row && std::isfinite(value) ? value
-                                                                       : std::numeric_limits<double>::quiet_NaN());
-                }
+            for (const std::string& label : shown.labels) {
+                labels.append(QString::fromStdString(label));
+            }
+            for (const double value : shown.values) {
+                values.append(value);
             }
         }
     }

@@ -48,6 +48,7 @@ qt_add_qml_module(edi_app_module
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp
+        src/test_observer.hpp src/test_observer.cpp
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
         src/row_table_model.hpp src/row_table_model.cpp
@@ -75,6 +76,7 @@ qt_add_qml_module(edi_app_module
         src/fit_view_model.hpp src/fit_view_model.cpp
         src/parameter_table_model.hpp src/parameter_table_model.cpp
         src/report_view_model.hpp src/report_view_model.cpp
+        src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
@@ -87,10 +89,13 @@ qt_add_qml_module(edi_app_module
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
-        qml/Components/FitOutcomeLabel.qml
+        qml/Components/DigitText.qml
+        qml/Components/FitStatusItem.qml
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
+        qml/Components/ChartSettingsGroup.qml
+        qml/Components/FigureColors.qml
         qml/Components/ChartToolButton.qml
         qml/Components/ChartToolbar.qml
         qml/Components/IconCell.qml
@@ -166,8 +171,13 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Project/GetStartedGroup.qml
         qml/Pages/Project/ProjectPage.qml
         qml/Pages/Project/RecentProjectsGroup.qml
-        qml/Pages/Report/ExportSummaryGroup.qml
+        qml/Pages/Project/StandardUncertaintiesGroup.qml
+        qml/Pages/Report/ContentsGroup.qml
+        qml/Pages/Report/ExportGroup.qml
+        qml/Pages/Report/ReportCorrelations.qml
         qml/Pages/Report/ReportPage.qml
+        qml/Pages/Report/ReportPreview.qml
+        qml/Pages/Report/ReportTable.qml
         qml/Pages/Structure/AppearanceGroup.qml
         qml/Pages/Structure/AtomSiteAdpGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
@@ -262,6 +272,15 @@ foreach(file IN LISTS EDI_APP_LICENCE_FILES)
     configure_file(${file} ${CMAKE_CURRENT_BINARY_DIR}/${name} COPYONLY)
 endforeach()
 
+# The HTML report's chart libraries (ADR-0036), which a saved report carries when asked: in the desktop app's resources
+# at qrc:/edi/report/vendor/; the browser build fetches them from its site instead (wasm-pack.sh), so its download
+# does not grow.
+if(NOT EMSCRIPTEN)
+    file(GLOB EDI_REPORT_VENDOR CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/data/report/vendor/*.js)
+    qt_add_resources(edi_app_module "edi_report_vendor" PREFIX "/edi" BASE ${PROJECT_SOURCE_DIR}/data
+                     FILES ${EDI_REPORT_VENDOR})
+endif()
+
 qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
@@ -307,10 +326,13 @@ add_custom_target(edi_app_build_commit
     COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
             -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
     BYPRODUCTS "${EDI_APP_BUILD_COMMIT_CPP}"
-    COMMENT "Embedding the source commit in the app test runner")
+    COMMENT "Embedding the source commit in the app and its test runner")
 qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main.cpp ${EDI_APP_TEST_SUPPORT}
                   "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app_tests edi_app_build_commit)
+# The app names it too: its test observers report the build they observe.
+target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_app edi_app_build_commit)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
 # The demo opens a verification project the app does not bundle from the source tree (ADR-0031).

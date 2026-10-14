@@ -149,6 +149,10 @@ inline constexpr const char* kPolarizationCoefficient[] = {"_instrument.setup_po
 inline constexpr const char* kPolarizationCoefficientCif[] = {"_instr.polarization_coefficient"};
 inline constexpr const char* kMonochromatorTwotheta[] = {"_instrument.setup_monochromator_twotheta"};
 inline constexpr const char* kMonochromatorTwothetaCif[] = {"_instr.monochromator_twotheta"};
+inline constexpr const char* kWavelength2[] = {"_instrument.setup_wavelength_2"};
+inline constexpr const char* kWavelength2Cif[] = {"_instr.wavelength_2"};
+inline constexpr const char* kWavelengthRatio[] = {"_instrument.setup_wavelength_2_to_1_ratio"};
+inline constexpr const char* kWavelengthRatioCif[] = {"_instr.wavelength_2_to_1_ratio"};
 inline constexpr const char* kScale[] = {"_linked_structure.scale"};
 inline constexpr const char* kScaleCif[] = {"_easydiffraction_sc_crystal_block.scale", "_sc_crystal_block.scale"};
 inline constexpr const char* kBackgroundIntensity[] = {"_background.intensity"};
@@ -416,6 +420,19 @@ inline const ParameterSpec instrument_monochromator_twotheta{
     "Pre-specimen monochromator 2theta angle (0 means no monochromator)",
     ParameterRange{0.0, 180.0}, "Monochromator 2θ", "deg", "Monochromator $2\\theta$", "\\mathrm{deg}",
     detail::kMonochromatorTwotheta, detail::kMonochromatorTwothetaCif};
+// The X-ray CW K-alpha doublet: the pattern is the first wavelength's plus the ratio times the second's.
+// Upstream CwlInstrumentBase.setup_wavelength_2 / .setup_wavelength_2_to_1_ratio (tags, units, display names
+// and the ratio's [0, 1] range mirrored), X-ray only here. Fit parameters here; upstream holds them fixed.
+inline const ParameterSpec instrument_wavelength_2{
+    "instrument", "setup_wavelength_2", "angstroms",
+    "Second incident wavelength (e.g. X-ray K-alpha2)",
+    {0.0, detail::kInf}, "Wavelength 2", "Å", "Wavelength 2", "\\AA",
+    detail::kWavelength2, detail::kWavelength2Cif};
+inline const ParameterSpec instrument_wavelength_2_to_1_ratio{
+    "instrument", "setup_wavelength_2_to_1_ratio", "dimensionless",
+    "Relative intensity of wavelength_2 to wavelength (I2/I1); 0 means a single wavelength",
+    ParameterRange{0.0, 1.0}, "Wavelength 2/1 ratio", "", "Wavelength 2/1 ratio", "",
+    detail::kWavelengthRatio, detail::kWavelengthRatioCif};
 
 inline const ParameterSpec linked_structure_scale{
     "linked_structure", "scale", "dimensionless", "Scale factor of the linked structure",
@@ -477,6 +494,39 @@ inline void check_admissible(const ParameterSpec* spec, double value, const char
                                     std::to_string(spec->range.min) + ", " +
                                     std::to_string(spec->range.max) + "]");
     }
+}
+
+/// A parameter's short symbol as the app's tables and the report show it: its LaTeX name in plain text
+/// (`$\sigma_1$` is "σ₁", `$B_{\mathrm{iso}}$` is "B iso"), the FCJ asymmetry under FullProf's names "S/L" and "D/L",
+/// or the display name where the LaTeX name uses anything this does not spell.
+std::string parameter_symbol(const ParameterSpec* parameter_spec);
+
+// How an ADP parameter shows for its site's declared type. The isotropic value is B iso or U iso, or the
+// read-only equivalent of an anisotropic site: U eq for Uani, B eq for Bani and beta. A tensor component
+// (`component` 11, 22, 33, 12, 13 or 23) is U11 or B11 in Å², or the unitless β11.
+struct AdpDisplay {
+    std::string short_name;  // plain text, as the tables show it
+    std::string latex_name;
+    std::string display_units;
+    std::string latex_units;
+};
+inline AdpDisplay adp_display(const std::string& adp_type, const std::string& component) {
+    if (component == "iso") {
+        const bool u = adp_type == "Uiso" || adp_type == "Uani";
+        const std::string tail = adp_type == "Biso" || adp_type == "Uiso" ? "iso" : "eq";
+        return {std::string(u ? "U " : "B ") + tail, std::string(u ? "$U_{\\mathrm{" : "$B_{\\mathrm{") + tail + "}}$",
+                "Å²", "\\AA$^2$"};
+    }
+    // "₁₂" from "12": the subscript digits the tables use.
+    std::string subscript;
+    for (const char digit : component) {
+        subscript += std::string("₀₁₂₃₄₅₆₇₈₉").substr(static_cast<std::size_t>(digit - '0') * 3, 3);
+    }
+    if (adp_type == "beta") {
+        return {"β" + subscript, "$\\beta_{" + component + "}$", "", ""};
+    }
+    const std::string letter = adp_type == "Bani" ? "B" : "U";
+    return {letter + subscript, "$" + letter + "_{" + component + "}$", "Å²", "\\AA$^2$"};
 }
 
 }  // namespace edi

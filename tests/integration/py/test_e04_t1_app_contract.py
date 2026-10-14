@@ -202,30 +202,124 @@ def assert_local_app_checks(manifest):
         )
 
 
-def assert_disabled_app_steps(job):
-    for title, task in (
-        ("The app's Qt Quick Test tier", 'app-test'),
-        ('The UI test against the one committed image set', 'app-ui-test'),
-    ):
+NIGHTLY_APP_CONDITION = (
+    "${{ !cancelled() && (github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch') }}"
+)
+APP_GROUP_TITLE = "The app group's Python tests (tests/integration/app)"
+APP_TIER_STEPS = (
+    ("The app's Qt Quick Test tier", 'app-test'),
+    ('The UI test against the one committed image set', 'app-ui-test'),
+)
+APP_IMAGE_UPLOAD_TITLE = "Upload the UI test's images and similarity maps"
+
+
+def assert_nightly_app_steps(job):
+    for title, task in APP_TIER_STEPS:
         steps = [step for step in job['steps'] if step.get('name') == title]
-        assert len(steps) == 1 and steps[0].get('if') is False, (
-            ' owner decisions: each disabled app tier is retained once with literal if: false'
+        assert len(steps) == 1, (
+            f'owner decision: each nightly app tier is present once; title={title!r}, '
+            f'actual count={len(steps)}'
+        )
+        assert steps[0].get('if') == NIGHTLY_APP_CONDITION, (
+            'owner decision: app tiers run only on schedule or manual dispatch, including '
+            f'after earlier failures; title={title!r}, actual if={steps[0].get("if")!r}'
         )
         assert steps[0].get('run') == f'pixi run -e app --skip-deps {task}', (
-            ' owner decisions: retain the manual tier command for owner re-enable'
+            f'owner decision: retain the app tier command; title={title!r}, '
+            f'actual run={steps[0].get("run")!r}'
         )
-    uploads = [
-        step
-        for step in job['steps']
-        if step.get('name') == "Upload the UI test's images and similarity maps"
-    ]
-    assert len(uploads) == 1 and uploads[0].get('if') is False, (
-        ' owner decision: retain the image upload once with literal if: false'
+    uploads = [step for step in job['steps'] if step.get('name') == APP_IMAGE_UPLOAD_TITLE]
+    assert len(uploads) == 1, (
+        f'owner decision: the nightly UI image upload is present once; actual count={len(uploads)}'
     )
+    assert uploads[0].get('if') == NIGHTLY_APP_CONDITION, (
+        'owner decision: image upload has the same schedule/manual and cancellation condition; '
+        f'actual if={uploads[0].get("if")!r}'
+    )
+    assert uploads[0].get('uses') == 'actions/upload-artifact@v4' and set(
+        uploads[0].get('with', {}).get('path', '').split()
+    ) == {'build/app/ui-actual', 'build/app/ui-diff'}, (
+        'owner decision: the nightly upload keeps the actual-image and similarity-map inputs; '
+        f'actual upload={uploads[0]}'
+    )
+    groups = [step for step in job['steps'] if step.get('name') == APP_GROUP_TITLE]
+    assert len(groups) == 1 and groups[0].get('run') == 'pixi run --skip-deps group-app', (
+        'owner decision: keep the group-app command present once before Qt Quick Test; '
+        f'actual group steps={groups}'
+    )
+    titles = [step.get('name') for step in job['steps']]
+    assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
+        'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
+        f'the Python app group; actual step order={titles}'
+    )
+
+
+def assert_nightly_app_step_escape_controls():
+    # Independent positive policy fixture: these values come from the workflow contract.
+    job = {
+        'steps': [
+            {'name': APP_GROUP_TITLE, 'run': 'pixi run --skip-deps group-app'},
+            *[
+                {
+                    'name': title,
+                    'if': NIGHTLY_APP_CONDITION,
+                    'run': f'pixi run -e app --skip-deps {task}',
+                }
+                for title, task in APP_TIER_STEPS
+            ],
+            {
+                'name': APP_IMAGE_UPLOAD_TITLE,
+                'if': NIGHTLY_APP_CONDITION,
+                'uses': 'actions/upload-artifact@v4',
+                'with': {'path': 'build/app/ui-actual\nbuild/app/ui-diff'},
+            },
+        ]
+    }
+    assert_nightly_app_steps(job)
+    for title in [*(title for title, _ in APP_TIER_STEPS), APP_IMAGE_UPLOAD_TITLE]:
+        for condition in (
+            None,
+            False,
+            True,
+            'false',
+            '${{ false }}',
+            '${{ always() }}',
+            '${{ !cancelled() }}',
+            "${{ github.event_name == 'push' }}",
+            "${{ github.event_name == 'pull_request' }}",
+        ):
+            broken = copy.deepcopy(job)
+            step = next(step for step in broken['steps'] if step['name'] == title)
+            if condition is None:
+                step.pop('if')
+            else:
+                step['if'] = condition
+            with pytest.raises(AssertionError, match='owner decision'):
+                assert_nightly_app_steps(broken)
+        for duplicate in (False, True):
+            broken = copy.deepcopy(job)
+            step = next(step for step in broken['steps'] if step['name'] == title)
+            if duplicate:
+                broken['steps'].append(copy.deepcopy(step))
+            else:
+                broken['steps'].remove(step)
+            with pytest.raises(AssertionError, match='owner decision'):
+                assert_nightly_app_steps(broken)
+    broken = copy.deepcopy(job)
+    broken['steps'][0], broken['steps'][1] = broken['steps'][1], broken['steps'][0]
+    with pytest.raises(AssertionError, match='before Qt Quick Test'):
+        assert_nightly_app_steps(broken)
+    for index in (0, 1, 2):
+        broken = copy.deepcopy(job)
+        broken['steps'][index]['run'] = 'true'
+        with pytest.raises(AssertionError, match='owner decision'):
+            assert_nightly_app_steps(broken)
 
 
 @pytest.mark.parametrize('damage', ['missing-edge', 'empty-checker'])
 def test_app_reachability_observer_rejects_missing_group_or_checker(damage):
+    assert_nightly_app_step_escape_controls()
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
     for aggregator in ('app-verify', 'app-gates'):
@@ -263,20 +357,7 @@ def test_local_and_ci_gates_reach_app_tests():
         assert job.get('if') is not False, (
             ' owner decisions: both app jobs remain active and required'
         )
-        assert_disabled_app_steps(job)
-        for title in (
-            "The app's Qt Quick Test tier",
-            'The UI test against the one committed image set',
-        ):
-            for condition in (None, True, 'false', '${{ false }}'):
-                mutant = copy.deepcopy(job)
-                step = next(step for step in mutant['steps'] if step.get('name') == title)
-                if condition is None:
-                    step.pop('if')
-                else:
-                    step['if'] = condition
-                with pytest.raises(AssertionError, match='owner decision'):
-                    assert_disabled_app_steps(mutant)
+        assert_nightly_app_steps(job)
         commands = '\n'.join(
             step.get('run', '') for step in job['steps'] if step.get('if') is not False
         )
@@ -287,13 +368,6 @@ def test_local_and_ci_gates_reach_app_tests():
             'group-app',
         ):
             assert script in commands, f'gate 6/7: {name} invokes the shared {script} task'
-        uploads = [step for step in job['steps'] if 'upload-artifact' in step.get('uses', '')]
-        assert any(
-            step.get('if') is False
-            and 'build/app/ui-actual' in step.get('with', {}).get('path', '')
-            and 'build/app/ui-diff' in step.get('with', {}).get('path', '')
-            for step in uploads
-        ), f' owner decision: {name} retains disabled image upload inputs for re-enable'
 
     assert sorted(app_jobs) == ['Linux', 'macOS'], (
         'gate 7: both desktop platforms execute app checks'

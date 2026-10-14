@@ -162,6 +162,8 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_optional_parameter(out, experiment.instrument.calib_sample_transparency, scope);
     put_optional_parameter(out, experiment.instrument.setup_polarization_coefficient, scope);
     put_optional_parameter(out, experiment.instrument.setup_monochromator_twotheta, scope);
+    put_optional_parameter(out, experiment.instrument.setup_wavelength_2, scope);
+    put_optional_parameter(out, experiment.instrument.setup_wavelength_2_to_1_ratio, scope);
     // Each link's structure, and whether it takes part (written only when it can differ from
     // the one link of a single-phase experiment).
     for (const auto& link : experiment.linked_structures) {
@@ -466,10 +468,15 @@ template class OneRow<JointFitCategory>;
 template class OneRow<DataSourceCategory>;
 template class OneRow<DataRangeCategory>;
 template class OneRow<FittingModeCategory>;
+template class OneRow<SuFormatCategory>;
+template class OneRow<ReportSettingsCategory>;
+template class OneRow<CorrelationChartCategory>;
+template class OneRow<PatternChartCategory>;
 template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;
 template class OneRow<FitResultCategory>;
 template class OneRow<FitResultBankCategory>;
+template class OneRow<FitResultPhaseCategory>;
 template class OneRow<MetadataCategory>;
 template class OneRow<ProjectStateCategory>;
 

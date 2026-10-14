@@ -13,9 +13,12 @@
 #include <QSignalSpy>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QGuiApplication>
+#include <QOpenGLContext>
 #include <QCursor>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QTemporaryDir>
 #include <QTextDocument>
 #include <QtQml/qqml.h>
 #include <memory>
@@ -36,12 +39,19 @@ class AcceptanceProbe final : public QObject {
         QList<QByteArray> names;
     };
     std::vector<Watch> watches_;
+    std::vector<std::unique_ptr<QTemporaryDir>> scratch_projects_;
     static QString root() {
         return QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath())
             .absoluteFilePath(QStringLiteral("../../.."));
     }
 public:
     using QObject::QObject;
+    Q_INVOKABLE bool softwareOffscreenWithoutGl() const {
+        if (QGuiApplication::platformName() != "offscreen" ||
+            qEnvironmentVariable("QT_QUICK_BACKEND") != "software") return false;
+        QOpenGLContext context;
+        return !context.create();
+    }
     Q_INVOKABLE QVariantList objectsWithProperty(QObject *root, const QString &name) const {
         QVariantList result;
         if (!root) return result;
@@ -114,6 +124,15 @@ public:
         }
         return QString::fromStdString(diagnostic.str()).trimmed();
     }
+    Q_INVOKABLE QUrl scratchProjectUrl() {
+        auto directory = std::make_unique<QTemporaryDir>(
+            QDir::tempPath() + QStringLiteral("/edi-latest-fit-uncertainty-XXXXXX"));
+        if (!directory->isValid()) return {};
+        const QUrl result = QUrl::fromLocalFile(directory->path());
+        scratch_projects_.push_back(std::move(directory));
+        return result;
+    }
+    Q_INVOKABLE void releaseScratchProjects() { scratch_projects_.clear(); }
     Q_INVOKABLE QUrl repoUrl(const QString &path) const {
         return QUrl::fromLocalFile(QDir(root()).absoluteFilePath(path));
     }

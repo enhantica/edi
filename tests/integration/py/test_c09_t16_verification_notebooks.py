@@ -24,6 +24,9 @@ PAGES = {
     'pd-neut-cwl_LBCO_preferred-orientation': 'pd-neut-cwl_lbco-hrpt_preferred-orientation',
     'pd-xray-cwl_LiF_single': 'pd-xray-cwl_lif_single',
     'pd-xray-cwl_LiF_single_polarization': 'pd-xray-cwl_lif_single-polarization',
+    'pd-xray-cwl_LiF_doublet': 'pd-xray-cwl_lif_doublet',
+    'pd-xray-cwl_LiF_single_absorption': 'pd-xray-cwl_lif_single-absorption',
+    'pd-xray-cwl_PbSO4_round-robin': 'pd-xray-cwl_pbso4-lab_round-robin',
     'pd-neut-cwl_LaB6_fcj-asymmetry': 'pd-neut-cwl_lab6-echidna_fcj-asymmetry',
     'pd-neut-cwl_PbSO4_beba-asymmetry': 'pd-neut-cwl_pbso4_beba-asymmetry',
     'pd-neut-tof_Fe_pseudo-voigt': 'pd-neut-tof_fe_pseudo-voigt',
@@ -185,6 +188,20 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
         ]
     assert len(bindings) == 1, f'{page}: calculated candidate must have one source binding'
     binding = bindings[0]
+    if isinstance(binding, ast.keyword) and isinstance(binding.value, ast.Name):
+        aliases = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == binding.value.id
+                for target in node.targets
+            )
+        ]
+        assert len(aliases) == 1 and aliases[0].lineno < binding.lineno, (
+            f'{page}: calculated candidate alias must have one preceding source binding'
+        )
+        binding = aliases[0]
     expected = ast.parse(
         'verify.restrict_to_included(project.experiment, project.experiment.data.intensity_calc)',
         mode='eval',
@@ -236,10 +253,30 @@ def _assert_calculated_candidate_flow(page: str, tree: ast.Module) -> None:
     assert calculations, f'{page}: calculated candidate must follow the project calculation'
 
 
-def _assert_fullprof_reference_flow(  # noqa: PLR0914
-    page: str, tree: ast.Module
-) -> None:
-    _assert_calculated_candidate_flow(page, tree)
+def _normalize_fullprof_aliases(page: str, tree: ast.Module) -> ast.Module:
+    if not any(
+        isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == 'calc_ed_crysta'
+            for target in node.targets
+        )
+        for node in ast.walk(tree)
+    ):
+        candidates = [
+            keyword.value.id
+            for call in ast.walk(tree)
+            if isinstance(call, ast.Call)
+            and ast.unparse(call.func) == 'verify.plot_pattern_comparison'
+            for keyword in call.keywords
+            if keyword.arg == 'candidate' and isinstance(keyword.value, ast.Name)
+        ]
+        assert len(candidates) == 1, (
+            f'{page}: reference flow must name the one validated calculated candidate'
+        )
+        tree = copy.deepcopy(tree)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id == candidates[0]:
+                node.id = 'calc_ed_crysta'
     if page == 'pd-neut-cwl_YAP_multiphase':
         # This page names its included reference once; validate the exact provenance
         # before expanding the alias for the same comparison-flow predicates.
@@ -266,6 +303,14 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
                 and isinstance(node.ctx, ast.Load)
             ):
                 node.id = 'calc_fullprof'
+    return tree
+
+
+def _assert_fullprof_reference_flow(  # noqa: PLR0914
+    page: str, tree: ast.Module
+) -> None:
+    _assert_calculated_candidate_flow(page, tree)
+    tree = _normalize_fullprof_aliases(page, tree)
     expected_reference_candidates = {'calc_ed_crysta'}
     expected_cross_pairs: set[tuple[frozenset[str], frozenset[str]]] = set()
     if page == 'pd-neut-cwl_LaB6_absorption':
@@ -299,6 +344,8 @@ def _assert_fullprof_reference_flow(  # noqa: PLR0914
     if page == 'pd-neut-cwl_LBCO_preferred-orientation':
         # The random-powder negative control is plotted but must not claim agreement.
         expected_plot_candidates.add('calc_random')
+    if page == 'pd-xray-cwl_LiF_single_absorption':
+        expected_plot_candidates.add('calc_pointwise')
     plots = [call for call in calls if _call_name(call) == 'verify.plot_pattern_comparison']
     assert len(plots) == len(expected_plot_candidates), (
         f'{page}: every expected FullProf candidate must have exactly one comparison plot'

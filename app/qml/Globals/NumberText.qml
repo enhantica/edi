@@ -3,16 +3,19 @@ pragma Singleton
 
 import QtQuick
 
+import edi.app
+
 // The one rule for a number shown in a table cell or a field (owner, 2026-10-07): round it to what it is known
 // to (the place of its uncertainty's first digit, or six significant digits without one) and to what the cell can
 // show, never padding or clipping digits. A value that would not fit in `width` characters is written with an
 // exponent instead, keeping the digits its uncertainty allows. The base library's own rounding padded a value
 // smaller than its uncertainty with zeros (`000`) and broke on an exponent (`-4.2e-170000000000000`).
 //
-// A parameter is written whatever the width of its cell, which clips a long one at its edge, and edited in full
-// (`full`). One at or above a million, or below 1e-4 and not zero, is written in scientific notation with four
-// significant digits and its uncertainty in the same exponent (`2.290e7`, `0.010e7`), so a column of large
-// intensities reads at a glance (the owner, 2026-10-10).
+// A parameter with an uncertainty is rounded as the project writes it, by its rule for standard uncertainties: the
+// uncertainty rounded up to one or two digits and the value to the same digit. A parameter is written whatever the
+// width of its cell, which clips a long one at its edge, and edited in full (`full`). One at or above a million, or
+// below 1e-4 and not zero, is written in scientific notation with four significant digits and its uncertainty in the
+// same exponent (`2.290e7`, `0.010e7`), so a column of large intensities reads at a glance (the owner, 2026-10-10).
 QtObject {
     // Whether `value` is written in scientific notation.
     function scientific(value) {
@@ -34,13 +37,27 @@ QtObject {
         return String(value);
     }
 
-    // A parameter's `value` with its uncertainty `error` (0 or absent: none).
-    function parameter(value, error) {
-        return scientific(value) ? value.toExponential(3).replace("e+", "e") : rounded(value, error, Infinity);
+    // A parameter's `value` with its uncertainty `error` (0 or absent: none). `digits` caps the significant digits
+    // of a value without an uncertainty (6 by default; the ADP table asks for 5, so a beta component fits its cell).
+    function parameter(value, error, digits) {
+        if (scientific(value))
+            return value.toExponential(3).replace("e+", "e");
+        const text = ruled(value, error);
+        return text ? text.value : rounded(value, error, Infinity, digits);
+    }
+
+    // `value` and its uncertainty `error` rounded by the open project's rule: the `value`, `su` and `bracket`
+    // texts, or null without a project or a usable uncertainty. Reading the rule redraws the cells it changes.
+    function ruled(value, error) {
+        const project = Session.project;
+        if (!project || project.suRule === "" || typeof value !== "number" || !isFinite(value) || typeof error !== "number" || !isFinite(error) || error <= 0)
+            return null;
+        const text = project.suText(value, error);
+        return text.value !== "" ? text : null;
     }
 
     // `value` rounded by its uncertainty `error` and to the cell, as the comment at the top says.
-    function rounded(value, error, width) {
+    function rounded(value, error, width, digits) {
         if (typeof value !== "number")
             return String(value);
         if (!isFinite(value))
@@ -48,7 +65,8 @@ QtObject {
         const room = width > 0 ? width : 8;
         const known = typeof error === "number" && isFinite(error) && error > 0;
         let text;
-        let significant = 6;
+        const most = digits > 0 ? digits : 6;
+        let significant = most;
         if (known) {
             // The place of the uncertainty's first digit, after rounding it to that one digit. Read from the text, as
             // the rounded digit can lie past the largest number (an uncertainty near 1.8e308 rounds to 2e308).
@@ -63,15 +81,16 @@ QtObject {
             else
                 text = exponent(value, significant);
         } else {
-            text = String(Number(value.toPrecision(6)));
+            text = String(Number(value.toPrecision(most)));
         }
         if (text.length <= room)
             return text;
         return exponent(value, Math.min(significant, Math.max(1, room - 5)));
     }
 
-    // An uncertainty as the error column shows it: one significant digit, written plainly while it fits. Beside
-    // a `parameterValue` in scientific notation it takes that value's exponent and three decimals.
+    // An uncertainty as the error column shows it: rounded up by the project's rule and written plainly (without a
+    // project, one significant digit, plainly while it fits). Beside a `parameterValue` in scientific notation it
+    // takes that value's exponent and three decimals.
     function error(value, width, parameterValue) {
         if (typeof value !== "number" || !isFinite(value) || value <= 0)
             return "";
@@ -83,8 +102,12 @@ QtObject {
             return sharedExponent(value, power) + "e" + power;
         }
         const room = width > 0 ? width : 6;
-        const text = String(Number(value.toPrecision(1)));
-        return text.length <= room ? text : exponent(value, 1);
+        // By the project's rule the uncertainty is written plainly at its place, as the value beside it is.
+        const text = ruled(parameterValue, value);
+        if (text)
+            return text.su;
+        const plain = String(Number(value.toPrecision(1)));
+        return plain.length <= room ? plain : exponent(value, 1);
     }
 
     // A positive `value` written in units of 10^power with three decimals, from its decimal digits: for an

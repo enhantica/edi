@@ -5,8 +5,10 @@ var reference = {
   "source_tree_sha256": "5e6ee5d998c030c0517a0b8adb19f13d22f63e1ea8c199bb5ec2076081db5888",
   "sources": [
     "Elements/TabBar.qml",
-    "Style/Colors.qml"
+    "Style/Colors.qml",
+    "Style/Sizes.qml"
   ],
+  "border": 1,
   "width": 2,
   "move_duration": 250,
   "accent": {

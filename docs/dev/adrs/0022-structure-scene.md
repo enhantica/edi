@@ -69,8 +69,10 @@ features (atoms all, asymmetric unit or none; bonds, cell, axes on; labels off).
 ### 6. The view in the core
 
 The home view is diffraction-lib's: the longest axis across the screen, the middle one up, the shortest towards the
-viewer, seen along `0.37·L + 0.24·M + 0.90·S`, fitted on the projected extent with diffraction-lib's margin and a top
-band kept clear for the toolbar and legend. The orthographic and perspective projections, the pointer rules (drag
+viewer, seen along `0.37·L + 0.24·M + 0.90·S`, fitted on the projected extent of everything the view draws (the
+atoms, the cell, and the axis arrows with their letters, whose size follows the fit; the owner, 2026-10-13) and shown at
+0.9 of that (`default_view`'s magnification), so an even margin surrounds the drawing, with a top band kept clear for the
+toolbar and legend. The orthographic and perspective projections, the pointer rules (drag
 rotates, wheel zooms about the pointer, right drag pans) and the views along a, b and c are pure functions of the
 core (`default_view`, `view_along`, `fitted_scale`, `project`, `rotated`, `zoomed`, `panned`), so the terminal
 renderer and the app share them and the core tier tests them.

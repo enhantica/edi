@@ -135,6 +135,12 @@ def test_c33_lif_counter_is_derived_from_filename_difference():
     # The independently gated two-bank verification page is now retained prior art.
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
+    # The separately gated X-ray page inventory owns these additions.
+    after.difference_update({
+        'pd-xray-cwl_LiF_doublet',
+        'pd-xray-cwl_LiF_single_absorption',
+        'pd-xray-cwl_PbSO4_round-robin',
+    })
     # ADR-0026 independently gates its beta-tensor verification page.
     after.discard('pd-neut-cwl_Y2O3_beta-adp')
     after.discard('pd-neut-cwl_LBCO_preferred-orientation')
@@ -150,7 +156,10 @@ def test_c33_lif_counter_is_derived_from_filename_difference():
 
 
 @pytest.mark.parametrize('escape', ['oracle-assignment', 'other-experiment', 'no-calculation'])
-@pytest.mark.parametrize('vehicle', ['pd-neut-cwl_LaB6_basic', 'pd-neut-cwl_YAP_multiphase'])
+@pytest.mark.parametrize(
+    'vehicle',
+    ['pd-neut-cwl_LaB6_basic', 'pd-neut-cwl_YAP_multiphase', 'pd-xray-cwl_PbSO4_round-robin'],
+)
 def test_shared_candidate_flow_rejects_oracle_and_wrong_calculation(escape, vehicle):
     # Sweep the existing shared-flow consumers before exercising the LiF-family substitution.
     pages = ROOT / 'docs/dev/verification'
@@ -163,9 +172,16 @@ def test_shared_candidate_flow_rejects_oracle_and_wrong_calculation(escape, vehi
         }:
             _assert_calculated_candidate_flow(path.stem, ast.parse(path.read_text()))
     tree = ast.parse((pages / (vehicle + '.py')).read_text())
+    candidate_names = {'calc_ed_crysta'} | {
+        node.value.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.keyword)
+        and node.arg == 'candidate'
+        and isinstance(node.value, ast.Name)
+    }
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == 'calc_ed_crysta'
+            isinstance(target, ast.Name) and target.id in candidate_names
             for target in node.targets
         ):
             if escape == 'oracle-assignment':

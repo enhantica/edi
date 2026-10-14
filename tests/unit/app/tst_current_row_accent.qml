@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as Controls
 import QtTest
 import edi.app
+import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import EasyApplication.Gui.Elements as Elements
 import "RenderedTable.js" as Render
@@ -50,15 +52,22 @@ Item {
         property var group
         property var table
         function initTestCase() {
+            surface.Window.window.width = surface.width;
+            surface.Window.window.height = surface.height;
             savedTheme = Style.Colors.theme;
         }
         function cleanup() {
+            SettingsProof.endAnimationClock();
             if (group)
                 group.destroy();
             group = null;
             table = null;
             Session.closeProject();
             Style.Colors.theme = savedTheme;
+        }
+        function renderFrame() {
+            surface.Window.window.update();
+            verify(waitForRendering(surface), "The actual row window completes a requested rendered frame");
         }
         function cases() {
             const rows = [];
@@ -90,7 +99,7 @@ Item {
             table.forceLayout();
             select(data.kind, 0);
             mouseMove(surface, surface.width - 5, surface.height - 5);
-            verify(waitForRendering(table), "Selection is observed only after a drawn frame");
+            renderFrame();
         }
         function select(kind, index) {
             if (kind === "experiments")
@@ -101,21 +110,23 @@ Item {
                 group.selected = table.itemAtIndex(index).parameter;
         }
         function bars() {
-            return Render.descendants(table).filter(item => item.visible && item.opacity > 0 && item.color && String(item.color) === String(Style.Colors.themeAccent) && item.width === styleReference.width && item.height >= table.tableRowHeight - 0.5);
+            return Render.descendants(table).filter(item => item.visible && item.opacity > 0 && item.color && String(item.color) === String(Style.Colors.themeAccent) && item.width > 0 && item.width <= 3 && item.height >= table.tableRowHeight - 0.5);
         }
         function settled(index) {
             const row = table.itemAtIndex(index);
             verify(row !== null, "The selected row exists in the actual table viewport");
             tryVerify(() => bars().length === 1 && Math.abs(bars()[0].mapToItem(table, 0, 0).y - row.mapToItem(table, 0, 0).y) < 0.5, 1500, "Exactly one accent bar follows the current row inside the drawn table");
             const bar = bars()[0];
+            compare(bar.width, styleReference.width, "The current-row accent has the pinned tab underline width");
             const at = bar.mapToItem(row, 0, 0);
-            verify(Math.abs(at.x) < 0.5 && Math.abs(at.y) < 0.5, "The accent starts at the selected row's left edge");
+            verify(Math.abs(at.x - styleReference.border) < 0.5 && Math.abs(at.y) < 0.5, "The accent starts at the selected row's left edge");
             compare(bar.height, row.height, "The accent covers the full logical row height");
             const inTable = bar.mapToItem(table, 0, 0);
             verify(inTable.x >= 0 && inTable.x + bar.width <= table.width, "The accent remains inside the table frame");
-            verify(waitForRendering(table), "The settled accent is drawn before its pixels are sampled");
-            const image = grabImage(table);
-            compare(String(image.pixel(Math.floor(inTable.x + 1), Math.floor(inTable.y + row.height / 2))).toLowerCase(), styleReference.accent[themeKey], "The drawn bar has the theme accent colour, without an obscuring row layer");
+            renderFrame();
+            const image = grabImage(surface);
+            const onSurface = bar.mapToItem(surface, 0, 0);
+            compare(String(image.pixel(Math.floor(onSurface.x + 1), Math.floor(onSurface.y + row.height / 2))).toLowerCase(), styleReference.accent[themeKey], "The drawn bar has the theme accent colour, without an obscuring row layer");
         }
         function test_selection_background_and_hover_data() {
             return cases();
@@ -130,11 +141,19 @@ Item {
             }
             const row = table.itemAtIndex(1);
             mouseMove(row, row.width / 2, row.height / 2);
-            verify(waitForRendering(table), "The non-current row receives real hover input");
+            renderFrame();
             tryVerify(() => Render.descendants(row).some(item => item.color && String(item.color).toLowerCase() === styleReference.hover[themeKey] && item.width === row.width && item.height === row.height && item.opacity > 0.99), 1500, "The actual non-current row retains the pinned base hover background");
             settled(0);
             compare(data.kind === "parameters" ? group.selected : data.kind === "structures" ? Session.project.currentStructureIndex : Session.project.currentExperimentIndex, data.kind === "parameters" ? table.itemAtIndex(0).parameter : 0, "Hover alone does not change the current row");
-            mouseClick(row, 8, row.height / 2, Qt.LeftButton, Qt.NoModifier, table.pressDelay + 1);
+            const number = Render.cells(row)[0];
+            verify(number !== undefined, "The row click reaches its actual number cell");
+            mouseMove(number, number.width / 2, number.height / 2);
+            renderFrame();
+            mousePress(number, number.width / 2, number.height / 2, Qt.LeftButton, Qt.NoModifier);
+            wait(table.pressDelay + 20);
+            renderFrame();
+            mouseRelease(number, number.width / 2, number.height / 2, Qt.LeftButton, Qt.NoModifier);
+            verify(bars().length === 1, "Clicking a row never draws a second immediate accent beside the moving bar");
             settled(1);
         }
         function test_move_matches_tab_animation_data() {
@@ -147,18 +166,20 @@ Item {
                 x: 650,
                 y: 10
             });
-            verify(tabs !== null && waitForRendering(tabs), "The pinned tab bar supplies the independent animation reference");
+            verify(tabs !== null, "The pinned tab bar supplies the independent animation reference");
+            renderFrame();
             const reference = tabs.contentItem;
             compare(reference.highlightMoveDuration, styleReference.move_duration, "The tab reference uses its declared 250 ms move duration");
             const startY = bars()[0].mapToItem(table, 0, 0).y;
             const distance = table.itemAtIndex(1).mapToItem(table, 0, 0).y - startY;
             const startX = reference.highlightItem.x;
+            verify(SettingsProof.beginAnimationClock(), "The animation gate owns a public Qt clock before either movement starts");
             tabs.currentIndex = 1;
             select(data.kind, 1);
             let intermediate = 0;
-            const begun = Date.now();
-            while (Date.now() - begun < 450) {
-                verify(waitForRendering(table), "Animation comparisons use actual rendered frames");
+            for (let elapsed = 0; elapsed < 450; elapsed += 16) {
+                verify(SettingsProof.stepAnimationClock(16), "Both production and reference animations advance by the same controlled Qt time");
+                renderFrame();
                 verify(bars().length === 1, "The moving accent remains a single visible bar");
                 const x = (reference.highlightItem.x - startX) / 120;
                 const y = (bars()[0].mapToItem(table, 0, 0).y - startY) / distance;
@@ -170,6 +191,7 @@ Item {
                     break;
             }
             verify(intermediate > 0, "The animation gate reaches movement between the endpoints");
+            SettingsProof.endAnimationClock();
             settled(1);
         }
     }

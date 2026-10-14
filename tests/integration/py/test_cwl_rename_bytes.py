@@ -1,4 +1,4 @@
-"""Renaming TCH profiles must retain their pre-change calculation bytes."""
+"""TCH rename regression pins obey build identity and the declared numeric bound."""
 
 import base64
 import copy
@@ -19,6 +19,7 @@ from tests.fixtures.cwl_family.regression_comparison import (
     read_reference,
     rename_project,
     require_dispatch_reference,
+    sdk_build_identity,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -33,7 +34,24 @@ def test_tch_rename_preserves_pre_change_regression_bytes(tmp_path, name, token)
     project = crysta.Project.load(directory)
     project.analysis.calculate()
     actual = np.asarray(project.experiments[0].data.intensity_calc, dtype='<f8').tobytes()
-    compare_pin(actual, record, name, platform.system())
+    manifest = json.loads(
+        (ROOT / 'build/crysta-prefix/share/crysta-sdk/manifest.json').read_text()
+    )
+    assert (
+        manifest['platform'] == {'Linux': 'linux-64', 'Darwin': 'osx-arm64'}[platform.system()]
+    ), 'The calculation and sealed native pin must name their actual SDK platform'
+    native_build = sdk_build_identity(manifest)
+    compare_pin(actual, record, name, platform.system(), native_build=native_build)
+    project.analysis.calculate()
+    repeated = np.asarray(project.experiments[0].data.intensity_calc, dtype='<f8').tobytes()
+    compare(
+        repeated,
+        actual,
+        platform.system(),
+        platform.system(),
+        native_build=native_build,
+        reference_build=native_build,
+    )
 
 
 @pytest.mark.parametrize('native_platform', ['Darwin', 'Windows'])
@@ -43,15 +61,79 @@ def test_cross_platform_comparison_admits_only_the_declared_rounding_bound(nativ
     compare(reference.tobytes(), reference.tobytes(), native_platform)
     inside = reference + limit * 0.5
     compare(inside.tobytes(), reference.tobytes(), native_platform)
+    # The same OS with different sealed builds takes exactly the same ADR-0057 bound.
+    compare(
+        inside.tobytes(),
+        reference.tobytes(),
+        native_platform,
+        native_platform,
+        native_build='current-sdk',
+        reference_build='captured-sdk',
+    )
+    for unknown in (None, ''):
+        with pytest.raises(AssertionError, match='identit'):
+            compare(
+                inside.tobytes(),
+                reference.tobytes(),
+                native_platform,
+                native_platform,
+                native_build='current-sdk',
+                reference_build=unknown,
+            )
+    for bad in (np.nan, np.inf):
+        invalid = inside.copy()
+        invalid[0] = bad
+        with pytest.raises(AssertionError, match='nonfinite'):
+            compare(
+                invalid.tobytes(),
+                reference.tobytes(),
+                native_platform,
+                native_platform,
+                native_build='current-sdk',
+                reference_build='captured-sdk',
+            )
+    with pytest.raises(AssertionError, match='every reference sample'):
+        compare(
+            inside[:-1].tobytes(),
+            reference.tobytes(),
+            native_platform,
+            native_platform,
+            native_build='current-sdk',
+            reference_build='captured-sdk',
+        )
     for index in range(len(reference)):
         outside = reference.copy()
         outside[index] += 2 * limit[index]
         with pytest.raises(AssertionError, match='Cross-platform regression'):
             compare(outside.tobytes(), reference.tobytes(), native_platform)
+        with pytest.raises(AssertionError, match='cross-build'):
+            compare(
+                outside.tobytes(),
+                reference.tobytes(),
+                native_platform,
+                native_platform,
+                native_build='current-sdk',
+                reference_build='captured-sdk',
+            )
 
 
 @pytest.mark.parametrize('damage', ['low-bit', 'nonfinite', 'missing-sample'])
 def test_native_reference_and_sample_population_cannot_be_weakened(damage):
+    manifest = {
+        'source_sha': 'a' * 40,
+        'tested': {'sha256': {'lib/libcrysta_core.a': 'b' * 64}},
+    }
+    assert sdk_build_identity(manifest) == 'a' * 40 + ':' + 'b' * 64, (
+        'Build identity includes both SDK source and the tested archive bytes'
+    )
+    if damage == 'low-bit':
+        manifest['source_sha'] = ''
+    else:
+        manifest['tested']['sha256']['lib/libcrysta_core.a'] = (
+            '' if damage == 'nonfinite' else 'z' * 64
+        )
+    with pytest.raises(AssertionError, match='SDK'):
+        sdk_build_identity(manifest)
     reference = np.array([-3.5, 0, 15], dtype='<f8')
     actual = reference.copy()
     if damage == 'low-bit':
@@ -61,7 +143,14 @@ def test_native_reference_and_sample_population_cannot_be_weakened(damage):
     else:
         actual = actual[:-1]
     with pytest.raises(AssertionError):
-        compare(actual.tobytes(), reference.tobytes(), 'Linux')
+        compare(
+            actual.tobytes(),
+            reference.tobytes(),
+            'Linux',
+            'Linux',
+            native_build='same-sdk',
+            reference_build='same-sdk',
+        )
 
 
 @pytest.mark.parametrize('name', ['tch', 'fcj'])

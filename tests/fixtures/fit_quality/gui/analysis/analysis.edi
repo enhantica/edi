@@ -1,0 +1,39 @@
+_edi.schema_version 2
+
+_fitting_mode.type joint
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+hrpt 1
+aux 1
+_fit_result.result_kind deterministic
+_fit_result.success true
+_fit_result.iterations 17
+_fit_result.prof_wr_factor 0.2137
+_fit_result.prof_r_factor 0.1876
+_fit_result.prof_wr_expected 0.0654
+_fit_result.prof_cr_factor 0.2876
+_fit_result.prof_cwr_factor 0.3234
+_fit_result.reduced_chi_square 5.56
+loop_
+_fit_result_bank.experiment_id
+_fit_result_bank.n_data_points
+_fit_result_bank.prof_wr_factor
+_fit_result_bank.prof_r_factor
+_fit_result_bank.prof_wr_expected
+_fit_result_bank.prof_cr_factor
+_fit_result_bank.prof_cwr_factor
+_fit_result_bank.chi_square
+hrpt 123 0.1234 0.0876 0.0654 0.1876 0.2234 3.56
+aux 123 0.3123 0.2154 0.0987 0.4156 0.5123 7.89
+loop_
+_fit_result_phase.experiment_id
+_fit_result_phase.structure_id
+_fit_result_phase.bragg_r_factor
+_fit_result_phase.f_r_factor
+hrpt lbco 0.0432 0.0210
+aux lbco 0.1432 0.1210

@@ -3,6 +3,9 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <iterator>
+#include <string>
+#include <vector>
 
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
@@ -29,6 +32,26 @@ int peak_family(const std::string& name) {
     }
     return 3;
 }
+
+// The instrument fields in the sidebar's order (display only; the file and the parameter paths keep the
+// core's): the wavelengths first, then the corrections, so an X-ray CW group reads Wavelength, Wavelength 2,
+// Intensity ratio 2/1 on one row and 2θ offset, Polarization coefficient, Monochromator 2θ on the next.
+std::vector<edi::CategoryField> instrument_display_order(std::vector<edi::CategoryField> fields) {
+    static constexpr const char* order[] = {"setup_wavelength",
+                                            "setup_wavelength_2",
+                                            "setup_wavelength_2_to_1_ratio",
+                                            "calib_twotheta_offset",
+                                            "setup_polarization_coefficient",
+                                            "setup_monochromator_twotheta"};
+    const auto rank = [](const std::string& name) {
+        const auto* found = std::find(std::begin(order), std::end(order), name);
+        return static_cast<int>(found - std::begin(order));
+    };
+    std::stable_sort(fields.begin(), fields.end(), [&rank](const edi::CategoryField& a, const edi::CategoryField& b) {
+        return rank(a.name) < rank(b.name);
+    });
+    return fields;
+}
 }  // namespace
 
 ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
@@ -42,7 +65,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       absorption_type_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       categories_(new CategoryListModel(this)),
-      instrument_(new ParameterListModel([this] { return category("instrument").fields; }, registry, this)),
+      instrument_(new ParameterListModel([this] { return instrument_display_order(category("instrument").fields); },
+                                          registry, this)),
       peak_(new ParameterListModel([this] { return category("peak").fields; }, registry, this)),
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),
@@ -268,22 +292,66 @@ void ExperimentViewModel::sync() {
     scattering_source_->sync();
 }
 
-void ExperimentViewModel::capturePattern() {
+std::size_t ExperimentViewModel::place() const {
     std::size_t place = 0;
     for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
         if (project_.experiments[i].get() == &experiment_) {
             place = i;
         }
     }
-    pattern_source_ = edi::capture_pattern(project_, place);
+    return place;
+}
+
+void ExperimentViewModel::capturePattern() {
+    pattern_source_ = edi::capture_pattern(project_, place());
+    pattern_source_.experiment_place = colourPlace();
+    if (!d_charts_.isEmpty()) {
+        d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
+        d_source_->experiment_place = colourPlace();
+    }
     ++pattern_generation_;
     emit patternSourceChanged();
 }
 
-void ExperimentViewModel::showPattern(edi::PatternSource source) {
+void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source) {
     pattern_source_ = std::move(source);
+    pattern_source_.experiment_place = colourPlace();
+    if (d_source) {
+        d_source_ = std::move(d_source);
+        d_source_->experiment_place = colourPlace();
+    }
     ++pattern_generation_;
     emit patternSourceChanged();
+}
+
+void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count) {
+    if (place == colour_place_ && (!place || count == colour_count_)) {
+        return;
+    }
+    colour_place_ = place;
+    colour_count_ = place ? count : 0;
+    // The same pattern in its new colour: the chart draws it again, and nothing waiting on a new pattern counts it.
+    pattern_source_.experiment_place = colourPlace();
+    if (d_source_) {
+        d_source_->experiment_place = colourPlace();
+    }
+    emit patternSourceChanged();
+}
+
+void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis axis) {
+    const bool wanted = !d_charts_.isEmpty();
+    if (axis == edi::PatternAxis::DSpacing) {
+        d_charts_.insert(chart);
+    } else {
+        d_charts_.remove(chart);
+    }
+    if (d_charts_.isEmpty()) {
+        d_source_.reset();
+    } else if (!wanted) {
+        d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
+        d_source_->experiment_place = colourPlace();
+        emit patternSourceChanged();
+    }
 }
 
 void ExperimentViewModel::setChartShown(const QObject* chart, bool shown) {

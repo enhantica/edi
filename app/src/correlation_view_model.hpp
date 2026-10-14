@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -66,6 +67,9 @@ class CorrelationViewModel : public QObject {
     void setLevel(double level);
     int maxParameters() const { return max_parameters_; }
     void setMaxParameters(int count);
+    // The project's `_correlation_chart.threshold` (ADR-0036 §7), which the level shows; absent, the count asked
+    // for sets the level.
+    void setThreshold(std::optional<double> threshold);
 
    signals:
     void labelsChanged();
@@ -74,10 +78,16 @@ class CorrelationViewModel : public QObject {
     void emptyTextChanged();
     void levelChanged();
     void maxParametersChanged();
+    // The level a user gave (or a count's level), for the project to keep as its threshold.
+    void levelAsked(double level);
 
    private:
     // The level and the count, which edit each other, then the matrix they show.
     void apply(double level, int count);
+    // The level by the threshold, or by the count asked for.
+    void show();
+    // A level given by the user, for the project to keep.
+    void ask(double level);
     // The matrix of `rows` without the parameters named under `hidden` prefixes; `reason` when fewer than two remain.
     // `file` names the rows for their numbers (`""` for a single or joint fit's).
     void show(const std::string& file, const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
@@ -96,16 +106,17 @@ class CorrelationViewModel : public QObject {
     // (row-major, 1 on the diagonal).
     std::vector<std::string> names_;
     std::vector<double> matrix_;
-    // Each parameter's strongest correlation with another, in the fit's order, and from the strongest down.
+    // Each parameter's strongest correlation with another, in the fit's order.
     std::vector<double> strength_;
-    std::vector<double> ranked_;
     QString reason_;
     QStringList labels_;
     QList<qreal> values_;
     QString empty_text_;
     int available_ = 0;
     double level_ = 0.0;
-    int max_parameters_ = kDefaultMaxParameters;
+    int max_parameters_ = kDefaultMaxParameters;  // how many the level keeps
+    int wanted_ = kDefaultMaxParameters;          // the count asked for, kept for the next matrix
+    std::optional<double> threshold_;             // the project's threshold
     struct Numbers {
         std::vector<const edi::FitParameterCorrelation*> rows;
         std::vector<std::uint64_t> written;  // each row's coefficient write identity when parsed

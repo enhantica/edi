@@ -238,13 +238,13 @@ TestCase {
         const structureIcon = named(group("structures"), "structures.color.0");
         compare(structureIcon.icon, "layer-group", "idea 12: structure table has a datablock icon");
         const structureColor = String(structureIcon.iconColor);
-        // Independent gui-components v0.9.1 Colors.qml model palette: orange.
-        compare(structureColor.toLowerCase(), Style.Colors.isDarkPalette ? "#ffcc80" : "#ff9800", "idea 12: first structure uses the upstream model orange");
+        // Before: one upstream orange shade. After: shared published structure palette.
+        compare(structureColor.toLowerCase(), String(ApplicationInfo.structureColour(Preferences.colourScheme, 0, Style.Colors.isDarkPalette)).toLowerCase(), "idea 12: first structure follows its published contrast-safe palette shade");
         pane("experiment", "basic");
         const experimentIcon = named(group("experiments"), "experiments.color.0");
         compare(experimentIcon.icon, "microscope", "idea 12: experiment table has a datablock icon");
-        // Independent gui-components v0.9.1 chartForegroundsExtra[2]: light blue.
-        compare(String(experimentIcon.iconColor).toLowerCase(), Style.Colors.isDarkPalette ? "#81d4fa" : "#03a9f4", "idea 12: first experiment uses the upstream measured-data blue");
+        // Before: one upstream blue shade. After: shared published experiment palette.
+        compare(String(experimentIcon.iconColor).toLowerCase(), String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), Style.Colors.isDarkPalette)).toLowerCase(), "idea 12: first experiment follows its published contrast-safe palette shade");
         verify(String(experimentIcon.iconColor) !== structureColor, "idea 12: structure and experiment colours are distinct");
         pane("analysis", "basic");
         const rows = Probe.rows(Session.project.parameters);

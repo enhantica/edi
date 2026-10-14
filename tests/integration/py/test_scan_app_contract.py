@@ -85,6 +85,16 @@ def item(text, object_name):
     return text[begin:end]
 
 
+def object_id(text, identifier):
+    match = re.search(r'\bid:\s*' + re.escape(identifier) + r'\b', text)
+    assert match, 'A display observer must reach its actual object id: ' + identifier
+    start, end = min(
+        ((a, b) for a, b in spans(text) if a < match.start() < b),
+        key=lambda span: span[1] - span[0],
+    )
+    return text[start:end]
+
+
 def require(text, pattern, message):
     assert re.search(pattern, text, re.DOTALL), (
         'Scan wiring: the claimed control must preserve its actual binding: ' + message
@@ -94,7 +104,11 @@ def require(text, pattern, message):
 def property_value(text, name):
     opening = text.find('{')
     nested = [(a, b) for a, b in spans(text) if a > opening]
-    pattern = r'(?m)^\s*(?:(?:readonly\s+)?property\s+\w+\s+)?' + re.escape(name) + r':\s*'
+    pattern = (
+        r'(?m)^\s*(?:(?:readonly\s+)?property\s+[\w.]+(?:<[\w.]+>)?\s+)?'
+        + re.escape(name)
+        + r':\s*'
+    )
     for match in re.finditer(pattern, text):
         if any(a < match.start() < b for a, b in nested):
             continue
@@ -387,11 +401,11 @@ OUTCOMES = [
 ]
 
 
-def outcome_functions(text):
+def outcome_functions(text, *, include_context=True):
     colors = {color: color for _key, _word, _icon, color in OUTCOMES}
     context = 'const qsTr=x=>x; const EaStyle={Colors:' + json.dumps(colors) + '};'
     return (
-        context
+        (context if include_context else '')
         + '\n'
         + '\n'.join(block(text, 'function ' + name + '(') for name in ('word', 'icon', 'color'))
     )
@@ -421,7 +435,8 @@ def assert_outcome_consumers(bar, label, dialog):
         outcome_functions(source('qml/Globals/FitOutcomes.qml'))
         + '\nconst FitOutcomes={word,icon,color};'
     )
-    line = block(label, 'IconLine {')
+    icon_label = object_id(label, 'iconLabel')
+    value_label = object_id(label, 'value')
     icon_cell = block(dialog, 'IconCell {')
     value_cell = item(dialog, 'fit.results.value.${row.index}')
     expressions = [
@@ -431,23 +446,35 @@ def assert_outcome_consumers(bar, label, dialog):
         property_value(value_cell, 'color'),
     ]
     context += '\nconst keys=' + json.dumps([key for key, *_ in OUTCOMES]) + ';'
+    status_properties = ('keyIcon', 'valueText', 'iconColor', 'valueColor')
+    display_expressions = [
+        property_value(icon_label, 'text'),
+        property_value(value_label, 'text'),
+        property_value(icon_label, 'color'),
+        property_value(value_label, 'color'),
+    ]
+    assignments = ','.join(
+        key + ':(' + property_value(summary, key) + ')' for key in status_properties
+    )
     rows = evaluate(
-        'keys.map(outcome=>{const label={outcome}; '
-        'const row={outcome,icon:"fallback",value:"17"}; return ['
-        + property_value(line, 'segments')
-        + ',['
+        'keys.map(outcome=>{const row={outcome,icon:"fallback",value:"17"}; '
+        'const control={'
+        + assignments
+        + '}; return [['
+        + ','.join(display_expressions)
+        + '],['
         + ','.join(expressions)
         + ']];})',
         context,
     )
     for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
         assert [
-            segments[0]['icon'],
-            segments[1]['text'],
-            segments[0]['color'],
-            segments[1]['color'],
+            segments[0],
+            segments[1],
+            segments[2],
+            segments[3],
         ] == [icon, word, color, color], (
-            'Outcomes: displayed status segments use the effective tuple'
+            'Outcomes: displayed status icon and digit value use the effective tuple'
         )
         assert overall == [
             icon,
@@ -463,7 +490,7 @@ def assert_outcome_consumers(bar, label, dialog):
 def test_result_row_and_status_summary_share_outcome_presentation():
     assert_outcome_consumers(
         source('qml/Components/StatusBar.qml'),
-        source('qml/Components/FitOutcomeLabel.qml'),
+        source('qml/Components/FitStatusItem.qml'),
         source('qml/Components/FitResultsDialog.qml'),
     )
     rows = block(source('src/fit_view_model.cpp'), 'void FitResultListModel::setRecord(')
@@ -478,7 +505,7 @@ def test_result_row_and_status_summary_share_outcome_presentation():
 def test_outcome_gate_rejects_a_different_results_word():
     bar, label, dialog = (
         source('qml/Components/' + name)
-        for name in ('StatusBar.qml', 'FitOutcomeLabel.qml', 'FitResultsDialog.qml')
+        for name in ('StatusBar.qml', 'FitStatusItem.qml', 'FitResultsDialog.qml')
     )
     changed = dialog.replace('FitOutcomes.word(row.outcome)', 'qsTr("Different")')
     assert changed != dialog, (
@@ -486,6 +513,78 @@ def test_outcome_gate_rejects_a_different_results_word():
     )
     with pytest.raises(AssertionError):
         assert_outcome_consumers(bar, label, changed)
+
+
+def status_item_declarations(text):
+    area = item(text, 'statusBar.fit')
+    base = source('qml/Components/FitStatusItem.qml')
+    fields = ('keyIcon', 'keyText', 'iconColor', 'valueColor', 'showKey')
+    declarations = []
+    for raw_identifier in property_value(area, 'items').strip('[]').split(','):
+        identifier = raw_identifier.strip()
+        body = object_id(area, identifier)
+        prefix = (
+            'const outcome=(' + property_value(body, 'outcome') + ');'
+            if identifier == 'statusItem'
+            else ''
+        )
+        values = []
+        for field in fields:
+            owned = re.search(r'(?m)^\s*' + field + r':', body)
+            values.append(field + ':(' + property_value(body if owned else base, field) + ')')
+        declarations.append(
+            'const '
+            + identifier
+            + '=(()=>{'
+            + prefix
+            + 'const valueText=('
+            + property_value(body, 'valueText')
+            + ');'
+            + 'return {valueText,shown:('
+            + property_value(body, 'shown')
+            + '),'
+            + ','.join(values)
+            + '};})();'
+        )
+    return '\n'.join(declarations) + '\nfitArea.items=' + property_value(area, 'items') + ';'
+
+
+def status_item_results(text, fit):
+    area = item(text, 'statusBar.fit')
+    base = source('qml/Components/FitStatusItem.qml')
+    labels = {name: object_id(base, name) for name in ('iconLabel', 'keyLabel', 'value')}
+    context = (
+        'String.prototype.arg=function(value){return this.replace(/%[1-9]/,String(value));};'
+        'const bar={keysFit:true,fit:' + json.dumps(fit) + '};const fitArea={};'
+        'const qsTr=value=>value;const EaStyle={Colors:{green:"#009900",red:"#cc0000",'
+        'orange:"#cc9900",themeForeground:"#111111",themeForegroundMinor:"#666666",'
+        'statusBarIconForeground:"#666666",statusBarTextForeground:"#666666"}};'
+    )
+    context += outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
+    context += '\nconst FitOutcomes={word,icon,color};'
+    for name in ('running', 'scanning', 'summary', 'scanSummary'):
+        context += (
+            'const '
+            + name
+            + '=('
+            + property_value(area, name)
+            + ');fitArea.'
+            + name
+            + '='
+            + name
+            + ';'
+        )
+    context += status_item_declarations(text)
+    observed = (
+        'fitArea.items.filter(item=>item.shown).map(control=>({'
+        'key:(' + property_value(labels['keyLabel'], 'text') + '),'
+        'key_shown:(' + property_value(labels['keyLabel'], 'visible') + '),'
+        'value:(' + property_value(labels['value'], 'text') + '),'
+        'icon:(' + property_value(labels['iconLabel'], 'text') + '),'
+        'icon_color:(' + property_value(labels['iconLabel'], 'color') + '),'
+        'value_color:(' + property_value(labels['value'], 'color') + ')}))'
+    )
+    return evaluate(observed, context)
 
 
 def assert_scan_status(text):
@@ -502,14 +601,16 @@ const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,ela
 eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
 percent:50,scanFitted:9,scanSkipped:3,scanProcessed:12,scanTotal:24,iterations:'13',outcome:'success'}};
-const fitArea={};const EaStyle={Colors:{red:'red'}};"""
+const fitArea={};const outcome='success';
+const EaStyle={Colors:{red:'red',green:'green',themeForeground:'neutral',
+statusBarIconForeground:'neutral'}};"""
     running = property_value(area, 'running')
     states = [(True, True), (True, False), (False, True)]
     prop = 'fraction' if re.search(r'(?m)^\s*fraction:', progress) else 'value'
     maximum = property_value(progress, 'to') if re.search(r'(?m)^\s*to:', progress) else '1'
     expressions = [
         property_value(progress, 'visible'),
-        property_value(outcome, 'visible'),
+        property_value(outcome, 'shown'),
         'run ? (' + property_value(progress, 'indeterminate') + ') : null',
         'run && scan ? (' + property_value(progress, prop) + ') : null',
         'run && scan ? (' + maximum + ') : null',
@@ -517,7 +618,11 @@ const fitArea={};const EaStyle={Colors:{red:'red'}};"""
     context += '\nconst states=' + json.dumps(states) + ';'
     actual = evaluate(
         'states.map(([run,scan])=>{ bar.fit.running=run; bar.fit.scanning=scan; '
-        'fitArea.running=(' + running + '); return [' + ','.join(expressions) + '];})',
+        'fitArea.running=('
+        + running
+        + '); fitArea.summary=!fitArea.running; return ['
+        + ','.join(expressions)
+        + '];})',
         context,
     )
     for (run, scan), (visible, terminal, striped, fill, maximum) in zip(
@@ -542,22 +647,17 @@ const fitArea={};const EaStyle={Colors:{red:'red'}};"""
                     'divided by their total'
                 )
     # Execute the text that is actually displayed, not an unused facts array.
-    state = (
-        context
-        + 'bar.fit.scanning=true;bar.fit.running=true;fitArea.running=true;'
-        + 'fitArea.scanning=('
-        + property_value(area, 'scanning')
-        + ');'
-        + block(area, 'function joined(').replace('function joined', 'fitArea.joined = function')
-        + ';'
+    state = context + "bar.fit.scanning=true;bar.fit.running=true;bar.fit.outcome='success';"
+    state += (
+        outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
+        + '\nconst FitPresentation={word,icon,color};'
     )
-    if 'function counts(' in area:
-        state += (
-            block(area, 'function counts(').replace('function counts', 'fitArea.counts = function')
-            + ';'
-        )
-    for name in ('chi', 'iterations'):
-        state += 'fitArea.' + name + '=(' + property_value(area, name) + ');'
+    state = state.replace("const FitOutcomes={separator:' | '};", '')
+    state += '\nconst FitOutcomes=FitPresentation;'
+    for name in ('running', 'scanning', 'summary', 'scanSummary'):
+        expression = property_value(area, name)
+        state += 'const ' + name + '=(' + expression + ');fitArea.' + name + '=' + name + ';'
+    state += status_item_declarations(text)
     shown = evaluate(property_value(values, 'text'), state)
     assert re.search(r'7.*2.*TIME.*ETA.*CHI', shown), (
         'Status bar wiring: the live-value consumer displays ok, fail, time, ETA and chi in order'
@@ -906,7 +1006,7 @@ def test_typed_status_producer_matches_the_shared_outcome_keys(status_receipts, 
 def test_effective_consumers_reject_wrong_branches_and_disconnected_search(channel):
     bar, label, dialog = (
         source('qml/Components/' + name)
-        for name in ('StatusBar.qml', 'FitOutcomeLabel.qml', 'FitResultsDialog.qml')
+        for name in ('StatusBar.qml', 'FitStatusItem.qml', 'FitResultsDialog.qml')
     )
     if channel.startswith('outcome-'):
         assert_outcome_consumers(bar, label, dialog)
@@ -1061,20 +1161,9 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
 @pytest.fixture(scope='module')
 def status_control():
     actual = source('qml/Components/StatusBar.qml')
-    # The control supplies the pending scan presentation without counting it as product evidence.
-    progress = item(actual, 'statusBar.fit.progress')
-    progress_control = progress.replace(
-        'indeterminate: true',
-        'indeterminate: !bar.fit.scanning\n            value: bar.fit.completed / bar.fit.total',
-    )
-    values = item(actual, 'statusBar.fit.values')
-    body = property_value(values, 'text')
-    visible_control = values.replace(
-        body, 'fitArea.joined([bar.fit.ok,bar.fit.fail,bar.fit.elapsed,bar.fit.eta,fitArea.chi])'
-    )
-    good = actual.replace(progress, progress_control).replace(values, visible_control)
-    assert_scan_status(good)
-    return good
+    # The producer has landed: qualify its actual consumer before every escape.
+    assert_scan_status(actual)
+    return actual
 
 
 @pytest.mark.parametrize('channel', ['polarity', 'fill', 'producer', 'facts'])
@@ -1096,14 +1185,7 @@ def test_status_observer_rejects_wrong_progress_polarity_fill_producer_and_unuse
                 '1',
             ),
             ('bar.fit !== null && bar.fit.running', 'false'),
-            (
-                (
-                    'text: '
-                    'fitArea.joined([bar.fit.ok,bar.fit.fail,bar.fit.elapsed,bar.fit.e'
-                    'ta,fitArea.chi])'
-                ),
-                'text: "wrong"',
-            ),
+            (property_value(item(good, 'statusBar.fit.values'), 'text'), '"wrong"'),
         ],
         strict=True,
     ):
