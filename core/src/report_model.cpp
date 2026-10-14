@@ -356,10 +356,12 @@ void add_scene(ReportStructure& out, const Structure& structure) {
 }
 
 // The pattern chart over the full range, undecimated and linear. The Charts options act on the source, so the panes
-// stay present_pattern's: no residual column without the residual, no phases without the ticks.
-ReportPattern pattern_of(const Project& project, std::size_t index, const ReportOptions& options) {
+// stay present_pattern's: no residual column without the residual, no phases without the ticks. The measured series
+// takes the style row of `place`, the experiment's place, or a scan's template dataset's among its datasets.
+ReportPattern pattern_of(const Project& project, std::size_t index, const ReportOptions& options, std::size_t place) {
     PatternSource source =
         capture_pattern(project, index, options.d_spacing ? PatternAxis::DSpacing : PatternAxis::Native);
+    source.experiment_place = place;
     if (!options.residual) {
         source.resid = nullptr;
     }
@@ -875,7 +877,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
             return (part.id == "refln" && !reflections) || (part.id == "data" && !data);
         });
         if (charts) {
-            built.pattern = pattern_of(project, index, options);
+            built.pattern = pattern_of(project, index, options, scan && scan->place ? *scan->place : index);
             built.pattern.title = reliability_text(project, index);
         }
         model.experiments.push_back(std::move(built));
@@ -893,17 +895,10 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         model.sections.push_back(ReportSection::Evolution);
         model.evolution = evolution_of(input, rule);
     }
-    model.pattern_styles = pattern_style_table(options.colour_scheme, project.experiments.size());
-    // A scan reports its template dataset in that dataset's colour among the scan's datasets, as the app's pages show
-    // it.
-    if (scan && scan->place) {
-        for (SeriesStyle& style : model.pattern_styles) {
-            if (style.key == "meas.0") {
-                style.light = pattern_colour(options.colour_scheme, *scan->place, scan->files, false);
-                style.dark = pattern_colour(options.colour_scheme, *scan->place, scan->files, true);
-            }
-        }
-    }
+    // A scan reports its template dataset at its place among the scan's datasets, in the colour the app's pages give
+    // it there; the table has a measured row for each dataset.
+    model.pattern_styles = pattern_style_table(options.colour_scheme,
+                                               scan && scan->place ? scan->files : project.experiments.size());
     model.structure_styles = structure_style_table();
     return model;
 }

@@ -54,8 +54,9 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    tab's order, titled with its name and units: two to a row at half the column, or one when the column is narrower than
    300 px. The preview draws each with the Evolution tab's chart given its series, the HTML report with plotly.js, and
    the PDF as images of the preview's charts. Every renderer colours the charts from the model's style rows alone, never
-   from the app's settings or project: a scan's measured row is its template dataset's colour among the scan's datasets,
-   as the app's pages draw that dataset, and the evolution charts take it too.
+   from the app's settings or project: a scan's table has a measured row for each of its datasets and its pattern takes
+   its template dataset's row, the colour the app's pages give that dataset, and the evolution charts take the first
+   measured row in every renderer.
 5. **Numbers.** Every value with a standard uncertainty carries the number, its s.u. and the text spelled by the
    project's rule, so no renderer writes a bracket itself.
 6. **The static PDF is the app's.** The core also writes the report as static HTML in the subset Qt's rich text reads
