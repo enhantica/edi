@@ -12,11 +12,14 @@ import pytest
 from tests.fixtures.palette_sources.oklab_reference import (
     contrast,
     distance,
+    gamut_hue_chroma_preserved,
     hue_chroma_preserved,
     lightness_quantisation_tolerance,
+    linear_rgb,
     oklab,
     polar,
     quantisation_tolerance,
+    smallest_adaptation,
     smallest_lightness_shift,
 )
 
@@ -114,9 +117,9 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):  #
         if row['role'] == 'pattern':
             retained.add(source)
         for theme, actual, background in [('light', light, '#FFFFFF'), ('dark', dark, '#444444')]:
-            if not hue_chroma_preserved(source, actual):
+            if not gamut_hue_chroma_preserved(source, actual):
                 mismatches.append((
-                    'Oklab hue/chroma',
+                    'Oklab hue/maximal gamut chroma',
                     source,
                     actual,
                     theme,
@@ -133,12 +136,11 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):  #
                 if row['role'] == 'pattern'
                 else None
             )
-            minimum = smallest_lightness_shift(source, background, calculated)
-            _, a, b = oklab(source)
-            ideal = (minimum, a, b)
+            ideal = smallest_adaptation(source, background, calculated)
+            minimum = ideal[0]
             other_colours = [r[theme] for r in rows if r['role'] == row['role'] and r != row]
             if (
-                hue_chroma_preserved(source, actual)
+                gamut_hue_chroma_preserved(source, actual)
                 and all(math.dist(ideal, oklab(other)) >= 0.08 for other in other_colours)
                 and abs(oklab(actual)[0] - minimum) > lightness_quantisation_tolerance(actual)
             ):
@@ -157,8 +159,9 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):  #
         f'actual retained={sorted(retained)}, missing={sorted(required - retained)}'
     )
     assert not mismatches, (
-        'Published-source mappings preserve Oklab hue/chroma within the stated half-LSB '
-        'quantisation-box tolerance, retain every hue and meet 3:1; '
+        'Published-source mappings preserve hue and the largest in-gamut chroma within the '
+        'half-LSB quantisation box, retain every hue, use the smallest feasible lightness '
+        'and meet 3:1 and the pattern calc-distance rule; '
         f'scheme={scheme["label"]}, actual mismatches={mismatches}'
     )
 
@@ -225,6 +228,35 @@ def test_oklab_observer_reaches_independent_black_white_and_hue_controls():
     )
     assert not hue_chroma_preserved('#4477AA', '#AA4477'), (
         'The independent Oklab observer rejects a substantial hue rotation'
+    )
+    for source in ('#E69F00', '#03A9F4', '#BCBD22', '#F0E442', '#FFFF33'):
+        lab = smallest_adaptation(source, '#FFFFFF')
+        published = oklab(source)
+        assert min(linear_rgb((lab[0], *published[1:]))) < 0, (
+            f'Published chroma is outside sRGB at the 3:1 boundary: {source}'
+        )
+        assert all(-1e-10 <= c <= 1 + 1e-10 for c in linear_rgb(lab)), (
+            f'The independently gamut-mapped hue lies inside linear sRGB: {source}'
+        )
+        expanded = (lab[0], lab[1] * 1.0001, lab[2] * 1.0001)
+        assert any(c < -1e-10 or c > 1 + 1e-10 for c in linear_rgb(expanded)), (
+            f'Increasing the retained chroma crosses the gamut boundary: {source}'
+        )
+    assert gamut_hue_chroma_preserved('#FFFF33', '#9A9A00'), (
+        'The independent gamut observer admits the published yellow mapped to its sRGB edge'
+    )
+    assert not gamut_hue_chroma_preserved('#FFFF33', '#949494'), (
+        'The independent gamut observer rejects avoidable desaturation to neutral grey'
+    )
+    assert not gamut_hue_chroma_preserved('#4477AA', '#AA4477'), (
+        'The independent gamut observer rejects an altered published hue'
+    )
+    adjusted = smallest_adaptation('#E41A1C', '#FFFFFF', '#F44336')
+    assert math.dist(adjusted, oklab('#F44336')) == pytest.approx(0.10, abs=1e-9), (
+        'A near-calc source moves to the nearest distance boundary while retaining 3:1 contrast'
+    )
+    assert smallest_adaptation('#4477AA', '#FFFFFF') == pytest.approx(oklab('#4477AA')), (
+        'An already compliant source keeps its lightness and chroma without adaptation'
     )
 
 
@@ -332,13 +364,31 @@ def test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes(scheme
     )
     with files[0].open() as stream:
         rows = [row for row in csv.DictReader(stream, delimiter='\t') if row['role'] == 'pattern']
-    nearby = [
-        any(
-            distance(row[theme], calculated) < 0.10
-            for theme, calculated in [('light', '#F44336'), ('dark', '#EF9A9A')]
-        )
-        for row in rows
+    provenance = (ROOT / 'data/palettes/PROVENANCE.md').read_text()
+    triples = [
+        tuple(value.upper() for value in re.findall(r'#[0-9A-Fa-f]{6}', line))
+        for line in provenance.splitlines()
+        if line.strip().startswith('|') and len(re.findall(r'#[0-9A-Fa-f]{6}', line)) == 3
     ]
+    nearby = []
+    for row in rows:
+        sources = {
+            source
+            for source, light, dark in triples
+            if (light, dark) == (row['light'].upper(), row['dark'].upper())
+            and source in {colour.upper() for colour in scheme['pattern']}
+        }
+        assert len(sources) == 1, (
+            'Each categorical pattern row keeps one published source identity before its '
+            f'calc-distance adaptation; scheme={scheme["id"]}, row={row}, sources={sources}'
+        )
+        source = sources.pop()
+        nearby.append(
+            any(
+                math.dist(smallest_adaptation(source, background), oklab(calculated)) < 0.10
+                for background, calculated in [('#FFFFFF', '#F44336'), ('#444444', '#EF9A9A')]
+            )
+        )
     assert nearby == sorted(nearby), (
         'A hue too close to calc in either theme goes after every safer hue in the shared '
         f'light/dark set order, without changing its identity; scheme={scheme["id"]}, '
