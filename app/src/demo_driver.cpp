@@ -419,10 +419,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     // A fitted scan's report, its preview at the evolution charts. Run only when asked (`--demo-only report-scan-`).
     if (only.startsWith(QLatin1String("report-scan-"))) {
-        steps_.push_back({"report-scan-1-evolution",
-                          QStringList{"resize:1280x960"} + start + open_example("pd-neut-cwl_cosio-d20_scan-3f") +
-                              QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
-                                          "choose:OK", "appBar.tab.report", "reveal:report.evolution"}});
+        // EDI_DEMO_REPORT_PROJECT names a fitted scan to open instead of fitting the bundled one.
+        const QString fitted = qEnvironmentVariable("EDI_DEMO_REPORT_PROJECT");
+        const QStringList open =
+            fitted.isEmpty() ? start + open_example("pd-neut-cwl_cosio-d20_scan-3f") +
+                                   QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                               "choose:OK"}
+                             : QStringList{"open-project:" + fitted};
+        steps_.push_back({"report-scan-1-evolution", QStringList{"resize:1280x960"} + open +
+                                                         QStringList{"appBar.tab.report", "reveal:report.evolution"}});
+        // Saved where EDI_DEMO_REPORT_DIR names, so the report files outlive the run, else in the run's own folder.
+        const QString kept = qEnvironmentVariable("EDI_DEMO_REPORT_DIR");
+        steps_.push_back({"report-scan-2-saved", {"save-as:" + (kept.isEmpty() ? QStringLiteral("report-scan") : kept),
+                                                  "report.writesPdf", "report.save"}});
     }
     if (only.startsWith(QLatin1String("perf-"))) {
         // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
