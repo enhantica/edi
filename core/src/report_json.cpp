@@ -131,7 +131,12 @@ Integer integer_of(const Value& value, const char* what) {
 std::size_t index_of(const Value& value, const char* what) {
     static const double largest =
         std::min(9007199254740992.0, static_cast<double>(std::numeric_limits<std::size_t>::max()));
-    return static_cast<std::size_t>(whole_number(value, what, 0.0, largest));
+    const double number = value.number(what);
+    if (!(number >= 0.0 && number <= largest) || std::floor(number) != number) {
+        throw std::invalid_argument(std::string("report JSON: ") + what + " is not a whole number from 0 to " +
+                                    std::to_string(static_cast<long long>(largest)));
+    }
+    return static_cast<std::size_t>(number);
 }
 
 Value whole(std::size_t number) { return Value(static_cast<double>(number)); }
