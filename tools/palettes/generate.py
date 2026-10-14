@@ -3,10 +3,12 @@
 
 Every data colour has at least 3:1 WCAG 2.x contrast against its theme's chart background.
 A distinct set keeps each published hue and moves only its Oklab lightness, by the smallest
-step that passes; a colour that would sit too close to an earlier one of its set moves
-further. Measured data must not look like the calculated pattern: a set colour too close to
-it in either theme goes to the end of its set, and a gradient keeps the longest run of its
-published table that passes both rules, at evenly spaced stops. matplotlib supplies the
+step that passes, to the 8-bit colour that keeps the hue and chroma within its rounding; a
+colour that would sit too close to an earlier one of its set moves further. Measured data must
+not look like the calculated pattern: a set colour too close to it in either theme goes to the
+end of its set and takes the smallest lightness shift, either way, that keeps it apart, and a
+gradient keeps the longest run of its published table that passes both rules, at evenly
+spaced stops. matplotlib supplies the
 viridis, cividis, plasma and magma tables. The script is run by hand and its output is
 committed:
 
@@ -14,9 +16,11 @@ committed:
 """
 
 import argparse
+import itertools
 import math
 import sys
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 import matplotlib as mpl
@@ -29,6 +33,8 @@ MIN_DISTANCE = 0.08
 # Oklab distance a pattern colour keeps from it.
 CALCULATED = {'light': '#F44336', 'dark': '#EF9A9A'}
 MIN_CALCULATED_DISTANCE = 0.10
+# The step of the search for the smallest passing lightness shift; a passing range can be narrow.
+LIGHTNESS_STEP = 0.0005
 GRADIENT_STOPS = 17
 
 # Paul Tol's iridescent scheme, as published (pale to dark).
@@ -111,7 +117,11 @@ def contrast(first: str, second: str) -> float:
 
 
 def oklab(colour: str) -> Lab:
-    red, green, blue = (to_linear(c) for c in channels(colour))
+    return oklab_of(channels(colour))
+
+
+def oklab_of(values: list[float]) -> Lab:
+    red, green, blue = (to_linear(c) for c in values)
     long_ = math.cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue)
     medium = math.cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue)
     short = math.cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue)
@@ -146,57 +156,106 @@ def hex_clamped(lab: Lab) -> str:
     return f'#{red:02X}{green:02X}{blue:02X}'
 
 
-def hex_of(lab: Lab) -> str:
-    """Return the sRGB colour; outside the gamut, the chroma shrinks with the hue kept."""
+def on_gamut(lab: Lab) -> Lab:
+    """Return the colour; outside the sRGB gamut, its chroma shrinks to the edge, the hue kept."""
     lightness, a, b = lab
-    if not in_gamut(lab):
-        low, high = 0.0, 1.0
-        for _ in range(40):
-            middle = (low + high) / 2
-            if in_gamut((lightness, a * middle, b * middle)):
-                low = middle
-            else:
-                high = middle
-        lab = (lightness, a * low, b * low)
-    return hex_clamped(lab)
+    if in_gamut(lab):
+        return lab
+    low, high = 0.0, 1.0
+    for _ in range(40):
+        middle = (low + high) / 2
+        if in_gamut((lightness, a * middle, b * middle)):
+            low = middle
+        else:
+            high = middle
+    return lightness, a * low, b * low
 
 
 def distance(first: str, second: str) -> float:
     return math.dist(oklab(first), oklab(second))
 
 
-def nearest_passing(lab: Lab, step: float, passes: Callable[[str], bool]) -> str | None:
-    """Return the colour at the smallest lightness shift, in the direction of `step`, that passes.
+def contrast_of(lab: Lab, background: str) -> float:
+    """Return the contrast ratio of an exact Oklab colour inside the gamut on the background."""
+    red, green, blue = (min(1.0, max(0.0, c)) for c in linear_rgb(lab))
+    low, high = sorted((0.2126 * red + 0.7152 * green + 0.0722 * blue, luminance(background)))
+    return (high + 0.05) / (low + 0.05)
 
-    The shift is found by coarse steps, then halved between the last failing and the first passing
-    lightness, so it is exact to well under one unit of the 8-bit colour.
+
+def nearest_passing(lab: Lab, step: float, passes: Callable[[Lab], bool]) -> Lab | None:
+    """Return the exact colour at the smallest lightness shift towards `step` that passes.
+
+    The published hue and chroma are kept, the chroma shrinking to the gamut's edge where needed.
+    The steps are small enough not to miss a narrow passing range, and the shift is then halved
+    between the last failing and the first passing lightness.
     """
     lightness, a, b = lab
     failing = lightness
     while 0.0 <= lightness + step <= 1.0:
         lightness += step
-        if passes(hex_of((lightness, a, b))):
-            for _ in range(40):
+        if passes(on_gamut((lightness, a, b))):
+            for _ in range(48):
                 middle = (failing + lightness) / 2
-                if passes(hex_of((middle, a, b))):
+                if passes(on_gamut((middle, a, b))):
                     lightness = middle
                 else:
                     failing = middle
-            return hex_of((lightness, a, b))
+            return on_gamut((lightness, a, b))
         failing = lightness
     return None
 
 
-def adapt(colour: str, theme: str) -> str:
-    """Return the colour if it passes, else its hue and chroma at the nearest passing lightness."""
-    background = BACKGROUND[theme]
-    if contrast(colour, background) >= MIN_CONTRAST:
-        return colour
-    step = -0.01 if theme == 'light' else 0.01
-    found = nearest_passing(oklab(colour), step, lambda c: contrast(c, background) >= MIN_CONTRAST)
-    if found is None:
-        sys.exit(f'{colour}: no lightness reaches {MIN_CONTRAST}:1 on {background}')
-    return found
+def polar(values: list[float]) -> Lab:
+    """Return Oklab lightness, chroma and hue in degrees of 0..1 sRGB channel values."""
+    lightness, a, b = oklab_of(values)
+    return lightness, math.hypot(a, b), math.degrees(math.atan2(b, a))
+
+
+def hue_difference(first: float, second: float) -> float:
+    return abs((first - second + 180) % 360 - 180)
+
+
+def rounding_error(colour: str, target: Lab, published: str) -> list[float]:
+    """Return how far an 8-bit colour is from the exact adapted colour, in units of its rounding.
+
+    Lightness, chroma and hue are each compared with how far they move across the colour's
+    half-unit box of channel values: the lightness with the exact colour's, the chroma with the
+    published colour's at the gamut's edge and the hue with the published hue. Up to 1 is within
+    the colour's rounding.
+    """
+    values = channels(colour)
+    lightness, chroma, hue = polar(values)
+    box = [(max(0.0, v - 0.5 / 255), min(1.0, v + 0.5 / 255)) for v in values]
+    corners = [polar(list(corner)) for corner in itertools.product(*box)]
+    _, published_chroma, published_hue = polar(channels(published))
+    expected_chroma = math.hypot(*on_gamut((lightness, *oklab(published)[1:]))[1:])
+    errors = [
+        abs(lightness - target[0]) / max(abs(c[0] - lightness) for c in corners),
+        abs(chroma - expected_chroma) / max(abs(c[1] - chroma) for c in corners),
+    ]
+    if published_chroma >= 1e-5:
+        errors.append(
+            hue_difference(published_hue, hue) / max(hue_difference(c[2], hue) for c in corners)
+        )
+    return errors
+
+
+def nearest_8_bit(target: Lab, published: str, passes: Callable[[str], bool]) -> str | None:
+    """Return the passing 8-bit colour nearest the exact adapted colour, measured by its rounding.
+
+    Rounding the exact colour can fail, or land further than a neighbour that also passes. A
+    colour that keeps the hue and chroma within its rounding comes first.
+    """
+    base = [round(v * 255) for v in channels(hex_clamped(target))]
+    found = []
+    for offset in itertools.product(range(-3, 4), repeat=3):
+        values = [v + o for v, o in zip(base, offset, strict=True)]
+        if all(0 <= v <= 255 for v in values):
+            colour = '#' + ''.join(f'{v:02X}' for v in values)
+            if passes(colour):
+                errors = rounding_error(colour, target, published)
+                found.append((max(errors[1:]) > 1, max(errors), sum(errors), colour))
+    return min(found)[-1] if found else None
 
 
 def apart_from_calculated(colour: str, theme: str) -> bool:
@@ -209,43 +268,54 @@ def passes_for_data(colour: str, theme: str) -> bool:
     )
 
 
-def adapt_set(colours: list[str], theme: str, moved: frozenset[str] = frozenset()) -> list[str]:
-    """Adapt each colour; one too close to an earlier one moves on, away from the background.
+def apart(lab: Lab, earlier: list[Lab], calculated: Lab | None) -> bool:
+    """Tell whether the colour keeps apart from the earlier colours and the calculated one."""
+    return (calculated is None or math.dist(lab, calculated) >= MIN_CALCULATED_DISTANCE) and all(
+        math.dist(lab, e) >= MIN_DISTANCE for e in earlier
+    )
 
-    A colour in `moved`, at the end of its set, also takes the smallest lightness shift away from
-    the background that keeps it apart from the calculated colour, with 3:1 contrast and its
-    distance from the set's earlier colours kept.
+
+def passes_exact(lab: Lab, background: str, earlier: list[Lab], calculated: Lab | None) -> bool:
+    return contrast_of(lab, background) >= MIN_CONTRAST and apart(lab, earlier, calculated)
+
+
+def passes_8_bit(colour: str, background: str, earlier: list[Lab], calculated: Lab | None) -> bool:
+    return contrast(colour, background) >= MIN_CONTRAST and apart(
+        oklab(colour), earlier, calculated
+    )
+
+
+def adapt_set(colours: list[str], theme: str, moved: frozenset[str] = frozenset()) -> list[str]:
+    """Adapt each colour by the smallest lightness shift that passes.
+
+    A colour passes with 3:1 contrast and MIN_DISTANCE from the set's earlier colours, so it
+    shifts away from the background. A colour in `moved`, at the end of its set, must also keep
+    apart from the calculated colour, and takes the smaller shift of the two directions.
     """
+    background = BACKGROUND[theme]
+    away = -LIGHTNESS_STEP if theme == 'light' else LIGHTNESS_STEP
     out: list[str] = []
     for colour in colours:
-        candidate = adapt(colour, theme)
-        if any(distance(candidate, earlier) < MIN_DISTANCE for earlier in out):
-            step = -0.005 if theme == 'light' else 0.005
-            found = nearest_passing(
-                oklab(candidate),
-                step,
-                lambda c: all(distance(c, earlier) >= MIN_DISTANCE for earlier in out),
-            )
-            if found is None:
-                sys.exit(f'{colour} ({theme}): cannot keep {MIN_DISTANCE} from its set')
-            candidate = found
-        if colour in moved and not apart_from_calculated(candidate, theme):
-            found = nearest_passing(
-                oklab(candidate),
-                -0.01 if theme == 'light' else 0.01,
-                lambda c: (
-                    passes_for_data(c, theme)
-                    and all(distance(c, earlier) >= MIN_DISTANCE for earlier in out)
-                ),
-            )
-            if found is None:
-                sys.exit(
-                    f'{colour} ({theme}): no lightness keeps it apart from the calculated colour'
-                )
-            candidate = found
-        if contrast(candidate, BACKGROUND[theme]) < MIN_CONTRAST:
-            sys.exit(f'{colour} ({theme}): moved below {MIN_CONTRAST}:1')
-        out.append(candidate)
+        rules = {
+            'background': background,
+            'earlier': [oklab(c) for c in out],
+            'calculated': oklab(CALCULATED[theme]) if colour in moved else None,
+        }
+        passes = partial(passes_8_bit, **rules)
+        adapted = colour
+        if not passes(colour):
+            published = oklab(colour)
+            steps = (away, -away) if colour in moved else (away,)
+            exact = [
+                nearest_passing(published, step, partial(passes_exact, **rules)) for step in steps
+            ]
+            found = [
+                c for lab in exact if lab and (c := nearest_8_bit(lab, colour, passes)) is not None
+            ]
+            if not found:
+                sys.exit(f'{colour} ({theme}): no lightness meets the palette rules')
+            adapted = min(found, key=lambda c: abs(oklab(c)[0] - published[0]))
+        out.append(adapted)
     return out
 
 

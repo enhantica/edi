@@ -274,8 +274,8 @@ least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); 
 
 | Block | Icon | Colour by its place in the project's list (light / dark theme), Default scheme |
 |---|---|---|
-| structure | `layer-group` | orange `#D78000` / `#FF9800`, teal `#009688` / `#1CA091`, pink `#E91E63` / `#FF4979`, then round again |
-| experiment | `microscope` | light blue `#009DE4` / `#03A9F4` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#AE8678`, green `#45A84A` / `#4CAF50` and five more; past the set's eight, viridis along the order, trimmed to the part that keeps 3:1 |
+| structure | `layer-group` | orange `#D78000` / `#FF9800`, teal `#009688` / `#1BA092`, pink `#E91E63` / `#FF4979`, then round again |
+| experiment | `microscope` | light blue `#039DE4` / `#03A9F4` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#AE8678`, green `#45A84A` / `#4CAF50` and five more; past the set's eight, viridis along the order, trimmed to the part that keeps 3:1 |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -601,11 +601,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Default scheme) | `#009DE4` / `#03A9F4`, then `#795548` / `#AE8678`, then `#45A84A` / `#4CAF50` | 2 px line, 5 px markers, 1 px bars |
+| Measured, by the experiment's place (Default scheme) | `#039DE4` / `#03A9F4`, then `#795548` / `#AE8678`, then `#45A84A` / `#4CAF50` | 2 px line, 5 px markers, 1 px bars |
 | Calculated | `#F44336` / `#EF9A9A` | 2 px line |
 | Background | `#607D8B` / `#B0BEC5` | 1 px line |
 | Residual | `#8BC34A` / `#C5E1A5` | 1 px line (the owner, 2026-10-02) |
-| Bragg ticks, by the structure's place (Default scheme) | `#D78000` / `#FF9800`, then `#009688` / `#1CA091`, then `#E91E63` / `#FF4979` | 1 px ticks (the owner, 2026-10-02) |
+| Bragg ticks, by the structure's place (Default scheme) | `#D78000` / `#FF9800`, then `#009688` / `#1BA092`, then `#E91E63` / `#FF4979` | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.
