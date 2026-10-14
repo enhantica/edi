@@ -417,6 +417,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "6-develop", {"preferences.tab.develop"}});
         }
     }
+    // A fitted scan's report, its preview at the evolution charts. Run only when asked (`--demo-only report-scan-`).
+    if (only.startsWith(QLatin1String("report-scan-"))) {
+        steps_.push_back({"report-scan-1-evolution",
+                          QStringList{"resize:1280x960"} + start + open_example("pd-neut-cwl_cosio-d20_scan-3f") +
+                              QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                          "choose:OK", "appBar.tab.report", "reveal:report.evolution"}});
+    }
     if (only.startsWith(QLatin1String("perf-"))) {
         // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
         const QString prepared = qEnvironmentVariable("EDI_DEMO_PERF_PROJECT");

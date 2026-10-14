@@ -1867,16 +1867,27 @@ std::vector<std::string> evolution_parameters(const Project& project, const Scan
 void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
                       const std::string& parameter, bool by_value,
                       const std::function<void(const EvolutionPoint&)>& visit) {
-    const ScanParameterColumns* columns = nullptr;
-    for (const std::string& name : {parameter, scan_results_column(parameter)}) {
-        for (const ScanParameterColumns& recorded : index.parameters) {
-            if (columns == nullptr && recorded.name == name) {
-                columns = &recorded;
+    evolution_series(project, places, index, std::vector<std::string>{parameter}, by_value,
+                     [&visit](std::size_t, const EvolutionPoint& point) { visit(point); });
+}
+
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::vector<std::string>& parameters, bool by_value,
+                      const std::function<void(std::size_t, const EvolutionPoint&)>& visit) {
+    // Each parameter's value and s.u. columns, by its unique name or its results column; none for one not recorded.
+    std::vector<const ScanParameterColumns*> columns(parameters.size(), nullptr);
+    bool any = false;
+    for (std::size_t i = 0; i < parameters.size(); ++i) {
+        for (const std::string& name : {parameters[i], scan_results_column(parameters[i])}) {
+            for (const ScanParameterColumns& recorded : index.parameters) {
+                if (columns[i] == nullptr && recorded.name == name) {
+                    columns[i] = &recorded;
+                    any = true;
+                }
             }
         }
     }
-    if (columns == nullptr || !index.error.empty() ||
-        !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+    if (!any || !index.error.empty() || !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
         return;
     }
     std::ifstream input(scan_results_path(project), std::ios::binary);
@@ -1894,26 +1905,31 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
             continue;
         }
         const auto place = places.find(scan_row_file(index, cells));
-        EvolutionPoint point;
         // A refused file's row holds the values its fit started from, not a result.
-        if (place == places.end() || cells[index.chi] == "nan" || !parse_scan_number(cells[columns->value], point.y) ||
-            !parse_scan_number(cells[columns->uncertainty], point.su)) {
+        if (place == places.end() || cells[index.chi] == "nan") {
             continue;
         }
-        point.dataset = place->second;
+        double x = static_cast<double>(place->second + 1);
         if (extracted) {
             const std::ptrdiff_t column = index.extract.front();
-            if (column < 0 || !parse_scan_number(cells[static_cast<std::size_t>(column)], point.x)) {
+            if (column < 0 || !parse_scan_number(cells[static_cast<std::size_t>(column)], x)) {
                 continue;
             }
-        } else {
-            point.x = static_cast<double>(point.dataset + 1);
         }
-        constexpr double kLimit = 1e300;
-        if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.su) && point.su >= 0.0 &&
-            std::abs(point.x) <= kLimit && std::abs(point.y - point.su) <= kLimit &&
-            std::abs(point.y + point.su) <= kLimit) {
-            visit(point);
+        for (std::size_t i = 0; i < parameters.size(); ++i) {
+            EvolutionPoint point;
+            point.x = x;
+            point.dataset = place->second;
+            if (columns[i] == nullptr || !parse_scan_number(cells[columns[i]->value], point.y) ||
+                !parse_scan_number(cells[columns[i]->uncertainty], point.su)) {
+                continue;
+            }
+            constexpr double kLimit = 1e300;
+            if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.su) && point.su >= 0.0 &&
+                std::abs(point.x) <= kLimit && std::abs(point.y - point.su) <= kLimit &&
+                std::abs(point.y + point.su) <= kLimit) {
+                visit(i, point);
+            }
         }
     }
 }
