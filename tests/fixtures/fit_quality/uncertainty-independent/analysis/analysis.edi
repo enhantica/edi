@@ -1,0 +1,15 @@
+_edi.schema_version 3
+_fitting_mode.type independent
+_minimizer.max_iterations 80
+loop_
+_alias.id
+_alias.parameter_unique_name
+a bank.background.1.coef
+b bank.background.2.coef
+c bank.background.3.coef
+loop_
+_constraint.expression
+"c = a - b"
+
+_sequential_fit.data_dir experiments/scan
+_sequential_fit.file_pattern *.dat

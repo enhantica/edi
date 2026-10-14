@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// The HTML report's figures (edi ADR-0035): each experiment's pattern as a plotly.js chart and each structure as a
+// The HTML report's figures (edi ADR-0036): each experiment's pattern as a plotly.js chart and each structure as a
 // three.js scene, from the report model in this page. The series, panes, error bars, ticks, colours, instances and
 // views all come from the model; this file only places them.
 
@@ -293,7 +293,7 @@ function drawPattern(figure, pattern) {
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
 }
 
-// One of a scan's evolution charts (edi ADR-0035): a parameter at each fitted dataset with its s.u. as an error bar,
+// One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,
 // titled with its name and units; "No fitted results yet" before any dataset is fitted.
 function drawEvolution(figure, series) {
   const font = pageStyle('--head-font');

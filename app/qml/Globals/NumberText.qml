@@ -37,12 +37,13 @@ QtObject {
         return String(value);
     }
 
-    // A parameter's `value` with its uncertainty `error` (0 or absent: none).
-    function parameter(value, error) {
+    // A parameter's `value` with its uncertainty `error` (0 or absent: none). `digits` caps the significant digits
+    // of a value without an uncertainty (6 by default; the ADP table asks for 5, so a beta component fits its cell).
+    function parameter(value, error, digits) {
         if (scientific(value))
             return value.toExponential(3).replace("e+", "e");
         const text = ruled(value, error);
-        return text ? text.value : rounded(value, error, Infinity);
+        return text ? text.value : rounded(value, error, Infinity, digits);
     }
 
     // `value` and its uncertainty `error` rounded by the open project's rule: the `value`, `su` and `bracket`
@@ -56,7 +57,7 @@ QtObject {
     }
 
     // `value` rounded by its uncertainty `error` and to the cell, as the comment at the top says.
-    function rounded(value, error, width) {
+    function rounded(value, error, width, digits) {
         if (typeof value !== "number")
             return String(value);
         if (!isFinite(value))
@@ -64,7 +65,8 @@ QtObject {
         const room = width > 0 ? width : 8;
         const known = typeof error === "number" && isFinite(error) && error > 0;
         let text;
-        let significant = 6;
+        const most = digits > 0 ? digits : 6;
+        let significant = most;
         if (known) {
             // The place of the uncertainty's first digit, after rounding it to that one digit. Read from the text, as
             // the rounded digit can lie past the largest number (an uncertainty near 1.8e308 rounds to 2e308).
@@ -79,7 +81,7 @@ QtObject {
             else
                 text = exponent(value, significant);
         } else {
-            text = String(Number(value.toPrecision(6)));
+            text = String(Number(value.toPrecision(most)));
         }
         if (text.length <= room)
             return text;

@@ -865,20 +865,10 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                         "isotropic type '" + site->adp_type.value() + "'");
         }
     }
-    for (const auto& site : structure.atom_sites) {
-        if (!is_anisotropic_adp_type(site->adp_type.value())) {
-            continue;
-        }
-        bool found = false;
-        for (const auto& tensor : structure.atom_site_aniso) {
-            found = found || tensor->id.value() == site->id.value();
-        }
-        if (!found) {
-            fail_domain(where, "missing-aniso-row",
-                        "site '" + site->id.value() + "' is of the anisotropic type '" +
-                            site->adp_type.value() + "' but has no _atom_site_aniso row");
-        }
-    }
+    // An anisotropic site without a tensor row gets the tensor of its isotropic value, and every tensor loads as
+    // its site symmetry ties it, with adp_iso its equivalent (ADR 0027).
+    add_missing_aniso_rows(structure);
+    complete_atom_site_aniso(structure);
 
     // The optional declared scattering-length map (`Structure.scattering_lengths_fm`). Absent
     // means "not set" — the built-in table applies by element lookup; there is no other route
@@ -1944,7 +1934,10 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                 static_cast<std::size_t>(std::floor((max_value - min_value) / step_value)) + 1;
             axis_values.reserve(count);
             for (std::size_t index = 0; index < count; ++index) {
-                axis_values.push_back(min_value + (static_cast<double>(index) * step_value));
+                // Multiply, then add, in two statements so no compiler fuses them: crysta builds
+                // this grid unfused on every platform, and a save checks they agree bit for bit.
+                const double offset = static_cast<double>(index) * step_value;
+                axis_values.push_back(min_value + offset);
             }
             (resolved.mode == BeamModeEnum::CONSTANT_WAVELENGTH ? generated.two_theta
                                                                 : generated.time_of_flight) =
@@ -3254,7 +3247,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         project.experiments.push_back(std::move(experiment));
     }
 
-    // ADR-0035 §7: reports/report.edi, the report's settings and its saved-report rows, each checked by crysta's rules:
+    // ADR-0036 §7: reports/report.edi, the report's settings and its saved-report rows, each checked by crysta's rules:
     // a value an item does not take, an item the category does not have and a row without a known format are refused,
     // naming them.
     const fs::path report_settings = root / "reports" / "report.edi";
@@ -3299,7 +3292,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
             project.fitting_mode = *mode;
         }
-        // ADR-0035 §7: the correlation chart's threshold and the pattern chart's x axis, each checked by crysta's rules.
+        // ADR-0036 §7: the correlation chart's threshold and the pattern chart's x axis, each checked by crysta's rules.
         try {
             if (const std::string* threshold = block.find("_correlation_chart.threshold")) {
                 project.correlation_threshold = detail::read_correlation_threshold(*threshold);
@@ -3536,10 +3529,29 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             result.covariance_available = flag("_fit_result.covariance_available");
             result.exit_reason = text("_fit_result.exit_reason");
             result.prof_wr_factor = number("_fit_result.prof_wr_factor");
+            // Absent in a result written before them.
+            for (const auto& [tag, field] : {std::pair{"_fit_result.prof_r_factor", &result.prof_r_factor},
+                                             std::pair{"_fit_result.prof_wr_expected", &result.prof_wr_expected},
+                                             std::pair{"_fit_result.prof_cr_factor", &result.prof_cr_factor},
+                                             std::pair{"_fit_result.prof_cwr_factor", &result.prof_cwr_factor}}) {
+                if (block.find(tag) != nullptr) {
+                    *field = number(tag);
+                }
+            }
             result.profile_function = text("_fit_result.profile_function");
             result.background_function = text("_fit_result.background_function");
             result.descent = text("_fit_result.descent");
+            // A result cell: '.' or a column written before it existed is not recorded.
+            const auto cell = [&where](const Loop& loop, const std::vector<std::string>& row,
+                                       const std::string& tag) -> std::optional<double> {
+                const int column = loop.column(tag);
+                if (column < 0 || row[static_cast<std::size_t>(column)] == ".") {
+                    return std::nullopt;
+                }
+                return to_double(row[static_cast<std::size_t>(column)], where);
+            };
             if (const Loop* banks = block.loop_with("_fit_result_bank.experiment_id")) {
+                std::set<const ExperimentBase*> seen;
                 for (const auto& row : banks->rows) {
                     const std::string& id = loop_cell(*banks, row, "_fit_result_bank.experiment_id", where);
                     ExperimentBase* bank = nullptr;
@@ -3548,6 +3560,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     }
                     if (bank == nullptr) {
                         throw IoError("_fit_result_bank row '" + id + "' names no experiment of the project: " + where);
+                    }
+                    if (!seen.insert(bank).second) {
+                        throw IoError("_fit_result_bank has two rows for experiment '" + id + "': " + where);
                     }
                     const std::string& points = loop_cell(*banks, row, "_fit_result_bank.n_data_points", where);
                     if (points != ".") {
@@ -3559,10 +3574,45 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     }
                     bank->fit_prof_wr_factor =
                         to_double(loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where), where);
-                    const std::string& chi_square = loop_cell(*banks, row, "_fit_result_bank.chi_square", where);
-                    if (chi_square != ".") {
-                        bank->fit_chi_square = to_double(chi_square, where);
+                    bank->fit_chi_square = cell(*banks, row, "_fit_result_bank.chi_square");
+                    bank->fit_prof_r_factor = cell(*banks, row, "_fit_result_bank.prof_r_factor");
+                    bank->fit_prof_wr_expected = cell(*banks, row, "_fit_result_bank.prof_wr_expected");
+                    bank->fit_prof_cr_factor = cell(*banks, row, "_fit_result_bank.prof_cr_factor");
+                    bank->fit_prof_cwr_factor = cell(*banks, row, "_fit_result_bank.prof_cwr_factor");
+                }
+            }
+            // Each phase's R_Bragg and R_F, on the link of its experiment and structure.
+            if (const Loop* phases = block.loop_with("_fit_result_phase.experiment_id")) {
+                std::set<const LinkedStructure*> seen;
+                for (const auto& row : phases->rows) {
+                    const std::string& experiment_id =
+                        loop_cell(*phases, row, "_fit_result_phase.experiment_id", where);
+                    const std::string& structure_id = loop_cell(*phases, row, "_fit_result_phase.structure_id", where);
+                    loop_cell(*phases, row, "_fit_result_phase.bragg_r_factor", where);
+                    const std::string wanted = KeyTraits<Structure>::canonical(structure_id);
+                    LinkedStructure* phase = nullptr;
+                    for (auto& experiment_item : project.experiments) {
+                        if (experiment_item->name != experiment_id) {
+                            continue;
+                        }
+                        for (const auto& link : experiment_item->linked_structures) {
+                            const std::string& linked = link->structure_id.value();
+                            const std::string resolved = linked.empty() && !project.structures.empty()
+                                                             ? project.structures.front()->name.value()
+                                                             : linked;
+                            phase = KeyTraits<Structure>::canonical(resolved) == wanted ? link.get() : phase;
+                        }
                     }
+                    if (phase == nullptr) {
+                        throw IoError("_fit_result_phase row ('" + experiment_id + "', '" + structure_id +
+                                      "') names no linked structure of the project: " + where);
+                    }
+                    if (!seen.insert(phase).second) {
+                        throw IoError("_fit_result_phase has two rows for ('" + experiment_id + "', '" + structure_id +
+                                      "'): " + where);
+                    }
+                    phase->fit_bragg_r_factor = cell(*phases, row, "_fit_result_phase.bragg_r_factor");
+                    phase->fit_f_r_factor = cell(*phases, row, "_fit_result_phase.f_r_factor");
                 }
             }
         }
@@ -3953,8 +4003,9 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         }
     }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
-    // every parameter marked, a dependent's free flag cleared with a warning.
-    refresh_relations(project, warn);
+    // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
+    // dependent saved with its s.u.).
+    refresh_relations(project, warn, true);
     return project;
 }
 
@@ -4090,7 +4141,7 @@ UndoFitOutcome restore_fit_start(Project& project) {
         }
         // Every dependent follows its restored independents through crysta's applier and gets
         // back the e.s.d. it held before the fit.
-        restore_dependents(project);
+        restore_dependents(project, restored);
         clear_fit_result(project);  // The undone fit's result goes with it
     }
     return outcome;
@@ -4099,11 +4150,40 @@ UndoFitOutcome restore_fit_start(Project& project) {
 void copy_fit_result(Project& to, const Project& from) {
     to.fit_result = from.fit_result;
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
-        ExperimentBase& target = *to.experiments[index];
-        const ExperimentBase& source = *from.experiments[index];
-        target.fit_n_data_points = source.fit_n_data_points;
-        target.fit_prof_wr_factor = source.fit_prof_wr_factor;
-        target.fit_chi_square = source.fit_chi_square;
+        copy_fit_share(*to.experiments[index], *from.experiments[index]);
+    }
+}
+
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) {
+    to.fit_n_data_points = from.fit_n_data_points;
+    to.fit_prof_r_factor = from.fit_prof_r_factor;
+    to.fit_prof_wr_factor = from.fit_prof_wr_factor;
+    to.fit_prof_wr_expected = from.fit_prof_wr_expected;
+    to.fit_prof_cr_factor = from.fit_prof_cr_factor;
+    to.fit_prof_cwr_factor = from.fit_prof_cwr_factor;
+    to.fit_chi_square = from.fit_chi_square;
+    for (const auto& link : to.linked_structures) {
+        link->fit_bragg_r_factor.reset();
+        link->fit_f_r_factor.reset();
+        for (const auto& source : from.linked_structures) {
+            if (source->structure_id.value() == link->structure_id.value()) {
+                link->fit_bragg_r_factor = source->fit_bragg_r_factor;
+                link->fit_f_r_factor = source->fit_f_r_factor;
+            }
+        }
+    }
+}
+
+void clear_fit_share(ExperimentBase& experiment) {
+    experiment.fit_n_data_points.reset();
+    for (std::optional<double>* field :
+         {&experiment.fit_prof_r_factor, &experiment.fit_prof_wr_factor, &experiment.fit_prof_wr_expected,
+          &experiment.fit_prof_cr_factor, &experiment.fit_prof_cwr_factor, &experiment.fit_chi_square}) {
+        field->reset();
+    }
+    for (const auto& link : experiment.linked_structures) {
+        link->fit_bragg_r_factor.reset();
+        link->fit_f_r_factor.reset();
     }
 }
 
@@ -4161,9 +4241,7 @@ void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrela
 void clear_fit_result(Project& project) {
     project.fit_result = FitResultRecord{};
     for (const auto& experiment_item : project.experiments) {
-        experiment_item->fit_n_data_points.reset();
-        experiment_item->fit_prof_wr_factor.reset();
-        experiment_item->fit_chi_square.reset();
+        clear_fit_share(*experiment_item);
     }
 }
 
@@ -4274,7 +4352,7 @@ std::vector<std::string> saved_file_order(const Project& project) {
             fs::path(entity_path("", "experiment", experiment->name)).generic_string());
     }
     files.emplace_back("analysis/analysis.edi");
-    // The report's own settings and saved-report rows (ADR-0035 §7), when the project states any.
+    // The report's own settings and saved-report rows (ADR-0036 §7), when the project states any.
     files.emplace_back("reports/report.edi");
     return files;
 }

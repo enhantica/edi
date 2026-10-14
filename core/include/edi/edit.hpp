@@ -123,7 +123,7 @@ inline StructuresUndo capture_structures(const Project& project) {
     return before;
 }
 
-/// The project's report settings (ADR-0035 §7) as one value: what an edit of one of them changes, and what its Undo
+/// The project's report settings (ADR-0036 §7) as one value: what an edit of one of them changes, and what its Undo
 /// puts back.
 struct ReportSettingsState {
     std::optional<bool> html, pdf, cif, html_offline;
@@ -194,7 +194,7 @@ class Edit {
             project.pattern_x_axis = state.pattern_x_axis;
         });
     }
-    // The project's report settings (ADR-0035 §7), each absent until stated.
+    // The project's report settings (ADR-0036 §7), each absent until stated.
     static Edit assign(std::optional<bool>& field, std::optional<bool> value) {
         return Edit([&field, value] { field = value; });
     }

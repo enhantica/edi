@@ -36,7 +36,7 @@ class StructureViewController : public QObject {
     QML_ELEMENT
     Q_PROPERTY(edi_app::StructureViewModel* structure READ structure WRITE setStructure NOTIFY structureChanged)
     Q_PROPERTY(edi_app::StructureViewOptions* options READ options WRITE setOptions NOTIFY optionsChanged)
-    // The report's input (edi ADR-0035): with `report` set the view draws the report model's scene of
+    // The report's input (edi ADR-0036): with `report` set the view draws the report model's scene of
     // `reportStructure`, from the model's view, and scene_drawing prepares it for this view's own viewport. The
     // options do not apply: the model's scene is presented once, with the default options.
     Q_PROPERTY(edi_app::ReportViewModel* report READ report WRITE setReport NOTIFY reportChanged)

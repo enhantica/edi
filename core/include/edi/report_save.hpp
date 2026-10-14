@@ -7,7 +7,7 @@
 #include "edi/report_html.hpp"
 #include "edi/report_model.hpp"
 
-// Save report for the command line and Python (edi ADR-0035 §7): the report's formats written into the project's
+// Save report for the command line and Python (edi ADR-0036 §7): the report's formats written into the project's
 // `reports/` folder with their `_report_file` rows, and the state of each report saved so far. The app writes its
 // own, the PDF included.
 

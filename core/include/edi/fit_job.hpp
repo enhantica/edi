@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <utility>
 #include <memory>
 #include <optional>
 #include <string>
@@ -103,6 +104,16 @@ class FitJob {
     struct State;
     std::shared_ptr<State> state_;
 };
+
+// A system test's view of each scan file as the worker finishes it, before the app hears of it
+// (edi_app --test-observer). Null, and never called, outside those tests.
+using WorkerFileObserver = void (*)(const std::string& file_name);
+void set_worker_file_observer(WorkerFileObserver observer);
+// Test instrumentation, the same way: told before each scan file's fit its name and the fitted parameters' start
+// values, keyed by results.csv column (crysta's scan file start observer). None by default.
+using ScanFileStartObserver = void (*)(const std::string& file,
+                                       const std::vector<std::pair<std::string, double>>& starts);
+void set_scan_file_start_observer(ScanFileStartObserver observer);
 
 }  // namespace edi
 

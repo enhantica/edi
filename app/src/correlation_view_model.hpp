@@ -67,7 +67,7 @@ class CorrelationViewModel : public QObject {
     void setLevel(double level);
     int maxParameters() const { return max_parameters_; }
     void setMaxParameters(int count);
-    // The project's `_correlation_chart.threshold` (ADR-0035 §7), which the level shows; absent, the count asked
+    // The project's `_correlation_chart.threshold` (ADR-0036 §7), which the level shows; absent, the count asked
     // for sets the level.
     void setThreshold(std::optional<double> threshold);
 

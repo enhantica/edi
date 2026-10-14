@@ -63,17 +63,23 @@ void ParameterRegistry::rebuild(edi::Project& project) {
 void ParameterRegistry::refreshElements(const edi::Project& project) {
     // An atom-site parameter's element is its site's type symbol (edi ADR-0017 §8), which an edit changes
     // without changing the set of parameters: it is read again at every publish, never kept from a rebuild.
+    // Likewise an ADP parameter's symbol and units, which follow its site's declared type.
     std::unordered_map<const edi::Parameter*, std::string> element;
+    std::unordered_map<const edi::Parameter*, edi::AdpDisplay> adp;
     for (const auto& structure : project.structures) {
         for (const auto& site : structure->atom_sites) {
             for (const edi::Parameter* parameter :
                  {&site->fract_x, &site->fract_y, &site->fract_z, &site->occupancy, &site->adp_iso}) {
                 element.emplace(parameter, site->type_symbol);
             }
+            adp.emplace(&site->adp_iso, edi::adp_display(site->adp_type.value(), "iso"));
             for (const auto& tensor : structure->atom_site_aniso) {
                 if (tensor->id.value() == site->id.value()) {
-                    for (const edi::Parameter* parameter : tensor->parameters()) {
-                        element.emplace(parameter, site->type_symbol);
+                    const char* const components[] = {"11", "22", "33", "12", "13", "23"};
+                    const auto parameters = tensor->parameters();
+                    for (std::size_t i = 0; i < parameters.size(); ++i) {
+                        element.emplace(parameters[i], site->type_symbol);
+                        adp.emplace(parameters[i], edi::adp_display(site->adp_type.value(), components[i]));
                     }
                 }
             }
@@ -108,6 +114,10 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
         item->setElementSymbol(site != element.end() ? QString::fromStdString(site->second) : QString());
         const auto owner = phase.find(item->parameter());
         item->setPhaseIndex(owner != phase.end() ? owner->second : -1);
+        if (const auto label = adp.find(item->parameter()); label != adp.end()) {
+            item->setLabel(QString::fromStdString(label->second.short_name),
+                           QString::fromStdString(label->second.display_units));
+        }
     }
 }
 

@@ -40,14 +40,19 @@ def comparison_probe(tmp_path_factory):
 
 
 @pytest.mark.parametrize(
+    'counts', [(512, 2048, 131072), (500, 2000, 120000)], ids=['power-two', 'prime-buckets']
+)
+@pytest.mark.parametrize(
     'operation', ['keyed', 'replace', 'reorder', 'copy', 'default-ids', 'unkeyed']
 )
-def test_admission_comparison_budget_is_proportional_to_rows(comparison_probe, operation):
+def test_admission_comparison_budget_is_proportional_to_rows(comparison_probe, operation, counts):
     # Fixed primitive-operation allowance, per row, through the owner's large-table witness.
     # The small witnesses fail first on a quadratic implementation rather than executing its
     # billions of operations at 120000. No elapsed-time limit decides this property.
     previous = None
-    for count in [512, 2048, 120000]:
+    # libc++ changes hash policy between power-of-two and other reserve counts.
+    # Compare scaling within BOTH classes; retain the original 120000-row subject.
+    for count in counts:
         result = subprocess.run(
             [str(comparison_probe), str(count), operation],
             capture_output=True,

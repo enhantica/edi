@@ -9,7 +9,7 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// Saving the report, the sidebar's top group (edi ADR-0035 §7): two boxes per row in two equal columns, the interactive
+// Saving the report, the sidebar's top group (edi ADR-0036 §7): two boxes per row in two equal columns, the interactive
 // HTML and whether it embeds plotly.js and three.js (online by default), then the static PDF (A4, the preview's figures
 // as images) and the CIF report (disabled until its writer exists); one Save report button, which writes the ticked formats into the
 // project's reports/ folder; and the reports saved so far, each marked when the project has changed since.

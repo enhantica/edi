@@ -34,8 +34,36 @@ EaComponents.TableViewParameter {
     // The column's alignment, unless the value is wider than the cell: then it shows from its start and clips at
     // the end, without an ellipsis (ADR-0029).
     property int columnAlignment: Text.AlignHCenter
+    // The most significant digits of a value without an uncertainty (NumberText.parameter).
+    property int significantDigits: 6
+    // With fitDigits, the text is made smaller when its significant digits would not fit the cell, so all of them show
+    // (a beta component's small values). Measured at the full size, in the cell's family and weight; only a fitDigits
+    // cell measures, as every value change runs these bindings again in every cell.
+    property bool fitDigits: false
+    readonly property real room: width - leftPadding - rightPadding
+    readonly property string fullText: fitDigits && item !== null ? NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits) : ""
+    readonly property FontMetrics fullMetrics: FontMetrics {
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        font.bold: cell.fit && cell.enabled
+    }
+    // Width scales about linearly with the size; the size found is checked once more, as hinting can differ a pixel.
+    readonly property int scaledPixelSize: {
+        const full = EaStyle.Sizes.fontPixelSize;
+        if (!fitDigits || room <= 0)
+            return full;
+        const needed = fullMetrics.advanceWidth(fullText);
+        return needed > room ? Math.max(1, Math.floor(full * room / needed)) : full;
+    }
+    readonly property FontMetrics scaledMetrics: FontMetrics {
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: cell.scaledPixelSize
+        font.bold: cell.fit && cell.enabled
+    }
+    font.pixelSize: fitDigits && scaledPixelSize > 1 && scaledPixelSize < EaStyle.Sizes.fontPixelSize && scaledMetrics.advanceWidth(fullText) > room ? scaledPixelSize - 1 : scaledPixelSize
     readonly property bool overflows: contentWidth > width - leftPadding - rightPadding
     horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
+    clip: true
 
     // The value as edited: in full, where the cell shows it rounded (NumberText).
     readonly property string editText: item !== null ? NumberText.full(item.value) : value
@@ -60,7 +88,7 @@ EaComponents.TableViewParameter {
     enabled: refinable
     // The value and its uncertainty as text, by the app's one rule for numbers in cells (NumberText).
     parameter: item ? {
-        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0),
+        "value": NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, cell.significantDigits),
         "error": item.hasUncertainty ? NumberText.error(item.uncertainty, 0, item.value) : "",
         "enabled": cell.refinable,
         "fittable": cell.canFit,

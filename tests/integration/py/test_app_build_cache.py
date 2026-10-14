@@ -22,6 +22,7 @@ def namespace(tmp_path, monkeypatch):
         root / 'app/main.cpp': 'int main() { return 0; }',
         root / 'core/src/value.cpp': 'void transport_input() {}',
         root / 'CMakeLists.txt': 'project(transport)',
+        root / 'build/app/app/edi_app': 'transport-only delivered normal app',
         sdk / '.crysta-sha': 'a' * 40,
         sdk / 'share/crysta-sdk/manifest.json': json.dumps({'source_sha': 'a' * 40}),
         sdk / 'include/input.hpp': 'void sdk_input();',
@@ -175,6 +176,14 @@ def test_real_app_fixtures_build_once_per_owner_and_backend(namespace, monkeypat
     root, sdk, source, _fixture = namespace
     calls = []
     captures = []
+    normal_receipts = []
+    delivered_receipt = screen.normal_app.receipt
+
+    def reuse_normal_app(*args):
+        normal_receipts.append(args[0])
+        return delivered_receipt(*args)
+
+    monkeypatch.setattr(screen.normal_app, 'receipt', reuse_normal_app)
     toolchain = root.parent / 'transport-toolkit'
     node = toolchain / 'emsdk-4.0.7/node/transport/bin/node'
     node.parent.mkdir(parents=True)
@@ -277,10 +286,15 @@ def test_real_app_fixtures_build_once_per_owner_and_backend(namespace, monkeypat
             hosts[owner, backend]
     assert sorted(calls) == [
         ('screen', 'browser'),
-        ('screen', 'desktop'),
         ('selector', 'browser'),
         ('selector', 'desktop'),
-    ], 'real fixture dispatch paths share four qualified owner/backend builds per process'
+    ], 'real fixture dispatch shares three private builds and the delivered desktop screen app'
+    assert normal_receipts == [root], (
+        'desktop screen fixtures prepare one receipt for the delivered app without compiling it'
+    )
+    assert drawn['desktop']['receipt']['executable'] == str(root / 'build/app/app/edi_app'), (
+        'the desktop screen dispatch binds the delivered normal app rather than a private host'
+    )
     assert sorted(captures) == ['browser', 'desktop'], (
         'screen fixtures and receipt controls reuse one completed capture per backend'
     )

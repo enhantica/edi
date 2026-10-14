@@ -9,7 +9,7 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The Report page's live preview (edi ADR-0035): the report model's sections, in its order, drawn from the model's
+// The Report page's live preview (edi ADR-0036): the report model's sections, in its order, drawn from the model's
 // JSON values only. It is set as the HTML report is, after the owner's reference report (diffraction-lib's style,
 // 2026-10-13): PT Sans headings at its sizes and margins, numbered sections and records, each category of a structure
 // or an experiment in its own subsection under its figure (the structure view, the pattern chart), bordered tables one

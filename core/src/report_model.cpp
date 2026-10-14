@@ -275,7 +275,7 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
     return out;
 }
 
-// A scan's template dataset as the app shows it (edi ADR-0035 §3): the declared template file, else the first file,
+// A scan's template dataset as the app shows it (edi ADR-0036 §3): the declared template file, else the first file,
 // as the app opens a scan; with that file's results row, the template takes the row's values and uncertainties (a
 // parameter the results do not record keeps the template's); without one, the template's own. Either way the file's
 // data are loaded, the relations completed and the pattern calculated, so the report draws the structure and the
@@ -784,7 +784,7 @@ std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string
 }  // namespace
 
 ReportModel build_report(const Project& input, const ReportOptions& options) {
-    // A scan's report is its template dataset's, fitted (ADR-0035 §3); one whose datasets or results cannot be read
+    // A scan's report is its template dataset's, fitted (ADR-0036 §3); one whose datasets or results cannot be read
     // reports the template as it is.
     const bool scan_mode = is_scan_fitting_mode(input.fitting_mode);
     std::optional<ScanTemplate> scan;

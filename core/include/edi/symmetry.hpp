@@ -68,9 +68,20 @@ void change_adp_type(Structure& structure, AtomSite& site, const std::string& ad
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's
 // _sync_atom_site_aniso): a missing row holds the tensor of the site's isotropic value, through
-// crysta's conversion; a row no anisotropic site names is removed. Each anisotropic site's adp_iso
-// is then set to its tensor's equivalent value.
+// crysta's conversion; a row no anisotropic site names is removed. Each tensor is then completed
+// (complete_atom_site_aniso).
 void sync_atom_site_aniso(Structure& structure);
+
+// Each anisotropic site's tensor as its site symmetry ties it, through crysta (a fixed component 0, a tied one its
+// expression over the free ones), and its adp_iso the tensor's equivalent value. Only values that change are
+// written. Every public edit of a tensor or a site, a load and sync_atom_site_aniso end with it, so a read never
+// sees followers or an equivalent from an earlier tensor.
+void complete_atom_site_aniso(Structure& structure);
+
+// The part of sync_atom_site_aniso that adds a tensor row for each anisotropic site without one,
+// leaving every other row and each site's adp_iso as they are. A component that comes out exactly
+// 0 carries no uncertainty.
+void add_missing_aniso_rows(Structure& structure);
 
 // An anisotropic site's tensor as U* (the CIF U scaled by the reciprocal lengths)
 // at the structure's symmetry-completed cell, or nullopt for an isotropic site, a site with no
