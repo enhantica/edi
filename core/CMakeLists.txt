@@ -17,6 +17,8 @@ add_library(edi_core STATIC
     src/validation.cpp
     src/report.cpp
     src/json.cpp
+    src/assistant.cpp
+    src/assistant_stream.cpp
     src/report_model.cpp
     src/report_json.cpp
     src/report_html.cpp
@@ -42,7 +44,7 @@ add_library(edi::core ALIAS edi_core)
 # ADR-0022: the element table (data/elements/element-styles.tsv, PROVENANCE.md beside it) is embedded in
 # the core as a string, so no runtime file lookup exists; element_style_table() parses it once. A change
 # to the file reconfigures.
-set(EDI_ELEMENT_STYLES_TSV ${CMAKE_SOURCE_DIR}/data/elements/element-styles.tsv)
+set(EDI_ELEMENT_STYLES_TSV ${PROJECT_SOURCE_DIR}/data/elements/element-styles.tsv)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_ELEMENT_STYLES_TSV})
 file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
 configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
@@ -53,7 +55,7 @@ set(EDI_PALETTES coast garden peaceful fog-forest sage okabe-ito paul-tol-bright
     carbon dark2 petroff vivid nord solarized catppuccin apple)
 set(EDI_PALETTE_TABLES "")
 foreach(scheme IN LISTS EDI_PALETTES)
-    set(palette_tsv ${CMAKE_SOURCE_DIR}/data/palettes/${scheme}.tsv)
+    set(palette_tsv ${PROJECT_SOURCE_DIR}/data/palettes/${scheme}.tsv)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${palette_tsv})
     file(READ ${palette_tsv} palette)
     string(APPEND EDI_PALETTE_TABLES "    R\"edi_palette(${palette})edi_palette\",\n")
@@ -62,7 +64,7 @@ configure_file(src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.
 
 # ADR-0036: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
 # file with no lookup; a change to the script reconfigures.
-set(EDI_REPORT_JS_FILE ${CMAKE_SOURCE_DIR}/data/report/report.js)
+set(EDI_REPORT_JS_FILE ${PROJECT_SOURCE_DIR}/data/report/report.js)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_REPORT_JS_FILE})
 file(READ ${EDI_REPORT_JS_FILE} EDI_REPORT_JS)
 configure_file(src/report_js_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp @ONLY)
@@ -86,7 +88,7 @@ target_compile_definitions(edi_core PUBLIC EDI_WORKER_OWNER_THREAD=$<BOOL:${EDI_
 # `edi::detail` seam (src/adapter_test_access.hpp) rather than a public API. Built as a default target so
 # `pixi run core-build` emits build/ci/core/e02_adapter_probe for the hidden pytest to run; ONLY this
 # target gets core/src on its include path, so the seam header stays out of core/include + installation.
-add_executable(e02_adapter_probe ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e02_adapter_probe.cpp)
+add_executable(e02_adapter_probe ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e02_adapter_probe.cpp)
 target_link_libraries(e02_adapter_probe PRIVATE edi_core)
 target_include_directories(e02_adapter_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -94,7 +96,7 @@ target_include_directories(e02_adapter_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 # pinned token corpus under an injected comma-decimal locale, which needs no system locale data and
 # therefore runs on every platform. Same shape as the probe above — a default target so
 # `pixi run core-build` emits build/ci/core/c09_t8_locale_probe for the hidden pytest to run.
-add_executable(c09_t8_locale_probe ${CMAKE_SOURCE_DIR}/tests/unit/cpp/c09_t8_locale_probe.cpp)
+add_executable(c09_t8_locale_probe ${PROJECT_SOURCE_DIR}/tests/unit/cpp/c09_t8_locale_probe.cpp)
 target_link_libraries(c09_t8_locale_probe PRIVATE edi_core)
 target_include_directories(c09_t8_locale_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -102,21 +104,21 @@ target_include_directories(c09_t8_locale_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 # session fixture (~18 s per suite run, and a second mutable build tree). Same shape as the
 # probes above - a default target so `pixi run core-build` emits
 # build/ci/core/c09_t7_internal_probe for the pytest to run.
-add_executable(c09_t7_internal_probe ${CMAKE_SOURCE_DIR}/tests/unit/cpp/c09_t7_internal_probe.cpp)
+add_executable(c09_t7_internal_probe ${PROJECT_SOURCE_DIR}/tests/unit/cpp/c09_t7_internal_probe.cpp)
 target_link_libraries(c09_t7_internal_probe PRIVATE edi_core)
 target_include_directories(c09_t7_internal_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Each latency probe carries the commit it was built from (`-dirty` when tracked files differed) as bytes
 # tools/ci/latency_bank.py reads from the executable it is about to run, so a bank row names the revision the timed
 # binary was built from; regenerated on every build, as lib's stamp.
-if(EXISTS ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e04_t9_latency_probe.cpp
-   OR EXISTS ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e04_t10_latency_probe.cpp)
+if(EXISTS ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e04_t9_latency_probe.cpp
+   OR EXISTS ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e04_t10_latency_probe.cpp)
     set(EDI_PROBE_BUILD_COMMIT_CPP "${CMAKE_BINARY_DIR}/edi_probe_build_commit.cpp")
-    execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -DOUT=${EDI_PROBE_BUILD_COMMIT_CPP}
-                            -DMARKER=ON -DMARK_DIRTY=ON -P "${CMAKE_SOURCE_DIR}/cmake/build_commit.cmake")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_PROBE_BUILD_COMMIT_CPP}
+                            -DMARKER=ON -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
     add_custom_target(edi_probe_build_commit
-        COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -DOUT=${EDI_PROBE_BUILD_COMMIT_CPP}
-                -DMARKER=ON -DMARK_DIRTY=ON -P "${CMAKE_SOURCE_DIR}/cmake/build_commit.cmake"
+        COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_PROBE_BUILD_COMMIT_CPP}
+                -DMARKER=ON -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
         BYPRODUCTS "${EDI_PROBE_BUILD_COMMIT_CPP}"
         COMMENT "Embedding the source commit in the latency probes")
 endif()
@@ -124,24 +126,24 @@ endif()
 # Test-only C++ probe (edi ADR-0020 §5): the latency measurement with its own oracle, the tests
 # lane's, which the ratchet gate runs once and `pixi run latency-bank` runs ten times. Same shape as
 # the probes above; guarded, so the instrument and the probe can land in either order.
-if(EXISTS ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e04_t9_latency_probe.cpp)
-    add_executable(e04_t9_latency_probe ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e04_t9_latency_probe.cpp
+if(EXISTS ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e04_t9_latency_probe.cpp)
+    add_executable(e04_t9_latency_probe ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e04_t9_latency_probe.cpp
                    "${EDI_PROBE_BUILD_COMMIT_CPP}")
     add_dependencies(e04_t9_latency_probe edi_probe_build_commit)
     target_link_libraries(e04_t9_latency_probe PRIVATE edi_core)
     target_include_directories(e04_t9_latency_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
-                                                            ${CMAKE_SOURCE_DIR}/tests/fixtures)
+                                                            ${PROJECT_SOURCE_DIR}/tests/fixtures)
 endif()
 
 # Test-only C++ probe (ADR-0022): the structure scene's presentation and update latency (V1, V2), the
 # tests lane's, which `pixi run latency-bank` runs beside probe. The same shape and the same guard as.
-if(EXISTS ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e04_t10_latency_probe.cpp)
-    add_executable(e04_t10_latency_probe ${CMAKE_SOURCE_DIR}/tests/unit/cpp/e04_t10_latency_probe.cpp
+if(EXISTS ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e04_t10_latency_probe.cpp)
+    add_executable(e04_t10_latency_probe ${PROJECT_SOURCE_DIR}/tests/unit/cpp/e04_t10_latency_probe.cpp
                    "${EDI_PROBE_BUILD_COMMIT_CPP}")
     add_dependencies(e04_t10_latency_probe edi_probe_build_commit)
     target_link_libraries(e04_t10_latency_probe PRIVATE edi_core)
     target_include_directories(e04_t10_latency_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
-                                                             ${CMAKE_SOURCE_DIR}/tests/fixtures)
+                                                             ${PROJECT_SOURCE_DIR}/tests/fixtures)
 endif()
 
 # Direct, constructed-value coverage of the presentation contract. The percent-change rule has edge
@@ -149,7 +151,7 @@ endif()
 # the 0.05 % blanking threshold — so they are exercised on constructed values instead. A default
 # target, so `pixi run core-build` emits it next to the other probes. Non-hidden and
 # implementation-lane-owned: it asserts the contract report.hpp documents.
-add_executable(report_format_probe ${CMAKE_SOURCE_DIR}/tools/probes/report_format_probe.cpp)
+add_executable(report_format_probe ${PROJECT_SOURCE_DIR}/tools/probes/report_format_probe.cpp)
 target_link_libraries(report_format_probe PRIVATE edi_core)
 
 # --- The C++ unit tier ---------------------------------------------- ONE doctest
@@ -169,17 +171,17 @@ find_package(doctest CONFIG QUIET)
 set(EDI_TEST_SOURCES "")
 if(doctest_FOUND)
     file(GLOB EDI_TEST_SOURCES CONFIGURE_DEPENDS
-        ${CMAKE_SOURCE_DIR}/tests/unit/cpp/test_*.cpp)
+        ${PROJECT_SOURCE_DIR}/tests/unit/cpp/test_*.cpp)
 endif()
 if(EDI_TEST_SOURCES)
     add_executable(edi_tests EXCLUDE_FROM_ALL
-        ${CMAKE_SOURCE_DIR}/tools/probes/edi_tests_main.cpp
+        ${PROJECT_SOURCE_DIR}/tools/probes/edi_tests_main.cpp
         ${EDI_TEST_SOURCES})
     target_link_libraries(edi_tests PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,edi_core>" doctest::doctest)
     # Same private seam access the probes get, so a unit case can reach edi::detail; and the visible
     # fixtures (the stress dataset's generator is a header there).
     target_include_directories(edi_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
-                                                 ${CMAKE_SOURCE_DIR}/tests/fixtures)
+                                                 ${PROJECT_SOURCE_DIR}/tests/fixtures)
     enable_testing()
     add_test(NAME edi_unit COMMAND edi_tests)
 endif()
@@ -189,3 +191,9 @@ endif()
 # format (the Makefile `... target` shape silently matches nothing under Ninja).
 list(LENGTH EDI_TEST_SOURCES EDI_TEST_CASE_FILES)
 file(WRITE ${CMAKE_BINARY_DIR}/edi_tests_case_files.txt "${EDI_TEST_CASE_FILES}\n")
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/tests/integration/py/assistant_probe/probe.cpp)
+    add_executable(assistant_contract_probe ${PROJECT_SOURCE_DIR}/tests/integration/py/assistant_probe/probe.cpp)
+    target_include_directories(assistant_contract_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(assistant_contract_probe PRIVATE edi::core)
+endif()

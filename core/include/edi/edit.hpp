@@ -214,6 +214,48 @@ class Edit {
     static Edit value(Parameter& parameter, double value) {
         return Edit([&parameter, value] { assign_value(parameter, value); });
     }
+    /// Assign a whole validated assistant batch, resolving and checking every path before the first write.
+    static Edit parameter_values(Project& project, std::vector<std::pair<std::string, double>> values) {
+        return Edit([&project, values = std::move(values)] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) by_name.emplace(slot.unique_name, slot.parameter);
+            std::vector<std::pair<Parameter*, double>> targets;
+            std::set<std::string> seen;
+            for (const auto& [name, value] : values) {
+                const auto found = by_name.find(name);
+                if (found == by_name.end() || !seen.insert(name).second || !std::isfinite(value))
+                    throw std::invalid_argument("Invalid or duplicate parameter: " + name);
+                Parameter copy = *found->second;
+                assign_value(copy, value);
+                targets.emplace_back(found->second, value);
+            }
+            for (const auto& [parameter, value] : targets) parameter->value = value;
+        });
+    }
+    /// Adopt an isolated fit's parameter/result state without replacing the live model's identity-bearing rows.
+    static Edit assistant_result(Project& project, std::shared_ptr<const Project> fitted) {
+        return Edit([&project, fitted = std::move(fitted)] {
+            const auto targets = named_slots(project);
+            auto source = std::make_shared<Project>(*fitted);
+            const auto sources = named_slots(*source);
+            if (targets.size() != sources.size() || project.experiments.size() != source->experiments.size())
+                throw std::invalid_argument("The trial no longer names this project's parameters");
+            for (std::size_t i = 0; i < targets.size(); ++i) {
+                if (targets[i].unique_name != sources[i].unique_name)
+                    throw std::invalid_argument("The trial's parameter identities changed");
+                Parameter checked = *sources[i].parameter;
+                assign_value(checked, checked.value.get());
+            }
+            for (std::size_t i = 0; i < targets.size(); ++i) {
+                Parameter& to = *targets[i].parameter;
+                const Parameter& from = *sources[i].parameter;
+                to.value = from.value.get(); to.uncertainty = from.uncertainty.get();
+                to.free = from.free.get(); to.start_value = from.start_value.get();
+                to.start_uncertainty = from.start_uncertainty.get();
+            }
+            copy_fit_result(project, *source);
+        });
+    }
     // A background point's fixed position: one recorded assignment, which cannot fail.
     static Edit background_position(LineSegment& point, double position) {
         return Edit([&point, position] { point.position = position; });
