@@ -1123,7 +1123,7 @@
         "LiF [Fm-3m]"
       ],
       "origin": "Calculated reference",
-      "detail": "Cu Kα₁ FullProf reference · Monochromator correction refinement",
+      "detail": "Cu Kα doublet FullProf reference · Doublet ratio and absorption refinement",
       "values": {
         "sampleForm": [
           "powder"
@@ -1159,13 +1159,63 @@
       "searchAliases": [
         "pd-xray-cwl_lif_single",
         "LiF [Fm-3m] · Calculated reference",
-        "Cu Kα₁ FullProf reference · Monochromator correction refinement"
+        "Cu Kα doublet FullProf reference · Doublet ratio and absorption refinement"
       ],
       "sources": [
         "docs/user/cli/pd-xray-cwl_lif_single/project/project.edi",
         "docs/user/cli/pd-xray-cwl_lif_single/project/analysis/analysis.edi",
         "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
         "docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi"
+      ]
+    },
+    "pd-xray-cwl_pbso4-lab_round-robin": {
+      "samples": [
+        "PbSO₄ [Pnma]"
+      ],
+      "origin": "Laboratory X-ray",
+      "detail": "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "xray"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          ""
+        ],
+        "instruments": [
+          ""
+        ],
+        "dimensionality": [
+          "1D"
+        ],
+        "polarisation": [
+          "__not_applicable__"
+        ]
+      },
+      "searchAliases": [
+        "pd-xray-cwl_pbso4-lab_round-robin",
+        "PbSO₄ [Pnma] · Laboratory X-ray",
+        "Rietveld round-robin data · Kα doublet and Bérar-Baldinozzi asymmetry refinement"
+      ],
+      "sources": [
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/project.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/analysis/analysis.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+        "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi"
       ]
     },
     "pd-neut-tof_ferrite-austenite-beer_joint": {

@@ -711,3 +711,9 @@ Report.x_axis	other-public
 ReportModel	other-public
 ReportModel.from_json	other-public
 ReportModel.to_json	other-public
+CwlPdXrayInstrument.setup_wavelength_2	other-public
+CwlPdXrayInstrument.setup_wavelength_2_to_1_ratio	other-public
+LinkedStructure.weight_fraction	other-public
+WeightFraction	other-public
+WeightFraction.uncertainty	other-public
+WeightFraction.value	other-public

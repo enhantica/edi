@@ -101,8 +101,11 @@ nav:
           - dev/verification/pd-neut-tof_Si_jorgensen-von-dreele.ipynb
           - dev/verification/pd-neut-tof_Si_jorgensen.ipynb
           - dev/verification/pd-neut-tof_diamond_dream.ipynb
+          - dev/verification/pd-xray-cwl_LiF_doublet.ipynb
           - dev/verification/pd-xray-cwl_LiF_single.ipynb
+          - dev/verification/pd-xray-cwl_LiF_single_absorption.ipynb
           - dev/verification/pd-xray-cwl_LiF_single_polarization.ipynb
+          - dev/verification/pd-xray-cwl_PbSO4_round-robin.ipynb
   - User:
       - user/index.md
       - user/features.md
@@ -131,6 +134,7 @@ nav:
           - user/cli/pd-neut-tof_ceo2-pearl_polynomial/index.md
           - user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/index.md
           - user/cli/pd-xray-cwl_lif_single/index.md
+          - user/cli/pd-xray-cwl_pbso4-lab_round-robin/index.md
           - user/cli/pd-neut-cwl_y2o3_beta-adp/index.md
           - user/cli/pd-xray-cwl_latp_scan-4f/index.md
       - Guides:

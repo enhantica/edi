@@ -53,6 +53,7 @@
 #include "crysta/scattering.hpp"
 #include "crysta/structure_geometry.hpp"
 #include "crysta/symmetry.hpp"
+#include "crysta/weight_fraction.hpp"
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
 #include "edi/categories.hpp"
@@ -2731,7 +2732,7 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     // from a calculation, a fit and a save alike, so it is refused instead.
     require_peak_slots_fit_type(e);
     std::vector<crysta::Parameter> instrument;
-    instrument.reserve(6);
+    instrument.reserve(8);
     instrument.push_back(param(required(e.instrument.calib_twotheta_offset, "instrument.calib_twotheta_offset"), crysta::CALIBRATION,
                                "calib_twotheta_offset"));
     instrument.push_back(
@@ -2746,14 +2747,18 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
                                crysta::CALIBRATION, "calib_sample_displacement"));
     instrument.push_back(param(e.instrument.calib_sample_transparency.value_or(undeclared_shift),
                                crysta::CALIBRATION, "calib_sample_transparency"));
-    // An X-ray experiment's monochromator polarization at instrument[4]/[5], crysta's 6-wide X-ray
-    // layout; absent takes the loader's default 0 under the same no-uncertainty rule. A neutron
-    // experiment stays 4-wide, as crysta's loader builds it.
+    // An X-ray experiment's monochromator polarization at instrument[4]/[5] and its K-alpha doublet
+    // at [6]/[7], crysta's 8-wide X-ray layout; absent takes the loader's default 0 under the same
+    // no-uncertainty rule. A neutron experiment stays 4-wide, as crysta's loader builds it.
     if (e.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY) {
         instrument.push_back(param(e.instrument.setup_polarization_coefficient.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_polarization_coefficient"));
         instrument.push_back(param(e.instrument.setup_monochromator_twotheta.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_monochromator_twotheta"));
+        instrument.push_back(param(e.instrument.setup_wavelength_2.value_or(undeclared_shift),
+                                   crysta::CALIBRATION, "setup_wavelength_2"));
+        instrument.push_back(param(e.instrument.setup_wavelength_2_to_1_ratio.value_or(undeclared_shift),
+                                   crysta::CALIBRATION, "setup_wavelength_2_to_1_ratio"));
     }
     std::vector<crysta::LineSegment> background;
     background.reserve(e.background.size());
@@ -2774,7 +2779,8 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
 }
 
-// The ONE admission rule for the X-ray monochromator polarization on an experiment that is not
+// The ONE admission rule for the X-ray monochromator polarization and K-alpha doublet on an experiment
+// that is not
 // X-ray CW (a view over another family's experiment, or X-ray state whose radiation or beam mode
 // was changed after loading). A member that says nothing beyond crysta's
 // default (value 0, fixed, no uncertainty, no fit start) is the default every reader applies, so
@@ -2792,7 +2798,11 @@ void require_polarization_family(const ExperimentBase& e) {
          {std::pair<const char*, const OptionalParameter*>{
               "setup_polarization_coefficient", &e.instrument.setup_polarization_coefficient},
           std::pair<const char*, const OptionalParameter*>{
-              "setup_monochromator_twotheta", &e.instrument.setup_monochromator_twotheta}}) {
+              "setup_monochromator_twotheta", &e.instrument.setup_monochromator_twotheta},
+          std::pair<const char*, const OptionalParameter*>{"setup_wavelength_2",
+                                                           &e.instrument.setup_wavelength_2},
+          std::pair<const char*, const OptionalParameter*>{
+              "setup_wavelength_2_to_1_ratio", &e.instrument.setup_wavelength_2_to_1_ratio}}) {
         if (!*slot) {
             continue;
         }
@@ -2801,9 +2811,10 @@ void require_polarization_family(const ExperimentBase& e) {
             throw std::invalid_argument(
                 "experiment '" + e.name + "' carries _instrument." + name +
                 (p.free ? " (free)" : "") +
-                " but is not an X-ray constant-wavelength experiment — the monochromator "
-                "polarization is X-ray CW only: reset it to 0 and fixed, or "
-                "declare the experiment X-ray CW");
+                " but is not an X-ray constant-wavelength experiment — the " +
+                (std::string(name).starts_with("setup_wavelength_2") ? "K-alpha doublet"
+                                                                     : "monochromator polarization") +
+                " is X-ray CW only: reset it to 0 and fixed, or declare the experiment X-ray CW");
         }
     }
 }
@@ -3241,6 +3252,49 @@ RelationProject relation_project(const Project& model) {
     fill_crysta_relations(model, *converted.project);
     return converted;
 }
+
+}  // namespace
+
+std::optional<WeightFraction> weight_fraction(const LinkedStructure& link) {
+    const detail::Membership* membership = link.row.record();
+    const detail::KeyedBase* owner = membership != nullptr ? membership->owner : nullptr;
+    const Project* model = owner != nullptr ? owner->host() : nullptr;
+    if (model == nullptr) {
+        return std::nullopt;
+    }
+    std::size_t index = 0;
+    bool found = false;
+    for (const auto& item : model->experiments) {
+        if (static_cast<const detail::KeyedBase*>(&item->linked_structures) == owner) {
+            found = true;
+            break;
+        }
+        ++index;
+    }
+    if (!found) {
+        return std::nullopt;
+    }
+    RelationProject converted = relation_project(*model);
+    // The correlations between scales the last fit stored, by the unique names crysta resolves.
+    std::vector<crysta::FitParameterCorrelation> rows;
+    for (const auto& row : model->fit_result.correlations) {
+        crysta::FitParameterCorrelation& copy = rows.emplace_back();
+        copy.id = row->id.value();
+        copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+        copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+        copy.correlation = row->correlation.value();
+        copy.file_path = row->file_path.value();
+    }
+    converted.project->fit_result.correlations.assign(rows);
+    const std::optional<crysta::WeightFraction> fraction = crysta::weight_fraction(
+        *converted.project, converted.project->experiments[index], link.structure_id.value());
+    if (!fraction) {
+        return std::nullopt;
+    }
+    return WeightFraction{fraction->value, fraction->uncertainty};
+}
+
+namespace {
 
 enum class Completion : std::uint8_t { Values, ValuesAndUncertainties };
 

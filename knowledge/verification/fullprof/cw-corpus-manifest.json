@@ -81,6 +81,13 @@
       "y2o3_isotropic_adp.prf": "sha256:7b70793eb5b3556de446371b98876c62dfff5775dc5d8e41ef80ac5eca82b2f5",
       "y2o3_isotropic_adp.sum": "sha256:721fea6c55fd689ffb0fddfdc489bc5f122305a8db701b2ea9904e2ead91f582"
     },
+    "pd-xray-cwl_lif_doublet": {
+      "lif_doublet_unpolarized.bac": "sha256:8cb78794ae7705e8212fe3dfb4cada8b85181431bfe8e6fa7a6080f7c195561e",
+      "lif_doublet_unpolarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_doublet_unpolarized.pcr": "sha256:3606d681cce449694c0964282286eb35c049228bd855496c24ea76a9729e0f04",
+      "lif_doublet_unpolarized.prf": "sha256:730a1b1f159bc351dcb48c7ed3aff13b809971e409cd1267b4f622a579d63a5c",
+      "lif_doublet_unpolarized.sum": "sha256:6c1782aa6a32034b483bed195876e607589d49772a34e1f63a9029708b375006"
+    },
     "pd-xray-cwl_lif_single": {
       "lif_single_unpolarized.bac": "sha256:a4d4499e76435e7c57d1b868374809bba5492d5b522e3e982572560104c1c10d",
       "lif_single_unpolarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
@@ -88,12 +95,26 @@
       "lif_single_unpolarized.prf": "sha256:a8bb9b01ffe9b7a7cf66e875f1b1fd152cbbe2ff861b2fcd36c166059e447103",
       "lif_single_unpolarized.sum": "sha256:14edb1a0ef4b45816d46f5e927a1b801f96ce007bc6077a79b762aa193098121"
     },
+    "pd-xray-cwl_lif_single-absorption": {
+      "lif_single_absorption.bac": "sha256:9de1c5f5c110ee85ddce094f66e657c2b352f3dd8742daa936ab1dfb5abde6f0",
+      "lif_single_absorption.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+      "lif_single_absorption.pcr": "sha256:b5b183b0fb8123453bbe13246ddbb22aad335361866cd0f57cf2c3099365e7c0",
+      "lif_single_absorption.prf": "sha256:3d5cea5e4e181e68481ffcdafae9191fa89e8bd5994a4e56470b02fb6492b7e4",
+      "lif_single_absorption.sum": "sha256:979cf26e51652b0b548109496de5901a10e2d293867b58f57d268e6196d993b8"
+    },
     "pd-xray-cwl_lif_single-polarization": {
       "lif_single_polarized.bac": "sha256:423eabac3ebd8ea65c5761f79594adc82fc79ba24c7b63313292ac8c76b974c2",
       "lif_single_polarized.dat": "sha256:06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
       "lif_single_polarized.pcr": "sha256:ee0ccb367617e839ddfc2ae6c3a9904e1daba03e2d0cb8aab7c95233ae5bde4f",
       "lif_single_polarized.prf": "sha256:1b1186880704ddbdae5b6e39b0444bdb177d9b5c13ad99dd0b7f5463d1b7d849",
       "lif_single_polarized.sum": "sha256:d2b25204f6853cab5bc2b64fc931595f0b8803e8ae0f73383fd91937434a3e67"
+    },
+    "pd-xray-cwl_pbso4-lab_round-robin": {
+      "pbsox.bac": "sha256:d3b8a079bdc75063650ee7365dbd6c47a6c5bda85e15a28125ebba9115ae138d",
+      "pbsox.dat": "sha256:ee2d5d38e9d44f68734605360b6fe1f40b3a5492cd839ad9db8617b9a30ae143",
+      "pbsox.pcr": "sha256:08036035bd6025c64db57d58ceccd95cbb85ad2cc9c69484ee8db2ec9e2f4c84",
+      "pbsox.prf": "sha256:8e46b904360a9d1bd61d39c093cf3a06ef53a37354e37b599289901950ffc0d5",
+      "pbsox.sum": "sha256:b904aa92dfd24f2474ccf3984885f404891285e102735c81b999aaa4ebc6660e"
     }
   },
   "corpus_root": "docs/docs/verification",

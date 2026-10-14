@@ -1265,6 +1265,20 @@
           "items": [
             "setup_monochromator_twotheta"
           ]
+        },
+        {
+          "member": "InstrumentBase::setup_wavelength_2",
+          "type": "OptionalParameter",
+          "items": [
+            "setup_wavelength_2"
+          ]
+        },
+        {
+          "member": "InstrumentBase::setup_wavelength_2_to_1_ratio",
+          "type": "OptionalParameter",
+          "items": [
+            "setup_wavelength_2_to_1_ratio"
+          ]
         }
       ],
       "owner": "InstrumentBase",
@@ -3444,6 +3458,16 @@
       "category": "_instrument"
     },
     {
+      "member": "InstrumentBase::setup_wavelength_2",
+      "type": "OptionalParameter",
+      "category": "_instrument"
+    },
+    {
+      "member": "InstrumentBase::setup_wavelength_2_to_1_ratio",
+      "type": "OptionalParameter",
+      "category": "_instrument"
+    },
+    {
       "member": "InstrumentBase::row",
       "type": "detail::RowLink",
       "part": "the row's link to its collection"
@@ -4186,6 +4210,16 @@
       "member": "FitResultBase::structure_factor_evaluations",
       "type": "std::uint64_t",
       "not_storage": "a fit report"
+    },
+    {
+      "member": "WeightFraction::value",
+      "type": "double",
+      "not_storage": "a linked structure's weight fraction, derived from the model on each read"
+    },
+    {
+      "member": "WeightFraction::uncertainty",
+      "type": "std::optional<double>",
+      "not_storage": "a linked structure's weight fraction, derived from the model on each read"
     },
     {
       "member": "ProjectMetadata::name",

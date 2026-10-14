@@ -21,6 +21,8 @@ Grid {
     property string prefix: ""
     property int maxColumns: 5
     property bool fillRows: false
+    // A field's label in place of its symbol, by `.edi` item name (the instrument's "Wavelength 1").
+    property var labels: ({})
 
     readonly property int fieldCount: fields ? fields.usedCount : 0
 
@@ -36,7 +38,7 @@ Grid {
             objectName: `${grid.prefix}.${model.name}`
             item: model.parameter
             visible: model.usedByProfile
-            label: model.shortName
+            label: grid.labels[model.name] ?? model.shortName
             width: (EaStyle.Sizes.sideBarContentWidth - (grid.columns - 1) * grid.columnSpacing) / grid.columns
         }
     }

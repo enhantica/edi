@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from tests.fixtures.phase_factors.reference import axial_profiles
+from tests.fixtures.xray_doublet import phase_membership as doublet_phase
 from tests.integration.py.test_anisotropic_adps import loop_rows
 from tests.system.py.test_latest_fit_uncertainty import ENGINE, vehicle
 from tests.system.py.test_powder_r_factors import profile_checks, record, scan_template_background
@@ -274,3 +275,141 @@ def test_phase_and_profile_results_follow_reload_and_changed_free_set_refit(tmp_
     assert loop_rows(latest, '_fit_result_phase') != loop_rows(text, '_fit_result_phase'), (
         'The new observations must replace the saved phase results as the latest fit'
     )
+
+
+@pytest.mark.parametrize('case', doublet_phase.CASES)
+@pytest.mark.parametrize('reverse', [False, True], ids=['increasing', 'decreasing'])
+@pytest.mark.parametrize(
+    ('entry', 'selection'),
+    [
+        ('direct', 'all'),
+        ('direct', 'excluded'),
+        ('direct', 'zero-sigma'),
+        ('direct', 'negative-sigma'),
+        ('analysis', 'all'),
+        ('analysis', 'excluded'),
+        ('analysis', 'zero-sigma'),
+        ('analysis', 'negative-sigma'),
+        ('joint-direct', 'all'),
+        ('joint-direct', 'excluded'),
+        ('joint-direct', 'zero-sigma'),
+        ('joint-direct', 'negative-sigma'),
+        ('joint-analysis', 'all'),
+        ('joint-analysis', 'excluded'),
+        ('joint-analysis', 'zero-sigma'),
+        ('joint-analysis', 'negative-sigma'),
+        ('sequential', 'all'),
+        ('sequential', 'excluded'),
+        ('independent', 'all'),
+        ('independent', 'excluded'),
+    ],
+)
+def test_doublet_phase_membership_and_orbit_share_survive_fit_and_reload(  # noqa: PLR0912, PLR0914, PLR0915
+    tmp_path, case, reverse, selection, entry
+):
+    root = tmp_path / 'input'
+    mode = (
+        'joint'
+        if entry.startswith('joint')
+        else entry
+        if entry in {'sequential', 'independent'}
+        else 'single'
+    )
+    grid, positions, eligible = doublet_phase.write(root, case, reverse, mode)
+    project = ENGINE.Project.load(root)
+    project.analysis.calculate()
+    calculated = np.asarray(project.experiments[0].data.intensity_calc).copy()
+    if case in doublet_phase.BOUNDARY_CASES:
+        assert np.all(calculated > 0), 'The boundary witness must paint a real positive tail'
+        assert eligible == (case == 'shifted-centre'), (
+            'Strict Bragg reachability must reject equality and beyond-limit lines, '
+            'while the authored reachable shifted centre is inside the high-angle window'
+        )
+    multiplier = np.full_like(grid, 1.2)
+    if case == 'both-unequal':
+        multiplier[grid > sum(positions) / 2] = 0.8
+    used = np.ones(len(grid), dtype=bool)
+    if selection != 'all':
+        used[::7] = False
+        used[[0, -1]] = True
+    sigma = np.ones_like(grid)
+    if selection.endswith('sigma'):
+        sigma[~used] = 0 if selection == 'zero-sigma' else -2
+    observed = calculated * multiplier
+    observed[~used] = 1e9
+    for bank in project.experiments:
+        path = root / f'experiments/{bank.name}.edi'
+        header = (
+            path.read_text().split('_data.intensity_meas_su\n', 1)[0] + '_data.intensity_meas_su\n'
+        )
+        text = header + doublet_phase.rows(grid, observed, sigma)
+        if selection == 'excluded':
+            text += 'loop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n'
+            text += ''.join(
+                f'{i} {x - 1e-7:.17g} {x + 1e-7:.17g}\n'
+                for i, x in enumerate(grid[~used], start=1)
+            )
+        path.write_text(text)
+    if mode in {'sequential', 'independent'}:
+        scan = root / 'experiments/scan'
+        scan.mkdir(exist_ok=True)
+        for index in range(3):
+            scan_observed = observed if index == 1 else calculated * (0.9 if index == 0 else 1.4)
+            (scan / f'{index}.dat').write_text(
+                'XYDATA\n' + doublet_phase.rows(grid, scan_observed, sigma)
+            )
+    refusal = None
+    try:
+        project = ENGINE.Project.load(root)
+        call = (
+            project.fit
+            if entry == 'direct'
+            else project.fit_joint
+            if entry == 'joint-direct'
+            else project.analysis.fit
+        )
+        result = call()
+    except ValueError as error:
+        refusal = str(error)
+    if refusal is not None:
+        assert selection.endswith('sigma'), 'Positive-sigma doublet fits must reach phase quality'
+        assert re.search(r'(?i)sigma|intensity_meas_su|uncertaint', refusal), (
+            'Only an explicit invalid-sigma refusal may replace used-point quality evaluation'
+        )
+        return
+    assert result is not None, 'Every admitted fit path must return its phase-quality record'
+    saved = tmp_path / 'saved'
+    project.save_as(saved)
+    loaded = ENGINE.Project.load(saved)
+    loaded.save_as(tmp_path / 'copied')
+    expected = (0.0, 0.0)
+    if eligible:
+        share = 1.2
+        if case == 'both-unequal':
+            profiles = doublet_phase.component_weights(grid, positions)
+            total = profiles[0] + profiles[1]
+            share = np.sum(total[used] * multiplier[used]) / np.sum(total[used])
+        expected = (abs(share - 1) / share, abs(math.sqrt(share) - 1) / math.sqrt(share))
+    for destination in (saved, tmp_path / 'copied'):
+        phase_rows = loop_rows(
+            (destination / 'analysis/analysis.edi').read_text(), '_fit_result_phase'
+        )
+        expected_keys = {(bank.name, 'phase') for bank in project.experiments}
+        assert {
+            (row['_fit_result_phase.experiment_id'], row['_fit_result_phase.structure_id'])
+            for row in phase_rows
+        } == expected_keys, 'Doublet quality must retain every phase/bank key on disk'
+        actual = [
+            (
+                float(row['_fit_result_phase.bragg_r_factor']),
+                float(row['_fit_result_phase.f_r_factor']),
+            )
+            for row in phase_rows
+        ]
+        assert all(pair == pytest.approx(expected, rel=2e-11, abs=2e-13) for pair in actual), (
+            'Phase Bragg and F factors must count either centred active line as one orbit, '
+            'use only admitted rows, '
+            'exclude outside tails and inactive lines, '
+            'and preserve the closed-form shares on reload: '
+            f'{actual} vs {expected}'
+        )

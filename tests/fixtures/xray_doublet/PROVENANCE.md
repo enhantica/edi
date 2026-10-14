@@ -1,0 +1,118 @@
+# Independent X-ray references
+
+`generate.py` reads committed external files only. It does not import either product.
+`manifest.json` records revisions and byte digests. The LiF `.prf`, `.sum`, `.pcr`,
+`.dat` and `.bac` files are the original FullProf results distributed by
+[diffraction-lib](https://github.com/easyscience/diffraction-lib/tree/0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf/docs/docs/verification/fullprof/pd-xray-cwl_lif).
+The profile is column 3 between BEGIN and END in each `.prf`. The authored
+model carries the FullProf scale 0.01 directly. The polarized LiF example
+uses a different normalization; that factor of two does not apply here.
+
+The ionic coefficient references are Waasmaier & Kirfel, Acta Cryst. A51 (1995),
+416–431, [DOI](https://doi.org/10.1107/S0108767394013292), from DABAX as distributed
+by periodictable, and International Tables for Crystallography C (1992),
+Table 6.1.1.4, pp. 500–502, from cctbx's independent transcription. The O2- entry
+in that transcription cites Hovestreydt, Acta Cryst. A39 (1983), 268–269.
+`published-f0.json` preserves all coefficients, including ions; evaluation uses
+the published sum of Gaussians at sin(theta)/lambda, in inverse Angstroms.
+
+Weight fractions use [Hill & Howard (1987)](https://doi.org/10.1107/S0021889887086199):
+`w_p = S_p Z_p M_p V_p / sum(S Z M V)`. The authored phases contain the same
+element, so its atomic mass cancels. Occupancies and atom counts independently
+set the ratio of cell masses; unequal cell volumes and scales prevent a scale-only
+normalisation from passing. Independent scale uncertainties propagate through
+the analytic derivatives of this quotient.
+
+To reproduce: `python generate.py /path/to/diffraction-lib /path/to/libraries`.
+
+The new public instrument members follow `setup_wavelength`:
+`setup_wavelength_2` and `setup_wavelength_2_to_1_ratio`, with matching
+`_instrument` tokens. The ratio participates in the existing free-parameter walk.
+The derived phase result uses `_linked_structure.weight_fraction` and a
+`weight_fraction` member carrying `value` and `uncertainty`, beside `scale`.
+The application displays it read-only. These names make the cross-repo seam
+reviewable before implementation.
+
+The PbSO4 round-robin files come from the same diffraction-lib revision,
+`docs/docs/verification/fullprof/pd-xray-cwl_pbso4_round-robin/pbsox.*`.
+FullProf's Npr 7 + BeBa shape has no exact map to the supported Caglioti
+pseudo-Voigt + BeBa. The executable page fits widths, mixing and the four
+coefficients from the issue-166 start and labels its bounds as regression
+pins. Its file is added, but it does not count toward diffraction-lib parity.
+Only the two LiF additions move that counter.
+
+Fit anchoring uses Bragg's law, `2 theta = 2 asin(lambda / (2 d))`.
+Jointly dilating a cell and its free wavelength leaves that line's positions
+unchanged. A participating fixed positive second wavelength instead has
+`d(2 theta)/d d = -lambda / (d^2 sqrt(1 - (lambda/(2 d))^2))`, which is nonzero.
+The authored graph table therefore admits exactly components connected to an
+active fixed second line; unrelated components, disabled bridges and inactive
+banks carry no anchor. Both free wavelengths retain the dilation null direction.
+The two wavelengths and nonzero ratio are authored inputs, never fit output.
+
+The correlated Hill-Howard witness uses the same independently specified masses,
+volumes and free scales, with stored coefficients `rho = 0.625` and `rho = -0.375`.
+For `q_i = Z_i M_i V_i` and `D = S_0 q_0 + S_1 q_1`, the first fraction has
+`g_0 = q_0 q_1 S_1 / D^2`, `g_1 = -q_0 q_1 S_0 / D^2` and
+`variance = g_0^2 sigma_0^2 + g_1^2 sigma_1^2 + 2 g_0 g_1 rho sigma_0 sigma_1`.
+The second fraction has the negative gradient and the same variance. The signed
+cross term is checked in memory and after saving and reopening the stored loop;
+no engine covariance or fit output supplies the expected value.
+
+Relation-aware admission uses the same Bragg law and independently authored
+relation derivatives. For `a(t)=a*t`, the angular response is
+`d(2 theta)/dt = (d lambda/dt - lambda)/(a*sqrt(1-(lambda/(2*a))^2))` at `t=1`.
+`line2=1.05*line1` has derivative 1.05; its reciprocal has derivative 1/1.05.
+Both participating wavelengths therefore co-dilate with the free master and
+have zero Bragg response, even though a dependent target has a nonfree flag.
+Constant wavelengths and wavelengths following the fixed atom ADP have zero
+wavelength response and a nonzero Bragg response; they remain genuine anchors.
+The fixed ADP is independently declared zero and fixed in the existing input.
+
+The ratio references use enabled constant values 0.375 and 0, and a disabled
+constant relation. Effective participation comes from that declaration, not
+from a prior stored ratio. Cold admission is checked before calculation,
+then again after calculation and after save/reopen. The complete original
+ordinary fixed/free/inactive/foreign-component matrix remains unchanged.
+The symbolic cases include single, shared-structure and connected multiphase
+models, with the anchor in the other bank and reversed bank ordering.
+
+At a zero effective ratio the superposition derivative is
+`dy/dt = dy1/dt + ratio_prime*y2`; the term `ratio*y2_prime` vanishes.
+The authored first line co-dilates with its cubic cell, so its Bragg response is
+zero. Relations `ratio=0.25*(line1-1.54)` and `ratio=0.25*(active_a-2.2)`
+instead have positive slopes 0.385 and 0.55 and paint a first-order second-line
+signal. A two-relation wavelength chain checks dependency propagation.
+Constant, disabled and squared stationary relations have zero ratio slope.
+An independently free second wavelength can cancel either driving term while
+its own motion is unobservable at ratio zero. Declaring a relation alone is
+therefore not an anchor; independent free-ratio and compensating controls refuse.
+
+Phase participation is independently authored from enabled links, as in the
+phase-plan contract: a retained unlinked or entirely disabled cell has no solved
+column, even when its stored free flag is true. Its scalar relation into a
+participating second wavelength has zero trial slope. The source phase is also
+tested active in the same bank, active in another unanchored component, and
+active in another bank with a fixed first wavelength. Active cells can co-dilate;
+the fixed bank forbids that move and transmits the anchor through the relation.
+All cases cover cold, calculated and reopened models and both public fit routes.
+
+Trial-domain cases use independently authored relations and physical domains.
+For a solved coordinate `x=0.4`, `ratio=4*x` is 1.6 and outside [0,1];
+`x=0.1` instead gives 0.4 and must recover after a rejected trial.
+The same projection witness drives the polarization fraction, monochromator
+angle, March ratio/fraction, both finite line shifts and TOF calibration.
+For TOF, `Dtt1=10000*(0.5-x)`, grid [5000,8000] and
+`alpha(d)=-0.4+1/d`: the bad coordinate gives d in [5,8] and a negative
+endpoint rate, while the valid coordinate gives [1.25,2] and positive rates.
+The shift expressions overflow at the bad point but remain finite at the
+initial and valid coordinates. Domains are analytic expectations, not snapshots.
+
+Symmetry followers use independently transcribed cctbx affine projector rows
+for Hall settings `P 2 2 3` (195:e, x=y=z) and `-P 3 2"` (164:i, x=-y).
+A relation reading y must see the image of the proposed positional basic,
+including its negative sign, rather than the stored coordinate. Scalar-source,
+fixed-coordinate and chained-source controls distinguish the representation seam.
+Profiles and Jacobians used to construct moving-fit observations are drive-only
+regression inputs. Their role is to request a step across the declared domain;
+no profile, derivative or fitted numerical value is an accuracy expectation.

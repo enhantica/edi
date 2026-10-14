@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// Pinned gui-components copy; edi terminology and units in the parameter menu (ADR-0029).
+// Pinned gui-components copy; edi terminology and units in the parameter menu (ADR-0029), and a read-only
+// value's s.u. (a derived one, such as a weight fraction).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -136,7 +137,7 @@ EaElements.TextInput {
                         text: qsTr("units")
                     }
                     EaElements.Label {
-                        visible: control.fittable && control.error !== ''
+                        visible: (control.fittable || control.readOnly) && control.error !== ''
                         color: EaStyle.Colors.themeForegroundMinor
                         text: qsTr("s.u.")
                     }
@@ -163,7 +164,7 @@ EaElements.TextInput {
                         color: EaStyle.Colors.themeForegroundMinor
                     }
                     EaElements.Label {
-                        visible: control.fittable && control.error !== ''
+                        visible: (control.fittable || control.readOnly) && control.error !== ''
                         text: control.error
                     }
                     EaElements.CheckBox {

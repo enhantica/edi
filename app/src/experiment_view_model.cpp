@@ -3,6 +3,9 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <iterator>
+#include <string>
+#include <vector>
 
 #include "edi/categories.hpp"
 #include "edi/io.hpp"
@@ -29,6 +32,26 @@ int peak_family(const std::string& name) {
     }
     return 3;
 }
+
+// The instrument fields in the sidebar's order (display only; the file and the parameter paths keep the
+// core's): the wavelengths first, then the corrections, so an X-ray CW group reads Wavelength, Wavelength 2,
+// Intensity ratio 2/1 on one row and 2θ offset, Polarization coefficient, Monochromator 2θ on the next.
+std::vector<edi::CategoryField> instrument_display_order(std::vector<edi::CategoryField> fields) {
+    static constexpr const char* order[] = {"setup_wavelength",
+                                            "setup_wavelength_2",
+                                            "setup_wavelength_2_to_1_ratio",
+                                            "calib_twotheta_offset",
+                                            "setup_polarization_coefficient",
+                                            "setup_monochromator_twotheta"};
+    const auto rank = [](const std::string& name) {
+        const auto* found = std::find(std::begin(order), std::end(order), name);
+        return static_cast<int>(found - std::begin(order));
+    };
+    std::stable_sort(fields.begin(), fields.end(), [&rank](const edi::CategoryField& a, const edi::CategoryField& b) {
+        return rank(a.name) < rank(b.name);
+    });
+    return fields;
+}
 }  // namespace
 
 ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
@@ -42,7 +65,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       absorption_type_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       categories_(new CategoryListModel(this)),
-      instrument_(new ParameterListModel([this] { return category("instrument").fields; }, registry, this)),
+      instrument_(new ParameterListModel([this] { return instrument_display_order(category("instrument").fields); },
+                                          registry, this)),
       peak_(new ParameterListModel([this] { return category("peak").fields; }, registry, this)),
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),

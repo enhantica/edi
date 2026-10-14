@@ -645,11 +645,14 @@ const std::set<std::string>& known_covered_tags() {
         "_instrument.calib_sample_displacement", "_instrument.calib_sample_transparency",
         "_instrument.calib_twotheta_offset", "_instrument.setup_monochromator_twotheta",
         "_instrument.setup_polarization_coefficient", "_instrument.setup_twotheta_bank",
-        "_instrument.setup_wavelength",
+        "_instrument.setup_wavelength", "_instrument.setup_wavelength_2",
+        "_instrument.setup_wavelength_2_to_1_ratio",
         // _data_source (the plain-data file the measured data was read from)
         "_data_source.file_name",
         // _linked_structure
         "_linked_structure.enabled", "_linked_structure.scale", "_linked_structure.structure_id",
+        // The derived Hill-Howard weight fraction crysta's writer adds: never read back.
+        "_linked_structure.weight_fraction",
         // _preferred_orientation (diffraction-lib's category, CW only)
         "_preferred_orientation.index_h", "_preferred_orientation.index_k",
         "_preferred_orientation.index_l", "_preferred_orientation.march_r",
@@ -969,12 +972,13 @@ constexpr std::array<const char*, 19> kTofFamilyTags{{
     "_instrument.calib_d_to_tof_offset", "_instrument.calib_d_to_tof_linear",
     "_instrument.calib_d_to_tof_quadratic", "_instrument.calib_d_to_tof_reciprocal",
 }};
-constexpr std::array<const char*, 13> kCwlFamilyTags{{
+constexpr std::array<const char*, 15> kCwlFamilyTags{{
     "_peak.broad_gauss_u", "_peak.broad_gauss_v", "_peak.broad_gauss_w", "_peak.broad_lorentz_x",
     "_peak.broad_lorentz_y", "_peak.mixing_eta_0", "_peak.mixing_eta_1",
     "_instrument.setup_wavelength", "_instrument.calib_twotheta_offset",
     "_instrument.calib_sample_displacement", "_instrument.calib_sample_transparency",
     "_instrument.setup_polarization_coefficient", "_instrument.setup_monochromator_twotheta",
+    "_instrument.setup_wavelength_2", "_instrument.setup_wavelength_2_to_1_ratio",
 }};
 
 const char* family_name(BeamModeEnum mode) {
@@ -1531,18 +1535,25 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         // loader refuses it.
         const bool xray =
             experiment.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+        // The K-alpha doublet's pair follows the same rule.
         for (const auto& [slot, polarization_spec] :
              {std::pair{&experiment.instrument.setup_polarization_coefficient,
                         &spec::instrument_polarization_coefficient},
               std::pair{&experiment.instrument.setup_monochromator_twotheta,
-                        &spec::instrument_monochromator_twotheta}}) {
+                        &spec::instrument_monochromator_twotheta},
+              std::pair{&experiment.instrument.setup_wavelength_2, &spec::instrument_wavelength_2},
+              std::pair{&experiment.instrument.setup_wavelength_2_to_1_ratio,
+                        &spec::instrument_wavelength_2_to_1_ratio}}) {
             std::optional<Parameter> found = find_spec_parameter(block, *polarization_spec, where);
             if (!xray) {
                 if (found) {
+                    const bool doublet = polarization_spec == &spec::instrument_wavelength_2 ||
+                                         polarization_spec == &spec::instrument_wavelength_2_to_1_ratio;
                     fail_schema(where, "xray-instrument-on-non-xray",
                                 std::string(polarization_spec->edi_names[0]) +
-                                    " is declared on a non-X-ray experiment — the monochromator "
-                                    "polarization is X-ray only");
+                                    " is declared on a non-X-ray experiment — the " +
+                                    (doublet ? "K-alpha doublet" : "monochromator polarization") +
+                                    " is X-ray only");
                 }
                 continue;
             }
@@ -1574,6 +1585,26 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                 fail_domain(where, "polarization-domain",
                             "_instrument.setup_monochromator_twotheta is " + shown(monochromator) +
                                 ", outside its domain [0, 180] degrees");
+            }
+            // The doublet's domain, in crysta's words: the ratio in [0, 1], the second wavelength
+            // finite and not negative, and positive whenever the ratio is not 0.
+            const double wavelength_2 = experiment.instrument.setup_wavelength_2->value;
+            const double ratio = experiment.instrument.setup_wavelength_2_to_1_ratio->value;
+            if (!(ratio >= 0.0 && ratio <= 1.0)) {
+                fail_domain(where, "doublet-domain",
+                            "_instrument.setup_wavelength_2_to_1_ratio is " + shown(ratio) +
+                                ", outside its domain [0, 1]");
+            }
+            if (!(wavelength_2 >= 0.0) || !std::isfinite(wavelength_2)) {
+                fail_domain(where, "doublet-domain",
+                            "_instrument.setup_wavelength_2 is " + shown(wavelength_2) +
+                                ", outside its domain [0, inf) angstroms");
+            }
+            if (ratio != 0.0 && wavelength_2 == 0.0) {
+                fail_domain(where, "doublet-domain",
+                            "_instrument.setup_wavelength_2_to_1_ratio is " + shown(ratio) +
+                                " but _instrument.setup_wavelength_2 is 0: a second component needs "
+                                "a wavelength");
             }
         }
     } else {
@@ -2165,14 +2196,17 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
                 instrument("setup_wavelength", &*experiment.instrument.setup_wavelength);
             }
             // Crysta's instrument[2]/[3], after the pair (its storage order);: then the X-ray
-            // polarization pair, its instrument[4]/[5].
+            // polarization pair, its instrument[4]/[5], and the K-alpha doublet, [6]/[7].
             for (const auto& [name, shift] :
                  {Named{"calib_sample_displacement", &experiment.instrument.calib_sample_displacement},
                   Named{"calib_sample_transparency", &experiment.instrument.calib_sample_transparency},
                   Named{"setup_polarization_coefficient",
                         &experiment.instrument.setup_polarization_coefficient},
                   Named{"setup_monochromator_twotheta",
-                        &experiment.instrument.setup_monochromator_twotheta}}) {
+                        &experiment.instrument.setup_monochromator_twotheta},
+                  Named{"setup_wavelength_2", &experiment.instrument.setup_wavelength_2},
+                  Named{"setup_wavelength_2_to_1_ratio",
+                        &experiment.instrument.setup_wavelength_2_to_1_ratio}}) {
                 if (*shift) {
                     instrument(name, &**shift);
                 }
@@ -2679,6 +2713,9 @@ const std::vector<CifExperimentItemRule>& experiment_cif_item_rules() {
         // The X-ray polarization pair, translated when present and never filled
         {"_instrument.setup_polarization_coefficient", {"_instr.polarization_coefficient"}},
         {"_instrument.setup_monochromator_twotheta", {"_instr.monochromator_twotheta"}},
+        // The K-alpha doublet pair, likewise
+        {"_instrument.setup_wavelength_2", {"_instr.wavelength_2"}},
+        {"_instrument.setup_wavelength_2_to_1_ratio", {"_instr.wavelength_2_to_1_ratio"}},
         // TOF instrument
         {"_instrument.setup_twotheta_bank", {"_instr.2theta_bank"}, "tof", "150.0"},
         {"_instrument.calib_d_to_tof_offset", {"_instr.d_to_tof_offset"}, "tof", "0.0"},
