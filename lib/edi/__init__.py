@@ -545,6 +545,9 @@ class Report:
     changes a setting.
     """
 
+    # A setting it does not have is refused: a misspelt option ignored in silence would leave the report as it was.
+    __slots__ = ('_project',)
+
     def __init__(self, project: Project) -> None:
         self._project = project
 
