@@ -964,7 +964,7 @@ from 10 to 19 (`iucr_19`, the default), or always two (`iucr_99`), and the value
 and s.u. cells, and the report, take both texts from one core function (`edi::su_text`, over crysta's), so the screen,
 the Text tab and the files agree. A value the cells write in scientific notation (at or above a million, or below 1e-4;
 the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard
-uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Appearance) only sets it for new
+uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Projects) only sets it for new
 projects (the owner, 2026-10-13).
 
 ## Consequences
