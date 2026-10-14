@@ -2,6 +2,7 @@
 import QtQuick
 import QtTest
 import QtQuick.Controls
+import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
@@ -48,9 +49,15 @@ Rectangle {
             return value;
         }
         function box(text) {
-            const values = Render.descendants(group()).filter(item => item.text === text && typeof item.checked === "boolean");
-            compare(values.length, 1, "Export has exactly one format or library checkbox labelled " + text);
-            return values[0];
+            const names = {
+                "HTML": "report.writesHtml",
+                "PDF": "report.writesPdf",
+                "CIF": "report.writesCif",
+                "Embed the chart libraries": "report.embedLibraries"
+            };
+            const value = findChild(group(), names[text] || "");
+            verify(value !== null && typeof value.checked === "boolean", "Export exposes its actual format or library checkbox " + (names[text] || text));
+            return value;
         }
         function setChecked(value, checked) {
             if (value.checked === checked)
@@ -73,6 +80,87 @@ Rectangle {
         }
         function reportName(extension) {
             return "reports/" + Session.project.name + "." + extension;
+        }
+        function pathField(format) {
+            const fields = Render.descendants(group()).filter(item => item.readOnly === true && item.placeholderText !== undefined && item.text !== undefined);
+            compare(fields.length, 3, "Export has one actual read-only path control per HTML, PDF and CIF row; actual controls=" + fields.length);
+            const checkbox = box(format.toUpperCase());
+            const targetY = checkbox.mapToItem(group(), 0, checkbox.height / 2).y;
+            fields.sort((a, b) => Math.abs(a.mapToItem(group(), 0, a.height / 2).y - targetY) - Math.abs(b.mapToItem(group(), 0, b.height / 2).y - targetY));
+            const field = fields[0], point = field.mapToItem(group(), 0, field.height / 2);
+            verify(Math.abs(point.y - targetY) <= Math.max(field.height, checkbox.height) / 2, "Each report path is on its own format's checkbox row: " + format + " actual y=" + point.y + " checkbox y=" + targetY);
+            verify(point.x >= checkbox.mapToItem(group(), checkbox.width, 0).x - 1, "Each format's read-only path follows its checkbox: " + format);
+            return field;
+        }
+        function pathIsRed(format) {
+            return String(pathField(format).color) === String(EaStyle.Colors.red);
+        }
+        function effectiveOpacity(item) {
+            let value = 1;
+            while (item && item !== page) {
+                value *= item.opacity;
+                item = item.parent;
+            }
+            return value;
+        }
+        function test_export_path_rows_show_the_saved_file_state_data() {
+            return ["not-saved", "current", "out-of-date", "missing", "unticked"].map(state => ({tag: state, state: state}));
+        }
+        function test_export_path_rows_show_the_saved_file_state(data) {
+            prepare(undefined, "tests/fixtures/report_options/pairs");
+            Session.project.report.setIncluded("charts", false);
+            const html = pathField("html"), pdf = pathField("pdf"), cif = pathField("cif");
+            for (const field of [html, pdf, cif]) {
+                compare(String(field.text), "", "Before the first explicit Save report each format path is empty");
+                verify(/not saved yet/i.test(field.placeholderText), "Before the first report save the path control says not saved yet; actual=" + field.placeholderText);
+                const colour = field.placeholderTextColor;
+                verify(colour !== undefined && Math.max(colour.r, colour.g, colour.b) - Math.min(colour.r, colour.g, colour.b) < 0.03, "The never-saved placeholder is neutral grey; actual=" + colour);
+            }
+            if (data.state === "not-saved")
+                return;
+            setChecked(box("PDF"), true);
+            saveReport();
+            tryVerify(() => ["html", "pdf"].every(format => SettingsProof.fileFacts(location, reportName(format)).bytes > 100), 15000, "The state gate writes and observes actual HTML and PDF outputs");
+            for (const format of ["html", "pdf"]) {
+                const field = pathField(format);
+                compare(String(field.text), reportName(format), "A saved format shows its exact relative reports/project-name path: " + format);
+                compare(String(field.color), String(EaStyle.Colors.themeForeground), "A current report path uses the normal text colour: " + format + " actual=" + field.color);
+                const row = Session.project.report.savedReports.find(value => value.format === format);
+                verify(row !== undefined && row.saved.length > 0 && String(field.ToolTip.text).includes(row.saved), "The path tooltip shows that actual saved-file record's time: " + format + " actual=" + field.ToolTip.text);
+                const before = String(field.text);
+                field.forceActiveFocus();
+                keyClick(Qt.Key_End);
+                keyClick(Qt.Key_X);
+                compare(String(field.text), before, "Actual keyboard input cannot edit the read-only report path: " + format);
+            }
+            const checkedOpacity = effectiveOpacity(html), checkedColour = String(html.color);
+            if (data.state === "out-of-date") {
+                Session.project.title = "Independently changed after saving both reports";
+                tryVerify(() => ["html", "pdf"].every(pathIsRed), 2000, "Changing project content makes both actual saved report paths red before project Save");
+                verify(Session.save(), "The edited content saves without regenerating its reports");
+            } else if (data.state === "missing") {
+                verify(SettingsProof.remove(location, reportName("html")), "The missing-output witness deletes the real saved HTML file");
+            } else if (data.state === "unticked") {
+                setChecked(box("HTML"), false);
+                verify(effectiveOpacity(html) < checkedOpacity || String(html.color) !== checkedColour, "Unticking a saved format visibly dims its read-only path; checked opacity=" + checkedOpacity + " actual=" + effectiveOpacity(html) + " colour=" + html.color);
+                verify(SettingsProof.fileFacts(location, reportName("html")).bytes > 100, "Unticking the format retains its actual saved output");
+                return;
+            } else {
+                return;
+            }
+            page.destroy();
+            page = null;
+            Session.closeProject();
+            verify(Session.openProject(location), "The stale or missing saved report is reopened from its real project folder");
+            tryCompare(Session.project, "calculating", false, 15000, "Reopening settles before reading the saved report path state");
+            page = pageFactory.createObject(parent, {width: 1300, height: 1000, current: true});
+            verify(page !== null && waitForPolish(page), "The reopened Report page constructs its actual path rows");
+            tryVerify(() => pathIsRed("html"), 2000, "The reopened stale or missing HTML report keeps its relative path and red state");
+            compare(String(pathField("html").text), reportName("html"), "A missing or stale output retains the saved path rather than deleting its row");
+            if (data.state === "missing")
+                compare(String(pathField("pdf").color), String(EaStyle.Colors.themeForeground), "Removing HTML leaves the actual existing PDF current");
+            saveReport();
+            tryVerify(() => ["html", "pdf"].every(format => String(pathField(format).color) === String(EaStyle.Colors.themeForeground)), 15000, "Save report rewrites missing or stale files and returns both path rows to normal text");
         }
         function evolutionWitness(included) {
             prepare(undefined, "tests/fixtures/report_evolution/project");
@@ -283,8 +371,12 @@ Rectangle {
             compare(cif.checked, false, "I34 absent formats leave CIF unticked");
             compare(cif.enabled, false, "I38 CIF is disabled until its writer task");
             verify(String(cif.ToolTip.text).includes("CIF"), "I38 the disabled CIF box explains its pending writer");
-            compare(html.parent, embed.parent, "I38 HTML and Embed occupy one checkbox row");
-            compare(pdf.parent, cif.parent, "I38 PDF and CIF occupy the next checkbox row");
+            // Before: two checkbox columns. After: one path row per format and its own Embed row.
+            const h = html.mapToItem(group(), 0, 0), p = pdf.mapToItem(group(), 0, 0), c = cif.mapToItem(group(), 0, 0), e = embed.mapToItem(group(), 0, 0);
+            verify(p.y > h.y && c.y > p.y, "Each export format has its own HTML, PDF, CIF row in that order");
+            verify(e.y > h.y && e.y < p.y, "Embed has its own unindented row immediately below HTML");
+            fuzzyCompare(e.x, h.x, 1, "The HTML Embed row is not indented relative to the format checkboxes");
+            verify(embed.width >= group().contentItem.width - 1 && embed.text.includes("HTML"), "Embed occupies a full-width row explicitly naming HTML");
             verify(html.mapToItem(group(), 0, 0).y < pdf.mapToItem(group(), 0, 0).y, "I38 the HTML row precedes the PDF row");
             setChecked(embed, true);
             setChecked(html, false);
@@ -434,8 +526,8 @@ Rectangle {
             compare(SettingsProof.fileFacts(destination, pdfName).sha256, oldPdf.sha256, "I35 Save as copies the original PDF without generating it");
             compare(SettingsProof.fileFacts(destination, htmlName).sha256, oldHtml.sha256, "I35 Save as copies the original HTML without generating it");
             compare(SettingsProof.text(location, "reports/report.edi"), oldRecord, "I35 Save as leaves the source report record untouched");
-            tryVerify(() => [pdfName, htmlName].every(name => Render.texts(group()).some(item => item.text.includes(name.split('/').pop()))), 2000, "I35 the new folder's Export list actually reaches both copied report rows");
-            verify(!Render.texts(group()).some(item => /out of date|missing/i.test(item.text)), "I35 both copied reports remain current after Save as changes only the path and metadata time");
+            tryVerify(() => ["pdf", "html"].every(format => String(pathField(format).text) === reportName(format)), 2000, "I35 the new folder's Export fields reach both copied report paths");
+            verify(["pdf", "html"].every(format => String(pathField(format).color) === String(EaStyle.Colors.themeForeground)), "I35 both copied report paths remain normal after Save as changes only the path and metadata time");
         }
         function checkHtmlGeometry(text) {
             const facts = SettingsProof.htmlFigureFacts(text);
@@ -482,18 +574,18 @@ Rectangle {
             tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "I37 staleness is exercised after a real report save");
             Session.project.title = "Changed unsaved report title";
             compare(Session.project.modified, true, "I37 the witness reaches an unsaved content change");
-            tryVerify(() => Render.texts(group()).some(item => /out of date/i.test(item.text)), 2000, "I37 the Export list marks a report stale before project Save");
+            tryVerify(() => pathIsRed("html"), 2000, "I37 the Export path turns red before project Save");
             verify(Session.save(), "I37 the changed project is persisted without regenerating reports");
             const original = location;
             Session.closeProject();
             verify(Session.openProject(original), "I37 the saved changed project reopens");
-            tryVerify(() => Render.texts(group()).some(item => /out of date/i.test(item.text)), 2000, "I37 the out-of-date mark survives reopening");
+            tryVerify(() => pathIsRed("html"), 2000, "I37 the out-of-date mark survives reopening");
             saveReport();
-            tryVerify(() => !Render.texts(group()).some(item => /out of date/i.test(item.text)), 2000, "I37 Save report replaces the stale digest and clears its mark");
+            tryVerify(() => String(pathField("html").color) === String(EaStyle.Colors.themeForeground), 2000, "I37 Save report replaces the stale digest and clears its mark");
             verify(SettingsProof.remove(location, reportName("html")), "I37 the witness removes the actual saved output");
             Session.closeProject();
             verify(Session.openProject(original), "I37 the project with a missing saved output reopens");
-            tryVerify(() => Render.texts(group()).some(item => /missing/i.test(item.text)), 2000, "I37 reopening marks a missing file rather than deleting its row");
+            tryVerify(() => pathIsRed("html"), 2000, "I37 reopening keeps a missing file path and colours it red");
         }
     }
 }

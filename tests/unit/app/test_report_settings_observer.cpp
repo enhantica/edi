@@ -135,6 +135,18 @@ public:
         if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
         return json.toVariant().toMap();
     }
+    Q_INVOKABLE QVariantMap reportHtmlMatrices(const QUrl& location) const {
+        QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
+        root.cd("../../..");
+        const auto python = QStandardPaths::findExecutable("python");
+        if (python.isEmpty()) return {{"error", "Report surface observer needs Python"}};
+        QProcess process;
+        process.start(python, {root.filePath("tests/fixtures/report_effective_template/observe_html.py"), location.toLocalFile()});
+        if (!process.waitForFinished(25000)) { process.kill(); return {{"error", "Python and CLI HTML observers did not finish"}}; }
+        const auto json = QJsonDocument::fromJson(process.readAllStandardOutput());
+        if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
+        return json.toVariant().toMap();
+    }
     Q_INVOKABLE QVariantMap pdfWitness() {
         auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-pdf-proof-XXXXXX");
         if (!directory->isValid()) return {{"error", "PDF witness has no temporary directory"}};
