@@ -5,9 +5,14 @@ are for people who **use** edi — as a Python library, the CLI, or the app — 
 modifying its code.
 
 - **[Web app](https://enhantica.github.io/edi/webapp/)** — the app in the browser, nothing to install.
+
 - **[Features](features.md)** — what edi can do today, per surface (generated from the
   developer feature catalog, so it is never stale).
+
 - **[CLI projects](cli/index.md)** — complete projects fitted with `python -m edi`, each
   checked in CI against its expected results.
+
 - **[Guides](guides/complete-project-loading.md)** — task-oriented walkthroughs, starting
   with loading a complete project.
+
+- **[Assistant desktop candidate](guides/the-assistant.md)** — subscription sign-in, project plans and current limitations.

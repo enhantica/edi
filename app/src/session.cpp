@@ -108,9 +108,9 @@ void WarningListModel::recount() {
 // ---- Session ------------------------------------------------------------------------------------
 
 Session::Session(QObject* parent)
-    : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
+    : QObject(parent), assistant_(new AssistantViewModel(this)), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
 
-Session::~Session() = default;
+Session::~Session() { assistant_->setProject(nullptr); }
 
 bool Session::openProject(const QUrl& directory) {
     if (openProjectAt(directory)) {
@@ -397,6 +397,7 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     ProjectViewModel* previous = project_;
     const QString previous_example = opened_example_;
     project_ = project;
+    assistant_->setProject(project_);
     opened_example_ = example;
     warnings_->setMessages(warnings);
     if (project_ != nullptr) {

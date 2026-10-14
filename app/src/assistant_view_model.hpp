@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#pragma once
+
+#include <QObject>
+#include <QTimer>
+#include <QVariantMap>
+#include <QtQml/qqmlregistration.h>
+#include <memory>
+
+#include "edi/assistant.hpp"
+#include "row_table_model.hpp"
+
+namespace edi_app {
+class ProjectViewModel;
+
+/// Native QML presentation of the shared controller. Owned by Session, including while no project is open.
+class AssistantViewModel : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to Session")
+    Q_PROPERTY(QString state READ state NOTIFY stateChanged)
+    Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
+    Q_PROPERTY(QString connectionLabel READ connectionLabel NOTIFY connectionLabelChanged)
+    Q_PROPERTY(edi_app::RowTableModel* models READ models CONSTANT)
+    Q_PROPERTY(QString selectedModel READ selectedModel WRITE setSelectedModel NOTIFY selectedModelChanged)
+    Q_PROPERTY(QString selectedEffort READ selectedEffort WRITE setSelectedEffort NOTIFY selectedEffortChanged)
+    Q_PROPERTY(QStringList availableEfforts READ availableEfforts NOTIFY availableEffortsChanged)
+    Q_PROPERTY(edi_app::RowTableModel* messages READ messages CONSTANT)
+    Q_PROPERTY(QVariantMap pendingPlan READ pendingPlan NOTIFY pendingPlanChanged)
+    Q_PROPERTY(QVariantMap pendingQuestion READ pendingQuestion NOTIFY pendingQuestionChanged)
+    Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
+    Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
+    Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+
+   public:
+    explicit AssistantViewModel(QObject* parent = nullptr);
+    ~AssistantViewModel() override;
+    QString state() const;
+    bool connected() const;
+    QString connectionLabel() const;
+    RowTableModel* models() const;
+    QString selectedModel() const;
+    QString selectedEffort() const;
+    QStringList availableEfforts() const;
+    RowTableModel* messages() const;
+    QVariantMap pendingPlan() const;
+    QVariantMap pendingQuestion() const;
+    QString activeJobId() const;
+    bool canCancel() const;
+    QString lastError() const;
+    void setSelectedModel(const QString& model);
+    void setSelectedEffort(const QString& effort);
+    /// Attach the live project through its existing worker and edit door; nullptr keeps a conversational session.
+    void setProject(ProjectViewModel* project);
+    Q_INVOKABLE void send(const QString& text);
+    Q_INVOKABLE void approvePlan(const QString& id);
+    Q_INVOKABLE void answerQuestion(const QString& id, const QString& answer);
+    Q_INVOKABLE void cancel();
+    Q_INVOKABLE void signIn();
+    Q_INVOKABLE void signOut();
+    Q_INVOKABLE void clearHistory();
+
+   signals:
+    void stateChanged();
+    void connectedChanged();
+    void connectionLabelChanged();
+    void selectedModelChanged();
+    void selectedEffortChanged();
+    void availableEffortsChanged();
+    void pendingPlanChanged();
+    void pendingQuestionChanged();
+    void activeJobIdChanged();
+    void canCancelChanged();
+    void lastErrorChanged();
+
+   private:
+    struct State;
+    std::unique_ptr<State> state_;
+};
+}  // namespace edi_app

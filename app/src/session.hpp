@@ -13,6 +13,7 @@
 #include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+#include "assistant_view_model.hpp"
 
 namespace edi_app {
 
@@ -72,6 +73,7 @@ class Session : public QObject {
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
+    Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(edi_app::ExampleListModel* examples READ examples CONSTANT)
@@ -92,6 +94,7 @@ class Session : public QObject {
     ~Session() override;
 
     ProjectViewModel* project() const { return project_; }
+    AssistantViewModel* assistant() const { return assistant_; }
     bool hasProject() const { return project_ != nullptr; }
     QString lastError() const { return last_error_; }
     ExampleListModel* examples() const { return examples_; }
@@ -150,6 +153,7 @@ class Session : public QObject {
     void setLastError(const QString& error);
 
     ProjectViewModel* project_ = nullptr;
+    AssistantViewModel* assistant_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;
     WarningListModel* warnings_;

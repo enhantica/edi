@@ -28,6 +28,15 @@ endif()
 # Off by default: the default pixi environment is Qt-free; the `app` environment builds it
 # (`pixi run -e app app-build`, tools/ci/app-build.sh). A C++ host only.
 option(EDI_BUILD_APP "Build the Qt/QML app host; needs Qt6" OFF)
+if(EMSCRIPTEN)
+    set(EDI_ASSISTANT_NATIVE_DEFAULT OFF)
+else()
+    set(EDI_ASSISTANT_NATIVE_DEFAULT ${EDI_BUILD_APP})
+endif()
+option(EDI_BUILD_ASSISTANT_NATIVE "Build the native ChatGPT subscription adapter" ${EDI_ASSISTANT_NATIVE_DEFAULT})
+if(EDI_BUILD_ASSISTANT_NATIVE AND NOT EMSCRIPTEN)
+    add_subdirectory(assistant/native)
+endif()
 if(EDI_BUILD_APP)
     # CorePrivate: the project archive (app/src/web_files.cpp); the browser build also reads the browser's files
     # through GuiPrivate's header. Qt warns that a private module ties the build to its Qt version: edi pins that

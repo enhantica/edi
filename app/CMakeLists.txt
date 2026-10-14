@@ -78,10 +78,18 @@ qt_add_qml_module(edi_app_module
         src/report_view_model.hpp src/report_view_model.cpp
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
+        src/assistant_view_model.hpp src/assistant_view_model.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
     QML_FILES
         qml/Main.qml
+        qml/Components/AssistantPanel.qml
+        qml/Components/AssistantMessage.qml
+        qml/Components/AssistantComposer.qml
+        qml/Components/AssistantPlan.qml
+        qml/Components/AssistantQuestion.qml
+        qml/Components/AssistantTrial.qml
+        qml/Components/AssistantConnectionDialog.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
@@ -345,3 +353,7 @@ set_target_properties(edi_app_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE
 include(GNUInstallDirs)
 install(TARGETS edi_app RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
+endif()

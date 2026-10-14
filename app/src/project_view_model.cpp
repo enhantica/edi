@@ -1933,6 +1933,7 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
     setLastError({});
     setModified(true);
     publishCalculating();
+    emit projectEdited();
     return {};
 }
 

@@ -254,6 +254,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
     const edi::Project& project() const { return *project_; }
+    /// Native assistant access to the same model and worker used by manual controls.
+    edi::Project* assistantProject() { return project_.get(); }
+    edi::work::Worker& assistantWorker() { return *worker_; }
     // The demo's seam: the project's created and last-modified times, which a loaded example takes
     // from the clock, set to a fixed value so its saved Text is reproducible.
     void pinTimestamps(const QString& timestamp);
@@ -367,6 +370,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
 
    signals:
     void nameChanged();
+    void projectEdited();
     void titleChanged();
     void descriptionChanged();
     void authorsChanged();

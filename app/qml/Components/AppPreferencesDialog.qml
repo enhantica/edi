@@ -253,13 +253,23 @@ AppDialog {
             }
 
             RowLabel {
-                text: qsTr("Sidebar") + ":"
+                text: qsTr("Workflow sidebar side") + ":"
             }
             RowBox {
                 objectName: "preferences.sideBarSide"
                 model: [qsTr("Left"), qsTr("Right")]
                 currentIndex: Preferences.sideBarOnLeft ? 0 : 1
                 onActivated: index => Preferences.sideBarSide = index === 0 ? "Left" : "Right"
+            }
+
+            RowLabel {
+                text: qsTr("Assistant") + ":"
+            }
+            RowCheckBox {
+                objectName: "preferences.assistantShown"
+                checked: Preferences.assistantShown
+                onToggled: Preferences.assistantShown = checked
+                ToolTip.text: qsTr("Show the assistant opposite the workflow sidebar")
             }
 
             RowLabel {

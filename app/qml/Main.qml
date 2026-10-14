@@ -7,6 +7,7 @@ import QtQuick.Dialogs
 import QtCore
 
 import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -66,6 +67,17 @@ EaComponents.ApplicationWindow {
     ]
 
     appBarRightButtons: [
+        EaElements.ToolButton {
+            objectName: "assistant.toggle"
+            fontIcon: "comments"
+            ToolTip.text: qsTr("Show or hide assistant")
+            Accessible.name: ToolTip.text
+            onClicked: {
+                Preferences.assistantShown = !Preferences.assistantShown;
+                if (Preferences.assistantShown)
+                    assistantPanel.focusComposer();
+            }
+        },
         EaElements.ToolButton {
             objectName: "appBar.button.preferences"
             fontIcon: "cog"
@@ -135,7 +147,9 @@ EaComponents.ApplicationWindow {
     ]
 
     contentArea: [
-        HomePage {},
+        HomePage {
+            id: homePage
+        },
         Loader {
             id: projectLoader
 
@@ -191,6 +205,37 @@ EaComponents.ApplicationWindow {
     statusBar: StatusBar {}
 
     AppPreferencesDialog {}
+
+    AssistantPanel {
+        id: assistantPanel
+        parent: window.contentItem
+        assistant: Session.assistant
+        anchors.top: parent.top
+        anchors.topMargin: EaStyle.Sizes.appBarHeight
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: EaStyle.Sizes.statusBarHeight
+        x: onLeft ? 0 : parent.width - width
+        overlayMode: window.width < panelWidth + EaStyle.Sizes.sideBarWidth + AppSizes.assistantMainMinimumWidth
+        z: 20
+    }
+    Binding {
+        target: homePage.SwipeView.view ? homePage.SwipeView.view.anchors : null
+        property: "leftMargin"
+        value: assistantPanel.visible && !assistantPanel.overlayMode && assistantPanel.onLeft ? assistantPanel.width : 0
+    }
+    Binding {
+        target: homePage.SwipeView.view ? homePage.SwipeView.view.anchors : null
+        property: "rightMargin"
+        value: assistantPanel.visible && !assistantPanel.overlayMode && !assistantPanel.onLeft ? assistantPanel.width : 0
+    }
+    Shortcut {
+        sequences: ["Ctrl+Shift+A", "Meta+Shift+A"]
+        onActivated: {
+            Preferences.assistantShown = !Preferences.assistantShown;
+            if (Preferences.assistantShown)
+                assistantPanel.focusComposer();
+        }
+    }
 
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal
     // shows the core's message.
