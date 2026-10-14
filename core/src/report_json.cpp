@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "edi/report_model.hpp"
@@ -106,13 +108,30 @@ std::vector<ReportCategory> categories_of(const Value& value, const char* what) 
     return out;
 }
 
-// A count or an index: a whole number from 0 to 2^53.
-std::size_t index_of(const Value& value, const char* what) {
+// A whole number from `low` to `high`, checked before it is converted: a JSON number can be fractional or too
+// large, and null reads as NaN.
+double whole_number(const Value& value, const char* what, double low, double high) {
     const double number = value.number(what);
-    if (!(number >= 0.0) || number > 9007199254740992.0 || std::floor(number) != number) {
-        throw std::invalid_argument(std::string("report JSON: ") + what + " is not a whole number");
+    if (!(number >= low && number <= high) || std::floor(number) != number) {
+        throw std::invalid_argument(std::string("report JSON: ") + what + " is not a whole number from " +
+                                    std::to_string(static_cast<long long>(low)) + " to " +
+                                    std::to_string(static_cast<long long>(high)));
     }
-    return static_cast<std::size_t>(number);
+    return number;
+}
+
+template <typename Integer>
+Integer integer_of(const Value& value, const char* what) {
+    return static_cast<Integer>(whole_number(value, what, static_cast<double>(std::numeric_limits<Integer>::min()),
+                                             static_cast<double>(std::numeric_limits<Integer>::max())));
+}
+
+// A count or an index: a whole number from 0 to 2^53, JSON's largest exact one, or to the largest std::size_t where
+// that is smaller (32-bit WebAssembly).
+std::size_t index_of(const Value& value, const char* what) {
+    static const double largest =
+        std::min(9007199254740992.0, static_cast<double>(std::numeric_limits<std::size_t>::max()));
+    return static_cast<std::size_t>(whole_number(value, what, 0.0, largest));
 }
 
 Value whole(std::size_t number) { return Value(static_cast<double>(number)); }
@@ -403,7 +422,7 @@ SceneAtom atom_of(const Value& value) {
     SceneAtom atom;
     atom.centre = vec_of(value.at("centre"));
     atom.row = index_of(value.at("row"), "row");
-    atom.cluster_id = static_cast<std::int32_t>(value.at("cluster_id").number("cluster_id"));
+    atom.cluster_id = integer_of<std::int32_t>(value.at("cluster_id"), "cluster_id");
     atom.table_radius = value.at("table_radius").number("table_radius");
     atom.radius = value.at("radius").number("radius");
     atom.radius_substituted = value.at("radius_substituted").boolean("radius_substituted");
@@ -780,7 +799,8 @@ ReportModel report_from_json(const std::string& text) {
         matrix.labels = strings_of(correlations.at("labels"), "labels");
         matrix.values = numbers_of(correlations.at("values"), "values");
         matrix.level = correlations.at("level").number("level");
-        matrix.available = static_cast<int>(correlations.at("available").number("available"));
+        matrix.available = static_cast<int>(whole_number(correlations.at("available"), "available", 0.0,
+                                                         static_cast<double>(std::numeric_limits<int>::max())));
         matrix.empty_text = correlations.at("empty_text").string("empty_text");
         model.correlations = std::move(matrix);
     }
