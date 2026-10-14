@@ -1919,12 +1919,40 @@ QString ProjectViewModel::apply_setting(const edi::Edit& change) {
 
 QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
     edi::ReportSettingsState before = edi::report_settings_state(*project_);
-    const QString refusal = apply_setting(change);
+    const QString refusal = write_report_settings(change);
     if (refusal.isEmpty() && edi::report_settings_state(*project_) != before) {
         undo_history_.emplace_back(std::move(before));
         syncUndo();
     }
     return refusal;
+}
+
+QString ProjectViewModel::write_report_settings(const edi::Edit& change) {
+    // No calculation reads a report setting: the patterns, the structures and the saved reports' digests stay current
+    // (no recalculation is asked for), and a scan's template takes the setting too.
+    if (fit_ != nullptr && fit_->running()) {
+        const QString message = tr("The project cannot be edited while a fit is running");
+        setLastError(message);
+        return message;
+    }
+    try {
+        preview_->apply_setting(change);
+    } catch (const std::exception& refusal) {
+        const QString message = QString::fromUtf8(refusal.what());
+        setLastError(message);
+        return message;
+    }
+    if (scan_template_) {
+        edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
+    }
+    setLastError({});
+    setModified(true);
+    publishMetadata();
+    syncCorrelations();
+    saved_files_.reset();
+    invalidateTexts();
+    report_->refresh();
+    return {};
 }
 
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
@@ -1995,7 +2023,7 @@ void ProjectViewModel::undo() {
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
-        undone = apply_setting(edi::Edit::report_settings(*project_, *report)).isEmpty();
+        undone = write_report_settings(edi::Edit::report_settings(*project_, *report)).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
         undone = apply(edi::Edit::set_free(*project_, flags->before), false).isEmpty();
     } else if (const auto* block = std::get_if<BlockName>(&undo_history_.back())) {
