@@ -9,8 +9,6 @@
 #include <QPointer>
 #include <QString>
 #include <QVariantAnimation>
-#include <QVariantList>
-#include <QVariantMap>
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
 #include <optional>
@@ -23,6 +21,22 @@
 #include "report_view_model.hpp"
 
 namespace edi_app {
+
+// One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, and the row's centre in rows from the
+// bottom. QML reads a list of them as an array.
+struct BraggLabel {
+    Q_GADGET
+    QML_VALUE_TYPE(braggLabel)
+    Q_PROPERTY(QString text MEMBER text CONSTANT)
+    Q_PROPERTY(QColor color MEMBER color CONSTANT)
+    Q_PROPERTY(double centre MEMBER centre CONSTANT)
+
+   public:
+    QString text;
+    QColor color;
+    double centre = 0.0;
+    bool operator==(const BraggLabel&) const = default;
+};
 
 // One pattern chart (edi ADR-0017 §15, ADR-0021). It draws what the core's edi::present_pattern
 // returns and computes nothing: it owns the view (the x range, the main y range, the plot width, the y
@@ -92,7 +106,7 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QString residualTitle READ residualTitle NOTIFY residualTitleChanged)
     // The Bragg rows' labels (edi::BraggRowLabel): maps of `text`, `color` and `centre`, the row's middle in the
     // Bragg pane's units (row k from the bottom spans k to k + 1).
-    Q_PROPERTY(QVariantList braggLabels READ braggLabels NOTIFY braggLabelsChanged)
+    Q_PROPERTY(QList<edi_app::BraggLabel> braggLabels READ braggLabels NOTIFY braggLabelsChanged)
     // The legend's rows and the excluded bands, as typed models (chart_models.hpp): the controller replaces
     // their rows at each refresh.
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
@@ -163,7 +177,7 @@ class PatternChartController : public QObject {
     QString xTitle() const { return x_title_; }
     QString yTitle() const { return y_title_; }
     QString residualTitle() const { return residual_title_; }
-    QVariantList braggLabels() const { return bragg_labels_; }
+    QList<BraggLabel> braggLabels() const { return bragg_labels_; }
     ChartLegendModel* legend() const { return legend_; }
     ChartBandModel* excludedBands() const { return excluded_bands_; }
     QColor measuredColor() const { return color(measured_style_); }
@@ -317,7 +331,7 @@ class PatternChartController : public QObject {
     bool has_residual_ = false, has_data_ = false, current_ = false;
     QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
     std::size_t colour_count_ = 0;
-    QVariantList bragg_labels_;
+    QList<BraggLabel> bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;
 };
