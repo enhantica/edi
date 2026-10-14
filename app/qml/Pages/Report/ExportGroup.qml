@@ -30,6 +30,9 @@ EaElements.GroupBox {
             report.saveReport({}, EaStyle.Fonts.fontFamily);
     }
 
+    // In the browser Save report also downloads the files, and a saved file lasts until the page is reloaded.
+    readonly property bool inBrowser: WebFiles.available
+
     // The format boxes share one width, so the path fields line up.
     readonly property real boxWidth: Math.max(htmlBox.implicitWidth, pdfBox.implicitWidth, cifBox.implicitWidth)
 
@@ -53,7 +56,7 @@ EaElements.GroupBox {
         required property string format
         required property EaElements.CheckBox box
         readonly property var saved: group.savedRow(format)
-        readonly property bool shown: saved !== null && !(WebFiles.available && saved.state === "missing")
+        readonly property bool shown: saved !== null && !(group.inBrowser && saved.state === "missing")
 
         objectName: "report.path." + format
         width: EaStyle.Sizes.sideBarContentWidth - group.boxWidth - EaStyle.Sizes.fontPixelSize
@@ -64,7 +67,7 @@ EaElements.GroupBox {
         text: shown ? "reports/" + saved.name : ""
         placeholderText: qsTr("not saved yet")
         color: shown && saved.state !== "current" ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
-        ToolTip.text: shown ? (WebFiles.available ? qsTr("Downloaded at %1") : qsTr("Saved %1")).arg(saved.saved) : ""
+        ToolTip.text: shown ? (group.inBrowser ? qsTr("Downloaded at %1") : qsTr("Saved %1")).arg(saved.saved) : ""
     }
 
     objectName: "group.reportExport"
@@ -152,7 +155,7 @@ EaElements.GroupBox {
             enabled: group.report !== null && (group.report.writesHtml || group.report.writesPdf)
             fontIcon: "download"
             text: qsTr("Save report")
-            ToolTip.text: WebFiles.available ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")
+            ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")
             onClicked: group.saveReport()
         }
     }
