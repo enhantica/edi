@@ -154,6 +154,10 @@ void save_project_via_crysta(const Project& project, const std::string& director
 // saved-report rows, when its text changes, through crysta's writer; whether it wrote.
 bool save_report_settings(const Project& project, const std::string& directory);
 
+// The report settings as `reports/report.edi` states them, each one the project leaves at its default written out with
+// that value, and the saved-report rows: what the Report page's Text tab shows, never empty. crysta writes the text.
+std::string report_settings_text(const Project& project);
+
 // A report setting's value checked by crysta's rules, as a file states it (ADR-0036 §7): `tag` is `_report.<item>`,
 // `_correlation_chart.threshold` or `_pattern_chart.x_axis`, `value` its text. Throws std::invalid_argument naming the
 // item for a value it does not take, or for a tag that is not a report setting.
