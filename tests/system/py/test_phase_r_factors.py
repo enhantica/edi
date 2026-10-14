@@ -304,7 +304,7 @@ def test_phase_and_profile_results_follow_reload_and_changed_free_set_refit(tmp_
         ('independent', 'excluded'),
     ],
 )
-def test_doublet_phase_membership_and_orbit_share_survive_fit_and_reload(  # noqa: PLR0914, PLR0915
+def test_doublet_phase_membership_and_orbit_share_survive_fit_and_reload(  # noqa: PLR0912, PLR0914, PLR0915
     tmp_path, case, reverse, selection, entry
 ):
     root = tmp_path / 'input'
@@ -319,6 +319,12 @@ def test_doublet_phase_membership_and_orbit_share_survive_fit_and_reload(  # noq
     project = ENGINE.Project.load(root)
     project.analysis.calculate()
     calculated = np.asarray(project.experiments[0].data.intensity_calc).copy()
+    if case in doublet_phase.BOUNDARY_CASES:
+        assert np.all(calculated > 0), 'The boundary witness must paint a real positive tail'
+        assert eligible == (case == 'shifted-centre'), (
+            'Strict Bragg reachability must reject equality and beyond-limit lines, '
+            'while the authored reachable shifted centre is inside the high-angle window'
+        )
     multiplier = np.full_like(grid, 1.2)
     if case == 'both-unequal':
         multiplier[grid > sum(positions) / 2] = 0.8

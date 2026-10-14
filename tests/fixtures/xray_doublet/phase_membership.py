@@ -13,7 +13,11 @@ CASES = (
     'inactive-ratio',
     'inactive-wavelength',
     'outside-tail',
+    'unreachable-equal',
+    'unreachable-beyond',
+    'shifted-centre',
 )
+BOUNDARY_CASES = ('unreachable-equal', 'unreachable-beyond', 'shifted-centre')
 
 
 def centers(reverse):
@@ -21,7 +25,36 @@ def centers(reverse):
     return wavelengths, tuple(2 * math.degrees(math.asin(value / 4)) for value in wavelengths)
 
 
+def shifted_boundary(case, reverse):
+    d_spacing = 0.7722
+    second = (
+        2 * d_spacing * math.sin(math.radians(179.995 / 2))
+        if case == 'shifted-centre'
+        else WAVELENGTHS[1]
+        if case == 'unreachable-equal'
+        else WAVELENGTHS[1] * 1.001
+    )
+    wavelengths = (WAVELENGTHS[0], second)
+    if reverse:
+        wavelengths = wavelengths[::-1]
+    positions = []
+    for wavelength in wavelengths:
+        sine = wavelength / (2 * d_spacing)
+        if sine >= 1:
+            positions.append(None)
+        else:
+            bragg = 2 * math.degrees(math.asin(sine))
+            positions.append(bragg + math.cos(math.radians(bragg)))
+    grid = np.linspace(178.99, 179.01, 21)
+    eligible = any(
+        position is not None and grid[0] <= position <= grid[-1] for position in positions
+    )
+    return wavelengths, tuple(positions), grid, eligible
+
+
 def geometry(case, reverse):
+    if case in BOUNDARY_CASES:
+        return shifted_boundary(case, reverse)
     wavelengths, positions = centers(reverse)
     if case == 'second-only':
         lo, hi = (45.24, 45.35) if reverse else (45.36, 45.50)
@@ -91,6 +124,15 @@ _atom_site.occupancy
 _atom_site.adp_iso
 X La a Biso 0() 0 0 1 0
 """)
+    if case in BOUNDARY_CASES:
+        structure = root / 'structures/phase.edi'
+        structure.write_text(
+            structure
+            .read_text()
+            .replace('_cell.length_a 2', '_cell.length_a 0.7722')
+            .replace('_cell.length_b 0.5', '_cell.length_b 0.2')
+            .replace('_cell.length_c 0.5', '_cell.length_c 0.2')
+        )
     ratio = 0 if case in {'inactive-ratio', 'inactive-wavelength'} else 0.5
     header = f"""data_bank
 _edi.schema_version 3
@@ -127,6 +169,12 @@ _data.two_theta
 _data.intensity_meas
 _data.intensity_meas_su
 """
+    if case in BOUNDARY_CASES:
+        header = header.replace('_peak.broad_gauss_w 0.0001', '_peak.broad_gauss_w 16')
+        header = header.replace(
+            '_instrument.calib_twotheta_offset 0',
+            '_instrument.calib_twotheta_offset 0\n_instrument.calib_sample_displacement 1',
+        )
     banks = ('bank', 'other') if mode == 'joint' else ('bank',)
     for bank in banks:
         (root / f'experiments/{bank}.edi').write_text(
