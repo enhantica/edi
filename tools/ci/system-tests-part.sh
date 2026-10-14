@@ -11,8 +11,8 @@
 # build/test-durations-<part>.json, which CI keeps as an artifact and merges on main
 # (tools/ci/merge_test_durations.py).
 #
-# With EDI_SKIP_NIGHTLY_GROUP=true (a macOS pull request) the files of the `nightly` group in
-# tests/test-groups.json are left out; Linux pull requests, main pushes and the nightly schedule run them.
+# The files of the `nightly-only` group in tests/test-groups.json are left out unless EDI_RUN_NIGHTLY_ONLY=true,
+# which only the nightly schedule sets: they build an app of their own.
 set -euo pipefail
 part="${1:?usage: system-tests-part <part> [<parts>]}"
 parts="${2:-3}"
@@ -23,9 +23,9 @@ recorded="${EDI_TEST_DURATIONS:-build/test-durations.json}"
 own="build/test-durations-$part.json"
 if [ -f "$recorded" ]; then cp "$recorded" "$own"; else echo '{}' > "$own"; fi
 set --
-if [ "${EDI_SKIP_NIGHTLY_GROUP:-false}" = true ]; then
-  nightly="$(python -c 'import json; print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly"]["paths"]))')"
-  [ -n "$nightly" ] || { echo "system-tests-part: the nightly group names no files" >&2; exit 2; }
+if [ "${EDI_RUN_NIGHTLY_ONLY:-false}" != true ]; then
+  nightly="$(python -c 'import json; print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly-only"]["paths"]))')"
+  [ -n "$nightly" ] || { echo "system-tests-part: the nightly-only group names no files" >&2; exit 2; }
   while IFS= read -r path; do set -- "$@" "--ignore=$path"; done <<< "$nightly"
 fi
 exec python -m pytest tests/system -q "$@" \

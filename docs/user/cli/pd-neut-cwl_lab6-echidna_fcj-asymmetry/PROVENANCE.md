@@ -34,3 +34,27 @@ copy of the reference folder), run once at authoring time; no gate runs FullProf
 
 - `fullprof/scale-fit.inp` `bb45ccb30ce32631844256f68d937ed92e7f343501770c49805517d73731a66e`
 - `fullprof/scale-fit.out` `f5b8d75b37a667de9d0dbf27eb19e1471e4cfe024117b7c3d1cdc052edba6a04`
+- `fullprof/fcj-from-zero.pcr` `3341981d5f842353d1299cd6e1dc544c3be5b3f0a1e30ced263626831cfdf27b`
+- `fullprof/fcj-from-zero.out` `e563e754074f8db07e38b73824b05112f5f634cc14bfeaf0af1bd78d1210bd86`
+- `fullprof/fcj-from-zero.sum` `992e33f5194250f68351f3b13194471fcfadd83aa9c84834d6af22b2c7f7bd4e`
+- `fullprof/fcj-from-small.pcr` `51a85043bd1c6f44770b97c1005057b404352778f99583c7e1f1ab1d43f37e57`
+- `fullprof/fcj-from-small.out` `7ec8eba8a927c472271b76aa6b711421959414416158b25d259adffa321cbb12`
+- `fullprof/fcj-from-small.sum` `8d098bb0989e86ce73c755e8946acaca4465998e30801f1e71d925551b8433c0`
+- `fullprof/fcj-sl-only.pcr` `d1fce9f622157459454d203bfad8b35d1e1b575ea720cb128e54c7add9dce056`
+- `fullprof/fcj-sl-only.out` `51ad5db90adab56714c627d42564c99bc03fffe00216e6467e64ef7917b3cbcd`
+- `fullprof/fcj-sl-only.sum` `65a8504b0dd11e55f249c1502dc401ac91c25ccd450022dac625f29629230510`
+
+## FullProf with S/L and D/L free from zero
+
+Three more FullProf.2k 8.40 runs, each `fullprof/scale-fit.inp` with S/L and D/L changed as below, run once
+the same way and never by a test. They answer one question: does FullProf move S/L and D/L away from 0?
+
+| run | start S/L, D/L | free | FullProf result |
+| --- | --- | --- | --- |
+| `fcj-from-zero` | 0, 0 | scale, S/L, D/L | every free parameter becomes NaN on the first cycle |
+| `fcj-from-small` | 1e-4, 2e-4 | scale, S/L, D/L | singular matrix on the first cycle (S/L) |
+| `fcj-sl-only` | 0.08, 0.08 | scale, S/L | S/L moves to 0.0331(8) but the fit does not converge in 100 cycles |
+
+Two more runs were not kept: both free from 0.08, 0.08 or from 0.08, 0.07 also stop on a singular matrix at
+the first cycle. So FullProf gives no reference for a fit that starts at zero; the reference for that case
+is the same fit started from non-zero values.

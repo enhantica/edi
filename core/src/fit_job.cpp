@@ -23,6 +23,7 @@
 namespace edi {
 namespace {
 const char* const kChannel = "fit";
+std::atomic<WorkerFileObserver> worker_file_observer{nullptr};
 
 // Every input of a fit that the calculation stamps (WorkStamps) do not carry, when the fit was snapshotted.
 // The stamps cover what a calculation reads; a fit also reads its free set, the fitting mode, the minimizer
@@ -265,6 +266,9 @@ bool FitJob::start(const Project* scan_template) {
             }
             const FileCompleteCallback on_file_complete = [&self, &emit, &file_frame,
                                                            &token](const ScanFileRecord& record) {
+                if (const auto observe = worker_file_observer.load(std::memory_order_acquire)) {
+                    observe(record.file_name);
+                }
                 emit([self, record] {
                     if (self->open && self->hooks.file_completed) {
                         self->hooks.file_completed(record);
@@ -334,5 +338,9 @@ void FitJob::wait_for_patterns(bool on) { state_->wait_patterns.store(on, std::m
 bool FitJob::running() const noexcept { return state_->ticket != 0; }
 
 work::Ticket FitJob::ticket() const noexcept { return state_->ticket; }
+
+void set_worker_file_observer(WorkerFileObserver observer) {
+    worker_file_observer.store(observer, std::memory_order_release);
+}
 
 }  // namespace edi

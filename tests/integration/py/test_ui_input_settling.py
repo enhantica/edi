@@ -11,18 +11,22 @@ def test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport(
     source = (ROOT / 'tests/unit/app/UiInteraction.js').read_text().replace('.pragma library', '')
     driver = r"""
 function scenario(kind) {
-    let frames = 0, presses = 0, message = "", renderedBeforePress = false;
+    let frames = 0, presses = 0, updates = 0, message = "", renderedBeforePress = false;
     const root = {visible:true,width:400,height:300,children:[],moving:true};
     const tab = {objectName:"sideBar.tab.extras",visible:true,enabled:true,
                  width:50,height:25,checked:false,parent:root,children:[]};
     root.children = [tab];
-    const window = {contentItem:root,contentArea:[root],appBarCentralTabs:{currentIndex:0}};
+    const window = {contentItem:root,contentArea:[root],appBarCentralTabs:{currentIndex:0},
+                    update() { ++updates; }};
     function tick() { ++frames; if (kind !== "stuck" && frames >= 2) root.moving = false; }
     function require(ok, why) { if (!ok) throw Error(why); }
     const test = {
         verify:require,
         waitForPolish() { return true; },
-        waitForRendering() { tick(); renderedBeforePress = presses === 0; return true; },
+        waitForRendering() {
+            require(updates > 0, "A rendering barrier must request a frame");
+            --updates; tick(); renderedBeforePress = presses === 0; return true;
+        },
         tryVerify(fn, deadline, why) {
             for (let n=0;n<8 && !fn();++n) tick();
             require(fn(),why);

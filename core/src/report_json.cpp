@@ -9,7 +9,7 @@
 #include "edi/report_model.hpp"
 #include "json.hpp"
 
-// The report model's JSON (edi ADR-0035 §1): every field, in declaration order, so a model read from its JSON writes
+// The report model's JSON (edi ADR-0036 §1): every field, in declaration order, so a model read from its JSON writes
 // the same JSON again.
 
 namespace edi {
@@ -671,8 +671,8 @@ std::string report_to_json(const ReportModel& model) {
                 points.emplace_back(
                     Object{{"x", point.x}, {"y", point.y}, {"su", point.su}, {"text", point.text}});
             }
-            series.emplace_back(
-                Object{{"name", one.name}, {"x_title", one.x_title}, {"points", std::move(points)}});
+            series.emplace_back(Object{
+                {"name", one.name}, {"units", one.units}, {"x_title", one.x_title}, {"points", std::move(points)}});
         }
         evolution = std::move(series);
     }
@@ -763,7 +763,9 @@ ReportModel report_from_json(const std::string& text) {
     if (!evolution.is_null()) {
         std::vector<ReportEvolution> series;
         for (const Value& item : evolution.array("evolution")) {
-            ReportEvolution one{item.at("name").string("name"), item.at("x_title").string("x_title"), {}};
+            const Value& units = item.get("units");
+            ReportEvolution one{item.at("name").string("name"), item.at("x_title").string("x_title"), {},
+                                units.is_null() ? std::string() : units.string("units")};
             for (const Value& point : item.at("points").array("points")) {
                 one.points.push_back({point.at("x").number("x"), point.at("y").number("y"),
                                       point.at("su").number("su"), point.at("text").string("text")});

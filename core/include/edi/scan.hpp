@@ -28,6 +28,13 @@ struct ScanDatasets {
 /// an undeclared scan, a project with no directory, a missing directory or no matching file.
 ScanDatasets scan_datasets(const Project& project);
 
+/// The scan's template dataset in effect: `_sequential_fit.template_file` when declared, else the first file of the
+/// scan's listing; empty when there is neither. A scan's report is this dataset's, and its fit record keeps this
+/// dataset's correlation pairs (edi ADR-0034), so the report shows the same pairs in the app and from the saved files.
+std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets);
+/// The same, listing the scan's files itself; the declared file, or empty, when they cannot be listed.
+std::string effective_scan_template_file(const Project& scan);
+
 /// One dataset's measured pattern, read as the driver reads it, on the axis of `mode`.
 PdDataBase read_scan_dataset(const std::string& directory, const std::string& file, BeamModeEnum mode);
 
@@ -149,6 +156,12 @@ struct EvolutionPoint {
 void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
                       const std::string& parameter, bool by_value,
                       const std::function<void(const EvolutionPoint&)>& visit);
+
+/// The same for several parameters in one read of the file: `visit` gets each point with its parameter's place in
+/// `parameters`, row by row. A report draws every parameter's chart from one read.
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::vector<std::string>& parameters, bool by_value,
+                      const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 
 /// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
 /// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.

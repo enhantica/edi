@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(generated_correlations LANGUAGES CXX)
+find_package(crysta CONFIG REQUIRED)
+add_executable(correlation_producer produce.cpp)
+target_compile_features(correlation_producer PRIVATE cxx_std_20)
+target_include_directories(correlation_producer PRIVATE "${EDI_INCLUDE}")
+target_link_libraries(correlation_producer PRIVATE "${EDI_CORE}" crysta::crysta)

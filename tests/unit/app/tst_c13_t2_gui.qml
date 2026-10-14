@@ -105,7 +105,7 @@ TestCase {
         verify(picker !== null && icon !== null && icon.parent === picker.contentItem, "owner 2026-10-06: atom icon sits inside the type picker without a separate column");
         verify(atoms.resolvedColumnWidths[2] < atoms.resolvedColumnWidths[3], "owner 2026-10-06: atom type column is compact beside coordinates");
         const table = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdps.list");
-        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "type", "Biso", "ani11", "ani22", "ani33", "ani12", "ani13", "ani23"]), "owner 2026-10-06: Atomic displacement owns the complete scalar and tensor table");
+        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "type", "iso/eq", "11", "22", "33", "12", "13", "23"]), "owner 2026-10-12: Atomic displacement retains its columns with iso/eq and component-index headers");
         const sites = Probe.rows(Session.project.currentStructure.atomSites);
         const adps = Probe.rows(Session.project.currentStructure.atomSiteAdps);
         compare(JSON.stringify(adps.map(row => row.label)), JSON.stringify(sites.map(row => row.label)), "owner 2026-10-06: ADP labels copy Atom sites in exactly the same order");
@@ -135,8 +135,8 @@ TestCase {
             // iso cell edits both scalar types and displays the tensor equivalent.
             tryVerify(() => {
                 const iso = control("atomSiteAdp.iso.0");
-                return iso !== null && iso.enabled === !anisotropic;
-            }, 2000, "owner 2026-10-06: equivalent iso is disabled only for anisotropic types");
+                return iso !== null && (anisotropic ? (!iso.enabled || iso.readOnly) : (iso.enabled && !iso.readOnly));
+            }, 2000, "owner 2026-10-06: equivalent iso is read-only only for anisotropic types");
             // La at the Pm-3m origin: cubic rotations equate all diagonals and
             // mirrors fix off-diagonals to zero; only ani11 is independent.
             for (const component of ["11", "22", "33", "12", "13", "23"])

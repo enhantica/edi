@@ -10,7 +10,7 @@
 #include "edi/presentation.hpp"
 #include "edi/structure_scene.hpp"
 
-// The report model (edi ADR-0035): one versioned description of a project's report, free of Qt and HTML. Only
+// The report model (edi ADR-0036): one versioned description of a project's report, free of Qt and HTML. Only
 // build_report reads a project; the HTML writer, the Report page and the Python display read the model or its JSON.
 
 namespace edi {
@@ -20,7 +20,7 @@ class Project;
 /// The schema version every model carries; a reader refuses another.
 inline constexpr int kReportSchemaVersion = 1;
 
-/// The report's sections, in the order they appear (ADR-0035 §3; the owner's Contents tree, 2026-10-13).
+/// The report's sections, in the order they appear (ADR-0036 §3; the owner's Contents tree, 2026-10-13).
 enum class ReportSection : std::uint8_t { Summary, Analysis, Structures, Experiments, Correlations, Evolution };
 
 /// Every section, in order.
@@ -57,7 +57,7 @@ struct ReportOverrides {
     std::optional<std::vector<std::string>> excluded;
 };
 
-/// The options a report of `project` is made with (ADR-0035 §7): its report settings (`reports/report.edi`) and the
+/// The options a report of `project` is made with (ADR-0036 §7): its report settings (`reports/report.edi`) and the
 /// correlation threshold and x axis (`analysis/analysis.edi`), each replaced by a given override. With no `excluded` the data are left out; with no threshold the correlations follow diffraction-lib's
 /// automatic rule; with no x axis the charts are on their own.
 ReportOptions effective_report_options(const Project& project, const ReportOverrides& overrides = {});
@@ -135,9 +135,10 @@ struct ReportEvolution {
     std::string name;     ///< the parameter's unique name, or its results column
     std::string x_title;  ///< the first extract rule's column heading, or "file index"
     std::vector<ReportEvolutionPoint> points;
+    std::string units;  ///< the parameter's units as the report writes them; empty without
 };
 
-/// The viewport a report's structure drawing is prepared for (ADR-0035 §1), in logical pixels, with room at the sides
+/// The viewport a report's structure drawing is prepared for (ADR-0036 §1), in logical pixels, with room at the sides
 /// for the element legend.
 inline constexpr Viewport kReportViewport{800.0, 600.0, 0.0, 120.0};
 
@@ -174,7 +175,7 @@ struct ReportExperiment {
     ReportPattern pattern;
 };
 
-/// A project's report (ADR-0035).
+/// A project's report (ADR-0036).
 struct ReportModel {
     int schema_version = kReportSchemaVersion;
     std::string generated;
@@ -203,10 +204,10 @@ struct ReportModel {
 /// as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
 std::string reliability_text(const Project& project, std::size_t experiment);
 
-/// The report of `project` as `options` ask: the only function that reads a project (ADR-0035 §2).
+/// The report of `project` as `options` ask: the only function that reads a project (ADR-0036 §2).
 ReportModel build_report(const Project& project, const ReportOptions& options);
 
-/// The model as JSON (ADR-0035 §1): every field, doubles in their shortest round-trip form, a non-finite one as null.
+/// The model as JSON (ADR-0036 §1): every field, doubles in their shortest round-trip form, a non-finite one as null.
 /// The text has no literal <, > or &, so it can sit inside an HTML <script> element.
 std::string report_to_json(const ReportModel& model);
 /// A model from its JSON; throws std::invalid_argument for malformed JSON, a missing field or another schema version.

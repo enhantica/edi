@@ -54,12 +54,7 @@ def children(source, start, end):
 
 def table_cells(source):
     masked = mask(source)
-    if re.search(r'delegate\s*:\s*TableRow\s*\{', masked):
-        shared = (ROOT / 'app/qml/Components/TableRow.qml').read_text()
-        assert re.search(r'^EaComponents\.ListViewDelegate\s*\{', shared, re.MULTILINE), (
-            'The shared TableRow remains the canonical production list-view delegate'
-        )
-    match = re.search(r'delegate\s*:\s*(?:EaComponents\.ListViewDelegate|TableRow)\s*\{', masked)
+    match = re.search(r'delegate\s*:\s*EaComponents\.ListViewDelegate\s*\{', masked)
     assert match, 'The table status census locates the actual production row delegate'
     depth = 1
     end = match.end()
@@ -74,10 +69,10 @@ def test_every_status_column_is_in_the_convention_census():
     actual = {}
     for path in PAGES.rglob('*.qml'):
         contents = path.read_text()
-        declaration = re.search(r'\bheader\s*:', mask(contents))
-        if declaration is None:
+        if 'header:' not in contents:
             continue
-        header = block(contents[declaration.start() :], 'header:')
+        start = contents.index('header:')
+        header = contents[start : start + len(block(mask(contents), 'header:'))]
         headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header)
         if headings:
             actual[path.relative_to(PAGES).as_posix()] = headings
@@ -125,4 +120,20 @@ def test_nested_declarations_and_comment_icons_cannot_fake_a_status_cell():
     actual = table_cells(source)
     assert [kind for kind, _ in actual] == ['EaComponents.TableViewLabel'], (
         'Nested, commented and sibling icons cannot satisfy the actual table-cell convention'
+    )
+
+
+def test_status_header_census_ignores_comment_quotes_and_balances_literal_braces():
+    source = """Item {
+        header: Row {
+            // owner's header: this apostrophe is not a string opener
+            Label { text: qsTr("Status") }
+            Label { text: "{literal brace}" }
+        }
+        Label { text: qsTr("Fit") }
+    }"""
+    start = source.index('header:')
+    header = source[start : start + len(block(mask(source), 'header:'))]
+    assert re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header) == ['Status'], (
+        'the header census ignores comment punctuation and excludes headings outside the header'
     )

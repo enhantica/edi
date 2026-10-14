@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-// The HTML report (edi ADR-0035): the text sections written here from the model, set after the owner's reference
+// The HTML report (edi ADR-0036): the text sections written here from the model, set after the owner's reference
 // report (diffraction-lib's, 2026-10-13), and report.js drawing the charts from the model's JSON in the same file.
 
 namespace edi::detail {
@@ -130,9 +130,13 @@ table.correlations td {
 /* A figure is framed and spaced as a table is (the owner, 2026-10-13). */
 .figure { margin: 1.55pt 0 9.5pt; border: var(--bw) solid var(--tableborder); }
 .pattern-figure { width: 100%; height: 440px; }
-.evolution-figure { width: 100%; }
-.evolution-figure select { margin: 8px; font: inherit; }
-.evolution-figure .evolution-plot { width: 100%; height: 360px; }
+/* A scan's evolution: one chart per parameter, two to a row while each is at least 300 px wide, else one. */
+.evolution-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(300px, calc(50% - 8px)), 1fr));
+  column-gap: 16px;
+}
+.evolution-figure { aspect-ratio: 4 / 3; min-width: 0; box-sizing: border-box; overflow: hidden; }
 .structure-figure { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; }
 /* A long table, such as an experiment's data points, scrolls in a window of rows. */
 .table-scroll.long { max-height: calc(21 * var(--lead)); overflow-y: auto; }
@@ -470,9 +474,9 @@ public:
                 case ReportSection::Evolution:
                     heading(2, number(), "Evolution");
                     note("The fitted parameters across the scan\xE2\x80\x99s datasets");
-                    // The Evolution tab's chart: one parameter at a time, chosen from a list (report.js).
-                    if (!document() && model_.evolution && !model_.evolution->empty()) {
-                        out_ += "<div class=\"figure evolution-figure\"></div>\n";
+                    // One chart per parameter, as the Evolution tab lists them (report.js draws each).
+                    if (model_.evolution && !model_.evolution->empty()) {
+                        evolution_figures();
                     }
                     break;
             }
@@ -567,6 +571,39 @@ private:
         }
         if (!document()) {
             out_ += "</article>\n";
+        }
+    }
+
+    // A scan's evolution charts: in the HTML report a grid of figures, in the static report their images two to a row,
+    // each framed as a figure, each row a table of its own so a page break never splits a chart.
+    void evolution_figures() {
+        const std::size_t count = model_.evolution->size();
+        if (!document()) {
+            out_ += "<div class=\"evolution-grid\">\n";
+            for (std::size_t index = 0; index < count; ++index) {
+                out_ += "<div class=\"figure evolution-figure\" data-index=\"" + whole(index) + "\"></div>\n";
+            }
+            out_ += "</div>\n";
+            return;
+        }
+        constexpr double kGap = 12.0;  // px between the two charts of a row
+        constexpr double kFrame = 3.0;  // px of a figure's frame, as the single figure leaves for it
+        const double width = (*figure_width_ - kGap - kFrame) / 2.0;
+        std::string frame;
+        for (const char* side : {"top", "bottom", "left", "right"}) {
+            frame += std::string("border-") + side + "-width: 0.5px; border-" + side + "-style: solid; border-" + side +
+                     "-color: " + kTableBorder + "; ";
+        }
+        for (std::size_t index = 0; index < count; index += 2) {
+            out_ += "<table cellspacing=\"0\" cellpadding=\"0\">\n<tr>";
+            for (std::size_t k = index; k < index + 2 && k < count; ++k) {
+                if (k > index) {
+                    out_ += "<td width=\"" + fixed2(kGap) + "\"></td>";
+                }
+                out_ += "<td style=\"padding-top: 3px; padding-bottom: 3px; " + frame + "\"><img src=\"evolution-" +
+                        whole(k) + "\" width=\"" + fixed2(width) + "\"></td>";
+            }
+            out_ += "</tr>\n</table>\n";
         }
     }
 

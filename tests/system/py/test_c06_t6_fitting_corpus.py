@@ -291,7 +291,7 @@ _PARAMS = [
 
 
 @pytest.mark.parametrize(('case', 'variant'), _PARAMS)
-def test_fitting_case_matches_expected_through_edi(
+def test_fitting_case_matches_expected_through_edi(  # noqa: PLR0915 - one corpus quantity boundary
     case: dict | None, variant: dict | None, tmp_path: Path
 ) -> None:
     """Realize one corpus (case, variant) unit through edi's API and hold its quantities."""
@@ -314,7 +314,8 @@ def test_fitting_case_matches_expected_through_edi(
     #  (the sides flips): realize through the analysis facade, which dispatches by the
     # project's declared fitting mode — a joint case realized down the single path would
     # silently fit one bank (measured: chi2r 3.92 vs the joint 14.12 on ncaf-wish-3bank-s5).
-    outcome = edi.Project.load(project_dir).analysis.fit()
+    project = edi.Project.load(project_dir)
+    outcome = project.analysis.fit()
     if not outcome.converged:
         pytest.fail(f'{case["id"]}: edi fit did not converge (status {outcome.status!r})')
 
@@ -392,6 +393,17 @@ def test_fitting_case_matches_expected_through_edi(
                 f'joint outcome banks {sorted(bank_metrics)!r}'
             )
             measured = float(bank_metrics[bank_name].rwp)
+        elif name == 'n_points_fitted':
+            # This quantity belongs to the completed fit's public machine record.
+            measured = float(
+                dict(
+                    line.split('=', 1)
+                    for line in edi.machine_report(
+                        project, outcome, edi.VerbosityEnum.FULL
+                    ).splitlines()
+                    if '=' in line
+                )[name]
+            )
         elif name == 'n_free':
             # The refined free-set size — the outcome's value table is exactly that set.
             measured = float(len(values))

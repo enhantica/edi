@@ -109,7 +109,7 @@ class Session : public QObject {
     // `suRule` is the preference's rule for standard uncertainties, "iucr_19" or "iucr_99". A title
     // and authors go into `_metadata` as the Project page writes them; an empty title keeps the default one.
     // `reportLibraries` is the preference for whether its saved HTML reports embed their chart libraries, written into
-    // the new project's `_report.html_offline` (ADR-0035 §7); no other project takes the preference.
+    // the new project's `_report.html_offline` (ADR-0036 §7); no other project takes the preference.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_19"), const QString& title = QString(),
                                    const QString& authors = QString(), bool reportLibraries = false);

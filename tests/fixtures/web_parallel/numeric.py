@@ -167,6 +167,8 @@ def scientific(root):
                         '_background.',
                         '_data.',
                         '_pd_phase_block.',
+                        '_fit_result_bank.',
+                        '_fit_result_phase.',
                     ))
                     for name in names
                 )

@@ -1,0 +1,10 @@
+{
+  "observer_switch": "EDI_TEST_OBSERVERS",
+  "enabled_value": "1",
+  "observer_arguments": ["--test-observer", "joint"],
+  "test_context_variable": "PYTEST_CURRENT_TEST",
+  "time_gate": "tools/ci/system_shard_time.py",
+  "time_gate_arguments": ["--current", "{current}", "--main", "{main}", "--run-id", "{run_id}", "--head-sha", "{head_sha}"],
+  "time_gate_current_identity": {"run_id": "111", "head_sha": "cccccccccccccccccccccccccccccccccccccccc"},
+  "maximum_ratio": 1.2
+}

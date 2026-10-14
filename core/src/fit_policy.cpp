@@ -13,6 +13,7 @@
 #include "crysta/model.hpp"
 #include "edi/model.hpp"
 #include "edi/categories.hpp"
+#include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
@@ -244,9 +245,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
     for (const auto& target : project.experiments) {
         for (const auto& source : measured.experiments) {
             if (source->name.value() == target->name.value()) {
-                target->fit_n_data_points = source->fit_n_data_points;
-                target->fit_prof_wr_factor = source->fit_prof_wr_factor;
-                target->fit_chi_square = source->fit_chi_square;
+                copy_fit_share(*target, *source);
             }
         }
     }

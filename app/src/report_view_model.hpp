@@ -19,9 +19,9 @@ namespace edi_app {
 
 class ProjectViewModel;
 
-// The Report page (edi ADR-0035): the report model built from the project and the page's Contents and Export, given to
+// The Report page (edi ADR-0036): the report model built from the project and the page's Contents and Export, given to
 // QML as the model's JSON values, rebuilt once per coalesced change. Its options are the project's report settings
-// (ADR-0035 §7), which the Contents boxes, the Embed checkbox and the Analysis page's correlation level and x axis
+// (ADR-0036 §7), which the Contents boxes, the Embed checkbox and the Analysis page's correlation level and x axis
 // edit; the page reads the model only, never the project.
 class ReportViewModel : public QObject {
     Q_OBJECT
@@ -37,7 +37,7 @@ class ReportViewModel : public QObject {
     // owner, 2026-10-12).
     Q_PROPERTY(bool embedLibraries READ embedLibraries WRITE setEmbedLibraries NOTIFY embedLibrariesChanged)
     // Export: whether Save report writes the HTML (by default), the PDF and the CIF report, the project's
-    // `_report.html`, `pdf` and `cif` (ADR-0035 §7).
+    // `_report.html`, `pdf` and `cif` (ADR-0036 §7).
     Q_PROPERTY(bool writesHtml READ writesHtml WRITE setWritesHtml NOTIFY writesHtmlChanged)
     Q_PROPERTY(bool writesPdf READ writesPdf WRITE setWritesPdf NOTIFY writesPdfChanged)
     Q_PROPERTY(bool writesCif READ writesCif WRITE setWritesCif NOTIFY writesCifChanged)
@@ -85,7 +85,7 @@ class ReportViewModel : public QObject {
 
     // A Contents box: includes or leaves out the item of `key`.
     Q_INVOKABLE void setIncluded(const QString& key, bool included);
-    // Save report (ADR-0035 §7): each ticked format written into the project's `reports/` as `<short name>.html` or
+    // Save report (ADR-0036 §7): each ticked format written into the project's `reports/` as `<short name>.html` or
     // `.pdf` (the browser also downloads it), then its `_report_file` row, through crysta's writer of
     // `reports/report.edi` alone. The HTML carries the chart libraries when embedLibraries is set; the PDF's figures
     // are the preview's images by their names in its static text (structure-0, pattern-1, ...) and its text is in

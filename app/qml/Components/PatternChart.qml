@@ -21,7 +21,7 @@ Item {
     objectName: "chart"
 
     property ExperimentViewModel experiment: null
-    // The report's input (edi ADR-0035): set, the chart draws the report model's presentation of `reportExperiment`
+    // The report's input (edi ADR-0036): set, the chart draws the report model's presentation of `reportExperiment`
     // as it is, with no toolbar and no pointer, so the wheel scrolls what holds it.
     property ReportViewModel report: null
     // The theme colours the chart draws with; a PDF's figure takes the light ones.

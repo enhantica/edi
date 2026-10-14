@@ -24,9 +24,11 @@ QtObject {
 
     // An experiment's colour by its place among the project's, from the colour scheme's palette: the default's
     // light blue first; past the palette's own colours, a gradient along the order. None is a structure's colour.
-    function experiment(index) {
+    // `dark` picks the dark theme's colour; without it, the app's theme decides (a PDF's figure asks for the light one).
+    function experiment(index, dark) {
         const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;
-        return index >= 0 ? ApplicationInfo.patternColour(Preferences.colourScheme, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
+        const darkColour = dark === undefined ? EaStyle.Colors.isDarkPalette : dark;
+        return index >= 0 ? ApplicationInfo.patternColour(Preferences.colourScheme, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
     }
 
     // A block's colour by its kind ("structure" or "experiment") and place.

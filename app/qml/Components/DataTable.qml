@@ -29,6 +29,10 @@ EaComponents.ListView {
         const text = typeof model.text === "function" ? model.text(row, role) : typeof model.get === "function" ? String(model.get(row)[role] ?? "") : "";
         return metrics.advanceWidth(text);
     }
+    // The width of `text` in the table's font.
+    function advance(text: string): real {
+        return metrics.advanceWidth(text);
+    }
     function textColumnWidth(role: string, title: string): real {
         const revision = modelRevision;
         let widths = rowWidths[role];
