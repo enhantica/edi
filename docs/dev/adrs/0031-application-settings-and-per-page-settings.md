@@ -44,8 +44,9 @@ to know where Qt puts it.
    holds that page's options that only change what the app shows or how it behaves, in groups, as Main and Extras hold
    project data. They are kept in the app-settings store under the page's name and apply to that page, unlike the app
    bar's settings, which apply to the whole app. The Analysis page's Settings tab is the first: "Pattern updates during
-   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins
-   it, so the chosen scale is kept.
+   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins it,
+   so the chosen scale is kept. A page with no such options has its Settings tab disabled, as an empty Extras tab is
+   (the owner, 2026-10-14).
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
    after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
    `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the
