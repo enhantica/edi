@@ -755,6 +755,10 @@ static void save_project_advancing_last_modified(edi::Project& self,
         self.metadata.last_modified = previous;
         throw;
     }
+    // The project then holds what its files hold, as a reopen reads them, and is calculated once from that.
+    if (edi::adopt_saved_values(self, directory)) {
+        self.refresh_calculated_pattern();
+    }
 }
 
 static nb::object star_datetime(const std::string& stored) {
@@ -3618,7 +3622,7 @@ NB_MODULE(_edi, m) {
             },
             "directory"_a,
             "Write the project out as a .edi project directory and remember it (inverse of "
-            "load).")
+            "load). The project then holds the values its files hold, as a reopen reads them.")
         .def(
             "_undo_fit",
             [](edi::Project& self) {
@@ -3691,7 +3695,7 @@ NB_MODULE(_edi, m) {
                 save_project_advancing_last_modified(self, self.path);
             },
             "Write the project back into its own directory (the one it was loaded from or last "
-            "saved to).")
+            "saved to). The project then holds the values its files hold, as a reopen reads them.")
         .def(
             "calculate",
             [](edi::Project& self) {

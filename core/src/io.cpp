@@ -43,6 +43,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 #include <iomanip>
@@ -4288,6 +4289,67 @@ void save_project_as(Project& project, const std::string& directory) {
     project.metadata.path = directory;
     // The saved project holds its scan data: it reads them from its own directory from now on.
     project.scan_data_root.clear();
+}
+
+bool adopt_saved_values(Project& project, const std::string& directory) {
+    // The reopen's warnings were the save's own concern; a project the loader refuses, such as one saved before it
+    // has a structure, keeps its values as they are.
+    std::optional<Project> reopened;
+    try {
+        reopened.emplace(load_project(directory, [](const std::string&) {}));
+    } catch (const IoError&) {
+        return false;
+    }
+    const Project& saved = *reopened;
+    bool changed = false;
+    std::map<std::string, const Parameter*> held;
+    for (const auto& slot : parameter_slots(saved)) {
+        held.emplace(slot.unique_name, slot.parameter);
+    }
+    for (const auto& slot : parameter_slots(project)) {
+        const auto found = held.find(slot.unique_name);
+        if (found == held.end()) {
+            continue;
+        }
+        Parameter& parameter = *slot.parameter;
+        if (parameter.value != found->second->value.get()) {
+            parameter.value = found->second->value.get();
+            changed = true;
+        }
+        if (parameter.uncertainty != found->second->uncertainty.get()) {
+            parameter.uncertainty = found->second->uncertainty.get();
+            changed = true;
+        }
+    }
+    // The correlation rows a save wrote, by their two parameters and file, take the saved coefficients. A scan's
+    // template then reads its pairs from those rows, as a reopened project does, not from its fit's table.
+    using RowKey = std::tuple<std::string, std::string, std::string>;
+    const auto key_of = [](const FitParameterCorrelation& row) {
+        return RowKey{row.parameter_unique_name_i.value(), row.parameter_unique_name_j.value(), row.file_path.value()};
+    };
+    std::map<RowKey, std::string> written;
+    for (const auto& row : saved.fit_result.correlations) {
+        written.emplace(key_of(*row), row->correlation.value());
+    }
+    auto& rows = project.fit_result.correlations;
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const auto found = written.find(key_of(*rows[i]));
+        if (found != written.end() && rows[i]->correlation.value() != found->second) {
+            auto row = std::make_shared<FitParameterCorrelation>(*rows[i]);
+            row->correlation = found->second;
+            rows.replace_at(i, std::move(row));
+            changed = true;
+        }
+    }
+    for (const auto& [key, text] : written) {
+        const auto table = project.fit_result.scan_results.find(std::get<2>(key));
+        if (!std::get<2>(key).empty() && table != project.fit_result.scan_results.end() && table->second &&
+            table->second->correlations) {
+            project.fit_result.scan_results.erase(table);
+            changed = true;
+        }
+    }
+    return changed;
 }
 
 
