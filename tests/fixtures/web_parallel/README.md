@@ -9,6 +9,14 @@ OMP_NUM_THREADS=4 python -m tests.fixtures.web_parallel.generate \
   .pixi/envs/default/bin/python --edi --producer '<edi and linked SDK source shas>'
 ```
 
+For a saved-result schema update, add `--conditioning-from <previous-captures>`.
+That directory must contain both previous native captures and their conditioning
+files. The generator checks all original parameters, patterns and fit scalars
+under the original bounds before retaining the native matrix and its column
+bindings. It then captures the complete result bank and phase loops and checks
+that the retained uncertainty bindings remain total. A changed numerical subject
+requires fresh independent conditioning evidence instead.
+
 The browser corpus is LBCO HRPT start 4 and NCAF WISH five-bank start 5. Captures
 include fitted parameters, fit scalars and every measured/calculated pattern
 operand. Parameter values and pattern operands retain the native captures'

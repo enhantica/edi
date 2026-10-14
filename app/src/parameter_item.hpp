@@ -38,8 +38,9 @@ class ParameterItem : public QObject {
     Q_PROPERTY(QString rowLabel READ rowLabel CONSTANT)
     Q_PROPERTY(QString name READ name CONSTANT)
     Q_PROPERTY(QString displayName READ displayName CONSTANT)
-    Q_PROPERTY(QString shortName READ shortName CONSTANT)
-    Q_PROPERTY(QString displayUnits READ displayUnits CONSTANT)
+    // An ADP parameter's symbol and units follow its site's declared type (edi::adp_display).
+    Q_PROPERTY(QString shortName READ shortName NOTIFY shortNameChanged)
+    Q_PROPERTY(QString displayUnits READ displayUnits NOTIFY displayUnitsChanged)
     Q_PROPERTY(double minimum READ minimum CONSTANT)
     Q_PROPERTY(double maximum READ maximum CONSTANT)
     // The value lies outside [minimum, maximum] (the owner, 2026-10-02): a fit writes its values unchecked, as
@@ -100,6 +101,7 @@ class ParameterItem : public QObject {
     void setBlockIndex(int index);
     void setElementSymbol(const QString& symbol);
     void setPhaseIndex(int index);
+    void setLabel(const QString& short_name, const QString& units);
 
     const edi::Parameter* parameter() const { return parameter_; }
     // Emit a signal for each field whose core value differs from the last published one; returns
@@ -117,6 +119,8 @@ class ParameterItem : public QObject {
     void blockIndexChanged();
     void elementSymbolChanged();
     void phaseIndexChanged();
+    void shortNameChanged();
+    void displayUnitsChanged();
 
    private:
     void setLastError(const QString& error);

@@ -1,0 +1,14 @@
+_edi.schema_version 2
+
+_metadata.name             lbco_hrpt_s2
+_metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI"
+_metadata.description "Cubic perovskite · Preferred orientation · Starting model 2"
+_metadata.purpose "refinement"
+_metadata.dimensionality "1D"
+_metadata.instrument "HRPT"
+_metadata.facility "PSI"
+_metadata.polarisation "none"
+
+_metadata.created "01 Jan 2099 00:00:00"
+
+_metadata.last_modified "01 Jan 2099 00:00:00"

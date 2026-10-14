@@ -33,7 +33,9 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
    `DomainValidationError` carrying crysta's code (`crysta.domain.constraint_*`). Each `Parameter` carries a
    `Dependence` mark from crysta's graph: independent, fixed or tied by symmetry, or constrained.
 4. **Free flag.** A dependent stays dependent. A loaded free flag on one is cleared with crysta's warning
-   `crysta.domain.dependent_free_ignored`; setting one free warns the same way and changes nothing.
+   `crysta.domain.dependent_free_ignored`; setting one free warns the same way and changes nothing. crysta saves a
+   constrained dependent holding a nonzero s.u. as `v(su)`, so a load reads that bracket as its s.u. and
+   clears the flag without the warning.
 5. **Values and e.s.d.s.** After any edit the app runs crysta's applier (`apply_relations`). A Python edit of the
    relations writes no value: it leaves the computed categories stale, and the next read or calculation applies the
    relations before it computes anything, the geometry included, and a value its range refuses refuses the read. A

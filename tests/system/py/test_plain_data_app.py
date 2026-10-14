@@ -898,6 +898,35 @@ def require_core_file_pairs(pairs, case):
     )
 
 
+def require_compact_file_pairs(state, case):
+    assert state['compact'], 'Completed scan results must use immutable per-file bundles'
+    files = {Path(file).name: value for file, value in state['files'].items()}
+    assert case['file'] in files, 'Every completed dataset must retain its own live result bundle'
+    table = files[case['file']]
+    labels = table['labels']
+    assert labels == case['names'], (
+        'The live correlation table must retain the independent free-column order'
+    )
+    observed = {
+        tuple(sorted((labels[i], labels[j]))): value
+        for (i, j), value in zip(
+            ((i, j) for i in range(len(labels)) for j in range(i + 1, len(labels))),
+            table['coefficients'],
+            strict=True,
+        )
+    }
+    expected = {
+        tuple(sorted((pair['parameter_unique_name_i'], pair['parameter_unique_name_j']))): pair[
+            'correlation'
+        ]
+        for pair in case['rows']
+    }
+    assert observed == pytest.approx(expected, abs=2e-4), (
+        'Each retained compact table must match the external normal-equations pairs and signs'
+    )
+    return table
+
+
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
 @pytest.mark.parametrize('history', [False, True], ids=['fresh', 'after-scan'])
 def test_single_fit_in_scan_shows_saves_and_undoes_its_own_matrix(
@@ -932,32 +961,70 @@ def test_cancelled_scan_retains_completed_core_pairs_and_resumes(
     assert record['cancelBeforeAny'] == record['before'], (
         'Cancellation before any file completes must preserve all previously held pairs'
     )
+    assert record['cancelBeforeAnyCompact'] == record['beforeCompact'], (
+        'Cancellation before any completion must retain the exact live map and pointers'
+    )
     assert record['completed'] == 1, (
         'The cancellation witness must complete exactly its first file'
     )
     assert len(record['cancelled']) == 3, (
-        "Cancellation must retain only the completed file's pairs, replacing a stale pair"
+        "Cancellation must retain only the completed template's rows, replacing a stale pair"
     )
     require_core_file_pairs(record['cancelled'], SCAN_REFERENCE['cases'][0])
+    first = require_compact_file_pairs(record['cancelledCompact'], SCAN_REFERENCE['cases'][0])
+    assert len(record['cancelledCompact']['files']) == 1, (
+        'Cancellation must publish only the completed dataset in the live map'
+    )
     assert record['reopened'] == record['cancelled'], (
-        "Save and reload must retain a cancelled scan's completed core correlations exactly"
+        "Save and reload must retain the cancelled scan's template rows exactly"
+    )
+    assert record['reopenedCompact']['files'] == {}, (
+        'A reload must not invent live bundles for the persisted template rows'
     )
     assert record['resumedFiles'] == ['02.xy'], (
         "Resume must fit only the unfinished dataset, without replacing the first dataset's pairs"
     )
-    assert len(record['resumed']) == 6, "Resume must retain both files' complete covariance pairs"
+    assert len(record['resumedCompact']['files']) == 2, (
+        "Resume must retain both files' complete covariance tables in the per-file map"
+    )
     for case in SCAN_REFERENCE['cases']:
-        require_core_file_pairs(record['resumed'], case)
+        table = require_compact_file_pairs(record['resumedCompact'], case)
+        if case['file'] == '01.xy':
+            assert table == first, (
+                'Resuming the unfinished file must retain the completed bundle and pointers'
+            )
+    assert record['resumed'] == record['cancelled'], (
+        'Fitting a non-template dataset must not replace the persisted template rows'
+    )
     assert not record['noopFiles'], 'A completed scan resume must execute no file fits'
+    assert record['noopCompact'] == record['resumedCompact'], (
+        'A no-op resume must preserve every completed table and its dataset association'
+    )
     assert record['noop'] == record['resumed'], (
-        'A no-op resume must preserve every completed correlation and its dataset association'
+        'A no-op resume must preserve every persisted template row exactly'
+    )
+    assert record['memoryAfterSaveCompact'] == record['resumedCompact'], (
+        'Saving a scan must preserve every completed dataset bundle in memory'
     )
     assert record['memoryAfterSave'] == record['resumed'], (
-        'Saving a scan must preserve all completed datasets correlations in memory'
+        'Saving a scan must preserve the persisted template rows in memory'
     )
     require_core_file_pairs(record['completedReopened'], SCAN_REFERENCE['cases'][0])
-    assert len(record['completedReopened']) == 3, (
+    assert record['completedReopened'] == record['cancelled'], (
         'A scan saves only its explicitly declared template dataset correlations'
+    )
+    assert record['completedReopenedCompact']['files'] == {}, (
+        'Completed non-template tables remain memory-only after save and reload'
+    )
+    assert record['reloadedResumeFiles'] == ['02.xy'], (
+        'Resume after reload must still skip the already completed template dataset'
+    )
+    assert record['reloadedResumed'] == record['cancelled'], (
+        'Resume after reload must preserve the completed template rows byte for byte'
+    )
+    require_compact_file_pairs(record['reloadedResumedCompact'], SCAN_REFERENCE['cases'][1])
+    assert len(record['reloadedResumedCompact']['files']) == 1, (
+        'Resume after reload publishes only newly fitted live tables'
     )
 
 

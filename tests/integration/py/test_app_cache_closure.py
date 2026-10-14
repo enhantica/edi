@@ -34,9 +34,19 @@ def dispatch(namespace, monkeypatch):  # noqa: F811 - shared pytest fixture
         path.write_text('transport recipe identity')
     (fixture / 'harness.py').write_text('transport owner fixture')
     original_run = subprocess.run
+    delivered_receipt = screen.normal_app.receipt
+
+    def prepare_normal_app(*args):
+        calls.append(('screen', 'desktop'))
+        return delivered_receipt(*args)
+
+    monkeypatch.setattr(screen.normal_app, 'receipt', prepare_normal_app)
+    monkeypatch.setattr(screen.normal_app, '__file__', str(fixture / 'normal_app.py'))
 
     def prepare(command, **kwargs):
         if '--output' not in command:
+            if command[0] == 'pixi' and 'app-build' in command:
+                raise RuntimeError('screen fixture attempted to compile the normal app')
             return original_run(command, **kwargs)
         owner = 'selector' if 'tests.fixtures.thread_selector.build' in command else 'screen'
         backend = command[command.index('--backend') + 1]
@@ -357,4 +367,33 @@ def test_browser_reuse_cannot_serve_an_unsealed_linked_directory(
         request(owner, 'browser', tmp_path / 'changed')
     assert len(dispatch.calls) == 1, (
         'a browser server cannot reuse captures with unsealed linked-directory assets'
+    )
+
+
+@pytest.mark.parametrize('reuse', ['cache', 'prepared'])
+def test_normal_screen_reuse_refuses_replaced_delivered_binary(
+    dispatch, reuse, tmp_path, monkeypatch
+):
+    first = request('screen', 'desktop', tmp_path / 'first')
+    assert Path(first['receipt']['executable']) == dispatch.root / 'build/app/app/edi_app', (
+        'desktop screen receipt controls bind the delivered normal app'
+    )
+    if reuse == 'prepared':
+        monkeypatch.setenv(
+            'EDI_SCAN_SCREEN_DESKTOP_RECEIPT', str(tmp_path / 'first/desktop/receipt.json')
+        )
+    Path(first['receipt']['executable']).write_bytes(b'replaced delivered transport app')
+    with pytest.raises(RuntimeError, match='replaced observation executable'):
+        request('screen', 'desktop', tmp_path / 'changed')
+    assert dispatch.calls == [('screen', 'desktop')] and dispatch.captures == ['desktop'], (
+        'a replaced delivered app refuses cached or prepared evidence before a second capture'
+    )
+
+
+def test_normal_screen_transport_requires_a_delivered_app(dispatch, tmp_path):
+    (dispatch.root / 'build/app/app/edi_app').unlink()
+    with pytest.raises(RuntimeError, match='screen observer runs the normal app'):
+        request('screen', 'desktop', tmp_path / 'missing')
+    assert not dispatch.captures and not builds.BUILDS, (
+        'a missing delivered desktop app fails rather than compiling a private replacement'
     )

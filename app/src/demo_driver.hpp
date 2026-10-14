@@ -3,6 +3,7 @@
 #define EDI_APP_DEMO_DRIVER_HPP
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QObject>
 #include <QString>
@@ -53,6 +54,16 @@ class DemoDriver : public QObject {
     //   expand:<group>              unfold a group, whether or not it is folded
     //   save-as:<name>              save the open project into a directory of that name in the run's
     //                               scratch directory (or at an absolute path); open-project:<name> opens one
+    //   timed-fit:<files>[:<stop>]  start the open scan and time it on a monotonic clock until its end is
+    //                               published and nothing is calculating; then check its work (every one of
+    //                               <files> datasets fitted and converged, no refusal) or fail; with <stop>,
+    //                               cancel after that many files (a control that must fail)
+    //   timed-reset                 time Reset fits the same way, then check the scan holds no results, the
+    //                               model its pre-fit values, and Undo is available
+    //   remove-scan-data            delete the open scan copy's data directory (a control whose start must fail)
+    // Each timed interval is a line of timings.tsv in the output directory. EDI_DEMO_DELAY_MS, when set, adds that
+    // delay at the scan's end and inside the reset, so a control can show both intervals contain it.
+    // EDI_DEMO_PERF_PROJECT, when set, is the prepared scan copy the timing steps open in place.
     struct Step {
         QString image;
         QStringList actions;
@@ -70,6 +81,13 @@ class DemoDriver : public QObject {
     // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
     void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
     void fail(const QString& message);
+    void timed_fit_then(std::function<void()> next, int files, int stop_after);
+    bool timed_reset();
+    // Polls every few milliseconds until nothing is calculating, then calls `next`.
+    void idle_then(std::function<void()> next, int waited_ms = 0);
+    QString scan_work(int files) const;
+    void record_time(const QString& label, qint64 ms);
+    void delay_then_record();
 
     QQuickWindow& window_;
     QDir output_dir_;
@@ -79,6 +97,9 @@ class DemoDriver : public QObject {
     QImage previous_frame_;
     int settle_attempts_ = 0;
     QTemporaryDir loaded_files_;
+    QElapsedTimer timer_;
+    std::vector<double> pre_fit_values_;
+    QString loaded_cli_project_;
 };
 
 }  // namespace edi_app

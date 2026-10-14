@@ -306,14 +306,14 @@ TEST_CASE("E09-T55 constant-wavelength project writer preserves typed axes and o
     CHECK_MESSAGE(restored.experiment().data->axis().size() == 6,
                   "the CW writer must retain all six independently recorded rows");
     CHECK_MESSAGE((edi::excluded_region_ranges(restored.experiment().excluded_regions) ==
-                      edi::excluded_region_ranges(project.experiment().excluded_regions)),
+                   edi::excluded_region_ranges(project.experiment().excluded_regions)),
                   "the CW writer must retain excluded-region pairs");
     REQUIRE_MESSAGE((restored.experiment().excluded_regions.size() == 1),
                     "constant-wavelength project writer preserves typed axes and observations");
     CHECK_MESSAGE((restored.experiment().excluded_regions[0]->id == "low angle"),
                   "constant-wavelength project writer preserves typed axes and observations");
-    REQUIRE_MESSAGE((
-        restored.experiment().background.size() == project.experiment().background.size()),
+    REQUIRE_MESSAGE(
+        (restored.experiment().background.size() == project.experiment().background.size()),
         "constant-wavelength project writer preserves typed axes and observations");
     CHECK_MESSAGE((restored.experiment().background[0]->id == "anchor point"),
                   "constant-wavelength project writer preserves typed axes and observations");
@@ -676,12 +676,29 @@ TEST_CASE("E09-T55 structure schema handles optional identity and ADP branches")
                   "a Uiso source must retain its declared type");
     CHECK_MESSAGE(uiso.atom_sites.front()->adp_iso.value == doctest::Approx(0.01),
                   "Uiso must retain its independently declared square-Angstrom value");
-    check_io_error(
-        [&] {
-            static_cast<void>(edi::structure_from_edi_text(replacing(
-                "Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani")));
-        },
-        "has no _atom_site_aniso row", "an anisotropic type must require its tensor row");
+    // Native missing rows initialize from the declared isotropic value (ADR-0027).
+    const edi::Structure uani = edi::structure_from_edi_text(
+        replacing("Ca Ca 0.4661 0 0.25 b 1 0.90 Biso", "Ca Ca 0.4661 0 0.25 b 1 0.90 Uani"));
+    REQUIRE_MESSAGE(uani.atom_site_aniso.size() == 1,
+                    "native ADP load must initialize exactly the missing tensor row");
+    const auto& tensor = uani.atom_site_aniso.front();
+    CHECK_MESSAGE(tensor->id == uani.atom_sites.front()->id,
+                  "the initialized tensor must belong to the declared anisotropic atom");
+    const std::vector<double> isotropic{0.90, 0.90, 0.90, 0.0, 0.0, 0.0};
+    const auto components = tensor->parameters();
+    for (std::size_t i = 0; i < components.size(); ++i) {
+        CHECK_MESSAGE(components[i]->value == doctest::Approx(isotropic[i]),
+                      "the native Uani fallback must preserve the full isotropic tensor");
+        if (i >= 3) {
+            CHECK_MESSAGE(!components[i]->uncertainty.has_value(),
+                          "exact zero tensor components must carry no standard uncertainty");
+        } else {
+            CHECK_MESSAGE(components[i]->uncertainty.value_or(0.0) == 0.0,
+                          "a bare isotropic input must not invent a nonzero tensor uncertainty");
+        }
+    }
+    CHECK_MESSAGE(uani.atom_sites.front()->adp_iso.value == doctest::Approx(0.90),
+                  "the native Uani fallback must preserve the declared isotropic equivalent");
 }
 
 TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes") {
@@ -865,7 +882,7 @@ TEST_CASE("GUI table readers generate legacy IDs and retain quoteable literal ID
     CHECK_MESSAGE((experiment.excluded_regions[1]->id == "2"),
                   "GUI table readers generate legacy IDs and retain quoteable literal IDs");
     CHECK_MESSAGE((edi::excluded_region_ranges(experiment.excluded_regions) ==
-                      std::vector<std::pair<double, double>>{{25, 30}, {50, 55}}),
+                   std::vector<std::pair<double, double>>{{25, 30}, {50, 55}}),
                   "GUI table readers generate legacy IDs and retain quoteable literal IDs");
     for (const auto& marker : {std::string{"."}, std::string{"?"}}) {
         auto literal_background = reference;
@@ -895,7 +912,7 @@ TEST_CASE("GUI table readers generate legacy IDs and retain quoteable literal ID
         CHECK_MESSAGE((literal.excluded_regions[0]->id == marker),
                       "GUI table readers generate legacy IDs and retain quoteable literal IDs");
         CHECK_MESSAGE((edi::excluded_region_ranges(literal.excluded_regions) ==
-                          std::vector<std::pair<double, double>>{{25, 30}}),
+                       std::vector<std::pair<double, double>>{{25, 30}}),
                       "GUI table readers generate legacy IDs and retain quoteable literal IDs");
     }
 }
