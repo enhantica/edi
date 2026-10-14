@@ -61,7 +61,8 @@ def generate():
         ),
     }
     Path(__file__).with_name('reference.json').write_text(json.dumps(reference, indent=2) + '\n')
-    # Independent PSD matrix: P1=-P2, all remaining variables independent.
+    # Independent PSD matrix: P1=P3=-P2, all remaining variables independent.
+    # All three endpoint colours therefore occur below the blank diagonal.
     repo = Path(__file__).resolve().parents[3]
     base = repo / 'tests/fixtures/report_options/pairs'
     if base.exists():
@@ -73,11 +74,14 @@ def generate():
             line = input_line
             if re.match(r'\d+ deterministic bank\.background\.P\d+\.intensity ', line):
                 values = line.split()
-                values[-1] = (
-                    '-1'
-                    if values[2].endswith('P1.intensity') and values[3].endswith('P2.intensity')
-                    else '0'
-                )
+                left = values[2].split('.')[-2]
+                right = values[3].split('.')[-2]
+                pair = frozenset((left, right))
+                values[-1] = {
+                    frozenset(('P1', 'P2')): '-1',
+                    frozenset(('P1', 'P3')): '1',
+                    frozenset(('P2', 'P3')): '-1',
+                }.get(pair, '0')
                 line = ' '.join(values)
             lines.append(line)
         file.write_text('\n'.join(lines) + '\n_correlation_chart.threshold 0\n')

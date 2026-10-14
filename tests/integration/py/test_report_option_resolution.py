@@ -1,6 +1,7 @@
 """Stored report options and per-run overrides from hand-declared project inputs."""
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -18,16 +19,35 @@ class Scripts(HTMLParser):
     def __init__(self):
         super().__init__()
         self.external = []
+        self.headings = []
+        self.heading = None
 
     def handle_starttag(self, tag, attrs):
         if tag == 'script' and dict(attrs).get('src'):
             self.external.append(dict(attrs)['src'])
+        if tag in {'h1', 'h2', 'h3', 'h4', 'h5', 'h6'}:
+            self.heading = ''
+
+    def handle_data(self, data):
+        if self.heading is not None:
+            self.heading += data
+
+    def handle_endtag(self, tag):
+        if tag in {'h1', 'h2', 'h3', 'h4', 'h5', 'h6'} and self.heading is not None:
+            self.headings.append(re.sub(r'^\d+(?:\.\d+)*\.?\s*', '', self.heading.strip()))
+            self.heading = None
 
 
 def external_scripts(text):
     parser = Scripts()
     parser.feed(text)
     return parser.external
+
+
+def headings(text):
+    parser = Scripts()
+    parser.feed(text)
+    return parser.headings
 
 
 def input_project(tmp_path, graph='pairs', **items):
@@ -132,7 +152,7 @@ def test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_w
     assert not external_scripts(loaded.report.as_html()), (
         'Omitted offline overrides retain embedded chart libraries'
     )
-    assert 'Reflections' not in loaded.report.as_html(), (
+    assert 'Reflections' not in headings(loaded.report.as_html()), (
         'The stored exclusion removes the Reflections subsection'
     )
     assert labels(override) == ['A', 'B', 'C', 'D', 'E', 'F'], (
@@ -163,7 +183,7 @@ def test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_w
     assert external_scripts(text), (
         'An explicit false offline override produces online library references'
     )
-    assert 'Reflections' in text, (
+    assert 'Reflections' in headings(text), (
         'An empty exclusion override restores the stored excluded Reflections subsection'
     )
     assert {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*.edi')} == original, (
@@ -211,7 +231,7 @@ def test_cli_override_flags_leave_project_options_and_bytes_unchanged(tmp_path):
         'The CLI report command never writes its per-run overrides into project.edi'
     )
     text = target.read_text()
-    assert external_scripts(text) and 'Reflections' in text, (
+    assert external_scripts(text) and 'Reflections' in headings(text), (
         'The CLI applies false offline and empty exclusions rather than '
         'retaining the stored settings'
     )

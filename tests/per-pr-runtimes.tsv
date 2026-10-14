@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-13T23:57:40Z
+# measured_utc = 2026-10-14T01:21:27Z
 #
-# Recorded from: canonical native XML completion: tests-seq21-cpp.xml; actual native results; red cases declared holes; Python bank retained
+# Recorded from: measured test run (20 node(s) measured once, 10449 banked, 0 stale row(s) dropped)
 # Collected tests: 11369; with a reported duration: 6148
 # Module-scoped fixture costs recorded: 43
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11369
 # inventory_cpp = 328
-# inventory_measured = 10451
-# inventory_unmeasured = 1246
+# inventory_measured = 10469
+# inventory_unmeasured = 1228
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5541,12 +5541,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_rename_namespace.py::tes
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-aliases-single]
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-correlations-sequential]
 0.010	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[unequal-structure-True-correlations-single]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[0.9-3]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[1.0-0]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[None-5]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
+0.000	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[0.9-3]
+0.000	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[1.0-0]
+0.000	tests/integration/py/test_report_builder_seams.py::test_core_correlation_filter_keeps_top_five_and_threshold_pairs[None-5]
+0.000	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
+0.000	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
+0.000	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[True]
@@ -5559,8 +5559,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::te
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[present_structure]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[scene_drawing]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_model_header_remains_free_of_qt_and_html_rendering
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_data_block.py::test_data_default_and_explicit_include_all_reach_report_and_html[absent-default]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_data_block.py::test_data_default_and_explicit_include_all_reach_report_and_html[explicit-empty]
+0.000	tests/integration/py/test_report_data_block.py::test_data_default_and_explicit_include_all_reach_report_and_html[absent-default]
+0.000	tests/integration/py/test_report_data_block.py::test_data_default_and_explicit_include_all_reach_report_and_html[explicit-empty]
 0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[Co"Si" <b>&amp;</b></script><script>alert(1)</script>\u2028\u2029]
 0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[\U0001d6c2 & "quotes" and 'apostrophe']
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_absent_rule_defaults_and_unknown_rule_refuses
@@ -5589,23 +5589,23 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_19-2.164(5)]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_99-2.1635(49)]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[54912-1234-iucr_19-54900(1300)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[False-0.001]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[False-0.001]
 0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-0.0]
 0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-None]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-nan]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-nan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.0234--0.023]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.99987--1.00]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9449-0.94]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9512-0.951]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[1-1.00]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_cli_override_flags_leave_project_options_and_bytes_unchanged
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_without_writes
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[clique-0.0-expected5]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[clique-0.9-expected4]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.0-expected3]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.95-expected1]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.99-expected2]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-None-expected0]
+0.000	tests/integration/py/test_report_option_resolution.py::test_cli_override_flags_leave_project_options_and_bytes_unchanged
+0.000	tests/integration/py/test_report_option_resolution.py::test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_without_writes
+0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[clique-0.0-expected5]
+0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[clique-0.9-expected4]
+0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.0-expected3]
+0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.95-expected1]
+0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.99-expected2]
+0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-None-expected0]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_absent_report_items_resolve_defaults_without_inventing_an_offline_item
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_declared_report_options_survive_reload_and_canonical_resave[false]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_declared_report_options_survive_reload_and_canonical_resave[true]

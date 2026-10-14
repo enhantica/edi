@@ -76,6 +76,14 @@ class ReportSettingsProof : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE QObject* creationDialog(QObject* root) const {
+        if (!root) return nullptr;
+        for (auto* object : root->findChildren<QObject*>())
+            if (object->metaObject()->indexOfProperty("projectName") >= 0 &&
+                object->metaObject()->indexOfProperty("projectParentDirectory") >= 0)
+                return object;
+        return nullptr;
+    }
     Q_INVOKABLE QVariantMap htmlFigureFacts(const QString& html) const {
         const QRegularExpression shared("const sharedSites = sites => \\{[\\s\\S]*?\n  \\};");
         const QRegularExpression legend("const legend = document.createElement\\('div'\\);[\\s\\S]*?figure.appendChild\\(legend\\);");
@@ -301,6 +309,14 @@ public:
         settings.beginGroup(group);
         settings.remove(key);
         settings.sync();
+    }
+    Q_INVOKABLE QVariantMap settingFacts(const QUrl& location, const QString& group, const QString& key) const {
+        QSettings settings(location.toLocalFile(), QSettings::IniFormat);
+        settings.beginGroup(group);
+        const auto value = settings.value(key);
+        return {{"file", location.toLocalFile()}, {"group", group}, {"key", key},
+                {"type", QString::fromUtf8(value.typeName() ? value.typeName() : "invalid")},
+                {"value", value}, {"list", value.toStringList()}};
     }
     Q_INVOKABLE QVariant value(const QUrl& location, const QString& group, const QString& key) const {
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);

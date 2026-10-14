@@ -73,7 +73,7 @@ Rectangle {
             if (!data.empty)
                 compare(match[1].trim(), "\"\"", "An explicit empty exclusion is written in the accepted double-quoted record form");
             Session.project.undo();
-            tryCompare(box, "checked", data.empty, 1000, "Undo restores the original Data checkbox state");
+            tryVerify(() => Render.descendants(findChild(page, "group.reportContents")).some(item => item.text === "Data" && item.checked === data.empty), 1000, "Undo restores the original Data checkbox state in the rebuilt Contents group and delegates");
             Session.closeProject();
             verify(Session.openProject(url), "The saved Data choice reopens through the real reader");
             const contents = Session.project.report.model.contents;
