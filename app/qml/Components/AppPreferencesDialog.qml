@@ -241,10 +241,13 @@ AppDialog {
                 text: qsTr("Colour scheme") + ":"
             }
             RowBox {
+                // The schemes' tokens (data/palettes), in the order the box lists them.
+                readonly property var schemes: ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"]
+
                 objectName: "preferences.colourScheme"
-                model: [qsTr("Default"), qsTr("Colour-blind safe")]
-                currentIndex: Preferences.colourScheme === "colourBlindSafe" ? 1 : 0
-                onActivated: index => Preferences.colourScheme = index === 1 ? "colourBlindSafe" : "default"
+                model: [qsTr("Default"), qsTr("Colour-blind safe"), qsTr("Tableau"), qsTr("Paul Tol"), qsTr("Vivid")]
+                currentIndex: Math.max(0, schemes.indexOf(Preferences.colourScheme))
+                onActivated: index => Preferences.colourScheme = schemes[index]
                 ToolTip.text: qsTr("The experiments' and structures' colours in every chart and icon")
             }
 

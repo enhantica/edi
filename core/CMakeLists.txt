@@ -48,12 +48,13 @@ file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
 configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
 
 # The colour palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way; a change reconfigures.
-set(EDI_DEFAULT_PALETTE_TSV ${CMAKE_SOURCE_DIR}/data/palettes/default.tsv)
-set(EDI_COLOUR_BLIND_SAFE_PALETTE_TSV ${CMAKE_SOURCE_DIR}/data/palettes/colour-blind-safe.tsv)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_DEFAULT_PALETTE_TSV}
-                                                               ${EDI_COLOUR_BLIND_SAFE_PALETTE_TSV})
-file(READ ${EDI_DEFAULT_PALETTE_TSV} EDI_DEFAULT_PALETTE)
-file(READ ${EDI_COLOUR_BLIND_SAFE_PALETTE_TSV} EDI_COLOUR_BLIND_SAFE_PALETTE)
+foreach(scheme IN ITEMS default colour-blind-safe tableau paul-tol vivid)
+    string(TOUPPER ${scheme} palette_name)
+    string(REPLACE "-" "_" palette_name ${palette_name})
+    set(palette_tsv ${CMAKE_SOURCE_DIR}/data/palettes/${scheme}.tsv)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${palette_tsv})
+    file(READ ${palette_tsv} EDI_${palette_name}_PALETTE)
+endforeach()
 configure_file(src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 
 # ADR-0036: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
