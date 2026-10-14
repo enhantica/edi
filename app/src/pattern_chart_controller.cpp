@@ -223,9 +223,14 @@ void PatternChartController::setReport(ReportViewModel* report) {
     }
     report_ = report;
     if (report_) {
-        connect(report_, &ReportViewModel::modelChanged, this, &PatternChartController::invalidate);
+        // A new model can bring other styles (another colour scheme) under the same keys.
+        connect(report_, &ReportViewModel::modelChanged, this, [this] {
+            publishColors();
+            invalidate();
+        });
     }
     emit reportChanged();
+    publishColors();
     invalidate();
 }
 

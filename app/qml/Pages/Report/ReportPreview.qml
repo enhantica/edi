@@ -179,11 +179,15 @@ Flickable {
                 border.color: EaStyle.Colors.appBorder
             }
         }
+        // The figures in the light theme's colours whatever the app's, as the HTML and PDF draw them.
         Component {
             id: structureFigure
             StructureView {
                 report: preview.report
                 reportStructure: record.modelData.id
+                colors: FigureColors {
+                    light: true
+                }
             }
         }
         Component {
@@ -191,6 +195,9 @@ Flickable {
             PatternChart {
                 report: preview.report
                 reportExperiment: record.modelData.id
+                colors: FigureColors {
+                    light: true
+                }
             }
         }
         Repeater {
@@ -445,6 +452,9 @@ Flickable {
                         width: evolutionCharts.chartWidth
                         height: evolutionCharts.chartHeight
                         reportSeries: modelData
+                        colors: FigureColors {
+                            light: true
+                        }
                     }
                 }
             }
