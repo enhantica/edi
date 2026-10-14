@@ -33,8 +33,8 @@ AppDialog {
     }
 
     // One layout on every tab (the owner, 2026-10-14): the labels in one column as wide as the widest label, the controls
-    // in one column as wide as the longest item of any box or the longest button text (two buttons on a row share it),
-    // and each label level with the first line of its control.
+    // in one column as wide as the longest item of any box or the longest button text, and each label level with the
+    // first line of its control.
     component RowGrid: Grid {
         columns: 2
         topPadding: EaStyle.Sizes.fontPixelSize * 0.5
@@ -55,10 +55,8 @@ AppDialog {
     }
     component RowButton: EaElements.SideBarButton {
         readonly property bool rowButton: true
-        // Two buttons on a row: each takes half the column.
-        property bool half: false
 
-        width: half ? (dialog.controlWidth - dialog.pairSpacing) / 2 : dialog.controlWidth
+        width: dialog.controlWidth
         height: dialog.rowHeight
     }
     component RowCheckBox: EaElements.CheckBox {
@@ -86,14 +84,13 @@ AppDialog {
     }
     // The width a button needs for its text with an em at each side (its content reports no width of its own).
     function buttonNeed(button) {
-        const need = Math.ceil(boxMetrics.advanceWidth(button.text) + 2 * EaStyle.Sizes.fontPixelSize);
-        return button.half ? 2 * need + pairSpacing : need;
+        return Math.ceil(boxMetrics.advanceWidth(button.text) + 2 * EaStyle.Sizes.fontPixelSize);
     }
 
     readonly property var rowItems: pages.contentChildren.reduce((all, page) => all.concat(itemsUnder(page, item => item.rowLabel === true || item.rowBox === true || item.rowButton === true)), [])
     readonly property real labelWidth: rowItems.reduce((widest, item) => item.rowLabel === true ? Math.max(widest, item.implicitWidth) : widest, 0)
     readonly property real controlWidth: rowItems.reduce((widest, item) => Math.max(widest, item.rowBox === true ? boxNeed(item) : item.rowButton === true ? buttonNeed(item) : 0), 0)
-    readonly property real pairSpacing: EaStyle.Sizes.fontPixelSize * 0.5
+    readonly property real stackSpacing: EaStyle.Sizes.fontPixelSize * 0.5
     readonly property real rowHeight: themeBox.implicitHeight
     // A label's line, centred on a control's height.
     readonly property real lineOffset: Math.max(0, (rowHeight - lineMetrics.height) / 2)
@@ -384,7 +381,7 @@ AppDialog {
                 text: qsTr("Settings") + ":"
             }
             Column {
-                spacing: dialog.pairSpacing
+                spacing: dialog.stackSpacing
 
                 EaElements.Label {
                     id: settingsPath
@@ -403,22 +400,16 @@ AppDialog {
                         visible: pathHover.hovered && settingsPath.truncated && EaGlobals.Vars.showToolTips
                     }
                 }
-                Row {
-                    spacing: dialog.pairSpacing
-
-                    RowButton {
-                        objectName: "preferences.openSettingsFolder"
-                        visible: !WebFiles.available
-                        half: true
-                        text: qsTr("Open folder")
-                        onClicked: Qt.openUrlExternally(ApplicationInfo.folderOf(EaGlobals.Vars.settingsFile))
-                    }
-                    RowButton {
-                        objectName: "preferences.resetSettings"
-                        half: !WebFiles.available
-                        text: qsTr("Reset to defaults")
-                        onClicked: resetConfirm.open()
-                    }
+                RowButton {
+                    objectName: "preferences.openSettingsFolder"
+                    visible: !WebFiles.available
+                    text: qsTr("Open folder")
+                    onClicked: Qt.openUrlExternally(ApplicationInfo.folderOf(EaGlobals.Vars.settingsFile))
+                }
+                RowButton {
+                    objectName: "preferences.resetSettings"
+                    text: qsTr("Reset to defaults")
+                    onClicked: resetConfirm.open()
                 }
             }
         }
