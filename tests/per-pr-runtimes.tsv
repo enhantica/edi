@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T12:15:23Z
+# measured_utc = 2026-10-14T12:25:30Z
 #
 # Recorded from: completed scoped publisher, native save actors, report save adoption and style diagnostics; independent sources; canonical completed-node and fixture-cost artifacts
-# Collected tests: 11818; with a reported duration: 6463
+# Collected tests: 11819; with a reported duration: 6463
 # Module-scoped fixture costs recorded: 45
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11818
+# inventory_python = 11819
 # inventory_cpp = 330
-# inventory_measured = 10872
+# inventory_measured = 10873
 # inventory_unmeasured = 1276
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -5435,7 +5435,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_source
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[tableau]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[vivid]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[colourBlindSafe]
-0.010	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[default]
+0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[default]
+0.000	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[paulTol]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[tableau]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[vivid]
 0.000	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls

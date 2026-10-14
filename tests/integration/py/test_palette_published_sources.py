@@ -94,7 +94,9 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):  #
             row['role'] == 'pattern'
             and all(on_published_curve(colour, scheme['gradient']) for colour in (light, dark))
         ):
-            continue  # trimmed gradient endpoints have no categorical lightness adaptation
+            if not all(on_published_curve(colour, scheme['gradient']) for colour in (light, dark)):
+                mismatches.append(('published gradient curve', row))
+            continue  # trimmed gradient stops have no categorical lightness adaptation
         candidates = [
             source
             for source, light_value, dark_value in triples
@@ -237,9 +239,7 @@ def test_published_curve_observer_reaches_numeric_interpolation_controls(actual,
     )
 
 
-@pytest.mark.parametrize(
-    'scheme', REFERENCE['schemes'][:3] + REFERENCE['schemes'][4:], ids=itemgetter('id')
-)
+@pytest.mark.parametrize('scheme', REFERENCE['schemes'], ids=itemgetter('id'))
 def test_gradient_endpoints_trim_the_full_published_contrast_range(scheme):
     files = [
         p
