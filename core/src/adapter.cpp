@@ -1847,6 +1847,77 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
     return split_scan_row(line);
 }
 
+std::vector<std::string> evolution_parameters(const Project& project, const ScanResultIndex& index) {
+    std::vector<std::string> names;
+    std::set<std::string> columns;
+    for (const NamedParameter& parameter : named_parameters(project)) {
+        if (parameter.parameter->free) {
+            names.push_back(parameter.unique_name);
+            columns.insert(scan_results_column(parameter.unique_name));
+        }
+    }
+    for (const ScanParameterColumns& parameter : index.parameters) {
+        if (columns.insert(parameter.name).second) {
+            names.push_back(parameter.name);
+        }
+    }
+    return names;
+}
+
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::string& parameter, bool by_value,
+                      const std::function<void(const EvolutionPoint&)>& visit) {
+    const ScanParameterColumns* columns = nullptr;
+    for (const std::string& name : {parameter, scan_results_column(parameter)}) {
+        for (const ScanParameterColumns& recorded : index.parameters) {
+            if (columns == nullptr && recorded.name == name) {
+                columns = &recorded;
+            }
+        }
+    }
+    if (columns == nullptr || !index.error.empty() ||
+        !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+        return;
+    }
+    std::ifstream input(scan_results_path(project), std::ios::binary);
+    std::string line;
+    // The columns mean what the indexed header says only while the file still has that header.
+    if (!std::getline(input, line) || split_scan_row(line) != index.header) {
+        return;
+    }
+    const bool extracted = by_value && !project.sequential_fit.extract.empty() && !index.extract.empty();
+    std::int64_t offset = input.tellg();
+    while (offset < index.end && std::getline(input, line) && !input.eof()) {
+        offset = input.tellg();
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != index.header.size()) {
+            continue;
+        }
+        const auto place = places.find(scan_row_file(index, cells));
+        EvolutionPoint point;
+        // A refused file's row holds the values its fit started from, not a result.
+        if (place == places.end() || cells[index.chi] == "nan" || !parse_scan_number(cells[columns->value], point.y) ||
+            !parse_scan_number(cells[columns->uncertainty], point.su)) {
+            continue;
+        }
+        point.dataset = place->second;
+        if (extracted) {
+            const std::ptrdiff_t column = index.extract.front();
+            if (column < 0 || !parse_scan_number(cells[static_cast<std::size_t>(column)], point.x)) {
+                continue;
+            }
+        } else {
+            point.x = static_cast<double>(point.dataset + 1);
+        }
+        constexpr double kLimit = 1e300;
+        if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.su) && point.su >= 0.0 &&
+            std::abs(point.x) <= kLimit && std::abs(point.y - point.su) <= kLimit &&
+            std::abs(point.y + point.su) <= kLimit) {
+            visit(point);
+        }
+    }
+}
+
 void check_scan_template_file(const Project& project, const std::string& file) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
