@@ -28,6 +28,13 @@ struct ScanDatasets {
 /// an undeclared scan, a project with no directory, a missing directory or no matching file.
 ScanDatasets scan_datasets(const Project& project);
 
+/// The scan's template dataset in effect: `_sequential_fit.template_file` when declared, else the first file of the
+/// scan's listing; empty when there is neither. A scan's report is this dataset's, and its fit record keeps this
+/// dataset's correlation pairs (edi ADR-0034), so the report shows the same pairs in the app and from the saved files.
+std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets);
+/// The same, listing the scan's files itself; the declared file, or empty, when they cannot be listed.
+std::string effective_scan_template_file(const Project& scan);
+
 /// One dataset's measured pattern, read as the driver reads it, on the axis of `mode`.
 PdDataBase read_scan_dataset(const std::string& directory, const std::string& file, BeamModeEnum mode);
 

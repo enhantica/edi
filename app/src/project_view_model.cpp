@@ -2259,7 +2259,10 @@ void ProjectViewModel::publish(bool structural) {
 
 void ProjectViewModel::adoptScanFileResult(const std::string& file,
                                            const std::shared_ptr<const edi::ScanFileResult>& result) {
-    const std::string& template_file = scanTemplateOrModel().sequential_fit.template_file;
+    // The template dataset in effect (declared, else the first file), whose pairs the record keeps (edi ADR-0034).
+    const std::string template_file =
+        scan_session_ != nullptr ? edi::effective_scan_template_file(scanTemplateOrModel(), scan_session_->datasets())
+                                 : scanTemplateOrModel().sequential_fit.template_file;
     edi::adopt_scan_file_result(project_->fit_result, file, result, template_file);
     if (scan_template_) {
         edi::adopt_scan_file_result(scan_template_->fit_result, file, result, template_file);
