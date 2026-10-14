@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T12:33:49Z
+# measured_utc = 2026-10-14T13:09:44Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 10870 banked, 0 stale row(s) dropped)
-# Collected tests: 11819; with a reported duration: 6462
+# Recorded from: measured test run (19 node(s) measured once, 10864 banked, 2 stale row(s) dropped)
+# Collected tests: 11825; with a reported duration: 6474
 # Module-scoped fixture costs recorded: 45
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11819
+# inventory_python = 11825
 # inventory_cpp = 330
-# inventory_measured = 10872
+# inventory_measured = 10878
 # inventory_unmeasured = 1277
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -4413,8 +4413,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::
 0.110	tests/integration/py/test_e04_t2_build_contract.py::test_ci_job_names_state_area_and_platform_and_share_matrices
 0.070	tests/integration/py/test_e04_t2_build_contract.py::test_crysta_build_and_prefix_are_isolated_by_environment
 0.040	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_builds_once_and_recovery_is_change_scoped
-0.920	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[Linux]
-0.820	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[macOS]
+0.680	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[pull_request-False-Linux]
+0.520	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[pull_request-False-macOS]
+0.750	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[push-False-Linux]
+0.500	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[push-False-macOS]
+0.720	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[schedule-True-Linux]
+0.820	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[schedule-True-macOS]
+0.750	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[workflow_dispatch-True-Linux]
+0.670	tests/integration/py/test_e04_t2_build_contract.py::test_desktop_ci_sequence_builds_once_before_checks[workflow_dispatch-True-macOS]
 0.250	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[False]
 0.240	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_preserves_explicit_and_inherited_build_identity[True]
 0.830	tests/integration/py/test_e04_t2_build_contract.py::test_dispatcher_skip_deps_keeps_checker_and_environment[False-options0]
@@ -5439,17 +5445,17 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_source
 0.000	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[paulTol]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[tableau]
 0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[vivid]
-0.000	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
+0.350	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[colourBlindSafe]
 0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[default]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[paulTol]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[tableau]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[vivid]
-0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[colourBlindSafe]
-0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[default]
-0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTol]
-0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[tableau]
-0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[vivid]
+0.220	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[colourBlindSafe]
+0.350	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[default]
+0.270	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTol]
+0.390	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[tableau]
+0.340	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[vivid]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#010100-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#808080-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#FF0000-False]
