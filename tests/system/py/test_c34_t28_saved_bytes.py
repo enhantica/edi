@@ -87,6 +87,7 @@ POLYNOMIAL_CASES = [
 
 # New relation data keeps its own fixed-point witness and never replaces an old pin.
 RELATION_CASES = ['corpus:constraint-covariance/project']
+FCJ_CASES = ['corpus:lab6-echidna-fcj/project']
 
 # New CLI subjects retain all source bytes and the complete second-save fixed point;
 # they do not replace or regenerate any historical serialization pin.
@@ -117,12 +118,13 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         | additions
         | set(POLYNOMIAL_CASES)
         | set(ADP_AND_SCAN_CASES)
+        | set(FCJ_CASES)
         | set(NEW_FIXED_POINTS)
         | (set(RELATION_CASES) & set(REFERENCE.inputs()))
     ), (
         ' I22 every project must retain its pre-move byte witness, labelled '
         ' LiF pin or explicit  serialization fixed-point witness; '
-        'or a declared relation-corpus fixed point; no unknown project may be omitted'
+        'or a declared relation/FCJ-corpus fixed point; no unknown project may be omitted'
     )
     expected_cases = {
         'corpus:cosio-d20-scan-3f/project',
@@ -331,7 +333,8 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
 
 
 @pytest.mark.parametrize(
-    'case', POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES + sorted(NEW_FIXED_POINTS)
+    'case',
+    POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES + sorted(NEW_FIXED_POINTS) + FCJ_CASES,
 )
 def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     inputs = REFERENCE.inputs()

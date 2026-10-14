@@ -100,6 +100,17 @@ void ParameterItem::setElementSymbol(const QString& symbol) {
     }
 }
 
+void ParameterItem::setLabel(const QString& short_name, const QString& units) {
+    if (short_name_ != short_name) {
+        short_name_ = short_name;
+        emit shortNameChanged();
+    }
+    if (display_units_ != units) {
+        display_units_ = units;
+        emit displayUnitsChanged();
+    }
+}
+
 void ParameterItem::setPhaseIndex(int index) {
     if (phase_index_ != index) {
         phase_index_ = index;

@@ -470,6 +470,7 @@ template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;
 template class OneRow<FitResultCategory>;
 template class OneRow<FitResultBankCategory>;
+template class OneRow<FitResultPhaseCategory>;
 template class OneRow<MetadataCategory>;
 template class OneRow<ProjectStateCategory>;
 

@@ -88,12 +88,15 @@ def public_build_boundary(data, name, platform=None):
     needs = job.get('needs')
     needs = [needs] if isinstance(needs, str) else needs
     expected_needs = {'changes'}
-    if name == 'notebooks':
+    if name == 'system':
+        expected_needs.add('app')
+    elif name == 'notebooks':
         expected_needs |= {'native', 'core'}
     elif name not in {'native', 'core', 'system'}:
         expected_needs.add('core')
     assert set(needs or []) == expected_needs, (
-        'public native jobs resolve the source once and build locally rather than download objects'
+        'Public jobs bind source once, build native code locally '
+        'and await the app for system reuse'
     )
     assert job.get('env', {}).get('CRYSTA_SOURCE_SHA') == (
         '${{ needs.changes.outputs.crysta_sha }}'

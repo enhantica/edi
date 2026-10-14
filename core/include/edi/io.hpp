@@ -146,8 +146,10 @@ void save_project_via_crysta(const Project& project, const std::string& director
 // The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
 // `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's
 // free flag cleared with crysta's `crysta.domain.dependent_free_ignored` warning to `warn`. The loader
-// runs it; so does every edit of the relations.
-void refresh_relations(Project& project, const WarningSink& warn = {});
+// runs it with `from_file`, where a constrained dependent's bracket is the uncertainty crysta saved
+// with it, so one holding a nonzero s.u. loses its free flag without the warning; so does every edit
+// of the relations, without `from_file`.
+void refresh_relations(Project& project, const WarningSink& warn = {}, bool from_file = false);
 
 // Every dependent (a cell sibling, a special-position follower, a constrained parameter) set from
 // its relation at the model's current independent values by crysta's one applier, values only.
@@ -161,8 +163,9 @@ bool apply_relations(Project& project);
 void complete_relations(Project& project);
 
 // Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
-// fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file).
-void restore_dependents(Project& project);
+// fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file); one in
+// `restored`, which its own start row gave back, keeps that.
+void restore_dependents(Project& project, const std::set<const Parameter*>& restored = {});
 
 // Review-9 F1 — the lossless prior-state property on edi's own paths (implemented in the
 // adapter, ADR-0003). rebalance_positional_fit_state runs between write_back and the
@@ -221,6 +224,10 @@ UndoFitOutcome restore_fit_start(Project& project);
 // `copy_fit_result` writes `from`'s onto `to`, a project `from` was copied from (experiments by position);
 // `clear_fit_result` leaves none. An undo clears it (restore_fit_start), as diffraction-lib's undo does.
 void copy_fit_result(Project& to, const Project& from);
+// One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
+// from its counterpart in another copy of the project.
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
+void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.
 double correlation_value(const FitParameterCorrelation& row);
