@@ -226,13 +226,24 @@ def test_empty_free_set_never_invents_pairs(tmp_path):
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
-def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload(tmp_path, mode):
+@pytest.mark.parametrize(
+    'template',
+    [None, '01.xy', '02.xy'],
+    ids=['first-by-default', 'declared-first', 'declared-later'],
+)
+def test_scan_persists_effective_templates_external_pairs_on_save_and_reload(
+    tmp_path, mode, template
+):
     reference = json.loads((FIXTURE / 'scan-reference.json').read_text())
     source = tmp_path / 'input'
     shutil.copytree(FIXTURE / f'scan-{mode}', source)
-    # Before: every dataset matrix was saved. After: the owner keeps only the template.
+    # Before: only a declared template was persisted. After: its absence selects file one.
     analysis = source / 'analysis/analysis.edi'
-    analysis.write_text(analysis.read_text() + '\n_sequential_fit.template_file 01.xy\n')
+    if template is not None:
+        analysis.write_text(
+            analysis.read_text() + '\n_sequential_fit.template_file ' + template + '\n'
+        )
+    effective = template or reference['cases'][0]['file']
     project = edi.Project.load(source)
     project.analysis.fit()
     assert (source / 'analysis/results.csv').is_file(), (
@@ -251,9 +262,14 @@ def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload
     lines = once.splitlines(keepends=True)
     starts = [i for i, line in enumerate(lines) if line.startswith(PREFIX + 'id')]
     rows = [row for i in starts for row in correlations(''.join(lines[i:]))]
-    expected = reference['cases'][0]['rows']
+    expected = next(case['rows'] for case in reference['cases'] if case['file'] == effective)
     assert len(rows) == len(expected), (
-        'Sequential and independent saves retain exactly the explicitly declared template pairs'
+        'Sequential and independent saves retain the declared template pairs, '
+        'or the first dataset pairs when none is declared'
+    )
+    assert all(Path(row.get('file_path', '')).name == effective for row in rows), (
+        'Each saved pair keeps the effective template file identity, '
+        'including the first-file fallback'
     )
     for pair in (('base', 'ramp'), ('base', 'curve'), ('ramp', 'curve')):
 

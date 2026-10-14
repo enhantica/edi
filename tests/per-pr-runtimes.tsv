@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T07:15:06Z
+# measured_utc = 2026-10-14T09:21:28Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 10479 banked, 0 stale row(s) dropped)
-# Collected tests: 11377; with a reported duration: 6151
+# Recorded from: measured test run (6 node(s) measured once, 10480 banked, 2 stale row(s) dropped)
+# Collected tests: 11381; with a reported duration: 6151
 # Module-scoped fixture costs recorded: 43
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11377
+# inventory_python = 11381
 # inventory_cpp = 328
 # inventory_measured = 10480
-# inventory_unmeasured = 1225
+# inventory_unmeasured = 1229
 
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
@@ -5380,8 +5380,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[1]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_python_fit_result_exposes_external_correlations[3]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[independent]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[sequential]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[declared-first-independent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[declared-first-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[declared-later-independent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[declared-later-sequential]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[first-by-default-independent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[first-by-default-sequential]
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[clipped]
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[nested]

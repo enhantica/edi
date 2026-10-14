@@ -226,13 +226,22 @@ TestCase {
         for (const index of [0, 1, 0, 1])
             checkExperiment(reference, index);
         const saved = Probe.repoUrl("build/test-tmp/correlation-scan-" + data.mode);
-        verify(Session.saveAs(saved), "The app must save every experiment's own correlations");
+        verify(Session.saveAs(saved), "The app saves only the effective first dataset matrix while retaining all live matrices");
         Session.closeProject();
         verify(Session.openProject(saved), "The app must reopen persisted per-experiment correlations");
         click("appBar.tab.analysis");
         click("mainArea.analysis.tab.correlations");
-        for (const index of [1, 0, 1, 0])
-            checkExperiment(reference, index);
+        // Before: all reloaded datasets had matrices. After: only the effective first template does.
+        for (const index of [1, 0, 1, 0]) {
+            if (index === 0) {
+                checkExperiment(reference, index);
+            } else {
+                Session.project.currentExperimentIndex = index;
+                tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 3000, "The non-template dataset completes its actual reopened projection");
+                compare(control("correlations").count, 0, "Only the effective first template matrix persists; other live dataset matrices remain memory-only");
+                verify(Session.project.correlations.emptyText.toLowerCase().includes("template"), "The reopened non-template dataset explains the template-only persistence rule");
+            }
+        }
     }
 
     function test_data_file_header_link_and_free_width() {
