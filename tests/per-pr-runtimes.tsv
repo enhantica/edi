@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T13:09:44Z
+# measured_utc = 2026-10-14T14:23:44Z
 #
-# Recorded from: measured test run (19 node(s) measured once, 10864 banked, 2 stale row(s) dropped)
-# Collected tests: 11825; with a reported duration: 6474
-# Module-scoped fixture costs recorded: 45
+# Recorded from: canonical completed Python nodes plus direct C++ integer census: tests-seq59-isolated.xml and tests-seq59-native.xml; expected reds remain declared unmeasured
+# Collected tests: 11937; with a reported duration: 6478
+# Module-scoped fixture costs recorded: 47
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11825
-# inventory_cpp = 330
-# inventory_measured = 10878
-# inventory_unmeasured = 1277
+# inventory_python = 11937
+# inventory_cpp = 333
+# inventory_measured = 10973
+# inventory_unmeasured = 1297
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -5652,6 +5652,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[True]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_pattern_reliability_text_uses_percent_and_two_decimal_metrics
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_unfitted_scan_evolution_names_every_free_parameter_without_points
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_context.py::test_scan_report_retains_effective_dataset_position_and_full_scan_count[first-fallback]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_context.py::test_scan_report_retains_effective_dataset_position_and_full_scan_count[later-template]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[correlation_matrix-correlation_view_model.cpp]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_live_tab_and_builder_both_reach_the_same_core_filter_or_series[evolution_series-evolution_view_model.cpp]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::test_report_builder_reaches_the_existing_presentation_and_drawing_functions[default_view]
@@ -6400,6 +6402,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
 0.090	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
 0.910	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
+1.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lab6-echidna-fcj]
 0.140	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
 1.230	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
 1.520	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
@@ -9604,6 +9607,20 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
+0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[0]
+0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[4294967295]
+0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[7]
+0.000	tests/system/py/test_report_index_width.py::test_report_index_refuses_before_a_32_bit_destination_cast[-2]
+0.000	tests/system/py/test_report_index_width.py::test_report_index_refuses_before_a_32_bit_destination_cast[1.25]
+0.000	tests/system/py/test_report_index_width.py::test_report_index_refuses_before_a_32_bit_destination_cast[1e300]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_index_width.py::test_report_index_refuses_before_a_32_bit_destination_cast[4294967296]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_index_width.py::test_report_index_refuses_before_a_32_bit_destination_cast[9007199254740992]
+0.014	tests/system/py/test_report_index_width.py::test_report_index_refuses_before_a_32_bit_destination_cast[null]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_settings_publication_failure_keeps_live_and_reopened_rows_consistent
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[cli-output]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[cli-save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[core-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[python-save-html]
 0.150	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
 0.170	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
 0.840	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]
@@ -10855,6 +10872,9 @@ UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_pa
 0.006	tests/unit/cpp/test_report_format.cpp::format_change brackets the non-trivial blanking threshold
 0.007	tests/unit/cpp/test_report_format.cpp::format_change refuses undefined percentages
 0.009	tests/unit/cpp/test_report_format.cpp::format_change uses the starting value as its denominator
+0.042	tests/unit/cpp/test_report_integer_domain.cpp::Report index JSON integers reject every invalid scene and pattern route
+0.002	tests/unit/cpp/test_report_integer_domain.cpp::Report integer JSON controls retain signed endpoints nonzero indices and missing rows
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_integer_domain.cpp::Report signed JSON integers reject null fractions and both range overflows
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON carries shortest-roundtrip doubles without dropping fields
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite values as null
@@ -12081,6 +12101,101 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[330--None]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[330-0-0]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_decimal_reader.py::test_integer_su_decimal_scaling_keeps_representable_subnormals[330-1-None]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[-2-structures.0.scene.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1.25-structures.0.scene.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[18446744073709551616-structures.0.scene.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[1e+300-structures.0.scene.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[9007199254740994-structures.0.scene.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_every_report_index_refuses_invalid_destination_values[None-structures.0.scene.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[experiments.0.pattern.series.0.rows.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.drawing.cylinders.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.drawing.shared.0]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.drawing.spheres.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.labels.0.atom]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.atoms.0.major]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.atoms.0.parts.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.atoms.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.bonds.0.atom_1]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.bonds.0.atom_2]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.bonds.0.row]
+0.000	tests/unit/py/test_report_integer_domain.py::test_report_index_checks_the_platform_size_t_domain[structures.0.scene.labels.0.atom]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[-2147483649-correlations.available]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[-2147483649-structures.0.scene.atoms.0.cluster_id]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[1.25-correlations.available]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[1.25-structures.0.scene.atoms.0.cluster_id]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[1e+300-correlations.available]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[1e+300-structures.0.scene.atoms.0.cluster_id]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[2147483648-correlations.available]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[2147483648-structures.0.scene.atoms.0.cluster_id]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[None-correlations.available]
+UNMEASURED:failed-in-this-run	tests/unit/py/test_report_integer_domain.py::test_signed_report_integers_refuse_before_narrowing[None-structures.0.scene.atoms.0.cluster_id]
+0.000	tests/unit/py/test_report_integer_domain.py::test_valid_signed_endpoints_indices_and_pattern_gap_keep_their_integer_identity
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_builder_serializes_nonfinite_uncertainty_as_null
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[decimal]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[max-double]
@@ -12230,6 +12345,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 2.346	tests/system/py/test_report_index_width.py
+# module-cost: 0.115	tests/system/py/test_report_publication_failures.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py
 # module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
