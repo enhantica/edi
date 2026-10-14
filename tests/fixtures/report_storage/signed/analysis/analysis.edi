@@ -38,11 +38,11 @@ _fit_parameter_correlation.parameter_unique_name_i
 _fit_parameter_correlation.parameter_unique_name_j
 _fit_parameter_correlation.correlation
 1 deterministic bank.background.P1.intensity bank.background.P2.intensity -1
-2 deterministic bank.background.P1.intensity bank.background.P3.intensity 0
+2 deterministic bank.background.P1.intensity bank.background.P3.intensity 1
 3 deterministic bank.background.P1.intensity bank.background.P4.intensity 0
 4 deterministic bank.background.P1.intensity bank.background.P5.intensity 0
 5 deterministic bank.background.P1.intensity bank.background.P6.intensity 0
-6 deterministic bank.background.P2.intensity bank.background.P3.intensity 0
+6 deterministic bank.background.P2.intensity bank.background.P3.intensity -1
 7 deterministic bank.background.P2.intensity bank.background.P4.intensity 0
 8 deterministic bank.background.P2.intensity bank.background.P5.intensity 0
 9 deterministic bank.background.P2.intensity bank.background.P6.intensity 0

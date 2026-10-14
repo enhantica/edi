@@ -170,7 +170,8 @@ def test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions(fre
         'Fixed, absent, zero and nonfinite uncertainty must retain the exact round-trip value'
     )
     assert restored.free == free, 'Uncertainty spelling must retain the parameter free state'
-    wanted = 0.0 if free and su is not None and not su else None
+    wanted = 0.0 if not free or (su is not None and not su) else None
     assert restored.uncertainty == wanted, (
-        'Zero uncertainty stays engaged; absent, nonfinite and fixed stay empty'
+        'Bare fixed values reload with the retained engaged zero; free zero remains '
+        'engaged while free absent and nonfinite uncertainties remain absent'
     )

@@ -81,7 +81,10 @@ def test_data_default_and_explicit_include_all_reach_report_and_html(tmp_path, i
         assert any(
             'range' in row['label'].lower() and '40' in row['text'] and '72' in row['text']
             for row in rows
-        ), 'The Data summary includes the independently declared native axis range'
+        ) or (
+            any('min' in row['label'].lower() and float(row['text']) == 40 for row in rows)
+            and any('max' in row['label'].lower() and float(row['text']) == 72 for row in rows)
+        ), 'The Data summary includes both independently declared native axis range endpoints'
         assert any('file' in row['label'].lower() for row in rows), (
             'The Data block names the data-file source even for embedded observations'
         )

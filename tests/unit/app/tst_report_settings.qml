@@ -62,14 +62,24 @@ Item {
             const dialog = createTemporaryObject(dialogFactory, surface);
             verify(dialog !== null, "The real Preferences dialog exists for the new Projects tab");
             Preferences.dialogShown = true;
-            const tabs = Render.descendants(dialog).filter(item => item.text && ["Appearance", "Projects"].includes(item.text) && item.checkable);
-            compare(tabs.length, 2, "Preferences has both Appearance and Projects tabs");
-            const projects = tabs.find(item => item.text === "Projects");
+            tryCompare(dialog, "opened", true, 2000, "The actual Preferences popup opens before its named tabs are inspected");
+            const appearance = findChild(dialog, "preferences.tab.appearance");
+            const projects = findChild(dialog, "preferences.tab.projects");
+            verify(appearance !== null && projects !== null, "Preferences exposes preferences.tab.appearance and preferences.tab.projects; actual " + JSON.stringify({
+                appearance: appearance !== null,
+                projects: projects !== null
+            }));
             mouseClick(projects, projects.width / 2, projects.height / 2);
             verify(waitForPolish(dialog.contentItem), "The actual Projects page completes its layout");
-            const texts = Render.texts(dialog).map(item => item.text.replace(/:$/, ""));
-            verify(texts.includes("New projects' uncertainties") && texts.includes("New reports' libraries"), "Projects exposes uncertainty and report-library defaults together");
-            verify(!texts.includes("Colour scheme"), "The Projects tab contains new-object defaults while the scheme choice belongs to Appearance");
+            function visibleTexts() {
+                return Render.texts(dialog.contentItem).filter(item => {
+                    const at = item.mapToItem(dialog.contentItem, 0, 0);
+                    return at.x >= 0 && at.y >= 0 && at.x + item.width <= dialog.contentItem.width + 0.5 && at.y + item.height <= dialog.contentItem.height + 0.5;
+                }).map(item => item.text.replace(/:$/, ""));
+            }
+            tryVerify(() => visibleTexts().includes("New projects' uncertainties") && visibleTexts().includes("New reports' libraries"), 2000, "The opened preferences.tab.projects finishes sliding its two default labels into view; initial visible text " + JSON.stringify(visibleTexts()));
+            const texts = visibleTexts();
+            verify(!texts.includes("Colour scheme"), "The opened preferences.tab.projects keeps Colour scheme on Appearance; visible text " + JSON.stringify(texts));
         }
         function test_scheme_and_library_defaults_persist_without_changing_an_open_project() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), "A real project supplies the modified-state control");
@@ -131,15 +141,20 @@ Item {
                 height: 800
             });
             verify(page !== null && waitForPolish(page), "The actual workflow page lays out before checking its fourth sidebar tab");
-            const tab = Render.descendants(page).find(item => item.text === "Settings" && item.checkable);
-            verify(tab !== undefined, "Every workflow page exposes a real Settings tab beside Main, Extras and Text");
+            const tab = findChild(page, "sideBar.tab.settings");
+            verify(tab !== null, "The actual " + data.page + " page exposes sideBar.tab.settings beside Main, Extras and Text; actual " + tab);
             mouseClick(tab, tab.width / 2, tab.height / 2);
             tryCompare(tab, "checked", true, 1000, "The Settings tab accepts actual pointer input");
         }
         function choose(control, index) {
             verify(control !== undefined && control.enabled, "The real page setting is enabled before actual pointer input");
+            tryVerify(() => {
+                const at = control.mapToItem(surface, 0, 0);
+                return at.x >= 0 && at.y >= 0 && at.x + control.width <= surface.width && at.y + control.height <= surface.height;
+            }, 2000, "The actual " + control.objectName + " finishes sliding inside the test window before pointer input");
+            verify(waitForRendering(control), "The actual " + control.objectName + " is rendered before opening its popup");
             mouseClick(control, control.width / 2, control.height / 2);
-            tryVerify(() => control.popup.opened, 1000, "The actual setting popup opens");
+            tryVerify(() => control.popup.opened, 1000, "Pointer input opens " + control.objectName + ".popup; initial opened " + control.popup.opened + "; control centre " + JSON.stringify(control.mapToItem(surface, control.width / 2, control.height / 2)));
             const list = control.popup.contentItem;
             list.positionViewAtIndex(index, ListView.Contain);
             list.forceLayout();
@@ -159,35 +174,59 @@ Item {
                 current: true
             });
             verify(page !== null && waitForPolish(page), "The actual Analysis page lays out its view controls");
-            const tab = Render.descendants(page).find(item => item.text === "Settings" && item.checkable);
-            verify(tab !== undefined, "Analysis exposes the real Settings tab after moving view options from Extras");
+            const tab = findChild(page, "sideBar.tab.settings");
+            verify(tab !== null, "The actual Analysis page exposes sideBar.tab.settings; actual " + tab);
             mouseClick(tab, tab.width / 2, tab.height / 2);
             tryCompare(tab, "checked", true, 1000, "The actual Analysis Settings tab opens through pointer input");
-            let y = null;
-            tryVerify(() => {
-                y = Render.descendants(page).find(item => item.visible && item.popup && typeof item.textAt === "function" && item.count >= 3 && /^log/i.test(item.textAt(2)));
-                return y !== undefined;
-            }, 1000, "The y-axis selector lives in the shown Settings pane");
+            const chartGroup = findChild(page, "group.chartSettings");
+            verify(chartGroup !== null, "Analysis Settings exposes group.chartSettings; actual " + chartGroup);
+            if (chartGroup.collapsed)
+                mouseClick(chartGroup.titleArea, chartGroup.titleArea.width / 2, chartGroup.titleArea.height / 2);
+            const y = findChild(page, "settings.chart.yScale");
+            verify(y !== null, "Analysis Settings exposes settings.chart.yScale; actual " + y);
+            tryVerify(() => y.visible && y.mapToItem(chartGroup, 0, 0).y + y.height <= chartGroup.height, 2000, "settings.chart.yScale clears its expanded group's clip before pointer input");
             choose(y, 2);
-            tryVerify(() => SettingsProof.value(location, "Analysis", "yAxis") === "log", 2000, "Selecting log persists the control's token in the Analysis store group");
-            tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "The moved pattern-update option retains its value in the Analysis group");
+            tryVerify(() => SettingsProof.value(location, "Analysis", "yScale") === "log", 2000, "settings.chart.yScale index 2 reads log at QSettings Analysis/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "yScale")));
+            tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "Preferences.scanPatternUpdates=0 reads zero at QSettings Analysis/scanPatternUpdates in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "scanPatternUpdates")));
             compare(Session.project.analysis.text.text, original, "Changing page settings leaves the analysis model text unchanged");
             compare(Session.project.modified, modified, "Changing y scale and scan redraw policy never modifies the project");
-            const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yAxis: "linear" }; property string axis: settings.yAxis }');
+            const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Globals as Globals; QtObject { property Settings settings: Settings { location: Globals.Vars.settingsFile; category: "Analysis"; property string yScale: "linear" }; property string axis: settings.yScale }');
             verify(!restored.error, "A fresh configured engine reads the saved page group");
-            compare(restored.axis, "log", "The log token survives destruction of the original Settings control");
+            compare(restored.axis, "log", "A fresh engine reads QSettings Analysis/yScale after selecting settings.chart.yScale index 2; actual token " + restored.axis);
         }
         function test_report_library_preference_seeds_only_created_projects() {
             verify(typeof Preferences.newReportLibraries === "string", "The Projects preference exposes the new-report libraries token");
             Preferences.newReportLibraries = "embedded";
-            verify(Session.createProject("created_report", "Independent new-project default witness"), "Creating a project applies the declared new-report preference");
-            compare(Session.project.report.embedLibraries, true, "Only a newly created project's Embed option starts from the Embedded preference");
-            const url = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
+            const page = createTemporaryObject(projectFactory, surface, {
+                width: 1200,
+                height: 800
+            });
+            verify(page !== null && waitForPolish(page), "The real Project page lays out its creation workflow");
+            const create = findChild(page, "project.create");
+            verify(create !== null, "Get started exposes project.create; actual " + create);
+            mouseClick(create, create.width / 2, create.height / 2);
+            const dialog = SettingsProof.creationDialog(page);
+            verify(dialog !== null, "project.create opens the real dialog with projectName and projectParentDirectory");
+            tryCompare(dialog, "opened", true, 2000, "The real Create project dialog opens before its fields are filled");
+            dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
+            dialog.projectName = "created_report";
+            dialog.projectDescription = "Independent new-project default witness";
+            const name = findChild(dialog, "createProject.name");
+            verify(name !== null, "Create project exposes createProject.name; actual " + name);
+            mouseClick(name, name.width / 2, name.height / 2);
+            keyClick(Qt.Key_Return);
+            tryVerify(() => Session.project !== null && Session.project.name === "created_report", 2000, "Return in createProject.name reaches the Get started creation handler; actual project " + Session.project + "; lastError " + Session.lastError);
+            compare(Session.project.report.embedLibraries, true, "After Return in the actual Create project dialog, ReportViewModel.embedLibraries reads true with Preferences.newReportLibraries=embedded; actual " + Session.project.report.embedLibraries);
+            const url = SettingsProof.emptyDirectory();
             verify(Session.saveAs(url), "The created project's seeded report option is saved for an independent reopen");
-            verify(/_report\.html_offline\s+true/.test(SettingsProof.text(url, "reports/report.edi")), "Creation writes the embedded default into reports/report.edi");
+            verify(/_report\.html_offline\s+true/.test(SettingsProof.text(url, "reports/report.edi")), "After Session.saveAs, reports/report.edi contains _report.html_offline true; actual text " + JSON.stringify(SettingsProof.text(url, "reports/report.edi")));
             Session.closeProject();
+            // A newly created blank project has no loadable structure or experiment yet.
+            // Add independent inputs without altering its report record or metadata.
+            for (const relative of ["structures/phase.edi", "experiments/bank.edi", "analysis/analysis.edi"])
+                verify(SettingsProof.write(url, relative, SettingsProof.repoText("tests/fixtures/loop_parameter_ids/line-segment/" + relative)), "The newly created project's reopen witness adds the independent " + relative + " without changing reports/report.edi");
             Preferences.newReportLibraries = "online";
-            verify(Session.openProject(url), "The newly created project reopens under a different preference");
+            verify(Session.openProject(url), "The newly created project reopens under a different preference; lastError " + Session.lastError);
             compare(Session.project.report.embedLibraries, true, "A project's explicit embedded option wins over the new-project preference");
             Session.closeProject();
             Preferences.newReportLibraries = "embedded";
@@ -282,21 +321,35 @@ Item {
                 urls.push(SettingsProof.localPath(url));
             }
             const wanted = urls.slice().reverse();
+            let recentFacts = SettingsProof.settingFacts(location, "Projects", "recent");
             tryVerify(() => {
-                const stored = SettingsProof.value(location, "Projects", "recent");
-                return Array.isArray(stored) && JSON.stringify(stored.slice(0, 3)) === JSON.stringify(wanted);
-            }, 2000, "Opening A then B then C stores recent paths in C B A order under Projects");
-            compare(SettingsProof.value(location, "Projects", "last"), urls[2], "Projects last records the actual last-opened absolute path");
+                recentFacts = SettingsProof.settingFacts(location, "Projects", "recent");
+                return JSON.stringify(Array.from(recentFacts.list).slice(0, 3)) === JSON.stringify(wanted);
+            }, 2000, "After Session.openProject returns for C, QSettings Projects/recent contains C B A in " + SettingsProof.localPath(location) + "; initial typed read " + JSON.stringify(recentFacts) + "; wanted " + JSON.stringify(wanted));
+            compare(SettingsProof.value(location, "Projects", "last"), urls[2], "After opening C, QSettings Projects/last in " + SettingsProof.localPath(location) + " records its absolute path; actual " + JSON.stringify(SettingsProof.settingFacts(location, "Projects", "last")));
             const restored = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property var paths: RecentProjects.paths() }');
             verify(!restored.error, "A fresh production RecentProjects singleton reloads the history store");
-            compare(JSON.stringify(restored.paths.slice(0, 3)), JSON.stringify(wanted), "Restart preserves the actual recent-project order");
+            compare(JSON.stringify(restored.paths.slice(0, 3)), JSON.stringify(wanted), "A fresh engine reads RecentProjects.paths() from Projects/recent; actual " + JSON.stringify(restored.paths) + "; wanted " + JSON.stringify(wanted));
         }
         function test_desktop_preferences_exposes_the_store_path_and_reset_actions() {
             const dialog = createTemporaryObject(dialogFactory, surface);
             verify(dialog !== null, "The Preferences store controls belong to the actual dialog");
-            const texts = Render.descendants(dialog).filter(item => typeof item.text === "string").map(item => item.text);
-            verify(texts.some(text => text.includes(String(location).replace(/^file:\/\//, ""))), "Desktop Preferences shows the entire application-settings path");
-            verify(texts.includes("Open folder") && texts.includes("Reset to defaults"), "Desktop Preferences exposes both store actions");
+            Preferences.dialogShown = true;
+            tryCompare(dialog, "opened", true, 2000, "Desktop Preferences opens before its store controls are inspected");
+            const develop = findChild(dialog, "preferences.tab.develop");
+            verify(develop !== null, "The store controls are reached through preferences.tab.develop; actual " + develop);
+            mouseClick(develop, develop.width / 2, develop.height / 2);
+            const path = findChild(dialog, "preferences.settingsPath");
+            verify(path !== null, "Develop exposes the named preferences.settingsPath label; actual " + path);
+            compare(path.text, SettingsProof.localPath(location), "preferences.settingsPath.text shows the decoded local app-store path; actual " + JSON.stringify(path.text) + "; wanted " + SettingsProof.localPath(location));
+            const folder = findChild(dialog, "preferences.openSettingsFolder");
+            const reset = findChild(dialog, "preferences.resetSettings");
+            verify(folder !== null && reset !== null, "Develop exposes preferences.openSettingsFolder and preferences.resetSettings; actual " + JSON.stringify({
+                folder: folder !== null,
+                reset: reset !== null
+            }));
+            compare(folder.text, "Open folder", "preferences.openSettingsFolder names its store action; actual " + folder.text);
+            compare(reset.text, "Reset to defaults", "preferences.resetSettings names its store action; actual " + reset.text);
         }
     }
 }

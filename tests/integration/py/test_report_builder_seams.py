@@ -12,7 +12,6 @@ from tests.integration.py.test_report_iucr_persistence import project
 def built(source):
     loaded = edi.Project.load(source)
     assert hasattr(loaded, 'report'), 'The planned report builder must be available for this seam'
-    loaded.report.parameters = 'all'
     return loaded
 
 
@@ -26,12 +25,12 @@ def test_cw_d_axis_uses_bragg_law_and_ascending_points(tmp_path):
     experiment.write_text(text)
     loaded = built(source)
     loaded.calculate()
-    loaded.report.x_axis = 'd'
+    loaded.report.x_axis = 'd_spacing'
     model = json.loads(loaded.report.model().to_json())
     pattern = model['experiments'][0]['pattern']
     assert pattern['x']['title'] == 'd (Å)', 'The report axis must name d spacing and its unit'
     measured = next(series for series in pattern['series'] if series['id'] == 'meas')
-    positions = [point['x'] for point in measured['points'] if point['x'] is not None]
+    positions = [x for x in measured['x'] if x is not None]
     assert positions == sorted(positions), (
         'A decreasing CW d axis must become ascending report points'
     )
@@ -86,9 +85,9 @@ _fit_parameter_correlation.correlation
         )
     analysis.write_text(analysis.read_text() + metadata)
     loaded = built(source)
-    loaded.report.correlation_level = level
+    loaded.report.correlation_threshold = level
     model = json.loads(loaded.report.model().to_json())
-    correlations = model.get('analysis', model)['correlations']
+    correlations = model['correlations']
     labels = correlations['labels'] if correlations else []
     assert len(labels) == count, (
         'The report must use the shared filter: five strongest parameters by default, '
@@ -125,7 +124,8 @@ def test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text(tmp_path):
     )
     loaded = built(source)
     model = json.loads(loaded.report.model().to_json())
-    series = model.get('analysis', model)['evolution']
+    assert 'evolution' in model, 'A scan report exposes its numeric evolution series in the model'
+    series = model['evolution']
     assert series, 'A scan report must carry the existing results ledger evolution series'
     points = [point for row in series for point in row['points']]
     assert any(
@@ -184,11 +184,11 @@ _data.intensity_meas_su
 """)
     loaded = built(source)
     loaded.calculate()
-    loaded.report.x_axis = 'd'
+    loaded.report.x_axis = 'd_spacing'
     model = json.loads(loaded.report.model().to_json())
     pattern = model['experiments'][0]['pattern']
     measured = next(series for series in pattern['series'] if series['id'] == 'meas')
-    positions = [point['x'] for point in measured['points'] if point['x'] is not None]
+    positions = [x for x in measured['x'] if x is not None]
     assert positions == pytest.approx([3.98, 4.98, 5.98], rel=2e-15), (
         'At TOF 20000, 25000 and 30000, zero 100 and DIFC 5000, DIFA zero gives (TOF-zero)/DIFC'
     )
