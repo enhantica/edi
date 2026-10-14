@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T09:25:00Z
+# measured_utc = 2026-10-14T09:29:39Z
 #
-# Recorded from: merged committed runtime banks; failed focused nodes remain declared unmeasured
-# Collected tests: 12127 carried identities pending merged collection; with a reported duration: 6404
+# Recorded from: measured test run (7 node(s) measured once, 10827 banked, 11 stale row(s) dropped)
+# Collected tests: 11788; with a reported duration: 6402
 # Module-scoped fixture costs recorded: 45
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11798
+# inventory_python = 11788
 # inventory_cpp = 329
-# inventory_measured = 10836
-# inventory_unmeasured = 1291
+# inventory_measured = 10834
+# inventory_unmeasured = 1283
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -1886,7 +1886,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py:
 0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
-0.040	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[screen]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[selector]
 0.100	tests/integration/py/test_compiled_app_environment.py::test_normal_screen_capture_provisions_an_absent_app_prefix
 0.350	tests/integration/py/test_constraint_alias_lifetime.py::test_alias_first_handle_owns_storage_and_obeys_detachment[destroy-background]
@@ -2352,7 +2351,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.150	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen///-first-/chosen/first]
 0.130	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[C:\\chosen\\\\-first-C:\\chosen\\first]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
-0.000	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_a_button_with_a_declared_combobox_width
+0.000	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_the_preferences_shared_control_width
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[experiment-Experiment/ExperimentsGroup.qml-duplicateExperiment]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[structure-Structure/StructuresGroup.qml-duplicateStructure]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
@@ -5444,8 +5443,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[declared-later-sequential]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[first-by-default-independent]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_effective_templates_external_pairs_on_save_and_reload[first-by-default-sequential]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[independent]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_parameter_correlations.py::test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload[sequential]
 0.010	tests/integration/py/test_parameter_correlations.py::test_unfitted_analysis_stays_byte_identical
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[clipped]
 0.000	tests/integration/py/test_pdf_figure_observer.py::test_saved_pdf_image_bounds_follow_the_independent_affine_reference[nested]
@@ -6366,7 +6363,6 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
 0.090	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
 0.910	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
-0.980	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lab6-echidna-fcj]
 0.140	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
 1.230	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
 1.520	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
@@ -9395,22 +9391,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::te
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[single]
 0.840	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy-power-two]
 0.830	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy-prime-buckets]
-UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy]
 0.540	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids-power-two]
 0.520	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids-prime-buckets]
-UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids]
 0.632	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed-power-two]
 0.420	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed-prime-buckets]
-UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[keyed]
 0.780	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[reorder-power-two]
 0.690	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[reorder-prime-buckets]
-UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[reorder]
 0.890	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[replace-power-two]
 0.990	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[replace-prime-buckets]
-UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[replace]
 0.510	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[unkeyed-power-two]
 0.190	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[unkeyed-prime-buckets]
-UNMEASURED:failed-in-this-run	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[unkeyed]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-absent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_locked_dependencies.py::test_app_configure_uses_locked_packages_and_truthful_sdk[system-present]
 0.000	tests/system/py/test_locked_dependencies.py::test_dependency_escape_observer_closes_paths_and_symlink_redirects

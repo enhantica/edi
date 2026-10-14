@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "UiInteraction.js" as Ui
 
@@ -197,12 +198,14 @@ TestCase {
         ];
     }
 
-    function checkExperiment(reference, index) {
+    function checkExperiment(reference, index, readPoint) {
         Session.project.currentExperimentIndex = index;
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 3000, "Selecting an experiment must finish its own dataset projection");
+        Session.project.correlations.level = 0;
+        Session.project.correlations.maxParameters = 3;
         const chart = control("correlations");
         verify(chart !== null, "The selected experiment must have the production Correlations chart");
-        compare(chart.count, 3, "Each completed experiment must retain all three correlated parameters");
+        compare(chart.count, 3, "Each completed experiment retains three independently correlated parameters at " + readPoint + "; dataset=" + index + "; actual count=" + chart.count);
         const truth = reference.cases[index];
         for (let row = 0; row < 3; ++row) {
             for (let column = 0; column < row; ++column) {
@@ -216,7 +219,8 @@ TestCase {
 
     function test_scan_correlations(data) {
         const reference = JSON.parse(Probe.readFile("tests/fixtures/correlations/scan-reference.json"));
-        open("tests/fixtures/correlations/scan-" + data.mode);
+        const input = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/correlations/scan-" + data.mode));
+        verify(Session.openProject(input), "The scan fits a disposable copy without changing its committed independent fixture");
         click("appBar.tab.analysis");
         click("mainArea.analysis.tab.correlations");
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 3000, "The scan witness must finish its initial experiment projection before fitting");
@@ -224,7 +228,7 @@ TestCase {
         tryCompare(Session.project.fit, "running", false, 5000, "The two independent polynomial experiment fits must complete");
         compare(Session.project.fit.scanFitted, 2, "The switching witness must really fit both experiments");
         for (const index of [0, 1, 0, 1])
-            checkExperiment(reference, index);
+            checkExperiment(reference, index, "live before save");
         const saved = Probe.repoUrl("build/test-tmp/correlation-scan-" + data.mode);
         verify(Session.saveAs(saved), "The app saves only the effective first dataset matrix while retaining all live matrices");
         Session.closeProject();
@@ -234,7 +238,7 @@ TestCase {
         // Before: all reloaded datasets had matrices. After: only the effective first template does.
         for (const index of [1, 0, 1, 0]) {
             if (index === 0) {
-                checkExperiment(reference, index);
+                checkExperiment(reference, index, "reopened effective template");
             } else {
                 Session.project.currentExperimentIndex = index;
                 tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 3000, "The non-template dataset completes its actual reopened projection");
