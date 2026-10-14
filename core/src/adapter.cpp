@@ -1310,6 +1310,24 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     }
 }
 
+std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets) {
+    if (!scan.sequential_fit.template_file.empty() || datasets.files.empty()) {
+        return scan.sequential_fit.template_file;
+    }
+    return datasets.files.front();
+}
+
+std::string effective_scan_template_file(const Project& scan) {
+    if (!scan.sequential_fit.template_file.empty()) {
+        return scan.sequential_fit.template_file;
+    }
+    try {
+        return effective_scan_template_file(scan, scan_datasets(scan));
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no listing, no template dataset
+        return {};
+    }
+}
+
 ScanDatasets scan_datasets(const Project& project) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
@@ -4744,12 +4762,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             detail::write_back(refined);
             publish_fit_state(*this, cproject);
             clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
-            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+            settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
         } else if (*completed_files > 0) {
             // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
             // skips that file and could not make them again. The unfinished file has none, and the rest of the
             // record stays as it was.
-            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+            settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
         }
         return outcome;
     } catch (const std::invalid_argument&) {

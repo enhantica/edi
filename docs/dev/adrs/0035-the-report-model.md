@@ -37,7 +37,9 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
 3. **Sections, in order:** Project summary, Analysis (software, minimizer, fitting mode, fit result, then Parameters,
    Correlations and, for a scan, Evolution), Structures, Experiments. The options remove sections and never reorder
    them. A scan's report holds its template dataset's sections, the evolution charts and the template's correlations,
-   and nothing of the other datasets.
+   and nothing of the other datasets. The template dataset is the declared one, else the first of the scan's files;
+   its correlations are the pairs the fit record keeps for it (ADR-0034), so a report from the saved files shows the
+   same pairs as one made in the app.
 4. **Charts are the core's outputs.** For each experiment the builder captures the pattern (the d axis is a capture
    choice: x from `_pd_data.d_spacing` and the ticks from `_refln.d_spacing`, ascending), applies the options to that
    source (no residual: no residual column; no ticks: no phases) and stores `present_pattern`'s presentation at full

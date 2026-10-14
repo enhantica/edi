@@ -288,11 +288,8 @@ struct ScanTemplate {
 };
 
 ScanTemplate scan_template_of(const Project& scan) {
-    ScanTemplate out{scan, scan.sequential_fit.template_file, std::nullopt};
     const ScanDatasets datasets = scan_datasets(scan);
-    if (out.file.empty() && !datasets.files.empty()) {
-        out.file = datasets.files.front();
-    }
+    ScanTemplate out{scan, effective_scan_template_file(scan, datasets), std::nullopt};
     const std::string& file = out.file;
     if (file.empty()) {
         return out;
@@ -862,9 +859,10 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     if (correlations) {
         model.sections.push_back(ReportSection::Correlations);
+        // A scan whose template could not be made still reports its template dataset's pairs.
+        const std::string template_file = scan_mode && !scan ? effective_scan_template_file(input) : std::string();
         model.correlations =
-            correlations_of(project, options,
-                            scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
+            correlations_of(project, options, scan ? &scan->file : scan_mode ? &template_file : nullptr,
                             model.fitted);
     }
     // A scan's parameters across its datasets.
