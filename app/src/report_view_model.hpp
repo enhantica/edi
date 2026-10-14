@@ -2,11 +2,13 @@
 #ifndef EDI_APP_REPORT_VIEW_MODEL_HPP
 #define EDI_APP_REPORT_VIEW_MODEL_HPP
 
+#include <QHash>
+#include <QImage>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QUrl>
-#include <QVariantList>
 #include <QVariantMap>
 #include <optional>
 #include <string>
@@ -18,6 +20,24 @@
 namespace edi_app {
 
 class ProjectViewModel;
+
+// One report Save report wrote, for QML: its file name, its format, when it was saved (in local time) and its state,
+// "current", "out of date" (the report the project would make now differs from the one written) or "missing".
+struct SavedReport {
+    Q_GADGET
+    QML_VALUE_TYPE(savedReport)
+    Q_PROPERTY(QString name MEMBER name CONSTANT)
+    Q_PROPERTY(QString format MEMBER format CONSTANT)
+    Q_PROPERTY(QString saved MEMBER saved CONSTANT)
+    Q_PROPERTY(QString state MEMBER state CONSTANT)
+
+   public:
+    QString name;
+    QString format;
+    QString saved;
+    QString state;
+    bool operator==(const SavedReport&) const = default;
+};
 
 // The Report page (edi ADR-0036): the report model built from the project and the page's Contents and Export, given to
 // QML as the model's JSON values, rebuilt once per coalesced change. Its options are the project's report settings
@@ -41,10 +61,8 @@ class ReportViewModel : public QObject {
     Q_PROPERTY(bool writesHtml READ writesHtml WRITE setWritesHtml NOTIFY writesHtmlChanged)
     Q_PROPERTY(bool writesPdf READ writesPdf WRITE setWritesPdf NOTIFY writesPdfChanged)
     Q_PROPERTY(bool writesCif READ writesCif WRITE setWritesCif NOTIFY writesCifChanged)
-    // The reports Save report wrote, one map per `_report_file` row: `name`, `format`, `saved` (when, in local time)
-    // and `state`, "current", "out of date" (the report the project would make now differs from the one written) or
-    // "missing".
-    Q_PROPERTY(QVariantList savedReports READ savedReports NOTIFY savedReportsChanged)
+    // The reports Save report wrote, one per `_report_file` row.
+    Q_PROPERTY(QList<edi_app::SavedReport> savedReports READ savedReports NOTIFY savedReportsChanged)
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
@@ -84,16 +102,19 @@ class ReportViewModel : public QObject {
     void setWritesPdf(bool on) { setWrites("pdf", on); }
     bool writesCif() const { return writes("cif"); }
     void setWritesCif(bool on) { setWrites("cif", on); }
-    QVariantList savedReports() const;
+    QList<SavedReport> savedReports() const;
 
     // A Contents box: includes or leaves out the item of `key`.
     Q_INVOKABLE void setIncluded(const QString& key, bool included);
     // Save report (ADR-0036 §7): each ticked format written into the project's `reports/` as `<short name>.html` or
     // `.pdf` (the browser also downloads it), then its `_report_file` row, through crysta's writer of
     // `reports/report.edi` alone. The HTML carries the chart libraries when embedLibraries is set; the PDF's figures
-    // are the preview's images by their names in its static text (structure-0, pattern-1, ...) and its text is in
-    // `fontFamily`. Unticked formats' files and rows are left as they are. Answers with saved or saveFailed.
-    Q_INVOKABLE void saveReport(const QVariantMap& figures, const QString& fontFamily);
+    // are the images setFigure gave since the last save, and its text is in `fontFamily`. Unticked formats' files and
+    // rows are left as they are. Answers with saved or saveFailed.
+    Q_INVOKABLE void saveReport(const QString& fontFamily);
+    // One of the preview's figures for the next save's PDF, by its name in the static text (structure-0, pattern-1,
+    // ...); a null image is left out.
+    Q_INVOKABLE void setFigure(const QString& name, const QImage& image);
     // Builds the model again from the project; the project calls it once per coalesced change, and when the Analysis
     // page's correlation level changes.
     void refresh();
@@ -139,6 +160,7 @@ class ReportViewModel : public QObject {
     mutable edi::ReportModel report_;
     mutable std::string json_;  // report_'s JSON: a rebuild that writes the same announces nothing
     mutable QVariantMap model_;
+    QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
 };
 
 }  // namespace edi_app

@@ -242,10 +242,10 @@ QString ReportViewModel::reportsDirectory() const {
     return QDir(QString::fromStdString(project_.project().path)).filePath(QStringLiteral("reports"));
 }
 
-QVariantList ReportViewModel::savedReports() const {
+QList<SavedReport> ReportViewModel::savedReports() const {
     ensureBuilt();
     const edi::Project& project = project_.project();
-    QVariantList rows;
+    QList<SavedReport> rows;
     const QDir reports(reportsDirectory());
     for (const auto& file : project.report_files) {
         const QString name = QString::fromStdString(file->name.value());
@@ -265,18 +265,23 @@ QVariantList ReportViewModel::savedReports() const {
         // Shown in the user's local time, in the pattern of the project's own dates.
         const QString saved = QString::fromStdString(file->saved.value());
         const QDateTime when = QDateTime::fromString(saved, Qt::ISODate);
-        rows.append(QVariantMap{{QStringLiteral("name"), name},
-                                {QStringLiteral("format"), QString::fromStdString(format)},
-                                {QStringLiteral("saved"),
-                                 when.isValid()
-                                     ? QLocale::c().toString(when.toLocalTime(), QStringLiteral("dd MMM yyyy HH:mm:ss"))
-                                     : saved},
-                                {QStringLiteral("state"), state}});
+        rows.append({name, QString::fromStdString(format),
+                     when.isValid() ? QLocale::c().toString(when.toLocalTime(), QStringLiteral("dd MMM yyyy HH:mm:ss"))
+                                    : saved,
+                     state});
     }
     return rows;
 }
 
-void ReportViewModel::saveReport(const QVariantMap& figures, const QString& fontFamily) {
+void ReportViewModel::setFigure(const QString& name, const QImage& image) {
+    if (!image.isNull()) {
+        figures_.insert(name, image);
+    }
+}
+
+void ReportViewModel::saveReport(const QString& fontFamily) {
+    // The figures belong to this save only, whatever it ends in.
+    const QHash<QString, QImage> images = std::exchange(figures_, {});
     ensureBuilt();
     const edi::Project& project = project_.project();
     const QString base = QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
@@ -328,13 +333,6 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
             }
         }
         if (writes("pdf")) {
-            QHash<QString, QImage> images;
-            for (auto it = figures.cbegin(); it != figures.cend(); ++it) {
-                const QImage image = it.value().value<QImage>();
-                if (!image.isNull()) {
-                    images.insert(it.key(), image);
-                }
-            }
             if (!write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(report_, "pdf"))) {
                 return;
             }

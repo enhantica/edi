@@ -385,14 +385,18 @@ Item {
             chart.zoom = [];
         }
     }
-    // A report's points go to the layer whenever its series changes.
+    // A report's points go to the layer whenever its series changes, each with its s.u. bar (none without a finite
+    // s.u.).
+    function drawReportPoints() {
+        layer.setPoints(reportPoints.map(point => point.x), reportPoints.map(point => point.y), reportPoints.map(point => typeof point.su === "number" ? point.su : NaN));
+    }
     onReportPointsChanged: {
         if (fromReport)
-            layer.setPoints(reportPoints);
+            drawReportPoints();
     }
     Component.onCompleted: {
         if (fromReport)
-            layer.setPoints(reportPoints);
+            drawReportPoints();
     }
 
     // The layer is the model's to fill while the tab is shown.
