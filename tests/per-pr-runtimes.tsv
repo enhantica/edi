@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T12:25:30Z
+# measured_utc = 2026-10-14T12:33:49Z
 #
-# Recorded from: completed scoped publisher, native save actors, report save adoption and style diagnostics; independent sources; canonical completed-node and fixture-cost artifacts
-# Collected tests: 11819; with a reported duration: 6463
+# Recorded from: measured test run (3 node(s) measured once, 10870 banked, 0 stale row(s) dropped)
+# Collected tests: 11819; with a reported duration: 6462
 # Module-scoped fixture costs recorded: 45
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 11819
 # inventory_cpp = 330
-# inventory_measured = 10873
-# inventory_unmeasured = 1276
+# inventory_measured = 10872
+# inventory_unmeasured = 1277
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4395,7 +4395,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[commit]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[duplicate]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[source]
-0.050	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
 0.090	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_qml_imports_and_base_pin
