@@ -157,6 +157,10 @@ inline Category instrument_category(ExperimentBase& experiment) {
                              instrument.setup_polarization_coefficient);
         detail::add_optional(category.fields, "setup_monochromator_twotheta",
                              instrument.setup_monochromator_twotheta);
+        // The X-ray K-alpha doublet, when the experiment carries it.
+        detail::add_optional(category.fields, "setup_wavelength_2", instrument.setup_wavelength_2);
+        detail::add_optional(category.fields, "setup_wavelength_2_to_1_ratio",
+                             instrument.setup_wavelength_2_to_1_ratio);
     }
     const std::pair<const char*, Parameter InstrumentBase::*> tof[] = {
         {"setup_twotheta_bank", &InstrumentBase::setup_twotheta_bank},

@@ -25584,8 +25584,8 @@
       "minimizer": "crysta (ladder)",
       "inputs_sha256": {
         "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
-        "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
-        "project.edi": "efa38eadd5af94f919ccb2c5ba29cd7f775bd5bf01954ac6e5d87fdfa5958866",
+        "experiments/cu_ka.edi": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+        "project.edi": "889a03d5f93dd1b479515d59b53eec51e417433901ce122fb805c8d056db7bab",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
       },
       "record": {
@@ -25598,8 +25598,8 @@
         "n_points_fitted": "6001",
         "n_free": "2",
         "iterations": "5",
-        "reduced_chi_square": "0.0001447904953",
-        "rwp": "0.0002292997186",
+        "reduced_chi_square": "2.275037958e-05",
+        "rwp": "0.0002846980363",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -25618,31 +25618,32 @@
         "terminal_nonfinite_trials": "0",
         "bound_active_columns": "none",
         "zero_jacobian_columns": "none",
-        "elapsed_ms": "68.877",
-        "iter.1.rwp": "0.0138587933",
-        "iter.1.reduced_chi_square": "0.5289125173",
+        "elapsed_ms": "56.378",
+        "iter.1.rwp": "0.03274378177",
+        "iter.1.reduced_chi_square": "0.300938241",
         "iter.1.unevaluable_trials": "0",
-        "iter.1.elapsed_ms": "19.167",
-        "iter.2.rwp": "0.0004772609842",
-        "iter.2.reduced_chi_square": "0.0006272560734",
+        "iter.1.elapsed_ms": "14.616",
+        "iter.2.rwp": "0.0008168924495",
+        "iter.2.reduced_chi_square": "0.0001873050418",
         "iter.2.unevaluable_trials": "0",
-        "iter.2.elapsed_ms": "40.660",
-        "iter.3.rwp": "0.0002293005458",
-        "iter.3.reduced_chi_square": "0.0001447915399",
+        "iter.2.elapsed_ms": "24.238",
+        "iter.3.rwp": "0.0002847010746",
+        "iter.3.reduced_chi_square": "2.275086516e-05",
         "iter.3.unevaluable_trials": "0",
-        "iter.3.elapsed_ms": "47.628",
-        "iter.4.rwp": "0.0002292997186",
-        "iter.4.reduced_chi_square": "0.0001447904953",
+        "iter.3.elapsed_ms": "32.360",
+        "iter.4.rwp": "0.0002846980363",
+        "iter.4.reduced_chi_square": "2.275037958e-05",
         "iter.4.unevaluable_trials": "0",
-        "iter.4.elapsed_ms": "55.484",
-        "iter.5.rwp": "0.0002292997186",
-        "iter.5.reduced_chi_square": "0.0001447904953",
+        "iter.4.elapsed_ms": "40.500",
+        "iter.5.rwp": "0.0002846980363",
+        "iter.5.reduced_chi_square": "2.275037958e-05",
         "iter.5.unevaluable_trials": "0",
-        "iter.5.elapsed_ms": "64.720",
-        "param.setup_monochromator_twotheta.value": "26.63300386",
-        "param.setup_monochromator_twotheta.uncertainty": "0.001105126235",
-        "param.setup_polarization_coefficient.value": "0.4999921282",
-        "param.setup_polarization_coefficient.uncertainty": "5.621600235e-06"
+        "iter.5.elapsed_ms": "50.383",
+        "param.mu_r.value": "0.9001989435",
+        "param.mu_r.uncertainty": "3.791769456e-06",
+        "param.setup_wavelength_2_to_1_ratio.value": "0.4999274012",
+        "param.setup_wavelength_2_to_1_ratio.uncertainty": "7.105377076e-06",
+        "x-edi.correlations": "1"
       },
       "stderr": "",
       "parameters": [
@@ -25857,23 +25858,39 @@
           "free": false
         },
         {
-          "value": 0.49999212815220107,
-          "uncertainty": 5.621600234830993e-06,
-          "free": true
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
         },
         {
-          "value": 26.633003861579567,
-          "uncertainty": 0.0011051262349121257,
+          "value": 26.5650511771,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.5444,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.4999274011882501,
+          "uncertainty": 7.105377076152949e-06,
           "free": true
         },
         {
           "value": 0.02,
           "uncertainty": 0.0,
           "free": false
+        },
+        {
+          "value": 0.9001989435415433,
+          "uncertainty": 3.7917694556629444e-06,
+          "free": true
         }
       ],
-      "edi_sha": "e184d5b98b382ca0183a49dd155b566728b81a32",
-      "crysta_build_commit": "1e6f501b3c1d15517122a3286fa53dc9d5d17fee"
+      "edi_sha": "96d232a425745d4d06e3b5c8a346e9399ceb92a3",
+      "crysta_build_commit": "8b0c8c81a6cf34c4d96ed9548c0603660b48785f",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
     },
     {
       "id": "pd-neut-tof_cecoal-polaris_chebyshev",
@@ -29035,6 +29052,470 @@
       ],
       "edi_sha": "85a61a3182f14af6a607c4e180a5f0300604e109",
       "crysta_build_commit": "36dfb70c8e7c84302c1eff1a4585be01e468e762"
+    },
+    {
+      "id": "pd-xray-cwl_pbso4-lab_round-robin",
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "mode": "single",
+      "minimizer": "crysta (ladder)",
+      "inputs_sha256": {
+        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
+        "experiments/pbsox.edi": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+        "project.edi": "fa9e6fa39a75c1ab54504fea9930132d76ea1df515175ce9225a486eabe24c6b",
+        "structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401"
+      },
+      "record": {
+        "schema": "8",
+        "record": "fit",
+        "status": "done",
+        "mode": "single",
+        "converged": "true",
+        "n_points_loaded": "6001",
+        "n_points_fitted": "5760",
+        "n_free": "10",
+        "iterations": "7",
+        "reduced_chi_square": "3.303859941",
+        "rwp": "0.08931857465",
+        "descent": "ladder",
+        "fast_descent": "false",
+        "linear_snap": "false",
+        "guarded_linear_snap": "false",
+        "linear_snap_attempts": "0",
+        "linear_snap_rejections": "0",
+        "linear_snap_guard_residual_evaluations": "0",
+        "multistart_prune": "false",
+        "multistart_probes_started": "0",
+        "multistart_probes_pruned": "0",
+        "multistart_probe_iterations": "0",
+        "multistart_survivor": "none",
+        "unevaluable_trials": "0",
+        "terminal_unevaluable_trials": "0",
+        "nonfinite_trials": "0",
+        "terminal_nonfinite_trials": "0",
+        "bound_active_columns": "none",
+        "zero_jacobian_columns": "none",
+        "elapsed_ms": "319.810",
+        "iter.1.rwp": "0.09209817316",
+        "iter.1.reduced_chi_square": "3.512692162",
+        "iter.1.unevaluable_trials": "0",
+        "iter.1.elapsed_ms": "30.329",
+        "iter.2.rwp": "0.08942815894",
+        "iter.2.reduced_chi_square": "3.311971876",
+        "iter.2.unevaluable_trials": "0",
+        "iter.2.elapsed_ms": "62.028",
+        "iter.3.rwp": "0.08932715008",
+        "iter.3.reduced_chi_square": "3.304494375",
+        "iter.3.unevaluable_trials": "0",
+        "iter.3.elapsed_ms": "94.962",
+        "iter.4.rwp": "0.08931988562",
+        "iter.4.reduced_chi_square": "3.303956926",
+        "iter.4.unevaluable_trials": "0",
+        "iter.4.elapsed_ms": "135.963",
+        "iter.5.rwp": "0.08931866626",
+        "iter.5.reduced_chi_square": "3.303866718",
+        "iter.5.unevaluable_trials": "0",
+        "iter.5.elapsed_ms": "170.083",
+        "iter.6.rwp": "0.08931857672",
+        "iter.6.reduced_chi_square": "3.303860094",
+        "iter.6.unevaluable_trials": "0",
+        "iter.6.elapsed_ms": "201.669",
+        "iter.7.rwp": "0.08931857465",
+        "iter.7.reduced_chi_square": "3.303859941",
+        "iter.7.unevaluable_trials": "0",
+        "iter.7.elapsed_ms": "289.622",
+        "param.asym_beba_a0.value": "0.486039736",
+        "param.asym_beba_a0.uncertainty": "0.0467781314",
+        "param.asym_beba_a1.value": "-1.602843411",
+        "param.asym_beba_a1.uncertainty": "0.1009603714",
+        "param.asym_beba_b0.value": "0.0039719673",
+        "param.asym_beba_b0.uncertainty": "0.009188930817",
+        "param.asym_beba_b1.value": "-0.04890287026",
+        "param.asym_beba_b1.uncertainty": "0.01994860582",
+        "param.broad_gauss_u.value": "0.05716573609",
+        "param.broad_gauss_u.uncertainty": "0.001564989485",
+        "param.broad_gauss_v.value": "-0.0577912473",
+        "param.broad_gauss_v.uncertainty": "0.001645412654",
+        "param.broad_gauss_w.value": "0.02710872027",
+        "param.broad_gauss_w.uncertainty": "0.0004499180042",
+        "param.mixing_eta_0.value": "0.6249850558",
+        "param.mixing_eta_0.uncertainty": "0.01150538873",
+        "param.mixing_eta_1.value": "0.0001685383931",
+        "param.mixing_eta_1.uncertainty": "0.0002792226883",
+        "param.scale.value": "0.001001599087",
+        "param.scale.uncertainty": "1.678600694e-06",
+        "x-edi.correlations": "45"
+      },
+      "stderr": "",
+      "parameters": [
+        {
+          "value": 8.4859,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 5.402259,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 6.964587,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 90.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.18822,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.16711,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.8629,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.06306,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.68485,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.34971,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.90281,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.59724,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.19713,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.18443,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.25,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.54586,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 2.56174,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.08094,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.02239,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.81289,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.37463,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.05716573608782565,
+          "uncertainty": 0.00156498948499605,
+          "free": true
+        },
+        {
+          "value": -0.057791247300538466,
+          "uncertainty": 0.0016454126543946135,
+          "free": true
+        },
+        {
+          "value": 0.0271087202666705,
+          "uncertainty": 0.0004499180042256075,
+          "free": true
+        },
+        {
+          "value": 0.6249850557964138,
+          "uncertainty": 0.011505388728884377,
+          "free": true
+        },
+        {
+          "value": 0.00016853839308417988,
+          "uncertainty": 0.00027922268834920135,
+          "free": true
+        },
+        {
+          "value": 0.4860397360049072,
+          "uncertainty": 0.046778131395795196,
+          "free": true
+        },
+        {
+          "value": 0.003971967299940317,
+          "uncertainty": 0.009188930817131643,
+          "free": true
+        },
+        {
+          "value": -1.602843411397885,
+          "uncertainty": 0.10096037142887836,
+          "free": true
+        },
+        {
+          "value": -0.04890287026363264,
+          "uncertainty": 0.019948605823891775,
+          "free": true
+        },
+        {
+          "value": 160.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.0,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 152.827,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.54056,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.00363,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 26.5650511771,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 1.5444,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.5,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 0.001001599087138584,
+          "uncertainty": 1.6786006943681138e-06,
+          "free": true
+        },
+        {
+          "value": 121.279,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 101.781,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -95.426,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -113.34,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": 185.296,
+          "uncertainty": 0.0,
+          "free": false
+        },
+        {
+          "value": -55.129,
+          "uncertainty": 0.0,
+          "free": false
+        }
+      ],
+      "edi_sha": "96d232a425745d4d06e3b5c8a346e9399ceb92a3",
+      "crysta_build_commit": "8b0c8c81a6cf34c4d96ed9548c0603660b48785f",
+      "classification": "CLI wiring regression pin, not an independent physics oracle"
     }
   ]
 }

@@ -246,3 +246,10 @@ reblessed:
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
       - ex-pd-xray-cwl_latp_scan-4f.png
+  - produced_at: 0b2ca4143c451567307cc85031b25f7b6532439b
+    reason: >-
+      The PbSO4 X-ray round robin joins the examples, so its page is captured (new). Captured with edi built against
+      crysta fc04c373. Only this image is added.
+    platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
+    images:
+      - ex-pd-xray-cwl_pbso4-lab_round-robin.png

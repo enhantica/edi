@@ -107,9 +107,11 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
     assert additions.isdisjoint(BASELINE['cases']), (
         '/ no old byte witness is replaced by a post-feature pin'
     )
-    assert set(NEW_FIXED_POINTS) == {'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project'}, (
-        'the new LATP input has its own witness without changing historical byte pins'
-    )
+    assert set(NEW_FIXED_POINTS) == {
+        'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project',
+        'repo:docs/user/cli/pd-xray-cwl_lif_single/project',
+        'repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project',
+    }, 'every declared extended or new X-ray input retains its separate complete byte witness'
     assert set(NEW_FIXED_POINTS).isdisjoint(BASELINE['cases']), (
         'a new project invariant cannot replace any old serialization oracle'
     )
@@ -295,7 +297,19 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
 
 @pytest.mark.parametrize('case', sorted(EXTENSION['cases']))
 def test_new_lif_project_matches_labelled_post_feature_byte_pin(tmp_path, case):
-    source = restored_source(REFERENCE.inputs()[case], tmp_path)
+    inputs = REFERENCE.inputs()
+    if case in NEW_FIXED_POINTS:
+        require_current_input(case, inputs[case])
+        # The original corpus and CLI LiF subjects have identical complete pins.
+        # Replay that retained input while testing the extended CLI input separately.
+        original = 'corpus:lif-xray-s1/project'
+        assert (
+            EXTENSION['cases'][case]['input_sha256']
+            == EXTENSION['cases'][original]['input_sha256']
+        ), 'the retained LiF replay must match every original CLI input byte'
+        source = restored_source(inputs[original], tmp_path)
+    else:
+        source = restored_source(inputs[case], tmp_path)
     expected = EXTENSION['cases'][case]
     assert REFERENCE.hashes(source) == expected['input_sha256'], (
         ' post-feature regression pin retains all input bytes and measured files'
@@ -332,6 +346,45 @@ def test_byte_witness_observes_value_order_inventory_and_measured_files(tmp_path
     )
 
 
+def require_current_input(case, source):
+    assert REFERENCE.hashes(source) == NEW_FIXED_POINTS[case]['input_sha256'], (
+        'the current fixed-point witness retains the complete independently recorded input bytes'
+    )
+
+
+@pytest.mark.parametrize('damage', ['value', 'row-order', 'missing', 'extra', 'data'])
+def test_extended_lif_input_cannot_escape_its_complete_byte_witness(tmp_path, monkeypatch, damage):
+    case = 'repo:docs/user/cli/pd-xray-cwl_lif_single/project'
+    inputs = REFERENCE.inputs()
+    require_current_input(case, inputs[case])
+    changed = tmp_path / 'changed'
+    shutil.copytree(inputs[case], changed)
+    experiment = changed / 'experiments/cu_ka.edi'
+    text = experiment.read_text()
+    if damage == 'value':
+        experiment.write_text(
+            text.replace(
+                '_instrument.setup_wavelength_2 1.5444', '_instrument.setup_wavelength_2 1.5451', 1
+            )
+        )
+    elif damage == 'row-order':
+        experiment.write_text(text.replace('10 1 0 1\n10.025 2 0 1', '10.025 2 0 1\n10 1 0 1', 1))
+    elif damage == 'missing':
+        experiment.unlink()
+    elif damage == 'extra':
+        (changed / 'unexpected.dat').write_text('12.5 31.25 0.75\n')
+    else:
+        experiment.write_text(text.replace('10.025 2 0 1', '10.025 2 0.375 1', 1))
+    assert REFERENCE.hashes(changed) != REFERENCE.hashes(inputs[case]), (
+        'each current-input escape must change real scientific or inventory bytes'
+    )
+    monkeypatch.setattr(REFERENCE, 'inputs', lambda: {**inputs, case: changed})
+    with pytest.raises(AssertionError, match='current fixed-point witness'):
+        test_new_lif_project_matches_labelled_post_feature_byte_pin(tmp_path / 'replay', case)
+    with pytest.raises(AssertionError, match='current fixed-point witness'):
+        test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path / 'fixed-point', case)
+
+
 @pytest.mark.parametrize(
     'case',
     POLYNOMIAL_CASES + RELATION_CASES + ADP_AND_SCAN_CASES + sorted(NEW_FIXED_POINTS) + FCJ_CASES,
@@ -341,10 +394,12 @@ def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     assert case in inputs, ' every new declared project needs its serialization witness'
     before = REFERENCE.hashes(inputs[case])
     if case in NEW_FIXED_POINTS:
-        retained = restored_source(inputs[case], tmp_path)
-        assert REFERENCE.hashes(retained) == NEW_FIXED_POINTS[case]['input_sha256'], (
-            'the new fixed-point witness retains every independently recorded input byte'
+        retained = (
+            restored_source(inputs[case], tmp_path)
+            if case == 'repo:docs/user/cli/pd-xray-cwl_latp_scan-4f/project'
+            else inputs[case]
         )
+        require_current_input(case, retained)
     first = tmp_path / 'first'
     second = tmp_path / 'second'
     once = REFERENCE.observe(inputs[case], first)
