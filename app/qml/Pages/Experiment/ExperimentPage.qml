@@ -49,6 +49,7 @@ WorkflowPage {
         ProjectPatternChart {
             id: chartView
             experiment: page.experiment
+            settingsPage: "experiment"
             shown: page.current && SwipeView.isCurrentItem
         }
     ]
@@ -76,6 +77,14 @@ WorkflowPage {
                     shownTier: "Extras"
                     contents: page.extrasContents
                 }
+            }
+        }
+    }
+    // The page's view options (edi ADR-0031 §2): its chart's y scale and x axis.
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
+            ChartSettingsGroup {
+                page: "experiment"
             }
         }
     }

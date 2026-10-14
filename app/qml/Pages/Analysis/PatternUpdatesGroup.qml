@@ -8,12 +8,12 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// How a followed scan redraws the pattern while it runs (edi ADR-0029). A preference of this machine, not part of
-// the project, so it comes after the project's own groups.
+// How a followed scan redraws the pattern while it runs (edi ADR-0029): a setting of this machine, not part of the
+// project, so it is on the page's Settings tab (edi ADR-0031 §2).
 EaElements.GroupBox {
     id: group
 
-    readonly property string openKey: "Extras:patternUpdates"
+    readonly property string openKey: "Settings:patternUpdates"
 
     objectName: "group.patternUpdates"
     collapsed: !SideBarGroups.isOpen(openKey)

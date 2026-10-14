@@ -379,6 +379,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // rule).
     void publishMetadata();
     void publishCurrent();
+    // ADR-0031 §1: the structure id, the experiment id and a scan's dataset file last selected in this project, in
+    // the app's settings keyed by the project's folder; stored only once restored.
+    QStringList storedSelection() const;
+    void storeSelection() const;
+    QString selectionKey() const;
+    bool selection_restored_ = false;
     void syncBlocks();
     void completeSymmetry();
     void syncParameterTable(bool refresh_report = true);

@@ -3,9 +3,13 @@
 #define EDI_APP_APP_INFO_HPP
 
 #include <QColor>
+#include <QDir>
+#include <QFileInfo>
 #include <QObject>
+#include <QPoint>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
 // What the app says about itself — its name, version and links. The only source of the identity the user
@@ -111,6 +115,14 @@ class ApplicationInfo : public QObject {
     // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
     // element the table does not have. The app holds no element colour of its own.
     QStringList elementSymbols() const;
+    // A local file's path as the app shows it, and the URL of the folder it is in (the Preferences' settings file).
+    Q_INVOKABLE QString localPath(const QUrl& file) const { return QDir::toNativeSeparators(file.toLocalFile()); }
+    Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
+        return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
+    }
+    // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
+    // centred on the primary screen's available area (a screen unplugged since).
+    Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
 };

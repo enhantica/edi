@@ -34,9 +34,23 @@ QtObject {
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
-    // Whether a new project's saved HTML reports embed their chart libraries (its `_report.html_offline`; edi
-    // ADR-0035 §7). A project keeps its own; this only starts a new one.
-    property bool newReportLibraries: false
+    // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
+    // ("embedded"): its `_report.html_offline` (edi ADR-0035 §7). A project keeps its own; this only starts a new one.
+    property string newReportLibraries: "online"
+
+    // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
+    function resetToDefaults() {
+        preferences.toolTips = true;
+        preferences.autoCollapse = true;
+        preferences.sideBarSide = "Right";
+        preferences.engineThreads = 0;
+        preferences.scanPatternUpdates = 2;
+        preferences.newProjectSuRule = "iucr_19";
+        preferences.newReportLibraries = "online";
+        preferences.analysisYScale = "linear";
+        preferences.experimentYScale = "linear";
+        preferences.experimentXAxis = "native";
+    }
 
     property Settings settings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -44,6 +58,12 @@ QtObject {
         property alias toolTips: preferences.toolTips
         property alias autoCollapse: preferences.autoCollapse
         property alias sideBarSide: preferences.sideBarSide
+    }
+
+    // ADR-0031: the Projects tab's defaults for new projects.
+    property Settings projectsSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Projects"
         property alias newProjectSuRule: preferences.newProjectSuRule
         property alias newReportLibraries: preferences.newReportLibraries
     }
@@ -54,10 +74,25 @@ QtObject {
         property alias engineThreads: preferences.engineThreads
     }
 
+    // ADR-0031 §2: the pages' settings, each kept under its page's name: the pattern charts' y scale ("linear",
+    // "sqrt" or "log"), the Experiment chart's x axis ("native" or "d_spacing"; the Analysis chart's is the project's),
+    // and how a followed scan redraws.
+    property string analysisYScale: "linear"
+    property string experimentYScale: "linear"
+    property string experimentXAxis: "native"
+
     property Settings analysisSettings: Settings {
         location: EaGlobals.Vars.settingsFile
-        category: "analysis"
+        category: "Analysis"
         property alias scanPatternUpdates: preferences.scanPatternUpdates
+        property alias yScale: preferences.analysisYScale
+    }
+
+    property Settings experimentSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Experiment"
+        property alias yScale: preferences.experimentYScale
+        property alias xAxis: preferences.experimentXAxis
     }
 
     property Binding fitPatternUpdates: Binding {

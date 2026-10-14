@@ -12,6 +12,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QQuickWindow>
+#include <QScreen>
 #include <QSGRendererInterface>
 #include <QStringList>
 #include <QSysInfo>
@@ -143,6 +144,21 @@ QStringList ApplicationInfo::elementSymbols() const {
         symbols.append(QString::fromStdString(style.symbol));
     }
     return symbols;
+}
+
+QPoint ApplicationInfo::onScreenPosition(int x, int y, int width, int height) const {
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    for (const QScreen* screen : screens) {
+        if (screen->virtualGeometry().contains(x, y)) {
+            return {x, y};
+        }
+    }
+    const QScreen* primary = QGuiApplication::primaryScreen();
+    if (primary == nullptr) {
+        return {x, y};
+    }
+    const QRect area = primary->availableGeometry();
+    return {area.x() + std::max(0, (area.width() - width) / 2), area.y() + std::max(0, (area.height() - height) / 2)};
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {

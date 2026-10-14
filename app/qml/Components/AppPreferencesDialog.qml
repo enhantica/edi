@@ -9,9 +9,10 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // The application preferences (the base's Components/PreferencesDialog.qml, rebuilt from its pieces as the
-// About dialog is; edi ADR-0017 §12): the same five tabs and layout, with edi's changes — no 1D plotting row,
-// a Sidebar side selector in Appearance, and what is not available yet (update checks, zoom, language) shown
-// disabled with a "Not available yet" tooltip. The base's own dialog stays hidden: the app bar opens this one.
+// About dialog is; edi ADR-0017 §12): the base's tabs and layout and a Projects tab, with edi's changes — no 1D
+// plotting row, a Sidebar side selector in Appearance, the settings file in Develop, and what is
+// not available yet (update checks, zoom, language) shown disabled with a "Not available yet" tooltip. The base's
+// own dialog stays hidden: the app bar opens this one.
 AppDialog {
     id: dialog
 
@@ -66,6 +67,11 @@ AppDialog {
             objectName: "preferences.tab.appearance"
             fontIcon: "paint-brush"
             text: qsTr("Appearance")
+        }
+        EaElements.AppBarTabButton {
+            objectName: "preferences.tab.projects"
+            fontIcon: "archive"
+            text: qsTr("Projects")
         }
         EaElements.AppBarTabButton {
             fontIcon: "flask"
@@ -199,6 +205,15 @@ AppDialog {
                 onToggled: Preferences.autoCollapse = checked
                 ToolTip.text: qsTr("Auto collapse for side bar groups")
             }
+        }
+
+        // Projects: only the defaults a new project takes. A project keeps its own: its s.u. rule on the Project
+        // page's Extra tab, its report's libraries on the Report page.
+        Grid {
+            columns: 2
+            columnSpacing: EaStyle.Sizes.fontPixelSize
+            rowSpacing: EaStyle.Sizes.fontPixelSize
+            verticalItemAlignment: Grid.AlignVCenter
 
             EaElements.Label {
                 text: qsTr("New projects' uncertainties") + ":"
@@ -212,18 +227,14 @@ AppDialog {
             }
 
             EaElements.Label {
-                topPadding: reportLibrariesCheckBox.topPadding
-                text: qsTr("New projects' HTML reports") + ":"
+                text: qsTr("New reports' libraries") + ":"
             }
-            EaElements.CheckBox {
-                id: reportLibrariesCheckBox
+            EaElements.ComboBox {
                 objectName: "preferences.newReportLibraries"
-                topPadding: 0.5 * EaStyle.Sizes.fontPixelSize
-                leftPadding: -3
-                text: qsTr("Embed the chart libraries")
-                checked: Preferences.newReportLibraries
-                onToggled: Preferences.newReportLibraries = checked
-                ToolTip.text: qsTr("Whether a new project's saved HTML reports carry plotly.js and three.js, so they open offline")
+                model: [qsTr("Online"), qsTr("Embedded")]
+                currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
+                onActivated: index => Preferences.newReportLibraries = index === 1 ? "embedded" : "online"
+                ToolTip.text: qsTr("Whether a new project's HTML reports load plotly.js and three.js from the web or carry them, so they open offline")
             }
         }
 
@@ -321,6 +332,53 @@ AppDialog {
                 text: qsTr("Show")
                 onClicked: diagnostics.open()
             }
+
+            // ADR-0031 §5: where the app's settings are kept, the folder holding them and a reset.
+            EaElements.Label {
+                text: qsTr("Settings") + ":"
+            }
+            Column {
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                EaElements.Label {
+                    objectName: "preferences.settingsPath"
+                    width: loggingLevel.width * 2
+                    wrapMode: Text.WrapAnywhere
+                    text: WebFiles.available ? qsTr("Stored in this browser") : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
+                }
+                Row {
+                    spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                    EaElements.SideBarButton {
+                        objectName: "preferences.openSettingsFolder"
+                        visible: !WebFiles.available
+                        width: loggingLevel.width
+                        height: loggingLevel.height
+                        text: qsTr("Open folder")
+                        onClicked: Qt.openUrlExternally(ApplicationInfo.folderOf(EaGlobals.Vars.settingsFile))
+                    }
+                    EaElements.SideBarButton {
+                        objectName: "preferences.resetSettings"
+                        width: loggingLevel.width
+                        height: loggingLevel.height
+                        text: qsTr("Reset to defaults")
+                        onClicked: resetConfirm.open()
+                    }
+                }
+            }
+        }
+    }
+
+    AppDialog {
+        id: resetConfirm
+        objectName: "preferences.resetConfirm"
+        parent: Overlay.overlay
+        title: qsTr("Reset the settings")
+        standardButtons: Dialog.Yes | Dialog.No
+        onAccepted: Preferences.resetToDefaults()
+
+        EaElements.Label {
+            text: qsTr("Set every preference and page setting back to its default? The open project is not changed.")
         }
     }
 

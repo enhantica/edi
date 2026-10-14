@@ -2,9 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-11
-- **Implementation:** ⬜ Not implemented — decided now, built in a later release. Today the settings are in
-  `settings.ini` in the platform's application configuration folder (local storage in the browser), and "Pattern
-  updates during a scan" is under Analysis, Extras
+- **Implementation:** 🟡 Partially implemented — the desktop store and its one-time carry-over, the Settings tab on
+  every page (the Analysis and Experiment charts' options and "Pattern updates during a scan"), the shown path with
+  Open folder and Reset, the window's geometry, the recent and last projects and each project's selection; the
+  browser keeps local storage until its measurement (4)
 - **Priority:** Medium
 - **Forward constraint (binding on new features):** a setting about how the app looks or behaves on this machine goes
   in the app-settings store, never in a project's `.edi` files; a setting that changes what a project calculates or
@@ -59,6 +60,13 @@ to know where Qt puts it.
    a confirmation. In the web app the path reads "stored in this browser" and there is no "Open folder".
 6. A demo capture or a test run keeps its own fresh settings folder (as now), so it never reads or writes the user's
    settings.
+7. **The groups.** The store's groups are named for what holds them: `Appearance` (the colour scheme), `Projects`
+   (the defaults for new projects, `recent` and `last`), `Window` (`x`, `y`, `width`, `height` in logical pixels; a
+   position on no screen is moved onto the primary screen), one group per page (`Analysis`: `yScale`,
+   `scanPatternUpdates`; `Experiment`: `yScale`, `xAxis`) and `Selections` (each project's structure, experiment and
+   scan dataset file, keyed by the project's folder). Today's `settings.ini` is carried over once: a key the store
+   holds is never overwritten, the keys that moved go to their groups, and a marker keeps a later start from carrying
+   anything again.
 
 ## Consequences
 
