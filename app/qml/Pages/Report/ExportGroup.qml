@@ -104,6 +104,7 @@ EaElements.GroupBox {
                 id: htmlBox
 
                 anchors.verticalCenter: parent.verticalCenter
+                leftPadding: 0
                 objectName: "report.writesHtml"
                 width: group.boxWidth
                 enabled: group.report !== null
@@ -121,6 +122,7 @@ EaElements.GroupBox {
         EaElements.CheckBox {
             objectName: "report.embedLibraries"
             width: EaStyle.Sizes.sideBarContentWidth
+            leftPadding: 0
             enabled: group.report !== null && group.report.writesHtml
             text: qsTr("Embed the chart libraries in the HTML (works offline)")
             checked: group.report ? group.report.embedLibraries : false
@@ -134,6 +136,7 @@ EaElements.GroupBox {
                 id: pdfBox
 
                 anchors.verticalCenter: parent.verticalCenter
+                leftPadding: 0
                 objectName: "report.writesPdf"
                 width: group.boxWidth
                 enabled: group.report !== null && group.preview !== null
@@ -154,6 +157,7 @@ EaElements.GroupBox {
                 id: cifBox
 
                 anchors.verticalCenter: parent.verticalCenter
+                leftPadding: 0
                 objectName: "report.writesCif"
                 width: group.boxWidth
                 enabled: false
@@ -167,8 +171,10 @@ EaElements.GroupBox {
             }
         }
 
+        // As wide as the sidebar, the boxes above starting at its left edge (the owner, 2026-10-14).
         EaElements.SideBarButton {
             objectName: "report.save"
+            wide: true
             enabled: group.report !== null && !group.savePending && (group.report.writesHtml || group.report.writesPdf)
             fontIcon: "download"
             text: qsTr("Save report")
