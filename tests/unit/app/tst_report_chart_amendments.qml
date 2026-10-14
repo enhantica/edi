@@ -69,12 +69,12 @@ Item {
         function test_palette_functions_follow_data_for_few_and_many_patterns_data() {
             const rows = [];
             for (const dark of [false, true])
-                for (const safe of [false, true])
+                for (const scheme of ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"])
                     for (const count of [3, 100])
                         rows.push({
-                            tag: (safe ? "safe" : "default") + "-" + count + (dark ? "-dark" : "-light"),
+                            tag: scheme + "-" + count + (dark ? "-dark" : "-light"),
                             dark: dark,
-                            safe: safe,
+                            scheme: scheme,
                             count: count
                         });
             return rows;
@@ -85,9 +85,10 @@ Item {
                 verify(Session.project.createExperiment(), "The palette gate gives each requested place a real experiment identity");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             verify(typeof Preferences.colourScheme === "string", "The scheme preference is available to every actual colour consumer");
-            Preferences.colourScheme = data.safe ? "colourBlindSafe" : "default";
-            const rows = SettingsProof.palette(data.safe);
-            verify(rows.pattern && rows.pattern.length >= 10 && rows.structure && rows.structure.length > 0, "The independent colour inputs are the shipped palette data rows");
+            Preferences.colourScheme = data.scheme;
+            const rows = SettingsProof.paletteForScheme(data.scheme);
+            verify(rows.pattern && rows.pattern.length >= 3 && rows.structure && rows.structure.length > 0, "The independent colour inputs are the shipped palette data rows");
+            const gradient = rows.gradient || rows.pattern.slice(-2);
             const theme = data.dark ? "dark" : "light";
             const colors = Array.from({
                 length: data.count
@@ -98,14 +99,14 @@ Item {
                 compare(JSON.stringify(colors), JSON.stringify(rows.pattern.slice(0, 3).map(row => row[theme].toLowerCase())), "Few patterns use their distinct palette rows in order");
                 compare(new Set(colors).size, 3, "Three patterns retain distinct colours in each scheme and theme");
             } else {
-                compare(colors[0], rows.pattern[rows.pattern.length - 2][theme].toLowerCase(), "The 100-pattern gradient starts at its first declared endpoint");
-                compare(colors[99], rows.pattern[rows.pattern.length - 1][theme].toLowerCase(), "The 100-pattern gradient finishes at its last declared endpoint");
+                compare(colors[0], gradient[0][theme].toLowerCase(), "The 100-pattern gradient starts at its first declared endpoint");
+                compare(colors[99], gradient[gradient.length - 1][theme].toLowerCase(), "The 100-pattern gradient finishes at its last declared endpoint");
                 verify(colors[50] !== colors[0] && colors[50] !== colors[99], "An interior pattern receives an interior gradient colour rather than an endpoint or repeated short palette");
             }
             for (let i = 0; i < rows.structure.length; ++i)
                 compare(String(AppColors.structure(i)).toLowerCase(), rows.structure[i][theme].toLowerCase(), "Structure icons read their own palette rows through the shared core function");
-            if (!data.safe && data.count === 3)
-                compare(colors[0], data.dark ? "#81d4fa" : "#03a9f4", "Default keeps the existing first measured-series colour in each theme");
+            if (data.scheme === "default" && data.count === 3)
+                compare(colors[0], String(ApplicationInfo.patternColour("default", 0, data.count, data.dark)).toLowerCase(), "Default first colour follows its published contrast-safe palette shade in each theme");
         }
         function test_scan_summary_uses_ui_font_size_and_equal_digit_slots() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real three-file scan supplies the status-bar summary");

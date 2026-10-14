@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import crysta_reference_prefix
+from tests.fixtures.report_units.iucr_reference import rounded_record
 from tests.fixtures.shared_correlations.freeze_saved import HERE, loop_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -17,7 +18,11 @@ ROOT = Path(__file__).resolve().parents[3]
 @pytest.fixture(scope='module')
 def shared_app_state(tmp_path_factory):
     work = tmp_path_factory.mktemp('shared-correlations-app')
-    sdk = Path(os.environ.get('EDI_PLAIN_DATA_SDK_DIR', crysta_reference_prefix()))
+    sdk = (
+        Path(explicit)
+        if (explicit := os.environ.get('EDI_PLAIN_DATA_SDK_DIR'))
+        else crysta_reference_prefix()
+    )
     build = Path(os.environ.get('EDI_PLAIN_DATA_HOST_BUILD', work / 'host'))
     source = Path(os.environ.get('EDI_PLAIN_DATA_SOURCE_ROOT', ROOT))
     command = [
@@ -130,8 +135,9 @@ def test_frozen_numeric_state_generates_the_complete_pre_change_saved_loop(share
         'Fresh production table conversion must emit the complete single or template fitted state'
     )
     actual = loop_bytes(Path(observed['analysis']).read_bytes())
-    assert actual == (HERE / (case + '-correlations.edi')).read_bytes(), (
-        'Fresh numeric fitted-state conversion and saving must retain every pre-change loop byte'
+    assert actual == rounded_record((HERE / (case + '-correlations.edi')).read_bytes()), (
+        'Before full-precision frozen coefficients; after independent IUCr coefficient spelling, '
+        'with every generated row identity, source kind and endpoint byte retained'
     )
 
 

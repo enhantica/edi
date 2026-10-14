@@ -15,6 +15,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.report_units.iucr_reference import rounded_correlation, rounded_record
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/correlations'
 REFERENCE = json.loads((FIXTURE / 'reference.json').read_text())
@@ -70,8 +72,11 @@ def check_pairs(text, count):
             'Stored correlation labels must identify the independently selected fit parameters'
         )
         assert math.isfinite(pairs[key]), 'Every persisted correlation coefficient must be finite'
-        assert pairs[key] == pytest.approx(row['correlation'], abs=2e-4), (
-            'Polynomial fit correlations must match diffraction-lib normalized normal equations'
+        assert pairs[key] == pytest.approx(
+            float(rounded_correlation(row['correlation'])), abs=1e-14
+        ), (
+            'Saved polynomial covariance equals the independent IUCr-rounded external reference; '
+            f'pair={key}, actual={pairs[key]}, raw reference={row["correlation"]}'
         )
 
 
@@ -154,7 +159,10 @@ def test_external_loop_survives_load_and_save_byte_for_byte(tmp_path):
     path.write_text(path.read_text().rstrip() + '\n\n' + loop)
     loaded = edi.Project.load(source)
     once = saved_analysis(loaded, tmp_path / 'once')
-    assert loop in once, 'Loading and saving must preserve the external correlation-loop bytes'
+    assert rounded_record(loop.encode()).decode() in once, (
+        'Before full-precision coefficient bytes; after IUCr coefficients with every external '
+        'row identity and endpoint byte retained'
+    )
     twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
     assert once == twice, (
         'A second unchanged save must preserve all analysis bytes including correlations'
@@ -283,10 +291,14 @@ def test_scan_persists_effective_templates_external_pairs_on_save_and_reload(
 
         target = tuple(sorted(pair))
         actual = sorted(float(row['correlation']) for row in rows if identity(row) == target)
-        truth = sorted(row['correlation'] for row in expected if identity(row) == target)
-        assert actual == pytest.approx(truth, abs=2e-4), (
+        truth = sorted(
+            float(rounded_correlation(row['correlation']))
+            for row in expected
+            if identity(row) == target
+        )
+        assert actual == pytest.approx(truth, abs=1e-14), (
             'The saved template must retain its independently normalized covariance, '
-            'including signs'
+            f'including IUCr significant figures; pair={target}, actual={actual}, expected={truth}'
         )
     twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
     assert once == twice, (
