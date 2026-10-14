@@ -401,9 +401,12 @@ Flickable {
             Heading {
                 text: `${preview.number("evolution")}.  ` + qsTr("Evolution")
             }
-            EaElements.Label {
-                color: EaStyle.Colors.themeForegroundMinor
-                text: qsTr("The fitted parameters across the scan's datasets")
+            // The chart of report.js: one parameter at a time, chosen above it.
+            EvolutionChart {
+                objectName: "report.evolution"
+                width: parent.width
+                height: EaStyle.Sizes.fontPixelSize * 26
+                reportSeries: preview.shown("evolution") ? (preview.model.evolution ?? []) : null
             }
         }
     }
