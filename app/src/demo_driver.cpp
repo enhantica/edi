@@ -433,6 +433,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"report-scan-2-saved", {"save-as:" + (kept.isEmpty() ? QStringLiteral("report-scan") : kept),
                                                   "report.writesPdf", "report.save"}});
     }
+    // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
+    // (`--demo-only evolution-`).
+    if (only.startsWith(QLatin1String("evolution-"))) {
+        const QStringList scan = QStringList{"resize:1280x960", "theme:light"} + start
+                                 + open_example("pd-neut-cwl_cosio-d20_scan-162f")
+                                 + QStringList{analysis, basic, "mainArea.analysis.tab.evolution"};
+        steps_.push_back({"evolution-1-unfitted", scan});
+        steps_.push_back({"evolution-2-unfitted-parameters", {"evolution.parameters"}});
+        steps_.push_back({"evolution-3-fitted", {"key:Escape", "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                 "choose:OK", "mainArea.analysis.tab.evolution"}});
+        steps_.push_back({"evolution-4-fitted-parameters", {"evolution.parameters"}});
+    }
     if (only.startsWith(QLatin1String("perf-"))) {
         // EDI_DEMO_PERF_PROJECT names a prepared copy to open in place, so two builds time the same input.
         const QString prepared = qEnvironmentVariable("EDI_DEMO_PERF_PROJECT");
