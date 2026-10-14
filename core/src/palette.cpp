@@ -11,11 +11,9 @@
 #include <vector>
 
 namespace edi::detail {
-extern const char* const kDefaultPaletteTsv;  // data/palettes, embedded by core/CMakeLists.txt
-extern const char* const kColourBlindSafePaletteTsv;
-extern const char* const kTableauPaletteTsv;
-extern const char* const kPaulTolPaletteTsv;
-extern const char* const kVividPaletteTsv;
+// data/palettes, one table per scheme in ColourScheme's order, embedded by core/CMakeLists.txt.
+extern const char* const kPaletteTsv[];
+extern const std::size_t kPaletteTsvCount;
 }  // namespace edi::detail
 
 namespace edi {
@@ -58,25 +56,22 @@ Palette parse(const char* text) {
     return palette;
 }
 
+constexpr std::array<std::string_view, 18> kNames{
+    "coast",      "garden", "peaceful", "fogForest", "sage",  "okabeIto", "paulTolBright", "paulTolMuted", "tableau",
+    "observable", "carbon", "dark2",    "petroff",   "vivid", "nord",     "solarized",     "catppuccin",   "apple"};
+
 const Palette& palette_of(ColourScheme scheme) {
-    static const Palette kDefault = parse(detail::kDefaultPaletteTsv);
-    static const Palette kColourBlindSafe = parse(detail::kColourBlindSafePaletteTsv);
-    static const Palette kTableau = parse(detail::kTableauPaletteTsv);
-    static const Palette kPaulTol = parse(detail::kPaulTolPaletteTsv);
-    static const Palette kVivid = parse(detail::kVividPaletteTsv);
-    switch (scheme) {
-        case ColourScheme::ColourBlindSafe:
-            return kColourBlindSafe;
-        case ColourScheme::Tableau:
-            return kTableau;
-        case ColourScheme::PaulTol:
-            return kPaulTol;
-        case ColourScheme::Vivid:
-            return kVivid;
-        case ColourScheme::Default:
-            break;
-    }
-    return kDefault;
+    static const std::vector<Palette> kPalettes = [] {
+        if (detail::kPaletteTsvCount != kNames.size()) {
+            throw std::logic_error("the embedded palettes are not one per colour scheme");
+        }
+        std::vector<Palette> out;
+        for (std::size_t i = 0; i < detail::kPaletteTsvCount; ++i) {
+            out.push_back(parse(detail::kPaletteTsv[i]));
+        }
+        return out;
+    }();
+    return kPalettes[static_cast<std::size_t>(scheme)];
 }
 
 // Oklab (Björn Ottosson, 2020) from and to sRGB, for a gradient whose steps look even.
@@ -114,23 +109,14 @@ std::string hex_of(const Lab& lab) {
 
 }  // namespace
 
+std::span<const std::string_view> colour_scheme_names() { return kNames; }
+
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {
-    if (name == "default") {
-        return ColourScheme::Default;
+    const auto found = std::find(kNames.begin(), kNames.end(), name);
+    if (found == kNames.end()) {
+        return std::nullopt;
     }
-    if (name == "colourBlindSafe") {
-        return ColourScheme::ColourBlindSafe;
-    }
-    if (name == "tableau") {
-        return ColourScheme::Tableau;
-    }
-    if (name == "paulTol") {
-        return ColourScheme::PaulTol;
-    }
-    if (name == "vivid") {
-        return ColourScheme::Vivid;
-    }
-    return std::nullopt;
+    return static_cast<ColourScheme>(found - kNames.begin());
 }
 
 std::size_t pattern_colour_count(ColourScheme scheme) { return palette_of(scheme).pattern.size(); }

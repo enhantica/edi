@@ -737,8 +737,11 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
     if (overrides.colour_scheme) {
         const std::optional<ColourScheme> scheme = colour_scheme_from_name(*overrides.colour_scheme);
         if (!scheme) {
-            throw std::invalid_argument("unknown colour scheme '" + *overrides.colour_scheme +
-                                        "': default, colourBlindSafe, tableau, paulTol or vivid");
+            std::string known;
+            for (const std::string_view name : colour_scheme_names()) {
+                known += (known.empty() ? "" : ", ") + std::string(name);
+            }
+            throw std::invalid_argument("unknown colour scheme '" + *overrides.colour_scheme + "': one of " + known);
         }
         options.colour_scheme = *scheme;
     }
