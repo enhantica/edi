@@ -10,6 +10,7 @@
 #include <sstream>
 #include <limits>
 #include <cmath>
+#include <deque>
 #include <map>
 #include <optional>
 #include <ranges>
@@ -21,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/fit_job.hpp"
 #include "edi/calculation.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
@@ -35,6 +37,7 @@
 #include "crysta/descent.hpp"
 #include "crysta/experiment_builder.hpp"
 #include "crysta/fit.hpp"
+#include "crysta/fit_quality.hpp"
 #include "crysta/fit_report.hpp"
 #include "crysta/identity.hpp"
 #include "crysta/model.hpp"
@@ -536,17 +539,7 @@ void order_tensor_rows(Structure& s) {
 
 }  // namespace
 
-void sync_atom_site_aniso(Structure& s) {
-    for (std::size_t row = s.atom_site_aniso.size(); row-- > 0;) {
-        const std::string& id = s.atom_site_aniso[row]->id.value();
-        bool kept = false;
-        for (const auto& site : s.atom_sites) {
-            kept = kept || (site->id.value() == id && is_anisotropic_adp_type(site->adp_type.value()));
-        }
-        if (!kept) {
-            s.atom_site_aniso.erase_at(row);
-        }
-    }
+void add_missing_aniso_rows(Structure& s) {
     for (const auto& site : s.atom_sites) {
         if (!is_anisotropic_adp_type(site->adp_type.value())) {
             continue;
@@ -574,15 +567,35 @@ void sync_atom_site_aniso(Structure& s) {
         const std::vector<Parameter*> parameters = tensor.parameters();
         for (std::size_t k = 0; k < 6; ++k) {
             parameters[k]->value = components[k];
+            if (components[k] == 0.0) {
+                parameters[k]->uncertainty = std::nullopt;  // an exact zero has no s.u.
+            }
         }
         s.atom_site_aniso.push_back(std::move(tensor));
     }
     order_tensor_rows(s);
-    // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
+}
+
+void sync_atom_site_aniso(Structure& s) {
+    for (std::size_t row = s.atom_site_aniso.size(); row-- > 0;) {
+        const std::string& id = s.atom_site_aniso[row]->id.value();
+        bool kept = false;
+        for (const auto& site : s.atom_sites) {
+            kept = kept || (site->id.value() == id && is_anisotropic_adp_type(site->adp_type.value()));
+        }
+        if (!kept) {
+            s.atom_site_aniso.erase_at(row);
+        }
+    }
+    add_missing_aniso_rows(s);
+    complete_atom_site_aniso(s);
+}
+
+void complete_atom_site_aniso(Structure& s) {
     const crysta::CellMetric metric = crysta::CellMetric::from_cell(completed_cell(s));
     for (const auto& tensor : s.atom_site_aniso) {
         for (const auto& site : s.atom_sites) {
-            if (site->id.value() != tensor->id.value()) {
+            if (site->id.value() != tensor->id.value() || !is_anisotropic_adp_type(site->adp_type.value())) {
                 continue;
             }
             const crysta::AdpForm form = crysta::adp_form_of(site->adp_type.value());
@@ -591,6 +604,19 @@ void sync_atom_site_aniso(Structure& s) {
             for (std::size_t k = 0; k < 6; ++k) {
                 components[k] = parameters[k]->value;
             }
+            // The site's symmetry exactly: a fixed component is 0 and a tied one its expression over the free ones.
+            try {
+                const crysta::Structure engine = one_site_engine(s, *site, site->adp_type.value());
+                components = crysta::tied_components(engine, engine.atom_sites[0], components);
+            } catch (const std::exception&) {
+                // a position that names no stabilizer keeps its components
+            }
+            for (std::size_t k = 0; k < 6; ++k) {
+                if (parameters[k]->value != components[k]) {
+                    parameters[k]->value = components[k];
+                }
+            }
+            // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
             const double equivalent = crysta::iso_of(crysta::equivalent_iso_form(form),
                                                      crysta::u_star_of(form, components, metric), metric);
             // A different equivalent replaces the scalar; the scalar's uncertainty and fit start
@@ -664,6 +690,9 @@ void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) 
     const std::vector<Parameter*> components = held->parameters();
     for (std::size_t k = 0; k < 6; ++k) {
         take(*components[k], engine.atom_site_aniso[0].adp[k]);
+        if (components[k]->value == 0.0 && !engine.atom_site_aniso[0].adp[k].uncertainty()) {
+            components[k]->uncertainty = std::nullopt;  // a component the symmetry fixes at 0
+        }
     }
     order_tensor_rows(s);
 }
@@ -1310,6 +1339,24 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     }
 }
 
+std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets) {
+    if (!scan.sequential_fit.template_file.empty() || datasets.files.empty()) {
+        return scan.sequential_fit.template_file;
+    }
+    return datasets.files.front();
+}
+
+std::string effective_scan_template_file(const Project& scan) {
+    if (!scan.sequential_fit.template_file.empty()) {
+        return scan.sequential_fit.template_file;
+    }
+    try {
+        return effective_scan_template_file(scan, scan_datasets(scan));
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no listing, no template dataset
+        return {};
+    }
+}
+
 ScanDatasets scan_datasets(const Project& project) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
@@ -1867,16 +1914,27 @@ std::vector<std::string> evolution_parameters(const Project& project, const Scan
 void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
                       const std::string& parameter, bool by_value,
                       const std::function<void(const EvolutionPoint&)>& visit) {
-    const ScanParameterColumns* columns = nullptr;
-    for (const std::string& name : {parameter, scan_results_column(parameter)}) {
-        for (const ScanParameterColumns& recorded : index.parameters) {
-            if (columns == nullptr && recorded.name == name) {
-                columns = &recorded;
+    evolution_series(project, places, index, std::vector<std::string>{parameter}, by_value,
+                     [&visit](std::size_t, const EvolutionPoint& point) { visit(point); });
+}
+
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::vector<std::string>& parameters, bool by_value,
+                      const std::function<void(std::size_t, const EvolutionPoint&)>& visit) {
+    // Each parameter's value and s.u. columns, by its unique name or its results column; none for one not recorded.
+    std::vector<const ScanParameterColumns*> columns(parameters.size(), nullptr);
+    bool any = false;
+    for (std::size_t i = 0; i < parameters.size(); ++i) {
+        for (const std::string& name : {parameters[i], scan_results_column(parameters[i])}) {
+            for (const ScanParameterColumns& recorded : index.parameters) {
+                if (columns[i] == nullptr && recorded.name == name) {
+                    columns[i] = &recorded;
+                    any = true;
+                }
             }
         }
     }
-    if (columns == nullptr || !index.error.empty() ||
-        !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+    if (!any || !index.error.empty() || !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
         return;
     }
     std::ifstream input(scan_results_path(project), std::ios::binary);
@@ -1894,26 +1952,31 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
             continue;
         }
         const auto place = places.find(scan_row_file(index, cells));
-        EvolutionPoint point;
         // A refused file's row holds the values its fit started from, not a result.
-        if (place == places.end() || cells[index.chi] == "nan" || !parse_scan_number(cells[columns->value], point.y) ||
-            !parse_scan_number(cells[columns->uncertainty], point.su)) {
+        if (place == places.end() || cells[index.chi] == "nan") {
             continue;
         }
-        point.dataset = place->second;
+        double x = static_cast<double>(place->second + 1);
         if (extracted) {
             const std::ptrdiff_t column = index.extract.front();
-            if (column < 0 || !parse_scan_number(cells[static_cast<std::size_t>(column)], point.x)) {
+            if (column < 0 || !parse_scan_number(cells[static_cast<std::size_t>(column)], x)) {
                 continue;
             }
-        } else {
-            point.x = static_cast<double>(point.dataset + 1);
         }
-        constexpr double kLimit = 1e300;
-        if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.su) && point.su >= 0.0 &&
-            std::abs(point.x) <= kLimit && std::abs(point.y - point.su) <= kLimit &&
-            std::abs(point.y + point.su) <= kLimit) {
-            visit(point);
+        for (std::size_t i = 0; i < parameters.size(); ++i) {
+            EvolutionPoint point;
+            point.x = x;
+            point.dataset = place->second;
+            if (columns[i] == nullptr || !parse_scan_number(cells[columns[i]->value], point.y) ||
+                !parse_scan_number(cells[columns[i]->uncertainty], point.su)) {
+                continue;
+            }
+            constexpr double kLimit = 1e300;
+            if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.su) && point.su >= 0.0 &&
+                std::abs(point.x) <= kLimit && std::abs(point.y - point.su) <= kLimit &&
+                std::abs(point.y + point.su) <= kLimit) {
+                visit(i, point);
+            }
         }
     }
 }
@@ -1999,7 +2062,7 @@ void raise_coded(const std::exception& error) {
 }
 
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
-// ADR-0035 §7: the report's settings, its saved-report rows and the two Analysis view items, as crysta writes them.
+// ADR-0036 §7: the report's settings, its saved-report rows and the two Analysis view items, as crysta writes them.
 void copy_report_settings(const Project& model, crysta::Project& cproject) {
     cproject.report_html = model.report_html;
     cproject.report_pdf = model.report_pdf;
@@ -2063,8 +2126,18 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         crysta::BraggPdExperiment& built = build_on_heap(built_experiments, e);
         built.calculation_only = e.calculation_only;
         built.fit_n_data_points = e.fit_n_data_points;  // The bank's share of the last fit
+        built.fit_prof_r_factor = e.fit_prof_r_factor;
         built.fit_prof_wr_factor = e.fit_prof_wr_factor;
+        built.fit_prof_wr_expected = e.fit_prof_wr_expected;
+        built.fit_prof_cr_factor = e.fit_prof_cr_factor;
+        built.fit_prof_cwr_factor = e.fit_prof_cwr_factor;
         built.fit_chi_square = e.fit_chi_square;
+        // Each phase's share; the links crossed in order (convert_experiment).
+        for (std::size_t index = 0; index < built.linked_structures.size() && index < e.linked_structures.size();
+             ++index) {
+            built.linked_structures[index].fit_bragg_r_factor = e.linked_structures[index]->fit_bragg_r_factor;
+            built.linked_structures[index].fit_f_r_factor = e.linked_structures[index]->fit_f_r_factor;
+        }
         // Every token of the experiment — the absorption family, the experiment-type axes and the
         // scattering-source selectors — has already crossed, through crysta's converter, in the
         // one conversion both paths share (apply_post_build_fields). The delegated save used to
@@ -2113,6 +2186,10 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
         to.covariance_available = from.covariance_available;
         to.exit_reason = from.exit_reason;
         to.prof_wr_factor = from.prof_wr_factor;
+        to.prof_r_factor = from.prof_r_factor;
+        to.prof_wr_expected = from.prof_wr_expected;
+        to.prof_cr_factor = from.prof_cr_factor;
+        to.prof_cwr_factor = from.prof_cwr_factor;
         to.profile_function = from.profile_function;
         to.background_function = from.background_function;
         to.descent = from.descent;
@@ -3149,26 +3226,33 @@ enum class Completion : std::uint8_t { Values, ValuesAndUncertainties };
 // Every dependent of `converted` set from its relation by crysta's one applier, then copied onto
 // the model by unique name: its value, and after a fit its e.s.d., keeping the one it held before
 // the fit for undo (a dependent has no fit-start row, so nothing is written for it).
-void copy_dependents(crysta::Project& converted, Project& model, Completion completion) {
+std::set<const Parameter*> copy_dependents(crysta::Project& converted, Project& model,
+                                           Completion completion) {
     const crysta::RelationGraph relations = crysta::apply_relations(converted, false);
     std::map<std::string, Parameter*> by_name;
     for (const NamedSlot& slot : named_slots(model)) {
         by_name.emplace(slot.unique_name, slot.parameter);
     }
+    std::set<const Parameter*> dependents;
     for (const crysta::Relation& relation : relations.relations()) {
         const auto found = by_name.find(relation.target_name);
         if (found == by_name.end()) {
             continue;
         }
         Parameter& target = *found->second;
+        dependents.insert(&target);
         if (target.value.get() != relation.target->value()) {
             target.value = relation.target->value();
         }
         if (completion == Completion::ValuesAndUncertainties) {
             target.start_uncertainty = target.uncertainty.get();
-            target.uncertainty = relation.target->uncertainty();
+            // A present zero is edi's fixed value with no s.u.; crysta reads it as none, which is no change.
+            if (relation.target->uncertainty().has_value() || target.uncertainty.get() != std::optional<double>(0.0)) {
+                target.uncertainty = relation.target->uncertainty();
+            }
         }
     }
+    return dependents;
 }
 
 Dependence dependence_of(crysta::Dependence source) {
@@ -3193,8 +3277,10 @@ std::string dependent_source(const crysta::Relation& relation) {
 }
 
 // Every parameter's mark from crysta's graph; a dependent's free flag cleared, with crysta's warning
-// when there is a sink to give it to.
-void mark_dependents(Project& model, const crysta::RelationGraph& relations, const WarningSink& warn) {
+// when there is a sink to give it to. From a file, a constrained dependent's bracket with a nonzero s.u.
+// is that s.u., not a free flag, so it goes without the warning.
+void mark_dependents(Project& model, const crysta::RelationGraph& relations, const WarningSink& warn,
+                     bool from_file = false) {
     std::map<std::string, Parameter*> by_name;
     for (const NamedSlot& slot : named_slots(model)) {
         slot.parameter->dependence = Dependence::Independent;
@@ -3209,7 +3295,9 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
         target.dependence = dependence_of(relation.source);
         if (target.free.get()) {
             target.free = false;
-            if (warn) {
+            const bool saved_su = from_file && relation.source == crysta::Dependence::Constrained &&
+                                  target.uncertainty.get().value_or(0.0) != 0.0;
+            if (warn && !saved_su) {
                 warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name +
                      "' is " + dependent_source(relation) +
                      "; free = True is ignored and it stays dependent");
@@ -3220,7 +3308,7 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
 
 }  // namespace
 
-void refresh_relations(Project& project, const WarningSink& warn) {
+void refresh_relations(Project& project, const WarningSink& warn, bool from_file) {
     if (project.structures.empty()) {
         return;
     }
@@ -3235,7 +3323,7 @@ void refresh_relations(Project& project, const WarningSink& warn) {
     if (!problems.empty()) {
         throw coded_refusal(problems);
     }
-    mark_dependents(project, crysta::compile_relations(*converted->project, false), warn);
+    mark_dependents(project, crysta::compile_relations(*converted->project, false), warn, from_file);
 }
 
 void complete_relations(Project& project) {
@@ -3260,7 +3348,7 @@ bool apply_relations(Project& project) {
     }
 }
 
-void restore_dependents(Project& project) {
+void restore_dependents(Project& project, const std::set<const Parameter*>& restored) {
     RelationProject converted = relation_project(project);
     const crysta::RelationGraph relations = crysta::compile_relations(*converted.project, false);
     copy_dependents(*converted.project, project, Completion::Values);
@@ -3274,6 +3362,9 @@ void restore_dependents(Project& project) {
             continue;
         }
         Parameter& target = *found->second;
+        if (restored.contains(&target)) {
+            continue;  // its own start row gave its e.s.d. back already
+        }
         target.uncertainty = target.start_uncertainty.get();
         target.start_uncertainty = std::nullopt;
     }
@@ -3743,14 +3834,62 @@ std::vector<std::string> identity_paths(const IterationCallback& subscriber,
 // series is written, never what the engine computes. It runs LAST, after the value write-back and every
 // completion pass, because the pattern must describe the model a SAVE would serialise. The three paths share
 // one function rather than three agreeing copies: a fourth entry point cannot forget a step it never spells.
-void publish_fit_state(Project& project, crysta::Project& converted) {
+void publish_fit_state(Project& project, crysta::Project& converted, const std::vector<detail::RefinedValue>& refined) {
     for (const auto& structure : project.structures) {  // every structure (phase)
         rebalance_positional_fit_state(*structure);  // review-9 F1: lossless snapshot hand-off
     }
     // Every dependent as crysta completed it on the fit's own project (Wyckoff followers, cell
     // siblings and constrained parameters), values and e.s.d.s.
-    copy_dependents(converted, project, Completion::ValuesAndUncertainties);
+    const std::set<const Parameter*> dependents =
+        copy_dependents(converted, project, Completion::ValuesAndUncertainties);
+    // An s.u. belongs to the latest fit: a parameter this fit gave none (fixed, free in a phase it left out, or a
+    // dependent no fitted parameter reaches, which crysta cleared) has none. Its prior s.u. becomes a start row at
+    // its own value, as in crysta, so undo gives it back after a save and load too. Without an s.u. it gets no
+    // row: an earlier fit's row would make undo restore a value this fit never moved.
+    std::set<const Parameter*> fitted;
+    for (const detail::RefinedValue& item : refined) {
+        fitted.insert(item.resolved.target);
+    }
+    for (const NamedSlot& slot : named_slots(project)) {
+        Parameter& p = *slot.parameter;
+        if (fitted.contains(&p)) {
+            continue;
+        }
+        if (dependents.contains(&p)) {
+            // Its prior s.u. needs a row when crysta cleared it, and on a constrained dependent, whose s.u. a save
+            // keeps, so undo after a reload gives it back.
+            const bool kept = p.dependence == Dependence::Constrained && p.start_uncertainty.get().value_or(0.0) != 0.0;
+            const bool cleared = !p.uncertainty.get().has_value() && p.start_uncertainty.get().value_or(0.0) != 0.0;
+            if (kept || cleared) {
+                p.start_value = p.value.get();
+            }
+            continue;
+        }
+        // A present zero is how edi spells a fixed value with no s.u., so it is neither cleared nor given a row.
+        if (p.uncertainty.get().value_or(0.0) != 0.0) {
+            p.start_value = p.value.get();
+            p.start_uncertainty = p.uncertainty.get();
+            p.uncertainty = std::optional<double>();
+        } else {
+            p.start_value.reset();
+            p.start_uncertainty.reset();
+        }
+    }
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
+}
+
+// The R factors of the fit that ran on `fitted` (its engine project, at the fitted values), over the measured
+// patterns the fit read, one per bank: the caller's, which need not be the model's embedded data. A deque, because
+// crysta's data node can't be moved and a vector may relocate its elements.
+crysta::FitQuality fitted_quality(crysta::Project& fitted, const std::deque<crysta::PdDataBase>& measured,
+                                  std::size_t n_free) {
+    for (std::size_t bank = 0; bank < fitted.experiments.size() && bank < measured.size(); ++bank) {
+        fitted.experiments[bank].data = measured[bank];
+        fitted.experiments[bank].calculation_only = false;
+        fitted.experiments[bank].explicit_grid = false;
+    }
+    crysta::calculate_project(fitted);
+    return crysta::fit_quality(fitted, n_free);
 }
 
 // The fit's parameter correlations as crysta computes them over the project it fitted (crysta::fit_correlations:
@@ -3831,12 +3970,12 @@ std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted
     return rows;
 }
 
-// The fit's result as the project records it (`_fit_result`, diffraction-lib's names, and each bank's share
-// for a joint fit), from what the fit returned — the same numbers the reports print. The status label is
-// crysta's machine-record spelling; the profile function is the peak type the experiments share (left out
-// when they differ), the background edi's only one.
+// The fit's result as the project records it (`_fit_result`, diffraction-lib's names, each experiment's share and
+// each phase's), from what the fit returned — the same numbers the reports print — with the R factors and the
+// parameter correlations crysta computed. The status label is crysta's machine-record spelling; the profile function
+// is the peak type the experiments share (left out when they differ), the background edi's only one.
 void record_fit_result(Project& project, FitResultBase& outcome, std::size_t considered,
-                       std::vector<FitParameterCorrelation> correlations) {
+                       std::vector<FitParameterCorrelation> correlations, const crysta::FitQuality& quality) {
     FitResultRecord record;
     record.result_kind = "deterministic";
     record.success = outcome.status == FitStatus::DONE;
@@ -3890,6 +4029,10 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
+    record.prof_r_factor = quality.pooled.rp;
+    record.prof_wr_expected = quality.pooled.rexp;
+    record.prof_cr_factor = quality.pooled.crp;
+    record.prof_cwr_factor = quality.pooled.cwrp;
     const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
     outcome.correlations.clear();
     for (const auto& row : rows) {
@@ -3899,9 +4042,19 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     project.fit_result = std::move(record);
     for (const auto& experiment_item : project.experiments) {
         ExperimentBase& experiment = *experiment_item;
-        experiment.fit_n_data_points.reset();
-        experiment.fit_prof_wr_factor.reset();
-        experiment.fit_chi_square.reset();
+        clear_fit_share(experiment);
+        for (const crysta::ProfileFactors& bank : quality.experiments) {
+            if (bank.experiment == experiment.name) {
+                experiment.fit_n_data_points = static_cast<int>(bank.n_points);
+                experiment.fit_prof_r_factor = bank.rp;
+                experiment.fit_prof_wr_factor = bank.rwp;
+                experiment.fit_prof_wr_expected = bank.rexp;
+                experiment.fit_prof_cr_factor = bank.crp;
+                experiment.fit_prof_cwr_factor = bank.cwrp;
+                experiment.fit_chi_square = bank.chi_square;
+            }
+        }
+        // A bank the fit reported keeps the fit's own points, Rwp and chi-square, the numbers the report prints.
         for (const BankMetric& bank : outcome.banks) {
             if (bank.name == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
@@ -3909,10 +4062,24 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
                 experiment.fit_chi_square = bank.chi_square;
             }
         }
+        for (const auto& link : experiment.linked_structures) {
+            const std::string& linked = link->structure_id.value();
+            const std::string structure = KeyTraits<Structure>::canonical(
+                linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked);
+            for (const crysta::PhaseFactors& phase : quality.phases) {
+                if (link->enabled.get() && phase.experiment == experiment.name &&
+                    KeyTraits<Structure>::canonical(phase.structure) == structure) {
+                    link->fit_bragg_r_factor = phase.r_bragg;
+                    link->fit_f_r_factor = phase.r_f;
+                }
+            }
+        }
     }
 }
 
 }  // namespace
+
+void set_scan_file_start_observer(ScanFileStartObserver observer) { crysta::set_scan_file_start_observer(observer); }
 
 void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
                             std::shared_ptr<const ScanFileResult> result, const std::string& template_file) {
@@ -4198,9 +4365,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // Write the refined value/esd back onto the edi model Parameters (all labels resolved above).
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-            publish_fit_state(*this, project);
-            record_fit_result(*this, outcome, considered,
-                              crysta_correlations(project, result));
+            publish_fit_state(*this, project, refined);
+            record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
+                              fitted_quality(project, {crysta::PdDataBase(grid, observed, sigma)}, outcome.values.size()));
             return outcome;
         };
         if (phases) {
@@ -4726,14 +4893,28 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // keeps its pre-scan values, and results.csv is the resume point.
         if (!result.cancelled) {
             detail::write_back(refined);
-            publish_fit_state(*this, cproject);
-            clear_fit_result(*this);  // A scan records no `_fit_result`; an earlier fit's would be stale
-            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+            publish_fit_state(*this, cproject, refined);
+            // crysta gives the R factors of the scan's template file when this call fitted it; otherwise there is
+            // nothing to record, and an earlier fit's result would be stale. Each file's results are the scan's.
+            if (result.scan_quality) {
+                // The record describes the template file, not the file the scan ended on.
+                const crysta::ProfileFactors& pooled = result.scan_quality->pooled;
+                FitResultBase recorded = outcome;
+                recorded.n_points_fitted = pooled.n_points;
+                recorded.rwp = pooled.rwp;
+                const std::size_t n_free = recorded.values.size();
+                recorded.reduced_chi_square =
+                    pooled.n_points > n_free ? pooled.chi_square / static_cast<double>(pooled.n_points - n_free) : 0.0;
+                record_fit_result(*this, recorded, cproject.collect_parameters().size(), {}, *result.scan_quality);
+            } else {
+                clear_fit_result(*this);
+            }
+            settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
         } else if (*completed_files > 0) {
             // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
             // skips that file and could not make them again. The unfinished file has none, and the rest of the
             // record stays as it was.
-            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+            settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
         }
         return outcome;
     } catch (const std::invalid_argument&) {
@@ -4933,9 +5114,13 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             }
             detail::write_back(refined);
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
-            publish_fit_state(*this, project);
-            record_fit_result(*this, outcome, considered,
-                              crysta_correlations(project, result));
+            publish_fit_state(*this, project, refined);
+            std::deque<crysta::PdDataBase> fitted_patterns;
+            for (const PdDataBase& pattern : patterns) {
+                fitted_patterns.emplace_back(pattern.axis(), pattern.intensity_meas.get(), pattern.intensity_meas_su.get());
+            }
+            record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
+                              fitted_quality(project, fitted_patterns, outcome.values.size()));
             // Before shared items this copied bank 0 into the single-bank mirror (the loader set it
             // up that way), so `experiment` never reports stale values after a joint refinement.
             // `experiment()` IS the first bank now, so nothing is copied back: that

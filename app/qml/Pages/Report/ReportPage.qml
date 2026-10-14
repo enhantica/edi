@@ -7,7 +7,7 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Report page (edi ADR-0035; the owner's notes 30 and 31, and the sidebar of 2026-10-13): the report's live preview
+// The Report page (edi ADR-0036; the owner's notes 30 and 31, and the sidebar of 2026-10-13): the report's live preview
 // in the main area, drawn from the report model; the sidebar's Export and Contents; reports/report.edi in Text.
 WorkflowPage {
     id: page

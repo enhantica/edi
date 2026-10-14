@@ -31,7 +31,7 @@ class Project;
 
 namespace edi::detail {
 
-// ADR-0035 §7: the report's settings, checked by crysta's rules; each throws std::invalid_argument naming the item.
+// ADR-0036 §7: the report's settings, checked by crysta's rules; each throws std::invalid_argument naming the item.
 // `_report.<item>` with its decoded value, stated into `project`; an item the category does not have is refused.
 void read_report_item(std::string_view item, const std::string& value, Project& project);
 // `_correlation_chart.threshold`, `_pattern_chart.x_axis` and a `_report_file.format`, checked.

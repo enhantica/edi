@@ -146,13 +146,13 @@ void CorrelationViewModel::settle(const QString& reason) {
     }
 }
 
-// The project's threshold (ADR-0035 §7): with one, the level is it; without, the count asked for sets it.
+// The project's threshold (ADR-0036 §7): with one, the level is it; without, the count asked for sets it.
 void CorrelationViewModel::show() {
     if (threshold_) {
         apply(*threshold_, static_cast<int>(edi::correlation_count_for_level(strength_, *threshold_)));
         return;
     }
-    // The level follows the count by ADR-0035 §7's rule: the lowest that keeps at most that many, a tie kept
+    // The level follows the count by ADR-0036 §7's rule: the lowest that keeps at most that many, a tie kept
     // whole; the count then shows how many it keeps.
     const double level = edi::correlation_level_for_count(strength_, static_cast<std::size_t>(wanted_));
     apply(level, static_cast<int>(edi::correlation_count_for_level(strength_, level)));
@@ -182,7 +182,7 @@ void CorrelationViewModel::setMaxParameters(int count) {
         apply(level_, count);
         return;
     }
-    // The count sets the level by ADR-0035 §7's rule, and the project keeps that level.
+    // The count sets the level by ADR-0036 §7's rule, and the project keeps that level.
     ask(edi::correlation_level_for_count(strength_, static_cast<std::size_t>(count)));
 }
 

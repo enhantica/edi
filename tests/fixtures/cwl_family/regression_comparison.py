@@ -1,4 +1,4 @@
-"""Exact native pre-change rename pins and a separate cross-platform diagnostic."""
+"""Sealed rename pins: exact within a build, ADR-0057 across builds or platforms."""
 
 import base64
 import hashlib
@@ -34,7 +34,15 @@ def require_reference(record, native_platform=None):
     )
 
 
-def compare(actual, expected, native_platform, reference_platform='Linux'):
+def compare(
+    actual,
+    expected,
+    native_platform,
+    reference_platform='Linux',
+    *,
+    native_build=None,
+    reference_build=None,
+):
     assert len(expected) > 0, 'The regression reference must contain samples'
     assert len(expected) % 8 == 0, 'The regression reference must contain complete doubles'
     assert len(actual) == len(expected), 'The renamed profile must retain every reference sample'
@@ -42,14 +50,31 @@ def compare(actual, expected, native_platform, reference_platform='Linux'):
     reference = np.frombuffer(expected, dtype='<f8')
     assert np.isfinite(values).all(), 'Platform comparison refuses nonfinite actual samples'
     assert np.isfinite(reference).all(), 'Platform comparison refuses nonfinite reference samples'
-    if native_platform == reference_platform:
+    assert (native_build is None) == (reference_build is None), (
+        'A build comparison requires both identities; an unknown peer cannot select tolerance'
+    )
+    if native_build is not None:
+        assert all(
+            isinstance(value, str) and value for value in (native_build, reference_build)
+        ), 'A build comparison requires two nonempty compiled identities'
+    if native_platform == reference_platform and native_build == reference_build:
+        diagnostic = ''
+        if actual != expected:
+            changed = np.flatnonzero(values.view('<u8') != reference.view('<u8'))
+            first = int(changed[0])
+            diagnostic = (
+                f'; differing samples={len(changed)}, first index={first}, '
+                f'obtained={float(values[first]).hex()}, '
+                f'reference={float(reference[first]).hex()}, '
+                f'max absolute difference={float(np.max(np.abs(values - reference))):.17g}'
+            )
         assert actual == expected, (
-            'The recorded native platform must retain the original calculation bytes exactly'
+            'The same native build must retain the calculation bytes exactly' + diagnostic
         )
     else:
         limit = np.maximum(5e-9 * np.abs(reference), 5e-10)
         assert np.all(np.abs(values - reference) <= limit), (
-            'Cross-platform regression values must obey ADR-0057 '
+            'Cross-platform regression or cross-build values must obey ADR-0057 '
             'max(relative 5e-9, absolute 5e-10) at every sample'
         )
 
@@ -109,13 +134,27 @@ def require_dispatch_reference(dispatch, historical, root, native_platform):
         )
 
 
-def compare_pin(actual, record, name, native_platform):
+def sdk_build_identity(manifest):
+    source = manifest.get('source_sha', '')
+    archive = manifest.get('tested', {}).get('sha256', {}).get('lib/libcrysta_core.a', '')
+    assert len(source) == 40 and set(source) <= set('0123456789abcdef'), (
+        'A compiled comparison requires the SDK source identity'
+    )
+    assert len(archive) == 64 and set(archive) <= set('0123456789abcdef'), (
+        'A compiled comparison requires the tested SDK core archive digest'
+    )
+    return source + ':' + archive
+
+
+def compare_pin(actual, record, name, native_platform, *, native_build=None):
     require_reference(record, native_platform)
     compare(
         actual,
         base64.b64decode(record.get('dispatch_pins', record['pins'])[name], validate=True),
         native_platform,
         record['platform'],
+        native_build=native_build,
+        reference_build=record.get('dispatch_build') if native_build is not None else None,
     )
 
 
@@ -130,7 +169,11 @@ def read_reference(root, native_platform):
     if adaptation.is_file():
         dispatch = json.loads(adaptation.read_text())
         require_dispatch_reference(dispatch, record, root, native_platform)
-        record = dict(record, dispatch_pins=dispatch['pins'])
+        record = dict(
+            record,
+            dispatch_pins=dispatch['pins'],
+            dispatch_build=sdk_build_identity(dispatch['sdk_manifest']),
+        )
     return record
 
 

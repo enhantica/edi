@@ -48,6 +48,7 @@ qt_add_qml_module(edi_app_module
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp
+        src/test_observer.hpp src/test_observer.cpp
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
         src/row_table_model.hpp src/row_table_model.cpp
@@ -271,7 +272,7 @@ foreach(file IN LISTS EDI_APP_LICENCE_FILES)
     configure_file(${file} ${CMAKE_CURRENT_BINARY_DIR}/${name} COPYONLY)
 endforeach()
 
-# The HTML report's chart libraries (ADR-0035), which a saved report carries when asked: in the desktop app's resources
+# The HTML report's chart libraries (ADR-0036), which a saved report carries when asked: in the desktop app's resources
 # at qrc:/edi/report/vendor/; the browser build fetches them from its site instead (wasm-pack.sh), so its download
 # does not grow.
 if(NOT EMSCRIPTEN)
@@ -325,10 +326,13 @@ add_custom_target(edi_app_build_commit
     COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_COMMIT_CPP}
             -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
     BYPRODUCTS "${EDI_APP_BUILD_COMMIT_CPP}"
-    COMMENT "Embedding the source commit in the app test runner")
+    COMMENT "Embedding the source commit in the app and its test runner")
 qt_add_executable(edi_app_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/app_tests_main.cpp ${EDI_APP_TEST_SUPPORT}
                   "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app_tests edi_app_build_commit)
+# The app names it too: its test observers report the build they observe.
+target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_app edi_app_build_commit)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
 # The demo opens a verification project the app does not bundle from the source tree (ADR-0031).

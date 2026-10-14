@@ -534,7 +534,7 @@ _DATA_DIR = _Path(__file__).resolve().parent.parent.parent / 'data'
 
 
 class Report:
-    """The report facade (ADR-0035 §7), mirroring diffraction-lib's ``project.report``.
+    """The report facade (ADR-0036 §7), mirroring diffraction-lib's ``project.report``.
 
     Delegation only (ADR-0009). Its settings are the project's: ``html``, ``pdf`` and ``cif``
     (what ``save()`` writes) and ``html_offline`` and ``excluded`` in ``reports/report.edi``,

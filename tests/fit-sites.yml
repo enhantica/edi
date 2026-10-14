@@ -123,6 +123,25 @@ sites:
     case: multiphase-scales
     why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
 
+  - file: tests/system/py/test_latest_fit_uncertainty.py
+    case: constraint-covariance
+
+  - file: tests/system/py/test_powder_r_factors.py
+    case: constraint-covariance
+
+  - file: tests/system/py/test_fcj_zero_start.py
+    case: lab6-echidna-fcj
+
+  - file: tests/system/py/test_fullprof_powder_factors.py
+    case: lbco-hrpt-s2
+
+  - file: tests/system/py/test_phase_r_factors.py
+    case: constraint-covariance
+
+  # Independently tabulated ADP lifecycle stimuli extend the LBCO special-site witness.
+  - file: tests/system/py/test_adp_site_symmetry.py
+    case: lbco-hrpt-s4
+
   - file: tests/integration/py/test_shared_correlation_saved_bytes.py
     case: cosio-d20-scan-3f
     why: Frozen pre-change single and scan inputs isolate serialization compatibility.
@@ -132,3 +151,7 @@ sites:
   - file: tests/system/py/test_generated_correlation_saved_output.py
     case: cosio-d20-scan-3f
     why: Disposable pinned corpus copies must fit to prove complete generated saved rows.
+
+  - file: tests/fixtures/generated_correlations/produce.cpp
+    case: cosio-d20-scan-3f
+    why: Core producer fits only the disposable physical copies verified by its owning generated-output gate.

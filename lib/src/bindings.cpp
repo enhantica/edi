@@ -227,6 +227,19 @@ static void refuse_detached(const edi::Parameter& parameter) {
                     parameter.spec != nullptr ? parameter.spec->name : "value");
 }
 
+// A write to a site's or a tensor's parameter completes that structure's tensors (ADR 0027): followers and the
+// equivalent adp_iso are current at the next read, without a calculation.
+static void complete_tensors_of(const edi::detail::RowLink* link) {
+    if (link == nullptr || !link->attached()) {
+        return;
+    }
+    const edi::detail::KeyedBase* owner = link->record()->owner;
+    edi::Structure* structure = owner->holder();
+    if (structure != nullptr && !structure->atom_site_aniso.empty()) {
+        edi::complete_atom_site_aniso(*structure);
+    }
+}
+
 static void assign_parameter_slot(edi::Parameter& field, const ParameterOrNumber& incoming,
                                   const char* name) {
     if (const edi::Parameter* parameter = std::get_if<edi::Parameter>(&incoming)) {
@@ -283,6 +296,7 @@ static void def_parameter_field(nb::class_<Class>& cls, const char* name,
         [member, name](Class& self, const ParameterOrNumber& incoming) {
             refuse_detached(self.row.detached(), name);
             assign_parameter_slot(self.*member, incoming, name);
+            complete_tensors_of(&self.row);
         },
         nb::rv_policy::reference_internal);
 }
@@ -1551,7 +1565,7 @@ void calculate_for_report(edi::Project& project) {
     }
 }
 
-// ADR-0035 §7: one run's overrides of the report's settings, each checked by crysta's rules as a file states it.
+// ADR-0036 §7: one run's overrides of the report's settings, each checked by crysta's rules as a file states it.
 edi::ReportOverrides report_overrides(std::optional<bool> offline, std::optional<std::string> x_axis,
                                       std::optional<double> correlation_threshold,
                                       std::optional<std::vector<std::string>> excluded) {
@@ -1730,6 +1744,7 @@ NB_MODULE(_edi, m) {
                 refuse_detached(p);
                 check_range(p.spec, value, p.spec ? p.spec->name : "value");
                 p.value = value;
+                complete_tensors_of(p.category.get());
             })
         .def_prop_rw(
             "uncertainty", [](const edi::Parameter& p) { return p.uncertainty.get(); },
@@ -3353,7 +3368,7 @@ NB_MODULE(_edi, m) {
 
     def_collection_views(m);
 
-    // ADR-0035: the report model, a project's report as data, as JSON both ways (the JS seam and its gate).
+    // ADR-0036: the report model, a project's report as data, as JSON both ways (the JS seam and its gate).
     nb::class_<edi::ReportModel>(m, "ReportModel")
         .def("to_json", [](const edi::ReportModel& self) { return edi::report_to_json(self); },
              "The model as JSON (every field; doubles in their shortest round-trip form).")
@@ -3507,7 +3522,7 @@ NB_MODULE(_edi, m) {
             "file. A partially-loaded project is unrepresentable; after a fit-ready load, "
             "fit()/fit_joint() can be called with no arguments and cannot fail for a data "
             "reason.")
-        // ADR-0035 §7: the report's settings (reports/report.edi, analysis/analysis.edi), each None until stated,
+        // ADR-0036 §7: the report's settings (reports/report.edi, analysis/analysis.edi), each None until stated,
         // and its run-time entry points; the `project.report` facade (lib/edi) is their Python surface.
         .def_rw("_report_html", &edi::Project::report_html)
         .def_rw("_report_pdf", &edi::Project::report_pdf)

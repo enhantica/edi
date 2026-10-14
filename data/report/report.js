@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-// The HTML report's figures (edi ADR-0035): each experiment's pattern as a plotly.js chart and each structure as a
+// The HTML report's figures (edi ADR-0036): each experiment's pattern as a plotly.js chart and each structure as a
 // three.js scene, from the report model in this page. The series, panes, error bars, ticks, colours, instances and
 // views all come from the model; this file only places them.
 
@@ -293,63 +293,47 @@ function drawPattern(figure, pattern) {
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
 }
 
-// The Evolution tab's chart (edi ADR-0035): a scan's parameter, chosen from a list, at each fitted dataset with its
-// s.u. as an error bar; "No fitted results yet" before any dataset is fitted.
-function drawEvolution(figure, evolution) {
-  const select = document.createElement('select');
-  for (const [index, series] of evolution.entries()) {
-    const option = document.createElement('option');
-    option.value = String(index);
-    option.textContent = series.name;
-    select.appendChild(option);
-  }
-  const plot = document.createElement('div');
-  plot.className = 'evolution-plot';
-  figure.appendChild(select);
-  figure.appendChild(plot);
+// One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,
+// titled with its name and units; "No fitted results yet" before any dataset is fitted.
+function drawEvolution(figure, series) {
   const font = pageStyle('--head-font');
   const grid = pageStyle('--rowshade');
   const frame = pageStyle('--tableborder');
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false };
-  const show = () => {
-    const series = evolution[Number(select.value)];
-    window.Plotly?.purge(plot);
-    plot.classList?.remove('figure-note');
-    plot.textContent = '';
-    if (series.points.length === 0) {
-      notice(plot, 'No fitted results yet');
-      return;
-    }
-    if (!window.Plotly) {
-      notice(plot, 'The chart needs plotly.js, which could not be loaded.');
-      return;
-    }
-    const style = patternStyle('meas.0');
-    const trace = {
-      type: 'scatter',
-      mode: 'lines+markers',
-      name: series.name,
-      x: series.points.map(point => point.x),
-      y: series.points.map(point => point.y),
-      error_y: { type: 'data', array: series.points.map(point => point.su), visible: true, thickness: 1 },
-      text: series.points.map(point => point.text),
-      hovertemplate: '%{x}: %{text}<extra></extra>',
-      line: { color: style.light, width: 1 },
-      marker: { color: style.light, size: 6 },
-    };
-    const layout = {
-      height: plot.clientHeight,
-      margin: { l: 16, r: 16, t: 16, b: 16 },
-      font: { family: font },
-      showlegend: false,
-      hovermode: 'closest',
-      xaxis: { ...axis, title: { text: series.x_title } },
-      yaxis: { ...axis, title: { text: series.name } },
-    };
-    window.Plotly.newPlot(plot, [trace], layout, { responsive: true, displaylogo: false });
+  if (series.points.length === 0) {
+    notice(figure, 'No fitted results yet');
+    return;
+  }
+  if (!window.Plotly) {
+    notice(figure, 'The chart needs plotly.js, which could not be loaded.');
+    return;
+  }
+  const style = patternStyle('meas.0');
+  const trace = {
+    // Points with their s.u. bars and no line, as the Evolution tab draws them.
+    type: 'scatter',
+    mode: 'markers',
+    name: series.name,
+    x: series.points.map(point => point.x),
+    y: series.points.map(point => point.y),
+    error_y: { type: 'data', array: series.points.map(point => point.su), visible: true, thickness: 1, color: style.light },
+    text: series.points.map(point => point.text),
+    hovertemplate: '%{x}: %{text}<extra></extra>',
+    marker: { color: style.light, size: 6 },
   };
-  select.addEventListener('change', show);
-  show();
+  const layout = {
+    height: figure.clientHeight,
+    // The toolbar stands at the right, clear of the title.
+    margin: { l: 16, r: 40, t: 40, b: 16 },
+    modebar: { orientation: 'v' },
+    font: { family: font },
+    title: { text: series.units ? `${series.name} (${series.units})` : series.name, x: 0.02, xanchor: 'left' },
+    showlegend: false,
+    hovermode: 'closest',
+    xaxis: { ...axis, title: { text: series.x_title } },
+    yaxis: { ...axis },
+  };
+  window.Plotly.newPlot(figure, [trace], layout, { responsive: true, displaylogo: false });
 }
 
 // --- The structure views (edi ADR-0022) ---
@@ -677,6 +661,7 @@ for (const figure of document.querySelectorAll('.structure-figure')) {
 const evolution = model.evolution ?? [];
 if (evolution.length > 0) {
   for (const figure of document.querySelectorAll('.evolution-figure')) {
-    drawEvolution(figure, evolution);
+    const series = evolution[Number(figure.dataset.index)];
+    if (series) drawEvolution(figure, series);
   }
 }

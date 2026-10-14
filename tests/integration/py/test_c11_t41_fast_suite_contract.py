@@ -322,7 +322,7 @@ def _partition_transport(groups, omitted):
         env = {
             **os.environ,
             'PATH': str(bindir) + os.pathsep + os.defpath,
-            'EDI_SKIP_NIGHTLY_GROUP': 'true' if omitted else 'false',
+            'EDI_RUN_NIGHTLY_ONLY': 'false' if omitted else 'true',
             'EDI_TEST_DURATIONS': str(replay / 'no-prior-durations.json'),
         }
         result = subprocess.run(
@@ -341,32 +341,31 @@ def _partition_transport(groups, omitted):
 
 
 def _assert_platform_nightly_partition(groups, tasks, jobs, active):
-    # Before: -q was followed directly by partition options. After the
-    # nightly split: forward only the independently fixed macOS PR omissions.
+    # The app builders run exclusively on the nightly schedule, on both platforms.
+    # Every other event keeps the full tier with precisely the declared omissions.
     nightly_paths = [
         'tests/system/py/test_scan_app_execution.py',
         'tests/system/py/test_scan_accident_paths.py',
         'tests/system/py/test_plain_data_app.py',
     ]
-    assert groups['nightly']['paths'] == nightly_paths, (
-        'the macOS PR omission is exactly the authorized three files, never a broader filter'
+    assert set(nightly_paths) <= set(groups['nightly-only']['paths']), (
+        'The exclusive nightly cohort retains all original app-builder witnesses'
     )
-    assert tasks['nightly-tests']['cmd'] == ['python', '-m', 'pytest', *nightly_paths, '-q'], (
-        'the nightly entry point retains every omitted macOS PR file without extra exclusions'
-    )
+    nightly_paths = groups['nightly-only']['paths']
     parts = [
         step
         for step in jobs['system']['steps']
         if 'pixi run system-tests-part' in step.get('run', '')
     ]
     assert len(parts) == 1, 'every system part invokes one required production partition runner'
-    switch = parts[0]['env']['EDI_SKIP_NIGHTLY_GROUP']
+    switch = parts[0]['env']['EDI_RUN_NIGHTLY_ONLY']
     for platform in ('Linux', 'macOS'):
         for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
             expression = str(switch).replace('matrix.platform', repr(platform))
-            omitted = active({'if': expression}, event)
-            assert omitted is (event == 'pull_request' and platform == 'macOS'), (
-                'only macOS PR omits three files; Linux PR and full events retain every file'
+            included = active({'if': expression}, event)
+            omitted = not included
+            assert included is (event == 'schedule'), (
+                'Only the nightly schedule includes private app-builder files on either platform'
             )
             result = _partition_transport(groups, omitted)
             ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
@@ -385,7 +384,18 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 '--durations-path',
                 'build/test-durations-1.json',
                 '--store-durations',
-            ], 'production partitions keep complete Linux/full and exact macOS PR selections'
+            ], (
+                'Production partitions retain the complete tier '
+                'with exactly the declared off-schedule omissions'
+            )
+
+    assert tasks['nightly-only-tests']['cmd'] == [
+        'python',
+        '-m',
+        'pytest',
+        *nightly_paths,
+        '-q',
+    ], 'The local exclusive-nightly entry point must execute every declared nightly file'
 
 
 def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:

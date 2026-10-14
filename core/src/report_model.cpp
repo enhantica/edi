@@ -275,7 +275,7 @@ std::optional<ReportCorrelations> correlations_of(const Project& project, const 
     return out;
 }
 
-// A scan's template dataset as the app shows it (edi ADR-0035 §3): the declared template file, else the first file,
+// A scan's template dataset as the app shows it (edi ADR-0036 §3): the declared template file, else the first file,
 // as the app opens a scan; with that file's results row, the template takes the row's values and uncertainties (a
 // parameter the results do not record keeps the template's); without one, the template's own. Either way the file's
 // data are loaded, the relations completed and the pattern calculated, so the report draws the structure and the
@@ -288,11 +288,8 @@ struct ScanTemplate {
 };
 
 ScanTemplate scan_template_of(const Project& scan) {
-    ScanTemplate out{scan, scan.sequential_fit.template_file, std::nullopt};
     const ScanDatasets datasets = scan_datasets(scan);
-    if (out.file.empty() && !datasets.files.empty()) {
-        out.file = datasets.files.front();
-    }
+    ScanTemplate out{scan, effective_scan_template_file(scan, datasets), std::nullopt};
     const std::string& file = out.file;
     if (file.empty()) {
         return out;
@@ -762,14 +759,22 @@ std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string
             x_title = unit.empty() ? extract->id.value() : extract->id.value() + " (" + unit + ")";
             break;
         }
-        for (const std::string& name : evolution_parameters(scan, index)) {
-            ReportEvolution series{name, x_title, {}};
-            evolution_series(scan, places, index, name, true, [&series, &rule](const EvolutionPoint& point) {
-                series.points.push_back({point.x, point.y, point.su,
-                                         point.su > 0.0 ? value_su_text(point.y, point.su, rule) : shortest(point.y)});
-            });
-            out.push_back(std::move(series));
+        // Each parameter's units by its unique name or its results column.
+        std::map<std::string, std::string> units;
+        for (const NamedParameter& named : named_parameters(scan)) {
+            units.emplace(named.unique_name, units_of(*named.parameter));
+            units.emplace(scan_results_column(named.unique_name), units_of(*named.parameter));
         }
+        const std::vector<std::string> names = evolution_parameters(scan, index);
+        for (const std::string& name : names) {
+            const auto found = units.find(name);
+            out.push_back({name, x_title, {}, found != units.end() ? found->second : std::string()});
+        }
+        // Every series from one read of the results.
+        evolution_series(scan, places, index, names, true, [&out, &rule](std::size_t i, const EvolutionPoint& point) {
+            out[i].points.push_back({point.x, point.y, point.su,
+                                     point.su > 0.0 ? value_su_text(point.y, point.su, rule) : shortest(point.y)});
+        });
     } catch (const std::exception&) {
         out.clear();
     }
@@ -779,7 +784,7 @@ std::vector<ReportEvolution> evolution_of(const Project& scan, const std::string
 }  // namespace
 
 ReportModel build_report(const Project& input, const ReportOptions& options) {
-    // A scan's report is its template dataset's, fitted (ADR-0035 §3); one whose datasets or results cannot be read
+    // A scan's report is its template dataset's, fitted (ADR-0036 §3); one whose datasets or results cannot be read
     // reports the template as it is.
     const bool scan_mode = is_scan_fitting_mode(input.fitting_mode);
     std::optional<ScanTemplate> scan;
@@ -854,9 +859,10 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     if (correlations) {
         model.sections.push_back(ReportSection::Correlations);
+        // A scan whose template could not be made still reports its template dataset's pairs.
+        const std::string template_file = scan_mode && !scan ? effective_scan_template_file(input) : std::string();
         model.correlations =
-            correlations_of(project, options,
-                            scan ? &scan->file : scan_mode ? &project.sequential_fit.template_file : nullptr,
+            correlations_of(project, options, scan ? &scan->file : scan_mode ? &template_file : nullptr,
                             model.fitted);
     }
     // A scan's parameters across its datasets.

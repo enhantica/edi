@@ -3432,6 +3432,11 @@ struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
     ItemKey structure_id;  // Owned by the experiment's linked_structures (e.g. "ncaf")
     Parameter scale{1.0};
     detail::Written<bool> enabled{true};
+    // This phase's agreement in its experiment at the project's last fit (`_fit_result_phase`, keyed by the
+    // experiment and the structure; crysta's LinkedStructure carries the same): R_Bragg and R_F as fractions.
+    // Absent when the project holds no fit result.
+    std::optional<double> fit_bragg_r_factor;
+    std::optional<double> fit_f_r_factor;
 
     LinkedStructure() { scale.spec = &spec::linked_structure_scale; }
 
@@ -3440,6 +3445,8 @@ struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
     detail::RowLink row;
     // This row's identity as a calculation input.
     detail::Epoch epoch;
+    // ADR-0018: the row of this object's non-loop categories.
+    detail::CategoryRow table_row;
 };
 
 // The absorption category — the per-bank FullProf ABSCOR pair behind the `_absorption.*`
@@ -3742,11 +3749,17 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
     std::string data_file;
-    // This bank's share of the project's last joint fit (`_fit_result_bank`, beside the project's
-    // `_fit_result`; crysta's ExperimentBase carries the same): the points it fitted, its weighted-profile
-    // R factor and its raw chi-square. Absent when the project holds no joint fit result.
+    // This bank's share of the project's last fit (`_fit_result_bank`, beside the project's `_fit_result`;
+    // crysta's ExperimentBase carries the same): the points it fitted, its profile, weighted-profile and
+    // expected R factors, the two with the background taken out (fractions) and its raw chi-square. Absent
+    // when the project holds no fit result, and each of the profile, expected and background-corrected
+    // factors in a result written before them.
     std::optional<int> fit_n_data_points;
+    std::optional<double> fit_prof_r_factor;
     std::optional<double> fit_prof_wr_factor;
+    std::optional<double> fit_prof_wr_expected;
+    std::optional<double> fit_prof_cr_factor;
+    std::optional<double> fit_prof_cwr_factor;
     std::optional<double> fit_chi_square;
 
     // The bank's embedded measured data, parsed from the `.edi` `_data.*` loop.
@@ -4301,7 +4314,7 @@ struct KeyTraits<ParameterConstraint> {
     static const char* category() { return "constraint"; }
 };
 
-// One `_report_file` row of `reports/report.edi` (ADR-0035 §7), a report Save report wrote: its file's name in
+// One `_report_file` row of `reports/report.edi` (ADR-0036 §7), a report Save report wrote: its file's name in
 // `reports/` (the row's key), its format (`html`, `pdf` or `cif`), when it was written (UTC), the project's
 // last-modified time it was made from, and the digest of what was written, by which it is current or out of date.
 struct ReportFile {
@@ -4395,6 +4408,12 @@ struct FitResultRecord {
     bool covariance_available = false;
     std::string exit_reason;  // crysta's status label: done, max_iter, no_step, cancelled
     double prof_wr_factor = 0.0;
+    // The profile and expected R factors over every fitted point, and the two with the background taken out;
+    // absent in a result written before them.
+    std::optional<double> prof_r_factor;
+    std::optional<double> prof_wr_expected;
+    std::optional<double> prof_cr_factor;
+    std::optional<double> prof_cwr_factor;
     std::string profile_function;     // empty: not written
     std::string background_function;  // empty: not written
     // The descent that produced the result, so a reopened result names its own minimizer rather than the
@@ -4639,14 +4658,14 @@ class Project : public detail::ProjectAnchor {
     // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
     // rule.
     std::string su_rule = "iucr_19";
-    // `reports/report.edi` `_report` (ADR-0035 §7): the report's settings, each absent until the file or the app
+    // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
     // `_report_file` rows: one per report Save report wrote.
     std::optional<bool> report_html, report_pdf, report_cif, report_html_offline;
     std::optional<std::string> report_excluded;
     ItemVec<ReportFile> report_files;
-    // `analysis/analysis.edi` (ADR-0035 §7): the correlation chart's threshold (absent: the five most correlated
+    // `analysis/analysis.edi` (ADR-0036 §7): the correlation chart's threshold (absent: the five most correlated
     // parameters) and the pattern chart's x axis (`native` or `d_spacing`; absent: native). effective_report_options
     // turns these and the settings above into a report's options.
     std::optional<double> correlation_threshold;
@@ -5203,8 +5222,8 @@ struct MinimizerCategory {
 };
 static_assert(detail::one_entry_per_column(MinimizerCategory::columns, MinimizerCategory::items));
 
-// The last fit's result (diffraction-lib's `_fit_result`) and each bank's share of a joint fit, one row per
-// experiment like `_joint_fit` (crysta's FitResultCategory and FitResultBankCategory).
+// The last fit's result (diffraction-lib's `_fit_result`) and each bank's share of it, one row per experiment
+// like `_joint_fit` (crysta's FitResultCategory and FitResultBankCategory).
 struct FitResultCategory {
     using Owner = FitResultRecord;
     static constexpr const char* name = "_fit_result";
@@ -5214,11 +5233,14 @@ struct FitResultCategory {
         &FitResultRecord::objective_name, &FitResultRecord::objective_value, &FitResultRecord::n_data_points,
         &FitResultRecord::n_parameters, &FitResultRecord::n_free_parameters, &FitResultRecord::degrees_of_freedom,
         &FitResultRecord::covariance_available, &FitResultRecord::exit_reason, &FitResultRecord::prof_wr_factor,
-        &FitResultRecord::profile_function, &FitResultRecord::background_function, &FitResultRecord::descent};
+        &FitResultRecord::prof_r_factor, &FitResultRecord::prof_wr_expected, &FitResultRecord::prof_cr_factor,
+        &FitResultRecord::prof_cwr_factor, &FitResultRecord::profile_function, &FitResultRecord::background_function,
+        &FitResultRecord::descent};
     static constexpr std::array items{"result_kind", "success", "message", "iterations", "fitting_time",
                                       "reduced_chi_square", "objective_name", "objective_value", "n_data_points",
                                       "n_parameters", "n_free_parameters", "degrees_of_freedom",
-                                      "covariance_available", "exit_reason", "prof_wr_factor", "profile_function",
+                                      "covariance_available", "exit_reason", "prof_wr_factor", "prof_r_factor",
+                                      "prof_wr_expected", "prof_cr_factor", "prof_cwr_factor", "profile_function",
                                       "background_function", "descent"};
 };
 static_assert(detail::one_entry_per_column(FitResultCategory::columns, FitResultCategory::items));
@@ -5226,11 +5248,24 @@ static_assert(detail::one_entry_per_column(FitResultCategory::columns, FitResult
 struct FitResultBankCategory {
     using Owner = ExperimentBase;
     static constexpr const char* name = "_fit_result_bank";
-    static constexpr auto columns = std::tuple{&ExperimentBase::fit_n_data_points, &ExperimentBase::fit_prof_wr_factor,
-                                               &ExperimentBase::fit_chi_square};
-    static constexpr std::array items{"n_data_points", "prof_wr_factor", "chi_square"};
+    static constexpr auto columns =
+        std::tuple{&ExperimentBase::fit_n_data_points,    &ExperimentBase::fit_prof_r_factor,
+                   &ExperimentBase::fit_prof_wr_factor,   &ExperimentBase::fit_prof_wr_expected,
+                   &ExperimentBase::fit_prof_cr_factor,   &ExperimentBase::fit_prof_cwr_factor,
+                   &ExperimentBase::fit_chi_square};
+    static constexpr std::array items{"n_data_points",  "prof_r_factor",   "prof_wr_factor", "prof_wr_expected",
+                                      "prof_cr_factor", "prof_cwr_factor", "chi_square"};
 };
 static_assert(detail::one_entry_per_column(FitResultBankCategory::columns, FitResultBankCategory::items));
+
+// One row per experiment and linked structure, keyed by both (crysta's FitResultPhaseCategory).
+struct FitResultPhaseCategory {
+    using Owner = LinkedStructure;
+    static constexpr const char* name = "_fit_result_phase";
+    static constexpr auto columns = std::tuple{&LinkedStructure::fit_bragg_r_factor, &LinkedStructure::fit_f_r_factor};
+    static constexpr std::array items{"bragg_r_factor", "f_r_factor"};
+};
+static_assert(detail::one_entry_per_column(FitResultPhaseCategory::columns, FitResultPhaseCategory::items));
 
 struct SequentialFitCategory {
     using Owner = SequentialFitConfig;

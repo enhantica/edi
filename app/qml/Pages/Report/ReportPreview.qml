@@ -9,7 +9,7 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The Report page's live preview (edi ADR-0035): the report model's sections, in its order, drawn from the model's
+// The Report page's live preview (edi ADR-0036): the report model's sections, in its order, drawn from the model's
 // JSON values only. It is set as the HTML report is, after the owner's reference report (diffraction-lib's style,
 // 2026-10-13): PT Sans headings at its sizes and margins, numbered sections and records, each category of a structure
 // or an experiment in its own subsection under its figure (the structure view, the pattern chart), bordered tables one
@@ -20,6 +20,8 @@ Flickable {
     property ReportViewModel report: null
     readonly property var model: report ? report.model : ({})
     readonly property var sections: model.sections ?? []
+    // The narrowest an evolution chart is drawn, here and in the HTML report (report.js's grid): narrower, one to a row.
+    readonly property real evolutionMinWidth: 300
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The reference's sizes and margins are in points over its 10.04 pt body.
     readonly property real pt: em / 10.04
@@ -35,18 +37,22 @@ Flickable {
     // every grab has answered; a figure that cannot be grabbed is left out.
     function grabFigures(done) {
         const jobs = [];
-        for (const [records, kind, component] of [[structureRecords, "structure", printStructure], [experimentRecords, "pattern", printPattern]]) {
+        for (const [records, kind, component] of [[structureRecords, "structure", printStructure], [experimentRecords, "pattern", printPattern], [evolutionRecords, "evolution", printEvolution]]) {
             for (let i = 0; i < records.count; ++i) {
                 const record = records.itemAt(i);
-                const shown = record ? record.figureItem : null;
+                const shown = record ? (kind === "evolution" ? record : record.figureItem) : null;
                 if (!shown || shown.width <= 0 || shown.height <= 0)
                     continue;
                 const properties = {
                     "width": shown.width,
-                    "height": shown.height,
-                    "report": preview.report
+                    "height": shown.height
                 };
-                properties[kind === "structure" ? "reportStructure" : "reportExperiment"] = record.modelData.id;
+                if (kind === "evolution")
+                    properties.reportSeries = record.reportSeries;
+                else
+                    properties.report = preview.report;
+                if (kind !== "evolution")
+                    properties[kind === "structure" ? "reportStructure" : "reportExperiment"] = record.modelData.id;
                 const copy = component.createObject(printFigures, properties);
                 if (copy)
                     jobs.push({
@@ -202,6 +208,14 @@ Flickable {
     Component {
         id: printStructure
         StructureView {
+            colors: FigureColors {
+                light: true
+            }
+        }
+    }
+    Component {
+        id: printEvolution
+        EvolutionChart {
             colors: FigureColors {
                 light: true
             }
@@ -401,12 +415,29 @@ Flickable {
             Heading {
                 text: `${preview.number("evolution")}.  ` + qsTr("Evolution")
             }
-            // The chart of report.js: one parameter at a time, chosen above it.
-            EvolutionChart {
-                objectName: "report.evolution"
+            // One chart per parameter the Evolution tab lists, in its order, as the HTML report draws them: two to a
+            // row while each is at least the minimum width, else one (the owner, 2026-10-14).
+            Flow {
+                id: evolutionCharts
+
+                readonly property real chartWidth: (width - spacing) / 2 >= preview.evolutionMinWidth ? (width - spacing) / 2 : width
+
                 width: parent.width
-                height: EaStyle.Sizes.fontPixelSize * 26
-                reportSeries: preview.shown("evolution") ? (preview.model.evolution ?? []) : null
+                spacing: EaStyle.Sizes.fontPixelSize
+
+                Repeater {
+                    id: evolutionRecords
+
+                    model: preview.shown("evolution") ? (preview.model.evolution ?? []) : []
+                    delegate: EvolutionChart {
+                        required property var modelData
+
+                        objectName: "report.evolution"
+                        width: evolutionCharts.chartWidth
+                        height: Math.round(width * 0.75)
+                        reportSeries: modelData
+                    }
+                }
             }
         }
     }

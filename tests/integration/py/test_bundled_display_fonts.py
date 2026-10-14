@@ -151,15 +151,32 @@ def test_font_reference_is_bound_to_packaged_bytes_and_archive():
                 )
 
 
-def generated_label_digit_is_bundled(char):
+def generated_label_digit_is_bundled(path, char):
     # This generated domain is not a literal in the production census. Its real
     # default-text fallback is exercised independently by the Qt shaping actor.
     setup = (ROOT / 'app/src/engine_setup.cpp').read_text()
     registered = (
         'QFont::insertSubstitution(family, fallback)' in setup
         and '{"PT_Sans/PTSans-Regular.ttf", "Noto_Sans/NotoSans-Regular.ttf"}' in setup
+        and '{"PT_Mono/PTMono-Regular.ttf", "Noto_Sans_Mono/NotoSansMono-Regular.ttf"}' in setup
     )
-    return '\u2080' <= char <= '\u2089' and registered and covered('Noto Sans', char)
+    formatter = (ROOT / path).read_text()
+    domain = (
+        path == 'app/src/parameter_item.cpp'
+        and re.search(r'QChar\(\s*0x2080\s*\+\s*\w+\.digitValue\(\)\s*\)', formatter)
+    ) or (
+        path == 'core/include/edi/parameter_spec.hpp'
+        and 'std::string("₀₁₂₃₄₅₆₇₈₉").substr' in formatter
+    )
+    return (
+        '\u2080' <= char <= '\u2089'
+        and registered
+        and bool(domain)
+        and all(
+            covered(family, char)
+            for family in ('Noto Sans', 'Noto Sans Mono', 'Noto Sans Light', 'Encode Sans')
+        )
+    )
 
 
 def test_display_census_includes_literals_escapes_and_formatter_domain():
@@ -184,8 +201,7 @@ def test_display_census_includes_literals_escapes_and_formatter_domain():
     missing = sorted({
         (path, f'U+{ord(char):04X}')
         for path, _, char in displayed_characters()
-        if (path, char) not in sites
-        and not (path == 'app/src/parameter_item.cpp' and generated_label_digit_is_bundled(char))
+        if (path, char) not in sites and not (generated_label_digit_is_bundled(path, char))
     })
     assert not missing, (
         'The displayed alphabet must include escaped literals, numeric QChar values '
@@ -242,7 +258,7 @@ def test_default_label_formatter_alphabet_has_no_missing_glyphs():
     missing = sorted(
         f'U+{ord(char):04X}'
         for char in alphabet
-        if not generated_label_digit_is_bundled(char)
+        if not any(generated_label_digit_is_bundled(path, char) for path in paths)
         and (rendering.get(char) not in REFERENCE['fonts'] or not covered(rendering[char], char))
     )
     assert not missing, (

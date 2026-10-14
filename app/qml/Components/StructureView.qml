@@ -20,7 +20,7 @@ Rectangle {
 
     property StructureViewModel structure: null
     property StructureViewOptions options: null
-    // The report's input (edi ADR-0035): set, the view draws the report model's scene of `reportStructure` with no
+    // The report's input (edi ADR-0036): set, the view draws the report model's scene of `reportStructure` with no
     // toolbar. A drag still turns it, and the wheel scrolls what holds it.
     property ReportViewModel report: null
     // The theme colours the view draws with; a PDF's figure takes the light ones.

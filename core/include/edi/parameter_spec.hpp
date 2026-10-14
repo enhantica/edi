@@ -484,6 +484,34 @@ inline void check_admissible(const ParameterSpec* spec, double value, const char
 /// or the display name where the LaTeX name uses anything this does not spell.
 std::string parameter_symbol(const ParameterSpec* parameter_spec);
 
+// How an ADP parameter shows for its site's declared type. The isotropic value is B iso or U iso, or the
+// read-only equivalent of an anisotropic site: U eq for Uani, B eq for Bani and beta. A tensor component
+// (`component` 11, 22, 33, 12, 13 or 23) is U11 or B11 in Å², or the unitless β11.
+struct AdpDisplay {
+    std::string short_name;  // plain text, as the tables show it
+    std::string latex_name;
+    std::string display_units;
+    std::string latex_units;
+};
+inline AdpDisplay adp_display(const std::string& adp_type, const std::string& component) {
+    if (component == "iso") {
+        const bool u = adp_type == "Uiso" || adp_type == "Uani";
+        const std::string tail = adp_type == "Biso" || adp_type == "Uiso" ? "iso" : "eq";
+        return {std::string(u ? "U " : "B ") + tail, std::string(u ? "$U_{\\mathrm{" : "$B_{\\mathrm{") + tail + "}}$",
+                "Å²", "\\AA$^2$"};
+    }
+    // "₁₂" from "12": the subscript digits the tables use.
+    std::string subscript;
+    for (const char digit : component) {
+        subscript += std::string("₀₁₂₃₄₅₆₇₈₉").substr(static_cast<std::size_t>(digit - '0') * 3, 3);
+    }
+    if (adp_type == "beta") {
+        return {"β" + subscript, "$\\beta_{" + component + "}$", "", ""};
+    }
+    const std::string letter = adp_type == "Bani" ? "B" : "U";
+    return {letter + subscript, "$" + letter + "_{" + component + "}$", "Å²", "\\AA$^2$"};
+}
+
 }  // namespace edi
 
 #endif  // EDI_PARAMETER_SPEC_HPP

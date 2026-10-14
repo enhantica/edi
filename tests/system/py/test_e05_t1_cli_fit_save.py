@@ -153,6 +153,10 @@ def check_projection(actual, reference, parameter_count):
         'covariance_available',
         'exit_reason',
         'prof_wr_factor',
+        'prof_r_factor',
+        'prof_wr_expected',
+        'prof_cr_factor',
+        'prof_cwr_factor',
         'profile_function',
         'background_function',
     }
@@ -160,8 +164,6 @@ def check_projection(actual, reference, parameter_count):
         ' gate 8 fit-and-save includes every computable diffraction-lib field'
     )
     unsupported = {
-        'prof_r_factor',
-        'prof_wr_expected',
         'correlation_available',
         'number_restraints',
         'number_constraints',
@@ -173,8 +175,18 @@ def check_projection(actual, reference, parameter_count):
         'wr_factor_gt',
     }
     assert not unsupported & {key.removeprefix('_fit_result.') for key in actual}, (
-        ' gate 8 unavailable powder and single-crystal metrics are omitted'
+        ' gate 8 unsupported single-crystal metrics are omitted'
     )
+    for field in ('prof_r_factor', 'prof_wr_expected', 'prof_cr_factor', 'prof_cwr_factor'):
+        value = float(actual['_fit_result.' + field])
+        assert math.isfinite(value), 'The extended powder projection contains finite metrics'
+        assert value >= 0, 'The extended powder projection contains nonnegative metrics'
+    assert math.isclose(
+        float(actual['_fit_result.prof_wr_expected']),
+        float(reference['rwp']) / math.sqrt(float(reference['reduced_chi_square'])),
+        rel_tol=5e-9,
+        abs_tol=5e-10,
+    ), 'Expected R must retain the independent Rwp and reduced-chi-square identity'
     dof = max(int(reference['n_points_fitted']) - int(reference['n_free']), 0)
     assert int(actual['_fit_result.degrees_of_freedom']) == dof, (
         ' gate 8 degrees of freedom uses fitted data minus CLI free parameters'
@@ -217,12 +229,16 @@ def check_banks(path, reference):
                 '_fit_result_bank.experiment_id',
                 '_fit_result_bank.n_data_points',
                 '_fit_result_bank.prof_wr_factor',
+                '_fit_result_bank.prof_r_factor',
+                '_fit_result_bank.prof_wr_expected',
+                '_fit_result_bank.prof_cr_factor',
+                '_fit_result_bank.prof_cwr_factor',
                 '_fit_result_bank.chi_square',
             }
-            assert set(tags) == required, (
-                ' gate 8 bank-result columns retain their exact declared identities'
+            assert required <= set(tags), (
+                ' gate 8 bank-result columns retain every declared metric identity'
             )
-            assert len(tags) == len(required), ' gate 8 bank column identities are unique'
+            assert len(tags) == len(set(tags)), ' gate 8 bank column identities are unique'
         while (
             tags
             and cursor < len(tokens)
@@ -250,6 +266,33 @@ def check_banks(path, reference):
                 rel_tol=5e-9,
                 abs_tol=5e-10,
             ), ' gate 8 each named bank metric retains its own independent CLI value'
+        check_extended_bank_metrics(row, reference)
         assert int(row['_fit_result_bank.n_data_points']) == int(
             reference['bank.' + name + '.n_points']
         ), ' gate 8 each bank retains its exact independently fitted point count'
+
+
+def check_extended_bank_metrics(row, reference):
+    name = row['_fit_result_bank.experiment_id']
+    for metric, column in (
+        ('rp', 'prof_r_factor'),
+        ('rexp', 'prof_wr_expected'),
+        ('crp', 'prof_cr_factor'),
+        ('cwrp', 'prof_cwr_factor'),
+    ):
+        value = float(row['_fit_result_bank.' + column])
+        assert math.isfinite(value), 'A persisted bank metric must be finite'
+        assert value >= 0, 'A persisted bank metric must be nonnegative'
+        key = 'bank.' + name + '.' + metric
+        if key in reference:
+            assert math.isclose(value, float(reference[key]), rel_tol=5e-9, abs_tol=5e-10), (
+                'Each new bank metric must retain its independently planted value'
+            )
+        elif metric == 'rexp':
+            expected = float(reference['bank.' + name + '.rwp']) * math.sqrt(
+                (int(reference['bank.' + name + '.n_points']) - int(reference['n_free']))
+                / float(reference['bank.' + name + '.chi_square'])
+            )
+            assert math.isclose(value, expected, rel_tol=5e-9, abs_tol=5e-10), (
+                'Each expected R must agree with its bank Rwp, raw chi square and N minus P'
+            )
