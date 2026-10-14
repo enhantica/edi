@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T23:51:31Z
+# measured_utc = 2026-10-14T23:59:14Z
 #
-# Recorded from: tests-seq2-core-trials.log and core-fixed.log completed-node artifacts; unchanged previous bank rows/holes preserved
+# Recorded from: unchanged prior bank plus tests-seq2-sdk-expanded-replay.log/.costs.json; thirty executed SDK replacement failures; initial Ninja setup failure excluded.
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,10 +27,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13011
+# inventory_python = 13038
 # inventory_cpp = 333
 # inventory_measured = 11821
-# inventory_unmeasured = 1523
+# inventory_unmeasured = 1550
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -9870,9 +9870,36 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 0.600	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[detach]
 0.920	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[manual-edit]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[app]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[consumer]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-local]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-pinned]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[configure-retry-app-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[configure-retry-app-local]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[configure-retry-app-pinned]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[configure-retry-consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[configure-retry-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[content-app-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[content-app-local]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[content-app-pinned]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[content-consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[content-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[identity-app-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[identity-app-local]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[identity-app-pinned]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[identity-consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[identity-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[replacement-app-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[replacement-app-local]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[replacement-app-pinned]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[replacement-consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[replacement-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-app-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-app-local]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-app-pinned]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-consumer]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-core]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
