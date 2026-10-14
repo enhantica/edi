@@ -34,7 +34,9 @@ J parameters(Project& project) {
     A rows;
     for (const auto& entry : parameter_entries(project)) {
         const Parameter& p = *entry.parameter;
-        rows.emplace_back(O{{"path", entry.path}, {"unique_name", names.at(&p)}, {"value", p.value.get()},
+        const auto named = names.find(&p);
+        const std::string unique_name = named == names.end() ? std::string() : named->second;
+        rows.emplace_back(O{{"path", entry.path}, {"unique_name", unique_name}, {"value", p.value.get()},
                             {"uncertainty", p.uncertainty.get() ? J(*p.uncertainty.get()) : J(nullptr)},
                             {"free", p.free.get()}, {"dependence", dependence(p.dependence)},
                             {"unit", p.spec ? p.spec->units : "dimensionless"}});
@@ -192,7 +194,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         std::map<const Parameter*, std::string> names;
         for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
         std::map<std::string, std::pair<Parameter*, std::string>> rows;
-        for (const auto& row : parameter_entries(project)) rows[row.path] = {row.parameter, names.at(row.parameter)};
+        for (const auto& row : parameter_entries(project)) {
+            const auto named = names.find(row.parameter);
+            if (named != names.end()) rows[row.path] = {row.parameter, named->second};
+        }
         return rows;
     }
     void apply(const Edit& edit, bool structural = false) {
@@ -267,6 +272,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 else flags.emplace_back(unique_name, row.at("free").boolean("free"));
             }
             if (seen.empty()) refuse("invalid_argument", "Empty parameter batch");
+            Project validated = target;
+            if (values) Edit::parameter_values(validated, edits)();
+            else Edit::set_free(validated, flags)();
+            complete_relations(validated);
             const Edit change = values ? Edit::parameter_values(target, std::move(edits)) : Edit::set_free(target, std::move(flags));
             if (trial) { change(); ++trial->revision; }
             else apply(change);
@@ -400,7 +409,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         else shape(event, {"schema", "type", "connection_id", "turn_id", "request_id", "call_id", "name", "project_id", "revision", "arguments"}, {"plan_id"});
         if (!ready || string(event, "connection_id") != connection) refuse("connection_required", "Connection changed");
         if (turn.empty() || string(event, "turn_id") != turn || string(event, "request_id") != request)
-            refuse("interrupted", "Provider event does not belong to the active request");
+            refuse(type == "tool_call" && !turn.empty() ? "invalid_argument" : "interrupted", "Provider event does not belong to the active request");
         if (type == "text_delta") {
             const auto delta = string(event, "text", true);
             emit("message_delta", {{"text", delta}});
