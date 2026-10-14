@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import edi
+import numpy as np
 import pytest
 
 from tests.integration.py.test_report_storage import REFERENCE, inventory, put, report_text, source
@@ -239,3 +240,61 @@ def test_failed_report_write_keeps_the_previous_row_and_every_unticked_file(tmp_
     assert rows(path) == before and pdf.read_text() == 'untouched app-only bytes', (
         'I36 a failed file write leaves existing rows and unticked output bytes unchanged'
     )
+
+
+@pytest.mark.parametrize('surface', ['python', 'cli'])
+def test_report_saved_after_project_save_stays_current_after_reopening(tmp_path, surface):
+    path = source(
+        tmp_path, ['_report.html true', '_report.pdf false', '_report.html_offline false']
+    )
+    project = edi.Project.load(path)
+    parameter = project.experiments['bank'].background[5].intensity
+    assert project.experiments['bank'].background[5].position == 72.321, (
+        'The save-adoption witness uses the last authored point bordering the measured range, '
+        'so its changed intensity must affect the actual calculated pattern'
+    )
+    parameter.value, parameter.uncertainty, parameter.free = 5.000000000000001, 0.0692616, True
+    project.analysis.calculate()
+    project.save()
+    # Independent recommendation-12 arithmetic: ceil(.0692616/.01)=7, value -> 5.00.
+    actual = (parameter.value, parameter.uncertainty)
+    assert actual == (5.0, 0.07), (
+        'A successful project Save adopts the file-rounded value and upward-rounded s.u. '
+        f'in its already-open parameter view; actual={actual}, expected=(5.0, 0.07)'
+    )
+    reopened = edi.Project.load(path)
+    reopened.analysis.calculate()
+    assert np.array_equal(
+        project.experiments['bank'].data.intensity_calc,
+        reopened.experiments['bank'].data.intensity_calc,
+    ), 'The open project recalculates saved values and has the exact reopened calculated pattern'
+    # Use a second nontrivial value so a writer-only fix cannot pass a pattern-coherence check.
+    parameter.value, parameter.uncertainty = 5.03641, 0.0692616
+    project.analysis.calculate()
+    before = np.array(project.experiments['bank'].data.intensity_calc, copy=True)
+    project.save()
+    assert (parameter.value, parameter.uncertainty) == (5.04, 0.07), (
+        'The same open parameter view adopts a genuinely shifted saved value; '
+        f'actual={(parameter.value, parameter.uncertainty)}, expected=(5.04, 0.07)'
+    )
+    reopened = edi.Project.load(path)
+    reopened.analysis.calculate()
+    after = np.array(project.experiments['bank'].data.intensity_calc, copy=True)
+    assert not np.array_equal(before, after) and np.array_equal(
+        after, reopened.experiments['bank'].data.intensity_calc
+    ), 'The saved rounding shift really changes the pattern, which is exactly coherent with disk'
+    name = project.metadata.name + '.html'
+    if surface == 'python':
+        project.report.save()
+    else:
+        result = command(path)
+        assert result.returncode == 0, (
+            'The actual CLI saves a report after project Save: ' + result.stdout + result.stderr
+        )
+    status(path, name, 'current', 0)
+    loaded = edi.Project.load(path)
+    assert (
+        loaded.experiments['bank'].background[5].intensity.value,
+        loaded.experiments['bank'].background[5].intensity.uncertainty,
+    ) == (5.04, 0.07), 'Reopening retains the independently rounded values used to save the report'
+    status(path, name, 'current', 0)
