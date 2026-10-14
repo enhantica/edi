@@ -63,16 +63,17 @@ ExperimentListModel::ExperimentListModel(QObject* parent)
     : RowTableModel({"name", "label", "experiment", "fitOutcome", "file", "extracted", "isTemplate"}, parent) {}
 
 void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project) {
-    // A joint fit records each bank's share (`_fit_result_bank`); a single fit records none and fitted the first.
+    // A fit records each fitted experiment's share (`_fit_result_bank`); a single fit recorded before that has none
+    // and fitted the first.
     const QString outcome = recorded_outcome(project.fit_result);
-    const bool joint = std::any_of(project.experiments.begin(), project.experiments.end(),
-                                   [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+    const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
     dataset_row_ = nullptr;
     dataset_experiment_ = nullptr;
     QList<Row> rows;
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
-        const bool fitted = joint ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
+        const bool fitted = shares ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
         experiment->setFitOutcome(fitted ? outcome : QString());
         rows.append({experiment,
                      {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
@@ -954,7 +955,10 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
     for (edi::Edit::ScanValue& value : values) {
         const auto found = columns.find(edi::scan_results_column(value.unique_name));
         if (found == columns.end()) {
-            continue;  // a parameter the results do not record keeps the template's value
+            // A parameter the results do not record keeps the template's value; its s.u. belonged to an
+            // earlier fit, not to the one this row records.
+            value.uncertainty.reset();
+            continue;
         }
         double number = 0.0, uncertainty = 0.0;
         const std::string& uncertainty_cell = row[found->second->uncertainty];
@@ -964,7 +968,8 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
                                         "' cells are not numbers");
         }
         value.value = number;
-        value.uncertainty = uncertainty;
+        // "nan": the fit gave this parameter no s.u. (it was not free in it).
+        value.uncertainty = uncertainty_cell == "nan" ? std::nullopt : std::optional<double>(uncertainty);
     }
     return values;
 }

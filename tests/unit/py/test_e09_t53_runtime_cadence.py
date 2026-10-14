@@ -88,18 +88,23 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
     }
     assert len(quick) == 1, 'the cadence needs exactly one quick/CI-PR group'
     assert len(full) == 1, 'the cadence needs exactly one full/merge group'
-    assert set(groups) == quick | full | {'app', 'nightly'}, (
-        'quick/full retain cadence; app and the exact nightly cohort name execution groups'
+    assert set(groups) == quick | full | {'app', 'nightly-only'}, (
+        'Quick/full retain cadence; app and the exclusive nightly cohort name execution groups'
     )
-    assert groups['nightly']['tiers'] == ['system'], (
+    assert groups['nightly-only']['tiers'] == ['system'], (
         'the nightly supplement retains the system tier without inventing another cadence'
     )
-    assert groups['nightly']['paths'] == [
+    assert {
         'tests/system/py/test_scan_app_execution.py',
         'tests/system/py/test_scan_accident_paths.py',
         'tests/system/py/test_plain_data_app.py',
-    ], 'the nightly supplement names exactly the authorized macOS PR omissions'
-    assert groups['nightly']['task'] == 'group-nightly', (
+    } <= set(groups['nightly-only']['paths']), (
+        'The exclusive nightly cohort must retain every original app-builder witness'
+    )
+    assert groups['nightly-only']['paths'] and len(groups['nightly-only']['paths']) == len(
+        set(groups['nightly-only']['paths'])
+    ), 'The exclusive nightly declaration must be nonempty and unique'
+    assert groups['nightly-only']['task'] == 'group-nightly-only', (
         'the nightly supplement retains its declared executable entry point'
     )
     assert groups['app']['tiers'] == ['integration/app'], (

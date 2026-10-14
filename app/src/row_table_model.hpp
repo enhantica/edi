@@ -40,6 +40,8 @@ class RowTableModel : public QAbstractListModel {
     QVariant get(int row, const QString& role) const;
     // A role's value as text, for QML that shows a few rows without a view over all of them.
     Q_INVOKABLE QString text(int row, const QString& role) const { return get(row, role).toString(); }
+    // A role's object (a ParameterItem), or null, for QML that measures what a column shows.
+    Q_INVOKABLE QObject* item(int row, const QString& role) const { return get(row, role).value<QObject*>(); }
 
    signals:
     void countChanged();

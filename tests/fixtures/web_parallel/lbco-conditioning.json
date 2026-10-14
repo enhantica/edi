@@ -4,7 +4,7 @@
   "sdk_manifest_sha256": "0ee7ed6b10e15578e54bd8cb848c380c476c6b85012598338edfe2a61077c719",
   "executable_sha256": "a3b729441c57b644f8b90ec85a9a9985d70c81cb6b38802632c11d6e484c3d25",
   "raw_capture_sha256": "4c331c9a0fe5e927e6d4d39f929e3778ba15fe215b555d9abc95abc3c93078f9",
-  "scientific_sha256": "4185d34437d0f5e806ebd56dc4a0db1f01f1e3a930ce5a22a0052b71ffcbcf77",
+  "scientific_sha256": "fd5d7ab4a8103ab540d8ddde9b23c6e3931190b421e3efedc0220ea570895a95",
   "n_data": 3098,
   "labels": [
     "cell_length_a",
@@ -689,5 +689,6 @@
       18,
       4
     ]
-  ]
+  ],
+  "schema_capture_producer": "edi d56c321 native; linked SDK a3cc2901; complete serialized result schema"
 }
