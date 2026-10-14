@@ -9,9 +9,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// Saving the report, the sidebar's top group (edi ADR-0035 §7): two boxes per row, the interactive HTML and whether it
-// embeds plotly.js and three.js (online by default), then the static PDF (A4, the preview's figures as images) and the
-// CIF report (disabled until its writer exists); one Save report button, which writes the ticked formats into the
+// Saving the report, the sidebar's top group (edi ADR-0035 §7): two boxes per row in two equal columns, the interactive
+// HTML and whether it embeds plotly.js and three.js (online by default), then the static PDF (A4, the preview's figures
+// as images) and the CIF report (disabled until its writer exists); one Save report button, which writes the ticked formats into the
 // project's reports/ folder; and the reports saved so far, each marked when the project has changed since.
 EaElements.GroupBox {
     id: group
@@ -38,13 +38,19 @@ EaElements.GroupBox {
     Column {
         spacing: AppSizes.groupContentSpacing
 
+        // Each column half the content width, as the other pages' two controls per row (the owner, 2026-10-14).
         Grid {
+            id: formats
+
+            readonly property real columnWidth: (EaStyle.Sizes.sideBarContentWidth - columnSpacing) / 2
+
             columns: 2
             columnSpacing: EaStyle.Sizes.fontPixelSize
             rowSpacing: AppSizes.groupContentSpacing
 
             EaElements.CheckBox {
                 objectName: "report.writesHtml"
+                width: formats.columnWidth
                 enabled: group.report !== null
                 text: qsTr("HTML")
                 checked: group.report ? group.report.writesHtml : false
@@ -53,6 +59,7 @@ EaElements.GroupBox {
             }
             EaElements.CheckBox {
                 objectName: "report.embedLibraries"
+                width: formats.columnWidth
                 enabled: group.report !== null && group.report.writesHtml
                 text: qsTr("Embed the chart libraries")
                 checked: group.report ? group.report.embedLibraries : false
@@ -61,6 +68,7 @@ EaElements.GroupBox {
             }
             EaElements.CheckBox {
                 objectName: "report.writesPdf"
+                width: formats.columnWidth
                 enabled: group.report !== null && group.preview !== null
                 text: qsTr("PDF")
                 checked: group.report ? group.report.writesPdf : false
@@ -69,6 +77,7 @@ EaElements.GroupBox {
             }
             EaElements.CheckBox {
                 objectName: "report.writesCif"
+                width: formats.columnWidth
                 enabled: false
                 text: qsTr("CIF")
                 checked: group.report ? group.report.writesCif : false
