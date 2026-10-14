@@ -48,7 +48,7 @@ class ReportViewModel : public QObject {
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
-    // The app's colour scheme ("default" or "colourBlindSafe"), which the report's charts take, as the app's do.
+    // The app's colour scheme (a token of edi::colour_scheme_from_name), whose light colours the report's charts take.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
     // The project's calculation is in flight or owed, so the model is not yet its outcome; a save waits for it.
     Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)

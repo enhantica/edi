@@ -41,7 +41,8 @@ class PatternChartController : public QObject {
     // The chart is shown: a hidden chart is only marked dirty, and refreshed when it is shown again.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     Q_PROPERTY(bool dark READ dark WRITE setDark NOTIFY darkChanged)
-    // The colour scheme, "default" or "colourBlindSafe" (data/palettes): the experiments' and structures' colours.
+    // The colour scheme, a token of edi::colour_scheme_from_name (data/palettes): the experiments' and structures'
+    // colours.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
     // The main plot area, in logical pixels, and the window's device pixel ratio: the decimation's width.
     Q_PROPERTY(qreal plotWidth READ plotWidth WRITE setPlotWidth NOTIFY plotWidthChanged)

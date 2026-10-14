@@ -34,8 +34,8 @@ QtObject {
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
-    // The experiments' and structures' colours (data/palettes): "default" or "colourBlindSafe". Every chart, icon and
-    // report the app draws follows it.
+    // The experiments' and structures' colours (data/palettes): "default", "colourBlindSafe", "tableau", "paulTol" or
+    // "vivid". Every chart, icon and report the app draws follows it, a report in the scheme's light colours.
     property string colourScheme: "default"
     // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
     // ("embedded"): its `_report.html_offline` (edi ADR-0036 §7). A project keeps its own; this only starts a new one.

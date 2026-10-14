@@ -13,6 +13,9 @@
 namespace edi::detail {
 extern const char* const kDefaultPaletteTsv;  // data/palettes, embedded by core/CMakeLists.txt
 extern const char* const kColourBlindSafePaletteTsv;
+extern const char* const kTableauPaletteTsv;
+extern const char* const kPaulTolPaletteTsv;
+extern const char* const kVividPaletteTsv;
 }  // namespace edi::detail
 
 namespace edi {
@@ -20,7 +23,7 @@ namespace edi {
 namespace {
 
 struct Palette {
-    std::vector<std::array<std::string, 2>> pattern, structure;  // light, dark
+    std::vector<std::array<std::string, 2>> pattern, gradient, structure;  // light, dark
 };
 
 // A table's rows, by role, in the order listed; a malformed row refuses the whole table.
@@ -43,12 +46,13 @@ Palette parse(const char* text) {
             return colour.size() == 7 && colour[0] == '#' &&
                    std::all_of(colour.begin() + 1, colour.end(), [](char c) { return std::isxdigit(c) != 0; });
         };
-        if (!hex(light) || !hex(dark) || (role != "pattern" && role != "structure")) {
+        if (!hex(light) || !hex(dark) || (role != "pattern" && role != "gradient" && role != "structure")) {
             throw std::logic_error("a palette row is malformed: " + line);
         }
-        (role == "pattern" ? palette.pattern : palette.structure).push_back({light, dark});
+        (role == "pattern" ? palette.pattern : role == "gradient" ? palette.gradient : palette.structure)
+            .push_back({light, dark});
     }
-    if (palette.pattern.size() < 2 || palette.structure.empty()) {
+    if (palette.pattern.empty() || palette.gradient.size() < 2 || palette.structure.empty()) {
         throw std::logic_error("a palette lists too few colours");
     }
     return palette;
@@ -57,7 +61,22 @@ Palette parse(const char* text) {
 const Palette& palette_of(ColourScheme scheme) {
     static const Palette kDefault = parse(detail::kDefaultPaletteTsv);
     static const Palette kColourBlindSafe = parse(detail::kColourBlindSafePaletteTsv);
-    return scheme == ColourScheme::ColourBlindSafe ? kColourBlindSafe : kDefault;
+    static const Palette kTableau = parse(detail::kTableauPaletteTsv);
+    static const Palette kPaulTol = parse(detail::kPaulTolPaletteTsv);
+    static const Palette kVivid = parse(detail::kVividPaletteTsv);
+    switch (scheme) {
+        case ColourScheme::ColourBlindSafe:
+            return kColourBlindSafe;
+        case ColourScheme::Tableau:
+            return kTableau;
+        case ColourScheme::PaulTol:
+            return kPaulTol;
+        case ColourScheme::Vivid:
+            return kVivid;
+        case ColourScheme::Default:
+            break;
+    }
+    return kDefault;
 }
 
 // Oklab (Björn Ottosson, 2020) from and to sRGB, for a gradient whose steps look even.
@@ -102,21 +121,35 @@ std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {
     if (name == "colourBlindSafe") {
         return ColourScheme::ColourBlindSafe;
     }
+    if (name == "tableau") {
+        return ColourScheme::Tableau;
+    }
+    if (name == "paulTol") {
+        return ColourScheme::PaulTol;
+    }
+    if (name == "vivid") {
+        return ColourScheme::Vivid;
+    }
     return std::nullopt;
 }
 
 std::size_t pattern_colour_count(ColourScheme scheme) { return palette_of(scheme).pattern.size(); }
 
 std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
-    const auto& rows = palette_of(scheme).pattern;
+    const Palette& palette = palette_of(scheme);
     const std::size_t side = dark ? 1 : 0;
-    if (count <= rows.size()) {
-        return rows[std::min(place, rows.size() - 1)][side];
+    if (count <= palette.pattern.size()) {
+        return palette.pattern[std::min(place, palette.pattern.size() - 1)][side];
     }
-    const Lab from = oklab(rows[rows.size() - 2][side]);
-    const Lab to = oklab(rows.back()[side]);
+    // tools/palettes/generate.py samples the same way when it checks every gradient colour's contrast.
+    const auto& stops = palette.gradient;
     const double t = static_cast<double>(std::min(place, count - 1)) / static_cast<double>(count - 1);
-    return hex_of({from.l + (to.l - from.l) * t, from.a + (to.a - from.a) * t, from.b + (to.b - from.b) * t});
+    const double position = t * static_cast<double>(stops.size() - 1);
+    const std::size_t below = std::min(static_cast<std::size_t>(position), stops.size() - 2);
+    const double mix = position - static_cast<double>(below);
+    const Lab from = oklab(stops[below][side]);
+    const Lab to = oklab(stops[below + 1][side]);
+    return hex_of({from.l + (to.l - from.l) * mix, from.a + (to.a - from.a) * mix, from.b + (to.b - from.b) * mix});
 }
 
 std::string structure_colour(ColourScheme scheme, std::size_t place, bool dark) {

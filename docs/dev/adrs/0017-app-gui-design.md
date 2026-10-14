@@ -267,14 +267,15 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Default or Colour-blind safe),
-read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's `pattern_colour` and
-`structure_colour`, which the charts' style table and the report read too:
+`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Default, Colour-blind safe,
+Tableau, Paul Tol or Vivid), read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's
+`pattern_colour` and `structure_colour`, which the charts' style table and the report read too. Each colour has at
+least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); a report always takes the light ones:
 
 | Block | Icon | Colour by its place in the project's list (light / dark theme), Default scheme |
 |---|---|---|
-| structure | `layer-group` | orange `#FF9800` / `#FFCC80`, teal `#009688` / `#80CBC4`, pink `#E91E63` / `#F48FB1`, then round again |
-| experiment | `microscope` | light blue `#03A9F4` / `#81D4FA` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#BCAAA4`, green `#4CAF50` / `#A5D6A7` and seven more; past the palette's ten, a gradient along the order between its last two |
+| structure | `layer-group` | orange `#D78000` / `#FF9800`, teal `#009688` / `#1CA091`, pink `#E91E63` / `#FF4979`, then round again |
+| experiment | `microscope` | light blue `#009DE4` / `#03A9F4` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#AE8779`, green `#45A849` / `#4CAF50` and five more; past the set's eight, viridis along the order, trimmed to the part that keeps 3:1 |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -376,8 +377,8 @@ limit off, since a row is shorter than a tab. It appears on, and leaves, a row i
   Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Colour scheme — Default or Colour-blind safe** (the experiments' and structures'
-  colours, §8, in every chart, icon and report the app draws); **Sidebar — Left or Right** (the owner,
+- **Appearance**: Theme; **Colour scheme — Default, Colour-blind safe, Tableau, Paul Tol or Vivid** (the
+  experiments' and structures' colours, §8, in every chart, icon and report the app draws); **Sidebar — Left or Right** (the owner,
   2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of
   chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or

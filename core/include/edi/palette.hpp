@@ -11,15 +11,15 @@
 
 namespace edi {
 
-/// The two schemes: the default one, and one whose colours stay apart for colour-blind readers.
-enum class ColourScheme { Default, ColourBlindSafe };
+/// The schemes, each a published set of distinct colours and a published gradient (PROVENANCE.md).
+enum class ColourScheme { Default, ColourBlindSafe, Tableau, PaulTol, Vivid };
 
-/// "default" or "colourBlindSafe" (the preference's tokens); nullopt for any other name.
+/// "default", "colourBlindSafe", "tableau", "paulTol" or "vivid" (the preference's tokens); nullopt for any other name.
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name);
 
 /// The colour, `#RRGGBB`, of the experiment at `place` among `count`: up to the scheme's number of pattern colours,
-/// the place's own; beyond it, the gradient between the last two, sampled at place / (count - 1). `dark` gives the
-/// dark theme's colours.
+/// the place's own; beyond it, the scheme's gradient sampled at place / (count - 1), mixed in Oklab between the two
+/// stops around it. `dark` gives the dark theme's colours.
 std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark);
 
 /// The colour of the structure at `place`, its scheme's short palette taken round again past its end.
