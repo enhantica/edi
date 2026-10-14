@@ -150,6 +150,12 @@ class ReportViewModel : public QObject {
     const edi::ReportLibraries* libraries() const;
     // The project's `reports/` folder.
     QString reportsDirectory() const;
+    // What the report is built from: a scan's stored template, else the project.
+    const edi::Project& reportInput() const;
+    // The model the saved reports' rows are judged by (edi::report_file_options): report_ when the page shows the
+    // default scheme and the first experiment's correlations, else one built with those, on its first use after a
+    // change.
+    const edi::ReportModel& judged() const;
 
     ProjectViewModel& project_;
     // What the hidden and embedLibraries properties last announced.
@@ -164,6 +170,9 @@ class ReportViewModel : public QObject {
     mutable edi::ReportModel report_;
     mutable std::string json_;  // report_'s JSON: a rebuild that writes the same announces nothing
     mutable QVariantMap model_;
+    // The options report_ was built with, and judged()'s model when its choices are not the default ones.
+    mutable edi::ReportOptions options_;
+    mutable std::optional<edi::ReportModel> judged_;
     QHash<QString, QImage> figures_;  // setFigure's images, which the next save takes
 };
 

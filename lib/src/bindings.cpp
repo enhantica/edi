@@ -1570,10 +1570,15 @@ void calculate_for_report(edi::Project& project) {
 }
 
 // ADR-0036 §7: one run's overrides of the report's settings, each checked by crysta's rules as a file states it.
+// The colour scheme and the correlations' experiment are checked against the project when the options are made.
 edi::ReportOverrides report_overrides(std::optional<bool> offline, std::optional<std::string> x_axis,
                                       std::optional<double> correlation_threshold,
-                                      std::optional<std::vector<std::string>> excluded) {
+                                      std::optional<std::vector<std::string>> excluded,
+                                      std::optional<std::string> colour_scheme,
+                                      std::optional<std::string> correlation_experiment) {
     edi::ReportOverrides overrides;
+    overrides.colour_scheme = std::move(colour_scheme);
+    overrides.correlation_experiment = std::move(correlation_experiment);
     overrides.html_offline = offline;
     if (x_axis) {
         edi::check_report_setting("_pattern_chart.x_axis", *x_axis);
@@ -3559,41 +3564,47 @@ NB_MODULE(_edi, m) {
         .def(
             "_report_model",
             [](edi::Project& self, std::optional<bool> offline, std::optional<std::string> x_axis,
-               std::optional<double> correlation_threshold, std::optional<std::vector<std::string>> excluded) {
+               std::optional<double> correlation_threshold, std::optional<std::vector<std::string>> excluded,
+               std::optional<std::string> colour_scheme, std::optional<std::string> correlation_experiment) {
                 calculate_for_report(self);
                 const edi::ReportOverrides overrides =
-                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded),
+                                     std::move(colour_scheme), std::move(correlation_experiment));
                 return edi::build_report(self, edi::effective_report_options(self, overrides));
             },
             "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
-            "excluded"_a = nb::none())
+            "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
         .def(
             "_report_html_text",
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
                std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
-               std::optional<std::vector<std::string>> excluded) {
+               std::optional<std::vector<std::string>> excluded, std::optional<std::string> colour_scheme,
+               std::optional<std::string> correlation_experiment) {
                 calculate_for_report(self);
                 const edi::ReportOverrides overrides =
-                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded),
+                                     std::move(colour_scheme), std::move(correlation_experiment));
                 const edi::ReportModel model = edi::build_report(self, edi::effective_report_options(self, overrides));
                 return edi::report_html(model, report_libraries(self, overrides, data_dir));
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
-            "excluded"_a = nb::none())
+            "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
         .def(
             "_report_save",
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
                std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
-               std::optional<std::vector<std::string>> excluded) {
+               std::optional<std::vector<std::string>> excluded, std::optional<std::string> colour_scheme,
+               std::optional<std::string> correlation_experiment) {
                 calculate_for_report(self);
                 const edi::ReportOverrides overrides =
-                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded),
+                                     std::move(colour_scheme), std::move(correlation_experiment));
                 const edi::ReportSaveResult result =
                     edi::save_report(self, overrides, report_libraries(self, overrides, data_dir));
                 return std::make_pair(result.written, result.pdf_left);
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
-            "excluded"_a = nb::none())
+            "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
         .def(
             "_report_states",
             [](edi::Project& self, const std::filesystem::path& data_dir) {

@@ -20,6 +20,7 @@
 #include "edi/edit.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/palette.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "edi/structure_scene.hpp"
@@ -285,6 +286,7 @@ struct ScanTemplate {
     std::string file;
     std::optional<ScanResultIndex::Row> row;
     std::size_t files = 0, fitted = 0, converged = 0;
+    std::optional<std::size_t> place;  ///< the template dataset's place among the scan's datasets
 };
 
 ScanTemplate scan_template_of(const Project& scan) {
@@ -297,6 +299,9 @@ ScanTemplate scan_template_of(const Project& scan) {
     const ScanPlaces places = scan_places(datasets);
     const ScanResultIndex index = index_scan_results(scan, datasets, places);
     out.files = datasets.files.size();
+    if (const auto found = places.find(file); found != places.end()) {
+        out.place = found->second;
+    }
     std::vector<Edit::ScanValue> values;
     if (index.error.empty()) {
         for (const ScanResultIndex::Row& row : index.rows) {
@@ -727,6 +732,24 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
         overrides.correlation_threshold ? overrides.correlation_threshold : project.correlation_threshold;
     options.d_spacing = overrides.x_axis.value_or(project.pattern_x_axis.value_or("native")) == "d_spacing";
     options.embed_libraries = overrides.html_offline.value_or(project.report_html_offline.value_or(false));
+    if (overrides.colour_scheme) {
+        const std::optional<ColourScheme> scheme = colour_scheme_from_name(*overrides.colour_scheme);
+        if (!scheme) {
+            throw std::invalid_argument("unknown colour scheme '" + *overrides.colour_scheme +
+                                        "': default, colourBlindSafe, tableau, paulTol or vivid");
+        }
+        options.colour_scheme = *scheme;
+    }
+    if (overrides.correlation_experiment) {
+        const auto& experiments = project.experiments;
+        const auto found = std::find_if(experiments.begin(), experiments.end(), [&overrides](const auto& experiment) {
+            return experiment->name.value() == *overrides.correlation_experiment;
+        });
+        if (found == experiments.end()) {
+            throw std::invalid_argument("the project has no experiment '" + *overrides.correlation_experiment + "'");
+        }
+        options.correlation_experiment = static_cast<std::size_t>(found - experiments.begin());
+    }
     return options;
 }
 
@@ -871,6 +894,16 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         model.evolution = evolution_of(input, rule);
     }
     model.pattern_styles = pattern_style_table(options.colour_scheme, project.experiments.size());
+    // A scan reports its template dataset in that dataset's colour among the scan's datasets, as the app's pages show
+    // it.
+    if (scan && scan->place) {
+        for (SeriesStyle& style : model.pattern_styles) {
+            if (style.key == "meas.0") {
+                style.light = pattern_colour(options.colour_scheme, *scan->place, scan->files, false);
+                style.dark = pattern_colour(options.colour_scheme, *scan->place, scan->files, true);
+            }
+        }
+    }
     model.structure_styles = structure_style_table();
     return model;
 }

@@ -28,6 +28,10 @@ Item {
     property var reportSeries: null
     readonly property bool fromReport: reportSeries !== null
     readonly property var reportPoints: fromReport ? reportSeries.points : []
+    // The report model's pattern styles: a report's points take its measured row (`meas.0`), as the HTML report draws
+    // them, never the app's colour scheme or project.
+    property var reportStyles: []
+    readonly property var reportMeasured: (reportStyles ?? []).find(style => style.key === "meas.0") ?? null
     // The theme's colours, or the light ones a PDF's copy is drawn in.
     property FigureColors colors: FigureColors {}
     readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
@@ -236,7 +240,7 @@ Item {
 
             objectName: "evolution.points"
             anchors.fill: parent
-            color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            color: !chart.fromReport ? AppColors.experiment(0, chart.colors.isDarkPalette) : chart.reportMeasured ? (chart.colors.isDarkPalette ? chart.reportMeasured.dark : chart.reportMeasured.light) : chart.colors.themeForeground
             markerSize: 6
             xMin: axisX.min
             xMax: axisX.max

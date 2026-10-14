@@ -7,6 +7,7 @@
     python -m edi report <project-dir> [--check] [--output PATH] [--offline|--online]
                          [--x-axis ...] [--correlation-threshold X]
                          [--exclude KEY ... | --include-all]
+                         [--colour-scheme NAME] [--correlation-experiment NAME]
 
 This exists because an example script was doing the job: ``examples/fit_ncaf.py`` had accreted
 argument parsing, verbosity handling and two output formats, which made it an undeclared
@@ -217,6 +218,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     groups.add_argument(
         '--include-all', action='store_true', help='leave no group out, for this run'
+    )
+    report.add_argument(
+        '--colour-scheme',
+        choices=('default', 'colourBlindSafe', 'tableau', 'paulTol', 'vivid'),
+        default=None,
+        help="the colour scheme whose light colours the report's charts take (default: default)",
+    )
+    report.add_argument(
+        '--correlation-experiment',
+        default=None,
+        metavar='NAME',
+        help='in a fit of several experiments, the one whose parameters the correlation chart '
+        'shows (default: the first)',
     )
     return parser
 
@@ -710,6 +724,8 @@ def run_report(args: argparse.Namespace) -> int:
             x_axis=args.x_axis,
             correlation_threshold=args.correlation_threshold,
             excluded=excluded,
+            colour_scheme=args.colour_scheme,
+            correlation_experiment=args.correlation_experiment,
         )
         print(f'Wrote {path}')
         return 0
@@ -718,6 +734,8 @@ def run_report(args: argparse.Namespace) -> int:
         x_axis=args.x_axis,
         correlation_threshold=args.correlation_threshold,
         excluded=excluded,
+        colour_scheme=args.colour_scheme,
+        correlation_experiment=args.correlation_experiment,
     )
     for path in written:
         print(f'Wrote {path}')

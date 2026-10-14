@@ -47,9 +47,10 @@ Flickable {
                     "width": shown.width,
                     "height": shown.height
                 };
-                if (kind === "evolution")
+                if (kind === "evolution") {
                     properties.reportSeries = record.reportSeries;
-                else
+                    properties.reportStyles = preview.model.pattern_styles ?? [];
+                } else
                     properties.report = preview.report;
                 if (kind !== "evolution")
                     properties[kind === "structure" ? "reportStructure" : "reportExperiment"] = record.modelData.id;
@@ -452,6 +453,7 @@ Flickable {
                         width: evolutionCharts.chartWidth
                         height: evolutionCharts.chartHeight
                         reportSeries: modelData
+                        reportStyles: preview.model.pattern_styles ?? []
                         colors: FigureColors {
                             light: true
                         }

@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <locale>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <system_error>
@@ -63,6 +64,16 @@ void replace_file(const fs::path& path, const std::string& text) {
 
 }  // namespace
 
+ReportOptions report_file_options(ReportOptions options) {
+    options.colour_scheme = ColourScheme::Default;
+    options.correlation_experiment = 0;
+    return options;
+}
+
+bool chooses_presentation(const ReportOptions& options) {
+    return options.colour_scheme != ColourScheme::Default || options.correlation_experiment != 0;
+}
+
 std::string iso_utc_from_star(const std::string& stamp) {
     std::tm parsed{};
     std::istringstream in(stamp);
@@ -78,6 +89,11 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
     ReportSaveResult result;
     const ReportOptions options = effective_report_options(project, overrides);
     const ReportModel model = build_report(project, options);
+    // The row's digest is of the report in report_file_options: the same model unless this run chose otherwise.
+    std::optional<ReportModel> judged;
+    if (chooses_presentation(options)) {
+        judged = build_report(project, report_file_options(options));
+    }
     const fs::path reports = fs::path(project.path) / "reports";
     fs::create_directories(reports);
     if (project.report_pdf.value_or(false)) {
@@ -96,7 +112,7 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         row.format = std::string("html");
         row.saved = iso_utc(std::time(nullptr));
         row.project_last_modified = iso_utc_from_star(project.metadata.last_modified);
-        row.digest = report_digest(model, "html", used);
+        row.digest = report_digest(judged ? *judged : model, "html", used);
         std::size_t at = 0;
         for (const auto& file : project.report_files) {
             if (file->name.value() == name) {
@@ -124,7 +140,7 @@ std::vector<ReportFileState> report_file_states(const Project& project, const Re
     if (project.report_files.empty()) {
         return states;
     }
-    const ReportOptions options = effective_report_options(project);
+    const ReportOptions options = report_file_options(effective_report_options(project));
     const ReportModel model = build_report(project, options);
     const fs::path reports = fs::path(project.path) / "reports";
     for (const auto& file : project.report_files) {

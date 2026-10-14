@@ -542,7 +542,12 @@ class Report:
     until stated, without stating it, and a value a file could not hold is refused, naming the
     item. ``model``, ``as_html``, ``save_html`` and ``save`` take the same keywords, each None
     keeping the stored setting and a given one replacing it for that call only; none of them
-    changes a setting.
+    changes a setting. Two more keywords are choices of the call alone, as the app makes them
+    from its Preferences and its Analysis page: ``colour_scheme`` (``'default'``,
+    ``'colourBlindSafe'``, ``'tableau'``, ``'paulTol'`` or ``'vivid'``; by default the first) and
+    ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
+    shows in a fit of several (by default the first). ``check`` judges every saved report with
+    those defaults, so a report is out of date only when the project changed.
     """
 
     # A setting it does not have is refused: a misspelt option ignored in silence would leave
@@ -628,9 +633,13 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> ReportModel:
         """The report as data, as the HTML report, the app and a notebook show it."""
-        return self._project._report_model(offline, x_axis, correlation_threshold, excluded)
+        return self._project._report_model(
+            offline, x_axis, correlation_threshold, excluded, colour_scheme, correlation_experiment
+        )
 
     def as_html(
         self,
@@ -639,10 +648,18 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> str:
         """The report as one HTML file's text."""
         return self._project._report_html_text(
-            _DATA_DIR, offline, x_axis, correlation_threshold, excluded
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
         )
 
     def save_html(
@@ -653,6 +670,8 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> _Path:
         """Write the HTML report to ``path``, by default ``<project>/reports/<name>.html``.
 
@@ -669,6 +688,8 @@ class Report:
             x_axis=x_axis,
             correlation_threshold=correlation_threshold,
             excluded=excluded,
+            colour_scheme=colour_scheme,
+            correlation_experiment=correlation_experiment,
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         # Written beside the old file and renamed over it, so a failed write leaves the old file.
@@ -688,6 +709,8 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> list[_Path]:
         """Save report: each ticked format but the PDF into ``<project>/reports/``, with its row.
 
@@ -696,7 +719,13 @@ class Report:
         A ticked PDF is written by the app; its file and row are left as they were.
         """
         written, pdf_left = self._project._report_save(
-            _DATA_DIR, offline, x_axis, correlation_threshold, excluded
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
         )
         if pdf_left:
             print(
