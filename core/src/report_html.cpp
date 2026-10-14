@@ -130,12 +130,15 @@ table.correlations td {
 /* A figure is framed and spaced as a table is (the owner, 2026-10-13). */
 .figure { margin: 1.55pt 0 9.5pt; border: var(--bw) solid var(--tableborder); }
 .pattern-figure { width: 100%; height: 440px; }
-/* A scan's evolution: one chart per parameter, two to a row while each is at least 300 px wide, else one. */
+/* A scan's evolution: one chart per parameter, two to a row at half the column, one when the column is narrower
+   than 300 px. */
 .evolution-grid {
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(max(300px, calc(50% - 8px)), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 16px;
 }
+@container (width < 300px) { .evolution-figure { grid-column: 1 / -1; } }
 .evolution-figure { aspect-ratio: 4 / 3; min-width: 0; box-sizing: border-box; overflow: hidden; }
 .structure-figure { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; }
 /* A long table, such as an experiment's data points, scrolls in a window of rows. */
