@@ -2316,49 +2316,49 @@
    },
    "FitParameterCorrelationItem": {
     "correlation": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.correlation",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "id": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.id",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "parameter_unique_name_i": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.parameter_unique_name_i",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "parameter_unique_name_j": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.parameter_unique_name_j",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "source_kind": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.source_kind",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "FitPreamble": {
@@ -2392,13 +2392,13 @@
      "verdict": "public"
     },
     "correlations": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "deviation",
       "ref": "D47",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "fitting_time": {
      "need": {
@@ -2776,13 +2776,13 @@
      "verdict": "public"
     },
     "correlations": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "deviation",
       "ref": "D47",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "fitting_time": {
      "need": {
@@ -4199,6 +4199,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "report": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Project.report",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "save": {
      "need": {
       "by": "counterpart",
@@ -4234,9 +4243,27 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "su_rule": {
+     "need": {
+      "by": "deviation",
+      "ref": "D81",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "ProjectMetadata": {
+    "authors": {
+     "need": {
+      "by": "deviation",
+      "ref": "D81",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "created": {
      "need": {
       "by": "counterpart",
@@ -4340,6 +4367,136 @@
     "XRAY": {
      "need": {
       "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "Report": {
+    "as_html": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "check": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "cif": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "correlation_threshold": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "excluded": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "html": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "html_offline": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "model": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "pdf": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "save": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "save_html": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "x_axis": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "ReportModel": {
+    "from_json": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "to_json": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5774,13 +5931,13 @@
     "verdict": "public"
    },
    "FitParameterCorrelationItem": {
-    "reason": "C",
-    "verdict": "public",
     "need": {
      "by": "counterpart",
      "ref": "FitParameterCorrelationItem",
      "verdict": "keep"
-    }
+    },
+    "reason": "C",
+    "verdict": "public"
    },
    "FitPreamble": {
     "need": {
@@ -6061,6 +6218,24 @@
     "reason": "C",
     "verdict": "public"
    },
+   "Report": {
+    "need": {
+     "by": "deviation",
+     "ref": "D80",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "ReportModel": {
+    "need": {
+     "by": "deviation",
+     "ref": "D80",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "SampleFormEnum": {
     "need": {
      "by": "counterpart",
@@ -6333,7 +6508,7 @@
    }
   }
  },
- "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
+ "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -7108,15 +7283,18 @@
     "metadata",
     "name",
     "parameters",
+    "report",
     "save",
     "save_as",
     "structure",
-    "structures"
+    "structures",
+    "su_rule"
    ]
   },
   "ProjectMetadata": {
    "kind": "class",
    "members": [
+    "authors",
     "created",
     "description",
     "last_modified",
@@ -7134,6 +7312,30 @@
    "members": [
     "NEUTRON",
     "XRAY"
+   ]
+  },
+  "Report": {
+   "kind": "class",
+   "members": [
+    "as_html",
+    "check",
+    "cif",
+    "correlation_threshold",
+    "excluded",
+    "html",
+    "html_offline",
+    "model",
+    "pdf",
+    "save",
+    "save_html",
+    "x_axis"
+   ]
+  },
+  "ReportModel": {
+   "kind": "class",
+   "members": [
+    "from_json",
+    "to_json"
    ]
   },
   "SampleFormEnum": {

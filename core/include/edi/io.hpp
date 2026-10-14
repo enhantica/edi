@@ -147,6 +147,11 @@ void save_project_via_crysta(const Project& project, const std::string& director
 // saved-report rows, when its text changes, through crysta's writer; whether it wrote.
 bool save_report_settings(const Project& project, const std::string& directory);
 
+// A report setting's value checked by crysta's rules, as a file states it (ADR-0035 §7): `tag` is `_report.<item>`,
+// `_correlation_chart.threshold` or `_pattern_chart.x_axis`, `value` its text. Throws std::invalid_argument naming the
+// item for a value it does not take, or for a tag that is not a report setting.
+void check_report_setting(const std::string& tag, const std::string& value);
+
 // The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
 // `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's
 // free flag cleared with crysta's `crysta.domain.dependent_free_ignored` warning to `warn`. The loader

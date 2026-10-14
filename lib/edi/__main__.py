@@ -4,6 +4,8 @@
     python -m edi fit <project-dir> [--dry] [--verbosity ...] [--report ...] [--stream]
     python -m edi calc <project-dir> [--dry] [--verbosity ...] [--report machine|human]
     python -m edi undo <project-dir> [--dry] [--verbosity ...] [--report machine|human]
+    python -m edi report <project-dir> [--check] [--offline|--online] [--x-axis ...]
+                         [--correlation-threshold X] [--exclude KEY ... | --include-all]
 
 This exists because an example script was doing the job: ``examples/fit_ncaf.py`` had accreted
 argument parsing, verbosity handling and two output formats, which made it an undeclared
@@ -154,6 +156,59 @@ def build_parser() -> argparse.ArgumentParser:
         default='machine',
         help="which channel to print: 'machine' (the default) is the versioned key=value record "
         "byte-comparable with `crysta undo`; 'human' is the readable view",
+    )
+    report = subcommands.add_parser(
+        'report',
+        help="save a project's report into its reports folder, as the app's Save report does",
+    )
+    report.add_argument('project', help='project directory')
+    report.add_argument(
+        '--check',
+        action='store_true',
+        help='list each saved report as current, out of date or missing, writing nothing; '
+        'exit 1 when one is not current',
+    )
+    libraries = report.add_mutually_exclusive_group()
+    libraries.add_argument(
+        '--offline',
+        dest='offline',
+        action='store_const',
+        const=True,
+        default=None,
+        help='embed the chart libraries in the HTML report, for this run',
+    )
+    libraries.add_argument(
+        '--online',
+        dest='offline',
+        action='store_const',
+        const=False,
+        help='load the chart libraries from the web, for this run',
+    )
+    report.add_argument(
+        '--x-axis',
+        choices=('native', 'd_spacing'),
+        default=None,
+        help="the charts' x axis for this run: the experiment's own (2θ or TOF) or d-spacing",
+    )
+    report.add_argument(
+        '--correlation-threshold',
+        type=float,
+        default=None,
+        metavar='X',
+        help='the correlation chart shows the parameters whose strongest correlation '
+        'reaches X (0 to 1), for this run',
+    )
+    groups = report.add_mutually_exclusive_group()
+    groups.add_argument(
+        '--exclude',
+        action='append',
+        default=None,
+        metavar='KEY',
+        help='leave a group out for this run (charts, correlations, reflections, data, '
+        'evolution); repeat for several',
+    )
+    groups.add_argument(
+        '--include-all', action='store_true', help='leave no group out, for this run'
     )
     return parser
 
@@ -629,6 +684,28 @@ def run_undo(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_report(args: argparse.Namespace) -> int:
+    # The project's own report settings, a flag replacing one for this run only; nothing is
+    # written to the project. Save report writes the ticked formats but the PDF, which is the
+    # app's.
+    project = edi.Project.load(args.project)
+    if args.check:
+        states = project.report.check()
+        for name, state in states:
+            print(f'{name} {state}')
+        return 0 if all(state == 'current' for _name, state in states) else 1
+    excluded = [] if args.include_all else args.exclude
+    written = project.report.save(
+        offline=args.offline,
+        x_axis=args.x_axis,
+        correlation_threshold=args.correlation_threshold,
+        excluded=excluded,
+    )
+    for path in written:
+        print(f'Wrote {path}')
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     # Argument parsing is NOT a run: argparse exits on its own for a usage error, and no record is
     # emitted, because nothing was attempted. Everything below has reached the point of
@@ -636,6 +713,12 @@ def main(argv: list[str] | None = None) -> int:
     # gets a well-formed "this run produced no fit" rather than silence it cannot distinguish
     # from a crash.
     args = build_parser().parse_args(argv)
+    if args.command == 'report':
+        try:
+            return run_report(args)
+        except (edi.IoError, ValueError, OSError) as error:
+            print(f'edi report: {error}', file=sys.stderr)
+            return 1
     try:
         if args.command == 'undo':
             return run_undo(args)

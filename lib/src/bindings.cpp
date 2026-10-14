@@ -5,6 +5,7 @@
 
 #include <nanobind/nanobind.h>
 #include <algorithm>
+#include <charconv>
 #include <iostream>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/filesystem.h>
@@ -13,6 +14,7 @@
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
@@ -32,6 +34,9 @@
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
 #include "edi/report.hpp"
+#include "edi/report_html.hpp"
+#include "edi/report_model.hpp"
+#include "edi/report_save.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
@@ -1526,6 +1531,49 @@ static void def_collection_views(nb::module_& m) {
             return self.vec()[static_cast<std::size_t>(i)];
         });
 }
+
+namespace {
+
+// A number as a file writes it: its shortest round-trip decimal.
+std::string report_number_text(double value) {
+    std::array<char, 64> buffer{};
+    const auto result = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+    return {buffer.data(), result.ptr};
+}
+
+// ADR-0035 §7: one run's overrides of the report's settings, each checked by crysta's rules as a file states it.
+edi::ReportOverrides report_overrides(std::optional<bool> offline, std::optional<std::string> x_axis,
+                                      std::optional<double> correlation_threshold,
+                                      std::optional<std::vector<std::string>> excluded) {
+    edi::ReportOverrides overrides;
+    overrides.html_offline = offline;
+    if (x_axis) {
+        edi::check_report_setting("_pattern_chart.x_axis", *x_axis);
+    }
+    overrides.x_axis = std::move(x_axis);
+    if (correlation_threshold) {
+        edi::check_report_setting("_correlation_chart.threshold", report_number_text(*correlation_threshold));
+    }
+    overrides.correlation_threshold = correlation_threshold;
+    if (excluded) {
+        std::string keys;
+        for (const std::string& key : *excluded) {
+            keys += (keys.empty() ? "" : " ") + key;
+        }
+        edi::check_report_setting("_report.excluded", keys);
+    }
+    overrides.excluded = std::move(excluded);
+    return overrides;
+}
+
+// The vendored chart libraries under `data_dir`, read only when the report embeds them.
+edi::ReportLibraries report_libraries(const edi::Project& project, const edi::ReportOverrides& overrides,
+                                      const std::filesystem::path& data_dir) {
+    return edi::effective_report_options(project, overrides).embed_libraries ? edi::read_report_libraries(data_dir)
+                                                                             : edi::ReportLibraries{};
+}
+
+}  // namespace
 
 NB_MODULE(_edi, m) {
     // The engine's threading policy (crysta — passive wait + max(1, cores-2) team, any present
@@ -3295,6 +3343,14 @@ NB_MODULE(_edi, m) {
 
     def_collection_views(m);
 
+    // ADR-0035: the report model, a project's report as data, as JSON both ways (the JS seam and its gate).
+    nb::class_<edi::ReportModel>(m, "ReportModel")
+        .def("to_json", [](const edi::ReportModel& self) { return edi::report_to_json(self); },
+             "The model as JSON (every field; doubles in their shortest round-trip form).")
+        .def_static(
+            "from_json", [](const std::string& text) { return edi::report_from_json(text); }, "text"_a,
+            "A model from its JSON; ValueError for malformed JSON, a missing field or another schema version.");
+
     nb::class_<edi::Project> project(m, "Project");
     def_parameter_walks(project);
     def_free_parameters(project);
@@ -3441,6 +3497,82 @@ NB_MODULE(_edi, m) {
             "file. A partially-loaded project is unrepresentable; after a fit-ready load, "
             "fit()/fit_joint() can be called with no arguments and cannot fail for a data "
             "reason.")
+        // ADR-0035 §7: the report's settings (reports/report.edi, analysis/analysis.edi), each None until stated,
+        // and its run-time entry points; the `project.report` facade (lib/edi) is their Python surface.
+        .def_rw("_report_html", &edi::Project::report_html)
+        .def_rw("_report_pdf", &edi::Project::report_pdf)
+        .def_rw("_report_cif", &edi::Project::report_cif)
+        .def_rw("_report_html_offline", &edi::Project::report_html_offline)
+        .def_prop_rw(
+            "_report_excluded", [](const edi::Project& self) { return self.report_excluded; },
+            [](edi::Project& self, std::optional<std::string> keys) {
+                if (keys) {
+                    edi::check_report_setting("_report.excluded", *keys);
+                }
+                self.report_excluded = std::move(keys);
+            })
+        .def_prop_rw(
+            "_correlation_threshold", [](const edi::Project& self) { return self.correlation_threshold; },
+            [](edi::Project& self, std::optional<double> threshold) {
+                if (threshold) {
+                    edi::check_report_setting("_correlation_chart.threshold", report_number_text(*threshold));
+                }
+                self.correlation_threshold = threshold;
+            })
+        .def_prop_rw(
+            "_pattern_x_axis", [](const edi::Project& self) { return self.pattern_x_axis; },
+            [](edi::Project& self, std::optional<std::string> axis) {
+                if (axis) {
+                    edi::check_report_setting("_pattern_chart.x_axis", *axis);
+                }
+                self.pattern_x_axis = std::move(axis);
+            })
+        .def(
+            "_report_model",
+            [](const edi::Project& self, std::optional<bool> offline, std::optional<std::string> x_axis,
+               std::optional<double> correlation_threshold, std::optional<std::vector<std::string>> excluded) {
+                const edi::ReportOverrides overrides =
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                return edi::build_report(self, edi::effective_report_options(self, overrides));
+            },
+            "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
+            "excluded"_a = nb::none())
+        .def(
+            "_report_html_text",
+            [](const edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
+               std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
+               std::optional<std::vector<std::string>> excluded) {
+                const edi::ReportOverrides overrides =
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                const edi::ReportModel model = edi::build_report(self, edi::effective_report_options(self, overrides));
+                return edi::report_html(model, report_libraries(self, overrides, data_dir));
+            },
+            "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
+            "excluded"_a = nb::none())
+        .def(
+            "_report_save",
+            [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
+               std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
+               std::optional<std::vector<std::string>> excluded) {
+                const edi::ReportOverrides overrides =
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                const edi::ReportSaveResult result =
+                    edi::save_report(self, overrides, report_libraries(self, overrides, data_dir));
+                return std::make_pair(result.written, result.pdf_left);
+            },
+            "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
+            "excluded"_a = nb::none())
+        .def(
+            "_report_states",
+            [](const edi::Project& self, const std::filesystem::path& data_dir) {
+                std::vector<std::tuple<std::string, std::string, std::string>> states;
+                for (const edi::ReportFileState& state :
+                     edi::report_file_states(self, report_libraries(self, {}, data_dir))) {
+                    states.emplace_back(state.name, state.format, state.state);
+                }
+                return states;
+            },
+            "data_dir"_a)
         .def(
             "save_as",
             [](edi::Project& self, const std::filesystem::path& directory) {
