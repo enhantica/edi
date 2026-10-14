@@ -103,11 +103,12 @@ Item {
                 verify(row !== undefined && icon(row) !== undefined, "The Project list materializes the requested experiment place " + position);
                 expected[position] = ink(icon(row).color);
             }
-            const palette = SettingsProof.palette(data.safe).pattern;
+            const table = SettingsProof.paletteForScheme(data.safe ? "colourBlindSafe" : "default");
+            const palette = table.pattern, gradient = table.gradient || palette.slice(-2);
             const theme = data.dark ? "dark" : "light";
-            compare(expected[0], palette[data.count > palette.length ? palette.length - 2 : 0][theme].toLowerCase(), "The Project list starts at its independent short-palette row or declared gradient endpoint");
+            compare(expected[0], (data.count > palette.length ? gradient[0] : palette[0])[theme].toLowerCase(), "Before endpoints in the short set; after the reordered short set or trimmed gradient role; actual first=" + expected[0] + "; declared first=" + (data.count > palette.length ? gradient[0] : palette[0])[theme]);
             if (data.count > 11)
-                compare(expected[data.count - 1], palette[palette.length - 1][theme].toLowerCase(), "The 162-file Project gradient reaches the independent last palette endpoint");
+                compare(expected[data.count - 1], gradient[gradient.length - 1][theme].toLowerCase(), "The 162-file Project gradient reaches the independent last palette endpoint");
             else
                 for (const position of positions)
                     compare(expected[position], palette[position][theme].toLowerCase(), "The few-experiment Project list uses its independent palette place " + position);

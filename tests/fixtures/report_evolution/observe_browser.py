@@ -18,15 +18,22 @@ window.addEventListener('error', e => errors.push(String(e.message)));
 window.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
 window.addEventListener('load', () => {
   const report = () => {
-    const plots = [...document.querySelectorAll('.evolution-figure .js-plotly-plot')];
+    const plots = [...document.querySelectorAll('.js-plotly-plot')]
+      .filter(plot => plot.closest('.evolution-figure'));
     const result = {selectors: document.querySelectorAll('.evolution-figure select').length,
       viewport: innerWidth, errors,
+      patterns: [...document.querySelectorAll('.js-plotly-plot')]
+        .filter(plot => plot.closest('.pattern-figure')).map(plot => ({
+        traces: (plot.data || []).map(trace => ({
+          name: trace.name, line: trace.line, marker: trace.marker})),
+        background: plot._fullLayout?.plot_bgcolor ?? plot.layout?.plot_bgcolor})),
       figures: [...document.querySelectorAll('.evolution-figure')].map(f => ({
         className: f.className, text: f.textContent,
         children: [...f.children].map(c => c.className)})), plots: plots.map(plot => {
         const b = plot.getBoundingClientRect();
         return {box: [b.x, b.y, b.width, b.height], traces: plot.data,
           svgCount: plot.querySelectorAll("svg,canvas").length,
+          title: plot.layout?.title?.text,
           xTitle: plot.layout?.xaxis?.title?.text, yTitle: plot.layout?.yaxis?.title?.text};
       })};
     fetch('/proof?case=CASE', {method: 'POST', body: JSON.stringify(result)});
@@ -55,7 +62,7 @@ def observe(html):
     }
     documents['/'] = (
         b'<!doctype html><iframe width="1200" height="2400" src="/wide"></iframe>'
-        b'<iframe width="380" height="2400" src="/narrow"></iframe>'
+        b'<iframe width="220" height="2400" src="/narrow"></iframe>'
     )
     received = queue.Queue()
 
@@ -125,5 +132,5 @@ if __name__ == '__main__':
     try:
         result = observe(Path(sys.argv[1]).read_text(encoding='utf-8'))
     except (OSError, RuntimeError, ValueError, queue.Empty, subprocess.TimeoutExpired) as error:
-        result = {'error': str(error)}
+        result = {'error': type(error).__name__ + ': ' + str(error)}
     print(json.dumps(result))
