@@ -27,7 +27,14 @@
 namespace edi_app {
 
 ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
+    // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
+    // end rebuilds from the outcome.
+    connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
     refresh();
+}
+
+bool ReportViewModel::calculating() const {
+    return project_.calculating();
 }
 
 void ReportViewModel::setColourScheme(const QString& scheme) {
