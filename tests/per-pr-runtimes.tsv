@@ -10,11 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T14:23:44Z
+# measured_utc = 2026-10-14T22:24:22Z
 #
-# Recorded from: canonical completed Python nodes plus direct C++ integer census: tests-seq59-isolated.xml and tests-seq59-native.xml; expected reds remain declared unmeasured
-# Collected tests: 11937; with a reported duration: 6478
-# Module-scoped fixture costs recorded: 47
+# Recorded from: tests-desktop-final-red.log and completed-node fixture artifact; red nodes stay unmeasured
+# All earlier rows and module costs preserved; canonical whole collection awaits the native extension
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +28,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11937
+# inventory_python = 12998
 # inventory_cpp = 333
-# inventory_measured = 10973
-# inventory_unmeasured = 1297
+# inventory_measured = 11774
+# inventory_unmeasured = 1557
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -5260,6 +5259,47 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_approved_values_use_one_shared_edit_and_advance_string_revision
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_cancel_and_detach_revoke_old_turns_without_a_success_claim
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_completed_duplicate_mutation_is_cached_and_changed_reuse_refuses
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_connection_revocation_prevents_late_mutation[disconnected]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_connection_revocation_prevents_late_mutation[expired]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_context_preserves_optional_uncertainty_and_free_state
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_detached_context_is_explicit_and_read_only
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_disconnected_message_does_not_send_project_context
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_eof_done_and_failed_provider_events_never_count_as_success[bare-done]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_eof_done_and_failed_provider_events_never_count_as_success[failed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_eof_done_and_failed_provider_events_never_count_as_success[incomplete]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_equal_external_write_revokes_approved_execution[False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_equal_external_write_revokes_approved_execution[True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_fragmented_utf8_and_multiline_sse_preserve_public_text
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_function_arguments_execute_only_after_complete_item
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_invalid_arguments_and_data_after_terminal_refuse
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_invalid_batch_is_atomic[values0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_invalid_batch_is_atomic[values1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_invalid_batch_is_atomic[values2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_malformed_nonfinite_and_duplicate_json_members_refuse[{"schema":"edi.assistant/1","type":"cancel","x":NaN}]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_malformed_nonfinite_and_duplicate_json_members_refuse[{"schema":"edi.assistant/1","type":"message","type":"cancel"}]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_malformed_nonfinite_and_duplicate_json_members_refuse[{]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_model_effort_and_attachment_capabilities_refuse_before_send[patch0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_model_effort_and_attachment_capabilities_refuse_before_send[patch1]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_model_effort_and_attachment_capabilities_refuse_before_send[patch2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_provider_payload_cannot_create_a_user_approval
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_read_tool_requires_no_plan_and_returns_real_context
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_scope_and_host_refusal_preserve_the_current_model
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_stream_text_cannot_forge_a_connection_or_approval
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tool_result_continuation_preserves_history_and_uses_a_fresh_request
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tools_bind_exact_project_revision_turn_and_request[overrides0-stale_project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tools_bind_exact_project_revision_turn_and_request[overrides1-stale_revision]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tools_bind_exact_project_revision_turn_and_request[overrides2-stale_revision]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tools_bind_exact_project_revision_turn_and_request[overrides3-invalid_argument]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tools_bind_exact_project_revision_turn_and_request[overrides4-invalid_argument]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_tools_bind_exact_project_revision_turn_and_request[overrides5-invalid_argument]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_unapproved_mutation_cannot_enter_the_typed_edit_door
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_unknown_tool_and_extra_domain_fields_refuse
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_user_envelope_is_strict[extra-True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_user_envelope_is_strict[schema-edi.assistant/99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e11_t5_assistant_protocol.py::test_user_envelope_is_strict[text-17]
 0.020	tests/integration/py/test_fitting_mode_weights.py::test_gui_fitting_modes_use_the_owner_descriptions
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[independent]
 0.030	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[joint]
@@ -6277,6 +6317,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_no
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_second_wavelength_has_its_own_bragg_position_and_lorentz_factor
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_zero_ratio_is_bitwise_single_wavelength_boundary
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_page_inventory.py::test_xray_page_filename_delta_preserves_prior_pages_and_adds_exactly_three
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_app_lifetime_survives_project_and_page_changes]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_both_themes_and_live_opposite_placement]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_keyboard_toggle_focus_and_multiline_composer]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_narrow_panel_keeps_controls_accessible]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Bani-0]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Uani-0]
 0.560	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-beta-0]
@@ -13338,6 +13383,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 3.207	tests/system/app/test_e11_t5_assistant_panel.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
