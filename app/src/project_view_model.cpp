@@ -10,18 +10,25 @@
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QSettings>
+#include <QUrl>
 #include <algorithm>
+#include <memory>
 #include <cctype>
 #include <map>
 #include <fstream>
 #include <filesystem>
 
 #include "background.hpp"
+#include "engine_setup.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
+#include "edi/report_model.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
+#include "edi/su_text.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "report_view_model.hpp"
@@ -75,8 +82,14 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
         ExperimentViewModel* experiment = experiments[i];
         const bool fitted = shares ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
         experiment->setFitOutcome(fitted ? outcome : QString());
+        // Its last fit's reliability follows its name and file on the selector's line (Rwp and χ²).
+        const std::string reliability = fitted ? edi::reliability_text(project, static_cast<std::size_t>(i)) : std::string();
+        QString label = block_label(experiment->name(), QStringLiteral("experiment"));
+        if (!reliability.empty()) {
+            label += QStringLiteral(" · ") + QString::fromStdString(reliability);
+        }
         rows.append({experiment,
-                     {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
+                     {experiment->name(), label,
                       QVariant::fromValue<QObject*>(experiment), experiment->fitOutcome(),
                       experiment->dataFile().isEmpty() ? experiment->name() + QStringLiteral(".edi")
                                                        : experiment->dataFile(),
@@ -101,6 +114,9 @@ QList<QVariant> dataset_values(ExperimentViewModel* experiment, const Experiment
         if (!value.isEmpty()) {
             label += QStringLiteral(" · ") + value;
         }
+    }
+    if (!dataset.reliability.isEmpty()) {
+        label += QStringLiteral(" · ") + dataset.reliability;
     }
     return {name, label, QVariant::fromValue<QObject*>(experiment), dataset.outcome, dataset.file, dataset.extracted,
             dataset.is_template};
@@ -157,6 +173,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
     metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this);
+    report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this);
     project_text_ = new BlockText(
         [this] {
             std::string text;
@@ -171,8 +188,15 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     loadScan();
     correlations_ = new CorrelationViewModel(this);
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncCorrelations);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncPatternColours);
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
+    // The report filters its correlations by the Analysis page's level, and in a fit of several experiments shows the
+    // one the page shows.
+    connect(correlations_, &CorrelationViewModel::levelChanged, report_, &ReportViewModel::refresh);
+    // A level or count the tab is given becomes the project's threshold (ADR-0036 §7).
+    connect(correlations_, &CorrelationViewModel::levelAsked, this, &ProjectViewModel::setReportCorrelationThreshold);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, report_, &ReportViewModel::refresh);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
     syncParameterTable();
@@ -180,6 +204,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     published_name_ = name();
     published_title_ = title();
     published_description_ = description();
+    published_authors_ = authors();
+    published_su_rule_ = suRule();
+    published_pattern_d_spacing_ = patternDSpacing();
     published_last_modified_ = lastModified();
     published_structure_index_ = current_structure_;
     published_experiment_index_ = current_experiment_;
@@ -283,11 +310,34 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     if (scan_session_ != nullptr) {
         showScanResults();
     }
-    // A scan project opens on its template dataset, else on its first, read before the project is shown.
+    // ADR-0031 §1: the project opens on the structure and experiment last selected in it (the app's settings, keyed
+    // by its folder); a scan on the dataset last selected, found by its file name, else on its template dataset.
+    // Restoring never changes the template.
+    const QStringList selection = storedSelection();
+    for (int i = 0; i < structure_models_.size() && !selection.value(0).isEmpty(); ++i) {
+        if (structure_models_[i]->name() == selection.value(0)) {
+            setCurrentStructureIndex(i);
+        }
+    }
     if (scan_) {
         scan_template_ = *project_;
-        viewDatasetNow(std::max(0, templateIndex()), true);
+        int shown = std::max(0, templateIndex());
+        const std::vector<std::string>& files = scan_session_ ? scan_session_->datasets().files : std::vector<std::string>();
+        for (std::size_t i = 0; i < files.size() && !selection.value(2).isEmpty(); ++i) {
+            if (QString::fromStdString(files[i]) == selection.value(2)) {
+                shown = static_cast<int>(i);
+            }
+        }
+        viewDatasetNow(shown, true);
+    } else {
+        for (int i = 0; i < experiment_models_.size() && !selection.value(1).isEmpty(); ++i) {
+            if (experiment_models_[i]->name() == selection.value(1)) {
+                setCurrentExperimentIndex(i);
+            }
+        }
     }
+    selection_restored_ = true;
+    storeSelection();
     preview_->recalculate();
     publishCalculating();
 }
@@ -314,6 +364,16 @@ QString ProjectViewModel::name() const { return QString::fromStdString(project_-
 QString ProjectViewModel::title() const { return QString::fromStdString(project_->metadata.title); }
 QString ProjectViewModel::description() const { return QString::fromStdString(project_->metadata.description); }
 QString ProjectViewModel::lastModified() const { return QString::fromStdString(project_->metadata.last_modified); }
+QString ProjectViewModel::authors() const { return QString::fromStdString(project_->metadata.authors); }
+QString ProjectViewModel::suRule() const { return QString::fromStdString(project_->su_rule); }
+
+UncertaintyText ProjectViewModel::suText(double value, double su) const {
+    if (!std::isfinite(value) || !std::isfinite(su) || su == 0.0) {
+        return {};
+    }
+    const edi::SuText text = edi::su_text(value, su, project_->su_rule);
+    return {QString::fromStdString(text.value), QString::fromStdString(text.su), QString::fromStdString(text.bracket)};
+}
 
 void ProjectViewModel::setName(const QString& name) {
     edi::Project& project = *project_;
@@ -329,6 +389,86 @@ void ProjectViewModel::setDescription(const QString& description) {
     edi::Project& project = *project_;
     apply_setting(edi::Edit::assign(project.metadata.description, description.toStdString()));
 }
+
+void ProjectViewModel::setAuthors(const QString& authors) {
+    edi::Project& project = *project_;
+    apply_setting(edi::Edit::assign(project.metadata.authors, authors.toStdString()));
+}
+
+void ProjectViewModel::setSuRule(const QString& rule) {
+    if (rule != QStringLiteral("iucr_19") && rule != QStringLiteral("iucr_99")) {
+        return;
+    }
+    edi::Project& project = *project_;
+    apply_setting(edi::Edit::assign(project.su_rule, rule.toStdString()));
+}
+
+void ProjectViewModel::setReportExcluded(const QString& keys) {
+    edi::Project& project = *project_;
+    const std::optional<std::string> value = keys.simplified().toStdString();
+    if (value != project.report_excluded) {
+        apply_report_setting(edi::Edit::assign(project.report_excluded, value));
+    }
+}
+
+void ProjectViewModel::setReportFormat(const QString& format, bool on) {
+    edi::Project& project = *project_;
+    std::optional<bool>* field = format == QLatin1String("html")  ? &project.report_html
+                                 : format == QLatin1String("pdf") ? &project.report_pdf
+                                 : format == QLatin1String("cif") ? &project.report_cif
+                                                                  : nullptr;
+    if (field != nullptr && std::optional<bool>(on) != *field) {
+        apply_report_setting(edi::Edit::assign(*field, std::optional<bool>(on)));
+    }
+}
+
+void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
+    edi::Project& project = *project_;
+    // The open project's rows change with reports/report.edi, or not at all.
+    const edi::ItemVec<edi::ReportFile> before = project.report_files;
+    for (edi::ReportFile& row : rows) {
+        const std::string key = row.name.value();
+        const auto found = std::find_if(project.report_files.begin(), project.report_files.end(),
+                                        [&key](const auto& file) { return file->name.value() == key; });
+        if (found != project.report_files.end()) {
+            project.report_files.replace_at(static_cast<std::size_t>(found - project.report_files.begin()),
+                                            std::make_shared<edi::ReportFile>(std::move(row)));
+        } else {
+            project.report_files.push_back(std::move(row));
+        }
+    }
+    try {
+        edi::save_report_settings(project, project.path);
+    } catch (...) {
+        project.report_files = before;
+        throw;
+    }
+}
+
+void ProjectViewModel::setReportHtmlOffline(bool embedded) {
+    edi::Project& project = *project_;
+    if (std::optional<bool>(embedded) != project.report_html_offline) {
+        apply_report_setting(edi::Edit::assign(project.report_html_offline, std::optional<bool>(embedded)));
+    }
+}
+
+void ProjectViewModel::setReportCorrelationThreshold(double threshold) {
+    edi::Project& project = *project_;
+    const std::optional<double> value = std::clamp(threshold, 0.0, 1.0);
+    if (value != project.correlation_threshold) {
+        apply_report_setting(edi::Edit::assign(project.correlation_threshold, value));
+    }
+}
+
+void ProjectViewModel::setPatternDSpacing(bool on) {
+    edi::Project& project = *project_;
+    if (on != patternDSpacing()) {
+        apply_report_setting(edi::Edit::assign(project.pattern_x_axis,
+                                        std::optional<std::string>(on ? "d_spacing" : "native")));
+    }
+}
+
+bool ProjectViewModel::patternDSpacing() const { return project_->pattern_x_axis.value_or("native") == "d_spacing"; }
 
 void ProjectViewModel::setCurrentStructureIndex(int index) {
     if (index != current_structure_ && index >= -1 && index < structure_models_.size()) {
@@ -352,7 +492,40 @@ void ProjectViewModel::setCurrentExperimentIndex(int index) {
     }
 }
 
+QStringList ProjectViewModel::storedSelection() const {
+    if (project_->path.empty() || settings_file_path().isEmpty()) {
+        return {};
+    }
+    QSettings store(settings_file_path(), QSettings::IniFormat);
+    store.beginGroup(QStringLiteral("Selections"));
+    return store.value(selectionKey()).toStringList();
+}
+
+void ProjectViewModel::storeSelection() const {
+    if (!selection_restored_ || project_->path.empty() || settings_file_path().isEmpty()) {
+        return;
+    }
+    const StructureViewModel* structure = currentStructure();
+    const ExperimentViewModel* experiment = scan_ ? nullptr : currentExperiment();
+    QString dataset;
+    if (scan_ && scan_session_ != nullptr && current_dataset_ >= 0 &&
+        current_dataset_ < static_cast<int>(scan_session_->datasets().files.size())) {
+        dataset = QString::fromStdString(scan_session_->datasets().files[static_cast<std::size_t>(current_dataset_)]);
+    }
+    QSettings store(settings_file_path(), QSettings::IniFormat);
+    store.beginGroup(QStringLiteral("Selections"));
+    store.setValue(selectionKey(), QStringList{structure ? structure->name() : QString(),
+                                               experiment ? experiment->name() : QString(), dataset});
+}
+
+QString ProjectViewModel::selectionKey() const {
+    // The project's folder, percent-encoded so its slashes do not make groups of the ini file.
+    return QString::fromLatin1(
+        QUrl::toPercentEncoding(QFileInfo(QString::fromStdString(project_->path)).absoluteFilePath()));
+}
+
 void ProjectViewModel::publishCurrent() {
+    storeSelection();
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();
@@ -384,7 +557,13 @@ void ProjectViewModel::publishMetadata() {
     update(published_name_, name(), &ProjectViewModel::nameChanged);
     update(published_title_, title(), &ProjectViewModel::titleChanged);
     update(published_description_, description(), &ProjectViewModel::descriptionChanged);
+    update(published_authors_, authors(), &ProjectViewModel::authorsChanged);
+    update(published_su_rule_, suRule(), &ProjectViewModel::suRuleChanged);
     update(published_last_modified_, lastModified(), &ProjectViewModel::lastModifiedChanged);
+    if (patternDSpacing() != published_pattern_d_spacing_) {
+        published_pattern_d_spacing_ = patternDSpacing();
+        emit patternDSpacingChanged();
+    }
 }
 
 bool ProjectViewModel::loadStructure(const QUrl& file) {
@@ -882,6 +1061,12 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     dataset.file = QString::fromStdString(files[static_cast<std::size_t>(index)]);
     dataset.is_template = files[static_cast<std::size_t>(index)] == scanTemplateOrModel().sequential_fit.template_file;
     dataset.outcome = scan_session_->outcome(index);
+    // A fitted dataset's χ² from its results row, as a single fit's reliability shows it.
+    const auto& results = scan_session_->index().rows;
+    if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
+        dataset.reliability = QStringLiteral("χ² ") +
+                              QString::number(results[static_cast<std::size_t>(index)].reduced_chi_square, 'f', 2);
+    }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
     if (dataset.outcome.isEmpty() && dataset.is_template && scanTemplateOrModel().fit_result.held()) {
         dataset.outcome = recorded_outcome(scanTemplateOrModel().fit_result);
@@ -909,6 +1094,7 @@ void ProjectViewModel::syncDatasets() {
     if (!scan_) {
         experiment_list_->setColumns({});
         experiment_list_->setExperiments(experiment_models_, *project_);
+        syncPatternColours();
         return;
     }
     const int count = static_cast<int>(scan_session_->datasets().files.size());
@@ -922,6 +1108,20 @@ void ProjectViewModel::syncDatasets() {
     if (experiment != nullptr) {
         experiment->setFitOutcome(current_dataset_ >= 0 && current_dataset_ < count ? datasetRow(current_dataset_).outcome
                                                                                     : QString());
+    }
+    syncPatternColours();
+}
+
+void ProjectViewModel::syncPatternColours() {
+    // One colour per experiment on every page (edi::pattern_colour by place and count): a scan's template shows one
+    // dataset at a time, in that dataset's colour among the scan's datasets.
+    for (int i = 0; i < experiment_models_.size(); ++i) {
+        if (scan_ && i == 0) {
+            experiment_models_[i]->setColourPlace(static_cast<std::size_t>(std::max(current_dataset_, 0)),
+                                                  scan_session_->datasets().files.size());
+        } else {
+            experiment_models_[i]->setColourPlace(std::nullopt, 0);
+        }
     }
 }
 
@@ -1087,9 +1287,11 @@ void ProjectViewModel::startViewRead() {
     const std::string directory = scan_session_->datasets().directory;
     const std::string file = scan_session_->datasets().files[static_cast<std::size_t>(index)];
     const edi::BeamModeEnum mode = project_->experiment().effective_beam_mode();
+    // A chart on d draws the shown dataset's d-spacing capture too.
+    const bool d_spacing = !experiment_models_.isEmpty() && experiment_models_.front()->dSpacingWanted();
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
-    run_in_background([self, request, index, directory, file, mode, values = std::move(values),
+    run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
                        shown = std::move(shown)]() mutable {
         DatasetView view;
         view.values = std::move(values);
@@ -1100,6 +1302,9 @@ void ProjectViewModel::startViewRead() {
                 edi::apply_relations(*shown);
                 shown->calculate();
                 view.frame = edi::FitFrame{edi::capture_pattern(*shown, 0)};
+                if (d_spacing) {
+                    view.d_frame = edi::capture_pattern(*shown, 0, edi::PatternAxis::DSpacing);
+                }
             }
         } catch (const std::exception& refusal) {
             view.error = QString::fromUtf8(refusal.what());
@@ -1189,7 +1394,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     syncDataset(index);
     publishCurrent();
     if (view.frame) {
-        showFitFrame(*view.frame);
+        showFitFrame(*view.frame, std::move(view.d_frame));
     } else if (!view.error.isEmpty()) {
         setLastError(view.error);
     }
@@ -1708,6 +1913,14 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
             scan_template_->descent = project_->descent;
             scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
             scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
+            scan_template_->su_rule = project_->su_rule;
+            scan_template_->report_html = project_->report_html;
+            scan_template_->report_pdf = project_->report_pdf;
+            scan_template_->report_cif = project_->report_cif;
+            scan_template_->report_html_offline = project_->report_html_offline;
+            scan_template_->report_excluded = project_->report_excluded;
+            scan_template_->correlation_threshold = project_->correlation_threshold;
+            scan_template_->pattern_x_axis = project_->pattern_x_axis;
         } else if (scan_template_) {
             edi::Project promoted = *project_;
             promoted.experiment().data = scan_template_->experiment().data;
@@ -1728,6 +1941,44 @@ QString ProjectViewModel::apply_setting(const edi::Edit& change) {
     const QString refusal = apply(change, false);
     applying_setting_ = false;
     return refusal;
+}
+
+QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
+    edi::ReportSettingsState before = edi::report_settings_state(*project_);
+    const QString refusal = write_report_settings(change);
+    if (refusal.isEmpty() && edi::report_settings_state(*project_) != before) {
+        undo_history_.emplace_back(std::move(before));
+        syncUndo();
+    }
+    return refusal;
+}
+
+QString ProjectViewModel::write_report_settings(const edi::Edit& change) {
+    // No calculation reads a report setting: the patterns, the structures and the saved reports' digests stay current
+    // (no recalculation is asked for), and a scan's template takes the setting too.
+    if (fit_ != nullptr && fit_->running()) {
+        const QString message = tr("The project cannot be edited while a fit is running");
+        setLastError(message);
+        return message;
+    }
+    try {
+        preview_->apply_setting(change);
+    } catch (const std::exception& refusal) {
+        const QString message = QString::fromUtf8(refusal.what());
+        setLastError(message);
+        return message;
+    }
+    if (scan_template_) {
+        edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
+    }
+    setLastError({});
+    setModified(true);
+    publishMetadata();
+    syncCorrelations();
+    saved_files_.reset();
+    invalidateTexts();
+    report_->refresh();
+    return {};
 }
 
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
@@ -1797,6 +2048,8 @@ void ProjectViewModel::undo() {
         }
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
+    } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
+        undone = write_report_settings(edi::Edit::report_settings(*project_, *report)).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
         undone = apply(edi::Edit::set_free(*project_, flags->before), false).isEmpty();
     } else if (const auto* block = std::get_if<BlockName>(&undo_history_.back())) {
@@ -1946,6 +2199,24 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         project_->metadata = scan_template_->metadata;
         project_->scan_data_root = scan_template_->scan_data_root;
     }
+    // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
+    // the IUCr rule), and is calculated once from that: not an edit, so it stays unmodified with nothing to undo.
+    try {
+        if (edi::adopt_saved_values(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
+            if (scan_template_) {
+                scan_template_->refresh_calculated_pattern();
+            } else {
+                preview_->recalculate();
+            }
+            publish(false);
+            publishCalculating();
+        }
+    } catch (const std::exception& error) {
+        const QString message =
+            tr("The project was saved, but reading it back failed: %1").arg(QString::fromUtf8(error.what()));
+        setLastError(message);
+        return message;
+    }
     setLastError({});
     emit pathChanged();
     // The results came along with the tree; their provenance is kept with them, and the datasets are listed
@@ -2001,6 +2272,7 @@ void ProjectViewModel::publish(bool structural) {
         syncDatasets();
     }
     analysis_->sync();
+    evolution_->syncParameters();
     syncCorrelations();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
     publishMetadata();
@@ -2015,7 +2287,10 @@ void ProjectViewModel::publish(bool structural) {
 
 void ProjectViewModel::adoptScanFileResult(const std::string& file,
                                            const std::shared_ptr<const edi::ScanFileResult>& result) {
-    const std::string& template_file = scanTemplateOrModel().sequential_fit.template_file;
+    // The template dataset in effect (declared, else the first file), whose pairs the record keeps (edi ADR-0034).
+    const std::string template_file =
+        scan_session_ != nullptr ? edi::effective_scan_template_file(scanTemplateOrModel(), scan_session_->datasets())
+                                 : scanTemplateOrModel().sequential_fit.template_file;
     edi::adopt_scan_file_result(project_->fit_result, file, result, template_file);
     if (scan_template_) {
         edi::adopt_scan_file_result(scan_template_->fit_result, file, result, template_file);
@@ -2026,6 +2301,8 @@ void ProjectViewModel::syncCorrelations() {
     if (correlations_ == nullptr) {
         return;
     }
+    // The level is the project's `_correlation_chart.threshold`, so it is saved, undone and reported as one.
+    correlations_->setThreshold(project_->correlation_threshold);
     if (scan_) {
         const std::vector<std::string>& files = scan_session_->datasets().files;
         const bool shown = current_dataset_ >= 0 && current_dataset_ < static_cast<int>(files.size());
@@ -2084,9 +2361,10 @@ void ProjectViewModel::publishFit() {
     setModified(true);
 }
 
-void ProjectViewModel::showFitFrame(const edi::FitFrame& frame) {
+void ProjectViewModel::showFitFrame(const edi::FitFrame& frame, std::optional<edi::PatternSource> d_frame) {
     for (int i = 0; i < experiment_models_.size() && i < static_cast<int>(frame.size()); ++i) {
-        experiment_models_[i]->showPattern(frame[static_cast<std::size_t>(i)]);
+        experiment_models_[i]->showPattern(frame[static_cast<std::size_t>(i)],
+                                           i == 0 ? std::move(d_frame) : std::nullopt);
     }
 }
 
@@ -2128,6 +2406,7 @@ void ProjectViewModel::invalidateTexts() {
     }
     analysis_->text()->invalidate();
     metadata_text_->invalidate();
+    report_text_->invalidate();
     project_text_->invalidate();
 }
 

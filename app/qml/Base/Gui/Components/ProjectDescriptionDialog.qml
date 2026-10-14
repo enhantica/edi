@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Pinned gui-components copy; the project's location joins its folder and name with one separator, and the
-// location the dialog shows is the one Create project saves into (the owner, 2026-10-08).
+// location the dialog shows is the one Create project saves into (the owner, 2026-10-08). It also asks for the title
+// and the authors, in the Project page's order (the owner, 2026-10-13).
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
@@ -15,6 +16,8 @@ EaElements.Dialog {
     id: dialog
 
     property alias projectName: projectNameField.text
+    property alias projectTitle: projectTitleField.text
+    property alias projectAuthors: projectAuthorsField.text
     property alias projectDescription: projectDescriptionField.text
 
     property string projectLocation: ""
@@ -64,6 +67,50 @@ EaElements.Dialog {
                     regularExpression: /^[a-zA-Z][a-zA-Z0-9_\-\.]{1,30}$/
                 }
                 placeholderText: qsTr("Enter project name here")
+
+                Keys.onReturnPressed: dialog.accept()
+                Keys.onEnterPressed: dialog.accept()
+            }
+        }
+
+        // Project title field
+
+        Column {
+            EaElements.Label {
+                enabled: false
+                text: qsTr("Title")
+            }
+
+            EaElements.TextField {
+                id: projectTitleField
+
+                objectName: "createProject.title"
+
+                implicitWidth: dialog.inputFieldWidth
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: qsTr("Enter project title here")
+
+                Keys.onReturnPressed: dialog.accept()
+                Keys.onEnterPressed: dialog.accept()
+            }
+        }
+
+        // Project authors field
+
+        Column {
+            EaElements.Label {
+                enabled: false
+                text: qsTr("Authors")
+            }
+
+            EaElements.TextField {
+                id: projectAuthorsField
+
+                objectName: "createProject.authors"
+
+                implicitWidth: dialog.inputFieldWidth
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: qsTr("Enter authors here, separated by ;")
 
                 Keys.onReturnPressed: dialog.accept()
                 Keys.onEnterPressed: dialog.accept()

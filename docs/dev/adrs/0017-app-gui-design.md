@@ -267,12 +267,15 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`:
+`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Default, Colour-blind safe,
+Tableau, Paul Tol or Vivid), read from the palettes in `data/palettes` (PROVENANCE.md there) through the core's
+`pattern_colour` and `structure_colour`, which the charts' style table and the report read too. Each colour has at
+least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); a report always takes the light ones:
 
-| Block | Icon | Colour by its place in the project's list (light / dark theme) |
+| Block | Icon | Colour by its place in the project's list (light / dark theme), Default scheme |
 |---|---|---|
-| structure | `layer-group` | the base's `models`: orange `#FF9800` / `#FFCC80`, teal `#009688` / `#80CBC4`, pink `#E91E63` / `#F48FB1`, then round again |
-| experiment | `microscope` | light blue `#03A9F4` / `#81D4FA` (easydiffractionbeta's measured-data colour, `chartForegroundsExtra[2]`), then brown `#795548` / `#BCAAA4` (`[3]`), green `#4CAF50` / `#A5D6A7` (`[1]`), then round again |
+| structure | `layer-group` | orange `#D78000` / `#FF9800`, teal `#009688` / `#1BA092`, pink `#E91E63` / `#FF4979`, then round again |
+| experiment | `microscope` | light blue `#039DE4` / `#03A9F4` (easydiffractionbeta's measured-data colour), then brown `#795548` / `#AE8678`, green `#45A84A` / `#4CAF50` and five more; past the set's eight, viridis along the order, trimmed to the part that keeps 3:1 |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -352,22 +355,35 @@ icons: its inline glyphs sit on the font baseline and could not follow this rule
 so the slider and its two limit boxes always show a parameter: the first shown row when a project opens, when
 the current experiment changes, and when the name filter or the variability filter hides the selected row; a
 row the user selected stays selected while it is shown (`ParametersGroup.ensureSelection`, over
-`ParameterFilterModel.parameterAt` / `shows`). The selected row is highlighted (`tableHighlight`), as the block
-tables' current row. This replaces empty start: the demo's `13-analysis-basic` now shows the first row selected
-with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
+`ParameterFilterModel.parameterAt` / `shows`). The selected row is the table's current row, marked as the block
+tables' current row is (below). This replaces empty start: the demo's `13-analysis-basic` now shows the first row
+selected with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
 The slider spans the selected value ± a half width, set when a row is selected or its value is committed (not while
 dragging; `ParameterItem::sliderHalfWidth`): 0.05 Å for a lattice constant (`length_a`, `length_b`, `length_c`; the
 owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise.
 
+**A table's current row is marked by an accent bar at its left edge** (the owner, 2026-10-12), not by a background
+tint: the Experiments and Structures tables' current block and the parameter table's selected row. Every row keeps
+its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
+logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
+the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. The tables share the row
+(`Components/TableRow.qml`) and `DataTable.currentRow`, which draws the bar; `tableHighlight` is no longer used.
+
 ### 12. Preferences, and the sidebar's side
 
 - **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
-  pieces as the About dialog is, with the base's five tabs and layout: Prompts, Updates, Appearance,
-  Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  pieces as the About dialog is, with the base's tabs and layout and one of edi's own: Prompts, Updates,
+  Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting
-  row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
+- **Appearance**: Theme; **Colour scheme — Default, Colour-blind safe, Tableau, Paul Tol or Vivid** (the
+  experiments' and structures' colours, §8, in every chart, icon and report the app draws); **Sidebar — Left or Right** (the owner,
+  2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of
+  chart library.
+- **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
+  always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
+  default, or embedded; a project's own is the Report page's Embed box).
 - **Updates and Experimental**: shown disabled (§4).
 - **Develop — Engine threads** (the owner, 2026-10-10): "Auto", the engine's own thread policy,
   or a count from 1 to twice the cores the platform reports (at least 16, at most 64; a browser can report fewer
@@ -532,8 +548,9 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
   toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
   legend, hover coordinates, a spacer, pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
   y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
-  (the owner, 2026-10-02), and right of it the x axis, 2θ, time-of-flight or d-spacing, showing the experiment's own axis; it is disabled until the
-  axis can be switched (owner, 2026-10-05). Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
+  (the owner, 2026-10-02), and right of it the x axis, the experiment's own (2θ or time-of-flight) or d-spacing
+  (owner, 2026-10-05). On d the chart draws the core's d-spacing capture of the pattern, which needs a calculated
+  one; each chart keeps its own choice, and switching starts the view over. Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
   *x: d*; its list keeps the plain choices (`ToolbarComboBox.closedTexts`). The controls are `AppSizes.toolbarControlSize` tall and
   `AppSizes.toolbarSpacing` apart within a group.
 - **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
@@ -584,11 +601,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place | `#03A9F4` / `#81D4FA`, then `#795548` / `#BCAAA4`, then `#4CAF50` / `#A5D6A7` | 2 px line, 5 px markers, 1 px bars |
+| Measured, by the experiment's place (Default scheme) | `#039DE4` / `#03A9F4`, then `#795548` / `#AE8678`, then `#45A84A` / `#4CAF50` | 2 px line, 5 px markers, 1 px bars |
 | Calculated | `#F44336` / `#EF9A9A` | 2 px line |
 | Background | `#607D8B` / `#B0BEC5` | 1 px line |
 | Residual | `#8BC34A` / `#C5E1A5` | 1 px line (the owner, 2026-10-02) |
-| Bragg ticks, by the structure's place | `#FF9800` / `#FFCC80`, then `#009688` / `#80CBC4`, then `#E91E63` / `#F48FB1` | 1 px ticks (the owner, 2026-10-02) |
+| Bragg ticks, by the structure's place (Default scheme) | `#D78000` / `#FF9800`, then `#009688` / `#1BA092`, then `#E91E63` / `#FF4979` | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.
@@ -650,7 +667,9 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   clear for the toolbar and the legend (the toolbar's height with its margins). So a label and its atom agree in
   both projections. The home view — the initial one, the reset and the views along a, b and c — shows the
   structure at **`kHomeZoom` = 0.9** of that fitted size, a bit smaller with more margin (the owner, 2026-10-02);
-  the orientation rule and the fit are diffraction-lib's, unchanged. The lights are diffraction-lib's (the owner, 2026-10-02): an ambient term and two headlights
+  the zoom is the core's `default_view` magnification, so the report draws the same view, and the fit holds the axis
+  arrows and their letters too, leaving an even margin on every side (the owner, 2026-10-13); the orientation rule is
+  diffraction-lib's, unchanged. The lights are diffraction-lib's (the owner, 2026-10-02): an ambient term and two headlights
   that follow the camera, a key shining from the camera-local direction (right, up, towards the camera) (0.3, 0.45,
   0.85) and a fill from (−0.4, −0.2, −0.45); the material is Phong-like, specular 0.2 with shininess 90, the same in
   both themes. The scene is lit in linear light and written out as sRGB (linear tone mapping), as three.js renders
@@ -894,8 +913,10 @@ refuses to write its bank rows into it.
 - **The Evolution tab** (Analysis, after Correlations; text only like every tab, §2) draws one fitted parameter across
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
-  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, chooses among the
-  parameters `analysis/results.csv` records. x is the first extract rule's
+  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, lists every free
+  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, the
+  chart has no axes and shows "No fitted results yet" as the other empty views show theirs; the points appear as the
+  datasets are fitted. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
   dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06). The pointer zooms as on the
@@ -926,6 +947,26 @@ refuses to write its bank rows into it.
   failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the
   run's own when it failed or was stopped, else Stopped while files are left, else the worst file's (Max iterations,
   No step, Success). The time is recorded in `analysis/scan-run.json`; results no run of the app wrote show none.
+
+### 20. The Correlations tab's toolbar
+
+The Correlations tab (`Components/CorrelationChart.qml`, data in ADR-0034) draws diffraction-lib's lower triangle by
+default. Its toolbar holds the correlation level and the parameter count, then two toggle buttons drawn as the pattern
+chart's (the owner, 2026-10-12): **names** shows the parameter names along both axes and the colour bar, both hidden at
+the start, since the cell's tool tip names both parameters and the matrix then takes the space; **full matrix** mirrors
+the lower triangle above the diagonal, off at the start. The diagonal stays blank in both. Like the boxes, both buttons
+are disabled while the shown experiment has no correlations, and the space below the matrix equals the space between
+the toolbar and the matrix (the owner, 2026-10-13).
+
+### 21. Standard uncertainties follow the project's rule
+
+A value with a standard uncertainty is shown as the project writes it: its uncertainty rounded up to one digit, or two
+from 10 to 19 (`iucr_19`, the default), or always two (`iucr_99`), and the value rounded to the same digit. The value
+and s.u. cells, and the report, take both texts from one core function (`edi::su_text`, over crysta's), so the screen,
+the Text tab and the files agree. A value the cells write in scientific notation (at or above a million, or below 1e-4;
+the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard
+uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Projects) only sets it for new
+projects (the owner, 2026-10-13).
 
 ## Consequences
 

@@ -118,9 +118,10 @@ EaElements.GroupBox {
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
-                            // PT Sans lacks several subscript digits; one bundled face keeps formula weights uniform.
+                            // PT Sans lacks several subscript digits; one bundled face keeps formula weights uniform. Regular
+                            // weight: only Noto Sans Regular is bundled, and a synthesised bold showed in the browser and on
+                            // Linux where macOS draws the regular face (the owner, 2026-10-13).
                             font.family: "Noto Sans"
-                            font.bold: true
                             text: row.sample + " · " + row.origin
                         }
                         Item {

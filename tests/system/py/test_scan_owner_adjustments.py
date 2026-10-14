@@ -230,22 +230,19 @@ def test_previous_and_next_repeat_the_effective_selection_step():
 
 def shortened_names(text):
     shown = property_value(text, 'shown')
-    limit = property_value(text, 'limit')
+    # Before: a comma-separated bounded run. The owner's new contract is one
+    # line per item, with exactly first five / ellipsis / last five above eleven.
+    counts = (0, 3, 11, 12, 162, 100000)
     rows = evaluate(
-        '[0,3,15,16,162,100000].map(count=>{return (function()' + shown + ')();})',
-        'const limit=' + limit + ';',
+        str(list(counts)) + '.map(count=>{return (function()' + shown + ')();})',
+        '',
     )
-    assert rows[0] == [] and rows[1] == [0, 1, 2], (
-        'Project names: every name in a short list remains displayed in order'
-    )
-    for count, indices in zip((15, 16, 162, 100000), rows[2:], strict=True):
-        assert 10 <= len(indices) <= 20 and indices[0] == 0 and indices[-1] == count - 1, (
-            'Project names: a long list displays bounded first and last names'
+    for count, indices in zip(counts, rows, strict=True):
+        expected = list(range(count)) if count <= 11 else [*range(5), -1, *range(count - 5, count)]
+        assert indices == expected, (
+            'Project names show every short-list item and exactly first five, '
+            'ellipsis, last five above eleven'
         )
-        if count > 20:
-            assert indices.count(-1) == 1, (
-                'Project names: the omitted middle has one ellipsis entry'
-            )
     repeat = block(text, 'Repeater {')
     assert property_value(repeat, 'model') == 'names.shown', (
         'Project names: the actual displayed list consumes the shortened selection'
@@ -255,7 +252,7 @@ def shortened_names(text):
         delegate.split('segments:', 1)[1].rstrip()[:-1].strip(),
         'const entry={modelData:-1};',
     )
-    assert segments == [{'text': '…,'}], (
+    assert segments == [{'text': '…'}], (
         'Project names: the displayed omitted middle reads as an ellipsis'
     )
 

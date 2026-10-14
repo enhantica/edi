@@ -2,9 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-11
-- **Implementation:** ⬜ Not implemented — decided now, built in a later release. Today the settings are in
-  `settings.ini` in the platform's application configuration folder (local storage in the browser), and "Pattern
-  updates during a scan" is under Analysis, Extras
+- **Implementation:** 🟡 Partially implemented — the desktop store and its one-time carry-over, the Settings tab on
+  every page (the Analysis and Experiment charts' options and "Pattern updates during a scan"), the shown path with
+  Open folder and Reset, the window's geometry, the recent and last projects and each project's selection; the
+  browser keeps local storage until its measurement (4)
 - **Priority:** Medium
 - **Forward constraint (binding on new features):** a setting about how the app looks or behaves on this machine goes
   in the app-settings store, never in a project's `.edi` files; a setting that changes what a project calculates or
@@ -36,13 +37,16 @@ to know where Qt puts it.
    - for each project, the structure and the experiment last selected in it, keyed by the project's path.
 
    A project opened on another machine, or by someone else, opens with that machine's settings, and changing a
-   setting never marks a project modified.
+   setting never marks a project modified. The report's settings are project data, not app settings (ADR-0036 §7):
+   the Analysis page's correlation level and its chart's x axis are `analysis/analysis.edi` items, the Report page's
+   Contents and Embed choices `reports/report.edi` items; only the Embed default for new projects is a preference.
 2. **A Settings tab on each page.** Each workflow page's sidebar gains a Settings tab beside Main, Extras and Text. It
    holds that page's options that only change what the app shows or how it behaves, in groups, as Main and Extras hold
    project data. They are kept in the app-settings store under the page's name and apply to that page, unlike the app
    bar's settings, which apply to the whole app. The Analysis page's Settings tab is the first: "Pattern updates during
-   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins
-   it, so the chosen scale is kept.
+   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins it,
+   so the chosen scale is kept. A page with no such options has its Settings tab disabled, as an empty Extras tab is
+   (the owner, 2026-10-14).
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
    after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
    `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the
@@ -57,6 +61,13 @@ to know where Qt puts it.
    a confirmation. In the web app the path reads "stored in this browser" and there is no "Open folder".
 6. A demo capture or a test run keeps its own fresh settings folder (as now), so it never reads or writes the user's
    settings.
+7. **The groups.** The store's groups are named for what holds them: `Appearance` (the colour scheme), `Projects`
+   (the defaults for new projects, `recent` and `last`), `Window` (`x`, `y`, `width`, `height` in logical pixels; a
+   position on no screen is moved onto the primary screen), one group per page (`Analysis`: `yScale`,
+   `scanPatternUpdates`; `Experiment`: `yScale`, `xAxis`) and `Selections` (each project's structure, experiment and
+   scan dataset file, keyed by the project's folder). Today's `settings.ini` is carried over once: a key the store
+   holds is never overwritten, the keys that moved go to their groups, and a marker keeps a later start from carrying
+   anything again.
 
 ## Consequences
 

@@ -20,6 +20,10 @@ Item {
     readonly property real fillWidth: indeterminate ? width : width * Math.max(0, Math.min(1, fraction))
     readonly property color accent: EaStyle.Colors.themeAccent
     readonly property color stripe: Qt.tint(EaStyle.Colors.themeAccent, Qt.rgba(1, 1, 1, 0.38))
+    // The text's baseline, so that its digits sit in the bar's middle: the font's line box, with its taller ascent,
+    // would set them high (the owner, 2026-10-13).
+    readonly property real digitHeight: -metrics.tightBoundingRect("0").y
+    readonly property real textBaseline: Math.round((height + digitHeight) / 2)
 
     implicitHeight: Math.round(EaStyle.Sizes.fontPixelSize * 1.3)
 
@@ -90,8 +94,14 @@ Item {
         }
     }
 
+    FontMetrics {
+        id: metrics
+        font.family: bar.fontFamily
+        font.pixelSize: bar.pixelSize
+    }
     Text {
-        anchors.centerIn: parent
+        x: Math.round((bar.width - width) / 2)
+        y: bar.textBaseline - baselineOffset
         font.family: bar.fontFamily
         font.pixelSize: bar.pixelSize
         color: EaStyle.Colors.themeForeground
@@ -103,8 +113,8 @@ Item {
         clip: true
 
         Text {
-            x: (bar.width - width) / 2
-            anchors.verticalCenter: parent.verticalCenter
+            x: Math.round((bar.width - width) / 2)
+            y: bar.textBaseline - baselineOffset
             font.family: bar.fontFamily
             font.pixelSize: bar.pixelSize
             color: EaStyle.Colors.mainContentBackground

@@ -15,25 +15,59 @@ import edi.app
 // the selector beside that box; the page's selector row above lists the datasets, as on the Pattern tab. A click on
 // a point shows that dataset, here and on the Pattern tab; a line marks the shown one. The pointer zooms as on the
 // pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
-// resets.
+// resets. Before any dataset is fitted the selector already lists every free parameter, and the chart has no axes,
+// only its empty state. The Report page gives it one of the report model's series instead of a project (edi ADR-0036):
+// it then draws that parameter, titled with its name and units, as the HTML report does, and no dataset is shown.
 Item {
     id: chart
 
     objectName: "evolution"
 
     property ProjectViewModel project: null
-    readonly property EvolutionViewModel evolution: project ? project.evolution : null
+    // One series of the report model's `evolution`: a parameter's name, units, x title and points ({x, y, su, text}).
+    property var reportSeries: null
+    readonly property bool fromReport: reportSeries !== null
+    readonly property var reportPoints: fromReport ? reportSeries.points : []
+    // The report model's pattern styles: a report's points take its measured row (`meas.0`), as the HTML report draws
+    // them, never the app's colour scheme or project.
+    property var reportStyles: []
+    readonly property var reportMeasured: (reportStyles ?? []).find(style => style.key === "meas.0") ?? null
+    // The theme's colours, or the light ones a PDF's copy is drawn in.
+    property FigureColors colors: FigureColors {}
+    readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
     // The tab is the one the window shows; the points are drawn once it is.
     property bool shown: true
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's.
-    readonly property real sideMargin: AppSizes.mainAreaMargin
+    readonly property real sideMargin: fromReport ? em : AppSizes.mainAreaMargin
+    // About one tick per six ems across the chart and two up its plot (the chart less its toolbar row, its x labels and
+    // its x title), at most the tab's eight and six, so a report's small chart keeps its labels apart.
+    readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
+    readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
     readonly property real toolbarRightInset: sideMargin
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
     property list<real> zoom: []
+    // Some dataset has its results: the axes, the titles and the points are drawn.
+    readonly property bool fitted: fromReport ? reportPoints.length > 0 : evolution !== null && evolution.fitted
+    // A report's ranges, with the margins the view model gives the tab's: [xMin, xMax, yMin, yMax].
+    readonly property var reportRange: {
+        if (reportPoints.length === 0)
+            return [0, 1, 0, 1];
+        let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+        for (const point of reportPoints) {
+            const su = typeof point.su === "number" && isFinite(point.su) ? point.su : 0;
+            xMin = Math.min(xMin, point.x);
+            xMax = Math.max(xMax, point.x);
+            yMin = Math.min(yMin, point.y - su);
+            yMax = Math.max(yMax, point.y + su);
+        }
+        const xPad = Math.max((xMax - xMin) * 0.06, 0.5);
+        const yPad = Math.max((yMax - yMin) * 0.16, Math.abs(yMax) * 1e-6 + 1e-12);
+        return [xMin - xPad, xMax + xPad, yMin - yPad, yMax + yPad];
+    }
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
@@ -47,7 +81,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: EaStyle.Colors.chartBackground
+        color: chart.colors.chartBackground
     }
 
     // x: the extracted value or the file index; the closed box names its axis, as the pattern chart's do.
@@ -57,6 +91,7 @@ Item {
         objectName: "evolution.toolbar.x"
         x: chart.sideMargin
         y: chart.em
+        visible: !chart.fromReport
         enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
         toolTip: qsTr("X axis")
         model: chart.evolution ? chart.evolution.xModes : []
@@ -68,10 +103,11 @@ Item {
     // The parameter drawn, one of those results.csv records, with the previous and next buttons.
     BlockSelector {
         objectName: "evolution.parameters"
+        visible: !chart.fromReport
         x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
         y: xBox.y + (xBox.height - height) / 2
         width: Math.max(0, chart.width - x - chart.toolbarRightInset)
-        backgroundColor: EaStyle.Colors.chartBackground
+        backgroundColor: chart.colors.chartBackground
         blocks: chart.evolution ? chart.evolution.parameters : null
         blocksTextRole: "label"
         blockKind: "parameter"
@@ -79,10 +115,23 @@ Item {
         onBlockActivated: index => chart.evolution.currentParameter = index
     }
 
+    // A report's chart is titled with its parameter's name and units, where the tab has its selectors.
+    EaElements.Label {
+        objectName: chart.fromReport ? "report.evolution.title" : ""
+        x: chart.sideMargin
+        y: xBox.y + (xBox.height - height) / 2
+        width: chart.width - 2 * chart.sideMargin
+        visible: chart.fromReport
+        elide: Text.ElideRight
+        color: chart.colors.chartLabels
+        text: chart.fromReport ? chart.reportSeries.name + (chart.reportSeries.units ? ` (${chart.reportSeries.units})` : "") : ""
+    }
+
     GraphsView {
         id: view
 
         objectName: "evolution.view"
+        visible: chart.fitted
         y: xBox.y + xBox.height + chart.sideMargin
         width: parent.width
         height: parent.height - y - chart.xTitleHeight - chart.em
@@ -94,7 +143,7 @@ Item {
             colorScheme: GraphsTheme.ColorScheme.Light
             backgroundVisible: false
             plotAreaBackgroundVisible: false
-            labelTextColor: EaStyle.Colors.chartLabels
+            labelTextColor: chart.colors.chartLabels
             labelFont.family: EaStyle.Fonts.fontFamily
             labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
             axisX.mainColor: "transparent"
@@ -106,9 +155,9 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
-            min: chart.evolution ? chart.evolution.xMin : 0
-            max: chart.evolution ? chart.evolution.xMax : 1
-            tickInterval: chart.niceStep(max - min, 8)
+            min: chart.fromReport ? chart.reportRange[0] : chart.evolution ? chart.evolution.xMin : 0
+            max: chart.fromReport ? chart.reportRange[1] : chart.evolution ? chart.evolution.xMax : 1
+            tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
             lineVisible: false
             gridVisible: false
@@ -116,9 +165,9 @@ Item {
         }
         axisY: ValueAxis {
             id: axisY
-            min: chart.evolution ? chart.evolution.yMin : 0
-            max: chart.evolution ? chart.evolution.yMax : 1
-            tickInterval: chart.niceStep(max - min, 6)
+            min: chart.fromReport ? chart.reportRange[2] : chart.evolution ? chart.evolution.yMin : 0
+            max: chart.fromReport ? chart.reportRange[3] : chart.evolution ? chart.evolution.yMax : 1
+            tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
             gridVisible: false
@@ -134,6 +183,7 @@ Item {
     Item {
         id: plot
 
+        visible: chart.fitted
         x: view.x + view.plotArea.x
         y: view.y + view.plotArea.y
         width: view.plotArea.width
@@ -161,7 +211,7 @@ Item {
                 x: Math.round(modelData * plot.width)
                 width: 1
                 height: plot.height
-                color: EaStyle.Colors.chartGridLine
+                color: chart.colors.chartGridLine
             }
         }
         Repeater {
@@ -171,7 +221,7 @@ Item {
                 y: Math.round((1 - modelData) * plot.height)
                 width: plot.width
                 height: 1
-                color: EaStyle.Colors.chartGridLine
+                color: chart.colors.chartGridLine
             }
         }
         // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does.
@@ -190,7 +240,7 @@ Item {
 
             objectName: "evolution.points"
             anchors.fill: parent
-            color: AppColors.experiment(0)
+            color: !chart.fromReport ? AppColors.experiment(0, chart.colors.isDarkPalette) : chart.reportMeasured ? (chart.colors.isDarkPalette ? chart.reportMeasured.dark : chart.reportMeasured.light) : chart.colors.themeForeground
             markerSize: 6
             xMin: axisX.min
             xMax: axisX.max
@@ -200,7 +250,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             color: "transparent"
-            border.color: EaStyle.Colors.chartAxis
+            border.color: chart.colors.chartAxis
             border.width: 1
         }
         // A left click shows the dataset of the nearest point within a few pixels. A drag zooms to its box (refused
@@ -253,6 +303,8 @@ Item {
                 }
             }
             onClicked: mouse => {
+                if (chart.evolution === null)
+                    return;
                 const reach = chart.em * 0.6;
                 const dataset = chart.evolution.datasetAt(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
                 if (dataset >= 0)
@@ -337,6 +389,19 @@ Item {
             chart.zoom = [];
         }
     }
+    // A report's points go to the layer whenever its series changes, each with its s.u. bar (none without a finite
+    // s.u.).
+    function drawReportPoints() {
+        layer.setPoints(reportPoints.map(point => point.x), reportPoints.map(point => point.y), reportPoints.map(point => typeof point.su === "number" ? point.su : NaN));
+    }
+    onReportPointsChanged: {
+        if (fromReport)
+            drawReportPoints();
+    }
+    Component.onCompleted: {
+        if (fromReport)
+            drawReportPoints();
+    }
 
     // The layer is the model's to fill while the tab is shown.
     Binding {
@@ -348,8 +413,9 @@ Item {
 
     EaElements.Label {
         objectName: "evolution.title.y"
+        visible: chart.fitted
         rotation: -90
-        color: EaStyle.Colors.chartLabels
+        color: chart.colors.chartLabels
         // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
         x: (chart.sideMargin - width) / 2
         y: plot.y + (plot.height - height) / 2
@@ -357,10 +423,11 @@ Item {
     }
     EaElements.Label {
         objectName: "evolution.title.x"
+        visible: chart.fitted
         x: plot.x + (plot.width - width) / 2
         y: chart.height - chart.em - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
-        color: EaStyle.Colors.chartLabels
-        text: chart.evolution ? chart.evolution.xTitle : ""
+        color: chart.colors.chartLabels
+        text: chart.fromReport ? chart.reportSeries.x_title : chart.evolution ? chart.evolution.xTitle : ""
     }
     // Results the template has changed since stay drawn, marked out of date until the next run.
     EaElements.Label {
@@ -374,8 +441,15 @@ Item {
     }
     EaElements.Label {
         anchors.centerIn: plot
-        visible: chart.evolution !== null && chart.evolution.count === 0
+        visible: chart.fitted && chart.evolution !== null && chart.evolution.count === 0
         color: EaStyle.Colors.themeForegroundMinor
         text: qsTr("No fitted values yet: the scan's results appear here as the datasets are fitted")
+    }
+    EmptyStateLabel {
+        objectName: "evolution.empty"
+        anchors.centerIn: parent
+        visible: (chart.fromReport || chart.evolution !== null) && !chart.fitted
+        width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
+        text: qsTr("No fitted results yet")
     }
 }

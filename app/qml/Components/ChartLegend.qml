@@ -15,6 +15,8 @@ Rectangle {
 
     // The rows: the chart controller's legend model, with the roles `label`, `color`, `mark`, `markWidth` and `bragg`.
     property ChartLegendModel entries: null
+    // The theme colours of the chart it belongs to.
+    property FigureColors colors: FigureColors {}
     // The name in the series' colour too, as a chart's legend shows it; the structure view's legend colours only
     // the mark, as a pale element colour (Ce, S) cannot be read on the view's background.
     property bool labelInColor: true
@@ -37,8 +39,8 @@ Rectangle {
 
     width: column.width
     height: Math.max(column.height, minimumHeight)
-    color: EaStyle.Colors.mainContentBackgroundHalfTransparent
-    border.color: EaStyle.Colors.chartGridLine
+    color: legend.colors.mainContentBackgroundHalfTransparent
+    border.color: legend.colors.chartGridLine
     border.width: EaStyle.Sizes.borderThickness
 
     Column {
@@ -78,7 +80,7 @@ Rectangle {
                 ] : [legend.markPiece(mark, markWidth, color),
                     {
                         "text": label,
-                        "color": legend.labelInColor ? color : EaStyle.Colors.themeForeground
+                        "color": legend.labelInColor ? color : legend.colors.themeForeground
                     }
                 ]
             }

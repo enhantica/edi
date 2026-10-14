@@ -1,0 +1,43 @@
+_edi.schema_version 3
+_fitting_mode.type single
+_minimizer.max_iterations 80
+
+_fit_result.result_kind deterministic
+_fit_result.success true
+_fit_result.message done
+_fit_result.iterations 1
+_fit_result.fitting_time 0
+_fit_result.reduced_chi_square 1
+_fit_result.objective_name chi_square
+_fit_result.objective_value 5
+_fit_result.n_data_points 9
+_fit_result.n_parameters 6
+_fit_result.n_free_parameters 4
+_fit_result.degrees_of_freedom 5
+_fit_result.covariance_available true
+_fit_result.exit_reason done
+_fit_result.prof_wr_factor 0.1
+_fit_result.profile_function cwl-tch-pseudo-voigt
+_fit_result.background_function line-segment
+_fit_result.descent ladder
+loop_
+_fit_parameter.id
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+_fit_parameter.start_tied
+bank.background.A 4 . .
+bank.background.B 5 . .
+bank.background.C 6 . .
+bank.background.D 7 . .
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+1 deterministic bank.background.A.intensity bank.background.B.intensity 0.9
+2 deterministic bank.background.A.intensity bank.background.C.intensity 0.9
+3 deterministic bank.background.A.intensity bank.background.D.intensity 0.3
+4 deterministic bank.background.B.intensity bank.background.C.intensity 0.9
+5 deterministic bank.background.B.intensity bank.background.D.intensity 0.3
+6 deterministic bank.background.C.intensity bank.background.D.intensity 0.3

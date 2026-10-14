@@ -9,6 +9,7 @@ import pytest
 
 from tests.conftest import crysta_reference_prefix
 from tests.fixtures.correlations.rename_history import literal_source
+from tests.fixtures.report_units.iucr_reference import rounded_correlation
 from tests.integration.py.test_default_structure_rename import observe
 from tests.integration.py.test_parameter_correlations import correlations
 
@@ -139,9 +140,14 @@ def test_native_loaded_nonordinal_pair_ids_survive_unchanged_app_saves(
     assert [row['id'] for row in expected] == ['pair17', 'pair18', 'pair19'], (
         'The native-created witness reaches nonordinal current-format row identities'
     )
+    # Before exact loaded coefficient text; after the independent IUCr written form.
+    expected = [
+        {**row, 'correlation': rounded_correlation(row['correlation'])} for row in expected
+    ]
     for destination in ['core-copy', 'saved', 'saved-again', 'saved-third']:
         assert correlations(texts[destination]) == expected, (
-            'An unchanged native or app save preserves each loaded pair id and its scientific text'
+            'An unchanged native or app save retains loaded pair ids and independently '
+            'IUCr-rounded coefficients through every subsequent saved fixed point'
         )
 
 
