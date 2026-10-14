@@ -23,7 +23,9 @@ app.
 1. **Model and files.** `AtomSite.adp_type` holds the declared type, `Biso` when a file declares none, and
    `adp_iso` holds the value in that type. An anisotropic site has a row of the structure's `atom_site_aniso`
    collection, keyed by the site id, with `adp_11` … `adp_23` in its type. Rows exist exactly for the anisotropic
-   sites: a load refuses a row for any other site and an anisotropic site without one. A CIF site takes the type
+   sites: a load refuses a row for any other site and gives an anisotropic site without one the tensor of its
+   isotropic value, as a type change does (point 2), a component that is exactly 0 carrying no uncertainty. A CIF
+   site takes the type
    `_atom_site_adp_type` declares, its numbers converted to it; a site that declares none is `Biso`, a U value
    converted, unless a tensor row states its type. A declared type outside the five, an anisotropic type without a
    tensor row, an isotropic one with a row, a row naming no site, a tensor loop without its id column and a second

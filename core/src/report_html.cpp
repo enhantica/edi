@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-// The HTML report (edi ADR-0035): the text sections written here from the model, set after the owner's reference
+// The HTML report (edi ADR-0036): the text sections written here from the model, set after the owner's reference
 // report (diffraction-lib's, 2026-10-13), and report.js drawing the charts from the model's JSON in the same file.
 
 namespace edi::detail {

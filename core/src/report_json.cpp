@@ -9,7 +9,7 @@
 #include "edi/report_model.hpp"
 #include "json.hpp"
 
-// The report model's JSON (edi ADR-0035 §1): every field, in declaration order, so a model read from its JSON writes
+// The report model's JSON (edi ADR-0036 §1): every field, in declaration order, so a model read from its JSON writes
 // the same JSON again.
 
 namespace edi {

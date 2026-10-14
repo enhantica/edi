@@ -135,6 +135,7 @@ function click(testCase, probe, window, name) {
                        "I10/I19: viewports finish moving before locating the next real input");
     testCase.verify(testCase.waitForPolish(window, 2000),
                     "I10/I19: layout updates finish before locating real input");
+    window.update();
     testCase.verify(testCase.waitForRendering(window.contentItem),
                     "I10/I19: the settled layout renders before locating real input");
     testCase.tryVerify(() => {
@@ -150,6 +151,7 @@ function click(testCase, probe, window, name) {
             inputDelay = Math.max(inputDelay, parent.pressDelay + 1);
     const point = clickPoint(item);
     testCase.mouseClick(item, point.x, point.y, undefined, undefined, inputDelay);
+    window.update();
     testCase.verify(testCase.waitForRendering(window.contentItem),
                     "I10/I19: real input is followed by a rendered frame");
     if (name.includes(".tab."))

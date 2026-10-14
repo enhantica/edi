@@ -211,11 +211,15 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
     if public:
         # Parallel system parts and their push-only duration collector identify
         # the same area/platform, with a concrete part suffix on every test job.
-        required |= {
-            f'system · {platform} · {part}/3'
-            for platform in ('Linux', 'macOS')
-            for part in (1, 2, 3)
-        } | {f'system durations · {platform}' for platform in ('Linux', 'macOS')}
+        required |= (
+            {'system time'}
+            | {
+                f'system · {platform} · {part}/3'
+                for platform in ('Linux', 'macOS')
+                for part in (1, 2, 3)
+            }
+            | {f'system durations · {platform}' for platform in ('Linux', 'macOS')}
+        )
         pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())
         assert {job.get('name') for job in pages['jobs'].values()} == {
             'build the site',

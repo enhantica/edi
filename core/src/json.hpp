@@ -6,7 +6,7 @@
 #include <variant>
 #include <vector>
 
-// The report model's JSON (edi ADR-0035): a small value type, a writer and a strict reader (RFC 8259).
+// The report model's JSON (edi ADR-0036): a small value type, a writer and a strict reader (RFC 8259).
 // Doubles are written in their shortest round-trip form and read correctly rounded, so a model reads
 // back unchanged; a non-finite double is written as null. The writer escapes <, >, & and U+2028/U+2029
 // as \uXXXX, so its output can sit inside an HTML <script> element as it is.

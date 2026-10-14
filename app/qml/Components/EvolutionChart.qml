@@ -16,7 +16,7 @@ import edi.app
 // a point shows that dataset, here and on the Pattern tab; a line marks the shown one. The pointer zooms as on the
 // pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
 // resets. Before any dataset is fitted the selector already lists every free parameter, and the chart has no axes,
-// only its empty state. The Report page gives it one of the report model's series instead of a project (edi ADR-0035):
+// only its empty state. The Report page gives it one of the report model's series instead of a project (edi ADR-0036):
 // it then draws that parameter, titled with its name and units, as the HTML report does, and no dataset is shown.
 Item {
     id: chart

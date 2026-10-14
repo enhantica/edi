@@ -1633,6 +1633,34 @@
           ]
         },
         {
+          "member": "FitResultRecord::prof_r_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_r_factor"
+          ]
+        },
+        {
+          "member": "FitResultRecord::prof_wr_expected",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_wr_expected"
+          ]
+        },
+        {
+          "member": "FitResultRecord::prof_cr_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_cr_factor"
+          ]
+        },
+        {
+          "member": "FitResultRecord::prof_cwr_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_cwr_factor"
+          ]
+        },
+        {
           "member": "FitResultRecord::profile_function",
           "type": "std::string",
           "items": [
@@ -1668,10 +1696,38 @@
           ]
         },
         {
+          "member": "ExperimentBase::fit_prof_r_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_r_factor"
+          ]
+        },
+        {
           "member": "ExperimentBase::fit_prof_wr_factor",
           "type": "std::optional<double>",
           "items": [
             "prof_wr_factor"
+          ]
+        },
+        {
+          "member": "ExperimentBase::fit_prof_wr_expected",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_wr_expected"
+          ]
+        },
+        {
+          "member": "ExperimentBase::fit_prof_cr_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_cr_factor"
+          ]
+        },
+        {
+          "member": "ExperimentBase::fit_prof_cwr_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "prof_cwr_factor"
           ]
         },
         {
@@ -1683,6 +1739,27 @@
         }
       ],
       "owner": "ExperimentBase"
+    },
+    {
+      "name": "_fit_result_phase",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "LinkedStructure::fit_bragg_r_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "bragg_r_factor"
+          ]
+        },
+        {
+          "member": "LinkedStructure::fit_f_r_factor",
+          "type": "std::optional<double>",
+          "items": [
+            "f_r_factor"
+          ]
+        }
+      ],
+      "owner": "LinkedStructure"
     },
     {
       "name": "_sequential_fit",
@@ -3397,6 +3474,16 @@
       "category": "_linked_structure"
     },
     {
+      "member": "LinkedStructure::fit_bragg_r_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result_phase"
+    },
+    {
+      "member": "LinkedStructure::fit_f_r_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result_phase"
+    },
+    {
       "member": "LinkedStructure::row",
       "type": "detail::RowLink",
       "part": "the row's link to its collection"
@@ -3405,6 +3492,11 @@
       "member": "LinkedStructure::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "LinkedStructure::table_row",
+      "type": "detail::CategoryRow",
+      "part": "the row token of the object's non-loop categories"
     },
     {
       "member": "AbsorptionBase::abscor1",
@@ -3754,7 +3846,27 @@
       "category": "_fit_result_bank"
     },
     {
+      "member": "ExperimentBase::fit_prof_r_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result_bank"
+    },
+    {
       "member": "ExperimentBase::fit_prof_wr_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result_bank"
+    },
+    {
+      "member": "ExperimentBase::fit_prof_wr_expected",
+      "type": "std::optional<double>",
+      "category": "_fit_result_bank"
+    },
+    {
+      "member": "ExperimentBase::fit_prof_cr_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result_bank"
+    },
+    {
+      "member": "ExperimentBase::fit_prof_cwr_factor",
       "type": "std::optional<double>",
       "category": "_fit_result_bank"
     },
@@ -4298,6 +4410,26 @@
       "category": "_fit_result"
     },
     {
+      "member": "FitResultRecord::prof_r_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::prof_wr_expected",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::prof_cr_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::prof_cwr_factor",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
       "member": "FitResultRecord::profile_function",
       "type": "std::string",
       "category": "_fit_result"
@@ -4577,6 +4709,9 @@
     ],
     "_fit_result_bank": [
       "_fit_result_bank"
+    ],
+    "_fit_result_phase": [
+      "_fit_result_phase"
     ],
     "_fitting_mode": [
       "_fitting_mode"

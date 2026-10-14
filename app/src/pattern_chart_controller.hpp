@@ -33,7 +33,7 @@ class PatternChartController : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(edi_app::ExperimentViewModel* experiment READ experiment WRITE setExperiment NOTIFY experimentChanged)
-    // The report's input (edi ADR-0035): with `report` set the chart draws the report model's presentation of
+    // The report's input (edi ADR-0036): with `report` set the chart draws the report model's presentation of
     // `reportExperiment` as it is, instead of presenting an experiment. It has no view to change, so the zoom, the
     // pan and the hover read-out do nothing.
     Q_PROPERTY(edi_app::ReportViewModel* report READ report WRITE setReport NOTIFY reportChanged)

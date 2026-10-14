@@ -8,7 +8,7 @@
 
 #include "edi/report_model.hpp"
 
-// The HTML report (edi ADR-0035): one file written from a report model, never from a project. The text sections are
+// The HTML report (edi ADR-0036): one file written from a report model, never from a project. The text sections are
 // HTML; the model's JSON sits in the file once, and report.js (embedded in the core) draws its charts and structure
 // views with plotly.js and three.js, loaded from their pinned web addresses or inlined from edi's vendored copies.
 
@@ -45,7 +45,7 @@ std::string report_static_html(const ReportModel& model, double figure_width);
 /// FNV-1a 64-bit of `bytes`, as 16 lower-case hex digits (the algorithm the FNV authors publish).
 std::string fnv1a64(std::string_view bytes);
 
-/// The digest a saved report's `_report_file` row records (ADR-0035 §7): FNV-1a 64 over what the format's writer writes
+/// The digest a saved report's `_report_file` row records (ADR-0036 §7): FNV-1a 64 over what the format's writer writes
 /// for `model` with its time left out, so it is equal exactly when that writer would write the same now, the time
 /// aside. For "html" the file's text, with `libraries` in it (all empty: loaded online); for "pdf" the model's JSON
 /// and the static text the PDF lays out, as its figures are drawn from the model. Empty for a format with no writer

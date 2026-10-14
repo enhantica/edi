@@ -138,7 +138,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Start fitting, its progress and its result.
     Q_PROPERTY(edi_app::FitViewModel* fit READ fit CONSTANT)
     Q_PROPERTY(edi_app::BlockText* metadataText READ metadataText CONSTANT)
-    // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0035 §7).
+    // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
     Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
     Q_PROPERTY(edi_app::ReportViewModel* report READ report CONSTANT)
@@ -186,14 +186,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setAuthors(const QString& authors);
     QString suRule() const;
     void setSuRule(const QString& rule);
-    // The report's settings (ADR-0035 §7), each an undoable edit: in `reports/report.edi` the groups the report
+    // The report's settings (ADR-0036 §7), each an undoable edit: in `reports/report.edi` the groups the report
     // leaves out (their keys separated by spaces) and whether a saved report embeds its libraries; in
     // `analysis/analysis.edi` the correlation threshold the Analysis page's level sets and the x axis.
     void setReportExcluded(const QString& keys);
     void setReportHtmlOffline(bool embedded);
     // Whether Save report writes `format` ("html", "pdf" or "cif"): `reports/report.edi`'s `_report.<format>`.
     void setReportFormat(const QString& format, bool on);
-    // Save report's record (ADR-0035 §7): the rows of the reports it wrote, each replacing the row of the same name,
+    // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
     // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
     // Throws when the file cannot be written.
     void recordReportFiles(std::vector<edi::ReportFile> rows);
@@ -342,7 +342,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
-    // A report setting's edit (ADR-0035 §7): the settings as they were kept for Undo.
+    // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
     QString apply_report_setting(const edi::Edit& change);
     // Writes report settings through the preview's settings door and publishes what they change.
     QString write_report_settings(const edi::Edit& change);

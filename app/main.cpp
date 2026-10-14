@@ -16,6 +16,7 @@
 #include "demo_driver.hpp"
 #include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
+#include "test_observer.hpp"
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
@@ -23,15 +24,25 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 // view-models. No product logic here. One host, two build targets — desktop and WASM — from this one
 // source tree (ADR-0006).
 int main(int argc, char* argv[]) {
+    if (const auto code = edi_app::refuse_test_observer(argc, argv)) {
+        return *code;  // before the platform checks, so the refusal names the observer request
+    }
     edi_app::select_freetype_engine(argc, argv);  // before the QGuiApplication reads the platform
     QGuiApplication app(argc, argv);
     QGuiApplication::setOrganizationName(QStringLiteral("EasyScience"));
     QGuiApplication::setApplicationName(QStringLiteral("EasyDiffraction"));
     edi_app::use_design_font();
     edi_app::require_freetype_engine();
+    const QStringList arguments = QGuiApplication::arguments();
+    // `--test-observer <action> ...`: a system test's observation of this app (test_observer.hpp).
+    const qsizetype observer_flag = arguments.indexOf(QStringLiteral("--test-observer"));
+    if (observer_flag >= 0) {
+        if (const auto code = edi_app::start_test_observer(arguments.mid(observer_flag + 1))) {
+            return *code;
+        }
+    }
     // `--demo <dir>`: the scripted click-through that saves one image per page state; `--demo-only <prefix>`
     // runs just the steps whose image name starts with the prefix.
-    const QStringList arguments = QGuiApplication::arguments();
     const qsizetype demo_flag = arguments.indexOf(QStringLiteral("--demo"));
     const bool demo = demo_flag >= 0;
     if (demo && demo_flag + 1 >= arguments.size()) {
@@ -65,10 +76,12 @@ int main(int argc, char* argv[]) {
     }
     QQmlApplicationEngine engine;
     edi_app::configure_engine(engine);
+    edi_app::configure_test_observer(engine);
     engine.loadFromModule("edi.app", "Main");
     if (engine.rootObjects().isEmpty()) {
         return -1;
     }
+    edi_app::install_test_observer(engine);
     edi_app::install_web_page_hooks(engine);  // the web build's page hooks for the browser checks
     std::unique_ptr<edi_app::DemoDriver> driver;
     if (demo) {

@@ -56,7 +56,7 @@ file(READ ${EDI_DEFAULT_PALETTE_TSV} EDI_DEFAULT_PALETTE)
 file(READ ${EDI_COLOUR_BLIND_SAFE_PALETTE_TSV} EDI_COLOUR_BLIND_SAFE_PALETTE)
 configure_file(src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 
-# ADR-0035: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
+# ADR-0036: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
 # file with no lookup; a change to the script reconfigures.
 set(EDI_REPORT_JS_FILE ${CMAKE_SOURCE_DIR}/data/report/report.js)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_REPORT_JS_FILE})

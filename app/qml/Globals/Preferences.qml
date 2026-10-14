@@ -38,7 +38,7 @@ QtObject {
     // report the app draws follows it.
     property string colourScheme: "default"
     // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
-    // ("embedded"): its `_report.html_offline` (edi ADR-0035 §7). A project keeps its own; this only starts a new one.
+    // ("embedded"): its `_report.html_offline` (edi ADR-0036 §7). A project keeps its own; this only starts a new one.
     property string newReportLibraries: "online"
 
     // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
