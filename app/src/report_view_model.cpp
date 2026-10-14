@@ -30,6 +30,14 @@ ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : Q
     refresh();
 }
 
+void ReportViewModel::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+        refresh();
+    }
+}
+
 void ReportViewModel::setActive(bool active) {
     if (active != active_) {
         active_ = active;
@@ -77,6 +85,7 @@ bool ReportViewModel::build() const {
     dirty_ = false;
     // The project's report settings (ADR-0035 §7); of a fit of several experiments, the one the tab shows.
     edi::ReportOptions options = edi::effective_report_options(project_.project());
+    options.colour_scheme = edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default);
     const int shown = project_.currentExperimentIndex();
     options.correlation_experiment = !project_.scan() && shown > 0 ? static_cast<std::size_t>(shown) : 0;
     edi::ReportModel next;
@@ -116,6 +125,11 @@ const edi::ReportPattern* ReportViewModel::pattern(const QString& experiment) co
         }
     }
     return nullptr;
+}
+
+QString ReportViewModel::reliability(const QString& experiment) const {
+    const edi::ReportPattern* found = pattern(experiment);
+    return found != nullptr ? QString::fromStdString(found->reliability) : QString();
 }
 
 const edi::ReportStructure* ReportViewModel::structure(const QString& id) const {

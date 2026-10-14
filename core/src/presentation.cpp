@@ -190,8 +190,9 @@ void fill_points(PatternSeries& series, const Kept& kept, const std::vector<doub
     }
 }
 
+// An experiment's style row is its place's; the Bragg rows cycle over three, as their series do.
 std::string style_key(const char* base, std::size_t place) {
-    return std::string(base) + "." + std::to_string(place % kPaletteSize);
+    return std::string(base) + "." + std::to_string(std::string_view(base) == "bragg" ? place % kPaletteSize : place);
 }
 
 // Six significant digits, as `%.6g` spells them in the C locale, whatever the process's locale is (I21): a
@@ -261,22 +262,26 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
     return decimate(x, low, high, x_min, x_max, columns).rows;
 }
 
-const std::vector<SeriesStyle>& pattern_style_table() {
-    // edi ADR-0017 §15: easydiffractionbeta's chart colours and widths (its QtCharts1dTab.qml; the residual's
-    // 1 px line and the Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). The measured and tick
-    // palettes are §8's block colours, by the block's place.
-    static const std::vector<SeriesStyle> table = {
-        {"meas.0", "#03A9F4", "#81D4FA", "line+markers+bars", 2.0, 1.0, 5.0},
-        {"meas.1", "#795548", "#BCAAA4", "line+markers+bars", 2.0, 1.0, 5.0},
-        {"meas.2", "#4CAF50", "#A5D6A7", "line+markers+bars", 2.0, 1.0, 5.0},
-        {"calc", "#F44336", "#EF9A9A", "line", 2.0, 1.0, 0.0},
-        {"bkg", "#607D8B", "#B0BEC5", "line", 1.0, 1.0, 0.0},
-        {"resid", "#8BC34A", "#C5E1A5", "line", 1.0, 1.0, 0.0},
-        {"bragg.0", "#FF9800", "#FFCC80", "ticks", 1.0, 1.0, 0.0},
-        {"bragg.1", "#009688", "#80CBC4", "ticks", 1.0, 1.0, 0.0},
-        {"bragg.2", "#E91E63", "#F48FB1", "ticks", 1.0, 1.0, 0.0},
-        {"excluded", "#8C8C8C", "#8C8C8C", "band", 0.0, 0.15, 0.0},
-    };
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments) {
+    // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
+    // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02) and its role colours. The measured and tick
+    // colours are the blocks' own, from the scheme's palette by the block's place.
+    // At least three of each, as the table always listed; the experiments' colours depend on how many there are only
+    // past the palette's own.
+    std::vector<SeriesStyle> table;
+    const std::size_t count = std::max<std::size_t>(experiments, 1);
+    for (std::size_t place = 0; place < std::max(count, kPaletteSize); ++place) {
+        table.push_back({"meas." + std::to_string(place), pattern_colour(scheme, place, count, false),
+                         pattern_colour(scheme, place, count, true), "line+markers+bars", 2.0, 1.0, 5.0});
+    }
+    table.push_back({"calc", "#F44336", "#EF9A9A", "line", 2.0, 1.0, 0.0});
+    table.push_back({"bkg", "#607D8B", "#B0BEC5", "line", 1.0, 1.0, 0.0});
+    table.push_back({"resid", "#8BC34A", "#C5E1A5", "line", 1.0, 1.0, 0.0});
+    for (std::size_t place = 0; place < kPaletteSize; ++place) {
+        table.push_back({"bragg." + std::to_string(place), structure_colour(scheme, place, false),
+                         structure_colour(scheme, place, true), "ticks", 1.0, 1.0, 0.0});
+    }
+    table.push_back({"excluded", "#8C8C8C", "#8C8C8C", "band", 0.0, 0.15, 0.0});
     return table;
 }
 
@@ -565,6 +570,7 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
         series.label = phase.label;
         series.style = style_key("bragg", phase.place);
         const double row_bottom = static_cast<double>(phases.size() - k - 1);
+        out.bragg_labels.push_back({phase.label, series.style, row_bottom + 0.5});
         std::vector<char> taken(binned ? static_cast<std::size_t>(view.columns) : 0, 0);
         for (std::size_t r = 0; r < phase.position->size(); ++r) {
             const double position = (*phase.position)[r];
@@ -596,6 +602,32 @@ PatternPresentation present_pattern(const PatternSource& source, const PatternVi
     }
     if (has_residual) {
         out.layout.push_back({Pane::Residual, 0.3, 0.0});
+    }
+
+    // --- the y titles as coloured pieces: each presented series' word in its colour, plain separators --------------
+    std::string measured_style, calculated_style;
+    for (const PatternSeries& series : out.series) {
+        if (series.kind == SeriesKind::Measured) {
+            measured_style = series.style;
+        } else if (series.kind == SeriesKind::Calculated) {
+            calculated_style = series.style;
+        }
+    }
+    for (const PatternSeries& series : out.series) {
+        const char* word = series.kind == SeriesKind::Measured     ? "meas"
+                           : series.kind == SeriesKind::Calculated ? "calc"
+                           : series.kind == SeriesKind::Background ? "bkg"
+                                                                   : nullptr;
+        if (word == nullptr || series.pane != Pane::Main) {
+            continue;
+        }
+        if (!out.y_main.segments.empty()) {
+            out.y_main.segments.push_back({", ", ""});
+        }
+        out.y_main.segments.push_back({word, series.style});
+    }
+    if (has_residual && !measured_style.empty() && !calculated_style.empty()) {
+        out.y_residual.segments = {{"meas", measured_style}, {" \xE2\x88\x92 ", ""}, {"calc", calculated_style}};
     }
     return out;
 }

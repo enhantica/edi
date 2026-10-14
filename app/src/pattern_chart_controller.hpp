@@ -9,9 +9,12 @@
 #include <QPointer>
 #include <QString>
 #include <QVariantAnimation>
+#include <QVariantList>
+#include <QVariantMap>
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
 #include <optional>
+#include <vector>
 
 #include "chart_models.hpp"
 #include "edi/presentation.hpp"
@@ -38,6 +41,8 @@ class PatternChartController : public QObject {
     // The chart is shown: a hidden chart is only marked dirty, and refreshed when it is shown again.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     Q_PROPERTY(bool dark READ dark WRITE setDark NOTIFY darkChanged)
+    // The colour scheme, "default" or "colourBlindSafe" (data/palettes): the experiments' and structures' colours.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
     // The main plot area, in logical pixels, and the window's device pixel ratio: the decimation's width.
     Q_PROPERTY(qreal plotWidth READ plotWidth WRITE setPlotWidth NOTIFY plotWidthChanged)
     Q_PROPERTY(qreal plotHeight READ plotHeight WRITE setPlotHeight NOTIFY plotHeightChanged)
@@ -84,6 +89,9 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
     Q_PROPERTY(QString residualTitle READ residualTitle NOTIFY residualTitleChanged)
+    // The Bragg rows' labels (edi::BraggRowLabel): maps of `text`, `color` and `centre`, the row's middle in the
+    // Bragg pane's units (row k from the bottom spans k to k + 1).
+    Q_PROPERTY(QVariantList braggLabels READ braggLabels NOTIFY braggLabelsChanged)
     // The legend's rows and the excluded bands, as typed models (chart_models.hpp): the controller replaces
     // their rows at each refresh.
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
@@ -118,6 +126,8 @@ class PatternChartController : public QObject {
     void setActive(bool active);
     bool dark() const { return dark_; }
     void setDark(bool dark);
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
     qreal plotWidth() const { return plot_width_; }
     void setPlotWidth(qreal width);
     qreal plotHeight() const { return plot_height_; }
@@ -152,6 +162,7 @@ class PatternChartController : public QObject {
     QString xTitle() const { return x_title_; }
     QString yTitle() const { return y_title_; }
     QString residualTitle() const { return residual_title_; }
+    QVariantList braggLabels() const { return bragg_labels_; }
     ChartLegendModel* legend() const { return legend_; }
     ChartBandModel* excludedBands() const { return excluded_bands_; }
     QColor measuredColor() const { return color(measured_style_); }
@@ -195,6 +206,7 @@ class PatternChartController : public QObject {
     void reportExperimentChanged();
     void activeChanged();
     void darkChanged();
+    void colourSchemeChanged();
     void plotWidthChanged();
     void plotHeightChanged();
     void residualPlotHeightChanged();
@@ -228,6 +240,7 @@ class PatternChartController : public QObject {
     void currentChanged();
     void xTitleChanged();
     void yTitleChanged();
+    void braggLabelsChanged();
     void residualTitleChanged();
     void revisionChanged();
     void measuredColorChanged();
@@ -276,6 +289,10 @@ class PatternChartController : public QObject {
     QPointer<ReportViewModel> report_;
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
+    QString colour_scheme_ = QStringLiteral("default");
+    // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
+    // project's experiments in the colour scheme.
+    std::vector<edi::SeriesStyle> styles() const;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
     YScale y_scale_ = Linear;
     bool d_spacing_ = false;
@@ -298,6 +315,7 @@ class PatternChartController : public QObject {
     int bragg_rows_ = 0, revision_ = 0;
     bool has_residual_ = false, has_data_ = false, current_ = false;
     QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
+    QVariantList bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;
 };

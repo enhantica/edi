@@ -175,6 +175,8 @@ class ExperimentViewModel : public QObject {
     // A chart's x axis: while one chart is on d, the pattern is captured on d as well.
     void setChartAxis(const QObject* chart, edi::PatternAxis axis);
     bool dSpacingWanted() const { return !d_charts_.isEmpty(); }
+    // How many experiments the project holds (the colour of this one's pattern depends on it past the palette's own).
+    std::size_t experimentCount() const { return project_.experiments.size(); }
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.

@@ -25,6 +25,7 @@
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
+#include "edi/report_model.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "edi/su_text.hpp"
@@ -80,8 +81,14 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
         ExperimentViewModel* experiment = experiments[i];
         const bool fitted = joint ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
         experiment->setFitOutcome(fitted ? outcome : QString());
+        // Its last fit's reliability follows its name and file on the selector's line (Rwp and χ²).
+        const std::string reliability = fitted ? edi::reliability_text(project, static_cast<std::size_t>(i)) : std::string();
+        QString label = block_label(experiment->name(), QStringLiteral("experiment"));
+        if (!reliability.empty()) {
+            label += QStringLiteral(" · ") + QString::fromStdString(reliability);
+        }
         rows.append({experiment,
-                     {experiment->name(), block_label(experiment->name(), QStringLiteral("experiment")),
+                     {experiment->name(), label,
                       QVariant::fromValue<QObject*>(experiment), experiment->fitOutcome(),
                       experiment->dataFile().isEmpty() ? experiment->name() + QStringLiteral(".edi")
                                                        : experiment->dataFile(),
@@ -106,6 +113,9 @@ QList<QVariant> dataset_values(ExperimentViewModel* experiment, const Experiment
         if (!value.isEmpty()) {
             label += QStringLiteral(" · ") + value;
         }
+    }
+    if (!dataset.reliability.isEmpty()) {
+        label += QStringLiteral(" · ") + dataset.reliability;
     }
     return {name, label, QVariant::fromValue<QObject*>(experiment), dataset.outcome, dataset.file, dataset.extracted,
             dataset.is_template};
@@ -1043,6 +1053,12 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     dataset.file = QString::fromStdString(files[static_cast<std::size_t>(index)]);
     dataset.is_template = files[static_cast<std::size_t>(index)] == scanTemplateOrModel().sequential_fit.template_file;
     dataset.outcome = scan_session_->outcome(index);
+    // A fitted dataset's χ² from its results row, as a single fit's reliability shows it.
+    const auto& results = scan_session_->index().rows;
+    if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
+        dataset.reliability = QStringLiteral("χ² ") +
+                              QString::number(results[static_cast<std::size_t>(index)].reduced_chi_square, 'f', 2);
+    }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
     if (dataset.outcome.isEmpty() && dataset.is_template && scanTemplateOrModel().fit_result.held()) {
         dataset.outcome = recorded_outcome(scanTemplateOrModel().fit_result);

@@ -21,6 +21,7 @@ add_library(edi_core STATIC
     src/report_json.cpp
     src/report_html.cpp
     src/report_save.cpp
+    src/palette.cpp
     src/category_title.cpp
     src/duration_text.cpp
     src/correlation_matrix.cpp
@@ -34,6 +35,7 @@ add_library(edi_core STATIC
     src/structure_scene.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp
 )
 add_library(edi::core ALIAS edi_core)
 
@@ -44,6 +46,15 @@ set(EDI_ELEMENT_STYLES_TSV ${CMAKE_SOURCE_DIR}/data/elements/element-styles.tsv)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_ELEMENT_STYLES_TSV})
 file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
 configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
+
+# The colour palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way; a change reconfigures.
+set(EDI_DEFAULT_PALETTE_TSV ${CMAKE_SOURCE_DIR}/data/palettes/default.tsv)
+set(EDI_COLOUR_BLIND_SAFE_PALETTE_TSV ${CMAKE_SOURCE_DIR}/data/palettes/colour-blind-safe.tsv)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_DEFAULT_PALETTE_TSV}
+                                                               ${EDI_COLOUR_BLIND_SAFE_PALETTE_TSV})
+file(READ ${EDI_DEFAULT_PALETTE_TSV} EDI_DEFAULT_PALETTE)
+file(READ ${EDI_COLOUR_BLIND_SAFE_PALETTE_TSV} EDI_COLOUR_BLIND_SAFE_PALETTE)
+configure_file(src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 
 # ADR-0035: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
 # file with no lookup; a change to the script reconfigures.

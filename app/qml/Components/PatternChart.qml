@@ -70,7 +70,10 @@ Item {
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
     // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
-    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) : topMargin + toolbar.height + belowToolbar
+    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbar.height + belowToolbar
+    // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
+    // charts show it in the page's selector line.
+    readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.
@@ -314,6 +317,7 @@ Item {
         active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
+        colourScheme: Preferences.colourScheme
         // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
         yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
@@ -461,6 +465,8 @@ Item {
         ChartToolbar {
             id: toolbar
 
+            // The y titles carry the series' colours, so the legend box waits behind its button.
+            legendShown: false
             onResetClicked: controller.reset()
         }
     }
@@ -641,6 +647,29 @@ Item {
         text: controller.yTitle
         visible: controller.hasData
     }
+    // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour.
+    Repeater {
+        model: controller.braggLabels
+        delegate: IconLine {
+            required property var modelData
+
+            objectName: "chart.bragg.label"
+            visible: braggView.visible
+            height: AppSizes.legendRowHeight
+            textColor: modelData.color
+            segments: [
+                {
+                    "icon": "layer-group",
+                    "color": modelData.color
+                },
+                {
+                    "text": modelData.text
+                }
+            ]
+            x: Math.max(0, braggView.x + braggView.plotArea.x - width - Math.round(chart.em * 0.4))
+            y: braggView.y + braggView.plotArea.y + (1 - modelData.centre / Math.max(1, controller.braggRows)) * braggView.plotArea.height - height / 2
+        }
+    }
     PaneTitle {
         objectName: "chart.title.residual"
         pane: residualView
@@ -661,6 +690,15 @@ Item {
     // "dSpacing" (the toolbar's x box).
     readonly property string nativeAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
     readonly property string xAxis: controller.dSpacing ? "dSpacing" : nativeAxis
+
+    EaElements.Label {
+        objectName: "chart.reliability"
+        visible: chart.reliability !== ""
+        x: mainView.x + mainView.plotArea.x
+        y: Math.max(0, mainView.y + mainView.plotArea.y - height - Math.round(chart.em * 0.25))
+        color: chart.colors.chartLabels
+        text: chart.reliability
+    }
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
     // where the strong peaks are at the other end (owner, 2026-10-05).

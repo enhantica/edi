@@ -722,6 +722,18 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
     return options;
 }
 
+std::string reliability_text(const Project& project, std::size_t experiment) {
+    if (project.fit_result.result_kind.empty()) {
+        return {};
+    }
+    double rwp = project.fit_result.prof_wr_factor;
+    if (experiment < project.experiments.size() && project.experiments[experiment]->fit_prof_wr_factor) {
+        rwp = *project.experiments[experiment]->fit_prof_wr_factor;
+    }
+    return "Rwp " + fixed(rwp * 100.0, 2) + " % \xC2\xB7 \xCF\x87\xC2\xB2 " +
+           fixed(project.fit_result.reduced_chi_square, 2);
+}
+
 ReportModel build_report(const Project& input, const ReportOptions& options) {
     // A scan's report is its template dataset's, fitted (ADR-0035 §3); one whose datasets or results cannot be read
     // reports the template as it is.
@@ -785,6 +797,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         });
         if (charts) {
             built.pattern = pattern_of(project, index, options);
+            built.pattern.reliability = reliability_text(project, index);
         }
         model.experiments.push_back(std::move(built));
     }
@@ -799,7 +812,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     if (evolution) {
         model.sections.push_back(ReportSection::Evolution);
     }
-    model.pattern_styles = pattern_style_table();
+    model.pattern_styles = pattern_style_table(options.colour_scheme, project.experiments.size());
     model.structure_styles = structure_style_table();
     return model;
 }

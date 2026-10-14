@@ -10,7 +10,7 @@ import edi.app
 
 // The application preferences (the base's Components/PreferencesDialog.qml, rebuilt from its pieces as the
 // About dialog is; edi ADR-0017 §12): the base's tabs and layout and a Projects tab, with edi's changes — no 1D
-// plotting row, a Sidebar side selector in Appearance, the settings file in Develop, and what is
+// plotting row, a colour scheme and a Sidebar side selector in Appearance, the settings file in Develop, and what is
 // not available yet (update checks, zoom, language) shown disabled with a "Not available yet" tooltip. The base's
 // own dialog stays hidden: the app bar opens this one.
 AppDialog {
@@ -180,6 +180,17 @@ AppDialog {
                 onActivated: index => {
                     EaStyle.Colors.theme = index === 1 ? EaStyle.Colors.DarkTheme : index === 2 ? EaStyle.Colors.SystemTheme : EaStyle.Colors.LightTheme;
                 }
+            }
+
+            EaElements.Label {
+                text: qsTr("Colour scheme") + ":"
+            }
+            EaElements.ComboBox {
+                objectName: "preferences.colourScheme"
+                model: [qsTr("Default"), qsTr("Colour-blind safe")]
+                currentIndex: Preferences.colourScheme === "colourBlindSafe" ? 1 : 0
+                onActivated: index => Preferences.colourScheme = index === 1 ? "colourBlindSafe" : "default"
+                ToolTip.text: qsTr("The experiments' and structures' colours in every chart and icon")
             }
 
             EaElements.Label {

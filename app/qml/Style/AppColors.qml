@@ -16,19 +16,17 @@ QtObject {
     // The hover highlight of a clickable status-bar item: the foreground at a tenth.
     readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
 
-    // A structure's colour by its place in the project: the base's model colours, as easydiffractionbeta
-    // colours its models (orange, teal, pink), round again after the third.
+    // A structure's colour by its place in the project, from the colour scheme's palette (data/palettes; the
+    // default's orange, teal and pink, as easydiffractionbeta colours its models), round again after its last.
     function structure(index) {
-        const palette = EaStyle.Colors.models;
-        return index >= 0 ? palette[index % palette.length] : EaStyle.Colors.themeForegroundMinor;
+        return index >= 0 ? ApplicationInfo.structureColour(Preferences.colourScheme, index, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
     }
 
-    // An experiment's colour by its place in the project: easydiffractionbeta's measured-data light blue
-    // first, then the base's brown and green, none of them a structure's colour.
+    // An experiment's colour by its place among the project's, from the colour scheme's palette: the default's
+    // light blue first; past the palette's own colours, a gradient along the order. None is a structure's colour.
     function experiment(index) {
-        const extra = EaStyle.Colors.chartForegroundsExtra;
-        const palette = [extra[2], extra[3], extra[1]];
-        return index >= 0 ? palette[index % palette.length] : EaStyle.Colors.themeForegroundMinor;
+        const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;
+        return index >= 0 ? ApplicationInfo.patternColour(Preferences.colourScheme, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
     }
 
     // A block's colour by its kind ("structure" or "experiment") and place.

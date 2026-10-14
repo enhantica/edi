@@ -34,6 +34,9 @@ QtObject {
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_19"
+    // The experiments' and structures' colours (data/palettes): "default" or "colourBlindSafe". Every chart, icon and
+    // report the app draws follows it.
+    property string colourScheme: "default"
     // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
     // ("embedded"): its `_report.html_offline` (edi ADR-0035 §7). A project keeps its own; this only starts a new one.
     property string newReportLibraries: "online"
@@ -47,6 +50,7 @@ QtObject {
         preferences.scanPatternUpdates = 2;
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
+        preferences.colourScheme = "default";
         preferences.analysisYScale = "linear";
         preferences.experimentYScale = "linear";
         preferences.experimentXAxis = "native";
@@ -60,7 +64,13 @@ QtObject {
         property alias sideBarSide: preferences.sideBarSide
     }
 
-    // ADR-0031: the Projects tab's defaults for new projects.
+    // ADR-0031: the Appearance tab's colour scheme, and the Projects tab's defaults for new projects.
+    property Settings appearanceSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Appearance"
+        property alias colourScheme: preferences.colourScheme
+    }
+
     property Settings projectsSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Projects"

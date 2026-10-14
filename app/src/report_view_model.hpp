@@ -48,6 +48,8 @@ class ReportViewModel : public QObject {
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
+    // The app's colour scheme ("default" or "colourBlindSafe"), which the report's charts take, as the app's do.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
 
    public:
     ReportViewModel(ProjectViewModel& project, QObject* parent);
@@ -62,9 +64,13 @@ class ReportViewModel : public QObject {
     }
     bool active() const { return active_; }
     void setActive(bool active);
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
     // The model's pattern of an experiment and its structure of a structure id; null when it has none.
     const edi::ReportPattern* pattern(const QString& experiment) const;
     const edi::ReportStructure* structure(const QString& id) const;
+    // An experiment's reliability text in the model (edi::reliability_text); empty with none.
+    Q_INVOKABLE QString reliability(const QString& experiment) const;
     QStringList hidden() const;
     void setHidden(const QStringList& keys);
     bool embedLibraries() const;
@@ -98,6 +104,7 @@ class ReportViewModel : public QObject {
     void writesCifChanged();
     void savedReportsChanged();
     void activeChanged();
+    void colourSchemeChanged();
     void saved(const QString& location);
     void saveFailed(const QString& message);
 
@@ -122,6 +129,7 @@ class ReportViewModel : public QObject {
     bool published_writes_html_ = true, published_writes_pdf_ = false, published_writes_cif_ = false;
     mutable std::optional<edi::ReportLibraries> libraries_;
     bool active_ = false;
+    QString colour_scheme_ = QStringLiteral("default");
     // The model, rebuilt on a read when a change arrived while the page was hidden (`dirty_`).
     mutable bool dirty_ = true;
     mutable edi::ReportModel report_;
