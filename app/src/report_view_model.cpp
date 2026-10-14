@@ -20,6 +20,7 @@
 #include "correlation_view_model.hpp"
 #include "edi/io.hpp"
 #include "edi/report_html.hpp"
+#include "edi/report_save.hpp"
 #include "project_view_model.hpp"
 #include "report_pdf.hpp"
 #include "web_files.hpp"
@@ -95,17 +96,24 @@ void ReportViewModel::ensureBuilt() const {
 
 bool ReportViewModel::build() const {
     dirty_ = false;
-    // The project's report settings (ADR-0036 §7); of a fit of several experiments, the one the tab shows.
-    edi::ReportOptions options = edi::effective_report_options(project_.project());
-    options.colour_scheme = edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default);
+    // The project's report settings (ADR-0036 §7) and the app's two choices, given as the CLI and Python give them: the
+    // Preferences' colour scheme and, of a fit of several experiments, the experiment the Analysis page shows.
+    const edi::Project& project = project_.project();
+    edi::ReportOverrides choices;
+    if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
+        choices.colour_scheme = colour_scheme_.toStdString();
+    }
     const int shown = project_.currentExperimentIndex();
-    options.correlation_experiment = !project_.scan() && shown > 0 ? static_cast<std::size_t>(shown) : 0;
+    if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
+        choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
+    }
+    judged_.reset();
     edi::ReportModel next;
     try {
-        // A scan's report is its template dataset's (edi ADR-0036 §3).
-        const edi::Project* scan_template = project_.scanTemplate();
-        next = edi::build_report(scan_template != nullptr ? *scan_template : project_.project(), options);
+        options_ = edi::effective_report_options(project, choices);
+        next = edi::build_report(reportInput(), options_);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
+        options_ = {};
         next = {};
     }
     std::string json = edi::report_to_json(next);
@@ -242,6 +250,27 @@ QString ReportViewModel::reportsDirectory() const {
     return QDir(QString::fromStdString(project_.project().path)).filePath(QStringLiteral("reports"));
 }
 
+const edi::Project& ReportViewModel::reportInput() const {
+    // A scan's report is its template dataset's (edi ADR-0036 §3).
+    const edi::Project* scan_template = project_.scanTemplate();
+    return scan_template != nullptr ? *scan_template : project_.project();
+}
+
+const edi::ReportModel& ReportViewModel::judged() const {
+    ensureBuilt();
+    if (!edi::chooses_presentation(options_)) {
+        return report_;
+    }
+    if (!judged_) {
+        try {
+            judged_ = edi::build_report(reportInput(), edi::report_file_options(options_));
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — as build(): no report
+            judged_ = edi::ReportModel{};
+        }
+    }
+    return *judged_;
+}
+
 QString ReportViewModel::fileStem() const {
     ensureBuilt();
     return QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
@@ -262,7 +291,7 @@ QList<SavedReport> ReportViewModel::savedReports() const {
             // The digest of what the format's writer would write now, the HTML with the libraries the project embeds.
             const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
             static const edi::ReportLibraries kOnline;
-            if (edi::report_digest(report_, format, embedded != nullptr ? *embedded : kOnline) !=
+            if (edi::report_digest(judged(), format, embedded != nullptr ? *embedded : kOnline) !=
                 file->digest.value()) {
                 state = QStringLiteral("out of date");
             }
@@ -336,11 +365,11 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
                 static const edi::ReportLibraries kOnline;
                 const edi::ReportLibraries& used = embedded != nullptr ? *embedded : kOnline;
                 failed = !write("html", QByteArray::fromStdString(edi::report_html(report_, used)),
-                                edi::report_digest(report_, "html", used));
+                                edi::report_digest(judged(), "html", used));
             }
         }
         if (!failed && writes("pdf")) {
-            failed = !write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(report_, "pdf"));
+            failed = !write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(judged(), "pdf"));
         }
     } catch (const std::exception& error) {
         emit saveFailed(QString::fromUtf8(error.what()));

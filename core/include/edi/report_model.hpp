@@ -48,18 +48,26 @@ struct ReportOptions {
     bool embed_libraries = false;
 };
 
-/// One run's choices over a project's report settings (the CLI's flags, Python's keywords): an absent one keeps the
-/// stored setting, a given one replaces it for the run. Nothing is written to the project.
+/// One run's choices over a project's report settings (the CLI's flags, Python's keywords, the app's): an absent one
+/// keeps the stored setting, a given one replaces it for the run. Nothing is written to the project. The colour scheme
+/// and the correlations' experiment are the surface's choices, not project settings: the app gives its Preferences'
+/// scheme and the experiment the Analysis page shows.
 struct ReportOverrides {
     std::optional<bool> html_offline;
     std::optional<double> correlation_threshold;
     std::optional<std::string> x_axis;  ///< "native" or "d_spacing"
     std::optional<std::vector<std::string>> excluded;
+    std::optional<std::string> colour_scheme;  ///< a token of colour_scheme_from_name; absent, the default scheme
+    /// In a fit of several experiments, the name of the one whose parameters the correlation chart shows; absent, the
+    /// first.
+    std::optional<std::string> correlation_experiment;
 };
 
 /// The options a report of `project` is made with (ADR-0036 §7): its report settings (`reports/report.edi`) and the
-/// correlation threshold and x axis (`analysis/analysis.edi`), each replaced by a given override. With no `excluded` the data are left out; with no threshold the correlations follow diffraction-lib's
-/// automatic rule; with no x axis the charts are on their own.
+/// correlation threshold and x axis (`analysis/analysis.edi`), each replaced by a given override, and the given colour
+/// scheme and correlations' experiment. With no `excluded` the data are left out; with no threshold the correlations
+/// follow diffraction-lib's automatic rule; with no x axis the charts are on their own. Throws std::invalid_argument
+/// for an unknown scheme or experiment name.
 ReportOptions effective_report_options(const Project& project, const ReportOverrides& overrides = {});
 
 /// A number as the report shows it: its value, its s.u. when it has one, and its text (the project's s.u. rule).
