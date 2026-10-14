@@ -50,6 +50,8 @@ class ReportViewModel : public QObject {
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     // The app's colour scheme ("default" or "colourBlindSafe"), which the report's charts take, as the app's do.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    // The project's calculation is in flight or owed, so the model is not yet its outcome; a save waits for it.
+    Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
 
    public:
     ReportViewModel(ProjectViewModel& project, QObject* parent);
@@ -66,6 +68,7 @@ class ReportViewModel : public QObject {
     void setActive(bool active);
     QString colourScheme() const { return colour_scheme_; }
     void setColourScheme(const QString& scheme);
+    bool calculating() const;
     // The model's pattern of an experiment and its structure of a structure id; null when it has none.
     const edi::ReportPattern* pattern(const QString& experiment) const;
     const edi::ReportStructure* structure(const QString& id) const;
@@ -105,6 +108,7 @@ class ReportViewModel : public QObject {
     void savedReportsChanged();
     void activeChanged();
     void colourSchemeChanged();
+    void calculatingChanged();
     void saved(const QString& location);
     void saveFailed(const QString& message);
 

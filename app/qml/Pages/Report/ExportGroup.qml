@@ -21,9 +21,18 @@ EaElements.GroupBox {
     // The preview, whose figures the PDF shows.
     property ReportPreview preview: null
 
-    // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed.
+    // A save asked for while the project calculates, made when the calculation ends.
+    property bool savePending: false
+
+    // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
+    // calculates, the report is not yet its outcome, so the save waits for it.
     function saveReport() {
         const report = group.report;
+        if (report.calculating) {
+            group.savePending = true;
+            return;
+        }
+        group.savePending = false;
         if (report.writesPdf)
             group.preview.grabFigures(figures => report.saveReport(figures, EaStyle.Fonts.fontFamily));
         else
@@ -152,7 +161,7 @@ EaElements.GroupBox {
 
         EaElements.SideBarButton {
             objectName: "report.save"
-            enabled: group.report !== null && (group.report.writesHtml || group.report.writesPdf)
+            enabled: group.report !== null && !group.savePending && (group.report.writesHtml || group.report.writesPdf)
             fontIcon: "download"
             text: qsTr("Save report")
             ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")
@@ -163,6 +172,10 @@ EaElements.GroupBox {
     // A report that could not be saved says why, as a project that could not.
     Connections {
         target: group.report
+        function onCalculatingChanged() {
+            if (group.savePending && !group.report.calculating)
+                group.saveReport();
+        }
         function onSaveFailed(message) {
             saveError.message = message;
             saveError.open();
