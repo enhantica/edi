@@ -53,9 +53,12 @@ REFERENCE = {
     'pattern_seam': {
         'height': 600,
         'measured': {'y': 100, 'bar_low': 90, 'bar_high': 112},
+        'measured_colour': '#0c2238',  # Independent RGB (12, 34, 56).
         'error_minus': 10,
         'error_plus': 12,
-        'domains': {'main': 0.658, 'bragg': 0.06, 'residual': 0.282},
+        'fixed_bragg_px': 36,
+        'stretch': {'main': 0.7, 'residual': 0.3},
+        'plot_body': 'Viewport height less the plot margins; the fixed pane retains its pixels',
         'gap': [None, None],
         'second_phase_style': 'bragg.1',
     },
@@ -65,6 +68,8 @@ REFERENCE = {
         'direction': [0, 0, 1],
         'up': [0, 1, 0],
         'bond_axis': [1, 0, 0],
+        # Column-major Rz(-90 degrees) times scale (.2, 1.5, .2), then translation.
+        'world_matrix': [0, -0.2, 0, 0, 1.5, 0, 0, 0, 0, 0, 0.2, 0, 1.25, 2.5, 3.75, 1],
     },
     'd_axis': {'wavelength': 1.87, 'two_theta': 30},
 }

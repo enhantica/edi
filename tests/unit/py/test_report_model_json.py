@@ -15,6 +15,15 @@ def group(document, name):
     return document.get(name, document)
 
 
+def parameters(document):
+    rows = document.get('parameters')
+    assert isinstance(rows, list) and rows, (
+        'The report model keeps a nonempty root parameters list independently of display '
+        f'options; root keys={sorted(document)}, parameters={rows!r}'
+    )
+    return rows
+
+
 def number(row):
     return row['value'] if isinstance(row['value'], dict) else row
 
@@ -25,7 +34,6 @@ def report_model():
     )
     project = edi.Project(name='numeric_report')
     assert hasattr(project, 'report'), 'The model builder must be reached through Project.report'
-    project.report.parameters = 'all'
     model = project.report.model()
     document = json.loads(model.to_json())
     assert document['schema_version'] == 1, 'Report JSON must identify its schema version as one'
@@ -37,17 +45,17 @@ def report_model():
 )
 def test_report_json_numbers_have_shortest_roundtrip_bits(value):
     document = report_model()
-    rows = group(document, 'analysis')['parameters']
+    rows = parameters(document)
     assert rows, 'The default project supplies a parameter row for the numeric seam'
     row = dict(rows[0])
     number(row).update(value=value, su=value if value >= 0 else 0.0)
     row['start'] = value
-    group(document, 'analysis')['parameters'] = [row]
+    document['parameters'] = [row]
     serialized = json.dumps(document, ensure_ascii=False, allow_nan=False)
     model = edi.ReportModel.from_json(serialized)
     actual = model.to_json()
     restored = json.loads(actual)
-    restored_row = group(restored, 'analysis')['parameters'][0]
+    restored_row = parameters(restored)[0]
     for key in ('value', 'su', 'start'):
         assert struct.pack(
             '>d', (restored_row[key] if key == 'start' else number(restored_row)[key])
@@ -65,10 +73,10 @@ def test_report_json_utf8_nulls_and_fixed_generated_roundtrip():
     document['generated'] = '2026-10-13 16:00 UTC'
     group(document, 'project')['title'] = TITLE
     group(document, 'project')['authors'] = "Ada Lovelace; Émile O'Brien"
-    row = dict(group(document, 'analysis')['parameters'][0])
+    row = dict(parameters(document)[0])
     number(row).update(value=0.1, su=None)
     row['start'] = None
-    group(document, 'analysis')['parameters'] = [row]
+    document['parameters'] = [row]
     model = edi.ReportModel.from_json(json.dumps(document, ensure_ascii=False))
     actual = model.to_json()
     assert json.loads(actual) == document, (
@@ -85,12 +93,11 @@ def test_report_builder_serializes_nonfinite_uncertainty_as_null():
     )
     project = edi.Project(name='nonfinite_report')
     project.structure.cell.length_a = edi.Parameter(5.1, math.nan, True)
-    project.report.parameters = 'all'
     text = project.report.model().to_json()
     assert 'NaN' not in text and 'Infinity' not in text, (
         'A nonfinite model number must serialize as JSON null rather than invalid numeric text'
     )
-    rows = group(json.loads(text), 'analysis')['parameters']
+    rows = parameters(json.loads(text))
     assert any(number(row)['value'] == 5.1 and number(row)['su'] is None for row in rows), (
         'The builder must project a real nonfinite standard uncertainty to explicit null'
     )
