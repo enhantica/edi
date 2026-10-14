@@ -24,9 +24,12 @@ namespace edi_app {
 
 namespace {
 
-// The static HTML's px are 1/96 inch, so the page is laid out at 96 to the inch; the text stays vector and the
-// figures keep their own resolution in the file.
-constexpr int kDpi = 96;
+// The page is laid out at 1800 to the inch, where the body's 10.04 pt is a whole number of pixels (251): Qt sets a font
+// in whole pixels, so at 96 to the inch the body would be 13 px, 9.75 pt. The document takes the static HTML's px as
+// 1/96 inch at any resolution, so the figures' width is given in those px; the text stays vector and the figures keep
+// their own resolution in the file.
+constexpr int kDpi = 1800;
+constexpr double kPxScale = kDpi / 96.0;
 constexpr double kMarginMm = 25.0;
 constexpr double kBodyPoints = 10.04;
 
@@ -113,7 +116,7 @@ QByteArray reportPdf(const edi::ReportModel& model, const QHash<QString, QImage>
         document.addResource(QTextDocument::ImageResource, QUrl(it.key()), it.value());
     }
     try {
-        document.setHtml(QString::fromStdString(edi::report_static_html(model, body.width())));
+        document.setHtml(QString::fromStdString(edi::report_static_html(model, body.width() / kPxScale)));
     } catch (const std::exception&) {
         return {};
     }
