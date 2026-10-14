@@ -44,6 +44,9 @@ printf '{"multithread": "%s", "singlethread": "%s"}\n' "$folder_multithread" "$f
 cp app/web/index.html app/web/coi-serviceworker.js app/web/README.md app/web/logo.svg app/web/logo-dark.svg \
   app/web/mark.svg app/web/name.svg app/web/name-dark.svg app/web/splash.css "$SITE/"
 cp -R app/web/LICENSES "$SITE/LICENSES"
+# The HTML report's chart libraries, which a report saved with them embedded reads from the site.
+mkdir -p "$SITE/report/vendor"
+cp data/report/vendor/*.js "$SITE/report/vendor/"
 # The licence files the desktop app ships too: the app's GPL-3.0 (COPYING), the source's licence and the notices.
 cp DEPENDENCIES.md LICENSE COPYING THIRD-PARTY-NOTICES "$SITE/LICENSES/"
 (cd "$SITE" && python -c 'import os, sys, zipfile

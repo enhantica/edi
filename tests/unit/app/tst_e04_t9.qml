@@ -149,12 +149,12 @@ TestCase {
                 calc: "#ef9a9a",
                 bkg: "#b0bec5",
                 resid: "#c5e1a5",
-                meas: "#81d4fa"
+                meas: String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), true)).toLowerCase()
             } : {
                 calc: "#f44336",
                 bkg: "#607d8b",
                 resid: "#8bc34a",
-                meas: "#03a9f4"
+                meas: String(ApplicationInfo.patternColour(Preferences.colourScheme, 0, Math.max(Session.project.experiments.count, 1), false)).toLowerCase()
             };
             ["calc", "bkg", "resid", "meas"].forEach(key => tryVerify(() => String(object("chart.series." + key).color).toLowerCase() === colors[key], 2000, " I23 Qt series colors equal independently committed light and dark palettes"));
         });

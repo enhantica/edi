@@ -211,16 +211,20 @@ ParameterItem* ParameterFilterModel::parameterAt(int row) const {
     return qobject_cast<ParameterItem*>(data(index(row, 0), role).value<QObject*>());
 }
 
-bool ParameterFilterModel::shows(ParameterItem* parameter) const {
+int ParameterFilterModel::rowOf(ParameterItem* parameter) const {
     if (parameter == nullptr) {
-        return false;
+        return -1;
     }
     for (int row = 0; row < rowCount(); ++row) {
         if (parameterAt(row) == parameter) {
-            return true;
+            return row;
         }
     }
-    return false;
+    return -1;
+}
+
+bool ParameterFilterModel::shows(ParameterItem* parameter) const {
+    return rowOf(parameter) >= 0;
 }
 
 void ParameterFilterModel::setVariability(Variability variability) {

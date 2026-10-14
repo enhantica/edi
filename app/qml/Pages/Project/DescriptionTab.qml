@@ -30,6 +30,17 @@ Rectangle {
             interactive: false
         }
 
+        // A click on the page outside a field ends the edit in progress, so it commits as Tab and Return do and Save
+        // is offered (the owner, 2026-10-13): the page takes the focus. The fields above take their own clicks.
+        MouseArea {
+            width: tab.width
+            height: Math.max(tab.height, column.height + 2 * column.y)
+            onPressed: mouse => {
+                tab.forceActiveFocus();
+                mouse.accepted = false;
+            }
+        }
+
         Column {
             id: column
 
@@ -105,6 +116,24 @@ Rectangle {
                     function commit() {
                         if (tab.project && text !== tab.project.title)
                             tab.project.title = text;
+                    }
+                }
+            }
+            // The report's authors (`_metadata.authors`), separated by "; ".
+            DescriptionRow {
+                label: qsTr("Authors")
+                EaElements.TextInput {
+                    objectName: "project.authors"
+                    width: column.width - AppSizes.descriptionNameColumnWidth
+                    placeholderText: qsTr("Enter authors here, separated by ;")
+                    text: tab.project ? tab.project.authors : ""
+                    onAccepted: commit()
+                    onEditingFinished: commit()
+
+                    // Return and leaving the field both commit; the second of the two finds nothing new.
+                    function commit() {
+                        if (tab.project && text !== tab.project.authors)
+                            tab.project.authors = text;
                     }
                 }
             }

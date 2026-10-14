@@ -17,6 +17,7 @@ run against both libraries at that consumer job and must agree, for the paths th
 never imports crysta-py.
 """
 
+import html as _html
 import os as _os
 import subprocess as _subprocess  # aliased: a bare name stays off the surface (I1)
 from collections.abc import (
@@ -212,6 +213,7 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     Project,
     ProjectMetadata,
     RadiationProbeEnum,
+    ReportModel,
     SampleFormEnum,
     ScanFileRecord,
     ScanPreamble,
@@ -342,6 +344,8 @@ __all__ = [
     'Project',
     'ProjectMetadata',
     'RadiationProbeEnum',
+    'Report',
+    'ReportModel',
     'SampleFormEnum',
     'ScExperimentBase',
     'ScanFileRecord',
@@ -522,6 +526,234 @@ def _analysis(self: Project) -> Analysis:
 
 
 Project.analysis = property(_analysis)
+
+
+# edi's data folder, beside the package in a source checkout: the report's vendored chart
+# libraries are there.
+_DATA_DIR = _Path(__file__).resolve().parent.parent.parent / 'data'
+
+
+class Report:
+    """The report facade (ADR-0036 §7), mirroring diffraction-lib's ``project.report``.
+
+    Delegation only (ADR-0009). Its settings are the project's: ``html``, ``pdf`` and ``cif``
+    (what ``save()`` writes) and ``html_offline`` and ``excluded`` in ``reports/report.edi``,
+    ``correlation_threshold`` and ``x_axis`` in ``analysis/analysis.edi``. Each reads its default
+    until stated, without stating it, and a value a file could not hold is refused, naming the
+    item. ``model``, ``as_html``, ``save_html`` and ``save`` take the same keywords, each None
+    keeping the stored setting and a given one replacing it for that call only; none of them
+    changes a setting. Two more keywords are choices of the call alone, as the app makes them
+    from its Preferences and its Analysis page: ``colour_scheme`` (``'default'``,
+    ``'colourBlindSafe'``, ``'tableau'``, ``'paulTol'`` or ``'vivid'``; by default the first) and
+    ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
+    shows in a fit of several (by default the first). ``check`` judges every saved report with
+    those defaults, so a report is out of date only when the project changed.
+    """
+
+    # A setting it does not have is refused: a misspelt option ignored in silence would leave
+    # the report as it was.
+    __slots__ = ('_project',)
+
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    @property
+    def html(self) -> bool:
+        """Whether ``save()`` writes the HTML report (by default it does)."""
+        value = self._project._report_html
+        return True if value is None else value
+
+    @html.setter
+    def html(self, value: bool) -> None:
+        self._project._report_html = bool(value)
+
+    @property
+    def pdf(self) -> bool:
+        """Whether the PDF report is ticked; the app writes it, ``save()`` leaves it."""
+        return bool(self._project._report_pdf)
+
+    @pdf.setter
+    def pdf(self, value: bool) -> None:
+        self._project._report_pdf = bool(value)
+
+    @property
+    def cif(self) -> bool:
+        """Whether the CIF report is ticked (its writer comes later)."""
+        return bool(self._project._report_cif)
+
+    @cif.setter
+    def cif(self, value: bool) -> None:
+        self._project._report_cif = bool(value)
+
+    @property
+    def html_offline(self) -> bool:
+        """Whether the HTML report embeds plotly.js and three.js, so it opens offline.
+
+        By default it loads them from the web.
+        """
+        return bool(self._project._report_html_offline)
+
+    @html_offline.setter
+    def html_offline(self, value: bool) -> None:
+        self._project._report_html_offline = bool(value)
+
+    @property
+    def correlation_threshold(self) -> float | None:
+        """The correlation chart's threshold, 0 to 1; None for the automatic rule."""
+        return self._project._correlation_threshold
+
+    @correlation_threshold.setter
+    def correlation_threshold(self, value: float | None) -> None:
+        self._project._correlation_threshold = value
+
+    @property
+    def x_axis(self) -> str:
+        """The charts' x axis, ``'native'`` (2θ or TOF, the default) or ``'d_spacing'``."""
+        value = self._project._pattern_x_axis
+        return 'native' if value is None else value
+
+    @x_axis.setter
+    def x_axis(self, value: str) -> None:
+        self._project._pattern_x_axis = value
+
+    @property
+    def excluded(self) -> list[str]:
+        """The report's groups left out, by key; by default the data. An empty list: none."""
+        value = self._project._report_excluded
+        return ['data'] if value is None else value.split()
+
+    @excluded.setter
+    def excluded(self, keys: list[str]) -> None:
+        self._project._report_excluded = ' '.join(keys)
+
+    def model(
+        self,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> ReportModel:
+        """The report as data, as the HTML report, the app and a notebook show it."""
+        return self._project._report_model(
+            offline, x_axis, correlation_threshold, excluded, colour_scheme, correlation_experiment
+        )
+
+    def as_html(
+        self,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> str:
+        """The report as one HTML file's text."""
+        return self._project._report_html_text(
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
+        )
+
+    def save_html(
+        self,
+        path: str | _Path | None = None,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> _Path:
+        """Write the HTML report to ``path``, by default ``<project>/reports/<name>.html``.
+
+        A failed write leaves the file already at ``path`` as it was. Returns the path written.
+        """
+        if path is None:
+            folder = self._project.metadata.path
+            if folder is None:
+                raise ValueError('the project has no folder: save it first, or give a path')
+            path = _Path(folder) / 'reports' / f'{self._project.name or "report"}.html'
+        path = _Path(path)
+        text = self.as_html(
+            offline=offline,
+            x_axis=x_axis,
+            correlation_threshold=correlation_threshold,
+            excluded=excluded,
+            colour_scheme=colour_scheme,
+            correlation_experiment=correlation_experiment,
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Written beside the old file and renamed over it, so a failed write leaves the old file.
+        part = path.with_name(f'.{path.name}.part')
+        try:
+            part.write_text(text, encoding='utf-8')
+            part.replace(path)
+        except BaseException:
+            part.unlink(missing_ok=True)
+            raise
+        return path
+
+    def save(
+        self,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> list[_Path]:
+        """Save report: each ticked format but the PDF into ``<project>/reports/``, with its row.
+
+        Returns the paths written.
+
+        A ticked PDF is written by the app; its file and row are left as they were.
+        """
+        written, pdf_left = self._project._report_save(
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
+        )
+        if pdf_left:
+            print(
+                'The PDF report is written by the app; its saved file, if any, is left as it was'
+            )
+        return [_Path(path) for path in written]
+
+    def check(self) -> list[tuple[str, str]]:
+        """Each saved report and its state: ``'current'``, ``'out of date'`` or ``'missing'``."""
+        states = self._project._report_states(_DATA_DIR)
+        return [(name, state) for name, _format, state in states]
+
+    def _repr_html_(self) -> str:  # noqa: PLW3201 - IPython's rich display hook
+        # A notebook shows the report in a frame of its own, so its styles and scripts stay
+        # inside it.
+        return (
+            '<iframe style="width: 100%; height: 800px; border: none" srcdoc="'
+            + _html.escape(self.as_html(), quote=True)
+            + '"></iframe>'
+        )
+
+
+def _report(self: Project) -> Report:
+    """The report facade over this project (see :class:`Report`)."""
+    return Report(self)
+
+
+Project.report = property(_report)
 
 
 # The TOF profile coefficient keys.

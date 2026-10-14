@@ -139,9 +139,29 @@ void save_project(const Project& project, const std::string& directory);
 // Save and Save as go through it.
 void save_project_as(Project& project, const std::string& directory);
 
+// After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
+// parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
+// rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything
+// changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
+// without a structure) is left as it is.
+bool adopt_saved_values(Project& project, const std::string& directory);
+
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
+
+// Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
+// saved-report rows, when its text changes, through crysta's writer; whether it wrote.
+bool save_report_settings(const Project& project, const std::string& directory);
+
+// The report settings as `reports/report.edi` states them, each one the project leaves at its default written out with
+// that value, and the saved-report rows: what the Report page's Text tab shows, never empty. crysta writes the text.
+std::string report_settings_text(const Project& project);
+
+// A report setting's value checked by crysta's rules, as a file states it (ADR-0036 §7): `tag` is `_report.<item>`,
+// `_correlation_chart.threshold` or `_pattern_chart.x_axis`, `value` its text. Throws std::invalid_argument naming the
+// item for a value it does not take, or for a tag that is not a report setting.
+void check_report_setting(const std::string& tag, const std::string& value);
 
 // The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
 // `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's

@@ -313,48 +313,6 @@ QString ScanSession::outcome(int dataset) const {
     return QStringLiteral("notConverged");
 }
 
-void ScanSession::column(const edi::Project& project, const std::string& name,
-                         const std::function<void(int, double, double)>& visit) const {
-    std::size_t value_column = 0, uncertainty_column = 0;
-    bool found = false;
-    for (const edi::ScanParameterColumns& parameter : index_.parameters) {
-        if (parameter.name == name) {
-            value_column = parameter.value;
-            uncertainty_column = parameter.uncertainty;
-            found = true;
-        }
-    }
-    if (!found || !index_.error.empty()) {
-        return;
-    }
-    // A results path that is gone gives no values, as a changed header does; one that is no longer a regular file
-    // refuses (scan_state_present throws), as the row reader does.
-    if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
-        return;
-    }
-    std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
-    std::string line;
-    // The columns mean what the indexed header says only while the file still has that header.
-    if (!std::getline(input, line) || split(line) != index_.header) {
-        return;
-    }
-    std::int64_t offset = input.tellg();
-    while (offset < index_.end && std::getline(input, line) && !input.eof()) {
-        offset = input.tellg();
-        const std::vector<std::string> cells = split(line);
-        if (cells.size() != index_.header.size()) {
-            continue;
-        }
-        const int dataset = place(edi::scan_row_file(index_, cells));
-        double value = 0.0, uncertainty = 0.0;
-        // A refused file's row holds the values its fit started from, not a result: it is not drawn.
-        if (dataset >= 0 && cells[index_.chi] != "nan" && edi::parse_scan_number(cells[value_column], value) &&
-            edi::parse_scan_number(cells[uncertainty_column], uncertainty)) {
-            visit(dataset, value, uncertainty);
-        }
-    }
-}
-
 QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
     run_ = run;
     QJsonObject object{{QStringLiteral("template"), QString::fromStdString(run.identity)},
@@ -374,8 +332,8 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
 }
 
 std::string ScanSession::templateIdentity(const edi::Project& project) {
-    // The name, title and description (project.edi) and the fitting mode are not the template: changing them leaves
-    // the results current. Neither are the fits' parameter correlations, a scan's own included (the
+    // The name, title and description (project.edi), the fitting mode and the report's settings (reports/report.edi
+    // and analysis.edi's two chart items) are not the template: changing them leaves the results current. Neither are the fits' parameter correlations, a scan's own included (the
     // `_fit_parameter_correlation` loop, its last category). The minimizer's settings are part of it: rows fitted under
     // another bound or descent are another generation.
     QCryptographicHash hash(QCryptographicHash::Sha256);
@@ -384,7 +342,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
         hash.addData(QByteArrayView("\n", 1));
     };
     for (const auto& [path, body] : edi::project_edi_files(project)) {
-        if (path == "project.edi") {
+        if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }
         hash.addData(QByteArrayView(path.data(), static_cast<qsizetype>(path.size())));
@@ -399,6 +357,11 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
             start = end + 1;
             if (line.starts_with("_fit_parameter_correlation.")) {
                 correlations = true;
+                pending.clear();
+                continue;
+            }
+            // A chart item takes the blank lines before it along, so a project hashes as it did without one.
+            if (line.starts_with("_correlation_chart.") || line.starts_with("_pattern_chart.")) {
                 pending.clear();
                 continue;
             }

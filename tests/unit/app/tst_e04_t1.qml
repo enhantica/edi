@@ -36,10 +36,10 @@ TestCase {
         verify(appWindow !== null, "gate 2: production Main loads under the actual registered module");
     }
     function init() {
-        // The alphabetically first actor opens a measured project and encounters
-        // Qt Graphs' one-time GLES2 context probe on the software host.
-        failOnWarning(qtest_results.functionName === "test_add_requires_explicit_complete_experiment_type"
-            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/ : /.*/);
+        // A partial run can encounter Qt Graphs' first probe in any case.
+        // Exempt its exact context/first-window diagnostics only on a software offscreen
+        // host whose independent QOpenGLContext creation actually fails.
+        failOnWarning(Probe.softwareOffscreenWithoutGl() ? /\A(?!(?:QRhiGles2: Failed to create (?:temporary context|context)|window doesn\x27t exist\.)\z)[\s\S]*\z/ : /.*/);
         Probe.clearWatches();
         unrelatedParameter = null;
         Session.closeProject();

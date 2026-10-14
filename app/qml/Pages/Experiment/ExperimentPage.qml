@@ -49,6 +49,7 @@ WorkflowPage {
         ProjectPatternChart {
             id: chartView
             experiment: page.experiment
+            settingsPage: "experiment"
             shown: page.current && SwipeView.isCurrentItem
         }
     ]
@@ -79,6 +80,14 @@ WorkflowPage {
             }
         }
     }
+    // The page's view options (edi ADR-0031 §2): its chart's y scale and x axis.
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
+            ChartSettingsGroup {
+                page: "experiment"
+            }
+        }
+    }
     textItem: Component {
         TextTab {
             source: page.experiment ? page.experiment.text : null
@@ -92,7 +101,6 @@ WorkflowPage {
     blockKind: "experiment"
     blockOutcomeRole: "fitOutcome"
     blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
-    blockOneColour: project !== null && project.scan
     blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
     blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
     blockIndex: project ? project.currentExperimentIndex : -1

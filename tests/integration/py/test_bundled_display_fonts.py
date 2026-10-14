@@ -17,12 +17,58 @@ TOKENS = re.compile(
 ESCAPES = re.compile(r'\\(?:u([\da-fA-F]{4})|U([\da-fA-F]{8})|x([\da-fA-F]+)|(.))')
 
 
-def literals(text):
-    for match in TOKENS.finditer(text):
+def decode_cpp_literal(value):
+    # C++ \x escapes denote bytes in an ordinary UTF-8 string, whereas
+    # QML/JavaScript \x escapes denote Unicode code points.
+    raw = bytearray()
+    start = 0
+    for escape in ESCAPES.finditer(value):
+        raw.extend(value[start : escape.start()].encode('utf-8'))
+        if escape.group(3):
+            raw.append(int(escape.group(3), 16))
+        elif escape.group(1) or escape.group(2):
+            raw.extend(chr(int(escape.group(1) or escape.group(2), 16)).encode('utf-8'))
+        else:
+            raw.extend(escape.group(4).encode('utf-8'))
+        start = escape.end()
+    raw.extend(value[start:].encode('utf-8'))
+    # A dynamic UTF-8 prefix is bytes, not an independently displayed glyph.
+    return raw.decode('utf-8', errors='ignore')
+
+
+def literals(text, *, cpp=False):
+    tokens = list(TOKENS.finditer(text))
+    index = 0
+    while index < len(tokens):
+        match = tokens[index]
+        index += 1
         value = match.group()
+        if cpp and value.startswith('"'):
+            end = match.end()
+            while index < len(tokens):
+                following = index
+                while following < len(tokens) and tokens[following].group().startswith((
+                    '//',
+                    '/*',
+                )):
+                    following += 1
+                if following == len(tokens) or not tokens[following].group().startswith('"'):
+                    break
+                gap = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', text[end : tokens[following].start()])
+                if gap.strip():
+                    break
+                value = value[:-1] + tokens[following].group()[1:]
+                end = tokens[following].end()
+                index = following + 1
         if value.startswith(('//', '/*')):
             continue
+        if cpp and value.startswith('R"'):
+            yield match.start(), value
+            continue
         # Consuming escaped backslashes prevents treating "\\\\u2153" as a fraction.
+        if cpp:
+            yield match.start(), decode_cpp_literal(value)
+            continue
         decoded = ESCAPES.sub(
             lambda escape: (
                 chr(int(next(g for g in escape.groups()[:3] if g), 16))
@@ -52,7 +98,7 @@ def displayed_characters():
             if path == ROOT / 'core/src/report.cpp':
                 continue
             text = path.read_text()
-            for at, value in literals(text):
+            for at, value in literals(text, cpp=path.suffix in {'.cpp', '.hpp'}):
                 found.extend(
                     (path.relative_to(ROOT).as_posix(), text.count('\n', 0, at) + 1, char)
                     for char in set(value)
@@ -134,6 +180,22 @@ def generated_label_digit_is_bundled(path, char):
 
 
 def test_display_census_includes_literals_escapes_and_formatter_domain():
+    assert [value for _, value in literals(r'"\xe2\x82\xac \u00c5"', cpp=True)] == ['"€ Å"'], (
+        'The C++ display observer decodes UTF-8 byte escapes '
+        'and Unicode escapes as rendered glyphs'
+    )
+    assert [value for _, value in literals(r'"\xe2\x82" /* split */ "\xac"', cpp=True)] == [
+        '"€"'
+    ], 'Adjacent C++ string fragments form one rendered UTF-8 glyph even across a comment'
+    assert [value for _, value in literals(r'"\xe2\x82"', cpp=True)] == ['""'], (
+        'A dynamic byte prefix is never misreported as standalone Unicode display characters'
+    )
+    assert [value for _, value in literals(r'"\xe2\x82\xac"')] == ['"â\x82¬"'], (
+        'The QML display observer retains JavaScript code-point escape semantics'
+    )
+    assert [value for _, value in literals(r'"\\u2153"', cpp=True)] == [r'"\u2153"'], (
+        'An escaped backslash never turns a literal escape spelling into a displayed fraction'
+    )
     census = json.loads((ROOT / 'data/display-glyphs.json').read_text())['characters']
     sites = {(site.rsplit(':', 1)[0], row['char']) for row in census for site in row['sites']}
     missing = sorted({

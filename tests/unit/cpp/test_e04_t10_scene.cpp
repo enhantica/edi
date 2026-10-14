@@ -507,7 +507,7 @@ TEST_CASE("E04-T10 I11 stale capture never computes and old source survives edit
     CHECK_MESSAGE(*held.cartn_x == old, " I1 immutable held source survives later model edits");
 }
 
-TEST_CASE("E04-T10 I9 home orientation and fit independently follow diffraction-lib") {
+TEST_CASE("E04-T10 I9 published home orientation fits the whole drawing") {
     for (const auto matrix : std::vector<std::array<double, 9>>{{10, 0, 0, 0, 10, 0, 0, 0, 10},
                                                                 {4, 0, 0, 0, 10, 0, 0, 0, 6},
                                                                 {4, 1, 2, 0, 10, 3, 0, 0, 6}}) {
@@ -520,25 +520,88 @@ TEST_CASE("E04-T10 I9 home orientation and fit independently follow diffraction-
         const double pad = .3 * std::sqrt(2.07);
         const std::vector<e04_t10::Vector> points{{3, 4, 5}, {8, 9, 10}, {11, 12, 13}};
         const auto expected = e04_t10::home(basis, points, pad);
-        vec(scene.frame.target, expected.target);
         vec(scene.frame.view_direction, expected.direction);
         vec(scene.frame.view_up, expected.up);
-        CHECK_MESSAGE(scene.frame.half_width == doctest::Approx(expected.width),
-                      " I9 independently projected fit points and radius padding determine "
-                      "horizontal extent");
-        CHECK_MESSAGE(
-            scene.frame.half_height == doctest::Approx(expected.height),
-            " I9 independently projected fit points and radius padding determine vertical extent");
+        // The owner changed the exact 1.24-margin pin into a fit of the whole drawing.
+        // Containment is a physical invariant, not a new output-derived absolute-size pin.
+        const auto right = e04_t10::cross(expected.up, expected.direction);
+        const auto fits = [&](edi::Vec3 point, double radius) {
+            const e04_t10::Vector relative{point.x - scene.frame.target.x,
+                                           point.y - scene.frame.target.y,
+                                           point.z - scene.frame.target.z};
+            CHECK_MESSAGE((std::abs(e04_t10::dot(relative, right)) + radius) * .9 < scene.frame.half_width,
+                          "The home frame contains each drawn extent with a positive horizontal margin");
+            CHECK_MESSAGE((std::abs(e04_t10::dot(relative, expected.up)) + radius) * .9 < scene.frame.half_height,
+                          "The home frame contains each drawn extent with a positive vertical margin");
+        };
+        REQUIRE_MESSAGE(scene.atoms.size() == 3,
+                        "The independent source reaches all three physical atom positions before judging its frame");
+        for (const auto& atom : scene.atoms) fits(atom.centre, atom.radius);
+        for (int i = 0; i < 2; ++i) for (int j = 0; j < 2; ++j) for (int k = 0; k < 2; ++k) {
+            const auto corner = e04_t10::add(e04_t10::add(e04_t10::times(basis[0], i),
+                                                       e04_t10::times(basis[1], j)),
+                                            e04_t10::times(basis[2], k));
+            fits({corner[0], corner[1], corner[2]}, 0);
+        }
+        CHECK_MESSAGE(edi::default_view(scene).magnification == doctest::Approx(.9),
+                      "The shared core home view starts at the owner's 0.9 magnification");
+        const auto drawing = edi::scene_drawing(scene, {400, 400, 0});
+        REQUIRE_MESSAGE(drawing.triad.size() == 3,
+                        "The home-frame witness reaches all three drawn axis arrows and letters");
+        for (const auto& arrow : drawing.triad) {
+            const double length = arrow.shaft_length + arrow.head_length;
+            fits({arrow.origin.x + arrow.direction.x * length,
+                  arrow.origin.y + arrow.direction.y * length,
+                  arrow.origin.z + arrow.direction.z * length}, arrow.head_radius);
+            fits(arrow.letter_anchor, 0);
+        }
         edi::SceneOptions off;
         off.axes = false;
         off.atoms = edi::AtomSubset::None;
         const auto hidden = edi::present_structure(s, off);
-        CHECK_MESSAGE((hidden.frame.half_width == scene.frame.half_width &&
-                       hidden.frame.half_height == scene.frame.half_height),
-                      " I9 hiding atoms and axes never changes the fitted home view");
+        // Before: toggles retained the exact old frame. After the owner's whole-drawing
+        // fit: visible geometry determines its extents; crystallographic orientation stays fixed.
+        vec(hidden.frame.view_direction, expected.direction);
+        vec(hidden.frame.view_up, expected.up);
+        CHECK_MESSAGE((hidden.frame.half_width > 0 && hidden.frame.half_height > 0),
+                      "Hiding atoms and axes retains a finite positive home frame for the remaining cell");
     }
     const auto empty = edi::present_structure({}, {});
     vec(empty.frame.view_direction, e04_t10::unit({1, .8, 1.5}));
+}
+
+namespace {
+template <class Viewport>
+void check_legend_band(Viewport viewport) {
+    if constexpr (requires { viewport.side_band; }) {
+        auto scene = cube();
+        scene.frame.half_width = 12;
+        scene.frame.half_height = 4;
+        viewport.width = 800;
+        viewport.height = 600;
+        viewport.top_band = 0;
+        viewport.side_band = 120;
+        // Before: H used the full 800 px. After: the two legend bands leave 560 px.
+        const double expected = 12. * 600 / 560;
+        CHECK_MESSAGE(fitted_half_height(scene.frame, viewport) == doctest::Approx(expected),
+                      "The public fitted half height reserves both nontrivial legend bands");
+        CHECK_MESSAGE(edi::fitted_scale(scene, viewport, edi::Projection::Orthographic) ==
+                          doctest::Approx(600 / (2 * expected)),
+                      "The projection uses the same band-aware fitted half height as its drawing");
+        const auto view = edi::view_along(scene, 2);
+        for (double offset : {-12., 12.}) {
+            const auto point = edi::project(scene, view, viewport,
+                {scene.frame.target.x + offset, scene.frame.target.y, scene.frame.target.z});
+            CHECK_MESSAGE((point.x > 120 && point.x < 680),
+                          "The 0.9 home zoom leaves the drawing clear of either reserved legend band");
+        }
+        viewport.side_band = 0;
+        CHECK_MESSAGE(fitted_half_height(scene.frame, viewport) == doctest::Approx(9),
+                      "A caller requesting no legend band retains the full-width projection formula");
+    } else {
+        FAIL_CHECK("The shared viewport must expose a side band for the owner's legend clearance");
+    }
+}
 }
 
 TEST_CASE("E04-T10 I13 I14 both projections and pointer transformations") {
@@ -550,9 +613,12 @@ TEST_CASE("E04-T10 I13 I14 both projections and pointer transformations") {
     const double H = std::max(scene.frame.half_height, scene.frame.half_width);
     const double scale = 400 / (2 * H * 1.21), cy = 200 + 84 / (2 * 1.21);
     const auto p = edi::project(scene, view, viewport, {10, 0, 0});
+    const double dx = 10 - scene.frame.target.x;
+    const double dy = -scene.frame.target.y;
+    const double dz = -scene.frame.target.z;
     CHECK_MESSAGE(
-        (p.x == doctest::Approx(200 + 5 * scale) && p.y == doctest::Approx(cy + 5 * scale) &&
-         p.depth == -5),
+        (p.x == doctest::Approx(200 + dx * scale * .9) && p.y == doctest::Approx(cy - dy * scale * .9) &&
+         p.depth == dz),
         " I13 orthographic projection obeys independent nontrivial pixel and top-band formulas");
     CHECK_MESSAGE(edi::fitted_scale(scene, viewport, edi::Projection::Orthographic) ==
                       doctest::Approx(scale),
@@ -565,12 +631,12 @@ TEST_CASE("E04-T10 I13 I14 both projections and pointer transformations") {
                   " I14 right drag moves the view in logical pixels");
     const auto zoom = edi::zoomed(scene, view, viewport, p.x, p.y, 120);
     const auto after = edi::project(scene, zoom, viewport, {10, 0, 0});
-    CHECK_MESSAGE(zoom.magnification == 1.25,
+    CHECK_MESSAGE(zoom.magnification == doctest::Approx(.9 * 1.25),
                   " I14 one wheel notch multiplies magnification by the published factor");
     CHECK_MESSAGE((after.x == doctest::Approx(p.x) && after.y == doctest::Approx(p.y)),
                   " I14 orthographic wheel zoom anchors the actual scene point under the pointer");
     const auto inverse = edi::zoomed(scene, zoom, viewport, p.x, p.y, -120);
-    CHECK_MESSAGE(inverse.magnification == doctest::Approx(1),
+    CHECK_MESSAGE(inverse.magnification == doctest::Approx(.9),
                   " I14 opposite wheel notches undo magnification");
     auto maximum = view;
     maximum.magnification = 100;
@@ -585,13 +651,14 @@ TEST_CASE("E04-T10 I13 I14 both projections and pointer transformations") {
     for (double z : {0., 10.}) {
         const auto q = edi::project(scene, view, viewport, {10, 0, z});
         CHECK_MESSAGE(
-            (q.x == doctest::Approx(200 + ps * D / (D - (z - 5)) * 5) &&
-             q.y == doctest::Approx(200 + ps * D / (D - (z - 5)) * 5)),
+            (q.x == doctest::Approx(200 + ps * .9 * D / (D - (z - scene.frame.target.z)) * dx) &&
+             q.y == doctest::Approx(200 - ps * .9 * D / (D - (z - scene.frame.target.z)) * dy)),
             " I13 perspective depth changes magnification with the thirty-degree field of view");
     }
     const auto perspective_zoom = edi::zoomed(scene, view, viewport, 300, 123, 120);
     CHECK_MESSAGE((perspective_zoom.pan_x == 0 && perspective_zoom.pan_y == 0),
                   " I14 perspective wheel zoom leaves pan unchanged");
+    check_legend_band(edi::Viewport{});
 }
 
 TEST_CASE("E04-T10 I15 I16 drawing hit maps half bonds and viewport dimensions") {

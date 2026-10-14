@@ -1,5 +1,6 @@
 import QtQuick
 import "UiInteraction.js" as Ui
+import "RenderedTable.js" as Render
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -23,13 +24,10 @@ TestCase {
         return Oracle.frozen.projects.filter(p => p.metadata["_metadata.purpose"] !== "verification");
     }
     function init() {
-        // Qt Graphs probes a temporary GLES2 context once per process, even
-        // with the software backend. Only this first Graphs user may lack GL.
-        const firstGraphsUse = qtest_results.functionName
-            === "test_arbitrary_directory_keeps_legacy_type_inference";
-        failOnWarning(firstGraphsUse
-            ? /\A(?!QRhiGles2: Failed to create (?:temporary context|context)\z)[\s\S]*\z/
-            : /.*/);
+        // A partial run can encounter Qt Graphs' first probe in any case.
+        // Exempt its exact context/first-window diagnostics only on a software offscreen
+        // host whose independent QOpenGLContext creation actually fails.
+        failOnWarning(Probe.softwareOffscreenWithoutGl() ? /\A(?!(?:QRhiGles2: Failed to create (?:temporary context|context)|window doesn\x27t exist\.)\z)[\s\S]*\z/ : /.*/);
         Session.closeProject();
         Session.examples.searchText = "";
         Session.examples.filterValue = "";
@@ -143,6 +141,8 @@ TestCase {
                        "The selected experiment publishes its independently measured point count");
             fuzzyCompare(experiment.measuredRange.minimum, range[0], 1e-10,
                          "The selected dataset displays the independent ASCII axis minimum");
+            fuzzyCompare(experiment.measuredRange.step, range[2], 0.00005,
+                         "The selected dataset preserves the independent mean axis step");
             fuzzyCompare(experiment.measuredRange.maximum, range[1], 1e-10,
                          "The selected dataset displays the independent ASCII axis maximum");
             if (datasets.length) {
@@ -169,32 +169,38 @@ TestCase {
             click("sideBar.tab.extras");
             click("sideBar.tab.text");
         }
+        // The owner's report defaults omit Data; explicitly include it for the
+        // retained measured-range and point-count witness.
+        project.report.hidden = Array.from(project.report.hidden).filter(key => key !== "data");
         click("appBar.tab.report");
-        tryVerify(() => visibleControl("report.text") !== null, 2000,
-                  "owner final report record: the report finishes loading in the selected page");
-        const report = visibleControl("report.text");
-        verify(report !== null && Probe.nativeText(report),
-               "owner final report record: report renders in a standard QML Text or TextArea");
-        compare(report.textFormat, Text.RichText, "owner final report record: report uses Qt's rich-text subset");
-        verify(!/<(?:script|img|iframe|canvas|svg|object|embed)\b|\bon\w+\s*=|javascript:/i.test(report.text),
-               "owner final report record: simple report contains no JavaScript, web frame or plot");
-        const text = Probe.plainText(report.text);
-        ["Crystal data", "Data collection", "Fit"].forEach(heading =>
-            verify(text.toLowerCase().includes(heading.toLowerCase()), "owner final report record: every report section is populated"));
+        tryVerify(() => visibleControl("report.preview") !== null, 2000, "The selected Report page finishes loading its live preview");
+        const preview = visibleControl("report.preview");
+        tryVerify(() => {
+            const title = findChild(preview, "report.preview.title");
+            return title !== null && title.text === (expected.metadata["_metadata.title"] || expected.metadata["_metadata.name"]);
+        }, 2000, "The rendered preview title belongs to the opened project: " + expected.id);
+        tryVerify(() => preview.model.contents.some(item => item.key === "data" && item.included),
+                  2000, "The preview includes the actual Data subsection before checking its measured summary");
+        verify(waitForPolish(preview) && waitForRendering(preview), "The selected project's preview lays out and renders before reading its document");
+        // Numeric cells render separate left, decimal-point and right Text items.
+        // Join their actual rendered parts within each cell before parsing numbers.
+        const cells = Render.descendants(preview).filter(item => typeof item.column === "number"
+            && typeof item.text === "string" && typeof item.parts !== "undefined");
+        const cellTexts = cells.map(cell => Render.texts(cell).map(item => item.text).join(""));
+        const text = Render.texts(preview).map(item => Probe.plainText(item.text)).concat(cellTexts).join("\n");
+        ["Project summary", "Analysis", "Structures", "Experiments"].forEach(heading => verify(text.includes(heading), "The live preview renders every required report section: " + heading));
         const numbers = (text.match(/[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g) || []).map(Number);
         expected.structures.forEach(s => {
-            verify(text.includes(s.name) && text.includes(s.spaceGroup), "owner final report record: crystal identity comes from committed structure files");
-            s.cell.forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005),
-                                          "owner final report record: reported cell lengths and angles agree with committed structure input"));
+            verify(text.includes(s.name) && text.includes(s.spaceGroup), "The preview's crystal identity comes from committed structure files: " + s.name);
+            s.cell.forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview cell lengths and angles agree with committed input: " + s.name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
         });
         expected.experiments.forEach(name => {
-            verify(text.includes(name), "owner final report record: data collection names every loaded experiment");
+            verify(text.includes(name), "The preview names every loaded experiment: " + name);
             const frozen = Oracle.frozen.corpus.find(c => c.project === expected.path && c.experiment === name);
             const reportRange = datasets.length ? datasets[selected[selected.length - 1]].range : frozen.range;
-            reportRange.forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005),
-                                                 "owner final report record: measured range and point count come from committed experiment data"));
+            [reportRange[0], reportRange[1], reportRange[3]].forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview Data endpoints and point count agree with committed data: " + name + " " + value + "; rendered cells=" + JSON.stringify(cellTexts)));
         });
-        verify(text.includes("crysta"), "owner final report record: fit summary names the effective engine");
+        verify(text.includes("crysta"), "The rendered Analysis software subsection names the effective engine");
     }
     function test_examples_registry_is_complete() {
         same(Probe.rows(Session.examples).map(r => r.exampleId), appProjects().map(p => p.id).concat(["pd-xray-cwl_lif"]),

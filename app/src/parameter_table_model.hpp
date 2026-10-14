@@ -94,8 +94,9 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     QList<CategoryGroup> categoryGroups() const { return category_groups_; }
     Q_INVOKABLE QString text(int row, const QString& role) const;
     // The shown rows' parameters, for the table's selection (edi ADR-0017 §11): the one at a shown row (null
-    // past the end), and whether a parameter is among the shown ones.
+    // past the end), the row a parameter is shown at (-1 when it is not shown), and whether it is shown.
     Q_INVOKABLE edi_app::ParameterItem* parameterAt(int row) const;
+    Q_INVOKABLE int rowOf(edi_app::ParameterItem* parameter) const;
     Q_INVOKABLE bool shows(edi_app::ParameterItem* parameter) const;
 
    signals:

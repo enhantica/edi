@@ -55,6 +55,8 @@ WorkflowPage {
         ProjectPatternChart {
             id: chartView
             experiment: page.experiment
+            axisProject: page.project
+            settingsPage: "analysis"
             shown: page.current && SwipeView.isCurrentItem
         },
         CorrelationChart {
@@ -92,6 +94,14 @@ WorkflowPage {
                     contents: page.contents
                 }
             }
+        }
+    }
+    // The page's view options (edi ADR-0031 §2): its chart's y scale, and how a followed scan redraws.
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
+            ChartSettingsGroup {
+                page: "analysis"
+            }
             PatternUpdatesGroup {}
         }
     }
@@ -109,7 +119,6 @@ WorkflowPage {
     blockKind: "experiment"
     blockOutcomeRole: "fitOutcome"
     blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
-    blockOneColour: project !== null && project.scan
     blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
     blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
     blockIndex: project ? project.currentExperimentIndex : -1

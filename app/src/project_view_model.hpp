@@ -43,6 +43,22 @@
 
 namespace edi_app {
 
+// A value and its standard uncertainty as the project's rule writes them, for QML: the value's text, the s.u.'s text
+// in the value's last digits, and the bracket; all empty when there is no s.u. to write.
+struct UncertaintyText {
+    Q_GADGET
+    QML_VALUE_TYPE(uncertaintyText)
+    Q_PROPERTY(QString value MEMBER value CONSTANT)
+    Q_PROPERTY(QString su MEMBER su CONSTANT)
+    Q_PROPERTY(QString bracket MEMBER bracket CONSTANT)
+
+   public:
+    QString value;
+    QString su;
+    QString bracket;
+    bool operator==(const UncertaintyText&) const = default;
+};
+
 class ParameterRegistry;
 
 // The project's structures: roles `name`, `label` (`name · file`, the file the structure is saved as),
@@ -77,6 +93,7 @@ class ExperimentListModel : public RowTableModel {
         QString outcome;
         QStringList extracted;
         bool is_template = false;
+        QString reliability;  // its fit's χ², as the selector's line shows it; empty before it is fitted
     };
     // A scan's `count` datasets. The rows hold only their keys: a row's values are built from `row` when it is read,
     // so a scan of many files keeps no text per file (the session holds its facts).
@@ -119,6 +136,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+    // The project's authors, one text separated by "; " (project.edi `_metadata.authors`).
+    Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
+    // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99".
+    Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
+    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
+    // The report's charts follow it. An undoable edit.
+    Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
     Q_PROPERTY(QString path READ path NOTIFY pathChanged)
     // True after any edit since the project was opened or last saved (edi ADR-0017 §13).
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
@@ -130,6 +154,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Start fitting, its progress and its result.
     Q_PROPERTY(edi_app::FitViewModel* fit READ fit CONSTANT)
     Q_PROPERTY(edi_app::BlockText* metadataText READ metadataText CONSTANT)
+    // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
+    Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
     Q_PROPERTY(edi_app::ReportViewModel* report READ report CONSTANT)
     Q_PROPERTY(int currentStructureIndex READ currentStructureIndex WRITE setCurrentStructureIndex NOTIFY currentStructureIndexChanged)
@@ -172,6 +198,27 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setTitle(const QString& title);
     QString description() const;
     void setDescription(const QString& description);
+    QString authors() const;
+    void setAuthors(const QString& authors);
+    QString suRule() const;
+    void setSuRule(const QString& rule);
+    // The report's settings (ADR-0036 §7), each an undoable edit: in `reports/report.edi` the groups the report
+    // leaves out (their keys separated by spaces) and whether a saved report embeds its libraries; in
+    // `analysis/analysis.edi` the correlation threshold the Analysis page's level sets and the x axis.
+    void setReportExcluded(const QString& keys);
+    void setReportHtmlOffline(bool embedded);
+    // Whether Save report writes `format` ("html", "pdf" or "cif"): `reports/report.edi`'s `_report.<format>`.
+    void setReportFormat(const QString& format, bool on);
+    // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
+    // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
+    // Throws when the file cannot be written, the open project's rows then as they were.
+    void recordReportFiles(std::vector<edi::ReportFile> rows);
+    void setReportCorrelationThreshold(double threshold);
+    bool patternDSpacing() const;
+    void setPatternDSpacing(bool on);
+    // A value and its standard uncertainty as the project's rule writes them; empty texts for a non-finite value or a
+    // zero or non-finite s.u.
+    Q_INVOKABLE edi_app::UncertaintyText suText(double value, double su) const;
     QString path() const { return QString::fromStdString(project_->path); }
     bool modified() const { return modified_; }
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
@@ -184,6 +231,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     AnalysisViewModel* analysis() const { return analysis_; }
     FitViewModel* fit() const { return fit_; }
     BlockText* metadataText() const { return metadata_text_; }
+    BlockText* reportText() const { return report_text_; }
     BlockText* projectText() const { return project_text_; }
     ReportViewModel* report() const { return report_; }
     int currentStructureIndex() const { return current_structure_; }
@@ -267,7 +315,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
     // to what the project holds (a fit that wrote nothing).
     void publishFit();
-    void showFitFrame(const edi::FitFrame& frame);
+    // A fit's or a shown dataset's patterns; a dataset's may bring the first experiment's d-spacing capture.
+    void showFitFrame(const edi::FitFrame& frame, std::optional<edi::PatternSource> d_frame = std::nullopt);
     void restorePatterns();
     // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
     // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
@@ -309,6 +358,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
+    QString apply_report_setting(const edi::Edit& change);
+    // Writes report settings through the preview's settings door and publishes what they change.
+    QString write_report_settings(const edi::Edit& change);
     // The scan's results (null outside a scan project).
     const ScanSession* scanSession() const { return scan_session_; }
 
@@ -316,6 +369,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void nameChanged();
     void titleChanged();
     void descriptionChanged();
+    void authorsChanged();
+    void suRuleChanged();
+    void patternDSpacingChanged();
     void lastModifiedChanged();
     void currentStructureIndexChanged();
     void currentStructureChanged();
@@ -347,6 +403,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // rule).
     void publishMetadata();
     void publishCurrent();
+    // ADR-0031 §1: the structure id, the experiment id and a scan's dataset file last selected in this project, in
+    // the app's settings keyed by the project's folder; stored only once restored.
+    QStringList storedSelection() const;
+    void storeSelection() const;
+    QString selectionKey() const;
+    bool selection_restored_ = false;
     void syncBlocks();
     void completeSymmetry();
     void syncParameterTable(bool refresh_report = true);
@@ -407,7 +469,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName>;
+                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
@@ -441,6 +503,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
+    BlockText* report_text_ = nullptr;
     BlockText* project_text_;
     ReportViewModel* report_;
     StructureViewOptions* structure_view_options_;
@@ -460,6 +523,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
+    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's).
+    void syncPatternColours();
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;
@@ -513,6 +578,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<edi::PdDataBase> data;
         std::vector<edi::Edit::ScanValue> values;
         std::optional<edi::FitFrame> frame;
+        std::optional<edi::PatternSource> d_frame;  // the frame on d, when a chart is on d
         QString error;
     };
     // Applies a projection read for request `request`, unless a newer one was asked for since.
@@ -544,6 +610,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool modified_ = false;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
+    QString published_authors_, published_su_rule_;
+    bool published_pattern_d_spacing_ = false;
     StructureViewModel* published_structure_ = nullptr;
     ExperimentViewModel* published_experiment_ = nullptr;
     int published_structure_index_ = -1;

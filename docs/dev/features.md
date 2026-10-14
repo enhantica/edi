@@ -59,7 +59,7 @@ roadmap stays authoritative for milestone status.
 | Feature | LIB | CLI | APP | WEB | Milestone |
 |---|:--:|:--:|:--:|:--:|---|
 | Fit summary (Rwp/χ², parameters + e.s.d.s) | ☐ | ☐ | ☐ | ☐ | · |
-| Report generation (headless/text path in the core) | ☐ | ☐ | ☐ | ☐ | |
+| Report: one model in the core; interactive HTML; PDF in the app; saved reports marked out of date | 🚧 | 🚧 | 🚧 | 🚧 | E04 |
 | `--format human/plain/json` structured output | ➖ | ☐ | ➖ | ➖ | E03 (with crysta C10's CLI kit) |
 | Undo/redo (crysta EditCommand; file-journal on the CLI) | ☐ | ☐ | ☐ | ☐ | · C10/E03 joint |
 
