@@ -8,6 +8,7 @@ not a tolerance fitted to any product palette.
 
 import itertools
 import math
+from functools import cache
 
 RGB_TO_LMS = (
     (0.4122214708, 0.5363325363, 0.0514459929),
@@ -80,67 +81,102 @@ def distance(first, second):
     return math.dist(oklab(first), oklab(second))
 
 
-def smallest_lightness_shift(source, background, calculated=None):  # noqa: PLR0914 - named matrix coordinates
-    """Solve the 3:1 boundary along the published hue/chroma ray.
-
-    Inverse Oklab matrices are from Ottosson's same published definition.
-    No colour clipping is used: clipping would change the required hue/chroma.
-    """
-    lightness, a, b = oklab(source)
-    meets_contrast = contrast(source, background) >= 3
-    if meets_contrast and (calculated is None or distance(source, calculated) >= 0.10):
-        return lightness
-    target = (
-        (1.05 / 3 - 0.05)
-        if background == '#FFFFFF'
-        else (
-            3
-            * (
-                sum(
-                    w * linear(c)
-                    for w, c in zip((0.2126, 0.7152, 0.0722), rgb(background), strict=True)
-                )
-                + 0.05
-            )
-            - 0.05
-        )
+def linear_rgb(lab):
+    """Invert Ottosson's published Oklab matrices without channel clipping."""
+    level, a, b = lab
+    cone_l = (level + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m = (level - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s = (level - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    return (
+        4.0767416621 * cone_l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * cone_l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * cone_l - 0.7034186147 * m + 1.7076147010 * s,
     )
 
-    def luminance(level):
-        cone_l = (level + 0.3963377774 * a + 0.2158037573 * b) ** 3
-        m = (level - 0.1055613458 * a - 0.0638541728 * b) ** 3
-        s = (level - 0.0894841775 * a - 1.2914855480 * b) ** 3
-        red = 4.0767416621 * cone_l - 3.3077115913 * m + 0.2309699292 * s
-        green = -1.2684380046 * cone_l + 2.6097574011 * m - 0.3413193965 * s
-        blue = -0.0041960863 * cone_l - 0.7034186147 * m + 1.7076147010 * s
-        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
-    low, high = (0, lightness) if background == '#FFFFFF' else (lightness, 1)
-    for _ in range(80):
-        midpoint = (low + high) / 2
-        if luminance(midpoint) < target:
-            low = midpoint
+def gamut_ray(source, level):
+    """Keep the largest published chroma that fits sRGB at this lightness."""
+    _, a, b = oklab(source)
+
+    def point(scale):
+        return level, scale * a, scale * b
+
+    def inside(scale):
+        return all(-1e-10 <= channel <= 1 + 1e-10 for channel in linear_rgb(point(scale)))
+
+    if inside(1):
+        return point(1)
+    low, high = 0, 1
+    for _ in range(48):
+        mid = (low + high) / 2
+        if inside(mid):
+            low = mid
         else:
-            high = midpoint
-    boundary = (low + high) / 2
-    if calculated is None:
-        return boundary
-    calc_l, calc_a, calc_b = oklab(calculated)
-    radial = 0.10**2 - (a - calc_a) ** 2 - (b - calc_b) ** 2
-    candidates = [lightness, boundary]
-    if radial > 0:
-        radius = math.sqrt(radial)
-        candidates.extend([calc_l - radius, calc_l + radius])
-    eligible = [
-        level
-        for level in candidates
-        if 0 <= level <= 1
-        and (level <= boundary + 1e-10 if background == '#FFFFFF' else level >= boundary - 1e-10)
-        and (level - calc_l) ** 2 + (a - calc_a) ** 2 + (b - calc_b) ** 2 >= 0.10**2 - 1e-12
+            high = mid
+    return point(low)
+
+
+def lab_contrast(lab, background):
+    luminance = sum(w * c for w, c in zip((0.2126, 0.7152, 0.0722), linear_rgb(lab), strict=True))
+    back = sum(
+        w * linear(c) for w, c in zip((0.2126, 0.7152, 0.0722), rgb(background), strict=True)
+    )
+    low, high = sorted((luminance, back))
+    return (high + 0.05) / (low + 0.05)
+
+
+@cache
+def smallest_adaptation(source, background, calculated=None):
+    """Find the nearest feasible lightness on the gamut-mapped published hue ray."""
+    origin = oklab(source)[0]
+    calc = oklab(calculated) if calculated else None
+
+    def eligible(level):
+        lab = gamut_ray(source, level)
+        return lab_contrast(lab, background) >= 3 and (
+            calc is None or math.dist(lab, calc) >= 0.10
+        )
+
+    if eligible(origin):
+        return gamut_ray(source, origin)
+    candidates = []
+    for end in (0, 1):
+        previous = origin
+        for step in range(1, 1025):
+            level = origin + (end - origin) * step / 1024
+            if eligible(level):
+                bad, good = previous, level
+                for _ in range(48):
+                    mid = (bad + good) / 2
+                    if eligible(mid):
+                        good = mid
+                    else:
+                        bad = mid
+                candidates.append(good)
+                break
+            previous = level
+    if not candidates:
+        raise ValueError('No gamut-mapped published hue meets both palette rules')
+    return gamut_ray(source, min(candidates, key=lambda level: abs(level - origin)))
+
+
+def smallest_lightness_shift(source, background, calculated=None):
+    return smallest_adaptation(source, background, calculated)[0]
+
+
+def gamut_hue_chroma_preserved(source, actual):
+    """Compare hue and maximal gamut chroma within RGB rounding uncertainty."""
+    level, chroma, hue = polar(actual)
+    source_chroma, source_hue = polar(source)[1:]
+    chroma_error, hue_error = quantisation_tolerance(actual)
+    lightness_error = lightness_quantisation_tolerance(actual)
+    expected = [
+        math.hypot(*gamut_ray(source, max(0, min(1, candidate)))[1:])
+        for candidate in (level - lightness_error, level, level + lightness_error)
     ]
-    if not eligible:
-        raise ValueError('No hue/chroma-preserving lightness meets both palette rules')
-    return min(eligible, key=lambda level: abs(level - lightness))
+    return min(expected) - chroma_error <= chroma <= max(expected) + chroma_error and (
+        source_chroma < 1e-5 or angle_difference(source_hue, hue) <= hue_error
+    )
 
 
 def lightness_quantisation_tolerance(actual):
