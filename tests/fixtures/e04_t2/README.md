@@ -11,21 +11,21 @@ Parameters/Fitting groups untitled and non-collapsible; its
 `SideBarBasic/Fittables.qml` puts native limit boxes on each side of the slider.
 `Pages/Model/SideBarText.qml` puts a block selector above the aligned text view.
 The theme tokens come from gui-components' `Gui/Style/Colors.qml`, and bundled
-font families from the owner's committed 2026-09-28 font records.
+font families from the committed font records.
 The absent-value tolerance is 1e-6, from the producer's
 `include/crysta/fit.hpp::kDefaultChiSquareTolerance`, forwarded by
 `core/src/adapter.cpp::default_chi_square_tolerance`. The editable
 project omits the tolerance and witnesses that fallback. Separately,
 `docs/user/cli/pd-neut-tof_si-sepd_start-2/project/analysis/analysis.edi`
 declares 1e-4; its loaded value and a subsequent 0.0025 edit witness explicit
-overrides. The packet's 0.0001 Analysis Text example is not the default.
+overrides. The 0.0001 Analysis Text example is an explicit override.
 
 Published test seam: `AppState.platformColorScheme` is writable for the Qt test
 and demo, and normally bound to `Qt.styleHints.colorScheme`. The test selects
 Light/Dark/System through the base `Colors.theme` setting. The seam does not
 claim to test the OS integration on the headless Linux runner.
 
-Category targets retain 's `group.<edi category>` names. Each loop group
+Category targets use `group.<edi category>` names. Each loop group
 contains a real ListView-based base TableView, with header and row delegates;
 its count must equal the input file's row count. A fields-only negative witness
 must be rejected by the same observer. Colour-pair controls reject a fixed
@@ -39,11 +39,11 @@ scanner proves speed or appearance.
 
 Capture evidence map: implementation supplies
 `docs/dev/design/-captures.json`, with a `captures` array. Each entry names
-`image` (basename in the shared edi expected-image set), `notes` (owner note
+`image` (basename in the shared edi expected-image set), `notes` (design note
 numbers), `theme` (`light`, `dark`, `system`), optional `expanded` (category ids)
 and, for Report Text note 13, the pinned `timestamp`. Every visible note 1–14
 is mapped. This is an inventory gate only: normal app-ui-test compares every
-image, and review/conductor still inspect the images against the owner notes.
+image, and visual review compares the images against the design notes.
 
 Note 19's shell check observes evaluated BUILD/PREFIX paths before a controlled
 fetch refusal for app and default environments. It proves the declared path
@@ -56,10 +56,8 @@ uncertainty supplies the precision. The nontrivial witnesses are
 1.2866603586797143 → 1.29 and 0.0025646436261 → 0.00256. Both retain their
 original stored double, including on focus loss without an edit.
 
-## Corrected note 20 (owner, 2026-09-29)
+## Build sequencing
 
-Authority: development hub `knowledge/decision-records.md`, "OWNER CORRECTION:
-note 20 means build once per full run", committed with the amended packet.
 A full sequence builds once before checks; each standalone step builds first
 on every invocation. Freshness detection is no longer an acceptance property.
 
@@ -90,7 +88,7 @@ and both desktop CI matrix platforms. Observer controls reject missing,
 duplicated or late builds and omitted checks. This is a shell sequencing claim,
 not a pixi implementation test or native app/full-suite attestation.
 
-Review-7 adaptation: the dispatcher previously keyed only on the task name,
+The dispatcher previously keyed only on the task name,
 which hid the observed duplicate between inherited and explicitly qualified
 app-build references. It now keeps the declared environment in task identity;
 a dispatcher-level negative witness must produce both builds and fail the
@@ -109,7 +107,7 @@ required. These changes adapt representation without relaxing build counts,
 ordering, repeated standalone builds or failure propagation.
 
 The retained CLI wiring gate previously walked only string task dependencies
-and accepted any one matching CI step. The corrected note-20 graph introduced an
+and accepted any one matching CI step. The environment-qualified graph introduced an
 environment-qualified dependency mapping, which raised TypeError during that walk.
 It now resolves task definitions and dependency identity in the declared environment,
 and checks verify, verify-quick and verify-full for the complete registry runner.
