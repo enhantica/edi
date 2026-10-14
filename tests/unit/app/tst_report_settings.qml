@@ -134,14 +134,35 @@ Item {
                     labelXs.push(label.mapToItem(dialog.contentItem, 0, 0).x);
                     let parent = label.parent;
                     const siblings = parent.children.filter(item => item !== label && item.mapToItem(parent, 0, 0).x >= label.x + label.width - 0.5);
-                    const control = siblings.sort((a, b) => Math.abs(a.y - label.y) - Math.abs(b.y - label.y))[0];
+                    let control = siblings.sort((a, b) => Math.abs(a.y - label.y) - Math.abs(b.y - label.y))[0];
                     if (!control) {
                         failures.push(tabs[t] + " has no right-hand control for " + title);
                         continue;
                     }
-                    const first = control.contentItemLabel || control.contentItem || control.indicator || Render.texts(control)[0] || control;
-                    if (Math.abs(inkTop(label) - inkTop(first)) > 1)
-                        failures.push(tabs[t] + " " + title + " text top=" + inkTop(label) + "; control first line=" + inkTop(first));
+                    // A disabled control can sit in a hover/tooltip wrapper.
+                    // Measure its real checkbox or button, preserving the wrapper's layout.
+                    const actionable = Render.descendants(control).find(item => item.indicator && item.checked !== undefined || item.rowButton === true);
+                    const firstInk = Render.texts(control).find(item => typeof item.text === "string" && item.text.length > 0);
+                    // A Settings column begins with its path label, then buttons.
+                    // Unwrap a hover wrapper only when it adds no earlier text line.
+                    if (actionable && (!firstInk || Render.descendants(actionable).includes(firstInk)))
+                        control = actionable;
+                    const isButton = control.rowButton === true || (typeof control.clicked === "function" && !control.indicator);
+                    const isTextlessCheck = control.checked !== undefined && control.indicator && !control.text;
+                    if (isButton || isTextlessCheck) {
+                        // A textless checkbox has no text line: its indicator centre
+                        // supplies the alignment. A button's face centre supplies it.
+                        const target = isTextlessCheck ? control.indicator : control;
+                        const targetCentre = target.mapToItem(dialog.contentItem, 0, target.height / 2).y;
+                        const inkHeight = typeof label.paintedHeight === "number" ? label.paintedHeight : label.height - (label.topPadding || 0) - (label.bottomPadding || 0);
+                        const labelCentre = inkTop(label) + inkHeight / 2;
+                        if (Math.abs(labelCentre - targetCentre) > 1)
+                            failures.push(tabs[t] + " " + title + " actual label ink centre=" + labelCentre + "; " + (isTextlessCheck ? "checkbox indicator" : "button face") + " centre=" + targetCentre + "; control=" + control.objectName);
+                    } else {
+                        const first = control.contentItemLabel || control.contentItem || Render.texts(control)[0] || control;
+                        if (Math.abs(inkTop(label) - inkTop(first)) > 1)
+                            failures.push(tabs[t] + " " + title + " actual label text top=" + inkTop(label) + "; actual control first text top=" + inkTop(first) + "; control=" + control.objectName);
+                    }
                 }
             }
             function same(values, name) {

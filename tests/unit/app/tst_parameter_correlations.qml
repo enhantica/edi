@@ -40,7 +40,8 @@ TestCase {
         return Ui.control(Probe, appWindow, name);
     }
     function open(path) {
-        verify(Session.openProject(Probe.repoUrl(path)), "The independently authored project must open");
+        const input = SettingsProof.copyProject(Probe.repoUrl(path));
+        verify(Session.openProject(input), "The independently authored project opens from a disposable copy without changing later cases' input: " + path);
     }
     function findBy(root, property, value) {
         if (root && (property === "model" ? JSON.stringify(root[property]) === JSON.stringify(value) : root[property] === value))
@@ -178,9 +179,10 @@ TestCase {
     function test_supported_only_choices_explain_their_disabled_state() {
         open("tests/fixtures/e04_t1/editable-project");
         click("appBar.tab.experiment");
+        Ui.expandGroup(test, Probe, appWindow, "group.experiments");
         for (const name of ["sampleForm", "scatteringType"]) {
             const field = control("experimentType." + name);
-            verify(field !== null && !field.enabled, "A supported-only type choice must be shown disabled");
+            verify(field !== null && !field.enabled, "The visible supported-only type choice is disabled; objectName=experimentType." + name + "; actual found=" + (field !== null) + "; enabled=" + (field ? field.enabled : "absent"));
             verify(Ui.text(field).length > 0, "The disabled choice must still display its supported value");
         }
     }
@@ -212,7 +214,10 @@ TestCase {
                 const i = truth.names.indexOf(chart.labels[row]);
                 const j = truth.names.indexOf(chart.labels[column]);
                 verify(i >= 0 && j >= 0, "The selected experiment must show the independent parameter identities");
-                verify(Math.abs(chart.valueAt(row * 3 + column) - truth.matrix[i][j]) < 2e-4, "Switching experiments must show that experiment's own independent covariance, including its sign");
+                const raw = truth.matrix[i][j];
+                const stored = readPoint.includes("reopened");
+                const expected = stored ? Number(raw.toPrecision(Math.abs(raw) >= 0.95 ? 3 : 2)) : raw;
+                verify(Math.abs(chart.valueAt(row * 3 + column) - expected) < (stored ? 1e-14 : 2e-4), "Dataset selection retains its signed external covariance, IUCr-rounded only after persistence; read point=" + readPoint + " actual=" + chart.valueAt(row * 3 + column) + " expected=" + expected);
             }
         }
     }
@@ -279,15 +284,23 @@ TestCase {
         verify(control("experiments.loadData.0") !== null, "The data-file link must remain available after a save and reload");
     }
 
-    function test_diagnostics_button_matches_logging_level_size() {
+    function test_diagnostics_button_matches_the_preferences_control_column() {
         click("appBar.button.preferences");
-        const button = control("preferences.diagnostics");
-        verify(button !== null && button.text === "Show", "Diagnostics must offer a real Show button");
-        const dialog = Probe.visibleDialogs(appWindow).find(item => Ui.text(item).includes("Logging level"));
-        verify(dialog !== undefined, "Preferences must expose the Logging level control beside Diagnostics");
-        const logging = findBy(dialog.contentItem, "model", ["Debug", "Info", "Error", "Disabled"]);
-        verify(logging !== null, "The Logging level combobox must be present for the size comparison");
-        compare(button.width, logging.width, "Diagnostics Show must be the Logging level combobox's width");
+        const dialogs = Probe.visibleDialogs(appWindow);
+        const dialog = dialogs.find(item => findChild(item, "preferences.tab.develop") !== null);
+        verify(dialog !== undefined, "The actual Preferences dialog exposes its Develop tab; actual dialogs=" + dialogs.length);
+        const appearance = findChild(dialog, "preferences.tab.appearance");
+        mouseClick(appearance, appearance.width / 2, appearance.height / 2);
+        tryCompare(appearance, "checked", true, 1000, "Appearance opens before taking the actual combo control width");
+        tryVerify(() => findChild(dialog, "preferences.colourScheme") !== null && findChild(dialog, "preferences.colourScheme").width > 0, 2000, "The real Appearance combo is laid out before its width is read");
+        const column = findChild(dialog, "preferences.colourScheme").width;
+        const tab = findChild(dialog, "preferences.tab.develop");
+        mouseClick(tab, tab.width / 2, tab.height / 2);
+        tryCompare(tab, "checked", true, 1000, "The actual Develop tab opens before Diagnostics geometry is read");
+        const button = findChild(dialog, "preferences.diagnostics");
+        verify(button !== null && button.text === "Show", "The visible Develop tab exposes its actual Diagnostics Show button");
+        tryVerify(() => button.visible && button.width > 0, 2000, "The actual Diagnostics control finishes its Preferences slide before measuring");
+        fuzzyCompare(button.width, column, 1, "Diagnostics Show shares the actual Appearance combo control column, independent of a private layout property; actual button=" + button.width + "; actual colour-scheme combo width=" + column);
         dialog.reject();
     }
 
@@ -295,8 +308,8 @@ TestCase {
         open("tests/fixtures/correlations/polynomial-3");
         click("appBar.tab.analysis");
         click("mainArea.analysis.tab.correlations");
-        const chart = control("correlations");
-        verify(chart !== null, "The Correlations tab must show the production chart");
+        const chart = findChild(appWindow.contentItem, "correlations");
+        verify(chart !== null, "The selected mainArea.analysis.tab.correlations exposes its actual correlations chart; actual tab=" + control("mainArea.analysis.tab.correlations").checked);
         compare(chart.count, 0, "A project before fitting must show an empty correlation view");
         compare(String(chart.cellColor(-1)), "#d73027", "Negative unit correlation must use the external red endpoint");
         compare(String(chart.cellColor(0)), "#ffffff", "Zero correlation on the light chart must be white");
@@ -304,7 +317,9 @@ TestCase {
         const reference = JSON.parse(Probe.readFile("tests/fixtures/correlations/reference.json")).cases["3"];
         Session.project.fit.start();
         tryCompare(Session.project.fit, "running", false, 5000, "The small polynomial fit must complete");
-        compare(chart.count, 3, "The many-parameter fit must show all three free parameter identities");
+        Session.project.correlations.level = 0;
+        Session.project.correlations.maxParameters = 3;
+        compare(chart.count, 3, "The actual completed fit shows all three independently free parameter identities at explicit level zero; actual count=" + chart.count + "; labels=" + JSON.stringify(chart.labels));
         const labels = chart.labels;
         for (let row = 0; row < 3; ++row) {
             for (let col = 0; col < row; ++col) {
@@ -352,18 +367,18 @@ TestCase {
         const coefficient = control("background.coef.0");
         verify(coefficient !== null, "The coefficient value must have a visible editing control");
         coefficient.forceActiveFocus();
-        keyClick(Qt.Key_A, Qt.ControlModifier);
-        for (const key of [Qt.Key_6, Qt.Key_Period, Qt.Key_2, Qt.Key_5])
-            keyClick(key);
-        keyClick(Qt.Key_Return);
-        compare(Probe.rows(terms)[0].coef.value, 6.25, "Typing a coefficient must update the production model");
+        verify(SettingsProof.type(coefficient, "6.25"), "The keyboard observer sends real text to the coefficient's own app window and active input, rather than the Quick Test runner window; actual text=" + coefficient.text);
+        verify(SettingsProof.key(coefficient, Qt.Key_Return), "Return reaches the actual coefficient editor's own app window to commit its typed value");
+        compare(Probe.rows(terms)[0].coef.value, 6.25, "Actual keyboard input plus Return commits the independently entered background coefficient; actual first term=" + JSON.stringify(Probe.rows(terms)[0]));
         click("background.removeTerm." + count);
         compare(terms.count, count, "Remove must erase exactly the selected coefficient");
         const selector = control("background.type");
         verify(selector !== null, "Coefficient backgrounds must retain the type selector");
         selector.selected("chebyshev");
-        const question = findChild(appWindow, "background.typeQuestion");
-        verify(question !== null && question.visible, "Replacing rows must ask for confirmation");
+        const background = control("group.background");
+        const question = findChild(background, "background.typeQuestion") || findChild(appWindow.contentItem, "background.typeQuestion");
+        verify(question !== null, "The actual background group retains its type confirmation popup; actual group=" + (background ? background.objectName : "absent"));
+        tryCompare(question, "visible", true, 2000, "Changing an existing background opens the actual confirmation popup owned by its group, including its real overlay transition; actual type=" + experiment.backgroundType);
         question.reject();
         compare(experiment.backgroundType, "polynomial", "Cancel must retain the existing background type");
         compare(terms.count, count, "Cancel must preserve every coefficient row");

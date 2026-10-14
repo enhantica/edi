@@ -69,6 +69,12 @@ def main():
     positive += 'plot.data=[independent[i]];plot.layout={xaxis:{title:{text:"Temperature (K)"}},'
     positive += 'yaxis:{title:{text:independent[i].name}}};});</script>'
     (target / 'browser-positive.html').write_text(positive)
+    root_positive = positive.replace('.evolution-figure', '.evolution-grid')
+    root_positive = root_positive.replace('class="evolution-figure"', 'class="evolution-grid"')
+    root_positive = root_positive.replace(
+        'class="js-plotly-plot"', 'class="evolution-figure js-plotly-plot"'
+    )
+    (target / 'browser-positive-root.html').write_text(root_positive)
     (target / 'reference.json').write_text(
         json.dumps(
             {

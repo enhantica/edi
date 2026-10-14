@@ -12,6 +12,7 @@ from tests.fixtures.correlations.rename_history import (
     remove_live_row,
     seed,
 )
+from tests.fixtures.report_units.iucr_reference import rounded_correlation
 from tests.integration.py.test_parameter_correlations import correlations, saved_analysis
 
 
@@ -81,6 +82,10 @@ def test_removed_rows_keep_both_historical_endpoints_on_block_rename(
         for name in names
         for r in original
     ), 'The history witness must contain the actual row identities before removal'
+    # Before literal coefficient spelling; after only that field follows IUCr rec. 12.
+    original = [
+        {**row, 'correlation': rounded_correlation(row['correlation'])} for row in original
+    ]
     project = edi.Project.load(before)
     remove_live_row(project, kind, owners(namespace)[0])
     removed = tmp_path / 'removed'

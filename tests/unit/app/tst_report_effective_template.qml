@@ -65,7 +65,7 @@ Rectangle {
             Session.project.correlations.level = 0;
             Session.project.correlations.maxParameters = 3;
             const failures = [];
-            function check(matrix, source) {
+            function check(matrix, source, persisted) {
                 if (!matrix || matrix.error || !matrix.labels || matrix.labels.length !== 3 || !matrix.values || matrix.values.length !== 9) {
                     failures.push(source + " actual=" + JSON.stringify(matrix));
                     return;
@@ -74,7 +74,10 @@ Rectangle {
                     for (let column = 0; column < row; ++column) {
                         const i = truth.names.indexOf(matrix.labels[row]), j = truth.names.indexOf(matrix.labels[column]);
                         const actual = matrix.values[row * 3 + column];
-                        if (i < 0 || j < 0 || typeof actual !== "number" || !isFinite(actual) || Math.abs(actual - truth.matrix[i][j]) > 2e-4)
+                        const raw = i < 0 || j < 0 ? NaN : truth.matrix[i][j];
+                        const digits = Math.abs(raw) >= 0.95 ? 3 : 2;
+                        const expected = persisted ? Number(raw.toPrecision(digits)) : raw;
+                        if (i < 0 || j < 0 || typeof actual !== "number" || !isFinite(actual) || Math.abs(actual - expected) > (persisted ? 1e-14 : 2e-4))
                             failures.push(source + " signed covariance/parameter identity differs: " + JSON.stringify(matrix));
                     }
                 }
@@ -110,8 +113,8 @@ Rectangle {
                 failures.push("Saved analysis has no effective-template correlation rows");
             const disk = SettingsProof.reportHtmlMatrices(location);
             verify(!disk.error, "The actual Python and CLI HTML processes complete: " + disk.error);
-            check(disk.python, "Python HTML from disk");
-            check(disk.cli, "CLI HTML from disk");
+            check(disk.python, "Python HTML from disk, binding=" + disk.binding, true);
+            check(disk.cli, "CLI HTML from disk, binding=" + disk.binding, true);
             page.destroy();
             page = null;
             Session.closeProject();
@@ -123,7 +126,7 @@ Rectangle {
             check({
                 labels: Session.project.correlations.labels,
                 values: Session.project.correlations.values
-            }, "Analysis reopened");
+            }, "Analysis reopened", true);
             page = reportFactory.createObject(parent, {
                 width: 1300,
                 height: 1000,
@@ -132,7 +135,7 @@ Rectangle {
             verify(page !== null && waitForPolish(page), "The reopened app constructs its report from persisted state");
             const reopened = findChild(page, "report.preview");
             verify(reopened !== null, "The reopened report preview exists before reading its actual model");
-            check(reopened.model.correlations, "Preview reopened");
+            check(reopened.model.correlations, "Preview reopened", true);
             compare(failures.length, 0, "A scan uses its declared template else its first dataset, retaining the same independently normalized signed matrix in Analysis and preview, saved rows, Python/CLI HTML and the app after reopening; actual " + failures.join("; "));
         }
     }

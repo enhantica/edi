@@ -21,6 +21,18 @@ Rectangle {
         property var page
         property var location
         property var webGroup
+        SignalSpy {
+            id: saveStarts
+            signalName: "calculationStarted"
+        }
+        SignalSpy {
+            id: saveFinishes
+            signalName: "calculationFinished"
+        }
+        SignalSpy {
+            id: savePublishes
+            signalName: "recalculated"
+        }
         property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/report_storage/reference.json"))
         function cleanup() {
             if (webGroup)
@@ -32,7 +44,8 @@ Rectangle {
             page = null;
         }
         function prepare(text, input) {
-            location = SettingsProof.copyProject(Probe.repoUrl(input || "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"));
+            const requested = input || "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project";
+            location = SettingsProof.copyProject(String(requested).startsWith("file:") ? requested : Probe.repoUrl(requested));
             if (text !== undefined)
                 verify(SettingsProof.write(location, "reports/report.edi", text), "The export witness independently declares the new report file before loading");
             verify(Session.openProject(location), "The export gate opens the actual lbco project through Session: " + Session.lastError);
@@ -111,7 +124,10 @@ Rectangle {
             return value;
         }
         function test_export_path_rows_show_the_saved_file_state_data() {
-            return ["not-saved", "current", "out-of-date", "missing", "unticked"].map(state => ({tag: state, state: state}));
+            return ["not-saved", "current", "out-of-date", "missing", "unticked"].map(state => ({
+                        tag: state,
+                        state: state
+                    }));
         }
         function test_export_path_rows_show_the_saved_file_state(data) {
             prepare(undefined, "tests/fixtures/report_options/pairs");
@@ -160,7 +176,11 @@ Rectangle {
             Session.closeProject();
             verify(Session.openProject(location), "The stale or missing saved report is reopened from its real project folder");
             tryCompare(Session.project, "calculating", false, 15000, "Reopening settles before reading the saved report path state");
-            page = pageFactory.createObject(parent, {width: 1300, height: 1000, current: true});
+            page = pageFactory.createObject(parent, {
+                width: 1300,
+                height: 1000,
+                current: true
+            });
             verify(page !== null && waitForPolish(page), "The reopened Report page constructs its actual path rows");
             tryVerify(() => pathIsRed("html"), 2000, "The reopened stale or missing HTML report keeps its relative path and red state");
             compare(String(pathField("html").text), reportName("html"), "A missing or stale output retains the saved path rather than deleting its row");
@@ -169,8 +189,31 @@ Rectangle {
             saveReport();
             tryVerify(() => ["html", "pdf"].every(format => String(pathField(format).color) === String(EaStyle.Colors.themeForeground)), 15000, "Save report rewrites missing or stale files and returns both path rows to normal text");
         }
+        function test_path_field_geometry_accepts_a_disabled_dimmed_cif_control() {
+            webGroup = Qt.createQmlObject(`import QtQuick; import QtQuick.Controls
+                Rectangle { width: 260; height: 120; property bool collapsed: false
+                    Column { Repeater { model: ["HTML", "PDF", "CIF"]
+                        delegate: Item { required property string modelData
+                            width: 260; height: 40
+                            CheckBox { objectName: "report.writes" + (modelData === "HTML" ? "Html" : modelData === "PDF" ? "Pdf" : "Cif")
+                                width: 260; height: 40; text: modelData; enabled: modelData !== "CIF" }
+                            TextField { x: 60; y: 4; width: 200; height: 32; readOnly: true
+                                enabled: modelData !== "CIF"; opacity: 0.5
+                                placeholderText: "not saved yet"; placeholderTextColor: "#888888" }
+                        }
+                    } }
+                }`, parent);
+            verify(webGroup !== null && waitForPolish(webGroup), "The independent Qt control reaches three read-only fields including a genuinely disabled dimmed CIF control");
+            for (const format of ["html", "pdf", "cif"])
+                compare(pathField(format).x, 60, "The geometry observer reads the visible checkbox ink, allowing a wider unused logical click item: " + format);
+            compare(pathField("cif").enabled, false, "The independent CIF geometry control remains disabled");
+            compare(pathField("cif").opacity, 0.5, "The independent unticked CIF control remains visibly dimmed");
+        }
         function test_browser_path_rows_use_the_session_file_state_data() {
-            return ["not-saved", "current", "out-of-date"].map(state => ({tag: state, state: state}));
+            return ["not-saved", "current", "out-of-date"].map(state => ({
+                        tag: state,
+                        state: state
+                    }));
         }
         function test_browser_path_rows_use_the_session_file_state(data) {
             prepare(undefined, "tests/fixtures/report_options/pairs");
@@ -179,7 +222,7 @@ Rectangle {
             verify(desktop !== null, "The browser capability seam starts with the actual app's Report group and model");
             desktop.visible = false;
             webGroup = SettingsProof.webExport(page, Session.project.report, findChild(page, "report.preview"));
-            verify(webGroup !== null && SettingsProof.webAvailable, "The browser UI gate compiles the real resource with only its WebFiles.available capability operand set true");
+            verify(webGroup !== null && SettingsProof.webAvailable, "The web path-state seam creates the actual Export resource and real report model with browser capability true; actual error=" + SettingsProof.webExportError);
             verify(waitForPolish(webGroup), "The actual Export resource lays out under the browser capability seam");
             const html = pathField("html");
             compare(String(html.text), "", "A fresh browser session reads no saved path before an actual report save");
@@ -252,10 +295,15 @@ Rectangle {
             const charts = allCharts.filter(item => item.visible);
             const failures = [];
             if (charts.length !== (data.included ? witness.order.length : 0))
-                failures.push("recursive report.evolution items=" + allCharts.length + "; visible charts=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0) + "; records=" + JSON.stringify(allCharts.map(item => ({visible: item.visible, width: item.width, height: item.height, series: item.reportSeries || item.reportShown}))));
+                failures.push("recursive report.evolution items=" + allCharts.length + "; visible charts=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0) + "; records=" + JSON.stringify(allCharts.map(item => ({
+                            visible: item.visible,
+                            width: item.width,
+                            height: item.height,
+                            series: item.reportSeries || item.reportShown
+                        }))));
             for (let i = 0; i < charts.length; ++i) {
                 const chart = charts[i];
-                const series = chart.reportSeries || chart.reportShown;
+                const series = chart.reportSeries && typeof chart.reportSeries.name === "string" ? chart.reportSeries : chart.reportShown;
                 if (!series || series.name !== witness.order[i])
                     failures.push("chart " + i + " actual reportSeries parameter=" + JSON.stringify(series));
                 const points = chart.reportPoints;
@@ -278,9 +326,21 @@ Rectangle {
             }
             compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses two charts per wide row or one per narrow row, and leaves Evolution out only when excluded; actual " + failures.join("; "));
         }
-        function test_browser_observer_reaches_independent_plot_geometry() {
+        function test_browser_observer_reaches_independent_plot_geometry_data() {
+            return [
+                {
+                    tag: "nested",
+                    file: "browser-positive.html"
+                },
+                {
+                    tag: "figure-root",
+                    file: "browser-positive-root.html"
+                }
+            ];
+        }
+        function test_browser_observer_reaches_independent_plot_geometry(data) {
             const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/report_evolution/reference.json"));
-            const observed = SettingsProof.htmlEvolutionFacts(Probe.repoUrl("tests/fixtures/report_evolution/browser-positive.html"));
+            const observed = SettingsProof.htmlEvolutionFacts(Probe.repoUrl("tests/fixtures/report_evolution/" + data.file));
             verify(!observed.error, "The browser observer reaches the independent six-box HTML control: " + observed.error);
             for (const view of ["wide", "narrow"]) {
                 const facts = observed[view];
@@ -321,7 +381,7 @@ Rectangle {
             const failures = [];
             for (const view of ["wide", "narrow"]) {
                 const facts = observed[view];
-                verify(facts !== undefined && typeof facts.plots.length === "number", "The browser proves the " + view + " saved report's actual DOM and Plotly plot inventory");
+                verify(facts !== undefined && typeof facts.plots.length === "number", "The browser proves the " + view + " saved report's actual DOM and Plotly plot inventory; actual=" + JSON.stringify(observed));
                 if (facts.selectors !== 0)
                     failures.push(view + " parameter selectors=" + facts.selectors);
                 const plots = facts.plots, names = [];
@@ -334,8 +394,8 @@ Rectangle {
                     const plot = plots[i], trace = plot.traces[0], expected = witness.reference.points[i];
                     if (plot.traces.length !== 1 || !expected || expected.some((point, index) => ["x", "y"].some(key => Math.abs(trace[key][index] - point[key]) > 1e-9) || Math.abs((trace.error_y.array || [])[index] - point.su) > 1e-9) || !trace.error_y.visible)
                         failures.push(view + " chart " + i + " numeric coordinates/s.u. bars=" + JSON.stringify(plot.traces));
-                    if (!plot.xTitle || !plot.xTitle.includes("K") || !plot.yTitle)
-                        failures.push(view + " chart " + i + " axis name/temperature units=" + JSON.stringify([plot.xTitle, plot.yTitle]));
+                    if (!plot.xTitle || !plot.xTitle.includes("K") || (plot.title || plot.yTitle) !== witness.titles[i])
+                        failures.push(view + " chart " + i + " actual title=" + plot.title + "; y-axis title=" + plot.yTitle + "; expected parameter title=" + witness.titles[i] + "; x-axis/temperature units=" + plot.xTitle);
                     const box = plot.box;
                     if (box[2] <= 0 || box[3] <= 0 || plot.svgCount <= 0)
                         failures.push(view + " chart " + i + " has no nonempty actual vector/canvas drawing");
@@ -605,6 +665,42 @@ Rectangle {
             saveReport();
             tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "I40 the geometry gate consumes an actual saved HTML report");
             checkHtmlGeometry(SettingsProof.text(location, reportName("html")));
+        }
+        function test_report_after_project_save_adopts_rounded_values_and_stays_current() {
+            const input = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"));
+            const structureFile = "structures/lbco.edi";
+            const original = SettingsProof.text(input, structureFile);
+            verify(original.includes("_cell.length_a 3.88()"), "The save-adoption witness reaches the real authored cell token before changing it");
+            verify(SettingsProof.write(input, structureFile, original.replace("_cell.length_a 3.88()", "_cell.length_a 5.03641(0.0692616)")), "A hand-declared fitted cell has nontrivial IUCr rounding, independent of any fit output");
+            prepare("_edi.schema_version 3\n_report.html true\n_report.pdf false\n_report.html_offline false\n", input);
+            const project = Session.project, parameter = project.currentStructure.cell.lengthA;
+            compare(parameter.value, 5.03641, "The app first loads the unrounded authored cell value");
+            const undoBefore = project.canUndo;
+            [saveStarts, saveFinishes, savePublishes].forEach(spy => {
+                spy.target = project;
+                spy.clear();
+            });
+            verify(saveStarts.valid && saveFinishes.valid && savePublishes.valid, "The save observer reaches actual worker start/finish and publication signals, without using busy state as a count proxy");
+            verify(Session.save(), "The actual app project Save succeeds before saving its report");
+            tryCompare(project, "calculating", false, 15000, "The one post-save calculation settles before taking the report");
+            compare(parameter.value, 5.04, "The already-open cell view adopts the independent file-rounded value; actual=" + parameter.value);
+            compare(parameter.uncertainty, 0.07, "The already-open cell view adopts the upward IUCr s.u.; actual=" + parameter.uncertainty);
+            compare(saveStarts.count, 1, "Successful project Save starts exactly one real calculation; actual=" + saveStarts.count);
+            compare(saveFinishes.count, 1, "Successful project Save finishes exactly one real calculation; actual=" + saveFinishes.count);
+            compare(savePublishes.count, 1, "Successful project Save publishes its coherent saved-value calculation once; actual=" + savePublishes.count);
+            compare(project.modified, false, "File-value adoption leaves the project saved, rather than introducing a new edit");
+            compare(project.canUndo, undoBefore, "File-value adoption introduces no extra undo step");
+            saveReport();
+            tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "The app really saves HTML immediately after the project Save");
+            const name = reportName("html"), savedLocation = location;
+            page.destroy();
+            page = null;
+            Session.closeProject();
+            prepare(undefined, savedLocation);
+            compare(Session.project.currentStructure.cell.lengthA.value, 5.04, "The reopened app sees precisely the saved cell used by its report");
+            tryVerify(() => !pathIsRed("html"), 2000, "The actual saved report remains current after reopening; actual path colour=" + pathField("html").color);
+            verify(SettingsProof.fileFacts(location, name).bytes > 100, "The current mark describes a real saved HTML file rather than a missing-file placeholder");
+            [saveStarts, saveFinishes, savePublishes].forEach(spy => spy.target = null);
         }
         function test_unsaved_content_edits_mark_saved_reports_stale_then_reopen_keeps_the_mark() {
             prepare();
