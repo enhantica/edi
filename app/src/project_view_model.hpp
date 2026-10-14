@@ -397,11 +397,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
     };
-    // A structure's or an experiment's rename: the block by its new name, and the name it had.
+    // A structure's or an experiment's rename: the block by its new name, and the name it had. The scan's results
+    // before and after it, so its Undo puts back the same shared results rather than renamed copies.
     struct BlockName {
         bool structure = true;
         std::string name;
         std::string before;
+        decltype(edi::FitResultRecord::scan_results) results_before;
+        decltype(edi::FitResultRecord::scan_results) results_after;
     };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
                                     edi::StructuresUndo, FreeFlags, PointIds, BlockName>;
@@ -426,9 +429,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::optional<edi::Project> stash;
         std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
         bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
-        // The fitted dataset's file and its correlations as they were, if it had any.
+        // The fitted dataset's file, and the scan's results and file-named correlation rows as they were (ADR-0034:
+        // the results are shared, so this holds pointers).
         std::string pairs_file;
-        std::optional<std::vector<edi::FitParameterCorrelation>> pairs;
+        std::map<std::string, std::shared_ptr<const edi::ScanFileResult>> results;
+        std::vector<edi::FitParameterCorrelation> rows;
     };
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
@@ -450,14 +455,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
     CorrelationViewModel* correlations_ = nullptr;
-    // A scan's correlations by dataset file, from each file's fit as the run reports it (owner, 2026-10-11): the
-    // Correlations tab shows the shown dataset's. Read from the saved record (`_fit_parameter_correlation` rows naming
-    // their file) when the project opens; written back into the record a save writes, and before a run replaces
-    // them, so its Undo puts them back.
-    std::map<std::string, std::vector<edi::FitParameterCorrelation>> scan_correlations_;
-    void readScanCorrelations();
-    void writeScanCorrelations();
-    void writeScanCorrelations(edi::Project& record);
+    // ADR-0034: each file's results as the run reports them go into the fit record (the model's, and the template's
+    // while a dataset is shown), where the Correlations tab, Undo and a save find them; nothing keeps a second copy.
+    void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
     QStringList scan_columns_;

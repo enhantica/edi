@@ -71,7 +71,8 @@ def test_every_status_column_is_in_the_convention_census():
         contents = path.read_text()
         if 'header:' not in contents:
             continue
-        header = block(contents, 'header:')
+        start = contents.index('header:')
+        header = contents[start : start + len(block(mask(contents), 'header:'))]
         headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header)
         if headings:
             actual[path.relative_to(PAGES).as_posix()] = headings
@@ -119,4 +120,20 @@ def test_nested_declarations_and_comment_icons_cannot_fake_a_status_cell():
     actual = table_cells(source)
     assert [kind for kind, _ in actual] == ['EaComponents.TableViewLabel'], (
         'Nested, commented and sibling icons cannot satisfy the actual table-cell convention'
+    )
+
+
+def test_status_header_census_ignores_comment_quotes_and_balances_literal_braces():
+    source = """Item {
+        header: Row {
+            // owner's header: this apostrophe is not a string opener
+            Label { text: qsTr("Status") }
+            Label { text: "{literal brace}" }
+        }
+        Label { text: qsTr("Fit") }
+    }"""
+    start = source.index('header:')
+    header = source[start : start + len(block(mask(source), 'header:'))]
+    assert re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header) == ['Status'], (
+        'the header census ignores comment punctuation and excludes headings outside the header'
     )
