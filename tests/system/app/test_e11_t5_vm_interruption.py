@@ -220,7 +220,8 @@ def test_approved_elapsed_budget_retires_dispatched_continuation_transport(vm, s
         if vm.last['requests'][index]['cancelled']:
             break
     assert not vm.last['vm']['can_cancel'], (
-        'I10/B1: the actual core deadline has retired its live approval/turn before transport proof'
+        'I10/B1: the actual core deadline has retired its live approval/turn '
+        'before transport proof'
     )
     assert vm.last['requests'][index]['cancelled'] and vm.last['vm']['project'] == original, (
         'I8/I10/B1: actual elapsed core budget revokes the matching native continuation '
