@@ -56,6 +56,7 @@ def generic(monkeypatch, tmp_path):
         monkeypatch.setenv('QT_QUICK_BACKEND', 'software')
         actor = Generic(Path(os.environ['EDI_ASSISTANT_WORKFLOW_VM_PROBE']))
         actor.command('inspect')
+        actor.peer_pid_file = config.with_suffix('.peer-pid')
         actors.append(actor)
         return actor, trace
 
@@ -66,6 +67,52 @@ def generic(monkeypatch, tmp_path):
 
 def records(trace):
     return [json.loads(line) for line in trace.read_text().splitlines()] if trace.exists() else []
+
+
+def process_state(pid):
+    stat = Path('/proc') / str(pid) / 'stat'
+    if sys.platform.startswith('linux'):
+        try:
+            fields = stat.read_text().split()
+            return {'start': fields[21], 'live': fields[2] != 'Z'}
+        except FileNotFoundError:
+            return None
+    # macOS ordinary process metadata; no signal or process-memory inspection.
+    result = subprocess.run(
+        ['ps', '-p', str(pid), '-o', 'lstart=', '-o', 'stat='],
+        capture_output=True,
+        text=True,
+        timeout=1,
+        check=False,
+    )
+    fields = result.stdout.split()
+    return (
+        {'start': ' '.join(fields[:-1]), 'live': not fields[-1].startswith('Z')}
+        if fields
+        else None
+    )
+
+
+def live_original_peer(actor):
+    pid = int(actor.peer_pid_file.read_text())
+    identity = process_state(pid)
+    assert identity and identity['live'], 'GR SETUP: original owned peer is live before the action'
+    return pid, identity['start']
+
+
+def original_peer_is_live(identity):
+    pid, started = identity
+    state = process_state(pid)
+    return bool(state and state['start'] == started and state['live'])
+
+
+def matching_interrupt(trace):
+    return any(
+        row.get('method') == 'turn/interrupt'
+        and row.get('params', {}).get('turnId') == '019a0290-0000-7000-8000-000000000002'
+        and row.get('params', {}).get('threadId') == '019a0290-0000-7000-8000-000000000001'
+        for row in records(trace)
+    )
 
 
 def settle(actor, predicate):
@@ -208,6 +255,7 @@ def test_record_or_aggregate_exhaustion_interrupts_owned_turn_without_truncated_
 ):
     actor, trace = generic(scenario)
     connect(actor)
+    identity = live_original_peer(actor)
     actor.command('send_text', text='Original bounded turn')
     state = settle(actor, lambda value: bool(value['last_error']))
     assert len(state['last_error'].encode()) <= 512, 'GR2: oversized record has bounded safe error'
@@ -215,6 +263,46 @@ def test_record_or_aggregate_exhaustion_interrupts_owned_turn_without_truncated_
         row.get('kind') == 'assistant' and row.get('status') == 'completed'
         for row in state['messages']
     ), 'GR2: rejected partial record is no completed reply'
-    assert any(row.get('method') == 'turn/interrupt' for row in records(trace)), (
-        'GR2: record exhaustion fences and interrupts the actual owned turn'
+    settle(actor, lambda _value: matching_interrupt(trace) or not original_peer_is_live(identity))
+    assert matching_interrupt(trace) or not original_peer_is_live(identity), (
+        'GR2: exhaustion interrupts the original turn or actually stops its owned process'
     )
+    assert not actor.last['vm']['can_cancel'], 'GR2: cancelled work has settled public Stop state'
+    assert len(users(actor, 'Original bounded turn')) == 1, (
+        'GR2: quota refusal preserves the complete original visible user input once'
+    )
+
+
+def test_followup_before_turn_identity_refuses_without_retiring_original_work(generic):
+    actor, trace = generic('start-pending')
+    connect(actor)
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original awaiting turn admission')
+    settle(actor, lambda _value: any(row.get('method') == 'turn/start' for row in records(trace)))
+    first = users(actor, 'Original awaiting turn admission')
+    assert len(first) == 1 and first[0]['id'], (
+        'GR: genuine outstanding start request has one actual original admitted user row'
+    )
+    actor.command('send_text', text='Original not-yet-admissible followup')
+    after = actor.last['vm']
+    assert after['last_error'] and len(after['last_error'].encode()) <= 512, (
+        'GR: missing active turn identity has visible bounded nonadmission'
+    )
+    assert not users(actor, 'Original not-yet-admissible followup'), (
+        'GR: rejected followup creates no row that would acknowledge clearing the actual draft'
+    )
+    assert [row['id'] for row in users(actor, 'Original awaiting turn admission')] == [
+        first[0]['id']
+    ], 'GR: refused early followup preserves the original admitted prompt identity'
+    assert after['can_cancel'] and original_peer_is_live(identity), (
+        'GR: refusing input before a turn ID must keep the original work/process active'
+    )
+    requests = records(trace)
+    assert sum(row.get('method') == 'turn/start' for row in requests) == 1, (
+        'GR: nonadmitted followup cannot replay another turn'
+    )
+    assert not any(row.get('method') == 'turn/steer' for row in requests), (
+        'GR: early followup cannot guess an unadmitted turn identity'
+    )
+    actor.command('cancel')
+    settle(actor, lambda value: not value['can_cancel'] and not original_peer_is_live(identity))

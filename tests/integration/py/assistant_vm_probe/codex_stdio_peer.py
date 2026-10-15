@@ -13,6 +13,9 @@ from pathlib import Path
 
 config = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
 trace = Path(config['trace'])
+Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).with_suffix('.peer-pid').write_text(
+    str(os.getpid()), encoding='utf-8'
+)
 scenario = config.get('scenario', 'complete')
 thread_id = '019a0290-0000-7000-8000-000000000001'
 turn_id = '019a0290-0000-7000-8000-000000000002'
@@ -174,11 +177,28 @@ for line in sys.stdin:
             value['modelProvider'] = 'other-original-provider'
         reply(request, value)
     elif method == 'turn/start':
+        if scenario == 'start-pending':
+            continue  # Genuine received request; no turn ID is admitted yet.
         reply(request, {'turn': turn('inProgress')})
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
         if scenario in {'hold', 'steer-no-ack'}:
             continue
         if scenario == 'approval-expansion':
+            notify(
+                'item/started',
+                {
+                    'threadId': thread_id,
+                    'turnId': turn_id,
+                    'item': {
+                        'type': 'commandExecution',
+                        'id': 'original-command',
+                        'status': 'inProgress',
+                        'command': 'original-command',
+                        'commandActions': [],
+                        'cwd': params['sandboxPolicy']['writableRoots'][0],
+                    },
+                },
+            )
             emit({
                 'id': server_id,
                 'method': 'item/commandExecution/requestApproval',
