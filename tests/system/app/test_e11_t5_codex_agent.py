@@ -306,3 +306,368 @@ def test_followup_before_turn_identity_refuses_without_retiring_original_work(ge
     )
     actor.command('cancel')
     settle(actor, lambda value: not value['can_cancel'] and not original_peer_is_live(identity))
+
+
+# Review62 GN1-GN6. These are public contract invariants, not producer-output pins.
+def started_requests(trace):
+    return [row for row in records(trace) if row.get('method') == 'turn/start']
+
+
+def authority_row(state):
+    return next(
+        (row for row in state['messages'] if row.get('payload', {}).get('id') == 'authority-item'),
+        None,
+    )
+
+
+def configure_next_peer(actor, scenario):
+    path = actor.peer_pid_file.with_suffix('.json')
+    value = json.loads(path.read_text())
+    value['scenario'] = scenario
+    path.write_text(json.dumps(value))
+
+
+@pytest.mark.parametrize('scenario', ['hold', 'start-pending'])
+def test_gn1_oversized_new_draft_preserves_original_admitted_process(generic, scenario):
+    actor, trace = generic(scenario)
+    connect(actor)
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original already admitted work')
+    settle(actor, lambda _state: len(started_requests(trace)) == 1)
+    original = users(actor, 'Original already admitted work')
+    assert len(original) == 1, 'GN1 SETUP: original public admission precedes new refusal'
+    actor.command('send_text', text='x' * 1048577)
+    state = actor.last['vm']
+    assert state['last_error'] and len(state['last_error'].encode()) <= 512, (
+        'GN1: oversized nonadmission has a bounded visible explanation'
+    )
+    assert state['can_cancel'] and original_peer_is_live(identity), (
+        'GN1: rejecting only the new draft preserves original work and reachable Stop'
+    )
+    assert [row['id'] for row in users(actor, 'Original already admitted work')] == [
+        original[0]['id']
+    ], 'GN1: refusing new input does not replace the original acknowledged user row'
+    assert len(started_requests(trace)) == 1 and not any(
+        row.get('method') == 'turn/steer' for row in records(trace)
+    ), 'GN1: a preflight-refused draft produces neither a new turn nor an active steer'
+
+
+@pytest.mark.parametrize('mode', ['null', 'apikey', 'chatgpt', 'chatgptAuthTokens'])
+def test_gn2_account_change_retires_old_authority_and_pending_outcomes(generic, mode):
+    actor, trace = generic('gn:account-' + mode)
+    connect(actor)
+    actor.command('send_text', text='Original account-bound work')
+    settle(
+        actor,
+        lambda state: any(
+            row.get('text') == 'Original immutable text' for row in state['messages']
+        ),
+    )
+    actor.command('send_text', text='Original trigger for account notification')
+    state = actor.last['vm']
+    # A replacement managed account must be read/revalidated, not silently accepted
+    # from an auth-mode-only notification. This peer supplies no new identity proof.
+    revalidated = sum(row.get('method') == 'account/read' for row in records(trace)) > 1
+    assert not state['can_cancel'] and (not state['connected'] or revalidated), (
+        'GN2: account change retires old work before any revalidated managed connection'
+    )
+    assert not any(row.get('status') in {'pending', 'in_progress'} for row in state['messages']), (
+        'GN2: account retirement truthfully settles every original pending public row'
+    )
+    before = len(started_requests(trace))
+    if not state['connected']:
+        actor.command('send_text', text='Original stale account send')
+        assert len(started_requests(trace)) == before, (
+            'GN2: no turn uses retired managed authority'
+        )
+
+
+@pytest.mark.parametrize('scenario', ['logout-hold', 'logout-late-start'])
+def test_gn2_signout_revokes_before_ack_and_late_start_cannot_revive(generic, scenario):
+    actor, trace = generic('gn:' + scenario)
+    connect(actor)
+    actor.command('send_text', text='Original work before Sign out')
+    settle(actor, lambda _state: len(started_requests(trace)) == 1)
+    actor.command('sign_out')
+    state = actor.last['vm']
+    assert not state['connected'] and not state['can_cancel'], (
+        'GN2: Sign out revokes before logout acknowledgement and despite late start'
+    )
+    assert not any(row.get('status') in {'pending', 'in_progress'} for row in state['messages']), (
+        'GN2: Sign out retains actual original work as an interrupted settled outcome'
+    )
+    actor.command('send_text', text='Original forbidden logout-interval send')
+    assert len(started_requests(trace)) == 1, 'GN2: the logout interval cannot admit a new turn'
+
+
+@pytest.mark.parametrize('suffix', ['missing', 'wrong'])
+def test_gn3_steer_ack_requires_actual_expected_turn_id(generic, suffix):
+    actor, trace = generic('gn:steer-' + suffix)
+    connect(actor)
+    actor.command('send_text', text='Original bound turn')
+    settle(actor, itemgetter('can_cancel'))
+    actor.command('send_text', text='Original unacknowledged steer')
+    state = actor.last['vm']
+    assert state['last_error'], (
+        'GN3: missing or unrelated required steer result.turnId is rejected'
+    )
+    assert not any(
+        row.get('status') == 'completed' for row in users(actor, 'Original unacknowledged steer')
+    ), 'GN3: a misbound acknowledgement cannot claim successful user admission'
+    assert len(started_requests(trace)) == 1, 'GN3: malformed acknowledgement never replays a turn'
+
+
+@pytest.mark.parametrize('suffix', ['item', 'delta'])
+def test_gn3_known_output_requires_its_actual_turn_binding(generic, suffix):
+    actor, trace = generic('gn:missing-' + suffix + '-turn')
+    connect(actor)
+    actor.command('send_text', text='Original binding control')
+    settle(
+        actor,
+        lambda state: any(
+            row.get('text') == 'Original immutable text' for row in state['messages']
+        ),
+    )
+    actor.command('send_text', text='Original trigger for misbound output')
+    state = actor.last['vm']
+    assert not any(
+        row.get('text') == 'Unbound text' or 'UNBOUND APPEND' in row.get('text', '')
+        for row in state['messages']
+    ), 'GN3: known output lacking required turnId never enters the current public transcript'
+    assert len(started_requests(trace)) == 1, (
+        'GN3: ignored/refused malformed output does not replay input'
+    )
+
+
+@pytest.mark.parametrize('suffix', ['duplicate', 'type', 'delta'])
+def test_gn3_finalized_original_cannot_be_replaced_or_extended(generic, suffix):
+    actor, trace = generic('gn:immutable-' + suffix)
+    connect(actor)
+    actor.command('send_text', text='Original immutable result control')
+    state = settle(
+        actor,
+        lambda value: (
+            any(row.get('text') == 'Original immutable text' for row in value['messages'])
+            if suffix == 'delta'
+            else authority_row(value) is not None
+        ),
+    )
+    original = (
+        next(row for row in state['messages'] if row.get('text') == 'Original immutable text')
+        if suffix == 'delta'
+        else authority_row(state)
+    )
+    assert original, 'GN3 SETUP: completed original is retained before late input'
+    actor.command('send_text', text='Original trigger for finalized contradiction')
+    after = next(row for row in actor.last['vm']['messages'] if row['id'] == original['id'])
+    assert after['text'] == original['text'] and after['payload'] == original['payload'], (
+        'GN3: finalized content survives duplicate completion, type change and late delta'
+    )
+    assert len(started_requests(trace)) == 1, (
+        'GN3: a finalized-item contradiction cannot create a new turn'
+    )
+
+
+@pytest.mark.parametrize('kind', ['commandExecution', 'fileChange'])
+def test_gn3_enclosing_success_cannot_fabricate_missing_tool_final_item(generic, kind):
+    actor, trace = generic('gn:unfinished-' + kind)
+    connect(actor)
+    actor.command('send_text', text='Original unfinished operation')
+    state = settle(actor, lambda value: authority_row(value) is not None)
+    row = authority_row(state)
+    assert row['status'] != 'completed', (
+        'GN3: turn completion alone cannot invent an authoritative completed command/file outcome'
+    )
+    assert row['payload']['status'] == 'inProgress', (
+        'GN3: the original incomplete operation payload remains truthful and complete'
+    )
+    assert len(started_requests(trace)) == 1, (
+        'GN3: unfinished output refusal never repeats user work'
+    )
+
+
+def test_gn3_wrong_thread_resolved_cannot_consume_current_question(generic):
+    actor, _trace = generic('gn:question-wrong-resolve')
+    connect(actor)
+    actor.command('send_text', text='Original question control')
+    state = settle(actor, lambda value: bool(value['pending_question']))
+    original = state['pending_question']
+    assert original['question_id'] == 'original-question', (
+        'GN3 SETUP: genuine bound question is visible'
+    )
+    actor.command('send_text', text='Original trigger for unrelated resolution')
+    assert actor.last['vm']['pending_question'] == original, (
+        'GN3: a request resolution from another thread cannot erase the current question'
+    )
+
+
+def test_gn3_stale_answer_after_reconnect_preserves_fresh_work(generic):
+    actor, trace = generic('gn:question-stale-answer')
+    connect(actor)
+    actor.command('send_text', text='Original retiring question')
+    state = settle(actor, lambda value: bool(value['pending_question']))
+    question = state['pending_question']['question_id']
+    actor.command('send_text', text='Original trigger for owned process EOF')
+    settle(actor, lambda value: not value['connected'])
+    configure_next_peer(actor, 'hold')
+    connect(actor)
+    actor.command('send_text', text='Original fresh unrelated work')
+    settle(actor, itemgetter('can_cancel'))
+    identity = live_original_peer(actor)
+    actor.command('answer', id=question, answer='Original answer')
+    assert actor.last['vm']['can_cancel'] and original_peer_is_live(identity), (
+        'GN3: an answer owned by a retired thread cannot retire unrelated fresh work'
+    )
+    assert len(started_requests(trace)) == 2, 'GN3: stale answer never replays a third turn'
+
+
+@pytest.mark.parametrize('channel', ['events', 'wire', 'stderr'])
+def test_gn4_individually_legal_settled_turns_have_independent_resource_lifetimes(
+    generic, channel
+):
+    actor, trace = generic('gn:lifetime-' + channel)
+    connect(actor)
+    identity = live_original_peer(actor)
+    for index in range(2):
+        actor.command('send_text', text='Original legal settled turn ' + str(index))
+        state = settle(actor, lambda value: not value['can_cancel'] or bool(value['last_error']))
+        assert (
+            not state['last_error'] and state['connected'] and original_peer_is_live(identity)
+        ), 'GN4: settled legal turns do not consume a single process-lifetime stream budget'
+        assert len(users(actor, 'Original legal settled turn ' + str(index))) == 1, (
+            'GN4: each independently admitted legal turn retains its original user row once'
+        )
+    assert len(started_requests(trace)) == 2, (
+        'GN4: resource reset occurs at genuine independent turns'
+    )
+
+
+@pytest.mark.parametrize('size', ['within', 'over'])
+def test_gn4_catalogue_charges_complete_metadata_across_pages(generic, size):
+    actor, trace = generic('gn:catalogue-' + size)
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    # Two independent model objects carry 500000/530000 description bytes each.
+    # Small wrappers keep the former below1MiB and the latter above it, while each
+    # individual record is below1MiB and there are only two choices.
+    if size == 'over':
+        assert not state['connected'] and state['last_error'], (
+            'GN4: complete aggregate catalogue refuses before ready despite small labels'
+        )
+        assert not any(row.get('method') == 'thread/start' for row in records(trace)), (
+            'GN4: over-cap complete catalogue cannot advance to admitted thread creation'
+        )
+    else:
+        assert state['connected'] and len(state['models']) == 2, (
+            'GN4: complete paginated catalogue within inclusive byte/count caps remains available'
+        )
+
+
+def test_gn5_reconnect_stages_current_immutable_inputs_not_modified_recovery(generic, tmp_path):
+    actor, trace = generic('gn:workspace-change')
+    original = b'Original immutable selected input, not a scientific expected value\n'
+    path = tmp_path / 'original-selected.txt'
+    path.write_bytes(original)
+    request = actor.command('selected_begin')['reply']['request_id']
+    actor.command('selected_add', request_id=request, urls=[path.as_uri()])
+    assert actor.last['vm']['selected_files'], (
+        'GN5 SETUP: real selected-byte intake precedes workspace creation'
+    )
+    connect(actor)
+    first_cwd = Path(
+        next(row['params']['cwd'] for row in records(trace) if row.get('method') == 'thread/start')
+    )
+    assert (first_cwd / 'inputs' / path.name).read_bytes() == original, (
+        'GN5 SETUP: first working copy matches independently planted bytes'
+    )
+    actor.command('send_text', text='Original work before process loss')
+    settle(actor, lambda value: not value['connected'])
+    changed = (first_cwd / 'inputs' / path.name).read_bytes()
+    assert changed != original and path.read_bytes() == original, (
+        'GN5 SETUP: only the task-owned staged copy changed before actual process loss'
+    )
+    configure_next_peer(actor, 'complete')
+    connect(actor)
+    current_cwd = Path(
+        [row['params']['cwd'] for row in records(trace) if row.get('method') == 'thread/start'][-1]
+    )
+    assert (current_cwd / 'inputs' / path.name).read_bytes() == original, (
+        'GN5: a fresh current-input connection cannot silently inherit changed recovery bytes'
+    )
+    assert (first_cwd / 'inputs' / path.name).read_bytes() == changed, (
+        'GN5: original changed recovery artifact is preserved rather than silently overwritten'
+    )
+
+
+@pytest.mark.parametrize('selection', ['auto', 'model'])
+def test_gn6_auto_after_explicit_effort_resets_actual_sticky_override(generic, selection):
+    actor, trace = generic('gn:effort-' + selection)
+    connect(actor)
+    actor.command('select_effort', id='high')
+    assert actor.last['vm']['selected_effort'] == 'high', (
+        'GN6 SETUP: original catalogue permits explicit high'
+    )
+    actor.command('send_text', text='Original explicit effort turn')
+    settle(actor, lambda value: not value['can_cancel'])
+    first = started_requests(trace)
+    assert len(first) == 1 and first[0]['params'].get('effort') == 'high', (
+        'GN6 SETUP: first actual runtime request establishes its sticky explicit override'
+    )
+    if selection == 'auto':
+        actor.command('select_effort', id='')
+    else:
+        actor.command('select_model', id='gpt-6-sol')
+    assert not actor.last['vm']['selected_effort'], (
+        'GN6 SETUP: Auto or unavailable old choice exposes actual Provider default'
+    )
+    actor.command('send_text', text='Original Auto effort turn')
+    settle(actor, lambda value: not value['can_cancel'] or bool(value['last_error']))
+    turns = started_requests(trace)
+    assert (len(turns) == 1 and actor.last['vm']['last_error']) or (
+        len(turns) == 2 and turns[1]['params'].get('effort') == 'medium'
+    ), 'GN6: Auto resets to the independent default or visibly refuses admission'
+
+
+def test_gn3_unknown_notification_preserves_bound_active_control(generic):
+    actor, trace = generic('gn:unknown-control')
+    connect(actor)
+    actor.command('send_text', text='Original unknown-notification control')
+    settle(actor, itemgetter('can_cancel'))
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original valid steer control')
+    assert actor.last['vm']['can_cancel'] and original_peer_is_live(identity), (
+        'GN3: an unrelated unknown notification does not fabricate failure of valid bound work'
+    )
+    assert users(actor, 'Original valid steer control')[0]['status'] == 'completed', (
+        'GN3: genuine matching steer acknowledgement still admits the original user input once'
+    )
+    assert len(started_requests(trace)) == 1, (
+        'GN3: a valid busy control remains in its original turn'
+    )
+
+
+def test_gn3_missing_turn_server_question_cannot_claim_current_authority(generic):
+    actor, _trace = generic('gn:missing-request-turn')
+    connect(actor)
+    actor.command('send_text', text='Original request-binding control')
+    settle(actor, itemgetter('can_cancel'))
+    actor.command('send_text', text='Original trigger for unbound question')
+    assert not actor.last['vm']['pending_question'], (
+        'GN3: a known server question missing required turnId cannot enter current authority'
+    )
+
+
+@pytest.mark.parametrize('kind', ['commandExecution', 'fileChange'])
+def test_gn3_actual_final_tool_original_remains_a_valid_completion(generic, kind):
+    actor, trace = generic('gn:finished-' + kind)
+    connect(actor)
+    actor.command('send_text', text='Original authoritative final operation')
+    state = settle(actor, lambda value: authority_row(value) is not None)
+    row = authority_row(state)
+    assert row['status'] == 'completed' and row['payload']['status'] == 'completed', (
+        'GN3: genuine authoritative final command/file item is retained as completed'
+    )
+    assert not state['can_cancel'] and not state['last_error'], (
+        'GN3: complete bound original and genuine turn terminal settle without interruption'
+    )
+    assert len(started_requests(trace)) == 1, 'GN3: final operation control dispatches once'

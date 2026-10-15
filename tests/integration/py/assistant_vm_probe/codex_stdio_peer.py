@@ -20,6 +20,8 @@ scenario = config.get('scenario', 'complete')
 thread_id = '019a0290-0000-7000-8000-000000000001'
 turn_id = '019a0290-0000-7000-8000-000000000002'
 server_id = 'original-approval-1'
+turn_number = 0
+pending_starts = []
 
 
 def emit(value):
@@ -59,6 +61,171 @@ def complete():
     notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
 
 
+# These additional finite scenarios use ordinary published messages. They do not
+# add a production control channel or execute any command/model tool.
+def original_item(kind='commandExecution', status='completed'):
+    if kind == 'agentMessage':
+        return {'type': kind, 'id': 'authority-item', 'text': 'Original immutable text'}
+    if kind == 'fileChange':
+        return {'type': kind, 'id': 'authority-item', 'status': status, 'changes': []}
+    value = {
+        'type': kind,
+        'id': 'authority-item',
+        'status': status,
+        'command': 'original harmless command, never executed',
+        'commandActions': [],
+        'cwd': str(Path.cwd()),
+    }
+    if status == 'completed':
+        value.update(exitCode=0, aggregatedOutput='Original complete output', durationMs=1)
+    return value
+
+
+def publish_item(item, *, completed=False, bound=True):
+    params = {'threadId': thread_id, 'item': item}
+    if bound:
+        params['turnId'] = turn_id
+    if completed:
+        params['completedAtMs'] = 1
+    notify('item/completed' if completed else 'item/started', params)
+
+
+def ask_original(*, bound=True):
+    publish_item({
+        'type': 'dynamicToolCall',
+        'id': 'original-question-item',
+        'tool': 'request_user_input',
+        'arguments': {},
+        'status': 'inProgress',
+    })
+    request = {
+        'id': 'original-question-rpc',
+        'method': 'item/tool/requestUserInput',
+        'params': {
+            'threadId': thread_id,
+            'turnId': turn_id,
+            'itemId': 'original-question-item',
+            'isBlocking': True,
+            'questions': [
+                {
+                    'id': 'original-question',
+                    'header': 'Original choice',
+                    'question': 'Which original option?',
+                    'options': [{'label': 'Original answer', 'description': 'Fixture choice'}],
+                }
+            ],
+        },
+    }
+    if not bound:
+        del request['params']['turnId']
+    emit(request)
+
+
+def lifetime_output(channel):
+    if channel == 'events':
+        for _ in range(4300):
+            notify('original/ignored', {})
+    elif channel == 'wire':
+        for _ in range(5):
+            emit(exact_record(1048576))
+    elif channel == 'stderr':
+        sys.stderr.write('x' * 5000000)
+        sys.stderr.flush()
+    complete()
+
+
+def gn_start(request):
+    if scenario == 'gn:logout-late-start':
+        pending_starts.append(request)
+        return
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    case = scenario.removeprefix('gn:')
+    if case in {'question-wrong-resolve', 'question-stale-answer'}:
+        ask_original()
+    elif case in {'immutable-duplicate', 'immutable-type', 'immutable-delta'}:
+        item = original_item('agentMessage' if case == 'immutable-delta' else 'commandExecution')
+        publish_item(item)
+        publish_item(item, completed=True)
+    elif case.startswith('finished-'):
+        item = original_item(case.removeprefix('finished-'))
+        publish_item(item)
+        publish_item(item, completed=True)
+        notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+    elif case.startswith('unfinished-'):
+        publish_item(original_item(case.removeprefix('unfinished-'), 'inProgress'))
+        notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+    elif case.startswith('lifetime-'):
+        lifetime_output(case.removeprefix('lifetime-'))
+    elif case == 'workspace-change':
+        selected = Path.cwd() / 'inputs' / 'original-selected.txt'
+        # Only the application-staged, task-owned copy is modified. This is an
+        # ownership witness, not actual runtime/tool execution evidence.
+        selected.write_bytes(b'Changed only inside the first admitted workspace')
+        sys.exit(0)
+    elif case in {'effort-auto', 'effort-model'}:
+        complete()
+    else:
+        publish_item(original_item('agentMessage'))
+
+
+def gn_steer(request):
+    case = scenario.removeprefix('gn:')
+    if case == 'steer-missing':
+        reply(request, {})
+        return
+    if case == 'steer-wrong':
+        reply(request, {'turnId': 'unrelated-turn'})
+        return
+    reply(request, {'turnId': turn_id})
+    if case.startswith('account-'):
+        mode = case.removeprefix('account-')
+        notify('account/updated', {'authMode': None if mode == 'null' else mode})
+    elif case == 'missing-request-turn':
+        ask_original(bound=False)
+    elif case == 'missing-item-turn':
+        publish_item(
+            {'type': 'agentMessage', 'id': 'unbound-item', 'text': 'Unbound text'}, bound=False
+        )
+    elif case == 'missing-delta-turn':
+        notify(
+            'item/agentMessage/delta',
+            {
+                'threadId': thread_id,
+                'itemId': 'authority-item',
+                'delta': 'UNBOUND APPEND',
+            },
+        )
+    elif case == 'immutable-duplicate':
+        item = original_item()
+        item['aggregatedOutput'] = 'CHANGED finalized output'
+        publish_item(item, completed=True)
+    elif case == 'immutable-type':
+        publish_item(original_item('fileChange'), completed=True)
+    elif case == 'immutable-delta':
+        notify(
+            'item/agentMessage/delta',
+            {
+                'threadId': thread_id,
+                'turnId': turn_id,
+                'itemId': 'authority-item',
+                'delta': 'LATE APPEND',
+            },
+        )
+    elif case == 'question-wrong-resolve':
+        notify(
+            'serverRequest/resolved',
+            {
+                'requestId': 'original-question-rpc',
+                'threadId': 'unrelated-thread',
+            },
+        )
+    elif case == 'question-stale-answer':
+        sys.exit(0)
+    elif case == 'unknown-control':
+        notify('original/unknown', {'threadId': thread_id, 'turnId': turn_id})
+
+
 for line in sys.stdin:
     request = json.loads(line)
     with trace.open('a', encoding='utf-8') as output:
@@ -93,6 +260,44 @@ for line in sys.stdin:
                 'requiresOpenaiAuth': False,
             },
         )
+    elif method == 'model/list' and scenario.startswith('gn:effort-'):
+        reply(
+            request,
+            {
+                'data': [
+                    {
+                        'id': slug,
+                        'model': slug,
+                        'displayName': 'Original ' + slug,
+                        'description': 'Independent catalogue effort choice',
+                        'hidden': False,
+                        'isDefault': index == 0,
+                        'defaultReasoningEffort': 'medium',
+                        'supportedReasoningEfforts': [
+                            {'reasoningEffort': effort, 'description': 'Original ' + effort}
+                            for effort in (['medium', 'high'] if index == 0 else ['medium'])
+                        ],
+                    }
+                    for index, slug in enumerate(['gpt-6.1-sol', 'gpt-6-sol'])
+                ]
+            },
+        )
+    elif method == 'model/list' and scenario.startswith('gn:catalogue-'):
+        # Complete supplied metadata, not normalized labels, defines this budget.
+        page = 1 if params.get('cursor') else 0
+        model = {
+            'id': 'fixture-model-' + str(page),
+            'model': 'fixture-model-' + str(page),
+            'displayName': 'Original catalogue ' + str(page),
+            'hidden': False,
+            'isDefault': page == 0,
+            'defaultReasoningEffort': 'medium',
+            'supportedReasoningEfforts': [
+                {'reasoningEffort': 'medium', 'description': 'Original'}
+            ],
+            'description': 'x' * (530000 if scenario.endswith('over') else 500000),
+        }
+        reply(request, {'data': [model], 'nextCursor': 'original-page-2' if page == 0 else None})
     elif method == 'model/list':
         reply(
             request,
@@ -177,6 +382,12 @@ for line in sys.stdin:
             value['modelProvider'] = 'other-original-provider'
         reply(request, value)
     elif method == 'turn/start':
+        turn_number += 1
+        if scenario.startswith('gn:'):
+            # New independent turns have distinct authoritative original IDs.
+            turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
+            gn_start(request)
+            continue
         if scenario == 'start-pending':
             continue  # Genuine received request; no turn ID is admitted yet.
         reply(request, {'turn': turn('inProgress')})
@@ -228,6 +439,9 @@ for line in sys.stdin:
         else:
             complete()
     elif method == 'turn/steer':
+        if scenario.startswith('gn:'):
+            gn_steer(request)
+            continue
         if scenario == 'steer-no-ack':
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
@@ -235,7 +449,11 @@ for line in sys.stdin:
         reply(request, {})
         notify('turn/completed', {'threadId': thread_id, 'turn': turn('interrupted')})
     elif method in {'account/logout', 'account/login/cancel'}:
-        reply(request, {})
+        if scenario == 'gn:logout-late-start' and pending_starts:
+            reply(pending_starts[0], {'turn': turn('inProgress')})
+            notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+        if scenario not in {'gn:logout-hold', 'gn:logout-late-start'}:
+            reply(request, {})
     elif 'id' in request:
         emit({
             'id': request['id'],
