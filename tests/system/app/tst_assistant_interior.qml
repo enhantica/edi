@@ -78,6 +78,11 @@ TestCase {
         };
     }
     function compareRetainedPayload(actual, expected) {
+        // Public payloads are JSON values. QVariantList is an array in that
+        // domain even though the Qt proxy is not a JavaScript Array object.
+        comparePayloadValue(JSON.parse(JSON.stringify(actual)), expected);
+    }
+    function comparePayloadValue(actual, expected) {
         compare(typeof actual, typeof expected, "ACT1: retained payload preserves every value type");
         compare(actual === null, expected === null, "ACT1: retained payload preserves null distinctly");
         if (expected === null)
@@ -86,13 +91,13 @@ TestCase {
         if (Array.isArray(expected)) {
             compare(actual.length, expected.length, "ACT1: retained payload preserves every array entry");
             for (let index = 0; index < expected.length; ++index)
-                compareRetainedPayload(actual[index], expected[index]);
+                comparePayloadValue(actual[index], expected[index]);
         } else if (typeof expected === "object") {
             const keys = Object.keys(actual).sort();
             const expectedKeys = Object.keys(expected).sort();
             compare(JSON.stringify(keys), JSON.stringify(expectedKeys), "ACT1: retained payload preserves all known and unknown keys independent of map ordering");
             for (const key of expectedKeys)
-                compareRetainedPayload(actual[key], expected[key]);
+                comparePayloadValue(actual[key], expected[key]);
         } else {
             compare(actual, expected, "ACT1: retained payload preserves exact scalar and string values");
         }
