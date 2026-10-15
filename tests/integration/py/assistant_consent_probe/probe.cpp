@@ -7,6 +7,12 @@
 #include <QDir>
 #include <QGuiApplication>
 #include <QFont>
+#include <QFontInfo>
+#include <QImage>
+#include <QQuickTextDocument>
+#include <QTextBlock>
+#include <QTextFragment>
+#include <QTextList>
 #include <QJsonValue>
 #include <QJSValue>
 #include <QQmlApplicationEngine>
@@ -88,8 +94,9 @@ void click(QQuickItem* item,QQuickWindow* window) {
 }
 }
 int main(int argc,char** argv) {
-    if(argc!=2 && !(argc==3 && QByteArray(argv[2])=="--submit"))return 96;
-    const bool submit_mode=argc==3;
+    if(argc!=2 && !(argc==3 && (QByteArray(argv[2])=="--submit" || QByteArray(argv[2])=="--markdown")))return 96;
+    const bool submit_mode=argc==3 && QByteArray(argv[2])=="--submit";
+    const bool markdown_mode=argc==3 && QByteArray(argv[2])=="--markdown";
     QTemporaryDir storage;if(!storage.isValid())return 97;
     qputenv("XDG_DATA_HOME",storage.path().toUtf8());
     qputenv("XDG_CONFIG_HOME",storage.path().toUtf8());
@@ -114,7 +121,39 @@ int main(int argc,char** argv) {
         if(!item)throw std::runtime_error("actual production consent content is unavailable");
         return item;
     };
+    const auto markdown_body=[&]() -> QQuickItem* {
+        auto* row=root->findChild<QQuickItem*>("markdown.row");
+        if(!row)throw std::runtime_error("actual message delegate missing");
+        for(auto* item:row->findChildren<QQuickItem*>())
+            if(item->isVisible() && item->property("readOnly").isValid())return item;
+        throw std::runtime_error("actual visible message body missing");
+    };
+    const auto markdown_document=[&]() -> QTextDocument* {
+        auto* wrapper=markdown_body()->property("textDocument").value<QQuickTextDocument*>();
+        if(!wrapper || !wrapper->textDocument())throw std::runtime_error("actual Qt text document missing");
+        return wrapper->textDocument();
+    };
     const auto snapshot=[&] {
+        if(markdown_mode) {
+            auto* body=markdown_body();auto* document=markdown_document();
+            Array fragments,blocks;
+            for(auto block=document->begin();block.isValid();block=block.next()) {
+                blocks.push_back(Object{{"text",block.text()},{"listed",block.textList()!=nullptr}});
+                for(auto it=block.begin();!it.atEnd();++it) {
+                    const auto fragment=it.fragment();if(!fragment.isValid())continue;
+                    const auto format=fragment.charFormat();
+                    fragments.push_back(Object{{"text",fragment.text()},
+                        {"bold",format.fontWeight()>=QFont::DemiBold},
+                        {"fixed_pitch",format.fontFixedPitch() || QFontInfo(format.font()).fixedPitch()}});
+                }
+            }
+            return Object{{"ui",Object{{"original",root->findChild<QObject*>("markdown.row")->property("text").toString()},
+                {"plain",document->toPlainText()},{"selected",body->property("selectedText").toString()},
+                {"read_only",body->property("readOnly").toBool()},
+                {"select_by_mouse",body->property("selectByMouse").toBool()},
+                {"body",geometry(body,window)},{"fragments",fragments},{"blocks",blocks}}}};
+        }
+
         Object vm{{"connected",session->assistant()->connected()},{"state",session->assistant()->state()},
             {"can_cancel",session->assistant()->canCancel()},{"last_error",session->assistant()->lastError()},
             {"consent_required",session->assistant()->contextConsentRequired()},
@@ -160,7 +199,26 @@ int main(int argc,char** argv) {
         try {
             const auto input=decode(QByteArray::fromStdString(line)).toObject();
             const auto op=input["op"].toString();Object result;
-            if(submit_mode && op=="type_draft") {
+            if(markdown_mode && op=="markdown_row") {
+                if(!QMetaObject::invokeMethod(root,"setRow",Q_ARG(QVariant,input["kind"].toString()),
+                    Q_ARG(QVariant,input["text"].toString()),Q_ARG(QVariant,input["dark"].toBool())))
+                    throw std::runtime_error("actual message harness action missing");
+                window->update();drain();
+            } else if(markdown_mode && op=="markdown_select") {
+                auto* body=markdown_body();click(body,window);
+                if(!QMetaObject::invokeMethod(body,"select",Q_ARG(int,input["start"].toInt()),Q_ARG(int,input["end"].toInt())))
+                    throw std::runtime_error("actual TextEdit selection unavailable");
+                if(input["type_x"].toBool())QTest::keyClick(window,Qt::Key_X);
+            } else if(markdown_mode && op=="fixture_image") {
+                const auto path=storage.path()+"/original-image.png";
+                QImage image(4,4,QImage::Format_ARGB32);image.fill(Qt::red);
+                const bool saved=image.save(path,"PNG");QImage reread(path);
+                result={{"url",QUrl::fromLocalFile(path).toString()},{"saved",saved},
+                    {"valid_original_image",!reread.isNull()}};
+            } else if(markdown_mode && op=="markdown_resource") {
+                const auto resource=markdown_document()->resource(QTextDocument::ImageResource,QUrl(input["url"].toString()));
+                result={{"resource_valid",resource.isValid() && !resource.isNull()}};
+            } else if(submit_mode && op=="type_draft") {
                 auto* editor=find("assistant.composer");click(editor,window);
                 const auto text=input["text"].toString();
                 for(const auto character:text) {
