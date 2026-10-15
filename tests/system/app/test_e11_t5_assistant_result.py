@@ -119,19 +119,28 @@ def result_record(actor, trace):
 
 
 def start(actor, trace):
-    admission = actor.command(
-        'send_then_stop', text='Create the original measured LBCO result', stop=False
-    )['reply']['before_stop']
-    original = [
-        row
-        for row in admission['messages']
-        if row['kind'] == 'user' and row['text'] == 'Create the original measured LBCO result'
-    ]
-    assert len(original) == 1 and original[0]['id'], (
-        'H2: real public send admits one original identity before queued result delivery'
-    )
-    actor.result_user_id = original[0]['id']
-    return result_record(actor, trace)
+    draft = 'Create the original measured LBCO result'
+    actor.command('send_text', text=draft)
+    for _ in range(40):
+        requests = old.started_requests(trace)
+        assert len(requests) <= 1, 'H2: original input cannot be replayed or duplicated'
+        if requests:
+            params = requests[0]['params']
+            assert (
+                sum(
+                    item.get('type') == 'text' and item.get('text') == draft
+                    for item in params['input']
+                )
+                == 1
+            ), 'H2: admitted wire identity belongs to this exact original draft once'
+            identity = params.get('clientUserMessageId')
+            assert isinstance(identity, str) and identity, (
+                'H2: actual public admission supplies its original user identity'
+            )
+            actor.result_user_id = identity
+            return result_record(actor, trace)
+        actor.command('inspect')
+    pytest.fail('H2: real public send reaches its actual published admission boundary')
 
 
 def project_readback(state):
