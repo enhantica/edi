@@ -99,7 +99,9 @@ struct Services : QObject {
         return {StoreStatus::ok, bytes};
     }
     StoreStatus write(const RecordKey& key, const QByteArray& bytes) {
-        if (bytes.size() > static_cast<qint64>(Limits::record_bytes) || !protect()) return StoreStatus::failed;
+        if (bytes.size() > static_cast<qint64>(Limits::record_bytes))
+            detail::refuse("resource_exhausted", "Own record exceeds the assistant limit");
+        if (!protect()) return StoreStatus::failed;
         const auto name = path(key); const QFileInfo info(name);
         if (info.isSymLink() || (info.exists() && !info.isFile())) return StoreStatus::failed;
 #ifdef Q_OS_UNIX

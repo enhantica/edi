@@ -66,3 +66,17 @@ Absent records, ordinary I/O and security-policy failures retain their distinct 
 refusal neither erases grants nor starts browser/provider work. This narrow category correction does not
 establish pre-growth admission for directory materialization, racing file growth, outgoing buffers or
 rotation aggregates. Actual live-provider and complete retaining-role verification remain owed.
+
+Replay belongs to the current authenticated connection as well as its conversation. Full operation teardown,
+disconnected/expired publication and an explicit new conversation retire originals, replay groups, marker and
+blocked-recovery state together. Saved-account selection and same-account renewal both replace connection
+scope, consistently with the core's normalized-history retirement. Omitting or retaining an optional host
+conversation marker cannot carry an old account's public or opaque items into the new connection. Ordinary
+unchanged-connection continuation and failed-response Retry retain their current replay scope.
+
+The same per-record resource category applies to writes. Complete mapping and credential byte encodings
+are both prepared/admitted before either record changes; HTTP token-body admission alone cannot establish
+that the metadata-bearing persisted grant fits. The common save path and actual protected write reject known
+size excess through the existing typed resource refusal before I/O. Ordinary write/permission/lock failures
+retain their separate failure category, and sign-out still reports unconfirmed erasure truthfully. This does
+not establish full pre-growth or rotation-recovery atomicity beyond the reviewed known-size boundary.

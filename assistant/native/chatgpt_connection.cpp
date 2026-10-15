@@ -153,12 +153,19 @@ struct ChatGptConnection::State : QObject {
     void set_error(const QString& message, const QString& code = "edi.assistant.provider_error") {
         error = message.left(static_cast<qsizetype>(Limits::error_bytes / 4)); error_code = code;
     }
+    void retire_replay() noexcept {
+        replay = {}; replay_groups.clear(); conversation_project.clear(); continuation_blocked = false;
+    }
     void cancel_operations() {
+        retire_replay();
         auto old = std::move(operations); operations.clear(); active_inference = 0;
         for (auto& [id, op] : old) { (void)id; op->settled = true; if (op->owned) op->owned->cancel(); }
         stream.reset(); pending_terminal = {}; request_context = {}; pending_calls = {}; pending_call_bytes = 2;
     }
     void emit_connection(const QString& value) {
+        // Core retires its normalized conversation on disconnected/expired too.
+        // Native scope must enforce that boundary without an optional host marker.
+        if (value != "ready") retire_replay();
         status = value;
         if (connection.isEmpty()) connection = "chatgpt-" + secret();
         QJsonArray capabilities;
@@ -171,7 +178,7 @@ struct ChatGptConnection::State : QObject {
     }
     void fail(const QString& message, const QString& code = "edi.assistant.provider_error") {
         ++generation; cancel_operations(); signing_in = false; renewing = false; signing_out = false; revoking = {}; callback.close();
-        nonce.clear(); verifier.clear(); expected_state.clear(); credentials = {}; replay = {}; replay_groups.clear(); continuation_blocked = false;
+        nonce.clear(); verifier.clear(); expected_state.clear(); credentials = {};
         if (release_records) release_records();
         set_error(message, code); emit_connection("disconnected");
     }
@@ -313,10 +320,20 @@ struct ChatGptConnection::State : QObject {
         admit_record(size);
         return LoadedRecord(*this, std::move(parsed), size);
     }
+    QByteArray prepare_record(const Object& record) const {
+        auto bytes = encoded(record);
+        if (bytes.size() > static_cast<qsizetype>(Limits::record_bytes))
+            detail::refuse("resource_exhausted", "Own record exceeds the assistant limit");
+        return bytes;
+    }
+    void save_bytes(RecordKind kind, const QString& id, const QByteArray& bytes) {
+        if (bytes.size() > static_cast<qsizetype>(Limits::record_bytes))
+            detail::refuse("resource_exhausted", "Own record exceeds the assistant limit");
+        if (services.write_record({kind, id.toStdString()}, bytes) != StoreStatus::ok)
+            throw std::invalid_argument("Own record write failed");
+    }
     void save(RecordKind kind, const QString& id, const Object& record) {
-        const auto bytes = encoded(record);
-        if (bytes.size() > static_cast<qsizetype>(Limits::record_bytes) ||
-            services.write_record({kind, id.toStdString()}, bytes) != StoreStatus::ok) throw std::invalid_argument("Own record write failed");
+        save_bytes(kind, id, prepare_record(record));
     }
     void list() {
         const auto result = services.list_registrations();
@@ -387,10 +404,15 @@ void ChatGptConnection::State::verify(Object tokens, const QString& client, bool
         record["ext_agent_host_id"] = host_id; record["label"] = verified_label;
         const auto key = digest((client + ':' + verified_subject).toUtf8());
         Object mapping{{"client_id", client}, {"subject", verified_subject}, {"ext_agent_host_id", host_id}, {"label", verified_label}};
-        if (encoded(record).size() + encoded(credentials).size() + encoded(tokens).size() > static_cast<qsizetype>(Limits::retained_record_bytes))
+        // Prove each complete persisted record fits before changing either the
+        // nonsecret mapping or the current grant. An HTTP-sized token object is
+        // not proof that its metadata-bearing credential record fits.
+        const auto grant_bytes = prepare_record(record);
+        const auto mapping_bytes = prepare_record(mapping);
+        if (grant_bytes.size() + encoded(credentials).size() + encoded(tokens).size() > static_cast<qsizetype>(Limits::retained_record_bytes))
             detail::refuse("resource_exhausted", "Token rotation buffer limit exceeded");
-        save(RecordKind::registration, key, mapping);
-        save(RecordKind::credentials, key, record);
+        save_bytes(RecordKind::registration, key, mapping_bytes);
+        save_bytes(RecordKind::credentials, key, grant_bytes);
         credentials = record; identity = mapping; registration = key; subject = verified_subject; label = verified_label;
         if (!registrations.contains(key)) registrations.append(key);
         nonce.clear(); verifier.clear(); expected_state.clear(); callback.close(); catalog();
@@ -661,7 +683,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
             return no("Conversation exceeds the assistant limit.", "edi.assistant.resource_exhausted");
         const auto marker = source.value("conversation_id").toString();
         if (!marker.isEmpty() && marker != s.conversation_project) {
-            s.replay_groups.clear(); s.replay = {}; s.conversation_project = marker; s.continuation_blocked = false;
+            s.retire_replay(); s.conversation_project = marker;
         }
         if (s.continuation_blocked)
             return no("This conversation has an unanswered provider call. Start a new conversation to continue safely.", "edi.assistant.interrupted");
@@ -783,7 +805,7 @@ void ChatGptConnection::sign_out() {
     s.revoking = s.credentials;
     ++s.generation; s.cancel_operations(); s.callback.close(); s.signing_in = false; s.renewing = false;
     s.credentials = {}; s.models = {}; s.label.clear(); s.subject.clear(); s.expected_state.clear(); s.nonce.clear(); s.verifier.clear();
-    s.replay = {}; s.replay_groups.clear(); s.continuation_blocked = false; s.signing_out = true; s.erased = true; s.revoke_attempts = 0; s.revoke_retry_at = 0;
+    s.signing_out = true; s.erased = true; s.revoke_attempts = 0; s.revoke_retry_at = 0;
     s.emit_connection("disconnected");
     try {
         s.revoke_started = s.now();
