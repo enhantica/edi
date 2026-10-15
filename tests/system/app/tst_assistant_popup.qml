@@ -42,7 +42,9 @@ TestCase {
     function toggle() {
         const control = item("assistant.toggle");
         verify(control.visible && control.enabled, "I16/popup: existing appbar button remains actionable");
+        const requested = !Preferences.assistantShown;
         mouseClick(control);
+        tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
         rendered();
     }
     function capture(stem) {
@@ -373,5 +375,75 @@ TestCase {
             window.minimumWidth = oldMinimum;
             Preferences.sideBarSide = savedSide;
         }
+    }
+    function test_rapid_slide_keeps_actual_plot_and_input_scope() {
+        if (popup.visible)
+            toggle();
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/slide: actual independent project anchors the live sidebar/plot");
+        Preferences.sideBarSide = "Right";
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        const main = item("workflow.project.mainContent");
+        const host = item("workflow.project.sidebarHost");
+        const manual = item("workflow.project.manualSidebar");
+        const plotBefore = rect(main);
+        const hostBefore = rect(host);
+        const projectBefore = Session.project;
+        const cancelBefore = assistant.canCancel;
+        const button = item("assistant.toggle");
+        // Raw appbar input deliberately does not wait for the new transition to finish.
+        mouseClick(button);
+        const editor = item("assistant.composer");
+        const positions = [];
+        let visibleExit = false;
+        function sample() {
+            window.update();
+            verify(waitForRendering(window.contentItem, 500), "I16/slide: observations follow an actual rendered frame");
+            sameRect(rect(main), plotBefore);
+            sameRect(rect(host), hostBefore);
+            if (popup.visible) {
+                compare(manual.enabled, false, "I16/slide: a visibly entering/exiting popup still excludes underlying manual input");
+                if (!Preferences.assistantShown)
+                    visibleExit = true;
+            }
+            if (popup.visible && Ui.rendered(editor)) {
+                const position = rect(editor);
+                if (!positions.some(previous => Math.abs(previous[0] - position[0]) < 0.5 && Math.abs(previous[1] - position[1]) < 0.5)) {
+                    positions.push(position);
+                    if (positions.length <= 3)
+                        capture("assistant-slide-frame-" + positions.length);
+                }
+            }
+        }
+        // Finite renderer samples are a fixture bound, not the producer's duration/transition state.
+        for (let frame = 0; frame < 12; ++frame)
+            sample();
+        verify(positions.length >= 3, "I16/slide: actual rendered content visits distinct intermediate moving positions, not an instantaneous/fade-only toggle");
+        editor.insert(0, "Unsent slide — Å cell 5.43");
+        editor.select(2, 9);
+        const draft = editor.text;
+        const selectedStart = editor.selectionStart;
+        const selectedEnd = editor.selectionEnd;
+        for (let action = 0; action < 3; ++action) {
+            mouseClick(button);
+            sample();
+        }
+        verify(visibleExit, "I16/slide: interrupted/reversed actions genuinely exercise a still-visible exit frame");
+        tryCompare(popup, "visible", false, 2000, "I16/slide: final hide fully exits before manual controls become actionable");
+        tryCompare(manual, "enabled", true, 2000, "I16/slide: fully exited popup releases the actual manual subtree");
+        sameRect(rect(main), plotBefore);
+        sameRect(rect(host), hostBefore);
+        compare(editor.text, draft, "I16/slide: reversing/hiding retains the actual unsent draft");
+        compare(Session.project, projectBefore, "I16/slide: transitions never replace the real project");
+        compare(assistant.canCancel, cancelBefore, "I16/slide: visibility alone does not alter the observed operation state");
+        toggle();
+        compare(editor.selectionStart, selectedStart, "I16/slide: interrupted show/hide restores actual selection start");
+        compare(editor.selectionEnd, selectedEnd, "I16/slide: interrupted show/hide restores actual selection end");
+        toggle();
+        const continued = findChild(manual, "sideBar.continue");
+        verify(continued !== null && continued.visible && continued.enabled, "I16/slide: real manual Continue is restored after full exit");
+        mouseClick(continued);
+        tryCompare(window.appBarCentralTabs, "currentIndex", 2, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
+        editor.clear();
     }
 }
