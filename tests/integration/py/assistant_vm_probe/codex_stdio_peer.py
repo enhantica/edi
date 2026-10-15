@@ -228,6 +228,30 @@ def gn_progress(case):
     notify(methods[kind], params)
 
 
+def gn82_start(case):
+    if case in {'stop-existing', 'question-answer'}:
+        ask_original()
+    elif case.startswith('mcp-'):
+        publish_item(status_tool('mcpToolCall', 'inProgress'))
+        if case == 'mcp-final':
+            publish_item(status_tool('mcpToolCall', 'completed'), completed=True)
+    else:
+        publish_item(original_item('agentMessage'))
+
+
+def gn82_steer(case):
+    if case.startswith('mcp-'):
+        notify(
+            'item/mcpToolCall/progress',
+            {
+                'threadId': thread_id,
+                'turnId': 'unrelated-turn' if case == 'mcp-stale' else turn_id,
+                'itemId': 'authority-item',
+                'message': 'Original bounded MCP progress',
+            },
+        )
+
+
 def gn_start(request):
     if scenario == 'gn:logout-late-start':
         pending_starts.append(request)
@@ -235,7 +259,9 @@ def gn_start(request):
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
     case = scenario.removeprefix('gn:')
-    if case.startswith('r:'):
+    if case.startswith('x:'):
+        gn82_start(case[2:])
+    elif case.startswith('r:'):
         gn_remaining_start(case[2:])
     elif case in {'question-wrong-resolve', 'question-stale-answer'}:
         ask_original()
@@ -271,7 +297,13 @@ def gn_steer(request):
         reply(request, {} if case == 'steer-missing' else {'turnId': 'unrelated-turn'})
         return
     reply(request, {'turnId': turn_id})
-    if case.startswith('r:progress:'):
+    gn_steer_notification(case)
+
+
+def gn_steer_notification(case):
+    if case.startswith('x:'):
+        gn82_steer(case[2:])
+    elif case.startswith('r:progress:'):
         gn_progress(case[2:])
     elif case.startswith('account-'):
         mode = case.removeprefix('account-')
@@ -329,6 +361,18 @@ for line in sys.stdin:
     params = request.get('params') or {}
     if method is None:
         if request.get('id') == server_id:
+            complete()
+        elif request.get('id') == 'original-question-rpc' and scenario == 'gn:x:question-answer':
+            publish_item(
+                {
+                    'type': 'dynamicToolCall',
+                    'id': 'original-question-item',
+                    'tool': 'request_user_input',
+                    'arguments': {},
+                    'status': 'completed',
+                },
+                completed=True,
+            )
             complete()
         continue
     if method == 'initialize':
@@ -541,7 +585,10 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
-        if scenario == 'gn:r:stop-unsettled':
+        if scenario == 'gn:x:stop-new':
+            ask_original()
+            continue
+        if scenario in {'gn:r:stop-unsettled', 'gn:x:stop-existing'}:
             continue  # A genuine unsettled first revoke; no fabricated terminal/ack.
         reply(request, {})
         notify('turn/completed', {'threadId': thread_id, 'turn': turn('interrupted')})

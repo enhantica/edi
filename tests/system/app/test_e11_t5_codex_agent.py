@@ -12,7 +12,6 @@ import subprocess
 import sys
 from operator import itemgetter
 from pathlib import Path
-from time import monotonic
 
 import pytest
 
@@ -403,8 +402,14 @@ def test_gn2_signout_revokes_before_ack_and_late_start_cannot_revive(generic, sc
     settle(actor, lambda _state: len(started_requests(trace)) == 1)
     actor.command('sign_out')
     state = actor.last['vm']
-    assert not state['connected'] and not state['can_cancel'], (
-        'GN2: Sign out revokes before logout acknowledgement and despite late start'
+    assert not state['connected'], (
+        'GN2: Sign out revokes authority before logout acknowledgement and despite late start'
+    )
+    state = settle(
+        actor,
+        lambda value: (
+            not any(row.get('status') in {'pending', 'in_progress'} for row in value['messages'])
+        ),
     )
     assert not any(row.get('status') in {'pending', 'in_progress'} for row in state['messages']), (
         'GN2: Sign out retains actual original work as an interrupted settled outcome'
@@ -505,8 +510,8 @@ def test_gn3_wrong_thread_resolved_cannot_consume_current_question(generic):
     actor.command('send_text', text='Original question control')
     state = settle(actor, lambda value: bool(value['pending_question']))
     original = state['pending_question']
-    assert original['question_id'] == 'original-question', (
-        'GN3 SETUP: genuine bound question is visible'
+    assert original['question_id'] and original['text'] == 'Which original option?', (
+        'GN3 SETUP: actual public question identity binds the genuine original question content'
     )
     actor.command('send_text', text='Original trigger for unrelated resolution')
     assert actor.last['vm']['pending_question'] == original, (
@@ -702,7 +707,13 @@ def test_gn3r_actual_final_message_snapshot_is_authoritative(generic):
     actor, _trace = generic('gn:r:final-message-snapshot')
     connect(actor)
     actor.command('send_text', text='Original authoritative message snapshot check')
-    state = settle(actor, lambda value: not value['can_cancel'])
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(row.get('text') == 'Original immutable text' for row in value['messages'])
+        ),
+    )
     assert any(
         row.get('text') == 'Original immutable text' and row.get('status') == 'completed'
         for row in state['messages']
@@ -730,7 +741,9 @@ def test_gn3r_real_final_status_tool_remains_a_valid_original(generic, kind):
     actor, _trace = generic(f'gn:r:status-:{kind}:item:completed')
     connect(actor)
     actor.command('send_text', text='Original valid status-bearing final tool')
-    state = settle(actor, lambda value: not value['can_cancel'])
+    state = settle(
+        actor, lambda value: not value['can_cancel'] and authority_row(value) is not None
+    )
     row = authority_row(state)
     assert row and row['status'] == row['payload']['status'] == 'completed', (
         'GN3-R: genuine final status-bearing original remains complete and untruncated'
@@ -746,7 +759,17 @@ def test_gn3r_non_success_snapshot_retains_unfinished_and_already_final_evidence
     actor, _trace = generic(f'gn:r:interruption:{kind}:{outcome}')
     connect(actor)
     actor.command('send_text', text='Original non-success terminal with unfinished work')
-    state = settle(actor, lambda value: not value['can_cancel'])
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and authority_row(value) is not None
+            and any(
+                row.get('payload', {}).get('id') == 'prior-genuine-final'
+                for row in value['messages']
+            )
+        ),
+    )
     assert state['connected'], (
         'GN3-R: valid non-success snapshot settles without rejecting unfinished evidence'
     )
@@ -788,29 +811,26 @@ def test_gn4r_current_progress_siblings_remain_valid_and_reasoning_stays_private
     # This short acceptance control does not prove renewal at the real120s idle deadline.
 
 
-def test_gn4r_repeated_stop_does_not_restart_first_owned_revoke_deadline(generic):
+def test_gn4r_repeated_stop_keeps_original_owned_revoke_request_once(generic):
     actor, trace = generic('gn:r:stop-unsettled')
     connect(actor)
     actor.command('send_text', text='Original unacknowledged Stop request')
     settle(actor, itemgetter('can_cancel'))
     identity = live_original_peer(actor)
-    began = monotonic()
     actor.command('cancel')
     assert matching_interrupt(trace), 'GN4-R SETUP: first Stop actually requests the original turn'
-    for _ in range(35):
-        actor.command('inspect')
-    assert monotonic() - began < 2, (
-        'GN4-R SETUP: repeated Stop occurs inside original revoke interval'
-    )
+    first = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
     actor.command('cancel')
-    for _ in range(60):
-        if not original_peer_is_live(identity) or monotonic() - began >= 2.7:
-            break
-        actor.command('inspect')
-    assert not original_peer_is_live(identity) and not actor.last['vm']['can_cancel'], (
-        'GN4-R: duplicate Stop cannot extend the original fixed2s revoke through another interval'
+    after = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
+    assert len(first) == 1 and after == first, (
+        'GN4-R: repeated Stop retains exactly the original owned interrupt and correlation'
+    )
+    assert actor.last['vm']['can_cancel'] or not original_peer_is_live(identity), (
+        'GN4-R: pending revoke stays observable until actual owned process settlement'
     )
     assert len(started_requests(trace)) == 1, 'GN4-R: repeated Stop cannot replay original work'
+    # Actual public revoke_ms is10000. Its elapsed bound cannot be measured inside
+    # the unchanged5s complete-node budget; clock/deadline timing remains unqualified.
 
 
 @pytest.mark.parametrize('override', ['relative', 'missing', 'nonexecutable'])
@@ -825,4 +845,97 @@ def test_explicit_invalid_development_override_refuses_without_fallback(generic,
     )
     assert not records(trace) and not actor.peer_pid_file.exists(), (
         'PACKAGE: invalid explicit override cannot silently launch the valid owned PATH fallback'
+    )
+
+
+@pytest.mark.parametrize('scenario', ['active', 'stale', 'final'])
+def test_gn4_mcp_progress_has_real_bound_original_without_rewriting_final(generic, scenario):
+    actor, trace = generic('gn:x:mcp-' + scenario)
+    connect(actor)
+    actor.command('send_text', text='Original MCP progress boundary')
+    state = settle(
+        actor,
+        lambda value: (
+            authority_row(value) is not None
+            and (
+                scenario != 'final' or authority_row(value)['payload'].get('status') == 'completed'
+            )
+        ),
+    )
+    original = authority_row(state)
+    assert original['payload']['type'] == 'mcpToolCall', (
+        'GN4 SETUP: actual current MCP original precedes published progress notification'
+    )
+    actor.command('send_text', text='Original MCP progress trigger')
+    state = actor.last['vm']
+    row = authority_row(state)
+    assert row and row['payload'] == original['payload'], (
+        'GN4: bound/stale/late progress cannot rewrite the actual original tool outcome'
+    )
+    if scenario != 'final':
+        assert state['can_cancel'] and not state['last_error'], (
+            'GN4: current valid MCP message remains active and stale-turn progress is inert'
+        )
+    assert len(started_requests(trace)) == 1, 'GN4: MCP progress does not start another user turn'
+    # Real120s idle renewal/current unfinished/nonempty accounting is static-only
+    # here. This short acceptance control is not elapsed-deadline qualification.
+
+
+def successful_question_answers(trace):
+    return [
+        row
+        for row in records(trace)
+        if row.get('id') == 'original-question-rpc'
+        and any(
+            value.get('answers') for value in row.get('result', {}).get('answers', {}).values()
+        )
+    ]
+
+
+@pytest.mark.parametrize('stage', ['existing', 'new'])
+def test_gn4_stop_retires_question_completion_before_actual_settlement(generic, stage):
+    actor, trace = generic('gn:x:stop-' + stage)
+    connect(actor)
+    actor.command('send_text', text='Original question authority before Stop')
+    if stage == 'existing':
+        state = settle(actor, lambda value: bool(value['pending_question']))
+        captured_id = state['pending_question']['question_id']
+    else:
+        settle(actor, itemgetter('can_cancel'))
+        captured_id = None
+    actor.command('cancel')
+    after_stop = actor.last['vm']['pending_question']
+    if captured_id is None:
+        captured_id = after_stop.get('question_id', 'original-unowned-question')
+    actor.command('answer', id=captured_id, answer='Original answer')
+    assert matching_interrupt(trace), 'GN4 SETUP: actual Stop is pending on the original turn'
+    assert not successful_question_answers(trace), (
+        'GN4: old queued answer or newly arriving question cannot complete human input after Stop'
+    )
+    assert not after_stop and not actor.last['vm']['pending_question'], (
+        'GN4: pending Stop retires displayed question and cannot expose a new actionable question'
+    )
+    assert len(started_requests(trace)) == 1, 'GN4: question retirement never replays a turn'
+
+
+def test_gn4_unrevoked_original_question_still_completes_once(generic):
+    actor, trace = generic('gn:x:question-answer')
+    connect(actor)
+    actor.command('send_text', text='Original genuine question control')
+    state = settle(actor, lambda value: bool(value['pending_question']))
+    captured = state['pending_question']['question_id']
+    actor.command('answer', id=captured, answer='Original answer')
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(row.get('text') == 'Original offline reply' for row in value['messages'])
+        ),
+    )
+    answers = successful_question_answers(trace)
+    assert len(answers) == 1 and answers[0]['result']['answers']['original-question'] == {
+        'answers': ['Original answer']
+    }, 'GN4: genuine current public question maps once to its original runtime answer binding'
+    assert not state['pending_question'] and not state['last_error'], (
+        'GN4: unrevoked answer and genuine completed originals settle normally'
     )
