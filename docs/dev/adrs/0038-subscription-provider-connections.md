@@ -98,3 +98,12 @@ envelope stays unchanged. Known event/stage and required-field diagnostics are a
 exception strings, unknown event names and duplicate JSON member names are withheld. No raw SSE, headers,
 body, credentials or hidden reasoning is logged. This diagnostic checkpoint does not resolve the unknown
 live failure, HTTP admission metadata/recovery or partial-item semantics.
+
+Returning OAuth callbacks may omit `client_id`: use the exact issued ID already bound to the pending
+request, as required by [SIWC registration and sign-in](https://developers.openai.com/siwc/token-sharing-open-source/sign-in).
+Presence is distinct from absence: a supplied empty or different ID is refused. First dynamic registration
+still requires the callback's nonempty issued ID and refuses `dynamic_agent_client`; the placeholder is
+never used for token exchange. Existing state/code/PKCE/nonce, loopback, signature/audience and selected
+account identity guards remain unchanged. No callback URL or credential is logged, and no saved store
+is deleted to retry. This fixes a documented returning-callback compatibility defect; the owner's exact
+callback and the separate live chat failure remain unobserved.

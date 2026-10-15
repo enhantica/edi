@@ -504,7 +504,10 @@ void ChatGptConnection::State::arrival() {
             expected_state.clear(); callback.close();
             try {
                 if (query.hasQueryItem("error")) throw std::invalid_argument("Consent declined");
-                const auto client = query.queryItemValue("client_id"); const auto code = query.queryItemValue("code");
+                // Reauthorization may omit client_id; only the exact issued ID
+                // of this pending attempt can supply it. Supplied empty stays empty.
+                const auto client = query.hasQueryItem("client_id") ? query.queryItemValue("client_id") : issued_client;
+                const auto code = query.queryItemValue("code");
                 if (client.isEmpty() || client == "dynamic_agent_client" || code.isEmpty() || (issued_client != "dynamic_agent_client" && client != issued_client))
                     throw std::invalid_argument("Incomplete registration");
                 QUrlQuery fields; fields.addQueryItem("grant_type", "authorization_code"); fields.addQueryItem("client_id", client);
