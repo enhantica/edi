@@ -384,9 +384,9 @@ struct AssistantViewModel::State {
         generic_revoke_workspace(); // Never relabel a modified recovery directory as a fresh snapshot.
         generic_prepare_workspace();
         generic_catalog_bytes = 2;
-        const auto executable = QStandardPaths::findExecutable("codex");
+        const auto executable = CodexAgent::executable();
         if (executable.isEmpty()) {
-            generic_fail(QObject::tr("Install the official Codex CLI to use the generic assistant.")); return;
+            generic_fail(QObject::tr("The bundled official agent is unavailable. Rebuild or reinstall this Edi candidate.")); return;
         }
         generic_connecting = true;
         if (!agent->start(executable, generic_workspace)) throw std::runtime_error("The official agent could not be started");

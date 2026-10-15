@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "codex_agent.hpp"
+#include "assistant_runtime_config.hpp"
+#include <QCoreApplication>
+#include <QFile>
+#include <stdexcept>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -107,6 +111,32 @@ QString CodexAgent::idKey(const QJsonValue& value) {
     return {};
 }
 
+QString CodexAgent::executable() {
+    if (qEnvironmentVariableIsSet("EDI_CODEX_DEVELOPMENT_EXECUTABLE")) {
+        const auto path = qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
+        const QFileInfo file(path);
+        if (!file.isAbsolute() || !file.isFile() || !file.isExecutable())
+            throw std::runtime_error("The explicit development agent executable is unavailable");
+        return file.absoluteFilePath(); // Explicit offline/developer composition, never a silent fallback.
+    }
+    const auto app = QDir::cleanPath(QCoreApplication::applicationDirPath());
+    const auto root = app == QDir::cleanPath(QString::fromUtf8(EDI_CODEX_BUILD_APP_DIR))
+        ? QString::fromUtf8(EDI_CODEX_RUNTIME_BUILD_DIR) : QDir(app).absoluteFilePath(QString::fromUtf8(EDI_CODEX_INSTALL_RELATIVE));
+    QFile manifest(root + "/codex-package.json");
+    if (!manifest.open(QIODevice::ReadOnly) || manifest.size() > static_cast<qint64>(Limits::http_json_bytes)) return {};
+    QJsonParseError error;
+    const auto parsed = QJsonDocument::fromJson(manifest.read(static_cast<qint64>(Limits::http_json_bytes) + 1), &error);
+    if (error.error != QJsonParseError::NoError || !parsed.isObject()) return {};
+    const auto metadata = parsed.object();
+    if (metadata.value("layoutVersion") != 1 || metadata.value("version") != "0.162.1" ||
+        metadata.value("target") != QString::fromUtf8(EDI_CODEX_RUNTIME_TARGET) ||
+        metadata.value("variant") != "codex-app-server" || metadata.value("entrypoint") != "bin/codex-app-server" ||
+        metadata.value("resourcesDir") != "codex-resources" || metadata.value("pathDir") != "codex-path") return {};
+    const auto executable = root + "/bin/codex-app-server";
+    if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) return {};
+    return executable;
+}
+
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
     if (process_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
         return false;
@@ -119,11 +149,12 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         auto* process = new QProcess(this);
         process_ = process;
         process->setProgram(executable);
-        process->setArguments({QStringLiteral("app-server"), QStringLiteral("--listen"), QStringLiteral("stdio://"),
+        process->setArguments({QStringLiteral("--listen"), QStringLiteral("stdio://"),
             QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.writable_roots=[]"),
             QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.network_access=false"),
             QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.exclude_slash_tmp=true"),
-            QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.exclude_tmpdir_env_var=true")});
+            QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.exclude_tmpdir_env_var=true"),
+            QStringLiteral("-c"), QStringLiteral("features.shell_zsh_fork=false")});
         process->setWorkingDirectory(workspace);
         process->setProcessChannelMode(QProcess::SeparateChannels);
         // The runtime owns its ordinary profile and managed login. Never assign

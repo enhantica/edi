@@ -6324,3 +6324,11 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
+
+
+The native assistant includes OpenAI Codex app-server 0.162.1 and its complete
+platform package (code-mode host, ripgrep, patched zsh and Linux bubblewrap).
+The package's licence/copyright texts, pinned provenance and source links are
+installed beside it in libexec/edi/codex/edi-licenses. See the bundled Codex
+Apache-2.0 LICENSE/NOTICE, ripgrep MIT/COPYING, zsh LICENCE and bubblewrap LGPL
+COPYING there. The unmodified upstream runtime owns its managed authentication.

@@ -368,3 +368,8 @@ if(NOT EMSCRIPTEN)
     qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
                      BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
 endif()
+
+if(NOT EMSCRIPTEN)
+    include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
+    edi_bundle_assistant_runtime()
+endif()

@@ -18,6 +18,7 @@ class CodexAgent final : public QObject {
     Q_OBJECT
 public:
     explicit CodexAgent(QObject* parent = nullptr);
+    static QString executable();
     ~CodexAgent() override;
     bool start(const QString& executable, const QString& workspace);
     QString request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare = {});
