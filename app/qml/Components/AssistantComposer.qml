@@ -38,6 +38,13 @@ Rectangle {
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.appBorder
     radius: AppSizes.unit * 0.75
+    function rememberSelection() {
+        if (editor.activeFocus) {
+            savedSelectionStart = editor.selectionStart;
+            savedSelectionEnd = editor.selectionEnd;
+            selectionRevision = textRevision;
+        }
+    }
     function focusEditor() {
         const restore = selectionRevision === textRevision;
         const start = savedSelectionStart;
@@ -77,13 +84,8 @@ Rectangle {
                 KeyNavigation.tab: models
                 KeyNavigation.backtab: composer.toggleControl
                 onTextChanged: ++composer.textRevision
-                onSelectionChanged: {
-                    if (activeFocus) {
-                        composer.savedSelectionStart = selectionStart;
-                        composer.savedSelectionEnd = selectionEnd;
-                        composer.selectionRevision = composer.textRevision;
-                    }
-                }
+                onSelectionStartChanged: composer.rememberSelection()
+                onSelectionEndChanged: composer.rememberSelection()
                 color: EaStyle.Colors.themeForeground
                 placeholderTextColor: EaStyle.Colors.themeForegroundMinor
                 font.family: EaStyle.Fonts.fontFamily
