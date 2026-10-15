@@ -170,3 +170,9 @@ shield. The page is never disabled globally. Draft/message/details text retains 
 composer focus restores a still-current selection, without reinstating selection across changed text.
 Actual keyboard, geometry and selection gates must exercise these mechanics; source does not establish
 macOS, populated-history or busy-path qualification by itself.
+
+
+Normal transcript bodies expose localized You/Assistant/Activity identity with their accessible static
+text name, retaining the selected unboxed/bubble appearance. The compact effort's full explanation
+uses an actual existing styled ToolTip on hover or keyboard focus, respecting the shared tooltip
+preference; setting attached text alone is not considered visible explanation delivery.

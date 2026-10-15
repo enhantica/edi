@@ -56,7 +56,7 @@ Rectangle {
             font.family: EaStyle.Fonts.fontFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize
             Accessible.role: Accessible.StaticText
-            Accessible.name: text
+            Accessible.name: (row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")) + ": " + text
         }
         EaElements.Button {
             id: disclosure

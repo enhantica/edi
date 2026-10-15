@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
@@ -163,6 +164,10 @@ Rectangle {
                 model: effortValues.map(value => effortLabel(value))
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: composer.assistant.selectedEffort === "" ? qsTr("Provider default") : currentText
+                EaElements.ToolTip {
+                    text: efforts.ToolTip.text
+                    visible: (efforts.hovered || efforts.activeFocus) && EaGlobals.Vars.showToolTips && text !== ""
+                }
                 Accessible.name: qsTr("Reasoning effort")
                 onActivated: index => composer.assistant.selectedEffort = effortValues[index]
             }
