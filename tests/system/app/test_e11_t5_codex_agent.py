@@ -49,6 +49,7 @@ def generic(monkeypatch, tmp_path):
         executable = owned / 'codex'
         executable.write_text(f'#!{sys.executable}\n' + PEER.read_text())
         executable.chmod(0o700)
+        monkeypatch.setenv('EDI_CODEX_DEVELOPMENT_EXECUTABLE', str(executable.resolve()))
         monkeypatch.setenv('PATH', str(owned) + os.pathsep + os.environ['PATH'])
         monkeypatch.setenv('EDI_TEST_CODEX_PEER_INPUT', str(config))
         monkeypatch.setenv('TMPDIR', str(owned))
