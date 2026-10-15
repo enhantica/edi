@@ -70,12 +70,12 @@ J project_metadata(const Project* project) {
         for (const auto& structure : project->structures) {
             A sites, anisotropic;
             for (const auto& site : structure->atom_sites)
-                append(sites, O{{"id", site->id.value()}, {"type_symbol", site->type_symbol.get()},
-                                {"wyckoff", site->wyckoff_letter.get()}, {"adp_type", site->adp_type.get()}});
+                append(sites, O{{"id", site->id.value()}, {"type_symbol", site->type_symbol.value()},
+                                {"wyckoff", site->wyckoff_letter.value()}, {"adp_type", site->adp_type.value()}});
             for (const auto& site : structure->atom_site_aniso) append(anisotropic, site->id.value());
             const auto& sg = structure->space_group;
             append(structures, O{{"id", KeyTraits<Structure>::canonical(structure->name.value())},
-                {"space_group", O{{"hm", sg.name_h_m.get()}, {"setting", sg.coord_system_code.get()},
+                {"space_group", O{{"hm", sg.name_h_m.value()}, {"setting", sg.coord_system_code.value()},
                                  {"it_number", sg.it_number ? J(*sg.it_number) : J(nullptr)}}},
                 {"sites", std::move(sites)}, {"anisotropic_site_ids", std::move(anisotropic)}});
         }
@@ -119,9 +119,9 @@ J project_metadata(const Project* project) {
                 {"background", O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
                                  {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}}}});
         }
-        for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.get()}});
+        for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
         for (const auto& constraint : project->constraints)
-            append(constraints, O{{"id", constraint->id.value()}, {"expression", constraint->expression.get()}, {"enabled", constraint->enabled.get()}});
+            append(constraints, O{{"id", constraint->id.value()}, {"expression", constraint->expression.value()}, {"enabled", constraint->enabled.get()}});
     }
     return O{{"structures", std::move(structures)}, {"datasets", std::move(datasets)},
              {"relations", O{{"aliases", std::move(aliases)}, {"constraints", std::move(constraints)}}}};
