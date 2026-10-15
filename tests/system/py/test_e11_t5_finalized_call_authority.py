@@ -286,7 +286,7 @@ def argument_event(value, ending, arguments):
     }
 
 
-@pytest.mark.parametrize('identity', ['absent', 'consistent'])
+@pytest.mark.parametrize('identity', ['absent', 'consistent', 'exact-id-cap'])
 def test_supplied_response_identity_is_optional_but_consistent_when_present(host, identity):
     host.command('stream_start')
     value = call('identity-positive-A')
@@ -294,6 +294,8 @@ def test_supplied_response_identity_is_optional_but_consistent_when_present(host
     if identity == 'absent':
         del terminal['response']['id']
     else:
+        if identity == 'exact-id-cap':
+            terminal['response']['id'] = 'r' * 256
         done['response_id'] = terminal['response']['id']
     observed = originals.wire(host, [done, terminal])
     assert observed['reply']['ok'] and len(calls(observed)) == 1, (
@@ -399,6 +401,7 @@ def test_initial_arguments_empty_complete_and_progressive_declarations_agree(
         ('object', 'direct', False),
         ('number', 'delta', True),
         ('contradictory', 'direct', False),
+        ('contradictory', 'direct', True),
         ('contradictory', 'delta', True),
         ('contradictory', 'arguments-done', False),
         ('prefix-conflict', 'delta', False),
@@ -428,7 +431,7 @@ def test_initial_argument_type_capacity_and_declaration_cannot_be_overwritten(
     events.extend([originals.item_event(value), originals.complete([value] if repeat else [])])
     observed = originals.wire(host, events)
     assert not observed['reply']['ok'] and not calls(observed), (
-        'FC2: initial wrong type/oversize/contradiction cannot disappear into a '
+        'FC2: initial wrong type/contradiction cannot disappear into a '
         'later valid done original'
     )
 
