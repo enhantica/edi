@@ -273,3 +273,200 @@ def test_omitted_proposal_still_requires_actual_current_ui_approval(workflow_vm,
         assert vm.last['vm']['project'] == actual_manual, (
             'S-R3: stale approval preserves the actual independently requested manual edit'
         )
+
+
+# FC1/FC2: published supplied identity and initial argument declaration are
+# independent prior inputs, never values reconstructed from decoder projection.
+def argument_event(value, ending, arguments):
+    return {
+        'type': 'response.function_call_arguments.' + ending,
+        'item_id': value['id'],
+        'output_index': 0,
+        'delta' if ending == 'delta' else 'arguments': arguments,
+    }
+
+
+@pytest.mark.parametrize('identity', ['absent', 'consistent'])
+def test_supplied_response_identity_is_optional_but_consistent_when_present(host, identity):
+    host.command('stream_start')
+    value = call('identity-positive-A')
+    done, terminal = originals.item_event(value), originals.complete([value])
+    if identity == 'absent':
+        del terminal['response']['id']
+    else:
+        done['response_id'] = terminal['response']['id']
+    observed = originals.wire(host, [done, terminal])
+    assert observed['reply']['ok'] and len(calls(observed)) == 1, (
+        'FC1: genuine optional absence and consistent supplied response identity remain valid'
+    )
+
+
+@pytest.mark.parametrize(
+    'door', ['created', 'added', 'delta', 'arguments-done', 'item-done', 'terminal']
+)
+def test_conflicting_supplied_response_identity_refuses_before_callable_publication(host, door):
+    host.command('stream_start')
+    value = call('identity-conflict-A')
+    events = []
+    if door == 'created':
+        events.append({
+            'type': 'response.created',
+            'response': {'id': 'response-A', 'status': 'in_progress', 'output': []},
+        })
+    added = originals.item_event({**value, 'status': 'in_progress', 'arguments': ''}, done=False)
+    delta = argument_event(value, 'delta', '{}')
+    arguments_done = argument_event(value, 'done', '{}')
+    done = originals.item_event(value)
+    for label, event in [
+        ('added', added),
+        ('delta', delta),
+        ('arguments-done', arguments_done),
+        ('item-done', done),
+    ]:
+        if door == label:
+            event['response_id'] = 'response-A'
+    terminal = originals.complete([value])
+    terminal['response']['id'] = 'response-B'
+    if door == 'terminal':
+        done['response_id'] = 'response-A'
+        terminal['response_id'] = 'response-A'
+    observed = originals.wire(host, [*events, added, delta, arguments_done, done, terminal])
+    assert not observed['reply']['ok'] and not calls(observed), (
+        'FC1: contradictory supplied event/response identities cannot authorize '
+        'any callable prefix'
+    )
+    assert not host.command('stream_finish')['reply']['ok'], (
+        'FC1: identity contradiction stays refused after EOF without repaired authority'
+    )
+
+
+@pytest.mark.parametrize('door', ['event', 'terminal'])
+@pytest.mark.parametrize(
+    'value', [None, 17, ['response-A'], 'r' * 257], ids=['null', 'number', 'array', 'over-id-cap']
+)
+def test_supplied_response_identity_checks_type_and_existing_byte_capacity(host, door, value):
+    host.command('stream_start')
+    original = call('identity-type-A')
+    done, terminal = originals.item_event(original), originals.complete([original])
+    if door == 'event':
+        done['response_id'] = value
+    else:
+        terminal['response']['id'] = value
+    observed = originals.wire(host, [done, terminal])
+    assert not observed['reply']['ok'] and not calls(observed), (
+        'FC1: supplied response IDs obey existing typed bounded identity contract '
+        'before publication'
+    )
+
+
+@pytest.mark.parametrize(
+    ('initial', 'flow', 'repeat'),
+    [
+        ('', 'direct', True),
+        ('{"x":1}', 'direct', False),
+        ('{"x":', 'delta', True),
+        ('{"x":', 'arguments-done', False),
+    ],
+)
+def test_initial_arguments_empty_complete_and_progressive_declarations_agree(
+    host, initial, flow, repeat
+):
+    host.command('stream_start')
+    value = call('initial-compatible-A')
+    value['arguments'] = '{"x":1}'
+    added = originals.item_event(
+        {**value, 'status': 'in_progress', 'arguments': initial}, done=False
+    )
+    events = [added]
+    if flow == 'delta':
+        events.append(argument_event(value, 'delta', '1}'))
+    elif flow == 'arguments-done':
+        events.append(argument_event(value, 'done', value['arguments']))
+    events.extend([originals.item_event(value), originals.complete([value] if repeat else [])])
+    observed = originals.wire(host, events)
+    assert observed['reply']['ok'] and len(calls(observed)) == 1, (
+        'FC2: compatible initial declarations retain valid direct and progressive finalization'
+    )
+    assert calls(observed)[0]['arguments'] == {'x': 1}, (
+        'FC2: complete arguments preserve the independently planted original object'
+    )
+
+
+@pytest.mark.parametrize(
+    ('fault', 'flow', 'repeat'),
+    [
+        ('null', 'direct', True),
+        ('object', 'direct', False),
+        ('number', 'delta', True),
+        ('contradictory', 'direct', False),
+        ('contradictory', 'delta', True),
+        ('contradictory', 'arguments-done', False),
+        ('prefix-conflict', 'delta', False),
+    ],
+)
+def test_initial_argument_type_capacity_and_declaration_cannot_be_overwritten(
+    host, fault, flow, repeat
+):
+    host.command('stream_start')
+    value = call('initial-refused-A')
+    value['arguments'] = '{"x":2}'
+    initial = {
+        'null': None,
+        'object': {'x': 1},
+        'number': 17,
+        'contradictory': '{"x":1}',
+        'prefix-conflict': '{"y":',
+    }[fault]
+    added = originals.item_event(
+        {**value, 'status': 'in_progress', 'arguments': initial}, done=False
+    )
+    events = [added]
+    if flow == 'delta':
+        events.append(argument_event(value, 'delta', '2}'))
+    elif flow == 'arguments-done':
+        events.append(argument_event(value, 'done', value['arguments']))
+    events.extend([originals.item_event(value), originals.complete([value] if repeat else [])])
+    observed = originals.wire(host, events)
+    assert not observed['reply']['ok'] and not calls(observed), (
+        'FC2: initial wrong type/oversize/contradiction cannot disappear into a '
+        'later valid done original'
+    )
+
+
+def test_supplied_content_event_response_identity_cannot_rebind_later_call(host):
+    host.command('stream_start')
+    message = originals.original('message', 'identity-content-A')
+    value = call('identity-content-call-B')
+    text = message['content'][0]['text']
+    prefix = originals.wire(
+        host,
+        [
+            originals.item_event({**message, 'status': 'in_progress', 'content': []}, done=False),
+            {
+                'type': 'response.content_part.added',
+                'item_id': message['id'],
+                'output_index': 0,
+                'content_index': 0,
+                'part': {'type': 'output_text', 'text': '', 'annotations': []},
+            },
+            {
+                'type': 'response.output_text.delta',
+                'item_id': message['id'],
+                'output_index': 0,
+                'content_index': 0,
+                'delta': text,
+                'response_id': 'response-content-A',
+            },
+            originals.item_event(message),
+            originals.item_event(value, 1),
+        ],
+    )
+    assert prefix['reply']['ok'] and not calls(prefix), (
+        'FC1: genuine live content and finalized callable prefix reach staging coherently'
+    )
+    terminal = originals.complete([message, value])
+    terminal['response']['id'] = 'response-content-B'
+    refused = originals.wire(host, [terminal])
+    assert not refused['reply']['ok'] and not calls(refused), (
+        'FC1: supplied content-event response identity binds the whole later callable group'
+    )
