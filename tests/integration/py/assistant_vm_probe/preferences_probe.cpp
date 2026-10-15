@@ -9,6 +9,9 @@
 #include <QQmlEngine>
 #include <QSettings>
 #include <QtQml/qqmlextensionplugin.h>
+#ifdef Q_OS_UNIX
+#include <unistd.h>
+#endif
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
@@ -43,6 +46,31 @@ int main(int argc,char** argv) {
     QGuiApplication app(argc,argv);
     QCoreApplication::setOrganizationName("EasyScience");
     QCoreApplication::setApplicationName("EasyDiffraction");
+    const auto arguments=QCoreApplication::arguments();
+    if(arguments.size()==3 && arguments[1]=="--settings-read-qualifier") {
+        // Separate process only: no Session/native construction or subject QSettings cache observer.
+        const QFileInfo info(arguments[2]);
+        const auto parent=info.dir().canonicalPath();
+        const auto owned=QFileInfo(root).canonicalFilePath();
+        if(!info.isAbsolute() || info.isSymLink() ||
+           (info.exists() && !info.isFile()) ||
+           (parent!=owned && !parent.startsWith(owned+"/")))return 96;
+        QFile file(info.absoluteFilePath());
+        const bool opened=file.open(QIODevice::ReadOnly);
+        const auto file_error=file.error();
+        QSettings settings(info.absoluteFilePath(),QSettings::IniFormat);
+        const auto count=settings.allKeys().size();
+        Object result{{"path",info.absoluteFilePath()},{"exists",info.exists()},
+            {"qfile_opened",opened},{"qfile_error",static_cast<int>(file_error)},
+            {"qsettings_status",static_cast<int>(settings.status())},
+            {"key_count",static_cast<double>(count)}};
+#ifdef Q_OS_UNIX
+        result["effective_uid"]=static_cast<double>(geteuid());
+#endif
+        std::cout<<encode(result).toStdString()<<'\n'<<std::flush;
+        return 0;
+    }
+    if(arguments.size()!=1)return 96;
     FixtureServices fixture; // Actual immutable native dependencies outlive engine/Session teardown.
     auto engine=std::make_unique<QQmlEngine>();
     auto owned=std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
