@@ -120,3 +120,25 @@ under a refreshed stamp. Foreign request/project/revision inputs retain their or
 the existing closed edit door and semantic call identity rather than granting a provider new authority.
 Failed native responses can supply a bounded generated explanation through the existing terminal message;
 the core exposes that failure while retiring its execution scope.
+
+Asynchronous admission prepares a complete original-bound pending result/activity and all core role
+capacity before requesting the optional host TerminalRetention lease. A refusing or throwing reserve
+starts no work and changes no candidate iteration setting. A committed start calls started once; its
+false result revokes/cancels work while retaining the lease and actual candidate. Standalone headless
+callers have no extra UI retaining role; real VM installation remains a separate required app unit.
+
+Complete terminal settlement prepares its encoded envelope, history/cache replacements and ordinary
+shown event before consuming any reservation. False host settlement leaves the pending core receipt
+and hold unchanged, quarantines the lease and preserves the genuine candidate/report. The controller
+borrows that report from its owned FitJob; local baseline/start failures have separately owned real
+workflow refusal reports. Baseline unavailable/cancel, genuine candidate submission exceptions, fit
+error/cancel, serialization, host retention and continuation all share that complete original-bound
+settlement. A missing result never claims candidate publication, including pre-fit cancellation.
+
+Stop revokes authority before fallible work and preserves running/pending reservations until actual
+settlement. A failed delivery retains a real supplied human answer as immutable pending evidence;
+retry or Stop settles that same answer rather than inventing a cancellation in its place. Completed
+receipts cannot be overwritten. Explicit project/account/controller teardown releases old leases on
+the owner thread after disabling their scope; queued old deliveries cannot publish into replacement
+state. Quarantine is visible interruption, never a partial successful public result. These core
+semantics do not establish real VM/archive persistence, all pre-growth quotas or live provider proof.

@@ -56,7 +56,9 @@ class FitJob {
         // A frame, between iterations. The job calculates the next one only after `frame_shown`, so a slow
         // owner sees fewer frames and the fit is never queued behind them. Empty: no frames are calculated.
         std::function<void(const FitFrame&)> frame;
-        // Once, last: nothing of this fit is delivered afterwards.
+        // Once, last: nothing of this fit is delivered afterwards. The actual completed report is owned
+        // by this FitJob. Its const reference remains valid until the next admitted start or destruction;
+        // owner-thread access only. A failed start preparation preserves the previous completed report.
         std::function<void(const FitReport&)> finished;
         // The scan hooks follow `finished` so callers that list the first four in order keep their meaning.
         // A scan: once, before its first file, the number of files and the rows results.csv already holds.

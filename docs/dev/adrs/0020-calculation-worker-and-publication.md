@@ -234,3 +234,14 @@ calculation in the process.
 | The door takes any callable, and a copy of the project taken before it is restored when it throws | Withdrawn after three code reviews each found a route the restore missed (§8): the guard is over everything a change might do to the object graph, so the class stays open |
 | Stage a change on a copy and commit it back into the live objects by value                        | Rejected: the commit back is that same restore, now on every edit, and every change would have to address a project it is given instead of the objects it holds            |
 | The door takes any callable, and every caller must validate before it writes                      | Rejected: a rule the type does not hold is kept until the first caller that breaks it                                                                                      |
+
+The first manual FitJob owns its actual completed FitReport. The existing finished callback borrows it
+on the owner thread until the next admitted start or destruction; failed start preparation preserves
+that borrow. The final Outcome and delivery are prepared before worker submission. Worker-side
+preparation failure returns that existing delivery rather than allocating another terminal after the
+optimizer. Publication still prepares every owning result/computed buffer before any live scalar write.
+A failed finished consumer cannot destroy the real report, and teardown disables publication before
+cancelling and releases owners without throwing. This shares report lifetime with assistant trials;
+there is no extra public report getter or separate fitting backend. The Worker's existing queued,
+ordered delivery contract remains required; arbitrary external Post/trace transport failure is not
+converted into a fabricated scientific result.

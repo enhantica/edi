@@ -12,6 +12,7 @@
 #include <locale>
 #include <sstream>
 #include <utility>
+#include <type_traits>
 
 #include "edi/calculation.hpp"
 #include "edi/categories.hpp"
@@ -111,6 +112,7 @@ struct FitJob::State {
     Seams seams;
     CancelCallback checkpoint;
     bool open = true;
+    std::optional<FitReport> completed;
     work::Ticket ticket = 0;  // the running fit's job, or 0
     // Set by the owner when it has shown a frame, cleared by the worker when it emits one.
     std::atomic<bool> frame_wanted{true};
@@ -129,9 +131,9 @@ struct FitJob::State {
             return;
         }
         self->ticket = 0;
-        FitReport report;
-        report.result = std::move(outcome.result);
-        report.refusal = std::move(outcome.refusal);
+        static_assert(std::is_nothrow_move_constructible_v<FitReport>);
+        FitReport report{FitStatus::ERROR, std::move(outcome.refusal), std::move(outcome.result)};
+        try {
         if (!report.result.has_value()) {
             report.status = FitStatus::ERROR;
             if (report.refusal.empty()) {
@@ -183,8 +185,14 @@ struct FitJob::State {
                 catch (...) { report.refusal.clear(); }
             }
         }
+        } catch (...) {
+            // Keep the actual optimizer result even if a failure explanation cannot allocate.
+            report.status = FitStatus::ERROR;
+        }
+        self->completed.emplace(std::move(report));
         if (self->hooks.finished) {
-            self->hooks.finished(report);
+            try { self->hooks.finished(*self->completed); }
+            catch (...) { /* The actual completed report remains owned for owner-thread recovery. */ }
         }
     }
 };
@@ -195,7 +203,8 @@ FitJob::FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams, Ca
 FitJob::~FitJob() {
     state_->open = false;
     if (state_->ticket != 0) {
-        state_->worker.cancel(state_->ticket);
+        try { state_->worker.cancel(state_->ticket); }
+        catch (...) { /* Publication was already disabled; teardown must not throw. */ }
     }
 }
 
@@ -208,12 +217,16 @@ bool FitJob::start(const Project* scan_template) {
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
+    // Prepare final ownership/delivery before admission. Worker-side preparation failure
+    // must still return the same nonallocating final delivery, carrying the real result.
+    auto outcome = std::make_shared<Outcome>();
+    outcome->stamps = snapshot->stamps;
+    outcome->inputs = *inputs;
+    outcome->scan = is_scan_fitting_mode(effective_fitting_mode(snapshot->project));
+    work::Delivery completion = [self, outcome] { State::finish(self, *outcome); };
     state_->ticket = state_->worker.submit(
-        kChannel, [self, snapshot, inputs](const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
-            auto outcome = std::make_shared<Outcome>();
-            outcome->stamps = snapshot->stamps;
-            outcome->inputs = *inputs;
-            outcome->scan = is_scan_fitting_mode(effective_fitting_mode(snapshot->project));
+        kChannel, [self, snapshot, outcome, completion = std::move(completion)](const work::CancelToken& token, const work::Emit& emit) mutable -> work::Delivery {
+            try {
             // A single or joint fit's frames are drawn on a second copy, so the fit's own copy is touched by the
             // fit alone. A scan's frame is the pattern crysta's fit left for the file (edi ADR-0029).
             std::shared_ptr<Project> preview;
@@ -317,8 +330,13 @@ bool FitJob::start(const Project* scan_template) {
             } catch (...) {
                 outcome->refusal = "the fit failed";
             }
-            return [self, outcome] { State::finish(self, *outcome); };
+            } catch (const std::exception& error) {
+                try { outcome->refusal = error.what(); } catch (...) { outcome->refusal.clear(); }
+            } catch (...) { outcome->refusal.clear(); }
+            return std::move(completion);
         });
+    // An exception before this successful submission keeps the previous borrow valid.
+    state_->completed.reset();
     return true;
 }
 

@@ -122,7 +122,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     J capabilities = A{}, history = A{}, attachments = A{};
     J question_record;
     std::string question_call;
-    std::map<std::string, std::pair<std::string, Reply>> answers;
+    using AnswerMap = std::map<std::string, std::pair<std::string, Reply>>;
+    AnswerMap answers;
+    AnswerMap::node_type pending_answer;
     struct Plan {
         std::string id;
         J description;
@@ -136,7 +138,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     };
     std::optional<Plan> plan;
     struct Trial {
-        std::string id, group, call_id;
+        std::string id, group, call_id, job_id;
         J scope;
         std::shared_ptr<Project> project, accepted;
         WorkStamps accepted_stamps, fitted_stamps;
@@ -145,7 +147,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         bool quarantined = false;
         std::uint64_t revision = 0;
         double baseline = std::numeric_limits<double>::quiet_NaN();
-        std::optional<FitReport> report;
+        // Borrowed only from this owned FitJob, or this Trial's local refusal.
+        const FitReport* report = nullptr;
+        std::optional<FitReport> local_report;
         std::unique_ptr<FitJob> job;
     };
     std::shared_ptr<Trial> trial;
@@ -158,11 +162,18 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     using CallMap = std::map<std::string, Cached>;
     using HoldMap = std::map<std::string, Hold>;
     CallMap calls;
+    struct Retention {
+        std::unique_ptr<TerminalRetention> lease;
+        bool quarantined = false;
+    };
+    using RetentionMap = std::map<std::string, Retention>;
+    RetentionMap retentions;
     struct Admission {
         Reply result;
         J history;
         CallMap::node_type call;
         HoldMap::node_type hold;
+        RetentionMap::node_type retention;
         std::uint64_t history_bytes = 0, cache_bytes = 0;
         // A question can fail publication after admission. Prepare its complete
         // interrupted alternative before exposing the pending question.
@@ -221,7 +232,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         fields.emplace_back("request_id", scope ? scope->at("request_id") : J(request));
         fields.emplace_back("project_id", scope ? scope->at("project_id") : J(version.project_id));
         fields.emplace_back("revision", scope ? scope->at("revision") : J(std::to_string(version.revision)));
-        hooks.event(json::write(fields));
+        const auto wire = json::write(fields);
+        if (wire.size() > Limits::message_bytes) refuse("resource_exhausted", "Assistant event exceeds the complete message limit");
+        hooks.event(wire);
     }
     template <typename Fields>
     bool safe_emit(std::string_view type, Fields&& fields, const J* scope = nullptr) noexcept {
@@ -275,8 +288,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         // an initializer_list while constructing the surrounding temporary.
         auto value = parse(result.value);
         O row;
-        row.reserve(11);
-        row.emplace_back("type", "tool_result"); row.emplace_back("call_id", call);
+        row.reserve(12);
+        row.emplace_back("schema", "edi.assistant/1"); row.emplace_back("type", "tool_result"); row.emplace_back("call_id", call);
         row.emplace_back("ok", result.ok); row.emplace_back("code", result.code);
         row.emplace_back("result", std::move(value)); row.emplace_back("pending", pending);
         row.emplace_back("connection_id", scope ? scope->at("connection_id").string("connection_id") : connection);
@@ -293,22 +306,27 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         row.emplace_back("binding", std::move(binding)); row.emplace_back("reply", std::move(reply));
         return payload_size(std::move(row));
     }
+    std::uint64_t terminal_cache_capacity(const J& event) const {
+        O row; row.reserve(2);
+        row.emplace_back("binding", canonical(event)); row.emplace_back("reply", O{});
+        return payload_size(std::move(row)) - 2 + Limits::message_bytes;
+    }
     void preflight(const Reply& result, bool pending = false) {
         if (admitting_call.empty()) return;
         if (result.value.size() > Limits::message_bytes) refuse("resource_exhausted", "Tool result exceeds the assistant payload limit");
         const auto call_row = invocation(admitting_event);
         const auto reply_row = result_row(admitting_call, result, pending, &admitting_event);
+        bounded(reply_row, Limits::message_bytes);
         const auto cache = cache_size(admitting_event, result) + (calls.empty() ? 0 : 1);
         if (calls.size() + 1 > Limits::completed_calls || cache + held_cache() > Limits::completed_call_bytes - cache_used)
             refuse("resource_exhausted", "Completed-call capacity is unavailable");
         std::uint64_t reserve = 0;
         if (pending) {
-            const J skeleton = result_row(admitting_call, success(), false);
-            reserve = payload_size(skeleton) - 2 + Limits::message_bytes + 1;
+            reserve = Limits::message_bytes + 1;
         }
         check_history({&call_row, &reply_row}, reserve);
         if (pending) {
-            const auto final_cache = payload_size(O{{"binding", canonical(admitting_event)}, {"reply", result_row(admitting_call, success())}}) - 2 + Limits::message_bytes;
+            const auto final_cache = terminal_cache_capacity(admitting_event);
             const auto growth = final_cache > cache ? final_cache - cache : 0;
             if (cache + growth + held_cache() > Limits::completed_call_bytes - cache_used)
                 refuse("resource_exhausted", "Completed terminal capacity is unavailable");
@@ -325,8 +343,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         staged_call.emplace(admitting_call, Cached{json::write(canonical(admitting_event)), result});
         prepared.call = staged_call.extract(admitting_call);
         if (pending) {
-            const auto terminal_history = payload_size(result_row(admitting_call, success())) - 2 + Limits::message_bytes + 1;
-            const auto next_cache = payload_size(O{{"binding", canonical(admitting_event)}, {"reply", result_row(admitting_call, success())}}) - 2 + Limits::message_bytes;
+            const auto terminal_history = Limits::message_bytes + 1;
+            const auto next_cache = terminal_cache_capacity(admitting_event);
             const auto previous_cache = cache_size(admitting_event, result);
             HoldMap staged_hold;
             staged_hold.emplace(admitting_call, Hold{terminal_history, next_cache > previous_cache ? next_cache - previous_cache : 0});
@@ -344,6 +362,33 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             staged_interrupted.emplace(admitting_call, Cached{json::write(canonical(admitting_event)), interrupted});
             prepared.interrupted_call = staged_interrupted.extract(admitting_call);
         }
+        if (pending && hooks.reserve_terminal) {
+            J activity;
+            const auto generated = parse(result.value);
+            if (string(admitting_event, "name") == "fit_trial") {
+                activity = O{{"type", "fit"}, {"job_id", generated.at("job_id")}, {"trial_id", trial->id}};
+            } else {
+                J shown = admitting_event.at("arguments");
+                for (const auto* key : {"connection_id", "turn_id", "request_id", "project_id", "revision", "call_id"})
+                    set(shown, key, admitting_event.at(key));
+                set(shown, "question_id", generated.at("question_id"));
+                O row; row.reserve(2); row.emplace_back("type", "question"); row.emplace_back("question", std::move(shown));
+                activity = std::move(row);
+            }
+            O prospective; prospective.reserve(4);
+            prospective.emplace_back("schema", "edi.assistant.terminal-retention/1");
+            prospective.emplace_back("call", admitting_event);
+            prospective.emplace_back("pending_result", reply_row);
+            prospective.emplace_back("activity", std::move(activity));
+            const auto input = json::write(prospective);
+            if (input.size() > Limits::message_bytes) refuse("resource_exhausted", "Complete prospective activity exceeds the assistant limit");
+            std::unique_ptr<TerminalRetention> lease;
+            try { lease = hooks.reserve_terminal(input); }
+            catch (...) { refuse("resource_exhausted", "The host could not reserve complete terminal capacity"); }
+            if (!lease) refuse("resource_exhausted", "The host cannot retain the complete terminal");
+            RetentionMap staged; staged.emplace(admitting_call, Retention{std::move(lease), false});
+            prepared.retention = staged.extract(admitting_call);
+        }
         admission.emplace(std::move(prepared));
     }
     void commit_admission(bool interrupted_question = false) noexcept {
@@ -354,17 +399,27 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             history = std::move(admission->history); history_used = admission->history_bytes;
             cache_used = admission->cache_bytes; calls.insert(std::move(admission->call));
             if (!admission->hold.empty()) holds.insert(std::move(admission->hold));
+            if (!admission->retention.empty()) retentions.insert(std::move(admission->retention));
         }
         admission.reset();
     }
-    void finish_call(const std::string& call, const Reply& result) {
+    void quarantine_retention(const std::string& call) noexcept {
+        const auto found = retentions.find(call);
+        if (found != retentions.end()) {
+            if (!found->second.quarantined) {
+                found->second.quarantined = true;
+                found->second.lease->quarantine();
+            }
+        }
+    }
+    bool finish_call(const std::string& call, const Reply& result) {
         const auto old = calls.find(call);
-        if (old == calls.end()) return;
+        if (old == calls.end()) return false;
         const auto hold = holds.find(call);
-        if (hold == holds.end()) return; // A completed outcome cannot be replaced by interruption.
+        if (hold == holds.end()) return true; // A completed outcome cannot be replaced by interruption.
         const auto event = parse(old->second.binding, Limits::completed_call_bytes);
         auto row = result_row(call, result, false, &event);
-        bounded(parse(result.value), Limits::message_bytes);
+        bounded(row, Limits::message_bytes);
         const auto previous = cache_size(event, old->second.reply), next = cache_size(event, result);
         const auto used = cache_used - previous;
         const auto other_cache = held_cache() - hold->second.cache;
@@ -376,20 +431,112 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const auto bytes = history_used + payload_size(row) + (rows.empty() ? 0 : 1);
         rows.reserve(rows.size() + 1);
         auto value = parse(result.value);
-        O shown; shown.reserve(4);
+        O shown; shown.reserve(5);
         shown.emplace_back("call_id", call); shown.emplace_back("ok", result.ok);
         shown.emplace_back("code", result.code); shown.emplace_back("result", std::move(value));
+        shown.emplace_back("pending", false);
+        const auto terminal_wire = json::write(row);
+        const auto retained = retentions.find(call);
+        if (retained != retentions.end() && !retained->second.lease->settle(terminal_wire)) {
+            quarantine_retention(call);
+            // No core receipt or hold has changed. Explicit recovery retries the real outcome.
+            refuse("resource_exhausted", "The host could not retain the complete terminal");
+        }
         // All throwing preparation precedes consuming the hold or changing the
         // pending receipt. A failed Stop can retry this same correlated call.
         static_assert(std::is_nothrow_move_constructible_v<J>);
         old->second.reply = std::move(prepared); rows.push_back(std::move(row));
         history_used = bytes; cache_used = used + next; holds.erase(call);
-        emit("tool_result", std::move(shown), &event);
+        if (retained != retentions.end()) retentions.erase(retained);
+        return safe_emit("tool_result", [&] { return std::move(shown); }, &event);
+    }
+    bool finish_question(const Reply& interrupted) {
+        const auto& result = pending_answer.empty() ? interrupted : pending_answer.mapped().second;
+        if (!finish_call(question_call, result)) return false;
+        if (!pending_answer.empty()) answers.insert(std::move(pending_answer));
+        question.clear(); question_record = J{}; question_call.clear();
+        return true;
+    }
+    void settle_fit(const std::string& job_id, const FitReport& report) noexcept {
+        const auto candidate = trial;
+        if (!open || !candidate || candidate->job_id != job_id ||
+            (active_job != job_id && !holds.count(candidate->call_id))) return;
+        // FitJob owns this reference through the next admitted start/destruction;
+        // local baseline/start refusals instead live in candidate->local_report.
+        candidate->report = &report;
+        try {
+            candidate->fitted_stamps = work_stamps(*candidate->project);
+            candidate->fitted_inputs = edi::detail::inputs_of(*candidate->project);
+            const auto status_text = [](FitStatus value) {
+                switch (value) {
+                    case FitStatus::DONE: return "done";
+                    case FitStatus::MAX_ITER: return "max_iter";
+                    case FitStatus::NO_STEP: return "no_step";
+                    case FitStatus::CANCELLED: return "cancelled";
+                    case FitStatus::SUPERSEDED: return "superseded";
+                    case FitStatus::UNAVAILABLE: return "unavailable";
+                    default: return "error";
+                }
+            };
+            O values, uncertainties;
+            if (report.result) {
+                for (const auto& item : report.result->values) values.emplace_back(item.first, item.second);
+                for (const auto& item : report.result->uncertainty) uncertainties.emplace_back(item.first, item.second);
+            }
+            const auto& record = candidate->project->fit_result;
+            const bool adopted = report.result.has_value() && report.adopted();
+            O fields; fields.reserve(19);
+            fields.emplace_back("job_id", job_id); fields.emplace_back("trial_id", candidate->id);
+            fields.emplace_back("status", status_text(report.status)); fields.emplace_back("message", report.refusal);
+            fields.emplace_back("candidate_adopted", adopted); fields.emplace_back("live_adopted", false);
+            fields.emplace_back("converged", report.result && report.result->converged);
+            fields.emplace_back("objective_name", "chi_square");
+            fields.emplace_back("objective", adopted ? J(record.objective_value) : J(nullptr));
+            fields.emplace_back("baseline_objective", std::isfinite(candidate->baseline) ? J(candidate->baseline) : J(nullptr));
+            fields.emplace_back("reduced_chi_square", report.result ? J(report.result->reduced_chi_square) : J(nullptr));
+            fields.emplace_back("rwp", report.result ? J(report.result->rwp) : J(nullptr));
+            fields.emplace_back("iterations", report.result ? report.result->iterations : 0);
+            fields.emplace_back("n_points_fitted", report.result ? J(static_cast<double>(report.result->n_points_fitted)) : J(nullptr));
+            fields.emplace_back("n_free_parameters", adopted ? J(record.n_free_parameters) : J(nullptr));
+            fields.emplace_back("values", std::move(values)); fields.emplace_back("uncertainties", std::move(uncertainties));
+            fields.emplace_back("diagnostics", diagnostics(candidate->project.get()));
+            J outcome = std::move(fields);
+            const bool complete = report.status != FitStatus::ERROR && report.status != FitStatus::SUPERSEDED &&
+                report.status != FitStatus::CANCELLED && report.status != FitStatus::UNAVAILABLE;
+            Reply terminal{complete, complete ? "" : "edi.assistant.interrupted", json::write(outcome)};
+            if (!finish_call(candidate->call_id, terminal)) return;
+            active_job.clear();
+            if (!safe_emit("job_finished", [&] {
+                O shown; shown.reserve(5);
+                shown.emplace_back("job_id", job_id); shown.emplace_back("result", std::move(outcome));
+                shown.emplace_back("status", status_text(report.status));
+                shown.emplace_back("candidate_adopted", adopted); shown.emplace_back("live_adopted", false);
+                return shown;
+            }, &candidate->scope)) return;
+            if (candidate->quarantined) { phase = "interrupted"; return; }
+            if (turn.empty()) { trial.reset(); status(ready ? "idle" : "disconnected"); }
+            else if (status("streaming")) continue_turn();
+        } catch (const std::bad_alloc&) { candidate->quarantined = true; publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { candidate->quarantined = true; publication_failed(OutputFailure::resource); }
+        catch (const Refusal& error) {
+            candidate->quarantined = true;
+            publication_failed(error.code == "resource_exhausted" ? OutputFailure::resource : OutputFailure::interrupted);
+        } catch (...) { candidate->quarantined = true; publication_failed(OutputFailure::interrupted); }
+    }
+    void local_fit_failure(const std::string& job_id, FitStatus status, const char* message) noexcept {
+        const auto candidate = trial;
+        if (!open || !candidate || candidate->job_id != job_id || candidate->report) return;
+        static_assert(std::is_nothrow_default_constructible_v<FitReport>);
+        candidate->local_report.emplace();
+        candidate->local_report->status = status;
+        try { candidate->local_report->refusal = message; } catch (...) {}
+        settle_fit(job_id, *candidate->local_report);
     }
     void reset_conversation() {
         auto next = id("conversation");
         history = A{}; history_used = 2; calls.clear(); cache_used = 2;
-        holds.clear(); answers.clear(); conversation = std::move(next);
+        retentions.clear(); holds.clear(); answers.clear(); pending_answer = {};
+        trial.reset(); active_job.clear(); conversation = std::move(next);
         admitting_call.clear(); admitting_event = J{}; admission.reset();
     }
     void interrupt_output() noexcept {
@@ -397,6 +544,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         // Revoke human-answer authority immediately, but retain the correlated
         // call/record until its terminal really commits (or explicit teardown).
         question.clear();
+        for (auto& [call, retained] : retentions) {
+            if (!retained.quarantined) { retained.quarantined = true; retained.lease->quarantine(); }
+            (void)call;
+        }
         if (trial) {
             trial->quarantined = true;
             try { if (trial->baseline_ticket) worker.cancel(trial->baseline_ticket); } catch (...) {}
@@ -404,8 +555,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         }
         if (!question_call.empty()) {
             try {
-                finish_call(question_call, failure("interrupted", "The question was interrupted"));
-                question_call.clear(); question_record = J{};
+                const auto retained = retentions.find(question_call);
+                if (retained == retentions.end() || !retained->second.quarantined)
+                    finish_question(failure("interrupted", "The question was interrupted"));
             } catch (...) { /* Keep the call and hold available for a later Stop/recovery. */ }
         }
         phase = "interrupted";
@@ -418,18 +570,25 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             // failure never restores permission to answer, execute or continue.
             turn.clear(); request.clear(); plan.reset();
             if (!question_call.empty()) {
-                const auto question_id = std::move(question);
+                const bool answered = !pending_answer.empty();
+                const auto question_id = answered ? pending_answer.key() : std::move(question);
+                const auto answer = answered ? pending_answer.mapped().first : std::string();
                 question.clear();
-                finish_call(question_call, failure("interrupted", "The question was interrupted before an answer"));
-                question_call.clear(); question_record = J{};
-                if (!safe_emit("question_invalidated", [&] { return O{{"question_id", question_id}}; })) return false;
+                if (!finish_question(failure("interrupted", "The question was interrupted before an answer"))) return false;
+                if (answered) {
+                    if (!safe_emit("question_answered", [&] { return O{{"question_id", question_id}, {"answer", answer}}; })) return false;
+                } else if (!safe_emit("question_invalidated", [&] { return O{{"question_id", question_id}}; })) return false;
+            }
+            if (trial && trial->report && holds.count(trial->call_id)) {
+                settle_fit(trial->job_id, *trial->report);
+                if (trial && holds.count(trial->call_id)) return false;
             }
             if (trial && trial->baseline_ticket) worker.cancel(trial->baseline_ticket);
             if (trial && (trial->baseline_ticket || (trial->job && trial->job->running()))) {
                 if (trial->job) trial->job->cancel();
                 return status("cancelling");
             }
-            if (!trial || !trial->quarantined) trial.reset();
+            if (!trial || !trial->quarantined || (trial->report && !holds.count(trial->call_id))) trial.reset();
             active_job.clear(); return status(ready ? "idle" : "disconnected");
         } catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
         catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
@@ -674,70 +833,28 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto max_iterations = static_cast<int>(plan->max_iterations);
             const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true);
             auto next_call = admitting_call; auto next_scope = event;
-            auto next_job = job_id; auto next_active_call = admitting_call;
+            auto next_job = job_id; auto next_candidate_job = job_id; auto next_active_call = admitting_call;
             const auto self = shared_from_this();
             FitJob::Hooks callbacks;
             callbacks.iterated = [self, job_id](const IterationRecord& iteration) {
                 if (self->open && self->active_job == job_id)
-                    self->emit("job_progress", {{"job_id", job_id}, {"objective", iteration.objective_value ? J(*iteration.objective_value) : J(nullptr)}, {"reduced_chi_square", iteration.reduced_chi_square}}, self->trial ? &self->trial->scope : nullptr);
+                    self->safe_emit("job_progress", [&] { return O{{"job_id", job_id}, {"objective", iteration.objective_value ? J(*iteration.objective_value) : J(nullptr)}, {"reduced_chi_square", iteration.reduced_chi_square}}; }, self->trial ? &self->trial->scope : nullptr);
             };
-            callbacks.finished = [self, job_id](const FitReport& report) {
-                const auto& state = self;
-                const auto candidate = state->trial;
-                if (!candidate || !state->open || state->active_job != job_id) return;
-                candidate->report = report; state->active_job.clear();
-                candidate->job.reset();
-                candidate->fitted_stamps = work_stamps(*candidate->project);
-                candidate->fitted_inputs = edi::detail::inputs_of(*candidate->project);
-                const auto status = [](FitStatus value) {
-                    switch (value) {
-                        case FitStatus::DONE: return "done";
-                        case FitStatus::MAX_ITER: return "max_iter";
-                        case FitStatus::NO_STEP: return "no_step";
-                        case FitStatus::CANCELLED: return "cancelled";
-                        case FitStatus::SUPERSEDED: return "superseded";
-                        case FitStatus::UNAVAILABLE: return "unavailable";
-                        default: return "error";
-                    }
-                };
-                O values, uncertainties;
-                if (report.result) {
-                    for (const auto& item : report.result->values) values.emplace_back(item.first, item.second);
-                    for (const auto& item : report.result->uncertainty) uncertainties.emplace_back(item.first, item.second);
-                }
-                const auto& record = candidate->project->fit_result;
-                J outcome = O{{"job_id", job_id}, {"trial_id", candidate->id}, {"status", status(report.status)},
-                    {"message", report.refusal}, {"candidate_adopted", report.adopted()}, {"live_adopted", false},
-                    {"converged", report.result && report.result->converged}, {"objective_name", "chi_square"},
-                    {"objective", report.adopted() ? J(record.objective_value) : J(nullptr)},
-                    {"baseline_objective", std::isfinite(candidate->baseline) ? J(candidate->baseline) : J(nullptr)},
-                    {"reduced_chi_square", report.result ? J(report.result->reduced_chi_square) : J(nullptr)},
-                    {"rwp", report.result ? J(report.result->rwp) : J(nullptr)},
-                    {"iterations", report.result ? report.result->iterations : 0},
-                    {"n_points_fitted", report.result ? J(static_cast<double>(report.result->n_points_fitted)) : J(nullptr)},
-                    {"n_free_parameters", record.n_free_parameters}, {"values", values}, {"uncertainties", uncertainties},
-                    {"diagnostics", diagnostics(candidate->project.get())}};
-                const Reply terminal = report.status == FitStatus::ERROR || report.status == FitStatus::SUPERSEDED || report.status == FitStatus::CANCELLED
-                    ? Reply{false, "edi.assistant.interrupted", json::write(outcome)} : success(outcome);
-                state->finish_call(candidate->call_id, terminal);
-                state->emit("job_finished", {{"job_id", job_id}, {"result", outcome}, {"status", status(report.status)},
-                    {"candidate_adopted", report.adopted()}, {"live_adopted", false}}, &candidate->scope);
-                if (candidate->quarantined) { state->status("interrupted"); return; }
-                if (state->turn.empty()) { state->trial.reset(); state->status(state->ready ? "idle" : "disconnected"); }
-                else if (state->status("streaming")) state->continue_turn();
-            };
+            callbacks.finished = [self, job_id](const FitReport& report) noexcept { self->settle_fit(job_id, report); };
             const auto now = hooks.monotonic_ms();
             const auto elapsed = now >= plan->started ? now - plan->started : plan->max_ms;
             const auto remaining = plan->max_ms - std::min(plan->max_ms, elapsed);
             const auto wall_start = std::chrono::steady_clock::now();
             const auto policy_start = hooks.monotonic_ms();
             const auto clock = hooks.monotonic_ms;
-            const auto expired = [remaining, wall_start, policy_start, clock] {
+            const auto expired = [remaining, wall_start, policy_start, clock]() noexcept {
+                try {
 #if EDI_WORKER_OWNER_THREAD
                 const auto value = clock();
                 if (value < policy_start || value - policy_start >= remaining) return true;
 #endif
                 return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - wall_start).count() >= static_cast<std::int64_t>(std::min<std::uint64_t>(remaining, INT64_MAX));
+                } catch (...) { return true; }
             };
             auto prepared_job = std::make_unique<FitJob>(*trial->project, worker, std::move(callbacks), FitJob::Seams{}, expired);
             auto baseline = std::make_shared<Project>(*trial->accepted);
@@ -749,34 +866,42 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 baseline_slots[i].parameter->free = candidate_slots[i].parameter->free.get();
             }
             const auto candidate_id = trial->id;
-            const auto baseline_ticket = worker.submit("assistant-baseline", [self, baseline, candidate_id, expired, mode](const work::CancelToken& token, const work::Emit&) {
-                std::optional<double> objective;
-                std::string error;
+            struct BaselineEvidence { std::optional<double> objective; bool error = false, cancelled = false; };
+            auto evidence = std::make_shared<BaselineEvidence>();
+            work::Delivery completion = [self, candidate_id, job_id, evidence]() noexcept {
+                if (!self->open || !self->trial || self->trial->id != candidate_id || self->trial->job_id != job_id) return;
+                auto& candidate = *self->trial; candidate.baseline_ticket = 0;
+                if (!evidence->objective || !std::isfinite(*evidence->objective) || evidence->error || self->turn.empty() || evidence->cancelled) {
+                    self->local_fit_failure(job_id, self->turn.empty() || evidence->cancelled ? FitStatus::CANCELLED : FitStatus::ERROR,
+                        evidence->error ? "The accepted baseline could not be evaluated" : "The baseline was interrupted or unavailable");
+                    return;
+                }
+                candidate.baseline = *evidence->objective;
                 try {
-                    if (!token.cancelled() && !expired()) {
-                        const auto started = [&objective](const FitPreamble& facts) { objective = facts.pre_fit.objective_value; };
-                        if (mode == "joint") baseline->fit_joint(IterationCallback{}, started, [] { return true; });
-                        else baseline->fit(IterationCallback{}, started, [] { return true; });
+                    if (!candidate.job->start()) {
+                        if (candidate.job->running()) {
+                            candidate.quarantined = true; self->publication_failed(OutputFailure::interrupted);
+                        } else self->local_fit_failure(job_id, FitStatus::ERROR, "The candidate fit could not start");
                     }
-                } catch (const std::exception&) { error = "The accepted baseline could not be evaluated"; }
-                return [self, candidate_id, objective, error] {
-                    if (!self->open || !self->trial || self->trial->id != candidate_id) return;
-                    auto& candidate = *self->trial; candidate.baseline_ticket = 0;
-                    if (!objective || !std::isfinite(*objective) || !error.empty() || self->turn.empty()) {
-                        FitReport refused; refused.status = self->turn.empty() ? FitStatus::CANCELLED : FitStatus::ERROR;
-                        refused.refusal = error.empty() ? "The baseline was interrupted or unavailable" : error;
-                        candidate.report = refused; candidate.job.reset(); const auto job_id = self->active_job; self->active_job.clear();
-                        self->finish_call(candidate.call_id, {false, "edi.assistant.interrupted", json::write(O{{"job_id", job_id}, {"trial_id", candidate.id}, {"status", self->turn.empty() ? "cancelled" : "error"}, {"message", refused.refusal}, {"candidate_adopted", false}, {"live_adopted", false}})});
-                        self->emit("job_finished", {{"job_id", job_id}, {"status", self->turn.empty() ? "cancelled" : "error"}, {"message", refused.refusal}, {"live_adopted", false}}, &candidate.scope);
-                        self->status("interrupted");
-                        if (self->turn.empty() && !candidate.quarantined) self->trial.reset();
-                        return;
-                    }
-                    candidate.baseline = *objective;
-                    if (!candidate.job->start()) { self->active_job.clear(); self->status("failed"); }
-                };
-            });
-            trial->call_id = std::move(next_call); trial->scope = std::move(next_scope);
+                } catch (...) {
+                    if (candidate.job->running()) {
+                        candidate.quarantined = true; self->publication_failed(OutputFailure::interrupted);
+                    } else self->local_fit_failure(job_id, FitStatus::ERROR, "The candidate fit could not be prepared");
+                }
+            };
+            const auto baseline_ticket = worker.submit("assistant-baseline",
+                [baseline, evidence, expired, mode, completion = std::move(completion)](const work::CancelToken& token, const work::Emit&) mutable -> work::Delivery {
+                    try {
+                        evidence->cancelled = token.cancelled() || expired();
+                        if (!evidence->cancelled) {
+                            const auto started = [&evidence](const FitPreamble& facts) { evidence->objective = facts.pre_fit.objective_value; };
+                            if (mode == "joint") baseline->fit_joint(IterationCallback{}, started, [] { return true; });
+                            else baseline->fit(IterationCallback{}, started, [] { return true; });
+                        }
+                    } catch (...) { evidence->error = true; }
+                    return std::move(completion);
+                });
+            trial->call_id = std::move(next_call); trial->scope = std::move(next_scope); trial->job_id = std::move(next_candidate_job);
             trial->job = std::move(prepared_job); trial->baseline_ticket = baseline_ticket;
             if (trial->project->minimizer_max_iterations == 0 || trial->project->minimizer_max_iterations > max_iterations)
                 trial->project->minimizer_max_iterations = max_iterations;
@@ -839,6 +964,15 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 if (old->second.first != answer) refuse("invalid_argument", "This question was already answered differently");
                 return old->second.second;
             }
+            if (!pending_answer.empty()) {
+                if (pending_answer.key() != question_id || pending_answer.mapped().first != answer)
+                    refuse("invalid_argument", "This question already has a pending different answer");
+                const Reply result = pending_answer.mapped().second;
+                user_scope_committed = true;
+                if (!finish_question(result)) return output_refusal();
+                if (!continue_turn()) return output_refusal();
+                return result;
+            }
             if (question.empty() || question_id != question) refuse("invalid_argument", "No matching live question");
             if (answer.size() > Limits::question_answer_bytes) refuse("resource_exhausted", "Question answer exceeds limit");
             bool selected = false;
@@ -849,11 +983,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 refuse("invalid_argument", "Question scope changed");
             const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", selected ? J(answer) : J(nullptr)}});
             if (answers.size() >= Limits::completed_calls) refuse("resource_exhausted", "Answered-question capacity is unavailable");
+            AnswerMap staged; staged.emplace(question, std::make_pair(answer, result));
             user_scope_committed = true;
-            finish_call(question_call, result);
-            answers.emplace(question, std::make_pair(answer, result));
-            emit("question_answered", {{"question_id", question}, {"answer", answer}});
-            question.clear(); question_record = J{}; question_call.clear();
+            pending_answer = staged.extract(question);
+            if (!finish_question(result)) return output_refusal();
+            if (!safe_emit("question_answered", [&] { return O{{"question_id", question_id}, {"answer", answer}}; })) return output_refusal();
             if (!continue_turn()) return output_refusal();
             return result;
         }
@@ -1007,7 +1141,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const bool failed_publication = output_failure != OutputFailure::none;
         commit_admission(failed_publication && name == "ask_question");
         admitting_call.clear();
-        if (failed_publication) return output_refusal();
+        if (failed_publication) { quarantine_retention(call); return output_refusal(); }
+        if (pending) {
+            const auto retained = retentions.find(call);
+            if (retained != retentions.end() && !retained->second.lease->started()) {
+                quarantine_retention(call); publication_failed(OutputFailure::resource);
+                return output_refusal();
+            }
+        }
         had_tools = true;
         if (!safe_emit("tool_result", [&] { return O{{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}}; }, &event))
             return output_refusal();
@@ -1016,16 +1157,23 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
 };
 
 Controller::Controller(work::Worker& worker, Hooks hooks) : state_(std::make_shared<State>(worker, std::move(hooks))) {}
-Controller::~Controller() { state_->open = false; state_->stop(); state_->trial.reset(); }
+Controller::~Controller() {
+    state_->open = false;
+    state_->stop();
+    state_->retentions.clear(); state_->holds.clear(); state_->pending_answer = {};
+    state_->trial.reset();
+}
 Reply Controller::attach(Project* project, std::string project_id) {
     if ((project == nullptr) != project_id.empty()) return failure("invalid_argument", "A project requires a session ID");
     if (project && project_id == state_->version.project_id) {
         if (project != state_->live) return failure("stale_project", "A replacement project requires a fresh session ID");
         return success();
     }
+    auto next_conversation = state_->id("conversation");
     if (!state_->stop()) return state_->output_refusal();
+    state_->retentions.clear(); state_->trial.reset(); state_->active_job.clear(); state_->pending_answer = {};
     state_->live = project; state_->version = {std::move(project_id), 0};
-    state_->history = A{}; state_->history_used = 2; state_->calls.clear(); state_->cache_used = 2; state_->holds.clear(); state_->answers.clear(); state_->conversation = state_->id("conversation"); state_->emit("state_changed", {{"state", state_->state()}}); return success();
+    state_->history = A{}; state_->history_used = 2; state_->calls.clear(); state_->cache_used = 2; state_->holds.clear(); state_->answers.clear(); state_->conversation = std::move(next_conversation); state_->emit("state_changed", {{"state", state_->state()}}); return success();
 }
 Revision Controller::revision() const { return state_->version; }
 void Controller::notify_changed() { ++state_->version.revision; state_->stop(); }

@@ -29,12 +29,25 @@ struct Revision {
     std::uint64_t revision = 0;
 };
 
+/// A unique owner-thread terminal reservation. Services captured by it outlive it.
+/// No method may reenter the controller/provider. Teardown releases unused capacity.
+class TerminalRetention {
+   public:
+    virtual ~TerminalRetention() noexcept = default;
+    virtual bool started() noexcept = 0;
+    virtual bool settle(const JsonText& terminal) noexcept = 0;
+    virtual void quarantine() noexcept = 0;
+};
+
 /// Owner-thread services. Callbacks must not reenter the controller; queue the next command instead.
 struct Hooks {
     std::function<void(const JsonText&)> event;
     std::function<void(const JsonText&)> provider_request;
     std::function<std::string(const edi::Edit&, bool structural)> apply;
     std::function<std::uint64_t()> monotonic_ms;
+    /// Prepare complete UI pending/activity rows and terminal bytes/slots before any async start.
+    /// Empty means no additional UI retaining role (ordinary headless hosts only).
+    std::function<std::unique_ptr<TerminalRetention>(const JsonText& prospective)> reserve_terminal;
 };
 
 /// Shared conversation, approval and trial policy (ADR-0037). The worker outlives this owner-thread object.
