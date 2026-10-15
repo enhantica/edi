@@ -532,12 +532,26 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         try { candidate->local_report->refusal = message; } catch (...) {}
         settle_fit(job_id, *candidate->local_report);
     }
+    // Explicit scope retirement differs from ordinary Stop: the old owner is
+    // leaving, so its capacity/report cannot depend on a renderer accepting it.
+    // Fence first; queued deliveries carry candidate/request identities and become inert.
+    void retire_scope() noexcept {
+        turn.clear(); request.clear(); response_done = true; had_tools = false;
+        plan.reset(); question.clear(); question_call.clear(); question_record = J{};
+        if (trial) {
+            try { if (trial->baseline_ticket) worker.cancel(trial->baseline_ticket); } catch (...) {}
+            try { if (trial->job) trial->job->cancel(); } catch (...) {}
+        }
+        retentions.clear(); holds.clear(); admission.reset(); pending_answer = {};
+        trial.reset(); active_job.clear(); active_call.clear(); request_trial.clear();
+        history = A{}; history_used = 2; calls.clear(); cache_used = 2;
+        answers.clear(); conversation.clear(); admitting_call.clear(); admitting_event = J{};
+        output_failure = OutputFailure::none;
+    }
     void reset_conversation() {
         auto next = id("conversation");
-        history = A{}; history_used = 2; calls.clear(); cache_used = 2;
-        retentions.clear(); holds.clear(); answers.clear(); pending_answer = {};
-        trial.reset(); active_job.clear(); conversation = std::move(next);
-        admitting_call.clear(); admitting_event = J{}; admission.reset();
+        retire_scope();
+        conversation = std::move(next);
     }
     void interrupt_output() noexcept {
         plan.reset(); response_done = true; turn.clear(); request.clear();
@@ -625,16 +639,33 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!next_effort.empty()) out.emplace_back("effort", next_effort);
         bounded(out, Limits::request_bytes); return out;
     }
-    bool send_request() {
-        const auto next_request = id("request");
-        const auto outgoing = json::write(request_payload(turn, next_request, conversation, text, model, effort, history));
-        auto captured = version;
-        request_version = std::move(captured);
-        request_trial = trial ? trial->id : "";
-        request = next_request; response_done = false; had_tools = false;
-        if (!status("streaming")) return false;
-        if (hooks.provider_request) hooks.provider_request(outgoing);
-        return true;
+    bool dispatch_request(const JsonText& outgoing) noexcept {
+        try {
+            if (hooks.provider_request) hooks.provider_request(outgoing);
+            return true;
+        } catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
+        catch (...) { publication_failed(OutputFailure::interrupted); }
+        return false;
+    }
+    bool send_request() noexcept {
+        // Every continuation caller uses this boundary: an undelivered request
+        // cannot leave approval/answer/fit outcomes committed but chat still busy.
+        try {
+            const auto next_request = id("request");
+            const auto outgoing = json::write(request_payload(turn, next_request, conversation, text, model, effort, history));
+            auto captured = version;
+            request_version = std::move(captured);
+            request_trial = trial ? trial->id : "";
+            request = next_request; response_done = false; had_tools = false;
+            if (!status("streaming")) return false;
+            return dispatch_request(outgoing);
+        } catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
+        catch (const Refusal& error) {
+            publication_failed(error.code == "resource_exhausted" ? OutputFailure::resource : OutputFailure::interrupted);
+        } catch (...) { publication_failed(OutputFailure::interrupted); }
+        return false;
     }
     bool continue_turn() {
         if (output_failure != OutputFailure::none) return false;
@@ -1028,8 +1059,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         history_used += growth;
         history = std::move(next_history); request_trial = std::move(next_trial); request_version = std::move(captured); response_done = false; had_tools = false;
         if (!status("streaming")) return output_refusal();
-        try { if (hooks.provider_request) hooks.provider_request(outgoing); }
-        catch (...) { interrupt_output(); return failure("interrupted", "The admitted provider request could not start"); }
+        if (!dispatch_request(outgoing)) return output_refusal();
         return admitted_message;
     }
     Reply provider(const J& event) {
@@ -1057,10 +1087,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 for (const J& attachment : item.at("attachment_types").array("attachment_types")) attachment.string("attachment type");
             }
             const auto next = string(event, "connection_id");
-            if (next != connection || state != "ready") {
-                if (!stop()) { ready = false; return output_refusal(); }
-                reset_conversation();
-            }
+            if (next != connection || state != "ready") reset_conversation();
             connection = next; ready = state == "ready"; capabilities = event.at("capabilities");
             if (!status(ready ? "idle" : "disconnected")) return output_refusal();
             return success();
@@ -1133,9 +1160,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (error.code == "resource_exhausted") throw;
             result = failure(error.code, error.what());
         }
-        catch (const std::bad_alloc&) { throw; }
-        catch (const std::length_error&) { throw; }
+        // All potentially throwing fit preparation precedes successful baseline
+        // submission; admitted() moves its prepared Reply. Abort provisional host
+        // ownership on every preparation escape before outer interruption/reporting.
+        catch (const std::bad_alloc&) { admission.reset(); throw; }
+        catch (const std::length_error&) { admission.reset(); throw; }
         catch (const std::exception& error) { admission.reset(); result = failure("invalid_argument", error.what()); }
+        catch (...) { admission.reset(); throw; }
         const bool pending = result.ok && (name == "fit_trial" || name == "ask_question");
         if (!admission) preflight(result, pending);
         const bool failed_publication = output_failure != OutputFailure::none;
@@ -1159,9 +1190,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
 Controller::Controller(work::Worker& worker, Hooks hooks) : state_(std::make_shared<State>(worker, std::move(hooks))) {}
 Controller::~Controller() {
     state_->open = false;
-    state_->stop();
-    state_->retentions.clear(); state_->holds.clear(); state_->pending_answer = {};
-    state_->trial.reset();
+    state_->retire_scope();
 }
 Reply Controller::attach(Project* project, std::string project_id) {
     if ((project == nullptr) != project_id.empty()) return failure("invalid_argument", "A project requires a session ID");
@@ -1170,10 +1199,11 @@ Reply Controller::attach(Project* project, std::string project_id) {
         return success();
     }
     auto next_conversation = state_->id("conversation");
-    if (!state_->stop()) return state_->output_refusal();
-    state_->retentions.clear(); state_->trial.reset(); state_->active_job.clear(); state_->pending_answer = {};
+    state_->retire_scope();
     state_->live = project; state_->version = {std::move(project_id), 0};
-    state_->history = A{}; state_->history_used = 2; state_->calls.clear(); state_->cache_used = 2; state_->holds.clear(); state_->answers.clear(); state_->conversation = std::move(next_conversation); state_->emit("state_changed", {{"state", state_->state()}}); return success();
+    state_->conversation = std::move(next_conversation);
+    state_->phase = state_->ready ? "idle" : "disconnected";
+    state_->emit("state_changed", {{"state", state_->state()}}); return success();
 }
 Revision Controller::revision() const { return state_->version; }
 void Controller::notify_changed() { ++state_->version.revision; state_->stop(); }

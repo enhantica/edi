@@ -142,3 +142,13 @@ receipts cannot be overwritten. Explicit project/account/controller teardown rel
 the owner thread after disabling their scope; queued old deliveries cannot publish into replacement
 state. Quarantine is visible interruption, never a partial successful public result. These core
 semantics do not establish real VM/archive persistence, all pre-growth quotas or live provider proof.
+
+Provisional host reservations unwind on every pre-start preparation escape, including allocation and length
+failures, before outer interruption/error reporting. Actual accepted running work keeps its committed lease.
+Explicit project/account/conversation retirement is a distinct owner boundary from ordinary Stop: it fences
+old requests, cancels old work and releases the retired owner's leases/holds/report even when its renderer
+permanently refuses settlement. Ordinary Stop still preserves the actual pending report and capacity.
+All continuation callers share one contained request-construction/dispatch boundary. Synchronous provider
+callback or construction failure revokes the undelivered request and approval, retains already committed
+answers/tool/scientific outcomes and visibly interrupts; initial send uses the same dispatch containment.
+No fresh revision, auto-approval, synthetic outcome or new public getter is introduced.
