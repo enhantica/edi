@@ -364,7 +364,7 @@ def test_actual_ui_archive_is_bounded_with_many_small_provider_deltas(ui, signer
     native_protocol.stream(
         ui,
         index,
-        [{'type': 'response.output_text.delta', 'delta': 'x'} for _ in range(513)]
+        [{'type': 'response.output_text.delta', 'delta': 'x' * 65536} for _ in range(33)]
         + [
             {
                 'type': 'response.completed',

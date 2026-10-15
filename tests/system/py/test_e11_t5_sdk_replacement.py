@@ -97,6 +97,11 @@ def sdk_world(tmp_path, entry, change):
         'CRYSTA_CONSUMER_SRC',
         'EDI_CRYSTA_PREFIX',
         'PYTEST_XDIST_WORKER',
+        'CI',
+        'EDI_USE_CONSUMER_BUILD',
+        'EDI_CORE_TARGETS',
+        'EDI_NATIVE_ARTIFACT',
+        'EDI_GUI_COMPONENTS_SRC',
     ]:
         env.pop(key, None)
     if entry in {'app-candidate', 'consumer'}:
@@ -182,3 +187,26 @@ def test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects(tmp_path,
             'E11-T5 SDK identity: an unchanged SDK/toolchain '
             'retains its valid incremental artifact'
         )
+
+
+def test_actual_app_local_override_remains_forbidden_in_ci(tmp_path):
+    work, ci, script, _, env, _, _ = sdk_world(tmp_path, 'app-local', 'identity')
+    env['CI'] = 'true'
+    result = subprocess.run(
+        ['bash', str(ci / script)],
+        cwd=work,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode != 0 and all(
+        token in result.stdout + result.stderr for token in ['EDI_CRYSTA_PREFIX', 'CI']
+    ), (
+        'E11-T5 SDK authority: the actual production app helper still refuses '
+        'a local override in CI'
+    )
+    assert not (work / 'build/app').exists(), (
+        'E11-T5 SDK authority: CI refuses the local override before configuring consumer artifacts'
+    )

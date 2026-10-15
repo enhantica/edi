@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T00:51:28Z
+# measured_utc = 2026-10-15T00:57:29Z
 #
-# E11-T5 seq2 final owner admission41setup errors and candidate-retirement2behavior reds; actual logs /home/andrewsazonov/runs/ai-assistant/tests-seq2-{owner-final-admission,candidate-retirement}.log; existing rows preserved
+# E11-T5 seq2 isolated Actions-style review11 correction: /home/andrewsazonov/runs/ai-assistant/tests-seq2-sdk-native-final.log (30behavior reds,1CI guard pass,91missing-interface setup errors); final-vehicle-controls.log (1pass,1setup); canonical earlier rows preserved
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,9 +27,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13187
+# inventory_python = 13188
 # inventory_cpp = 333
-# inventory_measured = 11829
+# inventory_measured = 11830
 # inventory_unmeasured = 1691
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -10019,6 +10019,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline
+0.010	tests/system/py/test_e11_t5_sdk_replacement.py::test_actual_app_local_override_remains_forbidden_in_ci
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-candidate]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-local]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-pinned]
@@ -13571,7 +13572,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 0.060	tests/system/app/test_e11_t5_assistant_connected.py
+# module-cost: 0.087	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
@@ -13590,7 +13591,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 0.257	tests/system/py/test_e11_t5_assistant_native.py
+# module-cost: 0.091	tests/system/py/test_e11_t5_assistant_native.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py

@@ -13,6 +13,7 @@ import json
 import os
 import select
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -35,7 +36,10 @@ def b64(value):
 def signer(tmp_path_factory):
     folder = tmp_path_factory.mktemp('synthetic-rsa')
     private = folder / 'private.pem'
-    openssl = ROOT / '.pixi/envs/default/bin/openssl'
+    openssl = Path(sys.executable).with_name('openssl')
+    assert openssl.is_file(), (
+        'I12: the locked interpreter environment supplies its independent OpenSSL signer'
+    )
     result = subprocess.run(
         [
             str(openssl),
