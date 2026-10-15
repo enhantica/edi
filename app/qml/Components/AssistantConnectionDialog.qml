@@ -98,6 +98,7 @@ AppDialog {
                     textFormat: TextEdit.PlainText
                     readOnly: true
                     selectByMouse: true
+                    persistentSelection: true
                     wrapMode: TextEdit.WrapAnywhere
                     Accessible.name: qsTr("Actual outgoing project context")
                 }

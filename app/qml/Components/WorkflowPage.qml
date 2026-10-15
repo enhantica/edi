@@ -20,6 +20,8 @@ EaComponents.ContentPage {
     // shown stays loaded, laid out and visible beside the shown one, clipped out of the view, so `visible`
     // does not say it: what the page draws only for the eye (its chart) follows this instead.
     property bool current: false
+    // Retained offscreen pages keep their tree/state but cannot acquire input focus.
+    enabled: current
     readonly property Item assistantOverlayHost: sideBar.parent
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items

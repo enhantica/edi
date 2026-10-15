@@ -155,3 +155,18 @@ Comparison A is the committed pre-interior layout; B is compact; C temporarily i
 using an explicit local QML patch. Normal native dependency rebuilds and actual-window captures identify
 every source/artifact/draft state, then restore only the owned variant patch. No runtime option framework,
 mock VM, fabricated conversation or live provider/scientific success is part of this visual comparison.
+
+
+## Popup keyboard, focus ownership and retained text selection
+
+Standard KeyNavigation edges connect the existing popup controls to the sole existing app-bar toggle;
+no key gesture hides the popup directly. Composer/editor traversal exits even when intervening controls
+are disabled. Retained workflow pages are input-disabled while noncurrent, without destroying their
+loaders or manual state. Rehost and close focus restoration validates the current page, actual sidebar
+host, project and popup epoch; a synchronous safe opener focus precedes Qt's own popup exit restoration.
+Home focus eligibility observes complete target/ancestor/strip geometry: wholly covered controls yield
+focus to chat, while partially exposed controls retain their outside usability under the local pointer
+shield. The page is never disabled globally. Draft/message/details text retains selection; deliberate
+composer focus restores a still-current selection, without reinstating selection across changed text.
+Actual keyboard, geometry and selection gates must exercise these mechanics; source does not establish
+macOS, populated-history or busy-path qualification by itself.

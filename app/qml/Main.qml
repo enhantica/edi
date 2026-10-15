@@ -26,7 +26,12 @@ EaComponents.ApplicationWindow {
         return index >= 0 && index < loaders.length ? loaders[index].item : null;
     }
     readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
+    readonly property Item assistantCurrentPage: assistantWorkflowPage || homePage
     property Item assistantPreviousFocus: null
+    property Item assistantPreviousPage: null
+    property Item assistantPreviousHost: null
+    property var assistantPreviousProject: null
+    property int assistantFocusEpoch: 0
 
     function containsAssistantItem(ancestor, item) {
         for (let current = item; current; current = current.parent)
@@ -35,37 +40,70 @@ EaComponents.ApplicationWindow {
         return false;
     }
     function rehostAssistant() {
+        ++assistantFocusEpoch;
         if (!activeAssistantHost || !assistantPanel)
             return;
         const previous = activeFocusItem;
         const restoreChatFocus = containsAssistantItem(assistantPanel.contentItem, previous);
         assistantPanel.parent = activeAssistantHost;
+        const epoch = assistantFocusEpoch;
+        const host = activeAssistantHost;
+        const project = Session.project;
         if (restoreChatFocus) {
             Qt.callLater(() => {
-                if (assistantPanel.visible && previous && previous.visible && previous.enabled)
+                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
                     previous.forceActiveFocus();
             });
         }
     }
+    function retireAssistantFocus() {
+        ++assistantFocusEpoch;
+        // Establish a safe current window focus before Qt's Popup exit restoration.
+        assistantToggle.forceActiveFocus();
+    }
     function restoreAssistantFocus() {
         const previous = assistantPreviousFocus;
+        const page = assistantPreviousPage;
+        const host = assistantPreviousHost;
+        const project = assistantPreviousProject;
+        const epoch = assistantFocusEpoch;
         assistantPreviousFocus = null;
+        assistantPreviousPage = null;
+        assistantPreviousHost = null;
+        assistantPreviousProject = null;
         Qt.callLater(() => {
-            if (previous && previous.visible && previous.enabled)
+            if (epoch !== assistantFocusEpoch || Preferences.assistantShown || assistantPanel.visible)
+                return;
+            if (page === assistantCurrentPage && host === activeAssistantHost && project === Session.project && previous && previous.visible && previous.enabled && (containsAssistantItem(page, previous) || previous === assistantToggle))
                 previous.forceActiveFocus();
             else
                 assistantToggle.forceActiveFocus();
         });
     }
-    onActiveAssistantHostChanged: rehostAssistant()
-    onActiveFocusItemChanged: {
+    // This binding observes the complete target/ancestor and strip geometry, including movement
+    // without a focus change. A partly exposed control remains usable in its uncovered portion.
+    readonly property bool assistantHomeFocusCovered: {
         const item = activeFocusItem;
         if (!assistantPanel || !assistantPanel.visible || !item || !containsAssistantItem(homePage, item))
-            return;
-        const point = item.mapToItem(assistantPanel.contentItem, item.width / 2, item.height / 2);
-        if (point.x >= 0 && point.x < assistantPanel.width && point.y >= 0 && point.y < assistantPanel.height)
+            return false;
+        for (let current = item; current; current = current.parent) {
+            const geometry = [current.x, current.y, current.width, current.height, current.scale, current.rotation];
+            if (!geometry.every(Number.isFinite))
+                return false;
+        }
+        const stripGeometry = [assistantPanel.x, assistantPanel.y, activeAssistantHost.x, activeAssistantHost.y, activeAssistantHost.width, activeAssistantHost.height, window.width, window.height];
+        if (!stripGeometry.every(Number.isFinite))
+            return false;
+        const rectangle = item.mapToItem(assistantPanel.contentItem, 0, 0, item.width, item.height);
+        return rectangle.width > 0 && rectangle.height > 0 && rectangle.x >= 0 && rectangle.y >= 0 && rectangle.x + rectangle.width <= assistantPanel.contentItem.width && rectangle.y + rectangle.height <= assistantPanel.contentItem.height;
+    }
+    function enforceAssistantHomeFocus() {
+        if (assistantHomeFocusCovered)
             assistantPanel.focusComposer();
     }
+    onAssistantHomeFocusCoveredChanged: enforceAssistantHomeFocus()
+    onActiveAssistantHostChanged: rehostAssistant()
+    onActiveFocusItemChanged: Qt.callLater(enforceAssistantHomeFocus)
 
     // A leading "•" while the open project has unsaved changes (edi ADR-0017 §13).
     title: (Session.project && Session.project.modified ? "• " : "") + ApplicationInfo.name
@@ -116,6 +154,7 @@ EaComponents.ApplicationWindow {
     appBarRightButtons: [
         EaElements.ToolButton {
             id: assistantToggle
+            KeyNavigation.tab: assistantPanel.visible ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
             fontIcon: "comments"
             enabled: ApplicationInfo.assistantAvailable
@@ -125,8 +164,13 @@ EaComponents.ApplicationWindow {
             onClicked: {
                 if (!ApplicationInfo.assistantAvailable)
                     return;
-                if (!Preferences.assistantShown)
+                if (!Preferences.assistantShown) {
+                    ++window.assistantFocusEpoch;
                     window.assistantPreviousFocus = window.activeFocusItem;
+                    window.assistantPreviousPage = window.assistantCurrentPage;
+                    window.assistantPreviousHost = window.activeAssistantHost;
+                    window.assistantPreviousProject = Session.project;
+                }
                 Preferences.assistantShown = !Preferences.assistantShown;
             }
         },
@@ -276,6 +320,8 @@ EaComponents.ApplicationWindow {
         id: assistantPanel
         parent: assistantFallbackHost
         assistant: Session.assistant
+        toggleControl: assistantToggle
+        onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()
         onClosed: window.restoreAssistantFocus()
     }

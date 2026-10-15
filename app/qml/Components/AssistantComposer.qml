@@ -10,6 +10,11 @@ import edi.app
 Rectangle {
     id: composer
     required property AssistantViewModel assistant
+    required property Item toggleControl
+    property int textRevision: 0
+    property int selectionRevision: -1
+    property int savedSelectionStart: 0
+    property int savedSelectionEnd: 0
     property string submittedText: ""
     property var previousMessageIds: []
     function acknowledgeVisiblePrompt() {
@@ -34,7 +39,12 @@ Rectangle {
     border.color: EaStyle.Colors.appBorder
     radius: AppSizes.unit * 0.75
     function focusEditor() {
+        const restore = selectionRevision === textRevision;
+        const start = savedSelectionStart;
+        const end = savedSelectionEnd;
         editor.forceActiveFocus();
+        if (restore)
+            editor.select(start, end);
     }
     function submit() {
         if (!assistant.connected || assistant.canCancel || editor.text.trim().length === 0)
@@ -62,6 +72,18 @@ Rectangle {
                 placeholderText: qsTr("Ask about your project or describe a refinement plan…")
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
+                persistentSelection: true
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: models
+                KeyNavigation.backtab: composer.toggleControl
+                onTextChanged: ++composer.textRevision
+                onSelectionChanged: {
+                    if (activeFocus) {
+                        composer.savedSelectionStart = selectionStart;
+                        composer.savedSelectionEnd = selectionEnd;
+                        composer.selectionRevision = composer.textRevision;
+                    }
+                }
                 color: EaStyle.Colors.themeForeground
                 placeholderTextColor: EaStyle.Colors.themeForegroundMinor
                 font.family: EaStyle.Fonts.fontFamily
@@ -84,6 +106,9 @@ Rectangle {
             spacing: AppSizes.unit * 0.25
             EaElements.ComboBox {
                 id: models
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: efforts
+                KeyNavigation.backtab: editor
                 textFormat: Text.PlainText
                 displayText: currentIndex < 0 ? qsTr("Model") : currentText
                 currentIndex: {
@@ -113,6 +138,9 @@ Rectangle {
             }
             EaElements.ComboBox {
                 id: efforts
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: stopButton
+                KeyNavigation.backtab: models
                 textFormat: Text.PlainText
                 readonly property var effortValues: [""].concat(composer.assistant.availableEfforts)
                 function effortLabel(value) {
@@ -137,6 +165,10 @@ Rectangle {
                 onActivated: index => composer.assistant.selectedEffort = effortValues[index]
             }
             EaElements.ToolButton {
+                id: stopButton
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: sendButton
+                KeyNavigation.backtab: efforts
                 objectName: "assistant.stop"
                 fontIcon: "stop"
                 text: qsTr("Stop")
@@ -147,6 +179,10 @@ Rectangle {
                 onClicked: composer.assistant.cancel()
             }
             EaElements.ToolButton {
+                id: sendButton
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: composer.toggleControl
+                KeyNavigation.backtab: stopButton
                 objectName: "assistant.send"
                 fontIcon: "arrow-up"
                 text: qsTr("Send")

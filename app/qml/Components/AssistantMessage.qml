@@ -49,6 +49,7 @@ Rectangle {
             text: row.text
             readOnly: true
             selectByMouse: true
+            persistentSelection: true
             textFormat: TextEdit.PlainText
             wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
@@ -66,9 +67,10 @@ Rectangle {
         TextEdit {
             width: parent.width
             visible: disclosure.visible && disclosure.checked
-            text: visible ? JSON.stringify(row.payload, null, 2) : ""
+            text: disclosure.checked ? JSON.stringify(row.payload, null, 2) : ""
             readOnly: true
             selectByMouse: true
+            persistentSelection: true
             textFormat: TextEdit.PlainText
             wrapMode: TextEdit.WrapAnywhere
             color: EaStyle.Colors.themeForeground

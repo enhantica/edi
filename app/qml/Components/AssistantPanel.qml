@@ -11,6 +11,8 @@ Popup {
     id: panel
     objectName: "assistant.popup"
     required property AssistantViewModel assistant
+    required property Item toggleControl
+    readonly property Item firstFocusItem: clearButton
     property bool shown: Preferences.assistantShown
     visible: ApplicationInfo.assistantAvailable && shown
     x: 0
@@ -57,6 +59,9 @@ Popup {
                     Layout.fillWidth: true
                 }
                 EaElements.ToolButton {
+                    id: clearButton
+                    KeyNavigation.priority: KeyNavigation.BeforeItem
+                    KeyNavigation.backtab: panel.toggleControl
                     fontIcon: "trash-alt"
                     ToolTip.text: qsTr("Clear conversation")
                     Accessible.name: ToolTip.text
@@ -200,6 +205,7 @@ Popup {
                 id: composer
                 Layout.fillWidth: true
                 assistant: panel.assistant
+                toggleControl: panel.toggleControl
             }
         }
         AssistantConnectionDialog {
