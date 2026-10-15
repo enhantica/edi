@@ -29,10 +29,19 @@ namespace {
 // Deliberately TOTAL over the whole Project — including `experiments` and `fitting_mode`, which the
 // single-bank handle never reads. Failing closed on an unrelated edit is the conservative direction;
 // missing a field is not. Adding a field to edi::Project REQUIRES extending this.
+void write_u64(char* target, std::uint64_t value) noexcept {
+    // Same sixteen lowercase hexadecimal bytes as the canonical source codec.
+    // Writing a prepared slot must not call a formatter or allocate.
+    constexpr char digits[] = "0123456789abcdef";
+    for (unsigned i = 0; i < 16; ++i) {
+        target[15 - i] = digits[value & 0xf];
+        value >>= 4;
+    }
+}
 void put_u64(std::string& out, std::uint64_t value) {
-    char buffer[17];
-    std::snprintf(buffer, sizeof(buffer), "%016llx", static_cast<unsigned long long>(value));
-    out.append(buffer, 16);
+    char buffer[16];
+    write_u64(buffer, value);
+    out.append(buffer, sizeof buffer);
 }
 
 void put_double(std::string& out, double value) {
@@ -431,6 +440,12 @@ std::string calculation_inputs(const ItemVec<Structure>& structures, const Exper
 
 std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             const ItemVec<ParameterConstraint>& constraints) {
+    return relation_inputs(aliases, constraints, nullptr);
+}
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints,
+                            std::vector<RelationValueSlot>* values) {
+    if (values) { values->clear(); values->reserve(aliases.size()); }
     std::string out;
     put_u64(out, aliases.generation());
     put_u64(out, aliases.size());
@@ -457,11 +472,21 @@ std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
             const auto found = by_name.find(alias->parameter_unique_name.value());
             put_u64(out, found != by_name.end() ? 1 : 0);
             if (found != by_name.end()) {
+                if (values) values->push_back({found->second, out.size()});
                 put_written(out, found->second->value);
             }
         }
     }
     return out;
+}
+
+void refresh_relation_values(std::string& encoding,
+                              const std::vector<RelationValueSlot>& values) noexcept {
+    for (const auto& slot : values) {
+        auto* target = encoding.data() + slot.offset;
+        write_u64(target, std::bit_cast<std::uint64_t>(slot.parameter->value.get()));
+        write_u64(target + 16, slot.parameter->value.written());
+    }
 }
 
 }  // namespace detail

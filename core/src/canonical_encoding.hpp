@@ -10,6 +10,8 @@
 // edi::Project REQUIRES extending it.
 
 #include <string>
+#include <cstddef>
+#include <vector>
 
 #include "edi/model.hpp"
 
@@ -44,6 +46,21 @@ void geometry_inputs_into(std::string& out, const Structure& structure);
 // was written, an equal rewrite included.
 std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             const ItemVec<ParameterConstraint>& constraints);
+
+// Preparation resolves aliases and records only the fixed-width value/write-ID
+// slots. The owning declarations/shape must remain unchanged until commit.
+struct RelationValueSlot {
+    const Parameter* parameter;
+    std::size_t offset;
+};
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints,
+                            std::vector<RelationValueSlot>* values);
+// Slots were checked against this exact complete encoding before live writes.
+// No name joining, resizing, allocation or declaration traversal occurs here.
+void refresh_relation_values(std::string& encoding,
+                              const std::vector<RelationValueSlot>& values) noexcept;
+
 
 }  // namespace edi::detail
 

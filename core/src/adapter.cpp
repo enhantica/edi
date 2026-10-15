@@ -3981,6 +3981,14 @@ std::optional<detail::PreparedPublication> detail::prepare_publication(Project& 
             if (const auto found = names.find(name); found != names.end()) ready.completed.emplace_back(found->second, value);
         }
     }
+    // Resolve the relation name join while preparation may still allocate.
+    // Each present alias target contributes exactly two sixteen-byte words;
+    // declarations and slot offsets are tied to the exact pre-write encoding.
+    const auto relations = relation_inputs(live.aliases, live.constraints, &ready.relation_values);
+    if (relations != stamps.relations) return std::nullopt;
+    for (const auto& slot : ready.relation_values)
+        if (!slot.parameter || slot.offset > relations.size() || relations.size() - slot.offset < 32)
+            return std::nullopt;
     ready.sources.resize(banks);
     if (!refused) for (std::size_t i = 0; i < banks; ++i) {
         ready.sources[i] = std::make_shared<ComputedSource>(ComputedSource{
@@ -4001,10 +4009,14 @@ void detail::PreparedPublication::commit(Project& live) noexcept {
     // Shape/text/data are unchanged between preparation and this synchronous owner-thread commit.
     // Scalar values and write IDs are fixed-width encodings; existing buffers already hold that width.
     for (const auto& [target, value] : completed) if (target->value.get() != value) target->value = value;
-    for (std::size_t i = 0; i < sources.size(); ++i) if (sources[i])
+    for (std::size_t i = 0; i < sources.size(); ++i) if (sources[i]) {
         calculation_inputs_into(sources[i]->inputs, live.structures, *live.experiments[i]);
-    for (std::size_t i = 0; i < geometry_sources.size(); ++i) if (geometry_sources[i])
+        refresh_relation_values(sources[i]->relations, relation_values);
+    }
+    for (std::size_t i = 0; i < geometry_sources.size(); ++i) if (geometry_sources[i]) {
         geometry_inputs_into(geometry_sources[i]->inputs, *live.structures[i]);
+        refresh_relation_values(geometry_sources[i]->relations, relation_values);
+    }
     static_assert(std::is_nothrow_move_assignable_v<StructureGeometry>);
     static_assert(std::is_nothrow_move_assignable_v<PowderReflnDataBase>);
     const bool refused = !result.refusal.empty();

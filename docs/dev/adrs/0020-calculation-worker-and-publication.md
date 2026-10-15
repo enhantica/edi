@@ -245,3 +245,10 @@ cancelling and releases owners without throwing. This shares report lifetime wit
 there is no extra public report getter or separate fitting backend. The Worker's existing queued,
 ordered delivery contract remains required; arbitrary external Post/trace transport failure is not
 converted into a fabricated scientific result.
+
+
+## Post-fit relation fingerprints
+
+Prepared publication must describe the same adopted scalar state in computed and geometry sources. Relation currentness includes alias target values and their last-write identities, even for an unused alias. Preparation resolves the existing name join and records fixed-width value/write-ID offsets in the exact canonical relation encoding, checks those slots before any live scalar write, and prepares all owning source strings. Commit refreshes those existing slots after fitted/completed values are written, for both source families. It performs no map construction, declaration traversal, string resizing or allocation. The canonical byte format remains two sixteen-character lowercase hexadecimal words for each present target's double bits and write identity.
+
+This owns the existing PreparedPublication path shared by FitJob and ordinary calculation publication: retained data, geometry and relation stamps must all refer to the adopted state. Existing full preflight/stale/manual-edit rejection is preserved; no second expensive calculation, chart-only repaint, ignored currentness, changed optimizer strategy or weakened scientific expectation is used as a repair. Alias-free, repeated-target, missing-target and dependent-value cases follow the same existing encoding semantics. Exact owner-project/platform reproduction and real actor results remain separate qualification; a current drawing is not proof of a scientifically adequate refinement.
