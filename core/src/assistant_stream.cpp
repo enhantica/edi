@@ -10,7 +10,7 @@
 namespace edi::assistant {
 using namespace detail;
 struct OpenAiStream::State {
-    std::string turn, request, pending, record;
+    std::string turn, request, pending, record, response_id;
     Reply first_failure;
     bool failure_cached = false;
     const char* failure_code = "invalid_argument";
@@ -39,7 +39,7 @@ struct OpenAiStream::State {
         // Include names passed indirectly through identifier/index and at/get,
         // as well as public text, refusal and function-argument delta fields.
         const std::string_view supplied(error.what());
-        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "item", "part", "delta", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id", "role", "annotations", "summary", "encrypted_content"}) {
+        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "item", "part", "delta", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id", "role", "annotations", "summary", "encrypted_content", "response_id"}) {
             const auto missing = std::string("report JSON: no member '") + field + "'";
             if (supplied == missing) return diagnostic(missing);
             for (const char* expected : {"a boolean", "a number", "a string", "an array", "an object"}) {
@@ -81,7 +81,7 @@ struct OpenAiStream::State {
         return value;
     }
     void retained() {
-        std::uint64_t size = 0;
+        std::uint64_t size = response_id.size();
         for (const auto& [id, item] : items) {
             size += id.size() + payload_size(item.original, Limits::stream_retained_bytes);
             for (const auto& [index, part] : item.parts) {
@@ -102,8 +102,23 @@ struct OpenAiStream::State {
         if (pending.size() + record.size() + retained_base > Limits::stream_retained_bytes)
             refuse("resource_exhausted", "Provider retained state exceeds limit");
     }
-    void tool(Call& call, const std::string& arguments) {
+    void tool(Call& call, const std::string& arguments, const J& declaration) {
         const auto args = parse(arguments); args.object("arguments");
+        if (!call.arguments_done && has(declaration, "arguments")) {
+            const auto& initial = declaration.at("arguments").string("arguments");
+            if (!initial.empty()) {
+                bool complete = false;
+                try {
+                    const auto declared = parse(initial); complete = true;
+                    if (json::write(canonical(declared)) != json::write(canonical(args)))
+                        refuse("invalid_argument", "Completed tool arguments contradict their initial declaration");
+                } catch (const Refusal& error) { if (error.code != "invalid_json") throw; }
+                // A progressive prefix belongs to the actual accumulated bytes.
+                // Canonically equivalent final spelling need not repeat that prefix.
+                if (!complete && !(call.deltas ? call.arguments : arguments).starts_with(initial))
+                    refuse("invalid_argument", "Completed tool arguments contradict their initial prefix");
+            }
+        }
         if (call.arguments_done) {
             if (json::write(canonical(parse(call.arguments))) != json::write(canonical(args))) refuse("invalid_argument", "Conflicting completed tool arguments");
             return;
@@ -123,6 +138,20 @@ struct OpenAiStream::State {
         }
         event.emplace_back("arguments", std::move(domain));
         emit(std::move(event));
+    }
+    void observe_response_id(const J& envelope, const char* key) {
+        const auto& supplied = envelope.at(key).string(key);
+        if (supplied.empty()) refuse("invalid_argument", "Supplied response identity is empty");
+        if (supplied.size() > Limits::id_bytes) refuse("resource_exhausted", "Provider response identity exceeds limit");
+        if (!response_id.empty()) {
+            if (response_id != supplied) refuse("invalid_argument", "Provider response identity changed");
+            return;
+        }
+        const auto retained_now = retained_base + pending.size() + record.size();
+        if (supplied.size() > Limits::stream_retained_bytes - retained_now)
+            refuse("resource_exhausted", "Provider response identity exceeds retained limit");
+        response_id = supplied;
+        retained();
     }
     std::uint64_t index(const J& event, const char* key) const {
         const auto value = number(event, key);
@@ -232,7 +261,10 @@ struct OpenAiStream::State {
     }
     bool omittable(const Item& held) const {
         const auto type = string(held.original, "type");
-        return held.done && (type == "message" || type == "reasoning") && semantic_complete(held.original);
+        // This predicate runs before terminal snapshots are installed: done
+        // therefore means a genuine earlier output_item.done, not arguments.done
+        // or an added/partial item. Complete calls were validated by item()/tool().
+        return held.done && (type == "message" || type == "reasoning" || type == "function_call") && semantic_complete(held.original);
     }
     void item(const J& original, bool done, std::uint64_t output_index) {
         const auto id = identifier(original, "id"); const auto type = string(original, "type");
@@ -253,6 +285,7 @@ struct OpenAiStream::State {
             if (!done || json::write(canonical(held.original)) != json::write(canonical(original))) refuse("invalid_argument", "Completed provider item changed");
             return;
         }
+        bool preserve_declaration = false;
         if (type == "function_call") {
             const auto call_id = identifier(original, "call_id"), name = identifier(original, "name");
             if (has(original, "namespace") && string(original, "namespace") != "edi") refuse("invalid_argument", "Unknown provider tool namespace");
@@ -262,7 +295,29 @@ struct OpenAiStream::State {
                 for (const auto& entry : calls) if (entry.second.id == call_id) refuse("invalid_argument", "Provider call ID reused by another item");
                 calls.emplace(id, Call{call_id, name, {}});
             } else if (found->second.id != call_id || found->second.name != name) refuse("invalid_argument", "Provider tool identity changed");
-            if (done && semantic_complete(original)) tool(calls.at(id), string(original, "arguments", true));
+            auto& call = calls.at(id);
+            const bool declared_before = prior != items.end() && has(held.original, "arguments");
+            preserve_declaration = !done && declared_before;
+            if (!done && has(original, "arguments")) {
+                const auto& declared = original.at("arguments").string("arguments");
+                if (declared.size() > Limits::message_bytes) refuse("invalid_json", "Tool arguments exceed message limit");
+                if (declared_before) {
+                    // held.original is the actual prior declaration, not tool()'s
+                    // canonically equivalent but potentially respelled final buffer.
+                    if (held.original.at("arguments").string("arguments") != declared)
+                        refuse("invalid_argument", "Initial tool arguments changed");
+                } else {
+                    if (call.arguments_done) refuse("invalid_argument", "New tool declaration after argument completion");
+                    if (!call.deltas) {
+                        retained();
+                        const auto retained_now = retained_base + pending.size() + record.size();
+                        if (declared.size() > Limits::stream_retained_bytes - retained_now)
+                            refuse("resource_exhausted", "Initial tool arguments exceed retained limit");
+                        call.arguments = declared;
+                    }
+                }
+            }
+            if (done && semantic_complete(original)) tool(call, string(original, "arguments", true), held.original);
         }
         // Live content identities start only through content_part.added.
         // A complete item snapshot may introduce completed parts without deltas.
@@ -277,7 +332,8 @@ struct OpenAiStream::State {
             }
             if (slot != held.parts.size()) refuse("invalid_argument", "Completed provider item lost content parts");
         }
-        held.original = original; held.done = done; retained();
+        if (!preserve_declaration) held.original = original;
+        held.done = done; retained();
     }
     void reconcile(const J& response, bool required) {
         if (!has(response, "output")) {
@@ -350,11 +406,21 @@ struct OpenAiStream::State {
         diagnostic_stage = "unrecognized event";
         // Diagnostics only: these existing decoder branches remain unchanged.
         // Unknown event names, content, tool arguments and reasoning are never copied.
-        for (const char* known : {"response.output_text.delta", "response.refusal.delta", "response.output_text.done", "response.refusal.done",
+        bool supported_event = false;
+        for (const char* known : {"response.created", "response.in_progress", "response.output_text.delta", "response.refusal.delta", "response.output_text.done", "response.refusal.done",
              "response.reasoning_text.delta", "response.reasoning_text.done", "response.content_part.added", "response.content_part.done",
              "response.output_item.added", "response.output_item.done", "response.function_call_arguments.delta", "response.function_call_arguments.done",
              "response.completed", "response.failed", "response.incomplete", "error"})
-            if (type == known) { diagnostic_stage = known; break; }
+            if (type == known) { diagnostic_stage = known; supported_event = true; break; }
+        if (supported_event) {
+            if (has(message, "response_id")) observe_response_id(message, "response_id");
+            if ((type == "response.created" || type == "response.in_progress" || type == "response.completed" ||
+                 type == "response.failed" || type == "response.incomplete" || type == "error") && has(message, "response")) {
+                const auto& response = message.at("response");
+                response.object("response");
+                if (has(response, "id")) observe_response_id(response, "id");
+            }
+        }
         if (type == "response.output_text.delta" || type == "response.refusal.delta" ||
             type == "response.output_text.done" || type == "response.refusal.done" ||
             type == "response.reasoning_text.delta" || type == "response.reasoning_text.done") {
@@ -412,7 +478,7 @@ struct OpenAiStream::State {
                 const auto delta = string(message, "delta", true);
                 if (delta.size() > Limits::message_bytes - call.arguments.size()) refuse("invalid_json", "Tool arguments exceed message limit");
                 call.arguments += delta; call.deltas = true; retained();
-            } else tool(call, string(message, "arguments", true));
+            } else tool(call, string(message, "arguments", true), items.at(id).original);
         } else if (type == "response.completed" || type == "response.failed" || type == "response.incomplete" || type == "error") {
             std::string status = "failed";
             if (has(message, "response")) reconcile(message.at("response"), type == "response.completed");
