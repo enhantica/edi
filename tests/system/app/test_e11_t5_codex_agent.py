@@ -188,13 +188,27 @@ def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two
     identity = live_original_peer(actor)
     before = actor.last['vm']
     actor.command('clear_history')
-    # Observe retirement, then attempt a fresh user input without signing in.
-    # Gather both outcomes before predicates, so an obsolete error cannot mask recovery.
+    # Observe retirement before any outgoing-context acknowledgement. The GUI's
+    # signIn action also approves current context, but must never repair lost auth here.
     for _ in range(40):
         actor.command('inspect')
         if not actor.last['vm']['can_cancel']:
             break
     cleared = actor.last['vm']
+    trace.with_suffix('.clear-public.json').write_text(json.dumps({
+        'before': before, 'cleared': cleared,
+        'original_peer_identity': identity,
+        'original_peer_still_live': original_peer_is_live(identity),
+        'requests': records(trace),
+    }, ensure_ascii=False, indent=2))
+    assert cleared['connected'] and cleared['handoff']['account_label'] == account, (
+        'CLEAR: retiring a conversation preserves genuine managed authentication/account'
+    )
+    assert cleared['models'] == models and (
+        cleared['selected_model'], cleared['selected_effort']
+    ) == choice, 'CLEAR: conversation retirement preserves the actual catalog and user choices'
+    if cleared['context_consent_required']:
+        actor.command('sign_in')
     actor.command('send_text', text=fresh_text)
     for _ in range(40):
         actor.command('inspect')
@@ -211,12 +225,6 @@ def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two
         'original_peer_still_live': original_peer_is_live(identity),
         'peer_events': observations, 'requests': records(trace),
     }, ensure_ascii=False, indent=2))
-    assert cleared['connected'] and cleared['handoff']['account_label'] == account, (
-        'CLEAR: retiring a conversation preserves genuine managed authentication/account'
-    )
-    assert cleared['models'] == models and (
-        cleared['selected_model'], cleared['selected_effort']
-    ) == choice, 'CLEAR: conversation retirement preserves the actual catalog and user choices'
     assert not any((cleared['messages'], cleared['pending_question'], cleared['pending_plan'])), (
         'CLEAR: original history and pending conversation controls are retired'
     )
@@ -251,8 +259,9 @@ def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two
     } for row in after['messages']), (
         'CLEAR: old retained or delayed conversation events cannot revive retired history'
     )
-    assert sum(row.get('method') == 'account/login/start' for row in records(trace)) == 0, (
-        'CLEAR: managed account readiness requires no new login interaction'
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), (
+        'CLEAR: context approval neither restarts login nor logs out the managed account'
     )
 
 
