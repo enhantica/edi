@@ -88,7 +88,8 @@ void click(QQuickItem* item,QQuickWindow* window) {
 }
 }
 int main(int argc,char** argv) {
-    if(argc!=2)return 96;
+    if(argc!=2 && !(argc==3 && QByteArray(argv[2])=="--submit"))return 96;
+    const bool submit_mode=argc==3;
     QTemporaryDir storage;if(!storage.isValid())return 97;
     qputenv("XDG_DATA_HOME",storage.path().toUtf8());
     qputenv("XDG_CONFIG_HOME",storage.path().toUtf8());
@@ -134,6 +135,22 @@ int main(int argc,char** argv) {
                 ui["cancel"]=geometry(action(root,false),window);
             }
         }
+        if(submit_mode) {
+            ui["panel"]=json_value(invoke(root,"panelState"));
+            auto* editor=find("assistant.composer");
+            ui["composer"]=geometry(editor,window);
+            ui["draft"]=editor->property("text").toString();
+            ui["send"]=geometry(find("assistant.send"),window);
+            Array messages;
+            auto* model=session->assistant()->messages();
+            for(int row=0;row<model->count();++row) {
+                Object value;
+                for(const auto& name:model->roleNames())
+                    value[QString::fromUtf8(name)]=QJsonValue::fromVariant(model->get(row,QString::fromUtf8(name)));
+                messages.push_back(value);
+            }
+            vm["messages"]=messages;
+        }
         return Object{{"vm",vm},{"ui",ui}};
     };
     std::string line;
@@ -141,7 +158,20 @@ int main(int argc,char** argv) {
         try {
             const auto input=decode(QByteArray::fromStdString(line)).toObject();
             const auto op=input["op"].toString();Object result;
-            if(op=="sign_in")session->assistant()->signIn();
+            if(submit_mode && op=="type_draft") {
+                auto* editor=find("assistant.composer");click(editor,window);
+                const auto text=input["text"].toString();
+                for(const auto character:text) {
+                    if(character.unicode()>126 || character.unicode()<32)
+                        throw std::invalid_argument("original typing fixture uses printable ASCII");
+                    QTest::keyClick(window,character.toLatin1(),Qt::NoModifier,1);
+                }
+            } else if(submit_mode && op=="click_send")click(find("assistant.send"),window);
+            else if(submit_mode && op=="press_enter") {
+                auto* editor=find("assistant.composer");click(editor,window);
+                QTest::keyClick(window,Qt::Key_Return,Qt::NoModifier,1);
+            } else if(submit_mode && op=="select_effort")session->assistant()->setSelectedEffort(input["id"].toString());
+            else if(op=="sign_in")session->assistant()->signIn();
             else if(op=="sign_out")session->assistant()->signOut();
             else if(op=="send_text")session->assistant()->send(input["text"].toString());
             else if(op=="cancel")session->assistant()->cancel();
