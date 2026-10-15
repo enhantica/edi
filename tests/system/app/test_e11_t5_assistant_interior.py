@@ -61,6 +61,15 @@ def test_actual_transcript_delegate_author_semantics():
             'PASS   : edi_app::AssistantInterior::'
             'test_activity_categories_require_structured_evidence(' + tag + ')'
         ) in output, 'GUI92: structured action and shell-word negative controls execute\n' + output
+    for tag in ['command', 'read', 'technical']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_disclosure_uses_available_caption_width(' + tag + ')'
+        ) in output, 'GEO1: actual wide/narrow/restored caption geometry executes\n' + output
+    assert (
+        'PASS   : edi_app::AssistantInterior::'
+        'test_real_selected_file_remove_pairs_with_own_label()'
+    ) in output, 'GEO2: actual selected-file geometry and pointer removal execute\n' + output
     assert result.returncode == 0, (
         'I16/INT1: actual delegate presentation completes without hidden failures\n' + output
     )

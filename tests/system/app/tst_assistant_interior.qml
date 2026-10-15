@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import "../../unit/app/UiInteraction.js" as Ui
 
@@ -25,6 +26,9 @@ TestCase {
             height: implicitHeight
         }
     }
+    Component { id: textMeasure; TextMetrics {} }
+    Component { id: composer; AssistantComposer { height: implicitHeight } }
+    Component { id: toggle; ToolButton { text: "Assistant" } }
     function initTestCase() {
         window = application.createObject(null);
         verify(window !== null, "I16/INT1: actual Qt window owns the production message delegate");
@@ -107,6 +111,135 @@ TestCase {
                 comparePayloadValue(actual[key], expected[key]);
         } else {
             compare(actual, expected, "ACT1: retained payload preserves exact scalar and string values");
+        }
+    }
+    function captionGeometry(control) {
+        const label = Ui.itemsWithProperty(control, "elide").find(item => item.visible && item.text === control.text);
+        verify(label !== undefined, "GEO1 SETUP: a real visible caption text item is measurable");
+        verify(typeof label.truncated === "boolean", "GEO1 SETUP: the actual Qt text exposes its truncation state");
+        const metrics = createTemporaryObject(textMeasure, window.contentItem, {font: label.font, text: label.text});
+        verify(metrics !== null && metrics.advanceWidth > 0, "GEO1 SETUP: independent metrics measure the actual caption font/text");
+        const point = label.mapToItem(control, 0, 0);
+        const facts = {text: label.text, font: label.font.family, fontPixels: label.font.pixelSize,
+            naturalWidth: metrics.advanceWidth, captionWidth: label.width, contentWidth: label.contentWidth,
+            truncated: label.truncated, buttonWidth: control.width, captionX: point.x};
+        console.info("DISCLOSURE_GEOMETRY", JSON.stringify(facts));
+        return facts;
+    }
+    function test_disclosure_uses_available_caption_width_data() {
+        return [{tag: "command", category: "command"}, {tag: "read", category: "read"},
+            {tag: "technical", category: "technical"}];
+    }
+    function test_disclosure_uses_available_caption_width(data) {
+        const original = commandItem("completed", 0);
+        if (data.category === "read")
+            original.commandActions = [{type: "read", path: "/owned/original.dat", name: "original.dat", command: original.command}];
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: data.category === "technical" ? "event" : "activity",
+            text: "Original literal details", status: "completed", payload: original
+        });
+        verify(row !== null, "GEO1: the actual retained row is constructed");
+        const scale = EaStyle.Sizes.defaultScale;
+        try {
+            for (const fontScale of [scale, Math.round(scale * 1.25)]) {
+                EaStyle.Sizes.defaultScale = fontScale;
+                row.width = 600;
+                renderedRow(row);
+                const control = data.category === "technical"
+                    ? Ui.itemsWithProperty(row, "checkable").find(item => item.visible && /technical/i.test(item.text))
+                    : commandDisclosure(row);
+                verify(control !== undefined && Ui.exposed(control), "GEO1: the real disclosure is reachable");
+                let facts = captionGeometry(control);
+                verify(row.width > facts.naturalWidth * 2, "GEO1 SETUP: the wide parent genuinely has room for the complete caption");
+                verify(!facts.truncated && facts.captionWidth + 1 >= facts.naturalWidth,
+                    "GEO1: ample panel space must show the complete activity or technical caption");
+                verify(facts.captionX >= 0 && facts.captionX + facts.captionWidth <= facts.buttonWidth + 1,
+                    "GEO1: complete caption remains inside its real clickable disclosure");
+                row.width = Math.max(32, facts.naturalWidth * 0.65);
+                renderedRow(row);
+                facts = captionGeometry(control);
+                verify(facts.captionWidth < facts.naturalWidth, "GEO1 SETUP: the narrow parent actually constrains the caption");
+                verify(facts.truncated, "GEO1: genuine narrow space uses bounded text elision rather than overflow");
+                row.width = 600;
+                renderedRow(row);
+                facts = captionGeometry(control);
+                verify(!facts.truncated && facts.captionWidth + 1 >= facts.naturalWidth,
+                    "GEO1: widening restores the original complete caption");
+                if (data.category === "technical") {
+                    mouseClick(control);
+                    renderedRow(row);
+                    facts = captionGeometry(control);
+                    verify(!facts.truncated && facts.captionWidth + 1 >= facts.naturalWidth,
+                        "GEO1: expanded technical disclosure also shows its full changed caption");
+                    mouseClick(control);
+                }
+            }
+        } finally {
+            EaStyle.Sizes.defaultScale = scale;
+        }
+        compareRetainedPayload(row.payload, original);
+    }
+    function textInk(item) {
+        const metrics = createTemporaryObject(textMeasure, window.contentItem, {font: item.font, text: item.text});
+        verify(metrics !== null && metrics.boundingRect.width > 0, "GEO2 SETUP: actual visible text/glyph has measurable ink");
+        const point = item.mapToItem(window.contentItem, 0, 0);
+        let offset = 0;
+        if (item.horizontalAlignment === Text.AlignHCenter)
+            offset = (item.width - item.contentWidth) / 2;
+        else if (item.horizontalAlignment === Text.AlignRight)
+            offset = item.width - item.contentWidth;
+        return {left: point.x + offset + metrics.boundingRect.x,
+            right: point.x + offset + metrics.boundingRect.x + metrics.boundingRect.width, y: point.y};
+    }
+    function test_real_selected_file_remove_pairs_with_own_label() {
+        const assistant = Session.assistant;
+        compare(assistant.selectedFiles.count, 0, "GEO2 SETUP: the owned real Session starts with no selected files");
+        const request = assistant.beginFileSelection();
+        verify(request.length > 0, "GEO2 SETUP: real native selection authority is admitted without an account action");
+        const admitted = assistant.addSelectedFiles(request, [Qt.resolvedUrl("../../fixtures/assistant/README.md"),
+            Qt.resolvedUrl("../../fixtures/assistant/provider-contracts.json")]);
+        verify(admitted, "GEO2 SETUP: original harmless fixture URLs enter the real selected-file model");
+        const ids = [];
+        try {
+            compare(assistant.selectedFiles.count, 2, "GEO2: both original selections are retained");
+            for (let index = 0; index < assistant.selectedFiles.count; ++index)
+                ids.push(assistant.selectedFiles.text(index, "id"));
+            const opener = createTemporaryObject(toggle, window.contentItem);
+            const actual = createTemporaryObject(composer, window.contentItem,
+                {assistant: assistant, toggleControl: opener, width: 680, y: 40});
+            verify(actual !== null, "GEO2: actual Composer renders the real selected-file model");
+            renderedRow(actual);
+            const labels = [];
+            const removers = [];
+            for (let index = 0; index < ids.length; ++index) {
+                const group = Ui.find(actual, "assistant.file." + ids[index]);
+                verify(group !== null, "GEO2: every real selected ID has its own visible chip group");
+                const name = assistant.selectedFiles.text(index, "name");
+                const label = Ui.itemsWithProperty(group, "elide").find(item => item.visible && item.text.startsWith(name));
+                const remove = Ui.itemsWithProperty(group, "fontIcon").find(item => item.visible && item.fontIcon === "times");
+                verify(label !== undefined && remove !== undefined && Ui.exposed(remove), "GEO2: original filename and its real remove action are visible together");
+                verify(remove.Accessible.name.includes(name), "GEO2: remove action identifies its own original file");
+                verify(!label.truncated, "GEO2 SETUP: both original short names fit before comparing visible group spacing");
+                labels.push(label);
+                removers.push(remove);
+            }
+            const glyph = Ui.itemsWithProperty(removers[0].contentItem, "contentWidth").find(item => item.visible && typeof item.text === "string" && item.text.length > 0);
+            verify(glyph !== undefined, "GEO2 SETUP: actual remove glyph text bounds are observable");
+            const first = textInk(labels[0]);
+            const cross = textInk(glyph);
+            const next = textInk(labels[1]);
+            verify(Math.abs(first.y - next.y) < labels[0].height, "GEO2 SETUP: the two original chip groups genuinely share a rendered line");
+            const inside = cross.left - first.right;
+            const between = next.left - cross.right;
+            console.info("FILE_PAIR_GEOMETRY", JSON.stringify({first: first, cross: cross, next: next, inside: inside, between: between}));
+            verify(inside >= 0 && between > inside, "GEO2: visible remove cross is closer to its own label than the next file group");
+            mouseClick(removers[0]);
+            renderedRow(actual);
+            compare(assistant.selectedFiles.count, 1, "GEO2: real pointer removal retires exactly one selection");
+            compare(assistant.selectedFiles.text(0, "id"), ids[1], "GEO2: removing the first paired action preserves the other original file");
+        } finally {
+            for (const id of ids)
+                assistant.removeSelectedFile(id);
         }
     }
     function test_command_activity_is_compact_and_discloses_originals_data() {
