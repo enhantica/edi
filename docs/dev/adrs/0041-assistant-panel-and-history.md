@@ -286,3 +286,5 @@ Ownerda4acf953 supersedes the preceding primary/navigation arrangement: plus, fl
 ### Explicit workflow guidance
 
 The VM's read-only skills rows and selectedSkill are derived from the current core catalog/context. The idle selectSkill wrapper uses the existing trusted command boundary and invalidates context consent. A compact workflow link above the transcript opens the existing AppDialog with exact bundled PlainText content, version and prerequisite status; no hidden filename inference or additional execution door is added. The connection disclosure names the selected workflow and included structure/dataset/relation metadata before approval. Resource/row/context wrappers retain existing caps.
+
+Ownerb9df68548 refines disabled Send to the exact existing navigation ToolButton backgroundColor()/foregroundColor() behavior, with ordinary opacity instead of an additional primary fade. Enabled primary contrast and all real admission/cancellation semantics remain unchanged.

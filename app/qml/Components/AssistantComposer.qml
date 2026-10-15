@@ -374,14 +374,13 @@ Rectangle {
                     implicitWidth: addFilesButton.implicitWidth
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : EaStyle.Colors.themeBackgroundDisabled
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : sendButton.backgroundColor()
                 }
                 contentItem: EaElements.Label {
-                    opacity: sendButton.enabled ? 1 : 0.35
                     text: sendButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: sendButton.font.pixelSize * 1.25
-                    color: EaStyle.Colors.isDarkPalette ? "black" : "white"
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : sendButton.foregroundColor()
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
