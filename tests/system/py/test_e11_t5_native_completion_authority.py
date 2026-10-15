@@ -124,6 +124,7 @@ def test_native_complete_function_keeps_optional_status_and_actual_paired_next_w
             'type': 'tool_result',
             'call_id': call['call_id'],
             'ok': True,
+            'code': '',
             'result': {'fixture': 'original independently supplied read-only outcome'},
         },
     ]
