@@ -39,7 +39,6 @@ Rectangle {
                 fontIcon: "trash-alt"
                 ToolTip.text: qsTr("Clear conversation")
                 Accessible.name: ToolTip.text
-                enabled: !panel.assistant.canCancel
                 onClicked: panel.assistant.clearHistory()
             }
             EaElements.ToolButton {
@@ -108,13 +107,26 @@ Rectangle {
             EaElements.ComboBox {
                 id: efforts
                 textFormat: Text.PlainText
-                currentIndex: panel.assistant.availableEfforts.indexOf(panel.assistant.selectedEffort)
+                readonly property var effortValues: [""].concat(panel.assistant.availableEfforts)
+                function effortLabel(value) {
+                    switch (value) {
+                    case "": return qsTr("Provider default");
+                    case "none": return qsTr("None");
+                    case "low": return qsTr("Low");
+                    case "medium": return qsTr("Medium");
+                    case "high": return qsTr("High");
+                    case "xhigh": return qsTr("Extra high");
+                    case "max": return qsTr("Maximum");
+                    default: return qsTr("Unavailable");
+                    }
+                }
+                currentIndex: effortValues.indexOf(panel.assistant.selectedEffort)
                 objectName: "assistant.effort"
                 Layout.preferredWidth: AppSizes.unit * 7
-                model: panel.assistant.availableEfforts
+                model: effortValues.map(value => effortLabel(value))
                 enabled: panel.assistant.connected && !panel.assistant.canCancel
                 Accessible.name: qsTr("Reasoning effort")
-                onActivated: index => panel.assistant.selectedEffort = panel.assistant.availableEfforts[index]
+                onActivated: index => panel.assistant.selectedEffort = effortValues[index]
             }
         }
         EaElements.Label {

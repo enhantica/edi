@@ -2,7 +2,7 @@
 
 Status: Accepted
 Date: 2026-10-15
-Implementation: Partial app foundation; real terminal retention, production smoke and live verification pending
+Implementation: Partial; terminal-retention/app lifecycle unit pending independent verification
 Priority: High
 
 The assistant is a Session-owned view model, separate from the currently open ProjectViewModel. It remains available without a project and rebinds the controller whenever the project changes. The controller borrows the existing project and worker; approved edits enter ProjectViewModel's existing apply/preview door (ADR-0020). External edits and manual fit completion invalidate the assistant revision. Queued provider requests are fenced across rebinds. Closing a session detaches before child project destruction.
@@ -21,9 +21,37 @@ model/effort selection, queued project-generation fences, literal untrusted text
 Session → AssistantViewModel → ChatGptConnection with production services. Internal native-only dependency
 composition supports independent offline hosts without replacing the real VM or altering provider security.
 
-This is unfinished integration on the draft branch, not a verified desktop preview. The VM does not yet install
-the approved `Hooks::reserve_terminal`: complete public-message/activity/archive role reservation and settlement,
-durable failed/incomplete/refused cards, and recovery under retention/persistence failure remain pending.
-Headless absence of that hook does not establish GUI retention. Actual `edi_app` production smoke, visual review
+This is unfinished integration on the draft branch, not a verified desktop preview. The VM installs the approved `Hooks::reserve_terminal` for its actual public-message/activity/archive role.
+Independent capacity, failure/recovery and current production visual/live verification are still required;
+headless absence of the hook does not establish GUI retention. Actual `edi_app` production smoke, visual review
 and live provider-owned sign-in/model selection/chat evidence remain owed. No completion claim or follow-up
 timer follows this checkpoint; the full import/refinement/Claude/browser scope remains active.
+
+The real VM lease prepares complete known call/start/question rows and a terminal placeholder using the
+accepted R4 compact-array formula, both byte and slot ceilings, actual wrapper metadata and full original
+arguments. Every append/coalesced extension preserves outstanding holds. Started/settle/quarantine run on
+the owner thread without reentering controller/provider; complete terminal T is retained as an object. Failed
+file retention returns false before canonical terminal commit and keeps the actual core report/lease/hold.
+Quarantine displays bounded failure metadata while retaining terminal capacity. Ordinary Stop preserves
+that evidence; explicit Clear/project/account retirement fences queued work and releases its old owner.
+State retires its controller/leases before archive/model/services destruction. The model reads canonical
+JSON payloads on demand instead of retaining another recursively converted payload archive. Rendering is
+queued; it reads the retained canonical state after the callback, and rendering failure cannot erase T.
+
+A separate finite per-request failure-row allowance covers the declared generated-error/identity bounds,
+with complete row framing and worst-case escaping. It does not reserve another full scientific terminal.
+Failed/incomplete/refused/interrupted requests keep bounded original correlation and a visible explanation
+in the same conversation; unsuccessful file writes preserve pending evidence and the prior file until
+retention succeeds or the user explicitly clears the owner. Provider replay remains the native contract.
+New prompts use the actual command acknowledgement, prewritten QSaveFile staging and queued physical
+dispatch fences. Composer clearing observes a new actual user-row ID, never lastError emptiness.
+Queued initial/continuation sends recheck live connection, turn and privately captured request identity,
+project generation and exact disclosure consent before physical I/O.
+
+Empty reasoning effort means Provider default and stays empty on the wire; explicit tags use localized
+app-owned labels. Incompatible model effort resets visibly to that default; busy setters refuse changes.
+The existing canCancel/state/connectionLabel properties include the VM's accepted pending browser sign-in.
+Stop uses existing native sign-out/teardown to retire that attempt and its late callbacks; no token getter,
+new provider endpoint or alternate dependency route is introduced. This source unit does not establish
+full S6 pre-growth/retaining-role closure, cost compliance, imports/refinement/Claude/browser completeness,
+actual subscription access, official SDK/task CI or readiness; no follow-up timer follows it.

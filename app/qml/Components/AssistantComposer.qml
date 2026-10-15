@@ -9,6 +9,25 @@ import edi.app
 Column {
     id: composer
     required property AssistantViewModel assistant
+    property string submittedText: ""
+    property var previousMessageIds: []
+    function acknowledgeVisiblePrompt() {
+        if (submittedText.length === 0)
+            return;
+        for (let i = 0; i < assistant.messages.count; ++i) {
+            if (previousMessageIds.indexOf(assistant.messages.text(i, "id")) < 0 && assistant.messages.text(i, "kind") === "user" && assistant.messages.text(i, "text") === submittedText) {
+                if (editor.text === submittedText)
+                    editor.clear();
+                submittedText = "";
+                return;
+            }
+        }
+    }
+    Connections {
+        target: composer.assistant.messages
+        function onCountChanged() { composer.acknowledgeVisiblePrompt(); }
+        function onDataChanged() { composer.acknowledgeVisiblePrompt(); }
+    }
     spacing: AppSizes.unit * 0.5
     function focusEditor() {
         editor.forceActiveFocus();
@@ -16,9 +35,13 @@ Column {
     function submit() {
         if (!assistant.connected || assistant.canCancel || editor.text.trim().length === 0)
             return;
-        assistant.send(editor.text);
-        if (assistant.lastError.length === 0)
-            editor.clear();
+        submittedText = editor.text;
+        const ids = [];
+        for (let i = 0; i < assistant.messages.count; ++i)
+            ids.push(assistant.messages.text(i, "id"));
+        previousMessageIds = ids;
+        assistant.send(submittedText);
+        acknowledgeVisiblePrompt();
     }
     ScrollView {
         width: parent.width
