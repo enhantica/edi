@@ -5,7 +5,7 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.0.0. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.1.0. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
@@ -27,7 +27,11 @@ Holding another group fixed makes a group's uncertainty conditional. When identi
 
 Start with an appropriate simpler ADP model. Consider anisotropic ADPs only when site symmetry, resolution, overlap, statistics and systematic-error assessment support the extra independent variables. Use the actual tensor basis and physical positive-semidefinite assessment, uncertainty/covariance and stability. A lower residual or a large raw point count alone is insufficient. If the supported API cannot express the required constraints, report that limitation rather than manufacture an equivalent model.
 
-For species occupying the same crystallographic site within one phase, inspect whether shared coordinates/ADPs represent the intended model. Treat occupancy sums/composition separately. Preserve known fixed fractions such as 0.5/0.5 and existing affine relations. Accidental coordinate equality or different phases do not establish a shared site; do not tie every atom parameter to one variable or silently change chemistry. Confirm the actual site's allowed degrees of freedom before assigning anisotropic terms.
+Before fitting, establish whether different species genuinely co-occupy the same crystallographic site within one phase, and retain the user's intended shared-coordinate/ADP model. For a confirmed mixed site, express the supported shared coordinates/ADPs before refinement, or report the precise API/symmetry obstacle; merely noting the issue is insufficient. Treat occupancy sums/composition separately and preserve known fixed fractions such as 0.5/0.5. Accidental coordinate equality or different phases do not establish a shared site. Confirm allowed independent ADP terms and the actual tensor basis; never tie unrelated parameters or change chemistry silently.
+
+When independently refined, confirmed same-phase co-occupied-site ADPs remain unresolved or have large uncertainty, an authorized delegated refinement suffices to run at least one bounded, physically supported shared-ADP candidate trial from the retained checkpoint. Do not request an additional shared-model preference or routine approval. An explicit user no-sharing/independent-ADP constraint prevails; report that limit rather than override it, and ask only about a genuinely new chemical assumption or scope conflict. Compare the same observations/weights/exclusions and objective, actual status/convergence/improvement, physical validity, stability and jointly assessed covariance. A low residual alone does not select the model; fixing a correlated group does not prove independence. Restore the accepted complete checkpoint if the candidate is rejected. Do not turn every high uncertainty into an equality constraint.
+
+The current public Python route is `project.analysis.aliases.create(id="name", param=actual_parameter)` and `project.analysis.constraints.create(expression="target_alias = source_alias")`. Resolve actual same-project parameters and inspect existing alias/constraint IDs first. Use distinct aliases for the intended matching coordinate or ADP components, preserve existing relations, and let the real validator refuse unsupported/cyclic/inconsistent declarations. This is the existing affine relation mechanism, not a new nonlinear constraint controller. Save and reopen the accepted candidate, read back enabled relation expressions and actual dependent/independent parameter states, and recalculate on the unchanged measurement. Report that evidence and any material reopened mismatch instead of claiming the saved result reproduces by intention alone.
 
 ## Use real operations
 
