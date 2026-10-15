@@ -9,7 +9,8 @@
 namespace edi::assistant {
 using namespace detail;
 struct OpenAiStream::State {
-    std::string turn, request, pending, record, failure_code;
+    std::string turn, request, pending, record;
+    Reply first_failure;
     Sink sink;
     const char* diagnostic_stage = "SSE framing";
     std::string diagnostic(const std::string& reason) const {
@@ -346,7 +347,7 @@ OpenAiStream::OpenAiStream(std::string turn, std::string request, Sink sink) : s
 OpenAiStream::~OpenAiStream() = default;
 Reply OpenAiStream::feed(std::string_view bytes) {
     auto& state = *state_;
-    if (state.failed) return failure(state.failure_code, "The provider stream has already failed");
+    if (state.failed) return state.first_failure;
     try {
         state.diagnostic_stage = "SSE framing";
         if (bytes.size() > Limits::stream_wire_bytes - state.wire) refuse("resource_exhausted", "Provider wire limit exceeded");
@@ -365,11 +366,21 @@ Reply OpenAiStream::feed(std::string_view bytes) {
             }
         }
         return success();
-    } catch (const Refusal& e) { state.failed = true; state.failure_code = e.code; return failure(e.code, state.diagnostic(e.what())); }
-    catch (const std::exception& error) { state.failed = true; state.failure_code = "invalid_argument"; return failure("invalid_argument", state.exception_diagnostic(error)); }
+    } catch (const Refusal& e) {
+        // Retain the first complete, already bounded public refusal. Later calls
+        // neither consume more wire nor replace it with a lifecycle message.
+        // Construct the reply before publishing failed state.
+        state.first_failure = failure(e.code, state.diagnostic(e.what()));
+        state.failed = true;
+        return state.first_failure;
+    } catch (const std::exception& error) {
+        state.first_failure = failure("invalid_argument", state.exception_diagnostic(error));
+        state.failed = true;
+        return state.first_failure;
+    }
 }
 Reply OpenAiStream::finish() {
-    if (state_->failed) return failure(state_->failure_code, "Provider stream failed");
+    if (state_->failed) return state_->first_failure;
     if (!state_->terminal || !state_->pending.empty() || !state_->record.empty()) return failure("interrupted", "Provider stream ended before settlement");
     return success();
 }

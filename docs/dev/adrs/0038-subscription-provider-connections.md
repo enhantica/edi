@@ -115,3 +115,10 @@ First means map iteration, not stream order, and wire-done does not assert seman
 arbitrary strings, arguments, text or reasoning are exposed. All output shape/size, identity/position and
 membership guards remain. This diagnoses the owner-reached finalization failure; it does not authorize
 unioning omitted outputs, establish a missing reasoning item or claim that live chat succeeds.
+
+The stream decoder retains its first complete bounded public feed failure. Repeated feed calls and
+finish after that failure return the same code and encoded safe message before reading more wire or
+emitting events. Both typed refusals and sanitized decoder exceptions use this path; their existing
+categories, redaction and error-byte cap remain unchanged. An incomplete finish without a prior feed
+failure retains its existing interrupted result. Constructing or copying the failure can still allocate;
+this is first-cause preservation, not an allocation-failure delivery guarantee or live-chat compatibility fix.
