@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "title": "Review an Edi project",
       "summary": "Inspect actual project context and propose bounded approved work.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "a11a06c33a5928502b2595cfddfb66704faab46c7fadc4712120c708fd630876",
+      "sha256": "ebbd7b60f498235688d71ca2f73b8e616f4a3a69eb9fa3c79cb98340286bbb6e",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -69,6 +69,41 @@
         {
           "title": "GSAS-II Full CIF tutorial",
           "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/CIFtutorial/CIFtutorial.html"
+        }
+      ]
+    },
+    {
+      "id": "refinement-strategy",
+      "version": "1.0.0",
+      "title": "Plan adaptive Rietveld refinement",
+      "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
+      "path": "refinement-strategy/SKILL.md",
+      "sha256": "f69545b83b843ffce48fef2e41b80800d56e9da9bdc966339492a2614894e4d1",
+      "requires": [],
+      "capabilities": [
+        "inspect_project",
+        "list_parameters",
+        "diagnostics",
+        "propose_plan",
+        "set_parameters",
+        "set_free",
+        "begin_trial",
+        "fit_trial",
+        "evaluate_trial",
+        "discard_trial"
+      ],
+      "references": [
+        {
+          "title": "IUCr Rietveld refinement guidelines",
+          "url": "https://journals.iucr.org/j/issues/1999/01/00/gl0561/"
+        },
+        {
+          "title": "GSAS-II constraints",
+          "url": "https://github.com/AdvancedPhotonSource/GSAS-II-tutorials/blob/main/MDhelp/docs/commontreeitems.md"
+        },
+        {
+          "title": "IUCr atomic displacement parameters",
+          "url": "https://www.iucr.org/who-we-are/commissions/commission-on-crystallographic-nomenclature/published-reports/adp"
         }
       ]
     }

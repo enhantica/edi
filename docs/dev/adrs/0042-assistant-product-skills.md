@@ -33,3 +33,8 @@ Bundled workflow guidance reuses current public Python factories and project-man
 
 
 The staged example requires DONE and converged at each boundary before starting another stage or reading/comparing the parity reference. CANCELLED returns130 immediately, including KeyboardInterrupt translated by the existing fit API. ERROR/UNAVAILABLE/SUPERSEDED and nonconverged/MAX_ITER/NO_STEP stop with a nonzero exit while retaining their actual reported state. This is this example's explicit continuation policy, not a universal refinement rule; numeric closeness alone never certifies successful completion. No data, weights, exclusions, starts, profile, free set or parity tolerance is adjusted to obtain that status.
+
+
+## Adaptive scientific guidance
+
+The automatically discovered refinement-strategy resource adds conditional staging, accepted checkpoints, correlated-group cycling, ADP model support and mixed-site guidance. Its 5–10-pass ceiling is an explicit owner exploration budget, not a universal solver/convergence rule. Existing generic authorization to create/refine does not require fresh approval for every ordinary free group; actual runtime and restricted typed-plan approval controls still apply. No C++ refinement controller, format converter, new tool registration or whole-corpus prompt is introduced. The manifest binds exact updated bytes; only relevant resource content is loaded through the existing skill discovery route. Primary scientific references are McCusker/IUCr and GSAS-II; no claim is made to have hydrated Young's local LFS book pointer.

@@ -5,7 +5,7 @@ description: Inspect actual project context and propose bounded approved work.
 
 # Review an Edi project before changing it
 
-Version: 1.0.0. This is guidance for the tools actually offered in the current request, not an authority to add tools or approve edits.
+Version: 1.1.0. This is guidance for the tools actually offered in the current request, not an authority to add tools or approve edits.
 
 Read the current revision-bound project/structure/dataset/parameter/constraint context. Use `inspect_project`, `list_parameters` and `diagnostics` where available. A missing project, measured dataset or valid uncertainty is a missing prerequisite, not permission to invent it. Use `read_selected_file` only for explicitly selected text and ask for missing companions; typing a path does not select a file. Unsupported conversion remains unsupported.
 
@@ -23,7 +23,7 @@ References:
 
 ## Generic official-runtime edition
 
-When Edi actually supplies the generic runtime, its supported shell/file tools replace the restricted manifest calls above. Inspect the runtime's actual capabilities; do not invent tools named after these prose steps. Operate on Edi's disclosed owned working copy, retain original inputs and accepted checkpoints, and obtain scientific approval before changing the free set or fitting. Existing installed Edi supports `python -m edi calc PROJECT --dry --report machine`, `fit PROJECT --report machine --stream`, `undo PROJECT`, and `report PROJECT --check`. Fit writes its working project by default; it is not a harmless inspection command. Never run it on the original project as an exploratory probe.
+When Edi actually supplies the generic runtime, its supported shell/file tools replace the restricted manifest calls above. Inspect the runtime's actual capabilities; do not invent tools named after these prose steps. Operate on Edi's disclosed owned working copy, retain original inputs and accepted checkpoints. A user request to create/refine with the remaining choices delegated is authorization to choose and execute scientifically justified free groups within that objective and the actual runtime permissions. State a bounded working plan and proceed; do not demand new approval for every ordinary group or fit. Ask when a missing scientific prerequisite, changed objective or new chemical assumption needs a user decision. The restricted typed-tool compatibility path above still requires its real plan-approval mechanism; guidance never bypasses a runtime approval or consent boundary. Consult the relevant refinement-strategy skill for adaptive staging, covariance and mixed-site decisions. Existing installed Edi supports `python -m edi calc PROJECT --dry --report machine`, `fit PROJECT --report machine --stream`, `undo PROJECT`, and `report PROJECT --check`. Fit writes its working project by default; it is not a harmless inspection command. Never run it on the original project as an exploratory probe.
 
 For an actual CIF plus raw diffraction measurement, reuse `edi.StructureFactory.from_cif_path` and `edi.ExperimentFactory.from_data_path`. Raw supported input is x/y/optional sigma; the actual reader skips nonnumeric rows, drops nonpositive y, supplies missing uncertainty and sorts/deduplicates x as documented by that factory. Explain those changes instead of promising byte-for-byte data interpretation. Ask for sample form, beam mode, radiation, scattering type, wavelength or TOF calibration, peak profile/background and phase associations when missing. A `.dat` extension alone does not identify them.
 
