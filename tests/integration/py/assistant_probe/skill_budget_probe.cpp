@@ -37,11 +37,14 @@ J model_observation(const J& input) {
     const auto fault=input.at("fault").string("fault");
     const auto count=static_cast<int>(input.at("exclusions").number("exclusions"));
     if(count<0 || count>20000)throw std::invalid_argument("closed fixture exclusion extent");
+    std::vector<std::shared_ptr<edi::ExcludedRegion>> original_regions;
+    original_regions.reserve(count);
     for(int i=0;i<count;++i) {
         auto region=std::make_shared<edi::ExcludedRegion>(1.25,2.75);
         region->id="region-"+std::to_string(i);
-        experiment->excluded_regions.push_back(region);
+        original_regions.push_back(region);
     }
+    experiment->excluded_regions=edi::ItemVec<edi::ExcludedRegion>(std::move(original_regions));
     const double invalid=std::numeric_limits<double>::quiet_NaN();
     if(fault=="weight")experiment->dataset_weight=invalid;
     else if(fault=="origin")experiment->background_origin=invalid;

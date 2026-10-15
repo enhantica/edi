@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -283,3 +284,40 @@ def test_real_owner_retirement_fences_late_original_completion_and_pending_dispa
         assert not vm.last['vm']['messages'], (
             'FIFO: explicit Clear removes owned pending conversation evidence'
         )
+
+
+def test_manual_project_attachment_survives_assistant_context_capacity_and_keeps_catalog(
+    workflow_vm, tmp_path
+):
+    # Actual documented .edi exclusion loop, copied original project, no private VM mutation.
+    project = tmp_path / 'large-original-project'
+    shutil.copytree(PROJECT, project)
+    bank = project / 'experiments/hrpt.edi'
+    text = bank.read_text()
+    original = '_excluded_region.end\n1 0. 5.\n2 165. 180.'
+    assert text.count(original) == 1, (
+        'SK4 SETUP: original documented exclusion loop is uniquely identified '
+        'before fixture growth'
+    )
+    rows = '\n'.join('owned-' + str(index) + ' 1.25 2.75' for index in range(20000))
+    bank.write_text(text.replace(original, '_excluded_region.end\n' + rows))
+    vm = workflow_vm
+    opened = vm.command('open', path=str(project))
+    assert opened['reply']['opened'] and opened['vm']['project_present'], (
+        'SK4: legitimate assistant-capacity refusal cannot escape real Session project attachment'
+    )
+    surface(vm)
+    assert opened['vm']['context'].get('error'), (
+        'SK4: actual large project reaches bounded assistant context refusal, '
+        'not a tiny-control pass'
+    )
+    assert {row['id'] for row in opened['vm']['skills']} == set(skills.IDS), (
+        'SK4: immutable bounded catalog remains usable independently of large project context'
+    )
+    assert not prior.responses(vm) and not opened['vm']['can_cancel'], (
+        'SK4: ordinary manual attachment performs no provider work or fabricated busy transition'
+    )
+    vm.command('close_project')
+    assert not vm.last['vm']['project_present'] and not vm.last['vm']['context'].get('error'), (
+        'SK4: ordinary detach restores usable projectless disclosure without losing catalog'
+    )
