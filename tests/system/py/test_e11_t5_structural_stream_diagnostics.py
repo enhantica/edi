@@ -60,7 +60,10 @@ def snapshot(kind, status='completed', index=0):
 def facts(message, aliases):
     """Accept equivalent named-value punctuation, without fixing English prose."""
     keys = '|'.join(re.escape(key) for key in aliases)
-    return re.findall(r'(?<![\w])(?:' + keys + r')[\s\"\']*[:=][\s\"\']*([\w.-]+)', message)
+    values = re.findall(r'(?<![\w])(?:' + keys + r')[\s\"\']*[:=][\s\"\']*([\w.-]+)', message)
+    # Closed equivalent display labels; arbitrary category strings remain forbidden.
+    labels = {'yes': 'true', 'no': 'false', 'other': 'unknown'}
+    return [labels.get(value, value) for value in values]
 
 
 @pytest.mark.parametrize(
@@ -121,12 +124,12 @@ def test_missing_terminal_member_has_bounded_allowlisted_structural_facts(
         'text, arguments, reasoning or unknown category/status strings'
     )
     expected = {
-        ('missing_kind', 'kind', 'type'): kind if kind != PRIVATE else 'unknown',
-        ('missing_status', 'status'): status if status != PRIVATE else 'unknown',
+        ('missing_kind', 'first_kind', 'kind', 'type'): kind if kind != PRIVATE else 'unknown',
+        ('missing_status', 'first_status', 'status'): status if status != PRIVATE else 'unknown',
         ('missing_wire_done', 'wire_done', 'done'): 'true' if wire_done else 'false',
         ('missing_count', 'missing'): str(count),
         ('retained_count', 'retained'): str(count),
-        ('final_count', 'final'): '0',
+        ('final_count', 'terminal_count', 'final', 'terminal'): '0',
         ('unfinished_count', 'unfinished'): '0' if wire_done else str(count),
     }
     observed = {names[0]: facts(message.lower(), names) for names in expected}
