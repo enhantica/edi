@@ -12,11 +12,14 @@ import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { inspectAssistantDevices } from './web_assistant_device.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const fileRequestsOnly = process.argv.includes('--file-requests-only');
+const assistantDevicesOnly = process.argv.includes('--assistant-devices-only');
+assert(!assistantDevicesOnly || !fileRequestsOnly, 'device and file-request scopes must be distinct');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
@@ -334,6 +337,13 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
+  if (assistantDevicesOnly) {
+    await inspectAssistantDevices({send,evaluate,frame,url:origin+'/webapp/',
+      record:value=>writeFile(join(output,`${mode}-device-${value.fixture}.json`),JSON.stringify(value,null,2)),
+      capture:id=>shot('device-'+id)});
+    assert.equal(errors.length,0,'I16/device: actual device entries complete without browser exceptions');
+    console.log(`${mode}: assistant device entries passed; no provider readiness claimed`);
+  } else {
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),
     () => shot('develop-diagnostics'));
@@ -739,6 +749,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
   if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
 } catch (error) {
