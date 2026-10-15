@@ -10,9 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T01:15:47Z
+# measured_utc = 2026-10-15T01:28:15Z
 #
-# E11-T5 seq3 held-source vehicle adaptation: /home/andrewsazonov/runs/ai-assistant/tests-seq3-sdk-vehicle.log;31passed against committed SDK helper92b8d58; original assertions/CI guard preserved; every other bank row and hole retained
+# Recorded from: E11-T5 seq3 SDK1-4 held producer92b8d58; focused tests-seq3-sdk-class-followup.log plus corrected tests-seq3-sdk-content-final.log; six behavioral failed holes, passing completed rows only; all other bank rows/holes retained
+# Collected tests: 13529; with a reported duration: 7390
+# Module-scoped fixture costs recorded: 51
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13188
+# inventory_python = 13196
 # inventory_cpp = 333
-# inventory_measured = 11860
-# inventory_unmeasured = 1661
+# inventory_measured = 11862
+# inventory_unmeasured = 1667
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4098,7 +4100,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[unexpected-field]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_retains_every_scientific_display_and_inventory_witness
 0.020	tests/integration/py/test_desk_build.py::test_default_gui_fetch_uses_pinned_archive_with_digest_and_deadline
-0.120	tests/integration/py/test_desk_build.py::test_failed_configure_preserves_attempt_for_next_no_export_build
+0.200	tests/integration/py/test_desk_build.py::test_failed_configure_preserves_attempt_for_next_no_export_build
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[digest]
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[duplicate]
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[missing-stall]
@@ -4116,7 +4118,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[timeout]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GH_TOKEN]
 0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GITHUB_TOKEN]
-0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
+0.010	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
 0.090	tests/integration/py/test_e01_scaffold.py::test_app_is_one_option_gated_cpp_qml_host
 0.140	tests/integration/py/test_e01_scaffold.py::test_checkout_imports_edi_without_path_injection
 0.030	tests/integration/py/test_e01_scaffold.py::test_ci_routes_surfaces_and_uses_strict_self_hosted_jobs
@@ -9817,13 +9819,15 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.400	tests/system/py/test_e09_t75_round3_pins.py::test_effective_pin_admission_agrees_through_each_public_consumer[wrong-table-native]
 0.130	tests/system/py/test_e09_t75_round3_pins.py::test_effective_pin_admission_agrees_through_each_public_consumer[wrong-table-pairing]
 0.510	tests/system/py/test_e09_t75_round3_pins.py::test_effective_pin_admission_agrees_through_each_public_consumer[wrong-table-updater]
-0.800	tests/system/py/test_e09_t75_runtime_callers.py::test_cpp_request_accident_cannot_manufacture_the_candidate_witness[ordinary-prefix]
-0.850	tests/system/py/test_e09_t75_runtime_callers.py::test_cpp_request_accident_cannot_manufacture_the_candidate_witness[wrong-build]
-0.590	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[corpus-policy]
-0.430	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[cpp-consumer]
-0.530	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[import]
-0.540	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[provenance]
-0.540	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[surface]
+1.030	tests/system/py/test_e09_t75_runtime_callers.py::test_cpp_request_accident_cannot_manufacture_the_candidate_witness[ordinary-prefix]
+1.070	tests/system/py/test_e09_t75_runtime_callers.py::test_cpp_request_accident_cannot_manufacture_the_candidate_witness[wrong-build]
+0.830	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[corpus-policy]
+0.560	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[cpp-consumer]
+2.520	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[import]
+0.610	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[provenance]
+0.600	tests/system/py/test_e09_t75_runtime_callers.py::test_diagnostic_sdk_cannot_build_one_artifact_and_prove_the_ordinary_one[surface]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t75_runtime_callers.py::test_installed_consumer_roots_helper_sources_independently_of_caller_cwd[empty]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t75_runtime_callers.py::test_installed_consumer_roots_helper_sources_independently_of_caller_cwd[shadow-helper]
 2.360	tests/system/py/test_e09_t75_sdk_update.py::test_d3_incomplete_pr_inventory_deletes_no_superseded_branch[missing-page]
 2.430	tests/system/py/test_e09_t75_sdk_update.py::test_d3_incomplete_pr_inventory_deletes_no_superseded_branch[total-mismatch]
 0.990	tests/system/py/test_e09_t75_sdk_update.py::test_sdk_update_dispatch_fixture_preserves_repository_and_ref[ref-CLI]
@@ -10019,6 +10023,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-None]
+3.190	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-build]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[extension-consumer-None]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[extension-ordinary-None]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[ordinary-None]
+2.680	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[ordinary-configure]
 0.020	tests/system/py/test_e11_t5_sdk_replacement.py::test_actual_app_local_override_remains_forbidden_in_ci
 2.650	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-candidate]
 2.510	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-local]
@@ -13592,6 +13602,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 0.091	tests/system/py/test_e11_t5_assistant_native.py
+# module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
