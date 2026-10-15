@@ -58,7 +58,7 @@ void AssistantMarkdown::render() noexcept {
     if (!document_) return;
     try {
         if (!markdown_) { document_->setPlainText(source_); return; }
-        document_->setMarkdown(source_, QTextDocument::MarkdownDialectGitHub | QTextDocument::MarkdownNoHTML);
+        document_->setMarkdown(source_, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
         // Qt owns Markdown parsing. Replace only its parsed image objects with
         // literal alternative text; no URI is fetched or second HTML parse made.
         QTextCursor cursor(document_);
