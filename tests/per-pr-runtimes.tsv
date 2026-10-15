@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T06:39:45Z
+# measured_utc = 2026-10-15T07:05:28Z
 #
-# Recorded from: seq19 finite actual Session/VM component baseline; current resource/A1-A4 reds remain honest holes; existing full-Main costs unchanged
-# Collected tests: 13801; with a reported duration: 7597
+# Recorded from: seq19 real question archive-settlement refusal: two reached expected-red holes; prior thirty VM assertions unchanged
+# Collected tests: 13803; with a reported duration: 7597
 # Module-scoped fixture costs recorded: 56
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13468
+# inventory_python = 13470
 # inventory_cpp = 333
 # inventory_measured = 12069
-# inventory_unmeasured = 1732
+# inventory_unmeasured = 1734
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6386,6 +6386,8 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test
 0.440	tests/system/app/test_e11_t5_vm_retention.py::test_queued_physical_request_rechecks_actual_owner_authority[initial-live-control]
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_queued_physical_request_rechecks_actual_owner_authority[initial-revoked]
 1.150	tests/system/app/test_e11_t5_vm_retention.py::test_real_fit_activity_retains_full_terminal_and_coalesces_progress
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_real_question_failed_persistence_preserves_settlement_until_explicit_recovery[clear]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_real_question_failed_persistence_preserves_settlement_until_explicit_recovery[restore-and-retry]
 1.050	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-account]
 1.060	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-clear]
 1.030	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-project]
@@ -13856,7 +13858,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 0.087	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
-# module-cost: 0.049	tests/system/app/test_e11_t5_vm_retention.py
+# module-cost: 0.083	tests/system/app/test_e11_t5_vm_retention.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py

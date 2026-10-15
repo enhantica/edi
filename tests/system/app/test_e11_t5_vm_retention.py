@@ -637,3 +637,54 @@ def test_pending_browser_signin_can_stop_and_late_valid_callback_cannot_connect(
     assert all(checks.values()), (
         'I12/A4: actual pending browser auth is cancellable and late valid callback stays fenced'
     )
+
+
+@pytest.mark.parametrize('recovery', ['clear', 'restore-and-retry'])
+def test_real_question_failed_persistence_preserves_settlement_until_explicit_recovery(
+    vm, signer, recovery
+):
+    authenticate(vm, signer)
+    ask(vm)
+    pending = vm.last['vm']['pending_question']
+    assert pending, (
+        'I10/S6: a genuine writable-archive question is admitted before settlement refusal'
+    )
+    original = vm.last['vm']['project']
+    count = len(responses(vm))
+    vm.command('persistence_barrier')
+    vm.command('answer', id=pending['question_id'], answer='inspect')
+    failed = vm.last
+    vm.command('cancel')
+    stopped = vm.last
+    checks = {
+        'no_complete_public_terminal': not visible_terminals(vm, 'vm-question'),
+        'no_continuation': len(responses(vm)) == count,
+        'accepted_state_preserved': vm.last['vm']['project'] == original,
+        'failed_settlement_visible': bool(failed['vm']['last_error']),
+        'stop_preserves_recovery': stopped['vm']['can_cancel'],
+    }
+    if recovery == 'clear':
+        vm.command('clear_history')
+        checks['explicit_clear_retires'] = (
+            not vm.last['vm']['can_cancel'] and not vm.last['vm']['pending_question']
+        )
+    else:
+        vm.command('persistence_restore')
+        vm.command('answer', id=pending['question_id'], answer='inspect')
+        terminal = visible_terminals(vm, 'vm-question')
+        expected = {
+            'question_id': pending['question_id'],
+            'answer': 'inspect',
+            'selected_option_id': 'inspect',
+        }
+        checks['original_complete_answer_survives'] = (
+            len(terminal) == 1 and terminal[0]['payload']['result'] == expected
+        )
+        checks['recovery_is_settled'] = not vm.last['vm']['can_cancel']
+        checks['complete_outcome_is_persisted'] = (
+            vm.command('archive')['reply']['rows'] == vm.last['vm']['messages']
+        )
+    assert all(checks.values()), (
+        'I3/I10/S6: real failed host settlement preserves actual question/answer, blocks '
+        'publication/continuation through Stop and permits explicit owner recovery: ' + str(checks)
+    )

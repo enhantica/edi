@@ -130,6 +130,11 @@ int main(int argc,char** argv) {
                 QFile saved(backup);QByteArray bytes;
                 if(saved.open(QIODevice::ReadOnly))bytes=saved.readAll();
                 result={{"preserved_sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
+            } else if(op=="persistence_restore") {
+                const auto backup=history+".preserved";
+                if(!QFileInfo(history).isDir() || !QDir().rmdir(history) ||
+                   !QFile::rename(backup,history))
+                    throw std::runtime_error("isolated history restoration failed");
             } else if(op=="callback_batch") {
                 const auto callbacks=input["callbacks"].toArray();
                 if(callbacks.isEmpty() || callbacks.size()>16)throw std::invalid_argument("bounded fixture callback batch");
