@@ -70,6 +70,11 @@ def test_actual_transcript_delegate_author_semantics():
         'PASS   : edi_app::AssistantInterior::'
         'test_real_selected_file_remove_pairs_with_own_label()'
     ) in output, 'GEO2: actual selected-file geometry and pointer removal execute\n' + output
+    for tag in ['read-name', 'list-path', 'search-query', 'opaque-command']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_activity_description_uses_original_structured_source(' + tag + ')'
+        ) in output, 'DESC1: structured-source and opaque-description controls execute\n' + output
     assert result.returncode == 0, (
         'I16/INT1: actual delegate presentation completes without hidden failures\n' + output
     )

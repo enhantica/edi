@@ -397,6 +397,47 @@ TestCase {
         }
         compareRetainedPayload(row.payload, original);
     }
+    function test_activity_description_uses_original_structured_source_data() {
+        // Pinned0.162.1 CommandAction: read has name/path; list/search metadata
+        // may be absent/null; unknown supplies only command, not semantic intent.
+        return [
+            {tag: "read-name", action: {type: "read", name: "original.cif", path: "/owned/original.cif"}, evidence: "original.cif", category: /read/i},
+            {tag: "list-path", action: {type: "listFiles", path: "/owned/original-series"}, evidence: "original-series", category: /list/i},
+            {tag: "search-query", action: {type: "search", query: "peak position", path: null}, evidence: "peak position", category: /search/i},
+            {tag: "opaque-command", action: {type: "unknown"}, evidence: "", category: /command|ran/i}
+        ];
+    }
+    function test_activity_description_uses_original_structured_source(data) {
+        const original = commandItem("completed", 0);
+        original.command = "printf 'read files search web scientific fit succeeded'";
+        original.commandActions = [Object.assign({command: original.command}, data.action)];
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command, status: "completed", payload: original
+        });
+        verify(row !== null, "DESC1: actual activity presents independent structured metadata");
+        renderedRow(row);
+        const control = commandDisclosure(row);
+        const summary = control.text;
+        const dot = summary.indexOf("·");
+        verify(dot > 0 && summary.slice(dot + 1).trim().length > 0,
+            "DESC1: real compact activity adds a nonempty short description after the category dot");
+        verify(data.category.test(summary.slice(0, dot)),
+            "DESC1: description preserves the truthful original structured activity category");
+        const description = summary.slice(dot + 1).trim();
+        if (data.evidence.length > 0)
+            verify(description.includes(data.evidence), "DESC1: step description uses its independently supplied original name, path or query");
+        verify(!summary.includes("scientific fit succeeded"),
+            "DESC1: opaque shell words cannot manufacture a scientific-success description");
+        if (data.evidence.length === 0)
+            verify(!/read.*file|search.*web|web.*search/i.test(summary),
+                "DESC1: missing purpose metadata cannot turn opaque shell text into a different action");
+        verify(!Ui.text(row).includes(original.aggregatedOutput),
+            "DESC1: compact description does not replace collapsed literal-output disclosure");
+        mouseClick(control);
+        renderedRow(row);
+        literalCommandDetails(row, original);
+        compareRetainedPayload(row.payload, original);
+    }
     function test_literal_rows_keep_author_information_data() {
         return [
             {
