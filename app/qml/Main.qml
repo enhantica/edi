@@ -51,7 +51,7 @@ EaComponents.ApplicationWindow {
         const project = Session.project;
         if (restoreChatFocus) {
             Qt.callLater(() => {
-                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
+                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && Preferences.assistantShown && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
                     previous.forceActiveFocus();
             });
         }
@@ -98,8 +98,12 @@ EaComponents.ApplicationWindow {
         return rectangle.width > 0 && rectangle.height > 0 && rectangle.x >= 0 && rectangle.y >= 0 && rectangle.x + rectangle.width <= assistantPanel.contentItem.width && rectangle.y + rectangle.height <= assistantPanel.contentItem.height;
     }
     function enforceAssistantHomeFocus() {
-        if (assistantHomeFocusCovered)
-            assistantPanel.focusComposer();
+        if (assistantHomeFocusCovered) {
+            if (Preferences.assistantShown)
+                assistantPanel.focusComposer();
+            else
+                assistantToggle.forceActiveFocus();
+        }
     }
     onAssistantHomeFocusCoveredChanged: enforceAssistantHomeFocus()
     onActiveAssistantHostChanged: rehostAssistant()
@@ -154,7 +158,7 @@ EaComponents.ApplicationWindow {
     appBarRightButtons: [
         EaElements.ToolButton {
             id: assistantToggle
-            KeyNavigation.tab: assistantPanel.visible ? assistantPanel.firstFocusItem : null
+            KeyNavigation.tab: assistantPanel.visible && Preferences.assistantShown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
             fontIcon: "comments"
             enabled: ApplicationInfo.assistantAvailable
@@ -254,6 +258,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -264,6 +269,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -274,6 +280,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -284,6 +291,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -294,6 +302,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ReportPage {
                     current: reportLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         }

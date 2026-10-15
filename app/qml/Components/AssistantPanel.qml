@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
@@ -26,12 +27,30 @@ Popup {
     focus: true
     popupType: Popup.Item
     closePolicy: Popup.NoAutoClose
-    background: Rectangle {
-        color: EaStyle.Colors.appBarBackground
-        border.color: EaStyle.Colors.appBorder
+    // Clip the moving sheet at the fixed sidebar viewport, including intermediate frames.
+    clip: true
+    background: null
+    enter: Transition {
+        NumberAnimation {
+            target: assistantSheet
+            property: "x"
+            from: Preferences.sideBarOnLeft ? -panel.width : panel.width
+            to: 0
+            duration: EaStyle.Times.translationChange
+            easing.type: Easing.OutCirc
+        }
+    }
+    exit: Transition {
+        NumberAnimation {
+            target: assistantSheet
+            property: "x"
+            to: Preferences.sideBarOnLeft ? -panel.width : panel.width
+            duration: EaStyle.Times.translationChange
+            easing.type: Easing.InCirc
+        }
     }
     function focusComposer() {
-        if (!ApplicationInfo.assistantAvailable || !visible)
+        if (!ApplicationInfo.assistantAvailable || !visible || !shown)
             return;
         composer.focusEditor();
     }
@@ -39,173 +58,201 @@ Popup {
     contentItem: Item {
         objectName: "assistant.panel"
         clip: true
+        // The complete fixed strip remains covered until Popup's actual exit finishes.
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.AllButtons
             preventStealing: true
             onWheel: wheel => wheel.accepted = true
         }
-        ColumnLayout {
-            z: 1
-            anchors.fill: parent
-            anchors.margins: AppSizes.unit
-            spacing: AppSizes.unit * 0.75
-            RowLayout {
-                Layout.fillWidth: true
+        Item {
+            id: assistantSheet
+            width: parent.width
+            height: parent.height
+            enabled: panel.shown
+            Rectangle {
+                anchors.fill: parent
+                color: EaStyle.Colors.appBarBackground
+                border.color: EaStyle.Colors.appBorder
+            }
+            Item {
+                id: header
+                width: parent.width
+                height: EaStyle.Sizes.tabBarHeight
                 EaElements.Label {
-                textFormat: Text.PlainText
+                    anchors.left: parent.left
+                    anchors.leftMargin: EaStyle.Sizes.fontPixelSize * 0.5
+                    anchors.verticalCenter: parent.verticalCenter
+                    textFormat: Text.PlainText
                     text: qsTr("Assistant")
                     font.bold: true
-                    Layout.fillWidth: true
+                    color: EaStyle.Colors.themeForegroundHovered
                 }
-                EaElements.ToolButton {
-                    id: clearButton
-                    KeyNavigation.priority: KeyNavigation.BeforeItem
-                    KeyNavigation.backtab: panel.toggleControl
-                    fontIcon: "trash-alt"
-                    ToolTip.text: qsTr("Clear conversation")
-                    Accessible.name: ToolTip.text
-                    onClicked: panel.assistant.clearHistory()
+                RowLayout {
+                    anchors.right: parent.right
+                    anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.5
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Button {
+                        id: connectionButton
+                        objectName: "assistant.connection"
+                        Layout.maximumWidth: header.width * 0.45
+                        text: !panel.assistant.connected && panel.assistant.state !== "connecting" ? qsTr("Sign in") : panel.assistant.connectionLabel
+                        Accessible.name: text
+                        contentItem: EaElements.Label {
+                            text: connectionButton.text
+                            textFormat: Text.PlainText
+                            font: connectionButton.font
+                            color: connectionButton.foregroundColor()
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+                        EaElements.ToolTip {
+                            text: connectionButton.text
+                            visible: (connectionButton.hovered || connectionButton.activeFocus) && EaGlobals.Vars.showToolTips
+                        }
+                        onClicked: connectionDialog.open()
+                    }
+                    EaElements.ToolButton {
+                        visible: panel.assistant.connected
+                        fontIcon: "sign-out-alt"
+                        ToolTip.text: qsTr("Sign out")
+                        Accessible.name: ToolTip.text
+                        onClicked: panel.assistant.signOut()
+                    }
+                    EaElements.ToolButton {
+                        id: clearButton
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: panel.toggleControl
+                        fontIcon: "trash-alt"
+                        ToolTip.text: qsTr("Clear conversation")
+                        Accessible.name: ToolTip.text
+                        onClicked: panel.assistant.clearHistory()
+                    }
+                }
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: EaStyle.Sizes.borderThickness
+                    color: EaStyle.Colors.appBorder
                 }
             }
-            RowLayout {
-                Layout.fillWidth: true
-                EaElements.Button {
-                    id: connectionButton
-                    objectName: "assistant.connection"
-                    contentItem: EaElements.Label {
-                        text: connectionButton.text
-                        textFormat: Text.PlainText
-                        font: connectionButton.font
-                        color: connectionButton.foregroundColor()
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
-                    }
+            ColumnLayout {
+                z: 1
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: header.bottom
+                anchors.bottom: parent.bottom
+                anchors.margins: AppSizes.unit
+                spacing: AppSizes.unit * 0.75
+                ListView {
+                    id: conversation
+                    objectName: "assistant.messages"
                     Layout.fillWidth: true
-                    text: !panel.assistant.connected && panel.assistant.state !== "connecting" ? qsTr("Sign in with ChatGPT") : panel.assistant.connectionLabel
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: AppSizes.unit * 0.5
+                    model: panel.assistant.messages
+                    reuseItems: true
+                    delegate: AssistantMessage {
+                        required property var model
+                        width: conversation.width
+                        kind: model.kind
+                        text: model.text
+                        payload: model.payload
+                        status: model.status
+                    }
+                    property bool followsTail: true
+                    property string lastUserId: ""
+                    function observeUserAdmission() {
+                        let latest = "";
+                        for (let i = panel.assistant.messages.count - 1; i >= 0; --i) {
+                            if (panel.assistant.messages.text(i, "kind") === "user") {
+                                latest = panel.assistant.messages.text(i, "id");
+                                break;
+                            }
+                        }
+                        if (latest !== lastUserId) {
+                            if (latest.length > 0)
+                                followsTail = true;
+                            lastUserId = latest;
+                        }
+                    }
+                    function positionAtTail() {
+                        if (followsTail)
+                            positionViewAtEnd();
+                    }
+                    function followOutput() {
+                        if (followsTail)
+                            Qt.callLater(positionAtTail);
+                    }
+                    onCountChanged: {
+                        observeUserAdmission();
+                        followOutput();
+                    }
+                    onContentHeightChanged: followOutput()
+                    onContentYChanged: {
+                        if (moving || historyScrollBar.pressed)
+                            followsTail = atYEnd;
+                    }
+                    onMovementEnded: followsTail = atYEnd
+                    Component.onCompleted: {
+                        observeUserAdmission();
+                        followOutput();
+                    }
+                    Connections {
+                        target: panel.assistant.messages
+                        function onDataChanged() { conversation.observeUserAdmission(); conversation.followOutput(); }
+                    }
+                    ScrollBar.vertical: ScrollBar {
+                        id: historyScrollBar
+                        onPressedChanged: {
+                            if (!pressed)
+                                conversation.followsTail = conversation.atYEnd;
+                        }
+                        onPositionChanged: {
+                            if (activeFocus) {
+                                Qt.callLater(() => {
+                                    if (historyScrollBar.activeFocus)
+                                        conversation.followsTail = conversation.atYEnd;
+                                });
+                            }
+                        }
+                    }
+                }
+                AssistantPlan {
+                    Layout.fillWidth: true
+                    assistant: panel.assistant
+                }
+                AssistantQuestion {
+                    Layout.fillWidth: true
+                    assistant: panel.assistant
+                }
+                AssistantTrial {
+                    Layout.fillWidth: true
+                    assistant: panel.assistant
+                }
+                EaElements.Label {
+                    textFormat: Text.PlainText
+                    Layout.fillWidth: true
+                    visible: panel.assistant.lastError.length > 0
+                    text: panel.assistant.lastError
+                    wrapMode: Text.Wrap
+                }
+                EaElements.Button {
+                    Layout.fillWidth: true
+                    visible: panel.assistant.connected && panel.assistant.contextConsentRequired
+                    text: qsTr("Inspect outgoing project context")
                     onClicked: connectionDialog.open()
                 }
-                EaElements.ToolButton {
-                    visible: panel.assistant.connected
-                    fontIcon: "sign-out-alt"
-                    ToolTip.text: qsTr("Sign out")
-                    Accessible.name: ToolTip.text
-                    onClicked: panel.assistant.signOut()
+                AssistantComposer {
+                    id: composer
+                    Layout.fillWidth: true
+                    assistant: panel.assistant
+                    toggleControl: panel.toggleControl
                 }
-            }
-            EaElements.Label {
-                textFormat: Text.PlainText
-                Layout.fillWidth: true
-                visible: !panel.assistant.connected
-                wrapMode: Text.Wrap
-                text: qsTr("Ask about the open project, inspect parameters, and refine through an agreed plan. Connect your ChatGPT subscription to start.")
-            }
-            ListView {
-                id: conversation
-                objectName: "assistant.messages"
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                spacing: AppSizes.unit * 0.5
-                model: panel.assistant.messages
-                reuseItems: true
-                delegate: AssistantMessage {
-                    required property var model
-                    width: conversation.width
-                    kind: model.kind
-                    text: model.text
-                    payload: model.payload
-                    status: model.status
-                }
-                property bool followsTail: true
-                property string lastUserId: ""
-                function observeUserAdmission() {
-                    let latest = "";
-                    for (let i = panel.assistant.messages.count - 1; i >= 0; --i) {
-                        if (panel.assistant.messages.text(i, "kind") === "user") {
-                            latest = panel.assistant.messages.text(i, "id");
-                            break;
-                        }
-                    }
-                    if (latest !== lastUserId) {
-                        if (latest.length > 0)
-                            followsTail = true;
-                        lastUserId = latest;
-                    }
-                }
-                function positionAtTail() {
-                    if (followsTail)
-                        positionViewAtEnd();
-                }
-                function followOutput() {
-                    if (followsTail)
-                        Qt.callLater(positionAtTail);
-                }
-                onCountChanged: {
-                    observeUserAdmission();
-                    followOutput();
-                }
-                onContentHeightChanged: followOutput()
-                onContentYChanged: {
-                    if (moving || historyScrollBar.pressed)
-                        followsTail = atYEnd;
-                }
-                onMovementEnded: followsTail = atYEnd
-                Component.onCompleted: {
-                    observeUserAdmission();
-                    followOutput();
-                }
-                Connections {
-                    target: panel.assistant.messages
-                    function onDataChanged() { conversation.observeUserAdmission(); conversation.followOutput(); }
-                }
-                ScrollBar.vertical: ScrollBar {
-                    id: historyScrollBar
-                    onPressedChanged: {
-                        if (!pressed)
-                            conversation.followsTail = conversation.atYEnd;
-                    }
-                    onPositionChanged: {
-                        if (activeFocus) {
-                            Qt.callLater(() => {
-                                if (historyScrollBar.activeFocus)
-                                    conversation.followsTail = conversation.atYEnd;
-                            });
-                        }
-                    }
-                }
-            }
-            AssistantPlan {
-                Layout.fillWidth: true
-                assistant: panel.assistant
-            }
-            AssistantQuestion {
-                Layout.fillWidth: true
-                assistant: panel.assistant
-            }
-            AssistantTrial {
-                Layout.fillWidth: true
-                assistant: panel.assistant
-            }
-            EaElements.Label {
-                textFormat: Text.PlainText
-                Layout.fillWidth: true
-                visible: panel.assistant.lastError.length > 0
-                text: panel.assistant.lastError
-                wrapMode: Text.Wrap
-            }
-            EaElements.Button {
-                Layout.fillWidth: true
-                visible: panel.assistant.connected && panel.assistant.contextConsentRequired
-                text: qsTr("Inspect outgoing project context")
-                onClicked: connectionDialog.open()
-            }
-            AssistantComposer {
-                id: composer
-                Layout.fillWidth: true
-                assistant: panel.assistant
-                toggleControl: panel.toggleControl
             }
         }
         AssistantConnectionDialog {

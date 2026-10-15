@@ -187,3 +187,21 @@ normal keyboard focus retains its visible border, tooltip and accessible name. S
 right. The actual selected manual-sidebar host is unchanged, and Right/light before/open/after captures
 must compare that same rectangle and scientific workspace. File selection is a separate functional
 boundary: no enabled decorative plus button or implied upload is added by this presentation change.
+
+
+## Sidebar header and confined slide lifecycle
+
+The Assistant label uses the actual manual tab-bar height and left inset. Its existing connection
+button is a compact Sign in/account label beside Clear, opening the same consent/connection dialog;
+the full actual account remains accessible while the visual label elides. Actual sign-out and
+connecting/error behavior remain, without a separate full-width connection row or persistent
+introductory paragraph. No file picker capability is implied by this presentation unit.
+
+One persistent sheet slides within a fixed, clipped sidebar-sized Popup viewport using the shared
+translation duration/easing. Neither the host nor scientific main geometry moves. A fixed local input
+shield covers the strip throughout enter/exit; retained manual controls remain hidden and disabled
+until the Popup is actually closed. Closing moves focus to the existing app-bar toggle immediately;
+only actual close restores a still-current page/host/project/epoch target. A closing sheet does not
+receive deferred composer focus, and rapid reversals keep the same conversation and selection tree.
+Actual intermediate-frame confinement and interrupted transitions require runtime observation; these
+source mechanics alone do not establish device, accessibility, provider or full-task readiness.

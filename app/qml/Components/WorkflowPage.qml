@@ -20,6 +20,8 @@ EaComponents.ContentPage {
     // shown stays loaded, laid out and visible beside the shown one, clipped out of the view, so `visible`
     // does not say it: what the page draws only for the eye (its chart) follows this instead.
     property bool current: false
+    // Popup visibility includes its exit; manual controls resume only after the sheet closes.
+    property bool assistantCovered: false
     // Retained offscreen pages keep their tree/state but cannot acquire input focus.
     enabled: current
     readonly property Item assistantOverlayHost: sideBar.parent
@@ -149,7 +151,7 @@ EaComponents.ContentPage {
     sideBar: EaComponents.SideBar {
         id: sideBar
         objectName: "workflow." + page.pageName + ".manualSidebar"
-        visible: !(page.current && ApplicationInfo.assistantAvailable && Preferences.assistantShown)
+        visible: !(page.current && ApplicationInfo.assistantAvailable && page.assistantCovered)
         enabled: visible
 
         tabs: [
