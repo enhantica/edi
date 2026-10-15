@@ -120,6 +120,26 @@ int main(int argc,char** argv) {
                 } catch(const edi::assistant::detail::Refusal& refused) {
                     result={{"thrown_refusal",QString::fromStdString(refused.code)},{"bytes",0}};
                 }
+            } else if(op=="store_write" || op=="store_contending_write") {
+                const auto record=record_key(input["key"].toString());
+                const auto bytes=input["utf8"].toString().toUtf8();
+                if(bytes.size()>2097152)throw std::invalid_argument("isolated write input exceeds fixture bound");
+                try {
+                    native::StoreStatus written;
+                    if(op=="store_contending_write") {
+                        auto contender=native::production_services();
+                        written=contender.dependencies.write_record(record,bytes);
+                    } else written=dependencies.write_record(record,bytes);
+                    result={{"status",status(written)},{"written_bytes",written==native::StoreStatus::ok?static_cast<double>(bytes.size()):0}};
+                } catch(const edi::assistant::detail::Refusal& refused) {
+                    result={{"thrown_refusal",QString::fromStdString(refused.code)},{"written_bytes",0}};
+                }
+            } else if(op=="store_permissions") {
+                const auto record=record_key(input["key"].toString());
+                const auto allowed=QFile::ReadOwner|QFile::WriteOwner;
+                const auto permissions=input["private"].toBool()?allowed:(allowed|QFile::ReadGroup);
+                if(!QFile::setPermissions(root+"/"+relative_path(record),permissions))
+                    throw std::runtime_error("isolated fixture permissions failed");
             } else if(op=="store_list") {
                 try {
                     const auto list=dependencies.list_registrations();Array ids;

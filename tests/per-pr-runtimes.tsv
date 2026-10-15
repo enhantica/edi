@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T04:49:12Z
+# measured_utc = 2026-10-15T05:05:44Z
 #
-# Recorded from: seq14 actual c789 store11 first green with distinct typed thrown-refusal observation; unrelated rows preserved
-# Collected tests: 13708; with a reported duration: 7519
-# Module-scoped fixture costs recorded: 53
+# Recorded from: seq15 sealed c789 U1/U2 finite scope; genuine offline accounts and actual protected writes; owner6 runtime refusal retained
+# Collected tests: 13739; with a reported duration: 7533
+# Module-scoped fixture costs recorded: 55
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13375
+# inventory_python = 13406
 # inventory_cpp = 333
-# inventory_measured = 11991
-# inventory_unmeasured = 1717
+# inventory_measured = 12005
+# inventory_unmeasured = 1734
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -9905,6 +9905,23 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e09_t75_runtime_callers.py::t
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[expiry-reconnect-omitted]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[expiry-reconnect-unchanged]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[saved-other-account-omitted]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[saved-other-account-unchanged]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[saved-same-account-omitted]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[saved-same-account-unchanged]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[sign-in-omitted]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_every_successful_connection_transition_retires_original_public_and_opaque_items[sign-in-unchanged]
+0.274	tests/system/py/test_e11_t5_account_replay.py::test_existing_failure_and_sign_out_scope_controls_clear_originals[failed-sign-in]
+0.260	tests/system/py/test_e11_t5_account_replay.py::test_existing_failure_and_sign_out_scope_controls_clear_originals[sign-out]
+0.140	tests/system/py/test_e11_t5_account_replay.py::test_explicit_new_conversation_retires_old_originals_within_same_connection
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_old_blocked_history_does_not_poison_a_new_authenticated_scope[expiry-reconnect]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_old_blocked_history_does_not_poison_a_new_authenticated_scope[saved-other-account]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_old_blocked_history_does_not_poison_a_new_authenticated_scope[saved-same-account]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_account_replay.py::test_old_blocked_history_does_not_poison_a_new_authenticated_scope[sign-in]
+0.130	tests/system/py/test_e11_t5_account_replay.py::test_unchanged_connection_continuation_preserves_both_originals[omitted]
+0.150	tests/system/py/test_e11_t5_account_replay.py::test_unchanged_connection_continuation_preserves_both_originals[unchanged]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_call_arguments_cannot_be_extended_and_completed_again
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_call_replay_is_independent_of_json_object_member_order
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_plan_response_cannot_be_reopened_by_a_late_callback[text_delta]
@@ -10157,6 +10174,20 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::t
 2.370	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-app-pinned]
 2.310	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-consumer]
 2.350	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-core]
+0.050	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_credential_lock_failure_is_distinct_and_recovers_after_release
+0.230	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_classifies_known_size_and_preserves_atomic_record[inclusive-cap-credentials]
+0.270	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_classifies_known_size_and_preserves_atomic_record[inclusive-cap-host]
+0.240	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_classifies_known_size_and_preserves_atomic_record[inclusive-cap-mapping]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_classifies_known_size_and_preserves_atomic_record[one-byte-over-credentials]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_classifies_known_size_and_preserves_atomic_record[one-byte-over-host]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_classifies_known_size_and_preserves_atomic_record[one-byte-over-mapping]
+0.040	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_permission_failure_is_not_quota[credentials]
+0.030	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_permission_failure_is_not_quota[host]
+0.040	tests/system/py/test_e11_t5_store_write_quota.py::test_actual_default_write_permission_failure_is_not_quota[mapping]
+0.497	tests/system/py/test_e11_t5_store_write_quota.py::test_genuine_signed_token_completion_preserves_write_quota_category_and_prior_grant[inclusive-cap-initial-signed-grant]
+0.590	tests/system/py/test_e11_t5_store_write_quota.py::test_genuine_signed_token_completion_preserves_write_quota_category_and_prior_grant[inclusive-cap-signed-renewal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_store_write_quota.py::test_genuine_signed_token_completion_preserves_write_quota_category_and_prior_grant[one-byte-over-initial-signed-grant]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_store_write_quota.py::test_genuine_signed_token_completion_preserves_write_quota_category_and_prior_grant[one-byte-over-signed-renewal]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[channel-done-output_text]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[channel-done-refusal]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[part-done-output_text]
@@ -13780,10 +13811,12 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
+# module-cost: 0.116	tests/system/py/test_e11_t5_account_replay.py
 # module-cost: 0.063	tests/system/py/test_e11_t5_assistant_native.py
 # module-cost: 0.083	tests/system/py/test_e11_t5_assistant_native_transitions.py
 # module-cost: 0.128	tests/system/py/test_e11_t5_assistant_store.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
+# module-cost: 0.073	tests/system/py/test_e11_t5_store_write_quota.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
