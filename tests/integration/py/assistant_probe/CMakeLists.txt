@@ -53,3 +53,8 @@ add_executable(assistant_selected_files_probe probe.cpp)
 target_compile_definitions(assistant_selected_files_probe PRIVATE EDI_TEST_SELECTED_FILES=1)
 target_include_directories(assistant_selected_files_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_selected_files_probe PRIVATE edi::core)
+
+# Trusted fixture implementation of the existing private generated-resource seam.
+add_executable(assistant_skill_budget_probe skill_budget_probe.cpp)
+target_include_directories(assistant_skill_budget_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_skill_budget_probe PRIVATE edi::core)
