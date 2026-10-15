@@ -21,7 +21,7 @@ int main() {
     std::string line;
     while(std::getline(std::cin,line)) {
         try {
-            if(line.size()>8*Limits::context_bytes) throw std::invalid_argument("trusted fixture exceeds host envelope");
+            if(line.size()>8*edi::assistant::Limits::context_bytes) throw std::invalid_argument("trusted fixture exceeds host envelope");
             const auto input=edi::json::parse(line);
             index_bytes=input.at("index_json").string("index_json");
             resources.clear(); owned.clear();
