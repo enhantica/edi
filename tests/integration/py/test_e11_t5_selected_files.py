@@ -100,7 +100,7 @@ def test_real_bytes_manifest_utf8_chunks_eof_and_continuation(files):
     ({'file_id': 'unselected'}, 'invalid_argument'), ({'offset': 4}, 'invalid_argument'),
     ({'offset': 8}, 'invalid_argument'), ({'offset': 1000}, 'invalid_argument'),
     ({'offset': -1}, 'invalid_argument'), ({'max_bytes': 3}, 'invalid_argument'),
-    ({'max_bytes': 65537}, 'invalid_argument'), ({'path': '/unselected/owned-marker'}, 'invalid_argument'),
+    ({'max_bytes': 65537}, 'resource_exhausted'), ({'path': '/unselected/owned-marker'}, 'invalid_argument'),
 ])
 def test_wrong_identity_range_and_path_never_grant_read(files, fields, code):
     admitted = admit(files); begin(files)

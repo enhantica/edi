@@ -148,6 +148,8 @@ def test_actual_consent_and_native_continuation_receive_immutable_original_bytes
 
 def test_genuine_active_inference_refuses_intake_without_cancelling_it(selected_vm, signer):
     vm = selected_vm; prior.authenticate(vm, signer)
+    vm.command('sign_in')  # Genuine acknowledgement of this ready connection's current disclosure.
+    assert not vm.last['vm']['context_consent_required'], 'I15/files: actual current context consent precedes genuine inference setup'
     index = prior.begin(vm, 'Keep this genuine current provider operation')
     before = vm.last; result = vm.command('selected_begin')
     assert result['reply']['request_id'] == '', 'I15/FILE1: real active inference refuses opening an intake'
@@ -158,10 +160,22 @@ def test_genuine_active_inference_refuses_intake_without_cancelling_it(selected_
 
 def test_real_connection_retirement_does_not_rebind_old_intake(selected_vm, signer, tmp_path):
     vm = selected_vm; prior.authenticate(vm, signer); path = planted(tmp_path)
+    previous_browser = vm.last['browsers'][-1]
+    previous_browser_count = len(vm.last['browsers'])
     old = begin(vm)
     vm.command('sign_out')
     assert not vm.last['vm']['connected'], 'I12/FILE1: actual owner sign-out genuinely retires the native connection'
+    revocations = [(i, request) for i, request in enumerate(vm.last['requests'])
+                   if request['url'] == prior.native.AUTH + '/independent-revoke' and not request['cancelled']]
+    assert len(revocations) == 1, 'I12/FILE1: real sign-out exposes its actual outstanding offline revocation'
+    revoke_index = revocations[0][0]
+    vm.respond(revoke_index, None)
+    vm.handled.add(revoke_index)
     prior.authenticate(vm, signer)
+    assert len(vm.last['browsers']) == previous_browser_count + 1, 'I12/FILE1: reconnect opens one genuine fresh authorization instead of reusing an old callback'
+    old_query = prior.native.parse_qs(prior.native.urlsplit(previous_browser).query)
+    fresh_query = prior.native.parse_qs(prior.native.urlsplit(vm.last['browsers'][-1]).query)
+    assert fresh_query['nonce'] != old_query['nonce'], 'I12/FILE1: new signed authentication is bound to its genuinely fresh nonce'
     before = vm.last; rejected = add(vm, old, [path])
     assert not rejected['reply']['accepted'] and rejected['vm']['selected_files'] == [], 'I12/I15/FILE1: a new real connection cannot reuse previous initiating authority'
     assert rejected['requests'] == before['requests'], 'I15/FILE1: stale account-scope completion performs no new request'
