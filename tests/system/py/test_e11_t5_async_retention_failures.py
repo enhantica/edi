@@ -83,6 +83,17 @@ def test_complete_real_fit_is_quarantined_without_stop_or_partial_success(role):
     assert observed['settled'] == 1 and len(observed['terminals']) == 1, (
         'I10/S5/S6: failed UI settlement receives the one actual complete scientific result'
     )
+    pending = [
+        event
+        for event in settled['events']
+        if event.get('type') == 'tool_result'
+        and event.get('call_id') == 'retained-call'
+        and event.get('pending') is True
+    ]
+    assert len(pending) == 1 and outcomes(settled) == [], (
+        'I10/S5/S6: failed host settlement preserves its pending public receipt '
+        'without committing a normal complete core outcome'
+    )
     complete = observed['terminals'][0]
     assert complete['pending'] is False and isinstance(complete['result'], dict), (
         'I3/S5/S6: quarantine retains the full bound terminal object, '
