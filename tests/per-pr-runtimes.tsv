@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T02:33:24Z
+# measured_utc = 2026-10-15T02:48:05Z
 #
-# Recorded from: E11-T5 seq7 frozen b6 core/native; completed focused tests-seq7-{core-corrected,core-final,status-corrected,owner-final,native-corrected}; failed nodes stay holes; UI-final writer refused passing runtime breaches, no UI measurements invented; unrelated prior rows retained
-# Collected tests: 13547; with a reported duration: 7462
+# Recorded from: E11-T5 seq8 first core transition checkpoint on frozen b6; tests-seq8-core-corrected.log 12 actual behavior reds and one positive control; previous bank values and holes preserved
+# Collected tests: 13560; with a reported duration: 7463
 # Module-scoped fixture costs recorded: 51
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13214
+# inventory_python = 13227
 # inventory_cpp = 333
-# inventory_measured = 11934
-# inventory_unmeasured = 1613
+# inventory_measured = 11935
+# inventory_unmeasured = 1625
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10005,6 +10005,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_text_limit_counts_decoded_utf8_bytes[unicode-at]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_text_limit_counts_decoded_utf8_bytes[unicode-over]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_without_a_project_is_nonmutating_and_attachment_retires_it
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_bound_output_exhaustion_revokes_existing_execution_scope[plan]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_bound_output_exhaustion_revokes_existing_execution_scope[question]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[completed-message-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[completed-message-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[function-call-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[function-call-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_connection_scope_replacement_does_not_forward_old_conversation[different-account]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_connection_scope_replacement_does_not_forward_old_conversation[same-account-reconnect]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_duplicate_user_approval_cannot_renew_original_deadline
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_failed_new_human_history_admission_is_transactional
+0.030	tests/system/py/test_e11_t5_assistant_transitions.py::test_live_message_fragmentation_remains_usable_before_item_completion
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_unknown_core_capability_cannot_gain_default_or_explicit_effort_authority[efforts0]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_unknown_core_capability_cannot_gain_default_or_explicit_effort_authority[efforts1]
 0.900	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-joint]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-single]
 0.910	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-joint]
