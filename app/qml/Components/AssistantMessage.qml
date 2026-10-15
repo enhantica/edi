@@ -12,6 +12,7 @@ Rectangle {
     required property string text
     property var payload: ({})
     property string status: ""
+    property bool highlighted: false
     color: "transparent"
     implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
     TextMetrics {
@@ -27,6 +28,8 @@ Rectangle {
         height: row.implicitHeight
         color: row.kind === "user" ? EaStyle.Colors.contentBackground : "transparent"
         radius: row.kind === "user" ? AppSizes.unit * 0.75 : 0
+        border.width: row.highlighted ? EaStyle.Sizes.borderThickness : 0
+        border.color: EaStyle.Colors.themeAccent
     }
     Column {
         id: content

@@ -234,6 +234,7 @@ Popup {
                         text: model.text
                         payload: model.payload
                         status: model.status
+                        highlighted: model.kind === "user" && model.id === conversation.jumpedUserId
                     }
                     property bool followsTail: true
                     property string jumpedUserId: ""
@@ -368,6 +369,8 @@ Popup {
                 }
                 Rectangle {
                     Layout.fillWidth: true
+                    Layout.leftMargin: -AppSizes.unit
+                    Layout.rightMargin: -AppSizes.unit
                     implicitHeight: EaStyle.Sizes.borderThickness
                     color: EaStyle.Colors.appBorder
                 }

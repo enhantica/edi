@@ -263,12 +263,14 @@ AppDialog {
             }
 
             RowLabel {
+                visible: !ApplicationInfo.assistantAvailable
                 text: qsTr("Assistant") + ":"
             }
             EaElements.Label {
                 objectName: "preferences.assistantUnavailableReason"
+                visible: !ApplicationInfo.assistantAvailable
                 width: dialog.controlWidth
-                text: ApplicationInfo.assistantAvailable ? qsTr("Use the assistant button in the app bar.") : ApplicationInfo.assistantUnavailableReason
+                text: ApplicationInfo.assistantUnavailableReason
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
             }

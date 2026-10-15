@@ -74,7 +74,7 @@ Rectangle {
         function onCountChanged() { composer.acknowledgeVisiblePrompt(); }
         function onDataChanged() { composer.acknowledgeVisiblePrompt(); }
     }
-    implicitHeight: composerContent.implicitHeight + AppSizes.unit
+    implicitHeight: composerContent.implicitHeight + AppSizes.unit * 1.5
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.appBorder
     radius: AppSizes.unit
@@ -115,9 +115,9 @@ Rectangle {
     }
     Column {
         id: composerContent
-        x: AppSizes.unit * 0.5
-        y: AppSizes.unit * 0.5
-        width: parent.width - AppSizes.unit
+        x: AppSizes.unit * 0.75
+        y: AppSizes.unit * 0.75
+        width: parent.width - AppSizes.unit * 1.5
         spacing: AppSizes.unit * 0.25
         ScrollView {
             ScrollBar.vertical: EaElements.ScrollBar {
@@ -185,7 +185,7 @@ Rectangle {
                 placeholderTextColor: EaStyle.Colors.themeForegroundMinor
                 font.family: EaStyle.Fonts.fontFamily
                 font.pixelSize: EaStyle.Sizes.fontPixelSize
-                padding: AppSizes.unit * 0.25
+                padding: AppSizes.unit * 0.4
                 background: null
                 Accessible.name: qsTr("Message to the assistant")
                 Keys.onReturnPressed: event => {

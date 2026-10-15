@@ -306,3 +306,8 @@ DT1 observes that equal context is not equal conversation ownership. The app-loc
 Owner0c48dbab5 extends the existing reply TextEdit, not canonical history. An app-only AssistantMarkdown helper installs a Qt QTextDocument on that same editor and invokes the built-in Markdown parser with MarkdownNoHTML. User/error/activity text uses setPlainText. Original row.text, history/request bytes and accessible role identity remain unchanged; selection/scroll use the existing control and EasyApplication colours. No HTML serialization, regex sanitizer or second Markdown parser is added.
 
 The document overrides loadResource without calling base and returns a valid empty resource, preventing both Qt's default local/data/parent loader and resource-provider fallback. Parsed image objects become literal alternative text, so no automatic media fetch occurs. Links have no opening action. The document is owned by the actual QQuickTextDocument editor wrapper, matching Qt6.11 caller-ownership semantics through delegate/helper lifetime. This is passive rendering only, with ordinary resource/selection/large-content/device runtime qualification still required.
+
+
+### Final compact desktop presentation
+
+Owner8746ea392 keeps the current compact composer and equal circular actions while increasing its inner text/toolbar inset slightly. The history divider spans the actual sidebar width. Previous/Next highlights only the real user row identified by the existing jumpedUserId cursor; ordinary scrolling and a new user admission clear that cursor through the existing list behavior. Supported platforms no longer repeat the appbar-button instruction in Preferences; unsupported-device explanation remains visible. No conversation, consent or provider authority changes.
