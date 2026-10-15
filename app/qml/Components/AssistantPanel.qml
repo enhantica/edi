@@ -331,6 +331,15 @@ Popup {
                     spacing: AppSizes.unit * 0.25
                     Item { Layout.fillWidth: true }
                     EaElements.ToolButton {
+                        id: previousUserButton
+                        background: Rectangle {
+                            implicitWidth: EaStyle.Sizes.toolButtonHeight
+                            implicitHeight: implicitWidth
+                            radius: width * 0.5
+                            color: previousUserButton.down || previousUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.contentBackground
+                            border.width: previousUserButton.activeFocus ? 1 : 0
+                            border.color: EaStyle.Colors.themeForegroundHighlight
+                        }
                         objectName: "assistant.previousUserMessage"
                         fontIcon: "chevron-up"
                         enabled: conversation.previousUserIndex >= 0
@@ -339,6 +348,15 @@ Popup {
                         onClicked: conversation.jumpToUser(-1)
                     }
                     EaElements.ToolButton {
+                        id: nextUserButton
+                        background: Rectangle {
+                            implicitWidth: EaStyle.Sizes.toolButtonHeight
+                            implicitHeight: implicitWidth
+                            radius: width * 0.5
+                            color: nextUserButton.down || nextUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.contentBackground
+                            border.width: nextUserButton.activeFocus ? 1 : 0
+                            border.color: EaStyle.Colors.themeForegroundHighlight
+                        }
                         objectName: "assistant.nextUserMessage"
                         fontIcon: "chevron-down"
                         enabled: conversation.nextUserIndex >= 0
