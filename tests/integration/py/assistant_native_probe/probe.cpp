@@ -39,7 +39,7 @@ int main(int argc,char** argv) {
                 result=fixture.dispatch(input);
                 if(op=="advance") connection->poll();
             }
-            QCoreApplication::processEvents();
+            if(op!="elapse_unpolled" && !input["defer_events"].toBool()) QCoreApplication::processEvents();
             auto output=fixture.snapshot();
             output["reply"]=result;
             output["state"]=connection ? decode(QByteArray::fromStdString(connection->state())) : QJsonValue();

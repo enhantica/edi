@@ -54,6 +54,7 @@ struct FixtureServices {
     std::int64_t wall=1800000000;
     std::uint64_t elapsed=100;
     std::string fail;
+    std::string absent_payload_key;
     native::NativeDependencies dependencies;
     std::function<void(const std::string&)> sink;
     bool failure(const std::string& name) {
@@ -75,6 +76,7 @@ struct FixtureServices {
         auto found=records.find(key(record));
         store_reads.push_back(Object{{"key",QString::fromStdString(key(record))},
             {"bytes",found==records.end()?0.:static_cast<double>(found->second.size())}});
+        if(key(record)==absent_payload_key) return {native::StoreStatus::absent,"contradictory-present-bytes"};
         return found==records.end() ? native::RecordRead{native::StoreStatus::absent,{}}
                                    : native::RecordRead{native::StoreStatus::ok,found->second};
     };
@@ -103,10 +105,21 @@ struct FixtureServices {
         auto op=input["op"].toString(); Object result;
             if(op=="store_put") {
                 records[input["key"].toString().toStdString()]=input["utf8"].toString().toUtf8();
-            } else if(op=="clear_store_receipts") {
+            } else if(op=="store_put_batch") {
+                for(const auto& row:input["records"].toArray()) {
+                    const auto record=row.toObject();records[record["key"].toString().toStdString()]=record["utf8"].toString().toUtf8();
+                }
+            } else if(op=="absent_payload") absent_payload_key=input["key"].toString().toStdString();
+            else if(op=="clear_store_receipts") {
                 store_reads=Array{};writes=Array{};erasures=Array{};
             } else if(op=="fail") fail=input["value"].toString().toStdString();
-            else if(op=="advance") {
+            else if(op=="elapse_unpolled") {
+                const auto delta=input["milliseconds"].toInteger();
+                if(delta < -1 || delta > 900000 || (delta < 0 && elapsed==0))
+                    throw std::invalid_argument("bounded independent clock control");
+                elapsed=static_cast<std::uint64_t>(static_cast<std::int64_t>(elapsed)+delta);
+                result={{"elapsed",static_cast<double>(elapsed)}};
+            } else if(op=="advance") {
                 wall+=static_cast<std::int64_t>(input["seconds"].toDouble());
                 elapsed+=static_cast<std::uint64_t>(input["milliseconds"].toDouble());
             } else if(op=="headers" || op=="data" || op=="finish") {

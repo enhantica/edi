@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T02:48:05Z
+# measured_utc = 2026-10-15T02:59:33Z
 #
-# Recorded from: E11-T5 seq8 first core transition checkpoint on frozen b6; tests-seq8-core-corrected.log 12 actual behavior reds and one positive control; previous bank values and holes preserved
-# Collected tests: 13560; with a reported duration: 7463
-# Module-scoped fixture costs recorded: 51
+# Recorded from: E11-T5 seq8 frozen b6 native/core archive seal; tests-seq8-native-corrected.log and tests-seq8-native-records-fixed.log; genuine Qt wire and signed record controls; actual passes and failed holes only; other bank values retained
+# Collected tests: 13592; with a reported duration: 7471
+# Module-scoped fixture costs recorded: 52
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13227
+# inventory_python = 13259
 # inventory_cpp = 333
-# inventory_measured = 11935
-# inventory_unmeasured = 1625
+# inventory_measured = 11943
+# inventory_unmeasured = 1649
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -9981,6 +9981,38 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::t
 0.200	tests/system/py/test_e11_t5_assistant_native.py::test_stateless_continuation_preserves_original_encrypted_reasoning_and_arguments
 0.160	tests/system/py/test_e11_t5_assistant_native.py::test_successful_http_with_streamed_failure_is_visible_and_never_completed[failed]
 0.160	tests/system/py/test_e11_t5_assistant_native.py::test_successful_http_with_streamed_failure_is_visible_and_never_completed[incomplete]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_absent_record_with_payload_is_not_silent_missing_data[0:]
+0.150	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_absent_record_with_payload_is_not_silent_missing_data[1:]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_absent_record_with_payload_is_not_silent_missing_data[2:]
+0.410	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_all_loaded_registration_metadata_shares_the_declared_retained_record_budget[2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_all_loaded_registration_metadata_shares_the_declared_retained_record_budget[3]
+0.140	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[backwards-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[backwards-finish]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[backwards-headers]
+0.140	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[before-idle-data]
+0.160	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[before-idle-finish]
+0.140	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[before-idle-headers]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[inclusive-idle-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[inclusive-idle-finish]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[inclusive-idle-headers]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[inclusive-total-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[inclusive-total-finish]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_callback_checks_its_deadline_without_a_prior_owner_poll[inclusive-total-headers]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_empty_association_cannot_become_matching_valid_registration_and_grant
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[context-invalid2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[conversation_id-invalid6]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[history-invalid0]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[request_id-invalid5]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[text-invalid3]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[tools-invalid1]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_malformed_nested_request_refuses_before_any_native_wire[turn_id-7]
+0.020	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_real_qt_transport_distinguishes_truncated_success_status_from_http_error[complete]
+0.020	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_real_qt_transport_distinguishes_truncated_success_status_from_http_error[http-error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_real_qt_transport_distinguishes_truncated_success_status_from_http_error[truncated]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_unsuccessful_inference_status_never_dispatches_valid_sse_tools[302]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_unsuccessful_inference_status_never_dispatches_valid_sse_tools[401]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_unsuccessful_inference_status_never_dispatches_valid_sse_tools[429]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native_transitions.py::test_unsuccessful_inference_status_never_dispatches_valid_sse_tools[500]
 1.370	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_elapsed_budget_includes_actual_queued_wait[expired-in-queue]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_elapsed_budget_includes_actual_queued_wait[useful-budget]
 2.790	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll[deadline-inside-work]
@@ -13633,6 +13665,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 0.099	tests/system/py/test_e11_t5_assistant_native.py
+# module-cost: 0.056	tests/system/py/test_e11_t5_assistant_native_transitions.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
