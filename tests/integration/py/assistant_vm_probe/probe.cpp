@@ -101,10 +101,13 @@ int main(int argc,char** argv) {
                 Array experiments;
                 for(const auto& experiment:value.experiments) {
                     Array axis,intensity,sigma,exclusions,phases;
-                    if(const auto values=experiment->data.two_theta.get())
-                        for(const auto item:*values)axis.push_back(item);
-                    for(const auto item:experiment->data.intensity_meas.get())intensity.push_back(item);
-                    for(const auto item:experiment->data.intensity_meas_su.get())sigma.push_back(item);
+                    if(experiment->data) {
+                        const auto& data=*experiment->data;
+                        if(const auto values=data.two_theta.get())
+                            for(const auto item:*values)axis.push_back(item);
+                        for(const auto item:data.intensity_meas.get())intensity.push_back(item);
+                        for(const auto item:data.intensity_meas_su.get())sigma.push_back(item);
+                    }
                     for(const auto& region:experiment->excluded_regions)
                         exclusions.push_back(Array{region->first.get(),region->second.get()});
                     for(const auto& phase:experiment->linked_structures)
