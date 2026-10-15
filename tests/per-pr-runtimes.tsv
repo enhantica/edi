@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T00:15:17Z
+# measured_utc = 2026-10-15T00:19:55Z
 #
-# Recorded from: unchanged prior bank plus tests-seq2-trials-expanded.log/.costs.json; forty-six actual passing protocol/single/joint/owner-kit nodes and thirteen failed nodes.
+# Recorded from: unchanged prior bank plus tests-seq2-reservation.log/.costs.json; two passing boundary nodes and nineteen actual boundary/history/reservation failures.
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,10 +27,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13064
+# inventory_python = 13067
 # inventory_cpp = 333
 # inventory_measured = 11827
-# inventory_unmeasured = 1570
+# inventory_unmeasured = 1573
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -9864,10 +9864,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.p
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_call_replay_is_independent_of_json_object_member_order
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_plan_response_cannot_be_reopened_by_a_late_callback[text_delta]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_plan_response_cannot_be_reopened_by_a_late_callback[turn_finished]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_conversation_history_bytes_cannot_be_bypassed_with_small_valid_deltas
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_conversation_history_count_preflights_complete_tool_and_result_pairs
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_fit_terminal_reservation_refuses_before_dispatch_when_history_cannot_hold_it
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_partial_arguments_across_distinct_calls_share_one_retained_budget
 0.020	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[ascii-at]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[ascii-over]
-0.010	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[unicode-at]
+0.020	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[unicode-at]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[unicode-over]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_public_json_depth_is_bounded_before_unknown_field_validation
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_repeated_output_index_cannot_change_its_original_call_identity[call_id-changed-call]

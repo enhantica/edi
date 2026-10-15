@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -314,3 +315,90 @@ def test_completed_call_replay_is_independent_of_json_object_member_order(host):
     assert replay['state']['pending_plan_id'] == first['state']['pending_plan_id'], (
         'I2/I3: replay does not create a second plan or execute the completed call again'
     )
+
+
+def test_conversation_history_count_preflights_complete_tool_and_result_pairs(host):
+    host.start()
+    binding = host.binding()
+    payloads = [
+        protocol.envelope(
+            'tool_call',
+            **binding,
+            call_id='count-' + str(i),
+            name='diagnostics',
+            project_id='project-A',
+            revision=host.last['state']['revision'],
+            arguments={},
+        )
+        for i in range(512)
+    ]
+    result = host.command('provider_chunks', payloads=payloads)
+    # One existing user row plus two rows per tool: 1+2*511=1023 fits, 1+2*512=1025 does not.
+    assert result['reply']['accepted'] == 511, (
+        'I3: composed history count admits only complete call/result pairs '
+        'through the inclusive 1024-row cap'
+    )
+    resource(result['reply']['last'])
+
+
+def test_conversation_history_bytes_cannot_be_bypassed_with_small_valid_deltas(host):
+    host.start()
+    binding = host.binding()
+    text = 'x' * 65536
+    payload = protocol.envelope('text_delta', **binding, text=text)
+    assert len(json.dumps(payload, separators=(',', ':')).encode()) < 1048576, (
+        'I3: every individual delta fits the independent message-byte limit'
+    )
+    result = host.command('provider_repeat', count=33, payload=payload)
+    assert result['reply']['accepted'] < 33, (
+        'I3: bounded single messages cannot grow one conversation past its '
+        'aggregate history-byte limit'
+    )
+    resource(result['reply']['last'])
+
+
+def test_fit_terminal_reservation_refuses_before_dispatch_when_history_cannot_hold_it(host):
+    spec = importlib.util.spec_from_file_location(
+        'e11_t5_reservation_trials', Path(__file__).with_name('test_e11_t5_assistant_trials.py')
+    )
+    trials = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(trials)
+    trials.load_source(host)
+    paths = trials.useful_paths(host)
+    original = host.last['snapshot']
+    binding = host.binding()
+    payload = protocol.envelope('text_delta', **binding, text='x' * 65536)
+    admitted = host.command('provider_repeat', count=16, payload=payload)
+    assert admitted['reply']['accepted'] == 16, (
+        'I3/I8: the finite history prefix remains usable before reserving a fit outcome'
+    )
+    minimum_history = [
+        {'type': 'message', 'role': 'user', 'text': 'u'},
+        {'type': 'message', 'role': 'assistant', 'text': 'x' * 1048576},
+    ]
+    encoded_minimum = len(json.dumps(minimum_history, separators=(',', ':')).encode())
+    assert encoded_minimum + 1048576 > 2097152, (
+        'I3: complete independently encoded history plus one full terminal '
+        'exceeds the approved role cap even before call/start wrappers'
+    )
+    plan = trials.approve(host, paths)
+    begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+    assert begun['reply']['ok'], (
+        'I8: a candidate without worker work fits the remaining bounded history'
+    )
+    trial = begun['reply']['value']['trial_id']
+    host.tool(
+        'set_free', {'flags': [{'path': path, 'free': True} for path in paths]}, plan_id=plan
+    )
+    before = host.command('inspect')
+    fitted = host.tool('fit_trial', {'trial_id': trial}, plan_id=plan)
+    resource(fitted['reply'])
+    assert not fitted['state']['active_job_id'], (
+        'I10: insufficient whole-terminal capacity refuses before optimizer dispatch'
+    )
+    assert fitted['snapshot'] == original, (
+        'I8/I10: terminal-capacity refusal preserves exact accepted scientific state'
+    )
+    assert len([e for e in fitted['events'] if e.get('type') == 'job_started']) == len([
+        e for e in before['events'] if e.get('type') == 'job_started'
+    ]), 'I10: refusing a terminal reservation starts no background scientific job'

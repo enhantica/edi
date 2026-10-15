@@ -252,6 +252,15 @@ int main() {
             } else if (op == "clear_requests") {
                 if(requests.size()>1) requests.erase(requests.begin(),requests.end()-1);
                 result=Object{};
+            } else if (op == "provider_chunks") {
+                edi::assistant::Reply last;
+                int accepted=0;
+                for(const auto& payload:input.at("payloads").array("payloads")) {
+                    last=controller.provider_event(edi::json::write(payload));
+                    if(!last.ok) break;
+                    ++accepted;
+                }
+                result=Object{{"accepted",accepted},{"last",reply(last)}};
             } else if (op == "provider_repeat") {
                 edi::assistant::Reply last;
                 int accepted=0;
