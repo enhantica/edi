@@ -11,6 +11,19 @@ using namespace detail;
 struct OpenAiStream::State {
     std::string turn, request, pending, record;
     Reply first_failure;
+    bool failure_cached = false;
+    const char* failure_code = "invalid_argument";
+    void latch_failure(std::string_view code) noexcept {
+        // Rejection must survive every later diagnostic allocation, including
+        // failure after the terminal flag was set but its sink delivery threw.
+        failed = true;
+        for (const char* known : {"invalid_argument", "invalid_json", "resource_exhausted", "interrupted", "provider_error"})
+            if (code == known) { failure_code = known; break; }
+    }
+    Reply failed_reply() const {
+        if (failure_cached) return first_failure;
+        return failure(failure_code, "The provider stream failed before its diagnostic could be retained");
+    }
     Sink sink;
     const char* diagnostic_stage = "SSE framing";
     std::string diagnostic(const std::string& reason) const {
@@ -349,7 +362,7 @@ OpenAiStream::OpenAiStream(std::string turn, std::string request, Sink sink) : s
 OpenAiStream::~OpenAiStream() = default;
 Reply OpenAiStream::feed(std::string_view bytes) {
     auto& state = *state_;
-    if (state.failed) return state.first_failure;
+    if (state.failed) return state.failed_reply();
     try {
         state.diagnostic_stage = "SSE framing";
         if (bytes.size() > Limits::stream_wire_bytes - state.wire) refuse("resource_exhausted", "Provider wire limit exceeded");
@@ -369,20 +382,19 @@ Reply OpenAiStream::feed(std::string_view bytes) {
         }
         return success();
     } catch (const Refusal& e) {
-        // Retain the first complete, already bounded public refusal. Later calls
-        // neither consume more wire nor replace it with a lifecycle message.
-        // Construct the reply before publishing failed state.
+        state.latch_failure(e.code);
         state.first_failure = failure(e.code, state.diagnostic(e.what()));
-        state.failed = true;
-        return state.first_failure;
+        state.failure_cached = true;
+        return state.failed_reply();
     } catch (const std::exception& error) {
+        state.latch_failure("invalid_argument");
         state.first_failure = failure("invalid_argument", state.exception_diagnostic(error));
-        state.failed = true;
-        return state.first_failure;
+        state.failure_cached = true;
+        return state.failed_reply();
     }
 }
 Reply OpenAiStream::finish() {
-    if (state_->failed) return state_->first_failure;
+    if (state_->failed) return state_->failed_reply();
     if (!state_->terminal || !state_->pending.empty() || !state_->record.empty()) return failure("interrupted", "Provider stream ended before settlement");
     return success();
 }

@@ -129,3 +129,12 @@ missing-member or expected-type errors for fixed app-owned field names are retai
 values and exception strings still receive a generic sanitized reason. The first-cause cache preserves
 that same bounded reason through later feed/finish. Acceptance, execution and resource categories do
 not change, and this does not identify the live omitted item or complete the broader diagnostic work.
+
+Decoder rejection is latched without allocation before either catch handler prepares its diagnostic.
+If preparation throws, later feed/finish remain rejected even when a terminal flag was already set;
+they use a fixed bounded fallback rather than an unavailable cache. The fallback retains current
+app-owned refusal categories through fixed labels; unclassified exceptions retain invalid_argument.
+A fully prepared first safe reply is published separately and survives later reply-copy failures.
+Fallback/reply construction can still throw under exhaustion, but cannot reopen the decoder, consume
+more wire or publish a successful terminal. No permanent-memory delivery guarantee, resource-category
+redesign or output/tool-policy change follows from this rejection fence.
