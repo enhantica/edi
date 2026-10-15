@@ -92,7 +92,7 @@ Popup {
                     anchors.right: parent.right
                     anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.5
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: AppSizes.unit * 0.5
+                    spacing: AppSizes.unit
                     EaElements.Button {
                         id: connectionButton
                         objectName: "assistant.connection"
@@ -150,13 +150,18 @@ Popup {
                         ToolTip.text: qsTr("Usage data unavailable")
                         Accessible.name: qsTr("Usage data unavailable")
                         Accessible.description: qsTr("This connection does not provide context or subscription usage metrics.")
-                        contentItem: Rectangle {
-                            implicitWidth: AppSizes.unit
-                            implicitHeight: AppSizes.unit
-                            radius: width * 0.5
-                            color: "transparent"
-                            border.width: 2
-                            border.color: EaStyle.Colors.themeForegroundDisabled
+                        contentItem: Item {
+                            implicitWidth: AppSizes.unit * 0.7
+                            implicitHeight: AppSizes.unit * 0.7
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: AppSizes.unit * 0.7
+                                height: width
+                                radius: width * 0.5
+                                color: "transparent"
+                                border.width: 2
+                                border.color: EaStyle.Colors.themeForegroundDisabled
+                            }
                         }
                         onClicked: usageDialog.open()
                     }
@@ -326,50 +331,20 @@ Popup {
                     text: qsTr("Inspect outgoing project context")
                     onClicked: connectionDialog.open()
                 }
-                RowLayout {
+                Rectangle {
                     Layout.fillWidth: true
-                    spacing: AppSizes.unit * 0.25
-                    Item { Layout.fillWidth: true }
-                    EaElements.ToolButton {
-                        id: previousUserButton
-                        background: Rectangle {
-                            implicitWidth: EaStyle.Sizes.toolButtonHeight
-                            implicitHeight: implicitWidth
-                            radius: width * 0.5
-                            color: previousUserButton.down || previousUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.contentBackground
-                            border.width: previousUserButton.activeFocus ? 1 : 0
-                            border.color: EaStyle.Colors.themeForegroundHighlight
-                        }
-                        objectName: "assistant.previousUserMessage"
-                        fontIcon: "chevron-up"
-                        enabled: conversation.previousUserIndex >= 0
-                        ToolTip.text: qsTr("Previous user message")
-                        Accessible.name: ToolTip.text
-                        onClicked: conversation.jumpToUser(-1)
-                    }
-                    EaElements.ToolButton {
-                        id: nextUserButton
-                        background: Rectangle {
-                            implicitWidth: EaStyle.Sizes.toolButtonHeight
-                            implicitHeight: implicitWidth
-                            radius: width * 0.5
-                            color: nextUserButton.down || nextUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.contentBackground
-                            border.width: nextUserButton.activeFocus ? 1 : 0
-                            border.color: EaStyle.Colors.themeForegroundHighlight
-                        }
-                        objectName: "assistant.nextUserMessage"
-                        fontIcon: "chevron-down"
-                        enabled: conversation.nextUserIndex >= 0
-                        ToolTip.text: qsTr("Next user message")
-                        Accessible.name: ToolTip.text
-                        onClicked: conversation.jumpToUser(1)
-                    }
+                    implicitHeight: EaStyle.Sizes.borderThickness
+                    color: EaStyle.Colors.appBorder
                 }
                 AssistantComposer {
                     id: composer
                     Layout.fillWidth: true
                     assistant: panel.assistant
                     toggleControl: panel.toggleControl
+                    hasPreviousUserMessage: conversation.previousUserIndex >= 0
+                    hasNextUserMessage: conversation.nextUserIndex >= 0
+                    onPreviousUserRequested: conversation.jumpToUser(-1)
+                    onNextUserRequested: conversation.jumpToUser(1)
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.

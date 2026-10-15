@@ -265,3 +265,15 @@ The native URL DropArea moves from the nested composer to ONE visible/current ch
 PREF2 separates the existing local preference/selection diagnostic from unrelated operation/provider/scientific/storage errors inside the VM. The existing lastError property presents an operation error first, then the local preference diagnostic; no new public error service/API or string-equality ownership guess is introduced. Confirmed read/absence recovery, restored supported saved choices and successful explicit saves (including same-value retries) retire only their owned diagnostic. A valid explicit choice replaces an invalid/unavailable selection warning; failed read/save remains visible as appropriate. A restored in-memory choice does not pretend a still-failed store read recovered. Native/provider/fit failures remain untouched. This extends existing configured-store/notify/getter paths.
 
 The two small neutral navigation buttons retain visible circular backings at rest using the existing content-background/hover/focus colours and ToolButton dimensions. Icons, IDs, actual user-boundary logic, disabled ends, selection/tail behavior and the larger primary composer action remain unchanged. No selector background, widget fork, new action or additional opener is added.
+
+
+### Owner-revised composer hierarchy
+
+Ownerbef37ebaa replaces the blue primary with theme-bound black/white Send/Stop and contrasting icons. Disabled admission stays disabled and visibly subdued. The smaller normal secondary user-boundary buttons now follow the primary inside the same composer toolbar; the existing ListView owns navigation and passes only internal QML availability/signals. Compact flat selectors share the remaining toolbar width. A conversation/composer divider, spaced existing header actions and smaller usage glyph preserve the actual sidebar geometry and hit target. No new provider capability or C++ interface is introduced.
+
+Ownerd03c7aff4 uses Effort as the disconnected/undiscovered placeholder, then the genuine current catalog choice (Low, High, etc.). The canonical empty choice reads Auto and explains that the provider chooses; no inferred level, settings/wire mutation or guessed connected state is introduced.
+
+
+### Cause-specific preference persistence recovery
+
+PREF3 keeps an unsuccessful explicit write separate from read/selection diagnostics inside the existing VM. Reading an older pair, confirmed absence or restoring an available in-memory choice cannot acknowledge that a newer explicit choice was persisted. Only a successful explicit write through the existing sync/flush path, or retirement of that configured store's ownership, clears its save cause. Same-value retries and pre-staging/sync/flush exceptions use that same boundary. Existing unrelated operation errors retain priority; no public error/settings interface is added.

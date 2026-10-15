@@ -13,6 +13,10 @@ Rectangle {
     id: composer
     required property AssistantViewModel assistant
     required property Item toggleControl
+    property bool hasPreviousUserMessage: false
+    property bool hasNextUserMessage: false
+    signal previousUserRequested()
+    signal nextUserRequested()
     property int textRevision: 0
     property int selectionRevision: -1
     property int savedSelectionStart: 0
@@ -183,6 +187,10 @@ Rectangle {
             }
         }
         RowLayout {
+            id: composerToolbar
+            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth
+                - Math.max(sendButton.implicitWidth, stopButton.implicitWidth)
+                - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * 6)
             width: parent.width
             spacing: AppSizes.unit * 0.25
             TextMetrics {
@@ -234,7 +242,7 @@ Rectangle {
                 }
                 objectName: "assistant.model"
                 Layout.preferredWidth: modelLabelMetrics.advanceWidth + AppSizes.unit * 2.5
-                Layout.maximumWidth: composerContent.width * 0.45
+                Layout.maximumWidth: composerToolbar.choiceWidth * 0.5
                 background: Rectangle {
                     implicitHeight: EaStyle.Sizes.comboBoxHeight
                     color: "transparent"
@@ -251,13 +259,13 @@ Rectangle {
             EaElements.ComboBox {
                 id: efforts
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: stopButton
+                KeyNavigation.tab: stopButton.visible ? stopButton : sendButton
                 KeyNavigation.backtab: models
                 textFormat: Text.PlainText
                 readonly property var effortValues: [""].concat(composer.assistant.availableEfforts)
                 function effortLabel(value) {
                     switch (value) {
-                    case "": return qsTr("Default");
+                    case "": return qsTr("Auto");
                     case "none": return qsTr("None");
                     case "low": return qsTr("Low");
                     case "medium": return qsTr("Medium");
@@ -267,11 +275,12 @@ Rectangle {
                     default: return qsTr("Unavailable");
                     }
                 }
-                displayText: qsTr("Effort: %1").arg(effortLabel(composer.assistant.selectedEffort))
+                displayText: !composer.assistant.connected || composer.assistant.models.count === 0
+                    || models.currentIndex < 0 || currentIndex < 0 ? qsTr("Effort") : currentText
                 currentIndex: effortValues.indexOf(composer.assistant.selectedEffort)
                 objectName: "assistant.effort"
                 Layout.preferredWidth: effortLabelMetrics.advanceWidth + AppSizes.unit * 2.5
-                Layout.maximumWidth: composerContent.width * 0.4
+                Layout.maximumWidth: composerToolbar.choiceWidth * 0.5
                 background: Rectangle {
                     implicitHeight: EaStyle.Sizes.comboBoxHeight
                     color: "transparent"
@@ -281,7 +290,7 @@ Rectangle {
                 }
                 model: effortValues.map(value => effortLabel(value))
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
-                ToolTip.text: composer.assistant.selectedEffort === "" ? qsTr("Provider default: the model or provider chooses the reasoning effort") : qsTr("Reasoning effort: %1").arg(currentText)
+                ToolTip.text: !composer.assistant.connected || composer.assistant.models.count === 0 ? qsTr("Reasoning effort is available after sign-in and model discovery") : composer.assistant.selectedEffort === "" ? qsTr("Provider default: the model or provider chooses the reasoning effort") : qsTr("Reasoning effort: %1").arg(currentText)
                 EaElements.ToolTip {
                     text: efforts.ToolTip.text
                     visible: (efforts.hovered || efforts.activeFocus) && EaGlobals.Vars.showToolTips && text !== ""
@@ -296,18 +305,19 @@ Rectangle {
                     implicitWidth: EaStyle.Sizes.toolButtonHeight * 1.2
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: stopButton.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeBackgroundDisabled
+                    color: EaStyle.Colors.isDarkPalette ? "white" : "black"
+                    opacity: stopButton.enabled ? 1 : 0.35
                 }
                 contentItem: EaElements.Label {
                     text: stopButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: stopButton.font.pixelSize * 1.25
-                    color: stopButton.enabled ? "white" : EaStyle.Colors.themeForegroundDisabled
+                    color: EaStyle.Colors.isDarkPalette ? "black" : "white"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: sendButton
+                KeyNavigation.tab: previousUserButton
                 KeyNavigation.backtab: efforts
                 objectName: "assistant.stop"
                 fontIcon: "stop"
@@ -324,19 +334,20 @@ Rectangle {
                     implicitWidth: EaStyle.Sizes.toolButtonHeight * 1.2
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: sendButton.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeBackgroundDisabled
+                    color: EaStyle.Colors.isDarkPalette ? "white" : "black"
+                    opacity: sendButton.enabled ? 1 : 0.35
                 }
                 contentItem: EaElements.Label {
                     text: sendButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: sendButton.font.pixelSize * 1.25
-                    color: sendButton.enabled ? "white" : EaStyle.Colors.themeForegroundDisabled
+                    color: EaStyle.Colors.isDarkPalette ? "black" : "white"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: composer.toggleControl
-                KeyNavigation.backtab: stopButton
+                KeyNavigation.tab: previousUserButton
+                KeyNavigation.backtab: efforts
                 objectName: "assistant.send"
                 fontIcon: "arrow-up"
                 text: qsTr("Send")
@@ -346,6 +357,46 @@ Rectangle {
                 enabled: composer.assistant.connected && !composer.assistant.canCancel && editor.text.trim().length > 0
                 Accessible.name: text
                 onClicked: composer.submit()
+            }
+            EaElements.ToolButton {
+                id: previousUserButton
+                objectName: "assistant.previousUserMessage"
+                fontIcon: "chevron-up"
+                enabled: composer.hasPreviousUserMessage
+                background: Rectangle {
+                    implicitWidth: EaStyle.Sizes.toolButtonHeight * 0.8
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: previousUserButton.backgroundColor()
+                    border.width: previousUserButton.activeFocus ? 1 : 0
+                    border.color: EaStyle.Colors.themeForegroundHighlight
+                }
+                ToolTip.text: qsTr("Previous user message")
+                Accessible.name: ToolTip.text
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: sendButton.visible ? sendButton : stopButton
+                KeyNavigation.tab: nextUserButton
+                onClicked: composer.previousUserRequested()
+            }
+            EaElements.ToolButton {
+                id: nextUserButton
+                objectName: "assistant.nextUserMessage"
+                fontIcon: "chevron-down"
+                enabled: composer.hasNextUserMessage
+                background: Rectangle {
+                    implicitWidth: EaStyle.Sizes.toolButtonHeight * 0.8
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: nextUserButton.backgroundColor()
+                    border.width: nextUserButton.activeFocus ? 1 : 0
+                    border.color: EaStyle.Colors.themeForegroundHighlight
+                }
+                ToolTip.text: qsTr("Next user message")
+                Accessible.name: ToolTip.text
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: previousUserButton
+                KeyNavigation.tab: composer.toggleControl
+                onClicked: composer.nextUserRequested()
             }
         }
     }

@@ -140,7 +140,7 @@ struct AssistantViewModel::State {
     };
     std::optional<FileSelection> file_selection;
     Object core, native, plan, question;
-    QString model, effort, error, preference_error;
+    QString model, effort, error, preference_error, preference_save_error;
     // Edi preferences, scoped to this provider, never a connection ID or provider profile.
     QString choice_store, remembered_model, remembered_effort;
     bool restore_choice_pending = true, choice_warning_shown = false, choice_read_complete = false;
@@ -734,15 +734,15 @@ struct AssistantViewModel::State {
     void load_choice_preference() noexcept {
         try {
             const auto path = settings_file_path();
-            if (path.isEmpty()) return; // Never fall back to a personal/default QSettings store.
             if (path != choice_store) {
                 // Retire the old association before any fallible new-store preparation.
                 remembered_model.clear(); remembered_effort.clear();
-                preference_error.clear();
+                preference_error.clear(); preference_save_error.clear();
                 choice_read_complete = false;
                 restore_choice_pending = true; choice_warning_shown = false;
                 choice_store = path;
             }
+            if (path.isEmpty()) return; // Retired store ownership; never use a personal/default store.
             if (choice_read_complete) return;
             QSettings settings(path, QSettings::IniFormat);
             settings.sync(); // Import actual same-path recovery before interpreting absence.
@@ -797,20 +797,21 @@ struct AssistantViewModel::State {
             remembered_model = model; remembered_effort = effort;
             restore_choice_pending = false; choice_warning_shown = false;
             const auto path = settings_file_path();
-            if (path.isEmpty()) { preference_error.clear(); return; } // No personal/default-store fallback.
+            if (path.isEmpty()) { preference_error.clear(); preference_save_error.clear(); return; } // No personal/default-store fallback.
             QSettings settings(path, QSettings::IniFormat);
             // A single value binds the effort to its actual model; fallback never writes this value.
             settings.setValue(QStringLiteral("Assistant/Providers/chatgpt/selection"), QStringList{model, effort});
             settings.sync();
             if (settings.status() != QSettings::NoError) {
-                preference_error = QObject::tr("The assistant selection changed, but its preference could not be saved.");
+                preference_save_error = QObject::tr("The assistant selection changed, but its preference could not be saved.");
                 return;
             }
             choice_read_complete = true;
             store_settings_now(); // The existing browser flush; desktop settings already synced.
+            preference_save_error.clear();
             preference_error.clear();
         } catch (...) {
-            try { preference_error = QObject::tr("The assistant selection changed, but its preference could not be saved."); } catch (...) {}
+            try { preference_save_error = QObject::tr("The assistant selection changed, but its preference could not be saved."); } catch (...) {}
         }
     }
     void select_from_catalog(const QJsonArray& choices) {
@@ -998,7 +999,7 @@ QVariantMap AssistantViewModel::pendingPlan() const { return state_->plan.toVari
 QVariantMap AssistantViewModel::pendingQuestion() const { return state_->question.toVariantMap(); }
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
 bool AssistantViewModel::canCancel() const { return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
-QString AssistantViewModel::lastError() const { return state_->error.isEmpty() ? state_->preference_error : state_->error; }
+QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : state_->preference_error; }
 QString AssistantViewModel::contextPreview() const { return state_->controller ? QString::fromStdString(state_->controller->context()) : QString(); }
 bool AssistantViewModel::contextConsentRequired() const {
     return !state_->controller || QJsonDocument(object(state_->controller->context())).toJson(QJsonDocument::Compact) != state_->consented_context;
