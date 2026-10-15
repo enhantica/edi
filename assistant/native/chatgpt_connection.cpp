@@ -35,6 +35,31 @@ Reply ok(const Object& o = {}) { return {true, {}, json(o)}; }
 Reply no(const QString& message, const QString& code = "edi.assistant.provider_error") {
     return {false, code.toStdString(), json({{"message", message.left(static_cast<qsizetype>(Limits::error_bytes / 4))}})};
 }
+// Only edi's own decoder diagnostic is accepted here, never a provider body.
+QString bounded_diagnostic(const QString& source) {
+    QByteArray bytes;
+    for (qsizetype i = 0; i < source.size();) {
+        const auto c = source.at(i);
+        const qsizetype width = c.isHighSurrogate() && i + 1 < source.size() && source.at(i + 1).isLowSurrogate() ? 2 : 1;
+        if (c.unicode() >= 32 && c.unicode() != 127) {
+            const auto part = source.mid(i, width).toUtf8();
+            if (static_cast<std::uint64_t>(bytes.size() + part.size()) > Limits::error_bytes) break;
+            bytes += part;
+        }
+        i += width;
+    }
+    return QString::fromUtf8(bytes);
+}
+QString decoder_reason(const Reply& result, bool finishing) {
+    QString reason;
+    if (result.value.size() <= Limits::message_bytes)
+        reason = QJsonDocument::fromJson(QByteArray::fromStdString(result.value)).object().value("message").toString();
+    // unique() can name an arbitrary member supplied in streamed JSON/tool
+    // arguments. Preserve its actual category without copying that raw name.
+    if (reason.startsWith("Duplicate JSON member:")) reason = "Duplicate JSON member in streamed response.";
+    const QString prefix = finishing ? "Edi could not finish decoding the response. " : "Edi could not decode the streamed response. ";
+    return bounded_diagnostic(prefix + (reason.isEmpty() ? QString("No decoder reason was available.") : reason));
+}
 QString secret() {
     QByteArray bytes(32, Qt::Uninitialized);
     for (auto& c : bytes) c = static_cast<char>(QRandomGenerator::system()->generate() & 255);
@@ -151,7 +176,7 @@ struct ChatGptConnection::State : QObject {
         return value;
     }
     void set_error(const QString& message, const QString& code = "edi.assistant.provider_error") {
-        error = message.left(static_cast<qsizetype>(Limits::error_bytes / 4)); error_code = code;
+        error = bounded_diagnostic(message); error_code = code;
     }
     void retire_replay() noexcept {
         replay = {}; replay_groups.clear(); conversation_project.clear(); continuation_blocked = false;
@@ -749,7 +774,10 @@ Reply ChatGptConnection::send(const JsonText& input) {
         });
         const auto done = [&s, source](int status, QByteArray) {
             s.active_inference = 0;
-            if (status != 200 || !s.stream || !s.stream->finish().ok || s.pending_terminal.isEmpty()) { s.inference_failed("The provider request did not complete. Retry or reconnect."); return; }
+            if (status != 200 || !s.stream) { s.inference_failed("The provider request did not complete. Retry or reconnect."); return; }
+            const auto decoded = s.stream->finish();
+            if (!decoded.ok) { s.inference_failed(decoder_reason(decoded, true), q(decoded.code)); return; }
+            if (s.pending_terminal.isEmpty()) { s.inference_failed("Edi decoded no terminal response. Retry or reconnect."); return; }
             const auto output = QJsonDocument::fromJson(QByteArray::fromStdString(s.stream->output())).array();
             auto replay = s.replay;
             for (const auto& item : output) replay.append(item);
@@ -785,7 +813,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
         const auto data = [&s](QByteArray data) {
             if (!s.stream) return;
             const auto result = s.stream->feed(std::string_view(data.constData(), static_cast<std::size_t>(data.size())));
-            if (!result.ok) s.inference_failed("Provider stream was refused.", q(result.code));
+            if (!result.ok) s.inference_failed(decoder_reason(result, false), q(result.code));
         };
         s.active_inference = s.request({HttpMethod::post, QUrl("https://api.openai.com/v1/responses"),
             {{"Content-Type", "application/json"}, {"Authorization", "Bearer " + s.credentials.value("access_token").toString().toUtf8()}},

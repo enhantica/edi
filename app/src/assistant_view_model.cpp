@@ -327,10 +327,20 @@ struct AssistantViewModel::State {
 #ifndef __EMSCRIPTEN__
         const auto sink = [this](const std::string& text) {
             const auto incoming_generation = generation;
-            QMetaObject::invokeMethod(&owner, [this, text, incoming_generation] {
+            const auto incoming = object(text);
+            // Snapshot native diagnostics at the exact terminal emission, not
+            // after queued callbacks can change the connection's last error.
+            QString emitted_code;
+            if (incoming.value("type") == "turn_finished" && connection) {
+                const auto emitted_state = object(connection->state());
+                const auto code = emitted_state.value("last_error_code").toString();
+                if (incoming.value("connection_id") == emitted_state.value("connection_id") &&
+                    code.startsWith("edi.assistant.") && static_cast<std::uint64_t>(code.toUtf8().size()) <= Limits::id_bytes)
+                    emitted_code = code;
+            }
+            QMetaObject::invokeMethod(&owner, [this, text, incoming, emitted_code, incoming_generation] {
                 if (!publishing || !controller || incoming_generation != generation) return;
                 try {
-                    const auto incoming = object(text);
                     native = object(connection->state());
                     const auto current_turn = object(controller->state()).value("active_turn_id").toString();
                     const bool terminal = incoming.value("type") == "turn_finished" &&
@@ -341,7 +351,7 @@ struct AssistantViewModel::State {
                     if (!reply.ok) error = bounded_error(object(reply.value).value("message").toString());
                     if (terminal) {
                         if (incoming.value("status") == "completed" && reply.ok) failure_slot.reset();
-                        else retain_failure(incoming, QString::fromStdString(reply.code),
+                        else retain_failure(incoming, emitted_code.isEmpty() ? QString::fromStdString(reply.code) : emitted_code,
                             incoming.value("message").toString().isEmpty() ? error : incoming.value("message").toString());
                     }
                     if (incoming.value("type") == "connection" && reply.ok) {
