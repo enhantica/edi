@@ -167,7 +167,24 @@ struct Services : QObject {
                 case QNetworkReply::OperationCanceledError: failure = HttpFailure::cancelled; break;
                 case QNetworkReply::TimeoutError: failure = HttpFailure::timeout; break;
                 case QNetworkReply::SslHandshakeFailedError: failure = HttpFailure::tls; break;
-                default: if (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).isValid()) failure = HttpFailure::none; break;
+                case QNetworkReply::ContentAccessDenied:
+                case QNetworkReply::ContentOperationNotPermittedError:
+                case QNetworkReply::ContentNotFoundError:
+                case QNetworkReply::AuthenticationRequiredError:
+                case QNetworkReply::ContentConflictError:
+                case QNetworkReply::ContentGoneError:
+                case QNetworkReply::UnknownContentError:
+                case QNetworkReply::InternalServerError:
+                case QNetworkReply::OperationNotImplementedError:
+                case QNetworkReply::ServiceUnavailableError:
+                case QNetworkReply::UnknownServerError: {
+                    const auto status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                    if (status >= 400 && status <= 599) failure = HttpFailure::none;
+                    break;
+                }
+                // In particular ContentReSendError is not an ordinary HTTP rejection.
+                // Having headers never erases a genuine network/proxy/TLS/protocol failure.
+                default: break;
             }
             if (callbacks.finished) callbacks.finished(failure);
         }));

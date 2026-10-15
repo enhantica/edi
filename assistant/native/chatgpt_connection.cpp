@@ -78,6 +78,21 @@ struct ChatGptConnection::State : QObject {
     QTcpServer callback{this};
     QTimer timer{this};
     Object credentials, identity;
+    std::uint64_t loaded_record_bytes = 0;
+    struct LoadedRecord {
+        State* owner;
+        Object object;
+        std::uint64_t bytes;
+        LoadedRecord(State& state, Object value, std::uint64_t size) : owner(&state), object(std::move(value)), bytes(size) { owner->loaded_record_bytes += bytes; }
+        LoadedRecord(LoadedRecord&& other) noexcept : owner(std::exchange(other.owner, nullptr)), object(std::move(other.object)), bytes(other.bytes) {}
+        ~LoadedRecord() { if (owner) owner->loaded_record_bytes -= bytes; }
+        QJsonValue value(const QString& key) const { return object.value(key); }
+        operator const Object&() const { return object; }
+        Object take() noexcept {
+            if (owner) { owner->loaded_record_bytes -= bytes; owner = nullptr; }
+            return std::move(object);
+        }
+    };
     QJsonArray models, registrations;
     QString status = "disconnected", error, error_code, connection, registration, subject, label, host_id;
     QString attempt, nonce, verifier, expected_state, redirect, issued_client;
@@ -99,6 +114,8 @@ struct ChatGptConnection::State : QObject {
     std::map<std::uint64_t, std::shared_ptr<Operation>> operations;
     std::unique_ptr<OpenAiStream> stream;
     Object request_context, pending_terminal;
+    QJsonArray pending_calls;
+    std::uint64_t pending_call_bytes = 2;
     QJsonArray replay;
     QString conversation_project;
     struct Replay { qsizetype after; QJsonArray items; };
@@ -138,7 +155,7 @@ struct ChatGptConnection::State : QObject {
     void cancel_operations() {
         auto old = std::move(operations); operations.clear(); active_inference = 0;
         for (auto& [id, op] : old) { (void)id; op->settled = true; if (op->owned) op->owned->cancel(); }
-        stream.reset(); pending_terminal = {}; request_context = {};
+        stream.reset(); pending_terminal = {}; request_context = {}; pending_calls = {}; pending_call_bytes = 2;
     }
     void emit_connection(const QString& value) {
         status = value;
@@ -162,7 +179,7 @@ struct ChatGptConnection::State : QObject {
         if (auto found = operations.find(active_inference); found != operations.end()) {
             found->second->settled = true; if (found->second->owned) found->second->owned->cancel(); operations.erase(found);
         }
-        active_inference = 0; stream.reset(); pending_terminal = {}; request_context = {};
+        active_inference = 0; stream.reset(); pending_terminal = {}; request_context = {}; pending_calls = {}; pending_call_bytes = 2;
         set_error(message, code);
         if (!source.isEmpty() && sink) sink(json({{"schema", "edi.assistant/1"}, {"type", "turn_finished"},
             {"connection_id", connection}, {"turn_id", source.value("turn_id")}, {"request_id", source.value("request_id")},
@@ -171,12 +188,34 @@ struct ChatGptConnection::State : QObject {
     bool live(const std::shared_ptr<Operation>& op) const {
         return !op->settled && op->generation == generation && operations.contains(op->id);
     }
-    void operation_failed(const std::shared_ptr<Operation>& op, const QString& message, bool quota = false) {
+    void operation_failed(const std::shared_ptr<Operation>& op, const QString& message, bool quota = false) noexcept {
         if (!live(op)) return;
-        op->settled = true; operations.erase(op->id); if (op->owned) op->owned->cancel();
-        if (op->failed) { op->failed(); return; }
-        const QString code = quota ? "edi.assistant.resource_exhausted" : "edi.assistant.provider_error";
-        if (op->inference) inference_failed(message, code); else fail(message, code);
+        op->settled = true; operations.erase(op->id);
+        try { if (op->owned) op->owned->cancel(); } catch (...) {}
+        try {
+            if (op->failed) { op->failed(); return; }
+            const QString code = quota ? "edi.assistant.resource_exhausted" : "edi.assistant.provider_error";
+            if (op->inference) inference_failed(message, code); else fail(message, code);
+        } catch (...) {
+            // A failing retry clock/dependency must not escape a Qt receive callback.
+            // Retire the whole attempt; retain protected store contents for explicit recovery.
+            try { fail("The native connection could not settle its failed operation."); }
+            catch (...) { ++generation; signing_in = false; renewing = false; signing_out = false; status = "disconnected"; }
+        }
+    }
+    bool admit_callback(const std::shared_ptr<Operation>& op) {
+        if (!live(op)) return false;
+        try {
+            const auto sampled = now();
+            if (signing_out && sampled - revoke_started >= Limits::revoke_ms) { cancel_operations(); end_sign_out(false); return false; }
+            if (signing_in && sampled - sign_in_started >= Limits::sign_in_ms) { fail("ChatGPT sign-in deadline expired."); return false; }
+            const bool due = sampled - op->started >= op->timeout ||
+                (op->inference && sampled - op->last_data >= Limits::inference_idle_ms) ||
+                (signing_in && sampled - sign_in_started >= Limits::sign_in_ms) ||
+                (signing_out && sampled - revoke_started >= Limits::revoke_ms);
+            if (due) { operation_failed(op, "Provider operation deadline expired."); return false; }
+            return true;
+        } catch (...) { operation_failed(op, "The native connection clock or dependency failed."); return false; }
     }
     std::uint64_t request(HttpRequest input, std::function<void(int, QByteArray)> done,
                           std::function<void(QByteArray)> data = {}, std::function<void()> failed = {}) {
@@ -200,15 +239,17 @@ struct ChatGptConnection::State : QObject {
         const QPointer<State> owner(this);
         HttpCallbacks callbacks;
         callbacks.headers = [owner, op](int status, HttpHeaders headers) {
-            if (!owner || !owner->live(op)) return;
+            if (!owner || !owner->admit_callback(op)) return;
             try {
                 if (owner->requesting || op->headers || status < 100 || status > 599) throw std::invalid_argument("Invalid HTTP headers phase");
-                headers_bound(headers); op->headers = true; op->status = status;
+                headers_bound(headers);
+                if (op->inference && status != 200) { owner->operation_failed(op, "Provider inference HTTP status was unsuccessful."); return; }
+                op->headers = true; op->status = status;
             } catch (const detail::Refusal& e) { owner->operation_failed(op, "Provider header limit exceeded.", e.code == "resource_exhausted"); }
             catch (...) { owner->operation_failed(op, "Invalid provider transport sequence."); }
         };
         callbacks.data = [owner, op](QByteArray bytes) {
-            if (!owner || !owner->live(op)) return;
+            if (!owner || !owner->admit_callback(op)) return;
             try {
                 if (owner->requesting || !op->headers) throw std::invalid_argument("Data before headers");
                 if (static_cast<std::uint64_t>(bytes.size()) > op->limit - op->bytes) { owner->operation_failed(op, "Provider body limit exceeded.", true); return; }
@@ -217,7 +258,7 @@ struct ChatGptConnection::State : QObject {
             } catch (...) { owner->operation_failed(op, "Invalid provider transport sequence."); }
         };
         callbacks.finished = [owner, op](HttpFailure failure) {
-            if (!owner || !owner->live(op)) return;
+            if (!owner || !owner->admit_callback(op)) return;
             if (owner->requesting || failure != HttpFailure::none || !op->headers) { owner->operation_failed(op, "Provider request did not complete."); return; }
             op->settled = true; owner->operations.erase(op->id);
             auto owned = std::move(op->owned);
@@ -244,11 +285,32 @@ struct ChatGptConnection::State : QObject {
                  {{"Content-Type", "application/x-www-form-urlencoded"}}, fields.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::http_json_ms},
             [done = std::move(done)](int status, QByteArray body) { if (status != 200) throw std::invalid_argument("Authorization refused"); done(document(body)); });
     }
-    std::optional<Object> read(RecordKind kind, const QString& id) {
+    std::uint64_t record_usage() const {
+        auto used = loaded_record_bytes;
+        for (const auto* record : {&credentials, &identity, &revoking}) {
+            if (record->isEmpty()) continue;
+            const auto size = static_cast<std::uint64_t>(encoded(*record).size());
+            if (size > Limits::retained_record_bytes - used) detail::refuse("resource_exhausted", "Retained own-record limit exceeded");
+            used += size;
+        }
+        return used;
+    }
+    void admit_record(std::uint64_t bytes) const {
+        if (bytes > Limits::retained_record_bytes - record_usage()) detail::refuse("resource_exhausted", "Retained own-record limit exceeded");
+    }
+    std::optional<LoadedRecord> read(RecordKind kind, const QString& id) {
         auto record = services.read_record({kind, id.toStdString()});
-        if (record.status == StoreStatus::absent) return {};
-        if (record.status != StoreStatus::ok || record.bytes.size() > static_cast<qsizetype>(Limits::record_bytes)) throw std::invalid_argument("Own record unavailable");
-        return document(record.bytes, Limits::record_bytes);
+        if (record.status == StoreStatus::absent) {
+            if (!record.bytes.isEmpty()) throw std::invalid_argument("Absent record supplied content");
+            return {};
+        }
+        if (record.status != StoreStatus::ok) throw std::invalid_argument("Own record unavailable");
+        if (record.bytes.size() > static_cast<qsizetype>(Limits::record_bytes)) detail::refuse("resource_exhausted", "Own record exceeds limit");
+        admit_record(static_cast<std::uint64_t>(record.bytes.size()));
+        auto parsed = document(record.bytes, Limits::record_bytes);
+        const auto size = static_cast<std::uint64_t>(encoded(parsed).size());
+        admit_record(size);
+        return LoadedRecord(*this, std::move(parsed), size);
     }
     void save(RecordKind kind, const QString& id, const Object& record) {
         const auto bytes = encoded(record);
@@ -297,7 +359,7 @@ void ChatGptConnection::State::catalog() {
             detail::refuse("resource_exhausted", "Normalized catalog exceeds limit");
         models = next;
         if (!eligible) { fail("No account-visible model has a verified edi capability mapping."); return; }
-        renewing = false; error.clear(); error_code.clear(); emit_connection("ready");
+        signing_in = false; renewing = false; error.clear(); error_code.clear(); emit_connection("ready");
     }, true);
 }
 void ChatGptConnection::State::verify(Object tokens, const QString& client, bool renewal) {
@@ -329,7 +391,7 @@ void ChatGptConnection::State::verify(Object tokens, const QString& client, bool
         save(RecordKind::credentials, key, record);
         credentials = record; identity = mapping; registration = key; subject = verified_subject; label = verified_label;
         if (!registrations.contains(key)) registrations.append(key);
-        signing_in = false; nonce.clear(); verifier.clear(); expected_state.clear(); callback.close(); catalog();
+        nonce.clear(); verifier.clear(); expected_state.clear(); callback.close(); catalog();
     };
     if (renewal && tokens.value("id_token").toString().isEmpty()) { complete(subject, label); return; }
     get(QUrl("https://auth.openai.com/.well-known/openid-configuration"), [this, tokens, client, renewal, complete](Object metadata) {
@@ -482,15 +544,15 @@ Reply ChatGptConnection::sign_in() {
         if (host && s.host_id.isEmpty()) throw std::invalid_argument("Malformed host identity");
         if (s.registration.isEmpty() && !s.registrations.isEmpty()) s.registration = s.registrations.first().toString();
         if (!s.registration.isEmpty()) {
-            const auto mapping = s.read(RecordKind::registration, s.registration);
+            auto mapping = s.read(RecordKind::registration, s.registration);
             if (!mapping || mapping->value("client_id").toString().isEmpty() || mapping->value("subject").toString().isEmpty())
                 throw std::invalid_argument("Registration unavailable");
-            s.identity = *mapping; s.issued_client = mapping->value("client_id").toString();
+            s.issued_client = mapping->value("client_id").toString();
             if (s.issued_client == "dynamic_agent_client" || digest((s.issued_client + ':' + mapping->value("subject").toString()).toUtf8()) != s.registration)
                 throw std::invalid_argument("Registration identity mismatch");
             const auto previous_host = mapping->value("ext_agent_host_id").toString();
             if (previous_host.isEmpty() || (!s.host_id.isEmpty() && previous_host != s.host_id)) throw std::invalid_argument("Host identity mismatch");
-            s.host_id = previous_host;
+            s.host_id = previous_host; s.identity = mapping->take();
         } else { s.identity = {}; s.issued_client = "dynamic_agent_client"; }
         if (s.host_id.isEmpty()) s.host_id = "urn:uuid:" + QUuid::createUuid().toString(QUuid::WithoutBraces);
         if (!host) s.save(RecordKind::host, "host", {{"id", s.host_id}});
@@ -518,24 +580,27 @@ Reply ChatGptConnection::connect_saved(std::string id) {
     if (!registration_id(id)) return no("Invalid saved registration.");
     if (s.signing_in || s.renewing || s.signing_out || s.active_inference) return no("Stop the active native operation before reconnecting.");
     try {
-        const auto mapping = s.read(RecordKind::registration, q(id));
+        auto mapping = s.read(RecordKind::registration, q(id));
         if (!mapping || mapping->value("client_id").toString().isEmpty() || mapping->value("subject").toString().isEmpty() || mapping->value("blocked").toBool())
             throw std::invalid_argument("Registration is unavailable or requires recovery");
         const auto client = mapping->value("client_id").toString(); const auto subject = mapping->value("subject").toString();
         if (digest((client + ':' + subject).toUtf8()).toStdString() != id || client == "dynamic_agent_client") throw std::invalid_argument("Registration mismatch");
-        s.registration = q(id); s.identity = *mapping; s.host_id = mapping->value("ext_agent_host_id").toString();
-        s.subject = subject; s.label = mapping->value("label").toString();
-        const auto saved = s.read(RecordKind::credentials, q(id));
+        const auto host = mapping->value("ext_agent_host_id");
+        if (!host.isString() || host.toString().isEmpty()) throw std::invalid_argument("Registration has no host association");
+        s.registration = q(id); s.host_id = host.toString();
+        s.subject = subject; s.label = mapping->value("label").toString(); s.identity = mapping->take();
+        auto saved = s.read(RecordKind::credentials, q(id));
         if (!saved || saved->value("revoked_locally").toBool()) { if (s.release_records) s.release_records(); return sign_in(); }
         if (!permission(*saved) || saved->value("client_id") != client || saved->value("subject") != subject ||
             saved->value("ext_agent_host_id") != s.host_id || saved->value("refresh_token").toString().isEmpty()) throw std::invalid_argument("Saved authorization mismatch");
         ++s.generation; s.cancel_operations(); s.connection.clear(); s.models = {}; s.emit_connection("disconnected");
-        s.credentials = *saved; s.renewing = true;
+        s.credentials = saved->take(); s.renewing = true;
         QUrlQuery form; form.addQueryItem("grant_type", "refresh_token"); form.addQueryItem("client_id", client);
         form.addQueryItem("refresh_token", saved->value("refresh_token").toString()); form.addQueryItem("resource", "https://api.openai.com/v1");
         s.token(form, [&s, client](Object tokens) { s.verify(tokens, client, true); });
         return ok();
-    } catch (...) { s.fail("Saved ChatGPT authorization could not be renewed. Sign in again."); return no(s.error); }
+    } catch (const detail::Refusal& e) { s.fail("Saved authorization exceeded the assistant limit.", "edi.assistant." + q(e.code)); return no(s.error, s.error_code); }
+    catch (...) { s.fail("Saved ChatGPT authorization could not be renewed. Sign in again."); return no(s.error); }
 }
 Reply ChatGptConnection::send(const JsonText& input) {
     auto& s = *state_;
@@ -546,6 +611,36 @@ Reply ChatGptConnection::send(const JsonText& input) {
         }
         const auto parsed = detail::parse(input, Limits::request_bytes);
         detail::shape(parsed, {"schema", "type", "connection_id", "turn_id", "request_id", "model", "text", "attachments", "context", "history", "tools"}, {"effort", "conversation_id"});
+        for (const auto* key : {"schema", "type", "connection_id", "turn_id", "request_id", "model"}) detail::string(parsed, key);
+        detail::string(parsed, "text", true);
+        if (detail::has(parsed, "effort")) detail::string(parsed, "effort");
+        if (detail::has(parsed, "conversation_id")) detail::string(parsed, "conversation_id");
+        parsed.at("attachments").array("attachments");
+        parsed.at("history").array("history");
+        parsed.at("tools").array("tools");
+        const auto& strict_context = parsed.at("context"); strict_context.object("context");
+        if (detail::string(strict_context, "schema") != "edi.assistant.context/1") throw std::invalid_argument("Unsupported context");
+        if (detail::has(strict_context, "error")) {
+            const auto& error = strict_context.at("error");
+            detail::shape(error, {"code", "message"}); detail::string(error, "message");
+            if (detail::string(error, "code") != "edi.assistant.resource_exhausted") throw std::invalid_argument("Invalid context refusal");
+            detail::refuse("resource_exhausted", "Project context is unavailable within the assistant limit");
+        }
+        strict_context.at("parameters").array("parameters"); strict_context.at("diagnostics").array("diagnostics");
+        if (!strict_context.at("project").is_null()) {
+            const auto& project = strict_context.at("project"); project.object("project");
+            detail::string(project, "id"); detail::revision(project);
+        }
+        for (const auto& row : parsed.at("history").array("history")) {
+            row.object("history row"); const auto type = detail::string(row, "type");
+            if (type == "message") { detail::string(row, "role"); detail::string(row, "text", true); }
+            else if (type == "tool_call") { detail::string(row, "call_id"); detail::string(row, "name"); row.at("arguments").object("arguments"); }
+            else if (type == "tool_result") { detail::string(row, "call_id"); row.at("ok").boolean("ok"); detail::string(row, "code", true); row.at("result"); if (detail::has(row,"pending")) row.at("pending").boolean("pending"); }
+            else throw std::invalid_argument("Unknown history row");
+        }
+        for (const auto& tool : parsed.at("tools").array("tools")) {
+            detail::string(tool, "name"); detail::string(tool, "description"); tool.at("input_schema").object("input_schema");
+        }
         const auto source = QJsonDocument::fromJson(QByteArray::fromStdString(input)).object();
         if (source.value("schema") != "edi.assistant/1" || source.value("type") != "request" || source.value("connection_id") != s.connection)
             return no("This request belongs to another connection.");
@@ -583,7 +678,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
         if (!effort.isEmpty()) body["reasoning"] = Object{{"effort", effort}};
         auto wire = encoded(body);
         if (wire.size() > static_cast<qsizetype>(Limits::request_bytes)) return no("Outgoing request exceeds the assistant limit.", "edi.assistant.resource_exhausted");
-        s.request_context = source; s.pending_terminal = {}; const auto generation = s.generation; const auto connection = s.connection;
+        s.request_context = source; s.pending_terminal = {}; s.pending_calls = {}; s.pending_call_bytes = 2; const auto generation = s.generation; const auto connection = s.connection;
         s.stream = std::make_unique<OpenAiStream>(source.value("turn_id").toString().toStdString(), source.value("request_id").toString().toStdString(), [&s, source, generation, connection](const JsonText& input) {
             if (generation != s.generation) return;
             auto event = QJsonDocument::fromJson(QByteArray::fromStdString(input)).object(); event["connection_id"] = connection;
@@ -591,7 +686,14 @@ Reply ChatGptConnection::send(const JsonText& input) {
                 const auto project = source.value("context").toObject().value("project").toObject();
                 event["project_id"] = project.value("id").toString(); event["revision"] = project.isEmpty() ? QJsonValue("0") : project.value("revision");
             }
-            if (event.value("type") == "turn_finished") s.pending_terminal = event;
+            if (event.value("type") == "tool_call") {
+                const auto bytes = static_cast<std::uint64_t>(encoded(event).size());
+                const auto growth = bytes + (s.pending_calls.isEmpty() ? 0 : 1);
+                if (bytes > Limits::message_bytes || s.pending_calls.size() >= static_cast<qsizetype>(Limits::stream_calls) ||
+                    growth > Limits::stream_retained_bytes - s.pending_call_bytes)
+                    detail::refuse("resource_exhausted", "Pending provider calls exceed the inference buffer limit");
+                s.pending_calls.append(event); s.pending_call_bytes += growth;
+            } else if (event.value("type") == "turn_finished") s.pending_terminal = event;
             else if (s.sink) s.sink(json(event));
         });
         const auto done = [&s, source](int status, QByteArray) {
@@ -604,9 +706,20 @@ Reply ChatGptConnection::send(const JsonText& input) {
                 s.inference_failed("Provider continuation exceeds the assistant limit.", "edi.assistant.resource_exhausted"); return;
             }
             s.replay = replay; if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output});
-            auto terminal = std::exchange(s.pending_terminal, Object{}); s.stream.reset(); s.request_context = {};
+            auto terminal = std::exchange(s.pending_terminal, Object{});
+            auto calls = std::exchange(s.pending_calls, QJsonArray{}); s.pending_call_bytes = 2;
+            s.stream.reset();
+            const auto generation = s.generation;
             if (terminal.value("status") != "completed") s.set_error("The provider response failed, was incomplete or refused. Retry or reconnect.");
-            else { s.error.clear(); s.error_code.clear(); }
+            else {
+                s.error.clear(); s.error_code.clear();
+                for (const auto& call : calls) {
+                    if (generation != s.generation || s.request_context.isEmpty()) return;
+                    if (s.sink) s.sink(json(call.toObject()));
+                }
+            }
+            if (generation != s.generation || s.request_context.isEmpty()) return;
+            s.request_context = {};
             if (s.sink) s.sink(json(terminal));
         };
         const auto data = [&s](QByteArray data) {

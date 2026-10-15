@@ -34,3 +34,18 @@ validated discovery endpoint, bounded retries and local erasure independently of
 Both production archives compile against the locally qualified integrated SDK at this checkpoint. This does not
 prove offline fixture behavior, actual authentication, secure stores on other operating systems, CI SDK qualification
 or readiness. The real app-owner composition and public history/disclosure/UI integration are separate pending work.
+
+The common receive boundary checks inclusive operation, inference idle and owning sign-in/revocation deadlines
+before admitting headers, data or finish, including a backwards-clock refusal. Data cannot renew an already
+expired idle allowance. Sign-in remains one attempt through catalog settlement. An unsuccessful inference HTTP
+status never reaches SSE semantics. Complete function calls are retained until both the semantic response and
+actual transport finish succeed; text may stream earlier. A transport failure discards those unexecuted calls and
+settles the captured request as interrupted. The production Qt adapter preserves real network/protocol failures
+after headers; only Qt's explicit HTTP rejection categories with a corresponding error status remain HTTP replies.
+
+Native request fields and required nested objects/arrays/identities are validated before Qt conversions, replay
+changes or I/O. Empty own-host associations and an absent record carrying bytes refuse. Each loaded own record
+is charged while held, alongside current registration/credential/revocation objects; ownership transfer to the
+current slot avoids retaining an uncharged duplicate. Per-record/aggregate excess has the declared resource code
+and a bounded generated explanation. This scoped repair does not close pending request/rotation/socket/accounting
+or real-UI retention matrices, nor establish live provider access or CI qualification.
