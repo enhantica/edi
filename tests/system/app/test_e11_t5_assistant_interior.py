@@ -33,6 +33,22 @@ def test_actual_transcript_delegate_author_semantics():
         ) in output, (
             'I16/INT1: every actual author kind and literal-body control executes\n' + output
         )
+    for tag in ['running', 'completed', 'failed']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_command_activity_is_compact_and_discloses_originals(' + tag + ')'
+        ) in output, 'ACT1: every actual command status/disclosure control executes\n' + output
+    assert (
+        'PASS   : edi_app::AssistantInterior::'
+        'test_command_same_identity_updates_and_reused_row_retires_expansion()'
+    ) in output, 'ACT1: same-command updates and different-command reuse execute\n' + output
+    for tag in ['interrupted', 'failed']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_public_command_retirement_overrides_unfinished_original(' + tag + ')'
+        ) in output, (
+            'ACT1: public terminal status over unfinished command evidence executes\n' + output
+        )
     assert result.returncode == 0, (
         'I16/INT1: actual delegate presentation completes without hidden failures\n' + output
     )

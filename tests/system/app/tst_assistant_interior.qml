@@ -40,6 +40,132 @@ TestCase {
             result += " " + accessibleText(child);
         return result;
     }
+    function renderedRow(row) {
+        verify(waitForPolish(window), "ACT1: the actual command row completes layout");
+        window.update();
+        verify(waitForRendering(window.contentItem), "ACT1: the actual command row renders before input or observation");
+    }
+    function commandDisclosure(row) {
+        const controls = Ui.itemsWithProperty(row, "checkable").filter(control => control.visible && control.checkable && Ui.exposed(control));
+        verify(controls.length > 0, "ACT1: retained commands have a real reachable disclosure control");
+        return controls[0];
+    }
+    function literalCommandDetails(row, original) {
+        const editors = Ui.itemsWithProperty(row, "readOnly").filter(control => control.visible && control.text.includes(original.command));
+        verify(editors.length > 0, "ACT1: expanded actual command remains a complete selectable literal");
+        for (const value of [original.command, original.cwd, original.aggregatedOutput]) {
+            const editor = Ui.itemsWithProperty(row, "readOnly").find(control => control.visible && control.text.includes(value));
+            verify(editor !== undefined, "ACT1: expansion retains complete original command, working directory and admitted output");
+            compare(editor.textFormat, TextEdit.PlainText, "ACT1: command details never interpret untrusted markup");
+            compare(editor.readOnly, true, "ACT1: retained command details remain read-only");
+            compare(editor.selectByMouse, true, "ACT1: retained command details remain selectable");
+            const start = editor.text.indexOf(value);
+            editor.select(start, start + value.length);
+            compare(editor.selectedText, value, "ACT1: actual selected details preserve every original character");
+        }
+    }
+    function commandItem(status, exitCode) {
+        return {
+            id: "original-command",
+            type: "commandExecution",
+            command: "python -c 'print(\"<b>literal</b>\")'",
+            cwd: "/owned/work copy/測定",
+            status: status,
+            commandActions: [],
+            aggregatedOutput: "original <b>not HTML</b>\ncomplete output — 第二行",
+            exitCode: exitCode,
+            diagnosticMarker: "SECONDARY_TECHNICAL_ORIGINAL"
+        };
+    }
+    function test_command_activity_is_compact_and_discloses_originals_data() {
+        return [
+            {tag: "running", status: "inProgress", exitCode: null, summary: /running/i},
+            {tag: "completed", status: "completed", exitCode: 0, summary: /ran/i},
+            {tag: "failed", status: "failed", exitCode: 7, summary: /ran|fail/i}
+        ];
+    }
+    function test_command_activity_is_compact_and_discloses_originals(data) {
+        const original = commandItem(data.status, data.exitCode);
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command,
+            status: data.status === "inProgress" ? "in_progress" : data.status,
+            payload: original
+        });
+        verify(row !== null, "ACT1: actual production delegate accepts retained command activity");
+        renderedRow(row);
+        const collapsed = Ui.text(row);
+        verify(data.summary.test(collapsed), "ACT1: collapsed command summary truthfully distinguishes running from settled work");
+        verify(!collapsed.includes(original.aggregatedOutput) && !collapsed.includes(original.cwd), "ACT1: complete command details start collapsed rather than flooding normal transcript rows");
+        verify(!collapsed.includes(original.diagnosticMarker), "ACT1: raw event JSON starts behind secondary technical disclosure");
+        if (data.exitCode !== null)
+            verify(collapsed.includes(String(data.exitCode)), "ACT1: completed activity retains its actual exit code without implying scientific success");
+        const disclosure = commandDisclosure(row);
+        compare(disclosure.checked, false, "ACT1: original command disclosure starts closed");
+        mouseClick(disclosure);
+        renderedRow(row);
+        literalCommandDetails(row, original);
+        verify(!Ui.text(row).includes(original.diagnosticMarker), "ACT1: primary disclosure shows human-readable originals before raw technical JSON");
+        compare(JSON.stringify(row.payload), JSON.stringify(original), "ACT1: presentation does not rewrite retained command payload");
+        mouseClick(disclosure);
+        renderedRow(row);
+        compare(disclosure.checked, false, "ACT1: real disclosure can collapse again");
+        verify(!Ui.text(row).includes(original.aggregatedOutput), "ACT1: collapsed output no longer occupies the visible command row");
+    }
+    function test_command_same_identity_updates_and_reused_row_retires_expansion() {
+        const original = commandItem("inProgress", null);
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command, status: "in_progress", payload: original
+        });
+        verify(row !== null, "ACT1: actual command reuse control is constructed");
+        renderedRow(row);
+        mouseClick(commandDisclosure(row));
+        renderedRow(row);
+        const completed = Object.assign({}, original, {status: "completed", exitCode: 0, aggregatedOutput: original.aggregatedOutput + "\nfinal original tail"});
+        row.payload = completed;
+        row.status = "completed";
+        renderedRow(row);
+        compare(commandDisclosure(row).checked, true, "ACT1: same admitted command updates preserve the reader's explicit expansion");
+        literalCommandDetails(row, completed);
+        const replacement = Object.assign({}, original, {id: "different-command", command: "python -c 'print(2)'", aggregatedOutput: "new original output"});
+        row.payload = replacement;
+        row.text = replacement.command;
+        row.status = "in_progress";
+        renderedRow(row);
+        compare(commandDisclosure(row).checked, false, "ACT1: reusing a delegate for a different command retires the old expansion");
+        verify(!Ui.text(row).includes(completed.aggregatedOutput), "ACT1: replacement command cannot reveal prior retained output");
+    }
+    function test_public_command_retirement_overrides_unfinished_original_data() {
+        return [
+            {tag: "interrupted", status: "interrupted", summary: /interrupt|stopp|cancel/i},
+            {tag: "failed", status: "failed", summary: /fail|error/i}
+        ];
+    }
+    function test_public_command_retirement_overrides_unfinished_original(data) {
+        const original = commandItem("inProgress", null);
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command, status: "in_progress", payload: original
+        });
+        verify(row !== null, "ACT1: real unfinished original exists before public retirement");
+        renderedRow(row);
+        verify(/running/i.test(Ui.text(row)), "ACT1: real live public row supplies the positive running control");
+        row.status = data.status;
+        renderedRow(row);
+        verify(data.summary.test(Ui.text(row)) && !/running/i.test(Ui.text(row)), "ACT1: public interruption/failure cannot remain Running because original command evidence is unfinished");
+        compare(JSON.stringify(row.payload), JSON.stringify(original), "ACT1: retirement never fabricates a command completion, output or exit code");
+        mouseClick(commandDisclosure(row));
+        renderedRow(row);
+        literalCommandDetails(row, original);
+        row.destroy();
+        // Reconstructed literal row is a presentation control for the archive
+        // shape, not a claim of a real Session archive/reload integration run.
+        const restored = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command, status: data.status, payload: original
+        });
+        verify(restored !== null, "ACT1: retained public status and original payload can be reconstructed");
+        renderedRow(restored);
+        verify(data.summary.test(Ui.text(restored)) && !/running/i.test(Ui.text(restored)), "ACT1: reload-equivalent presentation keeps actual retirement visible without rewriting original evidence");
+        compare(JSON.stringify(restored.payload), JSON.stringify(original), "ACT1: reload-equivalent presentation preserves the original unknown command outcome");
+    }
     function test_literal_rows_keep_author_information_data() {
         return [
             {
