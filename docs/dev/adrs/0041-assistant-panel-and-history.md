@@ -7,7 +7,7 @@ Priority: High
 
 The assistant is a Session-owned view model, separate from the currently open ProjectViewModel. It remains available without a project and rebinds the controller whenever the project changes. The controller borrows the existing project and worker; approved edits enter ProjectViewModel's existing apply/preview door (ADR-0020). External edits and manual fit completion invalidate the assistant revision. Queued provider requests are fenced across rebinds. Closing a session detaches before child project destruction.
 
-`app/qml/Components/Assistant*.qml` adopts edi's existing EasyApplication components, theme, font and AppSizes spacing. The panel sits opposite the existing workflow sidebar. Preferences persist visibility and width, and reset restores their defaults. At narrow widths it overlays the content instead of compressing both chart and workflow controls below usability. The app-bar action and keyboard shortcut reopen it. Resizing is bounded by app spacing tokens. The existing manual controls remain operable when it is hidden.
+`app/qml/Components/Assistant*.qml` adopts edi's existing EasyApplication components, theme, font and AppSizes spacing. The owner's shared-sidebar decision supersedes the opposite second-sidebar/popup default: one persistent panel overlays the actual workflow sidebar at its exact bounds/side/width. The app-bar action alone changes session visibility through the device gate. Hiding reveals the retained manual controls without cancelling work. The main chart/content geometry does not change. The previous independent width preference is dormant rather than a second reserved strip; no resize handle or segmented selector is introduced.
 
 The panel shows the provider connection, dynamically offered model/effort, public conversation, exact proposed parameter groups, budgets and improvement tolerances, questions, trial activity and Stop. Approval is an explicit user action bound to the current plan and revision. Text is plain and selectable; model text cannot activate links or invoke edits. The scientific chart remains edi's real chart, not a chat replacement. Actual light/dark, left/right, narrow/wide and keyboard visual acceptance is owed; adding QML files alone does not prove it.
 
@@ -87,10 +87,9 @@ and Linux legacy platform are compatible; Chrome OS/Chromium OS branding is norm
 an explicit consistent desktop hint requires a supplied0/1 touch fact; high-touch/unknown Macs refuse,
 including iPadOS desktop-style identification. This is conservative UI availability, not a security grant.
 
-The toolbar remains visible but disabled with an accessible reason. The shortcut and click handlers,
-panel effective visibility, focus helper and Preferences action all consume the same immutable decision.
-Unsupported Preferences show an unchecked disabled control and a visible wrapped literal explanation;
-no hover is required. Enforcing availability never overwrites saved shown/width/side preferences. Thus a
+The toolbar remains visible but disabled with an accessible reason. Its handler, popup visibility and
+focus helper consume that same immutable decision. Preferences show only a wrapped literal explanation;
+no hover or alternate opening control is required. Enforcing availability never overwrites saved shown/width/side preferences. Thus a
 restored true default cannot show a phone panel or reserve chart margins, while eligible computers retain
 their prior choice. Narrowness is presentation, not a reason to disable a recognized computer.
 
@@ -98,3 +97,46 @@ The two browser VM messages state only that AI connection is unavailable in this
 provider authorization, responsive redesign, B/Q lifecycle repair, live chat or device/CI readiness follows.
 The reviewed connection dialog and current manual/scientific UI are unchanged. Actual native/browser
 entry and accessible-explanation gates plus rendered behavior remain required.
+
+
+## Shared existing-sidebar composition
+
+Main owns the sole AssistantPanel outside page Loaders and changes only its visual parent. WorkflowPage
+exposes the actual existing sidebar container through the readonly QML assistantOverlayHost reference.
+Its manual SideBar remains instantiated but hidden/disabled while covered; the host stays enabled for the
+assistant sibling and keeps its normal fixed geometry. No pinned base component is edited. Actual objects
+carry unique workflow.<page>.sidebarHost/mainContent/manualSidebar names; Home's actual page and fallback
+host use workflow.home.mainContent/sidebarHost. The fallback uses the same preferred side and normal
+sidebar width between app/status bars, without navigation/project creation or main margins.
+
+A local opaque pointer/wheel shield prevents background pass-through; Home keyboard focus behind the
+covered strip returns to the composer without disabling the entire main page. The app-bar control and
+close remain reachable while busy. Focus restoration checks actual visibility/enabled lifetime, and
+reparenting restores an existing chat focus target instead of rebuilding content. Preferences dialogs
+retain their focus until closed. No hide/show path invokes cancellation, Clear or provider actions.
+
+Transcript following is local to the existing ListView. Actual newly admitted user rows resume tail
+following; streamed/coalesced text follows only while that mode remains active. Reading older content
+turns following off; explicit return to the end resumes it. Hide/reparent retains the same ListView,
+composer, selections, draft and actual VM/history rather than forcing the end. Populated actual scrolling,
+focus/input isolation, both sides and Home/workflow geometry need independent runtime gates and actual
+running-app captures. No generated mockup is visual authority or a claim of provider/scientific success.
+
+
+## App-bar-only nonmodal Popup clarification
+
+Owner99d50f selects one Qt Quick Controls Popup with NoAutoClose, Popup.Item, no modal surface/dimming,
+zero content padding and the actual sidebar host size. Its Item content retains assistant.panel identity;
+the wrapper is assistant.popup. Normal existing edi palette/widgets remain unchanged. Outside interaction
+and Escape do not close it. The app-bar button alone toggles requested visibility, including its normal
+keyboard activation; remove the old shortcut, separate close and Preferences checkbox. Preferences retain
+a readonly eligibility explanation. Session visibility starts false and is no longer aliased to the old
+persisted shown key; reset of unrelated preferences does not open or close chat. Dormant stored width and
+unrelated settings are preserved. No separate native OS window or new segmented selector is introduced.
+
+The Popup and content remain Main-owned outside page Loaders; the actual host is its positioning parent.
+Manual subtrees remain instantiated/hidden/disabled siblings, not disabled hosts. Popup closure restores
+an actual valid focus target or app-bar opener; Qt's automatic dismissal never becomes a cancellation.
+Draft/history/scientific state remain independent of visibility. Home is reachable without project creation.
+Actual desktop geometry/input/keyboard/scroll/busy/device exercises and captures remain owed; compiling
+or constructing a Popup alone does not establish ready chat, live provider access, CI or SDK qualification.

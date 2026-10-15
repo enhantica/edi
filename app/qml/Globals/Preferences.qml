@@ -20,7 +20,7 @@ QtObject {
     id: preferences
 
     property bool dialogShown: false
-    property bool assistantShown: true
+    property bool assistantShown: false
     property real assistantWidth: AppSizes.assistantDefaultWidth
 
     property bool toolTips: true
@@ -46,7 +46,6 @@ QtObject {
 
     // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
     function resetToDefaults() {
-        preferences.assistantShown = true;
         preferences.assistantWidth = AppSizes.assistantDefaultWidth;
         preferences.toolTips = true;
         preferences.autoCollapse = true;
@@ -78,7 +77,6 @@ QtObject {
     property Settings assistantSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Assistant"
-        property alias shown: preferences.assistantShown
         property alias width: preferences.assistantWidth
     }
 

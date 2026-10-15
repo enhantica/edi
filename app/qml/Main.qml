@@ -20,6 +20,53 @@ import edi.app
 EaComponents.ApplicationWindow {
     id: window
 
+    readonly property Item assistantWorkflowPage: {
+        const loaders = [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader];
+        const index = appBarCentralTabs.currentIndex - 1;
+        return index >= 0 && index < loaders.length ? loaders[index].item : null;
+    }
+    readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
+    property Item assistantPreviousFocus: null
+
+    function containsAssistantItem(ancestor, item) {
+        for (let current = item; current; current = current.parent)
+            if (current === ancestor)
+                return true;
+        return false;
+    }
+    function rehostAssistant() {
+        if (!activeAssistantHost || !assistantPanel)
+            return;
+        const previous = activeFocusItem;
+        const restoreChatFocus = containsAssistantItem(assistantPanel.contentItem, previous);
+        assistantPanel.parent = activeAssistantHost;
+        if (restoreChatFocus) {
+            Qt.callLater(() => {
+                if (assistantPanel.visible && previous && previous.visible && previous.enabled)
+                    previous.forceActiveFocus();
+            });
+        }
+    }
+    function restoreAssistantFocus() {
+        const previous = assistantPreviousFocus;
+        assistantPreviousFocus = null;
+        Qt.callLater(() => {
+            if (previous && previous.visible && previous.enabled)
+                previous.forceActiveFocus();
+            else
+                assistantToggle.forceActiveFocus();
+        });
+    }
+    onActiveAssistantHostChanged: rehostAssistant()
+    onActiveFocusItemChanged: {
+        const item = activeFocusItem;
+        if (!assistantPanel || !assistantPanel.visible || !item || !containsAssistantItem(homePage, item))
+            return;
+        const point = item.mapToItem(assistantPanel.contentItem, item.width / 2, item.height / 2);
+        if (point.x >= 0 && point.x < assistantPanel.width && point.y >= 0 && point.y < assistantPanel.height)
+            assistantPanel.focusComposer();
+    }
+
     // A leading "•" while the open project has unsaved changes (edi ADR-0017 §13).
     title: (Session.project && Session.project.modified ? "• " : "") + ApplicationInfo.name
     appName: ApplicationInfo.name
@@ -68,6 +115,7 @@ EaComponents.ApplicationWindow {
 
     appBarRightButtons: [
         EaElements.ToolButton {
+            id: assistantToggle
             objectName: "assistant.toggle"
             fontIcon: "comments"
             enabled: ApplicationInfo.assistantAvailable
@@ -77,9 +125,9 @@ EaComponents.ApplicationWindow {
             onClicked: {
                 if (!ApplicationInfo.assistantAvailable)
                     return;
+                if (!Preferences.assistantShown)
+                    window.assistantPreviousFocus = window.activeFocusItem;
                 Preferences.assistantShown = !Preferences.assistantShown;
-                if (Preferences.assistantShown)
-                    assistantPanel.focusComposer();
             }
         },
         EaElements.ToolButton {
@@ -153,6 +201,7 @@ EaComponents.ApplicationWindow {
     contentArea: [
         HomePage {
             id: homePage
+            objectName: "workflow.home.mainContent"
         },
         Loader {
             id: projectLoader
@@ -210,38 +259,25 @@ EaComponents.ApplicationWindow {
 
     AppPreferencesDialog {}
 
-    AssistantPanel {
-        id: assistantPanel
+    Item {
+        id: assistantFallbackHost
+        objectName: "workflow.home.sidebarHost"
         parent: window.contentItem
-        assistant: Session.assistant
         anchors.top: parent.top
         anchors.topMargin: EaStyle.Sizes.appBarHeight
         anchors.bottom: parent.bottom
         anchors.bottomMargin: EaStyle.Sizes.statusBarHeight
-        x: onLeft ? 0 : parent.width - width
-        overlayMode: window.width < panelWidth + EaStyle.Sizes.sideBarWidth + AppSizes.assistantMainMinimumWidth
+        width: EaStyle.Sizes.sideBarWidth
+        x: Preferences.sideBarOnLeft ? 0 : parent.width - width
+        clip: true
         z: 20
     }
-    Binding {
-        target: homePage.SwipeView.view ? homePage.SwipeView.view.anchors : null
-        property: "leftMargin"
-        value: assistantPanel.visible && !assistantPanel.overlayMode && assistantPanel.onLeft ? assistantPanel.width : 0
-    }
-    Binding {
-        target: homePage.SwipeView.view ? homePage.SwipeView.view.anchors : null
-        property: "rightMargin"
-        value: assistantPanel.visible && !assistantPanel.overlayMode && !assistantPanel.onLeft ? assistantPanel.width : 0
-    }
-    Shortcut {
-        sequences: ["Ctrl+Shift+A", "Meta+Shift+A"]
-        enabled: ApplicationInfo.assistantAvailable
-        onActivated: {
-            if (!ApplicationInfo.assistantAvailable)
-                return;
-            Preferences.assistantShown = !Preferences.assistantShown;
-            if (Preferences.assistantShown)
-                assistantPanel.focusComposer();
-        }
+    AssistantPanel {
+        id: assistantPanel
+        parent: assistantFallbackHost
+        assistant: Session.assistant
+        onOpened: focusComposer()
+        onClosed: window.restoreAssistantFocus()
     }
 
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal
@@ -454,6 +490,7 @@ EaComponents.ApplicationWindow {
     // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
     // (Preferences.apply).
     Component.onCompleted: {
+        window.rehostAssistant();
         restoreGeometry();
         Qt.callLater(() => {
             Preferences.apply();

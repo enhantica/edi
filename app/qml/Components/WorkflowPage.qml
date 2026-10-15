@@ -20,6 +20,7 @@ EaComponents.ContentPage {
     // shown stays loaded, laid out and visible beside the shown one, clipped out of the view, so `visible`
     // does not say it: what the page draws only for the eye (its chart) follows this instead.
     property bool current: false
+    readonly property Item assistantOverlayHost: sideBar.parent
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items
     property alias basicItem: basicLoader.sourceComponent
@@ -60,6 +61,8 @@ EaComponents.ContentPage {
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.
     Component.onCompleted: {
+        sideBar.parent.objectName = "workflow." + page.pageName + ".sidebarHost";
+        mainContent.parent.objectName = "workflow." + page.pageName + ".mainContent";
         for (let i = 0; i < sideBar.children.length; ++i) {
             const child = sideBar.children[i];
             if (child.gradient)
@@ -143,6 +146,9 @@ EaComponents.ContentPage {
 
     sideBar: EaComponents.SideBar {
         id: sideBar
+        objectName: "workflow." + page.pageName + ".manualSidebar"
+        visible: !(page.current && ApplicationInfo.assistantAvailable && Preferences.assistantShown)
+        enabled: visible
 
         tabs: [
             EaElements.TabButton {
