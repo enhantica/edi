@@ -79,3 +79,58 @@ follow the fitting mode.
 | Compute the implied value in the app from the leader | Rejected: a tied coordinate can be a signed or offset image of its leader; the completion helpers already hold that rule. |
 | Disable every cell and coordinate field when the space group does not resolve | Rejected: the user could not repair the structure. |
 | Keep the scope filter in the table's name filter (the proxy) | Rejected: the status bar and the report would count rows the table does not show. |
+
+
+## Amendment: missing classic-CIF Wyckoff letters (E11-T5)
+
+Classic CIF permits an absent `_atom_site_Wyckoff_symbol`. Previously the reader
+returned empty letters and the first project save failed in engine constraints.
+The shared classic reader now asks a core-private adapter helper to normalize
+only absent, `?` and `.` letters before ADP completion. Explicit literals remain
+unchanged, including invalid author declarations; existing validation still
+owns their refusal. The dot-vocabulary project reader is unchanged.
+
+The helper resolves the actual setting through crysta's existing resolver and
+reads its public operators/table. It constructs the fractional site's complete
+periodic orbit, filters table positions by that observed orbit size, then uses
+`SpecialPosition::axis_basic/evaluate` against every equivalent image. A match
+must also reproduce the entire orbit. Exactly one supported position must match;
+zero, multiple, unsupported representative evaluation, or incomplete periodic
+inverse coverage refuses. Multiplicity alone never selects a letter. Inverse
+coverage is proved only for unit-sign basic axes and integral follower factors;
+nonintegral followers need additional lattice branches and are refused rather
+than tested incompletely. No new parser, public API, dependency or SDK is used.
+
+Periodic comparison uses 64 times `numeric_limits<double>::epsilon()` after
+reduction to a cell: a conservative short-affine-chain roundoff allowance, not
+the geometry renderer's `1e-4` identity tolerance, coordinate uncertainty, or a
+physical snapping distance. Independent membership and near-special controls
+must qualify this new import policy. Source coordinates, SU/free/start metadata,
+occupancy, ADP and space-group identity are never written by inference; only
+missing letters are staged and assigned after all sites have qualified. Site
+multiplicity remains engine-derived from the accepted letter/group, as before.
+
+
+### WYC1: downstream representative compatibility
+
+Orbit membership alone is insufficient: the engine uses the stored first basic
+coordinates when applying the selected representative's fixed/follower axes.
+Before accepting a missing letter, inference evaluates that actual parameterization
+using those stored basics (first-axis sign one and offset zero, matching crysta's
+`add_structure_positions`). Its result must be the same fractional point modulo
+lattice translation AND have the same complete orbit. Merely reaching another
+symmetry-equivalent point is insufficient: no tensor-frame transformation has
+been performed. A mismatch refuses clearly as an unsupported parameterization;
+the original point and all metadata remain untouched. This deliberately stages a
+supported subset rather than silently canonicalizing coordinates.
+
+For a supplied anisotropic tensor, the same existing public
+`crysta::tied_components` used by ordinary ADP completion must return exactly
+those components under a temporary proposed letter. A change refuses; inference
+never rotates, projects or repairs a tensor. The temporary one-site engine
+composition reuses `one_site_engine`, and does not mutate the imported model.
+Thus ordinary completion/save/calculate/fit begin from a compatible site/frame;
+future intentional refinement still follows the model's ordinary symmetry rules.
+Independent canonical, equivalent-image, periodic-lift, tied/rank-reduced and
+ADP-bearing acceptance/refusal gates remain necessary. The broader arbitrary-CIF
+representative transformation capability remains open.

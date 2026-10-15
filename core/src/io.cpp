@@ -20,6 +20,7 @@
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
+#include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 
 #include <algorithm>
@@ -2593,6 +2594,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
             throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
         }
     }
+    detail::normalize_imported_wyckoff(structure);
     // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
     // each declared type, converted from the form the file spells it in, uncertainties with it.
     if (!structure.atom_site_aniso.empty()) {

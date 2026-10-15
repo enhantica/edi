@@ -29,6 +29,7 @@
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "publication.hpp"
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
+#include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
@@ -540,6 +541,240 @@ void order_tensor_rows(Structure& s) {
 }
 
 }  // namespace
+
+namespace {
+
+using ImportPoint = std::array<double, 3>;
+
+// This is an arithmetic-roundoff envelope, not a physical site-snapping tolerance.
+// Inputs and images are reduced to one cell before comparison. 64 epsilon covers
+// the short double affine/inverse/evaluate chain below; no coordinate SU widens it.
+constexpr double kImportRoundoff = 64.0 * std::numeric_limits<double>::epsilon();
+
+double import_periodic(double value) {
+    if (!std::isfinite(value)) {
+        throw IoError("Classic CIF Wyckoff inference requires finite fractional coordinates");
+    }
+    return value - std::floor(value);
+}
+
+bool import_same_point(const ImportPoint& one, const ImportPoint& other) {
+    for (std::size_t axis = 0; axis < one.size(); ++axis) {
+        const double a = import_periodic(one[axis]);
+        const double b = import_periodic(other[axis]);
+        if (std::abs(std::remainder(a - b, 1.0)) > kImportRoundoff) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::vector<ImportPoint> import_orbit(
+    const ImportPoint& point, const std::vector<crysta::SymmetryOperation>& operations) {
+    ImportPoint reduced{};
+    for (std::size_t axis = 0; axis < point.size(); ++axis) {
+        reduced[axis] = import_periodic(point[axis]);
+    }
+    std::vector<ImportPoint> orbit;
+    orbit.reserve(operations.size());
+    for (const auto& operation : operations) {
+        ImportPoint image{};
+        for (std::size_t row = 0; row < image.size(); ++row) {
+            image[row] = operation.translation[row];
+            for (std::size_t column = 0; column < reduced.size(); ++column) {
+                image[row] += operation.rotation[row * 3 + column] * reduced[column];
+            }
+            image[row] = import_periodic(image[row]);
+        }
+        if (std::none_of(orbit.begin(), orbit.end(), [&image](const ImportPoint& held) {
+                return import_same_point(image, held);
+            })) {
+            orbit.push_back(image);
+        }
+    }
+    return orbit;
+}
+
+bool import_same_orbit(const std::vector<ImportPoint>& one, const std::vector<ImportPoint>& other) {
+    return one.size() == other.size() &&
+           std::all_of(one.begin(), one.end(), [&other](const ImportPoint& point) {
+               return std::any_of(other.begin(), other.end(), [&point](const ImportPoint& held) {
+                   return import_same_point(point, held);
+               });
+           });
+}
+
+// A single periodic inverse is complete only when each basic's representative
+// axis has coefficient +/-1 and all follower coefficients are integral. Other
+// forms need additional lattice branches: refuse, never claim that one failed
+// representative test proves non-membership of those forms.
+bool import_inverse_is_complete(const crysta::SpecialPosition& position) {
+    std::vector<bool> seen(position.n_basic(), false);
+    for (std::size_t axis = 0; axis < 3; ++axis) {
+        if (!position.axis_is_basic(axis)) {
+            continue;
+        }
+        const std::size_t basic = position.axis_basic_index(axis);
+        const double factor = position.axis_sign(axis);
+        if (!std::isfinite(factor) || factor == 0.0 || std::trunc(factor) != factor) {
+            return false;
+        }
+        if (!seen[basic]) {
+            if (std::abs(factor) != 1.0) {
+                return false;
+            }
+            seen[basic] = true;
+        }
+    }
+    return std::all_of(seen.begin(), seen.end(), [](bool present) { return present; });
+}
+
+bool import_position_contains(
+    const crysta::SpecialPosition& position, const std::vector<ImportPoint>& orbit,
+    const std::vector<crysta::SymmetryOperation>& operations) {
+    for (const ImportPoint& image : orbit) {
+        std::vector<double> basics(position.n_basic());
+        std::vector<bool> read(position.n_basic(), false);
+        for (std::size_t axis = 0; axis < image.size(); ++axis) {
+            if (!position.axis_is_basic(axis)) {
+                continue;
+            }
+            const std::size_t basic = position.axis_basic_index(axis);
+            if (!read[basic]) {
+                basics[basic] = position.axis_basic(axis, image[axis]);
+                read[basic] = true;
+            }
+        }
+        const auto [x, y, z] = position.evaluate(basics);
+        const ImportPoint representative{x, y, z};
+        if (import_same_point(representative, image) &&
+            import_same_orbit(import_orbit(representative, operations), orbit)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Mirror the actual relation producer: its first basic is the STORED first
+// axis, not the inverse of an equivalent image. Requiring the very same point
+// modulo lattice translation also avoids an unperformed ADP-frame rotation.
+bool import_engine_preserves_point(
+    const crysta::SpecialPosition& position, const ImportPoint& stored,
+    const std::vector<ImportPoint>& orbit,
+    const std::vector<crysta::SymmetryOperation>& operations) {
+    std::vector<double> basics(position.n_basic());
+    std::vector<bool> seen(position.n_basic(), false);
+    for (std::size_t axis = 0; axis < stored.size(); ++axis) {
+        if (!position.axis_is_basic(axis)) {
+            continue;
+        }
+        const std::size_t basic = position.axis_basic_index(axis);
+        if (!seen[basic]) {
+            // add_structure_positions rejects any different first-basic form.
+            if (position.axis_sign(axis) != 1.0 || position.axis_offset(axis) != 0.0) {
+                return false;
+            }
+            basics[basic] = stored[axis];
+            seen[basic] = true;
+        }
+    }
+    const auto [x, y, z] = position.evaluate(basics);
+    const ImportPoint completed{x, y, z};
+    return import_same_point(completed, stored) &&
+           import_same_orbit(import_orbit(completed, operations), orbit);
+}
+
+// A newly inferred letter must not make the existing import ADP completion
+// change a supplied tensor. Delegate the symmetry test to the same engine helper
+// that complete_atom_site_aniso uses; do not rotate or repair imported values.
+void import_require_unchanged_adp(const Structure& structure, const AtomSite& site,
+                                  const std::string& letter) {
+    if (!is_anisotropic_adp_type(site.adp_type.value())) {
+        return;
+    }
+    AtomSite proposed = site;
+    proposed.wyckoff_letter = letter;
+    const crysta::Structure engine = one_site_engine(structure, proposed, proposed.adp_type.value());
+    for (const auto& tensor : structure.atom_site_aniso) {
+        if (tensor->id.value() != site.id.value()) {
+            continue;
+        }
+        const auto parameters = tensor->parameters();
+        crysta::AdpTensor before{};
+        for (std::size_t k = 0; k < before.size(); ++k) {
+            before[k] = parameters[k]->value;
+        }
+        if (crysta::tied_components(engine, engine.atom_sites[0], before) != before) {
+            throw IoError("Classic CIF site '" + site.id.value() +
+                          "': unsupported Wyckoff inference would change its supplied ADP tensor");
+        }
+    }
+}
+
+}  // namespace
+
+void detail::normalize_imported_wyckoff(Structure& structure) {
+    const auto missing = [](const AtomSite& site) {
+        const std::string& letter = site.wyckoff_letter.value();
+        return letter.empty() || letter == "." || letter == "?";
+    };
+    if (std::none_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                     [&missing](const auto& site) { return missing(*site); })) {
+        return;
+    }
+    try {
+        const crysta::SpaceGroup group = resolve_group(structure);
+        const auto operations = crysta::symmetry_operations(group);
+        // Stage every decision before changing the imported model. In particular,
+        // an unsupported/ambiguous later site never leaves earlier letters changed.
+        std::vector<std::pair<AtomSite*, std::string>> inferred;
+        for (const auto& site : structure.atom_sites) {
+            if (!missing(*site)) {
+                continue;  // An explicit literal stays the author's claim, unchanged.
+            }
+            const ImportPoint stored{site->fract_x.value, site->fract_y.value, site->fract_z.value};
+            const auto orbit = import_orbit(stored, operations);
+            std::optional<std::string> letter;
+            for (const auto& [candidate, row] : group.wyckoff) {
+                if (row.multiplicity <= 0 || static_cast<std::size_t>(row.multiplicity) != orbit.size()) {
+                    continue;
+                }
+                const crysta::SpecialPosition position(row.representative, row.n_free);
+                if (!import_inverse_is_complete(position)) {
+                    throw IoError("Classic CIF site '" + site->id.value() +
+                                  "': Wyckoff inference requires an unsupported periodic inverse");
+                }
+                if (!import_position_contains(position, orbit, operations)) {
+                    continue;
+                }
+                if (letter) {
+                    throw IoError("Classic CIF site '" + site->id.value() +
+                                  "': ambiguous Wyckoff orbit membership");
+                }
+                letter = candidate;
+            }
+            if (!letter) {
+                throw IoError("Classic CIF site '" + site->id.value() +
+                              "': no uniquely supported Wyckoff orbit membership");
+            }
+            const auto& row = group.wyckoff_for(*letter);
+            const crysta::SpecialPosition position(row.representative, row.n_free);
+            if (!import_engine_preserves_point(position, stored, orbit, operations)) {
+                throw IoError("Classic CIF site '" + site->id.value() +
+                              "': unsupported Wyckoff parameterization would change its stored orbit");
+            }
+            import_require_unchanged_adp(structure, *site, *letter);
+            inferred.emplace_back(site.get(), std::move(*letter));
+        }
+        for (auto& [site, letter] : inferred) {
+            site->wyckoff_letter = std::move(letter);
+        }
+    } catch (const IoError&) {
+        throw;
+    } catch (const std::exception& error) {
+        throw IoError(std::string("Classic CIF Wyckoff inference failed: ") + error.what());
+    }
+}
 
 void add_missing_aniso_rows(Structure& s) {
     for (const auto& site : s.atom_sites) {
