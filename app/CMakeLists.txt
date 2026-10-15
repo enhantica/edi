@@ -79,6 +79,7 @@ qt_add_qml_module(edi_app_module
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/assistant_view_model.hpp src/assistant_view_model.cpp
+        src/assistant_markdown.hpp src/assistant_markdown.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
     QML_FILES

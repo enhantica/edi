@@ -45,20 +45,28 @@ Rectangle {
             textFormat: Text.PlainText
         }
         TextEdit {
+            id: body
             width: parent.width
-            text: row.text
+            AssistantMarkdown {
+                document: body.textDocument
+                source: row.text
+                markdown: row.kind === "assistant"
+            }
             readOnly: true
             selectByMouse: true
             persistentSelection: true
             selectionColor: EaStyle.Colors.themeAccent
             selectedTextColor: EaStyle.Colors.themeBackground
+            // The private Qt document supplies passive formatting. No source URL
+            // or link handler is installed, and other row kinds stay literal.
             textFormat: TextEdit.PlainText
+            onLinkActivated: link => {}
             wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
             font.family: EaStyle.Fonts.fontFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize
             Accessible.role: Accessible.StaticText
-            Accessible.name: (row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")) + ": " + text
+            Accessible.name: (row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")) + ": " + row.text
         }
         EaElements.Button {
             id: disclosure
