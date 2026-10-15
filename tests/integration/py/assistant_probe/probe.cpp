@@ -113,6 +113,7 @@ int main() {
             return now;
         }
     });
+    double owner_work_max_ms=0;
     auto deliver = [&](int milliseconds) {
         edi::work::Delivery next;
         {
@@ -121,7 +122,10 @@ int main() {
             if (deliveries.empty()) return false;
             next = std::move(deliveries.front()); deliveries.pop_front();
         }
-        next(); return true;
+        auto began=std::chrono::steady_clock::now();
+        next();
+        owner_work_max_ms=std::max(owner_work_max_ms,std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-began).count());
+        return true;
     };
     auto parameter = [&](const std::string& path) -> edi::Parameter& {
         for (auto& item : edi::parameter_entries(*project)) if(item.path == path) return *item.parameter;
@@ -154,6 +158,24 @@ int main() {
                 preview = std::make_unique<edi::LivePreview>(*project, worker, edi::LivePreview::Hooks{});
                 if(!input.get("mode").is_null()) project->fitting_mode=input.at("mode").string("mode");
                 result = reply(controller.attach(project.get(), "project-A"));
+            } else if (op == "objective") {
+                auto copy=std::make_unique<edi::Project>(*project);
+                copy->calculate();
+                double objective=0;
+                int points=0;
+                for(std::size_t bank=0;bank<copy->experiments.size();++bank) {
+                    auto pattern=edi::capture_pattern(*copy,bank);
+                    if(!pattern.current || !pattern.meas || !pattern.calc || !pattern.su)
+                        throw std::runtime_error("independent weighted residual requires current measured pattern");
+                    for(std::size_t i=0;i<pattern.meas->size();++i) {
+                        if(!std::isfinite(pattern.calc->at(i))) continue;
+                        const double residual=(pattern.meas->at(i)-pattern.calc->at(i))/pattern.su->at(i);
+                        objective+=copy->experiments[bank]->dataset_weight*residual*residual;
+                        ++points;
+                    }
+                }
+                result=Object{{"objective",objective},{"points",points},
+                              {"held_objective",project->fit_result.objective_value}};
             } else if (op == "publication_fault") {
                 auto fitted=std::make_shared<edi::Project>(*project);
                 auto& target=project->structure().cell.length_a;
@@ -204,7 +226,7 @@ int main() {
                 preview->apply(edi::Edit::peak_profile(project->experiment(),input.at("name").string("profile")));
                 controller.notify_changed(); result=Object{};
             } else if (op == "clock") {
-                steady_clock=input.at("steady").boolean("steady"); clock_start=std::chrono::steady_clock::now();
+                steady_clock=input.at("steady").boolean("steady"); owner_work_max_ms=0; clock_start=std::chrono::steady_clock::now();
                 result=Object{};
             } else if (op == "fence") {
                 const int milliseconds=static_cast<int>(input.at("milliseconds").number("milliseconds"));
@@ -310,6 +332,7 @@ int main() {
                 {"requests", requests}, {"stream_events", stream_events},
                 {"snapshot", snapshot(*project)}, {"apply_count", applies},
                 {"owner_clock_violations", owner_clock_violations.load()},
+                {"owner_work_max_ms",owner_work_max_ms},
                 {"owner_thread_kit", static_cast<bool>(EDI_WORKER_OWNER_THREAD)}};
             std::cout << edi::json::write(output) << '\n' << std::flush;
         } catch (const std::exception& error) {

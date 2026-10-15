@@ -42,14 +42,14 @@ def load_source(host, *, baseline=True):
     return scales
 
 
-def approve(host, paths, *, iterations=80, elapsed=5000):
+def approve(host, paths, *, iterations=80, elapsed=5000, absolute=0.0):
     result = host.tool(
         'propose_plan',
         {
             'summary': 'Only the displayed parameter group may move',
             'groups': [{'id': 'workflow', 'paths': paths}],
             'budget': {'max_trials': 3, 'max_iterations': iterations, 'max_elapsed_ms': elapsed},
-            'objective': {'absolute_tolerance': 0.0, 'relative_tolerance': 0.0},
+            'objective': {'absolute_tolerance': absolute, 'relative_tolerance': 0.0},
         },
     )
     assert result['reply']['ok'], 'I2/I9: a finite explicit scoped plan must be displayable'
@@ -301,3 +301,91 @@ def test_result_publication_is_complete_or_preserves_exact_original_state(host, 
         assert result['snapshot'] != before, (
             'I4: the positive publication control performs an actual state change'
         )
+
+
+def test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline(host):
+    load_source(host)
+    paths = useful_paths(host)
+    fitted = host.command('manual_fit', free_paths=paths)
+    assert fitted['reply']['converged'], (
+        'I8: the independent manual FitJob establishes a converged historical record'
+    )
+    old_objective = fitted['reply']['objective']
+    cell = next(p for p in paths if p.endswith('.cell.length_a'))
+    host.command('mutate', path=cell, value=rows(host.last)[cell]['value'] * 1.03)
+    current = host.command('objective')
+    assert current['reply']['objective'] > old_objective * 1.1, (
+        'I8: the independently calculated weighted residual proves the manual '
+        'edit invalidated historical fit quality'
+    )
+    original = current['snapshot']
+    host.start()
+    plan = approve(host, paths, absolute=old_objective * 0.01)
+    begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+    if not begun['reply']['ok']:
+        assert begun['snapshot'] == original, (
+            'I8: refusing an unavailable current baseline preserves all accepted state'
+        )
+        return
+    trial = begun['reply']['value']['trial_id']
+    host.tool(
+        'set_free', {'flags': [{'path': path, 'free': True} for path in paths]}, plan_id=plan
+    )
+    started = host.tool('fit_trial', {'trial_id': trial}, plan_id=plan)
+    if not started['reply']['ok']:
+        assert started['snapshot'] == original, (
+            'I8: refusing stale-baseline work before fitting changes no accepted state'
+        )
+        return
+    settle(host)
+    evaluated = host.tool('evaluate_trial', {'trial_id': trial}, plan_id=plan)
+    if not evaluated['reply']['ok']:
+        assert evaluated['snapshot'] == original, (
+            'I8: a late currentness refusal changes no accepted state'
+        )
+        return
+    assert evaluated['reply']['value']['accepted'], (
+        'I8: completed comparable improvement uses the actual current accepted '
+        'state, never its stale historical fit record'
+    )
+    measured = host.command('objective')
+    assert measured['reply']['objective'] + old_objective * 0.01 < current['reply']['objective'], (
+        'I8: actual accepted quality improves by the independently declared '
+        'tolerance on the original weighted point population'
+    )
+
+
+def test_real_joint_fit_adoption_then_discard_preserves_both_banks(host):
+    source = ROOT / 'docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project'
+    loaded = host.command('load', path=str(source))
+    assert loaded['context']['project']['fitting_mode'] == 'joint', (
+        'I8: the joint witness loads the actual two-bank source project'
+    )
+    paths = [p for p in rows(loaded) if p.endswith(('.scale', '.cell.length_a'))]
+    baseline = host.command('manual_fit', free_paths=[p for p in paths if p.endswith('.scale')])
+    assert baseline['reply']['converged'], (
+        'I8: a real joint manual FitJob establishes a finite current baseline'
+    )
+    host.start()
+    plan = approve(host, paths, iterations=30)
+    original = host.last['snapshot']
+    trial = candidate(host, plan, paths)
+    settled = settle(host)
+    assert settled['snapshot'] == original, (
+        'I8: both banks and structures remain untouched while the real joint candidate fits'
+    )
+    accepted = host.tool('evaluate_trial', {'trial_id': trial}, plan_id=plan)
+    assert accepted['reply']['ok'] and accepted['reply']['value']['accepted'], (
+        'I8/I9: a converged comparable moving joint fit can be adopted through the real edit door'
+    )
+    best = accepted['snapshot']
+    assert best != original, 'I8: joint adoption publishes actual scientific movement'
+    begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+    assert begun['reply']['ok'], 'I8: a subsequent joint trial starts from the accepted best state'
+    discarded = host.tool(
+        'discard_trial', {'trial_id': begun['reply']['value']['trial_id']}, plan_id=plan
+    )
+    assert discarded['reply']['ok'] and discarded['snapshot'] == best, (
+        'I8: discarding the next trial preserves every captured '
+        'bank/structure/result/optional/start/row identity of accepted joint state'
+    )

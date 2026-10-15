@@ -20,7 +20,7 @@ def envelope(kind, **fields):
 
 
 class Host:
-    def __init__(self, binary):
+    def __init__(self, binary, reply_timeout=1.0):
         self.process = subprocess.Popen(
             [str(binary)],
             stdin=subprocess.PIPE,
@@ -29,13 +29,14 @@ class Host:
             text=True,
             encoding='utf-8',
         )
+        self.reply_timeout = reply_timeout
         self.last = None
         self.serial = 0
 
     def command(self, op, **fields):
         self.process.stdin.write(json.dumps({'op': op, **fields}, ensure_ascii=False) + '\n')
         self.process.stdin.flush()
-        ready, _, _ = select.select([self.process.stdout], [], [], 1.0)
+        ready, _, _ = select.select([self.process.stdout], [], [], self.reply_timeout)
         assert ready, 'I3: the owner-thread controller must return a bounded protocol reply'
         line = self.process.stdout.readline()
         assert line, 'I3: the real public controller probe must remain alive through each action'
