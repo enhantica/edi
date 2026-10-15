@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T03:41:13Z
+# measured_utc = 2026-10-15T04:14:19Z
 #
-# Recorded from: seq9 immediate fit-start phase class witness; failed nodes stay holes; prior rows preserved
-# Collected tests: 13648; with a reported duration: 7499
+# Recorded from: seq11 official provider membership and existing-question Stop on immutable ffd consumer; old rows preserved
+# Collected tests: 13699; with a reported duration: 7509
 # Module-scoped fixture costs recorded: 52
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13315
+# inventory_python = 13366
 # inventory_cpp = 333
-# inventory_measured = 11971
-# inventory_unmeasured = 1677
+# inventory_measured = 11981
+# inventory_unmeasured = 1718
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10106,6 +10106,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_interruption_atomicity
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_interruption_atomicity.py::test_one_shot_core_exhaustion_cannot_fall_through_publication_or_dispatch[question-question-length_error]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_interruption_atomicity.py::test_one_shot_core_exhaustion_cannot_fall_through_publication_or_dispatch[read-result-tool_result-bad_alloc]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_interruption_atomicity.py::test_one_shot_core_exhaustion_cannot_fall_through_publication_or_dispatch[read-result-tool_result-length_error]
+0.030	tests/system/py/test_e11_t5_question_stop_settlement.py::test_ordinary_stop_settles_exactly_one_existing_question_without_continuation
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[preparation-bad_alloc]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[preparation-length_error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[publication-bad_alloc]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[publication-length_error]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-None]
 3.190	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-build]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[extension-consumer-None]
@@ -10167,6 +10172,52 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecyc
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[wrong-kind-refusal]
 0.260	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[output_text]
 0.170	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_a_later_message_cannot_inherit_the_previous_messages_started_part[output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_a_later_message_cannot_inherit_the_previous_messages_started_part[refusal]
+0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[matching-duplicate-function_call]
+0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[matching-duplicate-message]
+0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[matching-duplicate-reasoning]
+0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[terminal-only-function_call]
+0.010	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[terminal-only-message]
+0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[terminal-only-reasoning]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[first-part-channel-done-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[first-part-channel-done-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[first-part-delta-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[first-part-delta-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[first-part-part-done-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[first-part-part-done-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[next-part-channel-done-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[next-part-channel-done-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[next-part-delta-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[next-part-delta-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[next-part-part-done-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_contiguous_but_unstarted_content_cannot_declare_its_own_live_identity[next-part-part-done-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_distinct_original_items_cannot_share_one_output_position[function_call-function_call]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_distinct_original_items_cannot_share_one_output_position[function_call-reasoning]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_distinct_original_items_cannot_share_one_output_position[message-function_call]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_distinct_original_items_cannot_share_one_output_position[message-message]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_distinct_original_items_cannot_share_one_output_position[reasoning-message]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_distinct_original_items_cannot_share_one_output_position[reasoning-reasoning]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_documented_reasoning_parts_remain_opaque_and_keep_exact_completed_original
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_final_response_cannot_omit_or_replace_previously_completed_items[omitted-function_call]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_final_response_cannot_omit_or_replace_previously_completed_items[omitted-message]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_final_response_cannot_omit_or_replace_previously_completed_items[omitted-reasoning]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_final_response_cannot_omit_or_replace_previously_completed_items[replaced-function_call]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_final_response_cannot_omit_or_replace_previously_completed_items[replaced-message]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_final_response_cannot_omit_or_replace_previously_completed_items[replaced-reasoning]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[fraction-delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[fraction-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[missing-delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[missing-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[negative-delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[negative-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[other-delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[other-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[string-delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_function_argument_events_require_their_actual_output_position[string-done]
+0.010	tests/system/py/test_e11_t5_stream_membership.py::test_repeating_an_item_at_a_changed_position_is_not_a_matching_duplicate[function_call]
+0.010	tests/system/py/test_e11_t5_stream_membership.py::test_repeating_an_item_at_a_changed_position_is_not_a_matching_duplicate[message]
+0.020	tests/system/py/test_e11_t5_stream_membership.py::test_repeating_an_item_at_a_changed_position_is_not_a_matching_duplicate[reasoning]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-fit]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-question]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[headless-fit]

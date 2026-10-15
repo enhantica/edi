@@ -460,6 +460,8 @@ int main() {
                     }
                 }
                 result=Object{{"accepted",accepted},{"last",reply(last)}};
+            } else if (op == "stream_output") {
+                result = edi::json::parse(stream->output());
             } else if (op == "stream_finish") {
                 result = reply(stream->finish());
             } else if (op == "inspect") {
