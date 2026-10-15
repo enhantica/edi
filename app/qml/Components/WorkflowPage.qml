@@ -151,8 +151,8 @@ EaComponents.ContentPage {
     sideBar: EaComponents.SideBar {
         id: sideBar
         objectName: "workflow." + page.pageName + ".manualSidebar"
-        visible: !(page.current && ApplicationInfo.assistantAvailable && page.assistantCovered)
-        enabled: visible
+        // Remain painted at full theme colors under the sliding sheet. Popup's
+        // local input shield and actual strip focus guard own covered input.
 
         tabs: [
             EaElements.TabButton {

@@ -926,6 +926,7 @@ struct AssistantViewModel::State {
         return reply;
     }
     void bind(ProjectViewModel* next) {
+        emit owner.conversationRetired(); // Before any fallible replacement preparation.
         retire_file_selection();
 #ifndef __EMSCRIPTEN__
         if (controller && connection) connection->cancel(core.value("active_turn_id").toString().toStdString());

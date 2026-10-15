@@ -51,15 +51,19 @@ EaComponents.ApplicationWindow {
         const project = Session.project;
         if (restoreChatFocus) {
             Qt.callLater(() => {
-                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && Preferences.assistantShown && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
+                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && assistantPanel.shown && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
                     previous.forceActiveFocus();
             });
         }
     }
+    function focusAssistantOpener() {
+        if (assistantToggle.enabled) assistantToggle.forceActiveFocus();
+        else if (appBarCentralTabs.currentItem) appBarCentralTabs.currentItem.forceActiveFocus();
+    }
     function retireAssistantFocus() {
         ++assistantFocusEpoch;
         // Establish a safe current window focus before Qt's Popup exit restoration.
-        assistantToggle.forceActiveFocus();
+        focusAssistantOpener();
     }
     function restoreAssistantFocus() {
         const previous = assistantPreviousFocus;
@@ -72,19 +76,19 @@ EaComponents.ApplicationWindow {
         assistantPreviousHost = null;
         assistantPreviousProject = null;
         Qt.callLater(() => {
-            if (epoch !== assistantFocusEpoch || Preferences.assistantShown || assistantPanel.visible)
+            if (epoch !== assistantFocusEpoch || assistantPanel.shown || assistantPanel.visible)
                 return;
             if (page === assistantCurrentPage && host === activeAssistantHost && project === Session.project && previous && previous.visible && previous.enabled && (containsAssistantItem(page, previous) || previous === assistantToggle))
                 previous.forceActiveFocus();
             else
-                assistantToggle.forceActiveFocus();
+                focusAssistantOpener();
         });
     }
     // This binding observes the complete target/ancestor and strip geometry, including movement
     // without a focus change. A partly exposed control remains usable in its uncovered portion.
     readonly property bool assistantHomeFocusCovered: {
         const item = activeFocusItem;
-        if (!assistantPanel || !assistantPanel.visible || !item || !containsAssistantItem(homePage, item))
+        if (!assistantPanel || !assistantPanel.visible || !item || !containsAssistantItem(assistantCurrentPage, item))
             return false;
         for (let current = item; current; current = current.parent) {
             const geometry = [current.x, current.y, current.width, current.height, current.scale, current.rotation];
@@ -99,10 +103,10 @@ EaComponents.ApplicationWindow {
     }
     function enforceAssistantHomeFocus() {
         if (assistantHomeFocusCovered) {
-            if (Preferences.assistantShown)
+            if (assistantPanel.shown)
                 assistantPanel.focusComposer();
             else
-                assistantToggle.forceActiveFocus();
+                focusAssistantOpener();
         }
     }
     onAssistantHomeFocusCoveredChanged: enforceAssistantHomeFocus()
@@ -158,15 +162,16 @@ EaComponents.ApplicationWindow {
     appBarRightButtons: [
         EaElements.ToolButton {
             id: assistantToggle
-            KeyNavigation.tab: assistantPanel.visible && Preferences.assistantShown ? assistantPanel.firstFocusItem : null
+            KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
             fontIcon: "robot"
-            enabled: ApplicationInfo.assistantAvailable
-            ToolTip.text: ApplicationInfo.assistantAvailable ? qsTr("Show or hide assistant") : ApplicationInfo.assistantUnavailableReason
+            enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
+            ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
+                : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages") : qsTr("Show or hide assistant")
             Accessible.name: qsTr("Show or hide assistant")
             Accessible.description: ApplicationInfo.assistantUnavailableReason
             onClicked: {
-                if (!ApplicationInfo.assistantAvailable)
+                if (!assistantToggle.enabled)
                     return;
                 if (!Preferences.assistantShown) {
                     ++window.assistantFocusEpoch;
@@ -329,6 +334,7 @@ EaComponents.ApplicationWindow {
         id: assistantPanel
         parent: assistantFallbackHost
         assistant: Session.assistant
+        shown: Preferences.assistantShown && window.assistantWorkflowPage !== null
         toggleControl: assistantToggle
         onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()

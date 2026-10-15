@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
@@ -71,6 +72,8 @@ AppDialog {
                 readOnly: true
                 selectByMouse: true
                 persistentSelection: true
+                selectionColor: EaStyle.Colors.themeAccent
+                selectedTextColor: EaStyle.Colors.themeBackground
                 wrapMode: TextEdit.WrapAnywhere
                 Accessible.name: qsTr("Exact selected workflow content and published references")
             }

@@ -17,6 +17,7 @@ Rectangle {
     property bool hasNextUserMessage: false
     signal previousUserRequested()
     signal nextUserRequested()
+    signal contextApprovalRequested(string draft)
     property int textRevision: 0
     property int selectionRevision: -1
     property int savedSelectionStart: 0
@@ -92,9 +93,18 @@ Rectangle {
         if (restore)
             editor.select(start, end);
     }
+    function submitApprovedDraft(draft) {
+        if (editor.text !== draft || !assistant.connected || assistant.contextConsentRequired)
+            return;
+        submit();
+    }
     function submit() {
         if (!assistant.connected || assistant.canCancel || editor.text.trim().length === 0)
             return;
+        if (assistant.contextConsentRequired) {
+            contextApprovalRequested(editor.text);
+            return;
+        }
         submittedText = editor.text;
         const ids = [];
         for (let i = 0; i < assistant.messages.count; ++i)
@@ -163,6 +173,8 @@ Rectangle {
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
                 persistentSelection: true
+                selectionColor: EaStyle.Colors.themeAccent
+                selectedTextColor: EaStyle.Colors.themeBackground
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: addFilesButton
                 KeyNavigation.backtab: composer.toggleControl
@@ -193,6 +205,7 @@ Rectangle {
                 - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * 6)
             width: parent.width
             spacing: AppSizes.unit * 0.5
+            FontMetrics { id: menuFontMetrics; font: models.font }
             TextMetrics {
                 id: modelLabelMetrics
                 font: models.font
@@ -230,10 +243,18 @@ Rectangle {
                             return i;
                     return -1;
                 }
+                readonly property real menuWidth: {
+                    let measured = width;
+                    for (let i = 0; i < composer.assistant.models.count; ++i)
+                        measured = Math.max(measured, menuFontMetrics.advanceWidth(composer.assistant.models.text(i, "displayName")) + AppSizes.unit * 3);
+                    return Math.min(measured, Math.max(width, Window.width - AppSizes.unit * 2));
+                }
+                popup.width: menuWidth
+                popup.x: Math.min(0, Window.width - mapToItem(null, 0, 0).x - menuWidth - AppSizes.unit)
                 delegate: EaElements.MenuItem {
                     required property var model
                     required property int index
-                    width: models.width
+                    width: models.popup.width
                     height: EaStyle.Sizes.comboBoxHeight
                     text: model.displayName
                     textFormat: Text.PlainText
@@ -247,8 +268,8 @@ Rectangle {
                     implicitHeight: EaStyle.Sizes.comboBoxHeight
                     color: "transparent"
                     radius: AppSizes.unit * 0.25
-                    border.width: models.activeFocus ? 1 : 0
-                    border.color: EaStyle.Colors.themeForegroundHighlight
+                    border.width: models.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                    border.color: EaStyle.Colors.appBarComboBoxBorder
                 }
                 model: composer.assistant.models
                 textRole: "displayName"
@@ -263,6 +284,14 @@ Rectangle {
                 KeyNavigation.backtab: models
                 textFormat: Text.PlainText
                 readonly property var effortValues: [""].concat(composer.assistant.availableEfforts)
+                readonly property real menuWidth: {
+                    let measured = width;
+                    for (const value of effortValues)
+                        measured = Math.max(measured, menuFontMetrics.advanceWidth(effortLabel(value)) + AppSizes.unit * 3);
+                    return Math.min(measured, Math.max(width, Window.width - AppSizes.unit * 2));
+                }
+                popup.width: menuWidth
+                popup.x: Math.min(0, Window.width - mapToItem(null, 0, 0).x - menuWidth - AppSizes.unit)
                 function effortLabel(value) {
                     switch (value) {
                     case "": return qsTr("Auto");
@@ -285,8 +314,8 @@ Rectangle {
                     implicitHeight: EaStyle.Sizes.comboBoxHeight
                     color: "transparent"
                     radius: AppSizes.unit * 0.25
-                    border.width: efforts.activeFocus ? 1 : 0
-                    border.color: EaStyle.Colors.themeForegroundHighlight
+                    border.width: efforts.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                    border.color: EaStyle.Colors.appBarComboBoxBorder
                 }
                 model: effortValues.map(value => effortLabel(value))
                 enabled: composer.assistant.connected && !composer.assistant.canCancel

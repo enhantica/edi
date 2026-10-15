@@ -84,6 +84,8 @@ class AssistantViewModel : public QObject {
 
    signals:
     void fileSelectionRetired(const QString& requestId);
+    /// Revokes deferred UI intent even when replacement context bytes are identical.
+    void conversationRetired();
     void stateChanged();
     void connectedChanged();
     void connectionLabelChanged();

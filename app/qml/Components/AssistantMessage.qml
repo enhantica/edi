@@ -50,6 +50,8 @@ Rectangle {
             readOnly: true
             selectByMouse: true
             persistentSelection: true
+            selectionColor: EaStyle.Colors.themeAccent
+            selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
             wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
@@ -71,6 +73,8 @@ Rectangle {
             readOnly: true
             selectByMouse: true
             persistentSelection: true
+            selectionColor: EaStyle.Colors.themeAccent
+            selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
             wrapMode: TextEdit.WrapAnywhere
             color: EaStyle.Colors.themeForeground

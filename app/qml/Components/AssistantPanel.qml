@@ -12,9 +12,27 @@ Popup {
     id: panel
     objectName: "assistant.popup"
     required property AssistantViewModel assistant
+    property bool sendAfterConsent: false
+    property string consentDraft: ""
+    property string consentContext: ""
+    function retireConsentSend() { sendAfterConsent = false; consentDraft = ""; consentContext = ""; }
+    Connections {
+        target: panel.assistant
+        function onConversationRetired() { panel.retireConsentSend(); }
+        function onConnectedChanged() { panel.retireConsentSend(); }
+        function onConnectionLabelChanged() { panel.retireConsentSend(); }
+        function onSelectedModelChanged() { panel.retireConsentSend(); }
+        function onSelectedEffortChanged() { panel.retireConsentSend(); }
+        function onContextPreviewChanged() {
+            if (panel.sendAfterConsent && panel.assistant.contextPreview !== panel.consentContext) panel.retireConsentSend();
+        }
+    }
     required property Item toggleControl
     readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
+    onShownChanged: {
+        if (!shown) { panel.retireConsentSend(); connectionDialog.close(); }
+    }
     visible: ApplicationInfo.assistantAvailable && shown
     x: 0
     y: 0
@@ -73,7 +91,12 @@ Popup {
             Rectangle {
                 anchors.fill: parent
                 color: EaStyle.Colors.appBarBackground
-                border.color: EaStyle.Colors.appBorder
+            }
+            Rectangle {
+                width: EaStyle.Sizes.borderThickness
+                height: parent.height
+                x: Preferences.sideBarOnLeft ? parent.width - width : 0
+                color: EaStyle.Colors.appBorder
             }
             Item {
                 id: header
@@ -151,11 +174,11 @@ Popup {
                         Accessible.name: qsTr("Usage data unavailable")
                         Accessible.description: qsTr("This connection does not provide context or subscription usage metrics.")
                         contentItem: Item {
-                            implicitWidth: AppSizes.unit * 0.85
-                            implicitHeight: AppSizes.unit * 0.85
+                            implicitWidth: AppSizes.unit * 0.85 * 1.5
+                            implicitHeight: AppSizes.unit * 0.85 * 1.5
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: AppSizes.unit * 0.85
+                                width: AppSizes.unit * 0.85 * 1.5
                                 height: width
                                 radius: width * 0.5
                                 color: "transparent"
@@ -357,6 +380,10 @@ Popup {
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)
                     onNextUserRequested: conversation.jumpToUser(1)
+                    onContextApprovalRequested: draft => {
+                        panel.consentDraft = draft; panel.consentContext = panel.assistant.contextPreview; panel.sendAfterConsent = true;
+                        connectionDialog.open();
+                    }
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
@@ -408,6 +435,13 @@ Popup {
         AssistantConnectionDialog {
             id: connectionDialog
             assistant: panel.assistant
+            onRejected: panel.retireConsentSend()
+            onContextApproved: {
+                const send = panel.sendAfterConsent;
+                const draft = panel.consentDraft;
+                panel.retireConsentSend();
+                if (send) composer.submitApprovedDraft(draft);
+            }
         }
     }
 }

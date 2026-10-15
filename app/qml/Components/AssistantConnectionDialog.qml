@@ -2,12 +2,14 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 AppDialog {
     id: dialog
     required property AssistantViewModel assistant
+    signal contextApproved()
     readonly property var disclosedContext: {
         try {
             return JSON.parse(assistant.contextPreview);
@@ -45,7 +47,11 @@ AppDialog {
                 dialog.updateAcceptButton();
         }
     }
-    onAccepted: assistant.signIn()
+    onAccepted: {
+        assistant.signIn();
+        if (assistant.connected && !assistant.contextConsentRequired)
+            contextApproved();
+    }
     ScrollView {
         ScrollBar.vertical: EaElements.ScrollBar {
             policy: ScrollBar.AsNeeded
@@ -135,6 +141,8 @@ AppDialog {
                     readOnly: true
                     selectByMouse: true
                     persistentSelection: true
+                    selectionColor: EaStyle.Colors.themeAccent
+                    selectedTextColor: EaStyle.Colors.themeBackground
                     wrapMode: TextEdit.WrapAnywhere
                     Accessible.name: qsTr("Actual outgoing project context")
                 }
