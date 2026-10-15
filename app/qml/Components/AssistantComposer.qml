@@ -374,7 +374,7 @@ Rectangle {
                     implicitWidth: addFilesButton.implicitWidth
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: EaStyle.Colors.isDarkPalette ? "white" : "black"
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : EaStyle.Colors.themeBackgroundDisabled
                 }
                 contentItem: EaElements.Label {
                     opacity: sendButton.enabled ? 1 : 0.35
