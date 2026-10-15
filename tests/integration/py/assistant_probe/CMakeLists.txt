@@ -25,3 +25,8 @@ add_executable(assistant_interruption_probe probe.cpp)
 target_compile_definitions(assistant_interruption_probe PRIVATE EDI_TEST_ADMISSION_FAULT=1)
 target_include_directories(assistant_interruption_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_interruption_probe PRIVATE edi::core)
+
+add_executable(assistant_async_settlement_probe probe.cpp)
+target_compile_definitions(assistant_async_settlement_probe PRIVATE EDI_TEST_ASYNC_SETTLEMENT=1)
+target_include_directories(assistant_async_settlement_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_async_settlement_probe PRIVATE edi::core)

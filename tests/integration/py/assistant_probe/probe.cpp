@@ -111,12 +111,25 @@ int main() {
     std::size_t queue_mark=0;
     edi::work::Ticket queue_predecessor=0;
     std::shared_ptr<IndependentQueueHold> queue_hold;
+#ifdef EDI_TEST_ASYNC_SETTLEMENT
+    bool fail_fit_submission=false;
+    int fit_submissions=0,submission_failures=0;
+#endif
     edi::work::Worker worker([&](edi::work::Delivery delivery) {
         std::lock_guard lock(mutex);
         deliveries.push_back(std::move(delivery));
         arrived.notify_one();
     }, {.clock_ns={}, .trace=[&](const edi::work::Event& event) {
         std::lock_guard lock(queue_trace_mutex);queue_trace.push_back(event);
+#ifdef EDI_TEST_ASYNC_SETTLEMENT
+        if(event.kind==edi::work::EventKind::Submitted && event.channel=="fit") {
+            ++fit_submissions;
+            if(fail_fit_submission) {
+                fail_fit_submission=false;++submission_failures;
+                throw std::runtime_error("ordinary independent worker submission failure");
+            }
+        }
+#endif
     }});
     auto project = std::make_unique<edi::Project>();
     project->structure().cell.length_a.value = 4.37;
@@ -300,6 +313,34 @@ int main() {
             } else if (op == "clock") {
                 steady_clock=input.at("steady").boolean("steady"); clock_on_fit=!input.get("fit_admission").is_null() && input.at("fit_admission").boolean("fit_admission"); owner_work_max_ms=0; clock_start=std::chrono::steady_clock::now();
                 result=Object{};
+#ifdef EDI_TEST_ASYNC_SETTLEMENT
+            } else if (op == "candidate_submit_failure") {
+                fail_fit_submission=input.at("armed").boolean("armed");result=Object{};
+            } else if (op == "direct_submission") {
+                int finished=0;edi::FitReport previous;
+                edi::FitJob::Hooks callbacks;
+                callbacks.finished=[&](const edi::FitReport& report){previous=report;++finished;};
+                edi::FitJob direct(*project,worker,std::move(callbacks));
+                const auto settle_direct=[&] {
+                    auto end=std::chrono::steady_clock::now()+std::chrono::seconds(3);
+                    while(direct.running() && std::chrono::steady_clock::now()<end) deliver(1);
+                    if(direct.running())throw std::runtime_error("independent direct start did not settle");
+                };
+                if(!direct.start())throw std::runtime_error("independent first direct start refused");
+                settle_direct();
+                auto before=snapshot(*project);auto first_report=fit_summary(previous);
+                const auto before_finished=finished;
+                fail_fit_submission=input.at("armed").boolean("armed");
+                bool threw=false,admitted=false;
+                try {admitted=direct.start();} catch(const std::runtime_error&) {threw=true;}
+                const bool running_at_reply=direct.running();const auto ticket_at_reply=direct.ticket();
+                if(admitted)settle_direct();
+                result=Object{{"threw",threw},{"admitted",admitted},{"running_at_reply",running_at_reply},
+                    {"ticket_at_reply",static_cast<double>(ticket_at_reply)},
+                    {"before_finished",before_finished},{"finished",finished},
+                    {"before",std::move(before)},{"after",snapshot(*project)},
+                    {"previous_report",std::move(first_report)},{"current_report",fit_summary(previous)}};
+#endif
             } else if (op == "queue_hold") {
                 if(queue_hold) throw std::invalid_argument("queue hold already exists");
                 queue_hold=std::make_shared<IndependentQueueHold>();
@@ -474,6 +515,10 @@ int main() {
                 {"owner_clock_violations", owner_clock_violations.load()},
                 {"owner_work_max_ms",owner_work_max_ms},
                 {"owner_thread_kit", static_cast<bool>(EDI_WORKER_OWNER_THREAD)}};
+#ifdef EDI_TEST_ASYNC_SETTLEMENT
+            std::get<Object>(output.data).emplace_back("async_submission",Object{
+                {"fit_submissions",fit_submissions},{"failures",submission_failures}});
+#endif
 #ifdef EDI_TEST_TERMINAL_RETENTION
             std::get<Object>(output.data).emplace_back("retention",retention.observation());
 #endif
@@ -482,7 +527,12 @@ int main() {
 #endif
             std::cout << edi::json::write(output) << '\n' << std::flush;
         } catch (const std::exception& error) {
-            std::cout << edi::json::write(Object{{"probe_error", error.what()}}) << '\n' << std::flush;
+            Object error_row{{"probe_error",error.what()}};
+#ifdef EDI_TEST_ASYNC_SETTLEMENT
+            error_row.emplace_back("async_submission",Object{
+                {"fit_submissions",fit_submissions},{"failures",submission_failures}});
+#endif
+            std::cout << edi::json::write(error_row) << '\n' << std::flush;
         }
     }
 }

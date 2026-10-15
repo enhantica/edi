@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T05:05:44Z
+# measured_utc = 2026-10-15T05:24:06Z
 #
-# Recorded from: seq15 sealed c789 U1/U2 finite scope; genuine offline accounts and actual protected writes; owner6 runtime refusal retained
-# Collected tests: 13739; with a reported duration: 7533
+# Recorded from: seq16 finite real async settlement/control costs, explicit absent-lease setup; immutable current owner timing remains refused
+# Collected tests: 13750; with a reported duration: 7537
 # Module-scoped fixture costs recorded: 55
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13406
+# inventory_python = 13417
 # inventory_cpp = 333
-# inventory_measured = 12005
-# inventory_unmeasured = 1734
+# inventory_measured = 12009
+# inventory_unmeasured = 1741
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10112,6 +10112,17 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 0.230	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
 0.990	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_retention_failures.py::test_accepted_stop_keeps_its_lease_until_actual_worker_or_human_settlement[fit-accept]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_retention_failures.py::test_accepted_stop_keeps_its_lease_until_actual_worker_or_human_settlement[question-accept]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_retention_failures.py::test_complete_real_fit_is_quarantined_without_stop_or_partial_success[settle-false]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_retention_failures.py::test_unavailable_baseline_uses_the_same_complete_retaining_role_before_recovery[accept]
+0.320	tests/system/py/test_e11_t5_async_settlement.py::test_candidate_start_submission_failure_is_contained_and_settled[actual-fit-control]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_settlement.py::test_candidate_start_submission_failure_is_contained_and_settled[submission-refusal]
+0.320	tests/system/py/test_e11_t5_async_settlement.py::test_continuation_failure_preserves_the_actual_complete_terminal_in_next_human_history
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_settlement.py::test_failed_baseline_settles_with_complete_refusal_and_recoverable_conversation[cancelled-baseline]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_settlement.py::test_failed_baseline_settles_with_complete_refusal_and_recoverable_conversation[unavailable-baseline]
+0.250	tests/system/py/test_e11_t5_async_settlement.py::test_shared_fitjob_start_failure_retains_prior_finished_state_without_false_running[direct-control]
+0.230	tests/system/py/test_e11_t5_async_settlement.py::test_shared_fitjob_start_failure_retains_prior_finished_state_without_false_running[direct-submit-refusal]
 0.560	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[allocation-after-live-write-joint]
 0.170	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[allocation-after-live-write-single]
 0.560	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[positive-joint]
