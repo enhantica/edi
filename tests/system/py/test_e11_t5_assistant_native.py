@@ -101,7 +101,7 @@ def signer(tmp_path_factory):
 
 
 class Native:
-    def __init__(self, binary):
+    def __init__(self, binary, reply_timeout=1.0):
         self.process = subprocess.Popen(
             [str(binary)],
             stdin=subprocess.PIPE,
@@ -110,16 +110,26 @@ class Native:
             text=True,
             encoding='utf-8',
         )
+        self.reply_timeout = reply_timeout
         self.last = None
         self.handled = set()
         self.jwt = None
         self.jwks = None
         self.scope = SCOPES
+        self.catalog = {
+            'models': [
+                {
+                    'slug': 'gpt-6.1-sol',
+                    'display_name': 'Offline fixture',
+                    'visibility': 'list',
+                }
+            ]
+        }
 
     def command(self, op, **fields):
         self.process.stdin.write(json.dumps({'op': op, **fields}, ensure_ascii=False) + '\n')
         self.process.stdin.flush()
-        readable, _, _ = select.select([self.process.stdout], [], [], 1)
+        readable, _, _ = select.select([self.process.stdout], [], [], self.reply_timeout)
         assert readable, (
             'I12/I13: real native service actions return bounded replies on the event-loop owner'
         )
@@ -179,18 +189,7 @@ class Native:
                     },
                 )
             elif url == API + '/models':
-                self.respond(
-                    index,
-                    {
-                        'models': [
-                            {
-                                'slug': 'independent-model',
-                                'display_name': 'Offline fixture',
-                                'visibility': 'list',
-                            }
-                        ]
-                    },
-                )
+                self.respond(index, self.catalog)
             else:
                 self.handled.remove(index)
                 return self.last
@@ -537,7 +536,7 @@ def provider_request(native, *, request_id='request-one', history=None):
         'connection_id': ready['connection_id'],
         'turn_id': 'turn-one',
         'request_id': request_id,
-        'model': 'independent-model',
+        'model': 'gpt-6.1-sol',
         'text': 'Inspect PbSO₄ — Ångström 🧪',
         'attachments': [],
         'context': {
@@ -567,8 +566,10 @@ def provider_request(native, *, request_id='request-one', history=None):
     }
 
 
-def start_inference(native):
+def start_inference(native, *, tools=None):
     request = provider_request(native)
+    if tools is not None:
+        request['tools'] = tools
     sent = native.command('send', payload=request)
     assert sent['reply']['ok'], (
         'I13: verified offline readiness admits a real native inference request'
@@ -657,8 +658,39 @@ def test_stateless_continuation_preserves_original_encrypted_reasoning_and_argum
 ):
     native.authenticate(signer)
     assert native.ready(), 'I13: stateless replay control begins from verified synthetic readiness'
-    index, request = start_inference(native)
-    original_arguments = '{ "plan_id" : "opaque-plan", "text" : "PbSO₄ 🧪" }'
+    index, request = start_inference(
+        native,
+        tools=[
+            {
+                'name': 'set_parameters',
+                'description': 'Set explicitly approved scientific scalar values',
+                'input_schema': {
+                    'type': 'object',
+                    'properties': {
+                        'plan_id': {'type': 'string'},
+                        'values': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'path': {'type': 'string'},
+                                    'value': {'type': 'number'},
+                                },
+                                'required': ['path', 'value'],
+                                'additionalProperties': False,
+                            },
+                        },
+                    },
+                    'required': ['plan_id', 'values'],
+                    'additionalProperties': False,
+                },
+            }
+        ],
+    )
+    original_arguments = (
+        '{ "plan_id" : "opaque-plan-Å🧪", "values" : '
+        '[{"path":"structure.cell.length_a","value":4.37}] }'
+    )
     reasoning = {
         'id': 'reasoning-one',
         'type': 'reasoning',
@@ -669,7 +701,7 @@ def test_stateless_continuation_preserves_original_encrypted_reasoning_and_argum
         'id': 'function-one',
         'type': 'function_call',
         'call_id': 'provider-call-one',
-        'name': 'inspect_project',
+        'name': 'set_parameters',
         'arguments': original_arguments,
         'status': 'completed',
     }
@@ -706,28 +738,29 @@ def test_stateless_continuation_preserves_original_encrypted_reasoning_and_argum
         ],
         width=7,
     )
-    # This input models core's domain projection: the plan ID has been checked and removed.
+    # Model the documented core domain projection after an unapproved-tool refusal.
+    # Native replay must retain provider items even when core denies the operation.
     history = [
         *request['history'],
         {
             'type': 'tool_call',
             'call_id': call['call_id'],
             'name': call['name'],
-            'arguments': {'text': 'PbSO₄ 🧪'},
+            'arguments': {'values': [{'path': 'structure.cell.length_a', 'value': 4.37}]},
         },
         {
             'type': 'tool_result',
             'call_id': call['call_id'],
-            'ok': True,
-            'code': '',
-            'result': {'observed': True},
+            'ok': False,
+            'code': 'edi.assistant.approval_required',
+            'result': {'message': 'No approved plan grants this scalar operation'},
         },
     ]
     sent = native.command(
         'send', payload=provider_request(native, request_id='request-two', history=history)
     )
     assert sent['reply']['ok'], (
-        'I13: a checked tool result can continue a stateless native conversation'
+        'I13: a correlated refused tool result can continue a stateless native conversation'
     )
     body = json.loads(sent['requests'][-1]['body'])
     retained = list(objects(body.get('input')))
@@ -890,4 +923,71 @@ def test_missing_native_dependency_refuses_before_any_external_service(native, i
     assert result['reply']['service_calls'] == 0, (
         'I12: invalid native dependency bundles cause no '
         'browser/store/network/clock I/O or default fallback'
+    )
+
+
+def test_catalog_intersects_account_order_with_exact_reviewed_capabilities(native, signer):
+    native.catalog = {
+        'models': [
+            {'slug': 'future-unknown', 'display_name': 'Future', 'visibility': 'list'},
+            {
+                'slug': 'gpt-6.1-sol',
+                'display_name': 'Sol',
+                'visibility': 'list',
+                'supported_reasoning_efforts': [
+                    {'reasoning_effort': 'invented', 'display_name': '<b>bad</b>'}
+                ],
+            },
+            {'slug': 'gpt-6-sol', 'display_name': 'Earlier Sol', 'visibility': 'list'},
+            {
+                'slug': 'gpt-6.1-sol-snapshot',
+                'display_name': 'Unknown snapshot',
+                'visibility': 'list',
+            },
+            {'slug': 'hidden', 'display_name': 'Hidden', 'visibility': 'hidden'},
+        ]
+    }
+    native.authenticate(signer)
+    assert native.ready(), 'I13: eligible catalog entries establish synthetic verified readiness'
+    models = native.last['state']['models']
+    assert [model['id'] for model in models] == [
+        'future-unknown',
+        'gpt-6.1-sol',
+        'gpt-6-sol',
+        'gpt-6.1-sol-snapshot',
+    ], 'I13: visible account order is preserved without inventing snapshot capabilities'
+    assert [model['available'] for model in models] == [False, True, True, False], (
+        'I13: only exact reviewed model IDs are available for actual inference'
+    )
+    assert models[1]['efforts'] == ['low', 'medium', 'high', 'xhigh', 'max'], (
+        'I13: undocumented provider effort metadata cannot override the reviewed Sol mapping'
+    )
+    assert models[2]['efforts'] == ['none', 'low', 'medium', 'high', 'xhigh', 'max'], (
+        'I13: explicit none remains distinct from provider-default omission'
+    )
+    assert all(not model['efforts'] for model in (models[0], models[3])), (
+        'I13: unknown visible IDs remain explanatory unavailable entries with no guessed efforts'
+    )
+
+
+@pytest.mark.parametrize('kind', ['unknown-only', 'duplicate', 'malformed', 'over-cap'])
+def test_no_eligible_or_malformed_catalog_never_silently_becomes_ready(native, signer, kind):
+    model = {'slug': 'gpt-6.1-sol', 'display_name': 'Sol', 'visibility': 'list'}
+    catalogs = {
+        'unknown-only': {'models': [{**model, 'slug': 'gpt-6.1-sol-unknown'}]},
+        'duplicate': {'models': [model, model]},
+        'malformed': {'models': [{**model, 'slug': 7}]},
+        'over-cap': {
+            'models': [model]
+            + [
+                {'slug': 'hidden-' + str(index), 'display_name': 'Hidden', 'visibility': 'hidden'}
+                for index in range(128)
+            ]
+        },
+    }
+    native.catalog = catalogs[kind]
+    native.authenticate(signer)
+    assert not native.ready() and native.last['state'].get('last_error'), (
+        'I13: missing capabilities, malformed identity and aggregate catalog overflow '
+        'fail closed with a visible prerequisite rather than a fabricated default'
     )

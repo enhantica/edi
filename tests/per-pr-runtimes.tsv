@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T00:20:16Z
+# measured_utc = 2026-10-15T00:46:56Z
 #
-# Recorded from: unchanged prior bank plus native-complete.log/.costs.json; forty-five native cases SETUP BLOCKED by absent approved DI probe, zero native behavioral outcomes; all declared unmeasured.
+# E11-T5 seq2 native/real-owner approved-interface setup measurement: /home/andrewsazonov/runs/ai-assistant/tests-seq2-native-owner.log; 87 setup errors, zero exercised native/connected behavior; prior rows preserved
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,10 +27,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13112
+# inventory_python = 13154
 # inventory_cpp = 333
 # inventory_measured = 11827
-# inventory_unmeasured = 1618
+# inventory_unmeasured = 1660
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6316,6 +6316,43 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_no
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_second_wavelength_has_its_own_bragg_position_and_lorentz_factor
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_zero_ratio_is_bitwise_single_wavelength_boundary
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_page_inventory.py::test_xray_page_filename_delta_preserves_prior_pages_and_adds_exactly_three
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_actual_owner_composition_has_one_session_and_real_lifetime
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_actual_ui_archive_is_bounded_with_many_small_provider_deltas
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_effort_options_use_reviewed_capabilities_and_ignore_untrusted_catalog_labels[collapsed]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_effort_options_use_reviewed_capabilities_and_ignore_untrusted_catalog_labels[popup]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_human_question_and_option_captions_are_literal_in_actual_panel[option]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_human_question_and_option_captions_are_literal_in_actual_panel[question]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_project_disclosure_is_bound_to_the_actual_project_sent_after_switch
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_provider_model_display_name_is_literal_in_both_actual_catalog_views[collapsed]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_provider_model_display_name_is_literal_in_both_actual_catalog_views[popup]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_provider_text_is_literal_in_actual_plan_error_message_and_detail_renderers[error]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_provider_text_is_literal_in_actual_plan_error_message_and_detail_renderers[message]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_provider_text_is_literal_in_actual_plan_error_message_and_detail_renderers[plan-details]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_provider_text_is_literal_in_actual_plan_error_message_and_detail_renderers[plan]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_queued_old_native_tool_cannot_create_a_plan_after_real_project_replacement
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_engine_refuses_invalid_owner_transfer_without_replacing_existing_owner[already-configured]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_engine_refuses_invalid_owner_transfer_without_replacing_existing_owner[null]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_engine_refuses_invalid_owner_transfer_without_replacing_existing_owner[parented]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_render_observers_have_real_bounded_image_and_url_positive_controls
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[0-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[0-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[1-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[1-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[2-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[2-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[3-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[3-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[4-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[4-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[5-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[5-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[6-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[6-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[7-session]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[7-vm]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_streamed_failure_after_public_text_is_visible_in_the_real_panel[failed]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_streamed_failure_after_public_text_is_visible_in_the_real_panel[incomplete]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_verified_account_caption_does_not_treat_signed_display_metadata_as_markup
 0.002	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_app_lifetime_survives_project_and_page_changes]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_both_themes_and_live_opposite_placement]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
@@ -9884,6 +9921,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.p
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[denied]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[missing-issued-client]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_catalog_intersects_account_order_with_exact_reviewed_capabilities
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_fragmented_model_refusal_is_public_and_never_an_empty_success
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[destroy]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[sign-out]
@@ -9901,6 +9939,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[oversize-body]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[oversize-headers]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[repeated-headers]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[duplicate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[malformed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[over-cap]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[unknown-only]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_loopback_pkce_verified_jwt_and_catalog_establish_only_synthetic_readiness
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_signature_and_direct_use_scope_are_both_required[scope]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_signature_and_direct_use_scope_are_both_required[signature]
@@ -13496,6 +13538,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
+# module-cost: 0.203	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
@@ -13514,7 +13557,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 0.064	tests/system/py/test_e11_t5_assistant_native.py
+# module-cost: 0.257	tests/system/py/test_e11_t5_assistant_native.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py

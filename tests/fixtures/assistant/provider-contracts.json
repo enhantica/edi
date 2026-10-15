@@ -30,6 +30,16 @@
       "url": "https://developers.openai.com/api/docs/api-reference/responses-streaming.md",
       "sha256": "310e18f833d9cd53e2b72cd88d2c5b6cde39959bc6e5bc8b7d07e3395262eb35",
       "bytes": 337408
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/deployment-checklist.md",
+      "sha256": "c57d29bcaa6235449f50138ca057dea8401d235026ffeba331b0be3ea049fa8e",
+      "bytes": 71353
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-6.1-sol.md",
+      "sha256": "acfe91d19882aaf7bb52877898684614035a947de02f2955c9de905a7efb1362",
+      "bytes": 4436
     }
   ],
   "purpose": "Independent offline protocol fixtures only; synthetic tokens never establish live provider entitlement.",
