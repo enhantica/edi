@@ -19,6 +19,8 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
+from tests.fixtures.assistant.response_events import message_complete, message_start, text_fragment
+
 ROOT = Path(__file__).resolve().parents[3]
 AUTH = 'https://auth.openai.com'
 API = 'https://api.openai.com/v1'
@@ -660,7 +662,8 @@ def test_successful_http_with_streamed_failure_is_visible_and_never_completed(
         native,
         index,
         [
-            {'type': 'response.output_text.delta', 'delta': 'Public partial answer Å'},
+            *message_start(),
+            text_fragment('Public partial answer Å'),
             {
                 'type': 'response.' + status,
                 'response': {
@@ -910,49 +913,9 @@ def test_fragmented_model_refusal_is_public_and_never_an_empty_success(native, s
         native,
         index,
         [
-            {
-                'type': 'response.output_item.added',
-                'output_index': 0,
-                'item': {
-                    'type': 'message',
-                    'id': 'message-one',
-                    'role': 'assistant',
-                    'status': 'in_progress',
-                    'content': [],
-                },
-            },
-            {
-                'type': 'response.refusal.delta',
-                'item_id': 'message-one',
-                'output_index': 0,
-                'content_index': 0,
-                'delta': refusal,
-                'sequence_number': 1,
-            },
-            {
-                'type': 'response.refusal.done',
-                'item_id': 'message-one',
-                'output_index': 0,
-                'content_index': 0,
-                'refusal': refusal,
-                'sequence_number': 2,
-            },
-            {
-                'type': 'response.completed',
-                'response': {
-                    'id': 'response-one',
-                    'status': 'completed',
-                    'output': [
-                        {
-                            'type': 'message',
-                            'id': 'message-one',
-                            'role': 'assistant',
-                            'status': 'completed',
-                            'content': [{'type': 'refusal', 'refusal': refusal}],
-                        }
-                    ],
-                },
-            },
+            *message_start(channel='refusal'),
+            text_fragment(refusal, channel='refusal'),
+            *message_complete(refusal, channel='refusal'),
         ],
         width=1,
     )

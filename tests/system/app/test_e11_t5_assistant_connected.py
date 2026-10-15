@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.assistant.response_events import message_complete, message_start, text_fragment
+
 ROOT = Path(__file__).resolve().parents[3]
 _spec = importlib.util.spec_from_file_location(
     'e11_t5_ui_native', ROOT / 'tests/system/py/test_e11_t5_assistant_native.py'
@@ -239,11 +241,9 @@ def test_provider_text_is_literal_in_actual_plan_error_message_and_detail_render
     index, _ = begin_request(ui)
     if sink == 'message':
         events = [
-            {'type': 'response.output_text.delta', 'delta': payload},
-            {
-                'type': 'response.completed',
-                'response': {'id': 'response-text', 'status': 'completed', 'output': []},
-            },
+            *message_start(),
+            text_fragment(payload),
+            *message_complete(payload, response_id='response-text'),
         ]
     elif sink == 'error':
         events = function_events('propose_plan', proposal('Invalid path control', path=payload))
@@ -289,10 +289,8 @@ def test_streamed_failure_after_public_text_is_visible_in_the_real_panel(ui, sig
         ui,
         index,
         [
-            {
-                'type': 'response.output_text.delta',
-                'delta': 'A partial answer with Ångström units',
-            },
+            *message_start(),
+            text_fragment('A partial answer with Ångström units'),
             {
                 'type': 'response.' + status,
                 'response': {
@@ -366,7 +364,8 @@ def test_actual_ui_archive_is_bounded_with_many_small_provider_deltas(ui, signer
     native_protocol.stream(
         ui,
         index,
-        [{'type': 'response.output_text.delta', 'delta': 'x' * 65536} for _ in range(33)]
+        message_start()
+        + [text_fragment('x' * 65536, sequence_number=i + 2) for i in range(33)]
         + [
             {
                 'type': 'response.completed',
@@ -496,12 +495,13 @@ def test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval(
 
 
 def old_callback_sequence(index, ending, marker):
-    events = [{'type': 'response.output_text.delta', 'delta': marker}]
-    if ending != 'text-only':
-        status = 'failed' if ending == 'failed' else 'completed'
+    events = message_start() + [text_fragment(marker)]
+    if ending == 'completed':
+        events.extend(message_complete(marker, response_id='old-response'))
+    elif ending == 'failed':
         events.append({
-            'type': 'response.' + status,
-            'response': {'id': 'old-response', 'status': status, 'output': []},
+            'type': 'response.failed',
+            'response': {'id': 'old-response', 'status': 'failed', 'output': []},
         })
     wire = ''.join(
         'data: ' + json.dumps(event, separators=(',', ':')) + '\n\n' for event in events
@@ -573,11 +573,9 @@ def test_old_text_and_terminal_callbacks_cannot_cross_actual_new_request(
         ui,
         current,
         [
-            {'type': 'response.output_text.delta', 'delta': 'CURRENT-TRANSPORT-MARKER'},
-            {
-                'type': 'response.completed',
-                'response': {'id': 'new-response', 'status': 'completed', 'output': []},
-            },
+            *message_start(),
+            text_fragment('CURRENT-TRANSPORT-MARKER'),
+            *message_complete('CURRENT-TRANSPORT-MARKER', response_id='new-response'),
         ],
     )
     assert 'CURRENT-TRANSPORT-MARKER' in json.dumps(ui.last['ui']['messages']), (

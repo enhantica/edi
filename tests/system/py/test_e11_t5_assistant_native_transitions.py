@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.assistant.response_events import message_start, text_fragment
+
 ROOT = Path(__file__).resolve().parents[3]
 _spec = importlib.util.spec_from_file_location(
     'e11_native_transitions', Path(__file__).with_name('test_e11_t5_assistant_native.py')
@@ -145,6 +147,16 @@ def test_callback_checks_its_deadline_without_a_prior_owner_poll(native, signer,
             index=index,
             base64=base64.b64encode(('data: ' + json.dumps(event) + '\n\n').encode()).decode(),
         )
+    if callback == 'data':
+        native.command(
+            'data',
+            index=index,
+            base64=base64.b64encode(
+                ''.join(
+                    'data: ' + json.dumps(event) + '\n\n' for event in message_start()
+                ).encode()
+            ).decode(),
+        )
     samples = native.last['services'].count('elapsed')
     native.command(
         'elapse_unpolled',
@@ -167,7 +179,7 @@ def test_callback_checks_its_deadline_without_a_prior_owner_poll(native, signer,
             defer_events=True,
         )
     elif callback == 'data':
-        event = {'type': 'response.output_text.delta', 'delta': 'LATE-CALLBACK-TEXT'}
+        event = text_fragment('LATE-CALLBACK-TEXT')
         native.command(
             'data',
             index=index,

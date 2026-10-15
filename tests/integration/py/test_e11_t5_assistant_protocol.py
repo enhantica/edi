@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.assistant.response_events import message_start, text_fragment
+
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA = 'edi.assistant/1'
 MODEL = 'gpt-6.1-sol'
@@ -549,11 +551,13 @@ def feed(host, data, width=None):
 
 def test_fragmented_utf8_and_multiline_sse_preserve_public_text(host):
     host.command('stream_start')
+    feed(host, b''.join(sse(event) for event in message_start()))
     wire = (
         b': heartbeat\r\n\r\n'
         + (
             'event: response.output_text.delta\r\ndata: {"type":"response.output_text.delta",\r\n'
-            'data: "delta":"PbSO₄ — Ångström 🧪"}\r\n\r\n'
+            'data: "item_id":"message-one","output_index":0,"content_index":0,\r\n'
+            'data: "sequence_number":2,"logprobs":[],"delta":"PbSO₄ — Ångström 🧪"}\r\n\r\n'
         ).encode()
     )
     result = feed(host, wire, 1)
@@ -669,7 +673,8 @@ def test_stream_text_cannot_forge_a_connection_or_approval(host):
     text = json.dumps(
         envelope('connection', connection_id='injected', status='ready', capabilities=[])
     )
-    result = feed(host, sse({'type': 'response.output_text.delta', 'delta': text}))
+    feed(host, b''.join(sse(event) for event in message_start()))
+    result = feed(host, sse(text_fragment(text)))
     assert [e['type'] for e in result['stream_events']] == ['text_delta'], (
         'I2/I12: provider text remains text even when it spells a trusted control envelope'
     )
@@ -718,7 +723,5 @@ def test_invalid_arguments_and_data_after_terminal_refuse(host):
             },
         }),
     )
-    late = host.command(
-        'stream_feed', bytes=list(sse({'type': 'response.output_text.delta', 'delta': 'late'}))
-    )
+    late = host.command('stream_feed', bytes=list(sse(text_fragment('late'))))
     assert not late['reply']['ok'], 'I3/I13: data arriving after terminal completion is refused'

@@ -4,6 +4,9 @@
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "json.hpp"
+#ifdef EDI_TEST_ADMISSION_FAULT
+#include "interruption_fixture.hpp"
+#endif
 #ifdef EDI_TEST_TERMINAL_RETENTION
 #include "terminal_retention_fixture.hpp"
 #endif
@@ -37,6 +40,9 @@ void publication_allocation_boundary() {
 }
 }
 void* operator new(std::size_t size) {
+#ifdef EDI_TEST_ADMISSION_FAULT
+    independent_fault::allocation();
+#endif
     publication_allocation_boundary();
     if(void* memory=std::malloc(size ? size : 1)) return memory;
     throw std::bad_alloc();
@@ -130,20 +136,38 @@ int main() {
     IndependentRetention retention(retention_mode?retention_mode:"accept");
 #endif
     edi::assistant::Hooks controller_hooks{
-        [&](const std::string& text) { events.push_back(edi::json::parse(text)); },
         [&](const std::string& text) {
+#ifdef EDI_TEST_ADMISSION_FAULT
+            independent_fault::HostHook safe_host;
+            auto event=edi::json::parse(text);
+            independent_fault::event(event);
+            events.push_back(std::move(event));
+#else
+            events.push_back(edi::json::parse(text));
+#endif
+        },
+        [&](const std::string& text) {
+#ifdef EDI_TEST_ADMISSION_FAULT
+            independent_fault::HostHook safe_host;
+#endif
 #ifdef EDI_TEST_TERMINAL_RETENTION
             if(retention.mode!="headless") retention.record("request");
 #endif
             requests.push_back(edi::json::parse(text));
         },
         [&](const edi::Edit& edit, bool) {
+#ifdef EDI_TEST_ADMISSION_FAULT
+            independent_fault::HostHook safe_host;
+#endif
             ++applies;
             if (refuse_apply) return std::string("independent host refusal");
             try { preview->apply(edit); return std::string{}; }
             catch (const std::exception& e) { return std::string(e.what()); }
         },
         [&] {
+#ifdef EDI_TEST_ADMISSION_FAULT
+            independent_fault::HostHook safe_host;
+#endif
             if (std::this_thread::get_id() != owner) ++owner_clock_violations;
             if (steady_clock) return now + static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-clock_start).count());
             return now;
@@ -365,6 +389,18 @@ int main() {
                 result = reply(controller.attach(project.get(), input.at("id").string("id")));
             } else if (op == "detach") {
                 result = reply(controller.attach(nullptr, ""));
+#ifdef EDI_TEST_ADMISSION_FAULT
+            } else if (op == "fault_user" || op == "fault_provider") {
+                const auto payload=edi::json::write(input.at("payload"));
+                const auto ordinal=static_cast<std::uint64_t>(input.at("ordinal").number("ordinal"));
+                const bool as_length=input.at("length").boolean("length");
+                edi::assistant::Reply actual;
+                {
+                    independent_fault::Arm armed(ordinal,as_length);
+                    actual=op=="fault_user" ? controller.user_command(payload) : controller.provider_event(payload);
+                }
+                result=reply(actual);
+#endif
             } else if (op == "user") {
                 result = reply(controller.user_command(edi::json::write(input.at("payload"))));
             } else if (op == "user_raw") {
@@ -438,6 +474,9 @@ int main() {
                 {"owner_thread_kit", static_cast<bool>(EDI_WORKER_OWNER_THREAD)}};
 #ifdef EDI_TEST_TERMINAL_RETENTION
             std::get<Object>(output.data).emplace_back("retention",retention.observation());
+#endif
+#ifdef EDI_TEST_ADMISSION_FAULT
+            std::get<Object>(output.data).emplace_back("allocation_fault",independent_fault::observation());
 #endif
             std::cout << edi::json::write(output) << '\n' << std::flush;
         } catch (const std::exception& error) {

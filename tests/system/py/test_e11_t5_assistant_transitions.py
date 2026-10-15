@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.assistant.response_events import message_start
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -100,6 +102,7 @@ def test_live_message_fragmentation_remains_usable_before_item_completion(host):
             }
         ],
     )
+    before = boundaries.chunks(host, [message_start(item_id='live-item')[1]])
     assert before['reply']['last']['ok'], (
         'I3/S10: a live message control precedes fragment admission'
     )
@@ -112,8 +115,10 @@ def test_live_message_fragmentation_remains_usable_before_item_completion(host):
                 'output_index': 0,
                 'content_index': 0,
                 'delta': text,
+                'sequence_number': sequence,
+                'logprobs': [],
             }
-            for text in ['Å', 'ngström 🧪']
+            for sequence, text in enumerate(['Å', 'ngström 🧪'], start=2)
         ],
     )
     assert result['reply']['last']['ok'], 'I3/S10: ordinary live message fragments remain accepted'
