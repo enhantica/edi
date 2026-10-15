@@ -323,3 +323,48 @@ def test_successful_preference_save_preserves_unrelated_provider_failure(launch,
         choose(failed, SOL, 'high')
         assert failed.last['vm']['last_error'] == original_error, 'I13/PREF2: successful preference save cannot erase an unrelated provider failure'
         assert failed.last['vm']['messages'] == original_rows, 'I3/PREF2: preference recovery leaves the original complete provider failure card intact'
+
+
+def test_catalog_reconnect_cannot_acknowledge_an_unsaved_user_choice(launch, signer):
+    with launch() as seed:
+        connected(seed, signer)
+        choose(seed, SOL, 'high')
+        store = Path(seed.last['settings_file'])
+    assert store.is_file(), 'I13/PREF3: genuine healthy explicit choice is persisted before a later write failure'
+    original = store.read_bytes()
+    mode = stat.S_IMODE(store.stat().st_mode)
+    parent_mode = stat.S_IMODE(store.parent.stat().st_mode)
+    facts = {}
+    with launch() as saving:
+        connected(saving, signer)
+        assert pair(saving) == (SOL, 'high'), 'I13/PREF3: a fresh real owner successfully reads the independently saved original pair'
+        try:
+            store.chmod(0o444)
+            store.parent.chmod(0o555)
+            with pytest.raises(PermissionError):
+                with store.open('ab'):
+                    pass
+            readable = qualify_read(store)
+            assert readable['qfile_opened'] and readable['qsettings_status'] == 0, 'I13/PREF3: the original store remains genuinely readable while actual writes are denied'
+            choose(saving, LUNA, 'none')
+            facts['failed_save'] = {'pair': pair(saving), 'error': saving.last['vm']['last_error'], 'old_disk_exact': store.read_bytes() == original}
+            finish_signout(saving)
+            connected(saving, signer)
+            with pytest.raises(PermissionError):
+                with store.open('ab'):
+                    pass
+            facts['reconnected_while_denied'] = {'pair': pair(saving), 'error': saving.last['vm']['last_error'], 'old_disk_exact': store.read_bytes() == original}
+        finally:
+            store.parent.chmod(parent_mode)
+            store.chmod(mode)
+        saving.command('select_model', id=LUNA)  # Actual same-value explicit successful save.
+        facts['successful_retry'] = {'pair': pair(saving), 'error': saving.last['vm']['last_error'], 'inferences': len(prior.responses(saving))}
+    with launch() as restarted:
+        connected(restarted, signer)
+        facts['restarted_pair'] = pair(restarted)
+    print(json.dumps({'PREF3': facts}, ensure_ascii=False))
+    assert facts['failed_save']['error'] and facts['failed_save']['old_disk_exact'], 'I13/PREF3: genuine failed write preserves the older healthy disk value and reports unsaved intent'
+    assert facts['reconnected_while_denied']['pair'] == (LUNA, 'none') and facts['reconnected_while_denied']['old_disk_exact'], 'I13/PREF3: reconnect cannot confuse the unsaved active choice with the older persisted pair'
+    assert facts['successful_retry']['pair'] == (LUNA, 'none') and facts['restarted_pair'] == (LUNA, 'none'), 'I13/PREF3: actual explicit recovery durably saves the intended pair for a fresh process'
+    assert not facts['successful_retry']['error'] and facts['successful_retry']['inferences'] == 0, 'I13/PREF3: confirmed successful save retires its warning without inference'
+    assert facts['reconnected_while_denied']['error'] == facts['failed_save']['error'], 'I13/PREF3: read and ready catalog success cannot clear an unresolved write-failure warning'
