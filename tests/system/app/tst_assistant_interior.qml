@@ -77,6 +77,26 @@ TestCase {
             diagnosticMarker: "SECONDARY_TECHNICAL_ORIGINAL"
         };
     }
+    function compareRetainedPayload(actual, expected) {
+        compare(typeof actual, typeof expected, "ACT1: retained payload preserves every value type");
+        compare(actual === null, expected === null, "ACT1: retained payload preserves null distinctly");
+        if (expected === null)
+            return;
+        compare(Array.isArray(actual), Array.isArray(expected), "ACT1: retained payload preserves object versus array shape");
+        if (Array.isArray(expected)) {
+            compare(actual.length, expected.length, "ACT1: retained payload preserves every array entry");
+            for (let index = 0; index < expected.length; ++index)
+                compareRetainedPayload(actual[index], expected[index]);
+        } else if (typeof expected === "object") {
+            const keys = Object.keys(actual).sort();
+            const expectedKeys = Object.keys(expected).sort();
+            compare(JSON.stringify(keys), JSON.stringify(expectedKeys), "ACT1: retained payload preserves all known and unknown keys independent of map ordering");
+            for (const key of expectedKeys)
+                compareRetainedPayload(actual[key], expected[key]);
+        } else {
+            compare(actual, expected, "ACT1: retained payload preserves exact scalar and string values");
+        }
+    }
     function test_command_activity_is_compact_and_discloses_originals_data() {
         return [
             {tag: "running", status: "inProgress", exitCode: null, summary: /running/i},
@@ -105,7 +125,7 @@ TestCase {
         renderedRow(row);
         literalCommandDetails(row, original);
         verify(!Ui.text(row).includes(original.diagnosticMarker), "ACT1: primary disclosure shows human-readable originals before raw technical JSON");
-        compare(JSON.stringify(row.payload), JSON.stringify(original), "ACT1: presentation does not rewrite retained command payload");
+        compareRetainedPayload(row.payload, original);
         mouseClick(disclosure);
         renderedRow(row);
         compare(disclosure.checked, false, "ACT1: real disclosure can collapse again");
@@ -151,7 +171,7 @@ TestCase {
         row.status = data.status;
         renderedRow(row);
         verify(data.summary.test(Ui.text(row)) && !/running/i.test(Ui.text(row)), "ACT1: public interruption/failure cannot remain Running because original command evidence is unfinished");
-        compare(JSON.stringify(row.payload), JSON.stringify(original), "ACT1: retirement never fabricates a command completion, output or exit code");
+        compareRetainedPayload(row.payload, original);
         mouseClick(commandDisclosure(row));
         renderedRow(row);
         literalCommandDetails(row, original);
@@ -164,7 +184,7 @@ TestCase {
         verify(restored !== null, "ACT1: retained public status and original payload can be reconstructed");
         renderedRow(restored);
         verify(data.summary.test(Ui.text(restored)) && !/running/i.test(Ui.text(restored)), "ACT1: reload-equivalent presentation keeps actual retirement visible without rewriting original evidence");
-        compare(JSON.stringify(restored.payload), JSON.stringify(original), "ACT1: reload-equivalent presentation preserves the original unknown command outcome");
+        compareRetainedPayload(restored.payload, original);
     }
     function test_literal_rows_keep_author_information_data() {
         return [
