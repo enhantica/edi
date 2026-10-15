@@ -273,6 +273,146 @@ def test_clear_active_turn_retires_old_authority_without_signing_out(generic):
     clear_conversation_case(generic, 'active')
 
 
+def clear_control_events(trace):
+    return records(trace.with_suffix('.clear-events.jsonl'))
+
+
+def begin_clear_control_case(generic, scenario):
+    actor, trace = generic(scenario)
+    connect(actor)
+    before = actor.last['vm']
+    actor.command('send_text', text='Original Clear ordering turn A')
+    settle(actor, lambda state: state['can_cancel'] and any(
+        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+    ))
+    assert before['handoff']['account_label'] == 'original@example.invalid', (
+        'CLR SETUP: managed account is genuinely admitted before work and retirement'
+    )
+    original = started_requests(trace)
+    assert len(original) == 1 and len(users(actor, 'Original Clear ordering turn A')) == 1, (
+        'CLR SETUP: actual original thread/turn and once-only user row are admitted'
+    )
+    return actor, trace, before, original[0]
+
+
+def require_clear_settlement(actor, trace, before, original):
+    state = settle(actor, lambda value: not value['can_cancel'] and {
+        'interrupt-ack', 'control-terminal'
+    } <= {event['kind'] for event in clear_control_events(trace)})
+    trace.with_suffix('.clear-control-public.json').write_text(json.dumps({
+        'state': state, 'events': clear_control_events(trace), 'requests': records(trace),
+    }, ensure_ascii=False, indent=2))
+    assert state['connected'] and state['handoff']['account_label'] == before['handoff'][
+        'account_label'
+    ], 'CLR: both original terminal and control acknowledgement preserve the managed account'
+    assert state['models'] == before['models'], (
+        'CLR: actual catalog survives settled conversation retirement'
+    )
+    assert not any((state['messages'], state['pending_question'], state['pending_plan'])), (
+        'CLR: no original or delayed conversation item revives after Clear'
+    )
+    interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
+    assert len(interrupts) == 1 and interrupts[0]['params']['threadId'] == original['params'][
+        'threadId'
+    ], 'CLR: original retirement issues one interrupt bound to its own thread'
+    active = next(event for event in clear_control_events(trace) if event['kind'] == 'active')
+    assert interrupts[0]['params']['turnId'] == active['turnId'], (
+        'CLR: acknowledgement cannot substitute a different original turn identity'
+    )
+    if state['context_consent_required']:
+        actor.command('sign_in')  # Actual context approval only after retained-auth proof.
+    actor.command('send_text', text='Original fresh Clear ordering turn B')
+    state = settle(actor, lambda value: any(
+        row.get('text') == 'Original fresh after Clear reply' for row in value['messages']
+    ))
+    sent = started_requests(trace)
+    assert len(sent) == 2 and sent[1]['params']['threadId'] != original['params']['threadId'], (
+        'CLR: settled Clear admits one genuinely fresh thread, not replay of the old owner'
+    )
+    row = users(actor, 'Original fresh Clear ordering turn B')
+    assert len(row) == 1 and row[0]['id'] == sent[1]['params']['clientUserMessageId'], (
+        'CLR: fresh current input is acknowledged by exactly its own retained row identity'
+    )
+    assert state['connected'] and not state['can_cancel'], (
+        'CLR: fresh actual turn completes without logout or stranded cancellation'
+    )
+    assert not any(record.get('method') in {'account/login/start', 'account/logout'}
+                   for record in records(trace)), (
+        'CLR: context/thread renewal does not fabricate a fresh login or logout'
+    )
+
+
+@pytest.mark.parametrize('order', ['ack-first', 'terminal-first'])
+def test_active_clear_settles_both_original_control_orderings(generic, order):
+    actor, trace, before, original = begin_clear_control_case(generic, 'clear:ordered:' + order)
+    actor.command('clear_history')
+    require_clear_settlement(actor, trace, before, original)
+    kinds = [event['kind'] for event in clear_control_events(trace)]
+    assert (kinds.index('interrupt-ack') < kinds.index('control-terminal')) == (
+        order == 'ack-first'
+    ), 'CLR SETUP: actual peer emitted the independently selected ACK/terminal ordering'
+
+
+def test_acknowledged_stop_then_clear_keeps_original_interrupt_once(generic):
+    actor, trace, before, original = begin_clear_control_case(generic, 'clear:stop-ack')
+    actor.command('cancel')
+    settle(actor, lambda _value: any(
+        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
+    ))
+    assert not any(event['kind'] == 'control-terminal' for event in clear_control_events(trace)), (
+        'CLR SETUP: real Stop acknowledgement precedes Clear while original terminal is pending'
+    )
+    actor.command('clear_history')
+    require_clear_settlement(actor, trace, before, original)
+
+
+def test_original_terminal_cannot_release_input_before_its_control_ack(generic):
+    actor, trace, before, original = begin_clear_control_case(generic, 'clear:pending-ack')
+    actor.command('cancel')
+    state = settle(actor, lambda value: any(
+        event['kind'] == 'control-terminal' for event in clear_control_events(trace)
+    ) and any(row.get('kind') == 'assistant' for row in value['messages']))
+    assert state['connected'] and not state['context_consent_required'], (
+        'CLR SETUP: original terminal retains genuine approved context before new input'
+    )
+    assert not any(event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)), (
+        'CLR SETUP: actual original control remains unacknowledged at the attempted new input'
+    )
+    actor.command('send_text', text='Original pending-control turn B')
+    blocked = actor.last['vm']
+    events = clear_control_events(trace)
+    trace.with_suffix('.pending-control-public.json').write_text(json.dumps({
+        'blocked': blocked, 'events': events, 'requests': records(trace),
+    }, ensure_ascii=False, indent=2))
+    assert not any(event['kind'] == 'interrupt-ack' for event in events), (
+        'CLR SETUP: attempted input actually precedes ACK delivery, not a guessed timing interval'
+    )
+    assert len(started_requests(trace)) == 1 and not users(
+        actor, 'Original pending-control turn B'
+    ), (
+        'CLR: pending original control refuses new admission without acknowledging editor clearing'
+    )
+    assert blocked['last_error'] and len(blocked['last_error'].encode()) <= 512, (
+        'CLR: nonadmitted input has a truthful bounded visible refusal'
+    )
+    settle(actor, lambda value: any(
+        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
+    ) and not value['can_cancel'])
+    actor.command('send_text', text='Original pending-control turn B')
+    state = settle(actor, lambda value: any(
+        row.get('text') == 'Original fresh after Clear reply' for row in value['messages']
+    ))
+    sent = started_requests(trace)
+    assert len(sent) == 2 and len(users(actor, 'Original pending-control turn B')) == 1, (
+        'CLR: explicit retry after real original ACK admits the new input exactly once'
+    )
+    assert state['connected'] and state['handoff']['account_label'] == before['handoff'][
+        'account_label'
+    ] and sent[0]['params']['threadId'] == original['params']['threadId'], (
+        'CLR: settling the owned original control preserves real account and original binding'
+    )
+
+
 @pytest.mark.parametrize(
     'scenario',
     [

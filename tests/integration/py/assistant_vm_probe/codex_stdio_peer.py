@@ -12,6 +12,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from threading import Timer
 
 config = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
 trace = Path(config['trace'])
@@ -99,7 +100,9 @@ def clear_start(request):
     original = {'threadId': thread_id, 'turnId': turn_id}
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
-    if len(starts) == 1 and scenario == 'clear:active':
+    if len(starts) == 1 and (scenario == 'clear:active'
+                            or scenario.startswith('clear:ordered:')
+                            or scenario in {'clear:stop-ack', 'clear:pending-ack'}):
         work = {
             'id': 'clear-prior-work', 'type': 'commandExecution', 'status': 'inProgress',
             'command': 'Original harmless held command, never executed', 'commandActions': [],
@@ -117,6 +120,31 @@ def clear_start(request):
                      else 'Original fresh after Clear reply')
     if len(starts) == 1:
         clear_prior = original
+
+
+def clear_ordered_interrupt(request):
+    """Finite ordinary protocol delay, not a producer clock or fault control."""
+    original = clear_prior
+    clear_observation('interrupt-received', {**original, 'request_id': request['id']})
+
+    def acknowledge():
+        reply(request, {})
+        clear_observation('interrupt-ack', {**original, 'request_id': request['id']})
+
+    def terminal():
+        clear_completion(original, 'Original late reply after Clear', old=True)
+        clear_observation('control-terminal', original)
+
+    terminal_first = scenario in {'clear:ordered:terminal-first', 'clear:pending-ack'}
+    if terminal_first:
+        terminal()
+    else:
+        acknowledge()
+    # Enough ordinary owner-event deliveries to observe the actual open gap;
+    # every test verifies that the delayed event is still absent at its action.
+    timer = Timer(0.6, acknowledge if terminal_first else terminal)
+    timer.daemon = True
+    timer.start()
 
 
 def handoff_metadata(value):
@@ -820,6 +848,11 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
+        if scenario.startswith('clear:ordered:') or scenario in {
+            'clear:stop-ack', 'clear:pending-ack'
+        }:
+            clear_ordered_interrupt(request)
+            continue
         if scenario.startswith('clear:') and clear_prior is not None:
             reply(request, {})
             clear_completion(clear_prior, 'Original late reply after Clear', old=True)
