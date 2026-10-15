@@ -160,22 +160,33 @@ PUBLISHED_PBSO4 = {
 }
 
 
-@pytest.mark.parametrize('factory', ['from_cif_path', 'from_cif_str'])
-def test_genuine_classic_cif_without_optional_letters_saves_and_reopens_unchanged(
-    tmp_path, factory
-):
-    source = ROOT / 'tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif'
-    original = source.read_bytes()
-    assert hashlib.sha256(original).hexdigest() == (
-        '9bc19d0995561afd78a5f0563599c032751621da994e36c7570b4f515d9f0e2f'
-    ), 'CIF INPUT: published tutorial bytes remain the independent original'
-    value = source if factory == 'from_cif_path' else original.decode()
-    structure = getattr(edi.StructureFactory, factory)(value)
-    project = edi.Project(name='genuine-pbso4-classic')
+def persistence_project(structure):
+    # Explicit calculation-only grid completes the ordinary saved project. It
+    # supplies NO invented measured y/sigma and no calculation is performed.
+    project = edi.Project(name='structure-persistence-control')
     project.structure = structure
-    target = tmp_path / 'saved-original-cif'
-    project.save_as(target)
-    reopened = edi.Project.load(target).structure
+    project.experiment = edi.ExperimentFactory.from_cif_str(
+        """data_persistence_grid
+_edi.schema_version 2
+_experiment_type.sample_form powder
+_experiment_type.beam_mode "constant wavelength"
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_peak.type cwl-tch-pseudo-voigt
+_peak.broad_gauss_u 0.1
+_peak.broad_gauss_v 0
+_peak.broad_gauss_w 0.1
+_instrument.setup_wavelength 1.909
+_data_range.two_theta_min 10
+_data_range.two_theta_max 10.2
+_data_range.two_theta_step 0.1
+"""
+    )
+    project.experiment.linked_structure.structure_id = structure.name
+    return project
+
+
+def verify_published_pbso4(reopened, expected_sites):
     assert reopened.space_group.name_h_m == 'P n m a', (
         'CIF: missing optional Wyckoff column cannot change the actual declared space group'
     )
@@ -196,8 +207,8 @@ def test_genuine_classic_cif_without_optional_letters_saves_and_reopens_unchange
         'groups'
     ]['Pnma']
     sites = {site.id: site for site in reopened.atom_sites}
-    assert set(sites) == set(PUBLISHED_PBSO4), 'CIF: all genuine published atom identities survive'
-    for label, (element, coordinates, multiplicity) in PUBLISHED_PBSO4.items():
+    assert set(sites) == set(expected_sites), 'CIF: all genuine published atom identities survive'
+    for label, (element, coordinates, multiplicity) in expected_sites.items():
         site = sites[label]
         actual = [
             float(getattr(site, field).value) % 1 for field in ('fract_x', 'fract_y', 'fract_z')
@@ -232,6 +243,24 @@ def test_genuine_classic_cif_without_optional_letters_saves_and_reopens_unchange
             'CIF REFERENCE: original coordinates and independent cctbx '
             'operations reproduce input count'
         )
+
+
+@pytest.mark.parametrize('factory', ['from_cif_path', 'from_cif_str'])
+def test_genuine_classic_cif_without_optional_letters_saves_and_reopens_unchanged(
+    tmp_path, factory
+):
+    source = ROOT / 'tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif'
+    original = source.read_bytes()
+    assert hashlib.sha256(original).hexdigest() == (
+        '9bc19d0995561afd78a5f0563599c032751621da994e36c7570b4f515d9f0e2f'
+    ), 'CIF INPUT: published tutorial bytes remain the independent original'
+    value = source if factory == 'from_cif_path' else original.decode()
+    structure = getattr(edi.StructureFactory, factory)(value)
+    project = persistence_project(structure)
+    target = tmp_path / 'saved-original-cif'
+    project.save_as(target)
+    reopened = edi.Project.load(target).structure
+    verify_published_pbso4(reopened, PUBLISHED_PBSO4)
     assert source.read_bytes() == original, (
         'CIF: actual factory/persistence cannot mutate source bytes'
     )
@@ -243,8 +272,7 @@ def test_genuine_published_explicit_wyckoff_letters_remain_authoritative(tmp_pat
     structure = edi.StructureFactory.from_cif_path(source)
     expected = {site.id: site.wyckoff_letter for site in structure.atom_sites}
     assert all(expected.values()), 'CIF SETUP: genuine COD input supplies its explicit letters'
-    project = edi.Project(name='published-explicit-letter-control')
-    project.structure = structure
+    project = persistence_project(structure)
     target = tmp_path / 'saved-cod-control'
     project.save_as(target)
     actual = edi.Project.load(target)
@@ -253,4 +281,48 @@ def test_genuine_published_explicit_wyckoff_letters_remain_authoritative(tmp_pat
     )
     assert source.read_bytes() == original, (
         'CIF: explicit-letter control preserves its genuine input'
+    )
+
+
+@pytest.mark.parametrize(
+    ('unknown', 'image'), [('?', False), ('.', False), (None, True), ('?', True), ('.', True)]
+)
+def test_derived_unknown_optional_letter_and_equivalent_orbit_image_preserve_physics(
+    tmp_path, unknown, image
+):
+    source = ROOT / 'tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif'
+    original = source.read_bytes()
+    text = original.decode()
+    assert '1/2-x,1/2+y,1/2+z' in text, (
+        'CIF DERIVED INPUT: the actual original supplies this literal symmetry operation'
+    )
+    expected_sites = {}
+    for label, (element, xyz, multiplicity) in PUBLISHED_PBSO4.items():
+        position = ((0.5 - xyz[0]) % 1, (0.5 + xyz[1]) % 1, (0.5 + xyz[2]) % 1) if image else xyz
+        expected_sites[label] = (element, position, multiplicity)
+    if unknown is not None:
+        text = text.replace(
+            '_atom_site_symmetry_multiplicity',
+            '_atom_site_symmetry_multiplicity\n   _atom_site_Wyckoff_symbol',
+        )
+    lines = []
+    for line in text.splitlines():
+        prepared = line
+        fields = line.split()
+        if fields and fields[0] in expected_sites:
+            if image:
+                fields[2:5] = [format(x, '.17g') for x in expected_sites[fields[0]][1]]
+            if unknown is not None:
+                fields.append(unknown)
+            prepared = ' '.join(fields)
+        lines.append(prepared)
+    selected = tmp_path / 'explicitly-derived-original.cif'
+    selected.write_text('\n'.join(lines) + '\n')
+    structure = edi.StructureFactory.from_cif_path(selected)
+    project = persistence_project(structure)
+    target = tmp_path / 'saved-derived-input'
+    project.save_as(target)
+    verify_published_pbso4(edi.Project.load(target).structure, expected_sites)
+    assert source.read_bytes() == original, (
+        'CIF DERIVED INPUT: unknown tokens/orbit-image controls never alter the genuine original'
     )
