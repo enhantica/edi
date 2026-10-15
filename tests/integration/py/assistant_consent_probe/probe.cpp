@@ -4,7 +4,9 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include <QAccessible>
+#include <QAbstractTextDocumentLayout>
 #include <QClipboard>
+#include <QColor>
 #include <QDir>
 #include <QGuiApplication>
 #include <QFont>
@@ -15,9 +17,11 @@
 #include <QTextBlock>
 #include <QTextFragment>
 #include <QTextList>
+#include <QTextLayout>
 #include <QJsonValue>
 #include <QJSValue>
 #include <QQmlApplicationEngine>
+#include <QQmlExpression>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QStandardPaths>
@@ -142,22 +146,38 @@ int main(int argc,char** argv) {
     const auto snapshot=[&] {
         if(markdown_mode) {
             auto* body=markdown_body();auto* document=markdown_document();
-            Array fragments,blocks;
+            Array fragments,blocks,lines;
             for(auto block=document->begin();block.isValid();block=block.next()) {
-                blocks.push_back(Object{{"text",block.text()},{"listed",block.textList()!=nullptr}});
+                const auto* list=block.textList();
+                blocks.push_back(Object{{"text",block.text()},{"listed",list!=nullptr},
+                    {"list_indent",list ? list->format().indent() : 0}});
+                const auto bounds=document->documentLayout()->blockBoundingRect(block);
+                if(const auto* layout=block.layout())for(int index=0;index<layout->lineCount();++index) {
+                    const auto line=layout->lineAt(index);
+                    lines.push_back(Object{{"start",block.position()+line.textStart()},
+                        {"length",line.textLength()},{"x",bounds.x()+line.x()},
+                        {"width",line.naturalTextWidth()}});
+                }
                 for(auto it=block.begin();!it.atEnd();++it) {
                     const auto fragment=it.fragment();if(!fragment.isValid())continue;
                     const auto format=fragment.charFormat();
                     fragments.push_back(Object{{"text",fragment.text()},
                         {"bold",format.fontWeight()>=QFont::DemiBold},
-                        {"fixed_pitch",format.fontFixedPitch() || QFontInfo(format.font()).fixedPitch()}});
+                        {"fixed_pitch",format.fontFixedPitch() || QFontInfo(format.font()).fixedPitch()},
+                        {"anchor",format.isAnchor()},{"href",format.anchorHref()},
+                        {"foreground",format.foreground().color().name(QColor::HexArgb)}});
                 }
             }
+            QQmlExpression accent(qmlContext(root),root,"EaStyle.Colors.themeAccent");
+            const auto accent_value=accent.evaluate();
+            if(accent.hasError() || !accent_value.canConvert<QColor>())
+                throw std::runtime_error("actual application theme accent is unavailable");
             return Object{{"ui",Object{{"original",root->findChild<QObject*>("markdown.row")->property("text").toString()},
                 {"plain",document->toPlainText()},{"selected",body->property("selectedText").toString()},
                 {"read_only",body->property("readOnly").toBool()},
                 {"select_by_mouse",body->property("selectByMouse").toBool()},
-                {"body",geometry(body,window)},{"fragments",fragments},{"blocks",blocks}}}};
+                {"body",geometry(body,window)},{"fragments",fragments},{"blocks",blocks},
+                {"lines",lines},{"theme_accent",accent_value.value<QColor>().name(QColor::HexArgb)}}}};
         }
 
         Object vm{{"connected",session->assistant()->connected()},{"state",session->assistant()->state()},

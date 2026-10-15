@@ -49,6 +49,18 @@ def test_actual_transcript_delegate_author_semantics():
         ) in output, (
             'ACT1: public terminal status over unfinished command evidence executes\n' + output
         )
+    for tag in ['files', 'mcp-failure', 'dynamic', 'collaboration', 'web', 'plan', 'unknown']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_supported_activity_kinds_share_compact_literal_disclosure(' + tag + ')'
+        ) in output, (
+            'GUI92: each independently supplied activity category/disclosure executes\n' + output
+        )
+    for tag in ['explicit-read', 'shell-words']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_activity_categories_require_structured_evidence(' + tag + ')'
+        ) in output, 'GUI92: structured action and shell-word negative controls execute\n' + output
     assert result.returncode == 0, (
         'I16/INT1: actual delegate presentation completes without hidden failures\n' + output
     )

@@ -64,6 +64,13 @@ TestCase {
             compare(editor.selectedText, value, "ACT1: actual selected details preserve every original character");
         }
     }
+    function revealTechnicalDetails(row) {
+        const controls = Ui.itemsWithProperty(row, "checkable").filter(control => control.visible && control.checkable && /technical|inspect details/i.test(control.text));
+        verify(controls.length > 0, "GUI92: original event JSON retains a real secondary disclosure");
+        if (!controls[0].checked)
+            mouseClick(controls[0]);
+        renderedRow(row);
+    }
     function commandItem(status, exitCode) {
         return {
             id: "original-command",
@@ -122,8 +129,8 @@ TestCase {
         verify(data.summary.test(collapsed), "ACT1: collapsed command summary truthfully distinguishes running from settled work");
         verify(!collapsed.includes(original.aggregatedOutput) && !collapsed.includes(original.cwd), "ACT1: complete command details start collapsed rather than flooding normal transcript rows");
         verify(!collapsed.includes(original.diagnosticMarker), "ACT1: raw event JSON starts behind secondary technical disclosure");
-        if (data.exitCode !== null)
-            verify(collapsed.includes(String(data.exitCode)), "ACT1: completed activity retains its actual exit code without implying scientific success");
+        if (data.status === "failed")
+            verify(/fail|error/i.test(collapsed), "GUI92: compact summaries cannot hide an actual failed command outcome");
         const disclosure = commandDisclosure(row);
         compare(disclosure.checked, false, "ACT1: original command disclosure starts closed");
         mouseClick(disclosure);
@@ -131,6 +138,14 @@ TestCase {
         literalCommandDetails(row, original);
         verify(!Ui.text(row).includes(original.diagnosticMarker), "ACT1: primary disclosure shows human-readable originals before raw technical JSON");
         compareRetainedPayload(row.payload, original);
+        // Owner d9ec58479 moves technical metadata out of the default caption.
+        // Preserve exact typed exit evidence and exercise its actual disclosure.
+        if (data.exitCode !== null) {
+            compare(typeof row.payload.exitCode, "number", "GUI92: original exit metadata keeps its numeric type");
+            compare(row.payload.exitCode, data.exitCode, "GUI92: original exit code is unchanged");
+            revealTechnicalDetails(row);
+            verify(new RegExp('"exitCode"\\s*:\\s*' + data.exitCode + '(?:\\s|[,}])').test(Ui.text(row)), "GUI92: actual exit code remains reachable in literal technical details");
+        }
         mouseClick(disclosure);
         renderedRow(row);
         compare(disclosure.checked, false, "ACT1: real disclosure can collapse again");
@@ -191,6 +206,64 @@ TestCase {
         verify(data.summary.test(Ui.text(restored)) && !/running/i.test(Ui.text(restored)), "ACT1: reload-equivalent presentation keeps actual retirement visible without rewriting original evidence");
         compareRetainedPayload(restored.payload, original);
     }
+    function test_supported_activity_kinds_share_compact_literal_disclosure_data() {
+        // Independent original shapes: retained public 0.162.1 ThreadItem union.
+        return [
+            {tag: "files", original: {id: "files-original", type: "fileChange", status: "completed", changes: []}, summary: /chang|file|patch/i},
+            {tag: "mcp-failure", original: {id: "mcp-original", type: "mcpToolCall", status: "failed", server: "owned", tool: "original", arguments: {}}, summary: /fail|error/i},
+            {tag: "dynamic", original: {id: "dynamic-original", type: "dynamicToolCall", status: "completed", tool: "original", arguments: {}, success: true, contentItems: []}, summary: /tool|call|ran|complet/i},
+            {tag: "collaboration", original: {id: "collab-original", type: "collabAgentToolCall", status: "interrupted", senderThreadId: "original-sender", receiverThreadIds: [], agentsStates: {}, tool: "spawnAgent"}, summary: /interrupt|stopp|cancel/i},
+            {tag: "web", original: {id: "web-original", type: "webSearch", query: "Original explicit search", action: {type: "search", query: "Original explicit search"}}, summary: /web|search/i},
+            {tag: "plan", original: {id: "plan-original", type: "plan", text: "Original proposed steps"}, summary: /plan/i},
+            {tag: "unknown", original: {id: "unknown-original", type: "futureOwnedActivity", original: "opaque original data"}, summary: /activity|event|unknown/i}
+        ];
+    }
+    function test_supported_activity_kinds_share_compact_literal_disclosure(data) {
+        const original = Object.assign({}, data.original, {diagnosticMarker: "ORIGINAL_SECONDARY_測定"});
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: "Original literal activity body", status: original.status || "completed", payload: original
+        });
+        verify(row !== null, "GUI92: actual production delegate presents the independently supplied activity kind");
+        renderedRow(row);
+        const summary = Ui.text(row);
+        verify(data.summary.test(summary), "GUI92: human activity summary preserves actual category and failed/interrupted truth");
+        verify(!summary.includes(original.diagnosticMarker), "GUI92: every activity kind starts with technical originals collapsed");
+        verify(accessibleText(row).trim().length > 0, "GUI92: compact activity keeps a discoverable accessible summary");
+        const disclosure = commandDisclosure(row);
+        compare(disclosure.checked, false, "GUI92: actual activity disclosure begins closed");
+        mouseClick(disclosure);
+        renderedRow(row);
+        if (!Ui.text(row).includes(original.diagnosticMarker))
+            revealTechnicalDetails(row);
+        verify(Ui.text(row).includes(original.diagnosticMarker), "GUI92: every supported or unknown activity retains complete inspectable original metadata");
+        const details = Ui.itemsWithProperty(row, "readOnly").filter(control => control.visible && control.text.includes(original.diagnosticMarker));
+        verify(details.length > 0, "GUI92: actual original metadata remains in a real selectable text field");
+        compare(details[0].textFormat, TextEdit.PlainText, "GUI92: technical activity details stay literal rather than executable markup");
+        compare(details[0].readOnly, true, "GUI92: retained activity details cannot be edited");
+        compare(details[0].selectByMouse, true, "GUI92: retained activity details are selectable");
+        compareRetainedPayload(row.payload, original);
+    }
+    function test_activity_categories_require_structured_evidence_data() {
+        return [{tag: "explicit-read", structured: true}, {tag: "shell-words", structured: false}];
+    }
+    function test_activity_categories_require_structured_evidence(data) {
+        const original = commandItem("completed", 0);
+        original.command = "printf 'cat read files search web curl'";
+        original.commandActions = data.structured ? [{type: "read", command: original.command, name: "original.cif", path: "/owned/original.cif"}] : [];
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command, status: "completed", payload: original
+        });
+        verify(row !== null, "GUI92: structured-action and shell-word controls use the same actual delegate");
+        renderedRow(row);
+        const summary = commandDisclosure(row).text;
+        if (data.structured)
+            verify(/read/i.test(summary), "GUI92: explicit original read action can supply a truthful human category");
+        else {
+            verify(/command|ran/i.test(summary), "GUI92: a command without structured actions stays a command");
+            verify(!/read.*file|search.*web|web.*search/i.test(summary), "GUI92: shell substrings alone cannot invent file-read or web-search actions");
+        }
+        compareRetainedPayload(row.payload, original);
+    }
     function test_literal_rows_keep_author_information_data() {
         return [
             {
@@ -248,7 +321,7 @@ TestCase {
             } else
                 verify(semantics.includes(text), "I16/INT1: complete body remains in the accessible semantic content");
         } else {
-            verify(Ui.text(row).includes("Activity"), "I16/INT1: existing Activity author-label control remains visibly identified");
+            verify(/activity|event/i.test(accessibleText(row)), "I16/INT1: a meaningful accessible activity identity survives human-summary captions");
         }
     }
 }
