@@ -193,7 +193,7 @@ for line in sys.stdin:
                         'type': 'commandExecution',
                         'id': 'original-command',
                         'status': 'inProgress',
-                        'command': 'original-command',
+                        'command': 'original command, never executed by peer',
                         'commandActions': [],
                         'cwd': params['sandboxPolicy']['writableRoots'][0],
                     },
