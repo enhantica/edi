@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T06:04:34Z
+# measured_utc = 2026-10-15T06:39:45Z
 #
-# Recorded from: seq18 finite c390 V1-V3 admission/continuation/teardown; 13 reached behavioral reds remain holes
-# Collected tests: 13771; with a reported duration: 7580
-# Module-scoped fixture costs recorded: 55
+# Recorded from: seq19 finite actual Session/VM component baseline; current resource/A1-A4 reds remain honest holes; existing full-Main costs unchanged
+# Collected tests: 13801; with a reported duration: 7597
+# Module-scoped fixture costs recorded: 56
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13438
+# inventory_python = 13468
 # inventory_cpp = 333
-# inventory_measured = 12052
-# inventory_unmeasured = 1719
+# inventory_measured = 12069
+# inventory_unmeasured = 1732
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6364,6 +6364,36 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.p
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_keyboard_toggle_focus_and_multiline_composer]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_narrow_panel_keeps_controls_accessible]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_busy_public_setters_refuse_selection_drift
+1.170	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_capacity_is_reserved_before_activity_or_work[capacity-control-bytes]
+0.690	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_capacity_is_reserved_before_activity_or_work[capacity-control-slots]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_capacity_is_reserved_before_activity_or_work[capacity-refusal-bytes]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_capacity_is_reserved_before_activity_or_work[capacity-refusal-slots]
+0.670	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_terminal_is_object_correlated_unique_and_persisted
+0.980	tests/system/app/test_e11_t5_vm_retention.py::test_inclusive_archive_cap_is_loadable_but_no_new_user_io_fits[bytes]
+0.570	tests/system/app/test_e11_t5_vm_retention.py::test_inclusive_archive_cap_is_loadable_but_no_new_user_io_fits[slots]
+1.451	tests/system/app/test_e11_t5_vm_retention.py::test_incomplete_native_tool_stream_does_not_fabricate_a_ui_allowance
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_native_start_refusal_then_retry_keeps_admitted_user_and_unique_send
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_pending_browser_signin_can_stop_and_late_valid_callback_cannot_connect
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_persistence_refusal_precedes_new_user_row_and_provider_io
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_provider_default_and_incompatible_model_reset_remain_visible
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_provider_terminal_card_is_durable_and_same_chat_retry_keeps_its_user[failed]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_provider_terminal_card_is_durable_and_same_chat_retry_keeps_its_user[incomplete]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_provider_terminal_card_is_durable_and_same_chat_retry_keeps_its_user[interrupted]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_provider_terminal_card_is_durable_and_same_chat_retry_keeps_its_user[refused]
+0.570	tests/system/app/test_e11_t5_vm_retention.py::test_queued_physical_request_rechecks_actual_owner_authority[continuation-live-control]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_queued_physical_request_rechecks_actual_owner_authority[continuation-revoked]
+0.440	tests/system/app/test_e11_t5_vm_retention.py::test_queued_physical_request_rechecks_actual_owner_authority[initial-live-control]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_queued_physical_request_rechecks_actual_owner_authority[initial-revoked]
+1.150	tests/system/app/test_e11_t5_vm_retention.py::test_real_fit_activity_retains_full_terminal_and_coalesces_progress
+1.050	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-account]
+1.060	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-clear]
+1.030	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-project]
+1.040	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[fit-session]
+0.600	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[question-account]
+0.610	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[question-clear]
+0.600	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[question-project]
+0.590	tests/system/app/test_e11_t5_vm_retention.py::test_stop_settles_actual_work_and_explicit_owner_retirement_fences_late_callbacks[question-session]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Bani-0]
 0.540	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-Uani-0]
 0.560	tests/system/py/test_adp_site_symmetry.py::test_a_completed_fit_moves_each_seed_and_preserves_its_full_site_tensor[cubic-beta-0]
@@ -13826,6 +13856,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 0.087	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
+# module-cost: 0.049	tests/system/app/test_e11_t5_vm_retention.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
