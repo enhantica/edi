@@ -64,6 +64,11 @@ TestCase {
         compare(popup.visible, false, "I16/popup: a fresh session starts with chat closed");
         compare(assistant.connected, false, "I12/popup: native availability does not imply provider connection");
     }
+    function cleanup() {
+        Preferences.dialogShown = false;
+        if (popup && popup.visible)
+            toggle();
+    }
     function cleanupTestCase() {
         if (popup.visible)
             toggle();
@@ -178,5 +183,158 @@ TestCase {
         sameRect(rect(main), before);
         toggle();
         composer.clear();
+    }
+    // POP1: actual traversal must escape Qt's Popup tab fence to the sole hide button.
+    function test_keyboard_can_return_to_appbar_data() {
+        return [
+            {
+                tag: "tab",
+                backwards: false
+            },
+            {
+                tag: "backtab",
+                backwards: true
+            }
+        ];
+    }
+    function test_keyboard_can_return_to_appbar(data) {
+        if (popup.visible)
+            toggle();
+        const button = item("assistant.toggle");
+        button.forceActiveFocus();
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", true, 500, "I16/POP1: real keyboard appbar activation opens chat");
+        const composer = item("assistant.composer");
+        tryVerify(() => composer.activeFocus, 500, "I16/POP1: traversal starts from the actual focused composer");
+        const visited = [];
+        // Finite fixture traversal bound, not a production resource or focus-policy limit.
+        for (let i = 0; i < 32 && !button.activeFocus; ++i) {
+            keyClick(Qt.Key_Tab, data.backwards ? Qt.ShiftModifier : Qt.NoModifier);
+            const focus = window.activeFocusItem;
+            if (focus && visited.indexOf(focus) < 0)
+                visited.push(focus);
+        }
+        verify(visited.length > 0, "I16/POP1: real key events traverse actual focusable objects");
+        verify(button.activeFocus, "I16/POP1: Tab and Backtab can reach the sole external appbar hide control");
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", false, 500, "I16/POP1: keyboard activation hides through the same appbar button");
+    }
+    function test_focus_restore_uses_current_scope_data() {
+        return [
+            {
+                tag: "page",
+                replacement: false
+            },
+            {
+                tag: "project-replacement",
+                replacement: true
+            }
+        ];
+    }
+    function test_focus_restore_uses_current_scope(data) {
+        if (popup.visible)
+            toggle();
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/POP2: real project establishes a live workflow scope");
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        const oldField = item("project.name");
+        mouseClick(oldField);
+        verify(oldField.activeFocus, "I16/POP2: real manual field owns focus before pointer opening");
+        toggle();
+        verify(popup.visible, "I16/POP2: pointer opens the actual popup without changing widget focus policy");
+        if (data.replacement) {
+            Session.closeProject();
+            verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/POP2: real replacement creates the next project scope");
+        }
+        const tab = item("appBar.tab.home");
+        mouseClick(tab);
+        tryCompare(window.appBarCentralTabs, "currentIndex", 0, 500, "I16/POP2: real outside navigation changes the current page while chat is open");
+        verify(popup.visible, "I16/POP2: navigation does not become an alternate dismissal");
+        toggle();
+        tryVerify(() => {
+            const current = window.activeFocusItem;
+            return current !== null && Ui.rendered(current);
+        }, 500, "I16/POP2: deferred close restores only a genuinely rendered current target");
+        verify(!oldField.activeFocus, "I16/POP2: retained or replaced offscreen field cannot receive restored focus");
+        const current = window.activeFocusItem;
+        keyClick(Qt.Key_Tab);
+        verify(window.activeFocusItem !== oldField, "I16/POP2: following real keyboard traversal stays outside the retired field");
+        verify(current !== null, "I16/POP2: close retains a usable visible keyboard target");
+    }
+    function test_home_focus_eligibility_tracks_geometry_data() {
+        return [
+            {
+                tag: "fully-covered",
+                partial: false
+            },
+            {
+                tag: "partial-edge",
+                partial: true
+            }
+        ];
+    }
+    function test_home_focus_eligibility_tracks_geometry(data) {
+        if (popup.visible)
+            toggle();
+        Session.closeProject();
+        window.appBarCentralTabs.currentIndex = 0;
+        const oldWidth = window.width;
+        const oldMinimum = window.minimumWidth;
+        const savedSide = Preferences.sideBarSide;
+        try {
+            Preferences.sideBarSide = "Left";
+            window.minimumWidth = 400;
+            window.width = 1280;
+            rendered();
+            toggle();
+            const about = item("home.about");
+            const host = item("workflow.home.sidebarHost");
+            const initial = rect(about);
+            const strip = rect(host);
+            verify(initial[0] >= strip[0] + strip[2], "I16/POP3: initial real Home target is wholly outside the popup strip");
+            // A cancelled pointer press focuses the normal widget without opening its dialog.
+            mousePress(about, about.width / 2, about.height / 2);
+            mouseRelease(about, -10, -10);
+            verify(about.activeFocus, "I16/POP3: legitimate outside pointer input establishes actual Home focus");
+            const focused = window.activeFocusItem;
+            if (data.partial) {
+                // Choose a finite width from captured centered-layout geometry, then
+                // independently require a real exposed edge; no invented target rect.
+                window.width = 1280 - 2 * (initial[0] - (strip[0] + strip[2] - initial[2] * 0.75));
+                rendered();
+                const edge = rect(about);
+                const edgeStrip = rect(host);
+                const boundary = edgeStrip[0] + edgeStrip[2];
+                verify(edge[0] < boundary && edge[0] + edge[2] > boundary, "I16/POP3: actual target spans covered and exposed geometry");
+                const exposedX = boundary - edge[0] + (edge[0] + edge[2] - boundary) / 2;
+                mouseClick(about, exposedX, about.height / 2);
+                tryCompare(item("about"), "visible", true, 500, "I16/POP3: exposed real Home control edge remains actionable");
+                item("about").close();
+                verify(popup.visible, "I16/POP3: partial-edge action does not dismiss chat");
+                return;
+            }
+            window.width = 640;
+            rendered();
+            const covered = rect(about);
+            const movedStrip = rect(host);
+            verify(covered[0] >= movedStrip[0] && covered[0] + covered[2] <= movedStrip[0] + movedStrip[2], "I16/POP3: actual resize moves the same Home target fully under the strip");
+            verify(focused === about, "I16/POP3: geometry witness concerns the same actual focused QObject");
+            tryVerify(() => !about.activeFocus, 500, "I16/POP3: geometry changes re-evaluate covered keyboard eligibility");
+            keyClick(Qt.Key_Space);
+            compare(item("about").visible, false, "I16/POP3: covered Home action cannot activate through the popup");
+            window.width = 1280;
+            rendered();
+            mouseClick(about);
+            tryCompare(item("about"), "visible", true, 500, "I16/POP3: genuine outside Home controls remain usable without a whole-page blocker");
+            item("about").close();
+            verify(popup.visible, "I16/POP3: outside dialog interaction does not dismiss chat");
+            toggle();
+        } finally {
+            if (popup.visible)
+                toggle();
+            window.width = oldWidth;
+            window.minimumWidth = oldMinimum;
+            Preferences.sideBarSide = savedSide;
+        }
     }
 }

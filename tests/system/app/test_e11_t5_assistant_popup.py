@@ -28,7 +28,13 @@ def popup_receipt(tmp_path_factory):
 
 @pytest.mark.parametrize(
     'case',
-    ['test_home_appbar_only_and_no_auto_dismiss', 'test_workflow_same_sidebar_and_live_state'],
+    [
+        'test_home_appbar_only_and_no_auto_dismiss',
+        'test_workflow_same_sidebar_and_live_state',
+        'test_keyboard_can_return_to_appbar',
+        'test_focus_restore_uses_current_scope',
+        'test_home_focus_eligibility_tracks_geometry',
+    ],
 )
 def test_actual_popup_owner_contract(popup_receipt, case):
     output = popup_receipt.stdout + popup_receipt.stderr
