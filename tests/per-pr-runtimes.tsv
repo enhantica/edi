@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T07:58:39Z
+# measured_utc = 2026-10-15T08:03:49Z
 #
-# Recorded from: seq22 finite HTTP/partial-item gates: three measured successful controls, ten reached red holes; original code is preserved in declared native state, no new core terminal field required
-# Collected tests: 13859; with a reported duration: 7612
-# Module-scoped fixture costs recorded: 60
+# Recorded from: seq22 returning callback: nine measured initial/returning guards, one actual omitted-issued-client red, three identity-verification premise holes behind that same omission
+# Collected tests: 13872; with a reported duration: 7621
+# Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13526
+# inventory_python = 13539
 # inventory_cpp = 333
-# inventory_measured = 12084
-# inventory_unmeasured = 1775
+# inventory_measured = 12093
+# inventory_unmeasured = 1779
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10214,6 +10214,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settleme
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[preparation-length_error]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[publication-bad_alloc]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_question_stop_settlement.py::test_question_stop_publication_failure_has_typed_outcome_and_settlement_or_recovery[publication-length_error]
+0.140	tests/system/py/test_e11_t5_reauthorization_callback.py::test_new_dynamic_registration_requires_an_issued_callback_client[missing]
+0.130	tests/system/py/test_e11_t5_reauthorization_callback.py::test_new_dynamic_registration_requires_an_issued_callback_client[placeholder]
+0.120	tests/system/py/test_e11_t5_reauthorization_callback.py::test_new_dynamic_registration_with_issued_client_remains_a_positive_control
+0.260	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_callback_uses_exact_pending_issued_client_when_optional_id_is_omitted[matching]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_callback_uses_exact_pending_issued_client_when_optional_id_is_omitted[omitted]
+0.260	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_omitted_client_does_not_relax_state_or_authorization_code_guards[missing-code]
+0.250	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_omitted_client_does_not_relax_state_or_authorization_code_guards[wrong-state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_omitted_client_still_verifies_pending_nonce_client_and_selected_account[aud]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_omitted_client_still_verifies_pending_nonce_client_and_selected_account[nonce]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_reauthorization_callback.py::test_returning_omitted_client_still_verifies_pending_nonce_client_and_selected_account[sub]
+0.260	tests/system/py/test_e11_t5_reauthorization_callback.py::test_supplied_invalid_returning_client_never_replaces_selected_registration[different]
+0.250	tests/system/py/test_e11_t5_reauthorization_callback.py::test_supplied_invalid_returning_client_never_replaces_selected_registration[empty]
+0.260	tests/system/py/test_e11_t5_reauthorization_callback.py::test_supplied_invalid_returning_client_never_replaces_selected_registration[placeholder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_recovery_boundaries.py::test_explicit_scope_retirement_releases_failed_retention_and_fences_late_delivery[connection-retirement-fit]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_recovery_boundaries.py::test_explicit_scope_retirement_releases_failed_retention_and_fences_late_delivery[connection-retirement-question]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_recovery_boundaries.py::test_explicit_scope_retirement_releases_failed_retention_and_fences_late_delivery[project-replacement-fit]
@@ -13939,6 +13952,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.128	tests/system/py/test_e11_t5_assistant_store.py
 # module-cost: 0.090	tests/system/py/test_e11_t5_http_diagnostics.py
 # module-cost: 0.039	tests/system/py/test_e11_t5_partial_provider_items.py
+# module-cost: 0.163	tests/system/py/test_e11_t5_reauthorization_callback.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 0.073	tests/system/py/test_e11_t5_store_write_quota.py
 # module-cost: 0.065	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py
