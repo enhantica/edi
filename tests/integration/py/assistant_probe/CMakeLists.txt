@@ -11,3 +11,7 @@ if(NOT TARGET assistant_contract_probe)
     target_include_directories(assistant_contract_probe PRIVATE "${EDI_SOURCE}/core/src")
     target_link_libraries(assistant_contract_probe PRIVATE edi::core)
 endif()
+
+add_executable(assistant_fit_publication_probe fit_publication_probe.cpp)
+target_include_directories(assistant_fit_publication_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_fit_publication_probe PRIVATE edi::core)

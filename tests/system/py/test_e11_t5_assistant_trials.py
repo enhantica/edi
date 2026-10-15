@@ -275,6 +275,7 @@ def test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
     )
     best = accepted['snapshot']
     assert best != original, 'I8: the useful-workflow witness actually moves fitted state'
+    host.provider('turn_finished', **host.binding(), status='completed')
     begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
     assert begun['reply']['ok'], (
         'I8/F6: retaining the full first outcome leaves capacity for a second ordinary trial'
@@ -390,6 +391,7 @@ def test_real_joint_fit_adoption_then_discard_preserves_both_banks(host):
     )
     best = accepted['snapshot']
     assert best != original, 'I8: joint adoption publishes actual scientific movement'
+    host.provider('turn_finished', **host.binding(), status='completed')
     begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
     assert begun['reply']['ok'], 'I8: a subsequent joint trial starts from the accepted best state'
     discarded = host.tool(

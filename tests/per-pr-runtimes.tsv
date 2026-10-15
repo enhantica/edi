@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T02:59:33Z
+# measured_utc = 2026-10-15T03:12:15Z
 #
-# Recorded from: E11-T5 seq8 frozen b6 native/core archive seal; tests-seq8-native-corrected.log and tests-seq8-native-records-fixed.log; genuine Qt wire and signed record controls; actual passes and failed holes only; other bank values retained
-# Collected tests: 13592; with a reported duration: 7471
+# Recorded from: seq8 focused actual 9a25145 core first green plus sealed b6 FitJob publication; prior rows preserved
+# Collected tests: 13596; with a reported duration: 7487
 # Module-scoped fixture costs recorded: 52
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13259
+# inventory_python = 13263
 # inventory_cpp = 333
-# inventory_measured = 11943
-# inventory_unmeasured = 1649
+# inventory_measured = 11959
+# inventory_unmeasured = 1637
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10037,26 +10037,26 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_text_limit_counts_decoded_utf8_bytes[unicode-at]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_text_limit_counts_decoded_utf8_bytes[unicode-over]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_without_a_project_is_nonmutating_and_attachment_retires_it
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_bound_output_exhaustion_revokes_existing_execution_scope[plan]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_bound_output_exhaustion_revokes_existing_execution_scope[question]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[completed-message-output_text]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[completed-message-refusal]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[function-call-output_text]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[function-call-refusal]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_connection_scope_replacement_does_not_forward_old_conversation[different-account]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_connection_scope_replacement_does_not_forward_old_conversation[same-account-reconnect]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_duplicate_user_approval_cannot_renew_original_deadline
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_failed_new_human_history_admission_is_transactional
-0.030	tests/system/py/test_e11_t5_assistant_transitions.py::test_live_message_fragmentation_remains_usable_before_item_completion
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_unknown_core_capability_cannot_gain_default_or_explicit_effort_authority[efforts0]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_transitions.py::test_unknown_core_capability_cannot_gain_default_or_explicit_effort_authority[efforts1]
+0.150	tests/system/py/test_e11_t5_assistant_transitions.py::test_bound_output_exhaustion_revokes_existing_execution_scope[plan]
+0.090	tests/system/py/test_e11_t5_assistant_transitions.py::test_bound_output_exhaustion_revokes_existing_execution_scope[question]
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[completed-message-output_text]
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[completed-message-refusal]
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[function-call-output_text]
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_completed_or_wrong_kind_item_cannot_receive_public_text_delta[function-call-refusal]
+0.040	tests/system/py/test_e11_t5_assistant_transitions.py::test_connection_scope_replacement_does_not_forward_old_conversation[different-account]
+0.040	tests/system/py/test_e11_t5_assistant_transitions.py::test_connection_scope_replacement_does_not_forward_old_conversation[same-account-reconnect]
+0.030	tests/system/py/test_e11_t5_assistant_transitions.py::test_duplicate_user_approval_cannot_renew_original_deadline
+0.280	tests/system/py/test_e11_t5_assistant_transitions.py::test_failed_new_human_history_admission_is_transactional
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_live_message_fragmentation_remains_usable_before_item_completion
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_unknown_core_capability_cannot_gain_default_or_explicit_effort_authority[efforts0]
+0.020	tests/system/py/test_e11_t5_assistant_transitions.py::test_unknown_core_capability_cannot_gain_default_or_explicit_effort_authority[efforts1]
 0.900	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-joint]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-single]
 0.910	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-joint]
 0.320	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-single]
 0.790	tests/system/py/test_e11_t5_assistant_trials.py::test_approved_elapsed_budget_includes_time_waiting_on_actual_worker[expired-in-queue]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_approved_elapsed_budget_includes_time_waiting_on_actual_worker[useful-budget]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
+0.480	tests/system/py/test_e11_t5_assistant_trials.py::test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
 0.350	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[False]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[True]
 3.560	tests/system/py/test_e11_t5_assistant_trials.py::test_genuine_native_status_survives_scientific_terminal_and_provider_continuation[1-max_iter-joint]
@@ -10075,7 +10075,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 0.510	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[cancel]
 0.940	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[detach]
 0.740	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[manual-edit]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_real_joint_fit_adoption_then_discard_preserves_both_banks
+3.950	tests/system/py/test_e11_t5_assistant_trials.py::test_real_joint_fit_adoption_then_discard_preserves_both_banks
 3.290	tests/system/py/test_e11_t5_assistant_trials.py::test_real_zero_free_error_or_preflight_refusal_never_becomes_fit_success[joint]
 0.400	tests/system/py/test_e11_t5_assistant_trials.py::test_real_zero_free_error_or_preflight_refusal_never_becomes_fit_success[single]
 0.660	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-live-preview]
@@ -10086,6 +10086,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 0.230	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
 0.990	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[allocation-after-live-write-joint]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[allocation-after-live-write-single]
+0.600	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[positive-joint]
+0.180	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[positive-single]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-None]
 3.190	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-build]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[extension-consumer-None]
