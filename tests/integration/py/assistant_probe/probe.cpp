@@ -252,6 +252,7 @@ int main() {
             case edi::FitStatus::NO_STEP: status="no_step"; break;
             case edi::FitStatus::CANCELLED: status="cancelled"; break;
             case edi::FitStatus::ERROR: status="error"; break;
+            case edi::FitStatus::UNAVAILABLE: status="unavailable"; break;
             case edi::FitStatus::SUPERSEDED: status="superseded"; break;
         }
         return Object{{"status",status},{"refusal",report.refusal},{"converged",report.result && report.result->converged},
