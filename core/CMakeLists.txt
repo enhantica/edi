@@ -18,6 +18,8 @@ add_library(edi_core STATIC
     src/report.cpp
     src/json.cpp
     src/assistant.cpp
+    src/assistant_skills.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/assistant_skills_data.cpp
     src/assistant_stream.cpp
     src/report_model.cpp
     src/report_json.cpp
@@ -75,7 +77,46 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_OPENAI_CAPA
 file(READ ${EDI_OPENAI_CAPABILITIES_FILE} EDI_OPENAI_CAPABILITIES)
 configure_file(src/openai_capabilities_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/openai_capabilities_data.cpp @ONLY)
 
+# ADR0042: package-relative skills are immutable product resources, not runtime paths.
+set(EDI_SKILL_ROOT ${PROJECT_SOURCE_DIR}/data/assistant/skills)
+set(EDI_SKILL_INDEX_FILE ${EDI_SKILL_ROOT}/index.json)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_SKILL_INDEX_FILE})
+file(READ ${EDI_SKILL_INDEX_FILE} EDI_SKILL_INDEX)
+string(FIND "${EDI_SKILL_INDEX}" ")edi_skill\"" EDI_SKILL_INDEX_DELIMITER)
+if(NOT EDI_SKILL_INDEX_DELIMITER EQUAL -1)
+    message(FATAL_ERROR "Bundled skill index contains its reserved embedding delimiter")
+endif()
+string(JSON EDI_SKILL_COUNT LENGTH "${EDI_SKILL_INDEX}" skills)
+if(EDI_SKILL_COUNT LESS 1)
+    message(FATAL_ERROR "The bundled skill catalog must not be empty")
+endif()
+set(EDI_SKILL_RESOURCES "")
+math(EXPR EDI_SKILL_LAST "${EDI_SKILL_COUNT} - 1")
+foreach(EDI_SKILL_N RANGE ${EDI_SKILL_LAST})
+    string(JSON EDI_SKILL_ID GET "${EDI_SKILL_INDEX}" skills ${EDI_SKILL_N} id)
+    string(JSON EDI_SKILL_PATH GET "${EDI_SKILL_INDEX}" skills ${EDI_SKILL_N} path)
+    string(JSON EDI_SKILL_HASH GET "${EDI_SKILL_INDEX}" skills ${EDI_SKILL_N} sha256)
+    if(NOT EDI_SKILL_ID MATCHES "^[a-z][a-z0-9-]*$" OR NOT EDI_SKILL_PATH STREQUAL "${EDI_SKILL_ID}/SKILL.md")
+        message(FATAL_ERROR "Invalid package-relative bundled skill identity/path")
+    endif()
+    set(EDI_SKILL_FILE ${EDI_SKILL_ROOT}/${EDI_SKILL_PATH})
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_SKILL_FILE})
+    file(SHA256 ${EDI_SKILL_FILE} EDI_SKILL_ACTUAL_HASH)
+    if(NOT EDI_SKILL_HASH STREQUAL EDI_SKILL_ACTUAL_HASH)
+        message(FATAL_ERROR "Bundled skill content differs from its declared SHA256")
+    endif()
+    file(READ ${EDI_SKILL_FILE} EDI_SKILL_CONTENT)
+    string(FIND "${EDI_SKILL_CONTENT}" ")edi_skill\"" EDI_SKILL_DELIMITER)
+    if(NOT EDI_SKILL_DELIMITER EQUAL -1)
+        message(FATAL_ERROR "Bundled skill contains its reserved embedding delimiter")
+    endif()
+    string(APPEND EDI_SKILL_RESOURCES "        {R\"edi_skill(${EDI_SKILL_ID})edi_skill\", R\"edi_skill(${EDI_SKILL_ACTUAL_HASH})edi_skill\", R\"edi_skill(${EDI_SKILL_CONTENT})edi_skill\"},\n")
+endforeach()
+configure_file(src/assistant_skills_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/assistant_skills_data.cpp @ONLY)
+
+
 target_include_directories(edi_core
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )

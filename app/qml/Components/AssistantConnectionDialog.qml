@@ -19,6 +19,10 @@ AppDialog {
     readonly property var parameters: Array.isArray(disclosedContext.parameters) ? disclosedContext.parameters : []
     readonly property var diagnostics: Array.isArray(disclosedContext.diagnostics) ? disclosedContext.diagnostics : []
     readonly property int freeCount: parameters.filter(parameter => parameter.free === true).length
+    readonly property var skills: Array.isArray(disclosedContext.skills) ? disclosedContext.skills : []
+    readonly property var structures: Array.isArray(disclosedContext.structures) ? disclosedContext.structures : []
+    readonly property var datasets: Array.isArray(disclosedContext.datasets) ? disclosedContext.datasets : []
+    readonly property var relations: disclosedContext.relations || { aliases: [], constraints: [] }
     title: assistant.connected ? qsTr("Approve outgoing project context") : qsTr("Sign in with ChatGPT")
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
     width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
@@ -77,6 +81,21 @@ AppDialog {
                         .arg(project.name || qsTr("Untitled project"))
                         .arg(project.fitting_mode || qsTr("Unspecified"))
                         .arg(dialog.parameters.length).arg(dialog.freeCount).arg(dialog.diagnostics.length);
+                }
+            }
+            EaElements.Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+                text: {
+                    const workflow = dialog.skills.length === 1 ? dialog.skills[0] : null;
+                    let title = workflow ? workflow.id : qsTr("Unavailable");
+                    if (workflow) for (let i = 0; i < dialog.assistant.skills.count; ++i)
+                        if (dialog.assistant.skills.text(i, "id") === workflow.id) title = dialog.assistant.skills.text(i, "title");
+                    return qsTr("Workflow: %1 · %2. Its exact bundled content is included.\n%3 structures with site/space-group metadata; %4 datasets with axis, observations, weighting, exclusions and phases; %5 aliases and %6 constraints. See exact outgoing context for every field.")
+                        .arg(title).arg(workflow ? workflow.version : "")
+                        .arg(dialog.structures.length).arg(dialog.datasets.length)
+                        .arg(dialog.relations.aliases.length).arg(dialog.relations.constraints.length);
                 }
             }
             EaElements.Label {

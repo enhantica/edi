@@ -31,6 +31,8 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QStringList availableEfforts READ availableEfforts NOTIFY availableEffortsChanged)
     Q_PROPERTY(edi_app::RowTableModel* messages READ messages CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* selectedFiles READ selectedFiles CONSTANT)
+    Q_PROPERTY(edi_app::RowTableModel* skills READ skills CONSTANT)
+    Q_PROPERTY(QString selectedSkill READ selectedSkill NOTIFY selectedSkillChanged)
     Q_PROPERTY(QVariantMap pendingPlan READ pendingPlan NOTIFY pendingPlanChanged)
     Q_PROPERTY(QVariantMap pendingQuestion READ pendingQuestion NOTIFY pendingQuestionChanged)
     Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
@@ -54,6 +56,8 @@ class AssistantViewModel : public QObject {
     QStringList availableEfforts() const;
     RowTableModel* messages() const;
     RowTableModel* selectedFiles() const;
+    RowTableModel* skills() const;
+    QString selectedSkill() const;
     QVariantMap pendingPlan() const;
     QVariantMap pendingQuestion() const;
     QString activeJobId() const;
@@ -66,6 +70,7 @@ class AssistantViewModel : public QObject {
     /// Attach the live project through its existing worker and edit door; nullptr keeps a conversational session.
     void setProject(ProjectViewModel* project);
     Q_INVOKABLE void send(const QString& text);
+    Q_INVOKABLE void selectSkill(const QString& id);
     Q_INVOKABLE void approvePlan(const QString& id);
     Q_INVOKABLE void answerQuestion(const QString& id, const QString& answer);
     Q_INVOKABLE void cancel();
@@ -83,6 +88,7 @@ class AssistantViewModel : public QObject {
     void connectedChanged();
     void connectionLabelChanged();
     void selectedModelChanged();
+    void selectedSkillChanged();
     void selectedEffortChanged();
     void availableEffortsChanged();
     void pendingPlanChanged();

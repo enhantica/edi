@@ -183,6 +183,18 @@ Popup {
                 anchors.bottom: parent.bottom
                 anchors.margins: AppSizes.unit
                 spacing: AppSizes.unit * 0.855
+                EaElements.Button {
+                    objectName: "assistant.workflow"
+                    Layout.fillWidth: true
+                    text: {
+                        for (let i = 0; i < panel.assistant.skills.count; ++i)
+                            if (panel.assistant.skills.text(i, "id") === panel.assistant.selectedSkill)
+                                return qsTr("Workflow: %1 · %2").arg(panel.assistant.skills.text(i, "title")).arg(panel.assistant.skills.text(i, "version"));
+                        return qsTr("Workflow unavailable");
+                    }
+                    Accessible.name: text
+                    onClicked: skillsDialog.open()
+                }
                 ListView {
                     id: conversation
                     objectName: "assistant.messages"
@@ -388,6 +400,10 @@ Popup {
                     wrapMode: Text.Wrap
                 }
             }
+        }
+        AssistantSkillsDialog {
+            id: skillsDialog
+            assistant: panel.assistant
         }
         AssistantConnectionDialog {
             id: connectionDialog

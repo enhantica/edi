@@ -89,6 +89,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/AssistantPlan.qml
         qml/Components/AssistantQuestion.qml
         qml/Components/AssistantTrial.qml
+        qml/Components/AssistantSkillsDialog.qml
         qml/Components/AssistantConnectionDialog.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml

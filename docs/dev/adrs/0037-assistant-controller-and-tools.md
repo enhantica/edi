@@ -177,3 +177,7 @@ executed. No path argument, provider upload, scientific converter or project mut
 Existing full tool/result/history reservations apply to escaped read outcomes. Native/browser chooser,
 pre-growth transfer and actual consent are separate required host implementation/qualification work;
 this core preparation alone does not establish a functional add-files UI.
+
+### Selected product guidance
+
+The trusted host protocol adds bounded read-only skill_catalog and idle select_skill, separate from provider tools. The selected immutable workflow is guidance only. Selection and all current scientific metadata are supplied by the same context serializer before consent/dispatch and through inspect_project. Unsupported import/create/save capabilities remain absent; the shipped FullProf/GSAS intake workflows describe those limits.

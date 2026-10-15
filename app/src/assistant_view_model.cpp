@@ -126,6 +126,9 @@ struct AssistantViewModel::State {
     QJsonArray history;
     Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history};
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
+    Rows skills{{"id", "version", "title", "summary", "path", "sha256", "requires", "capabilities", "references", "content", "available", "blocked_reason"}, &owner};
+    QString selected_skill;
+    QByteArray skill_catalog_binding;
     QJsonArray selected_rows;
     Rows selected_files{{"id", "name", "bytes", "textReadable", "format"}, &owner, &selected_rows};
     std::string selected_reply; // bounded descriptors only; canonical bytes belong solely to Controller
@@ -479,6 +482,7 @@ struct AssistantViewModel::State {
         property("connected", owner.connected(), &AssistantViewModel::connectedChanged);
         property("connectionLabel", owner.connectionLabel(), &AssistantViewModel::connectionLabelChanged);
         property("selectedModel", owner.selectedModel(), &AssistantViewModel::selectedModelChanged);
+        property("selectedSkill", owner.selectedSkill(), &AssistantViewModel::selectedSkillChanged);
         property("selectedEffort", owner.selectedEffort(), &AssistantViewModel::selectedEffortChanged);
         property("availableEfforts", owner.availableEfforts(), &AssistantViewModel::availableEffortsChanged);
         property("pendingPlan", owner.pendingPlan(), &AssistantViewModel::pendingPlanChanged);
@@ -859,6 +863,27 @@ struct AssistantViewModel::State {
             preference_error = QObject::tr("The previous reasoning effort is unavailable. Selection reset to Provider default.");
         }
     }
+    void sync_skills() {
+        if (!controller) { skills.assign({}); selected_skill.clear(); skill_catalog_binding.clear(); return; }
+        // Canonical core context owns selection. Catalog bytes are immutable and
+        // availability depends only on the actual selected-file prerequisite.
+        const auto context = object(controller->context());
+        if (context.contains("error")) throw std::runtime_error("Workflow context is unavailable");
+        const auto selected = context.value("skills").toArray();
+        if (selected.size() != 1) throw std::runtime_error("Workflow selection is unavailable");
+        const auto id = selected.first().toObject().value("id").toString();
+        const bool files = !context.value("selected_files").toObject().value("files").toArray().isEmpty();
+        const auto binding = id.toUtf8() + (files ? ":files" : ":empty");
+        if (binding == skill_catalog_binding) return;
+        const auto reply = controller->user_command(json(Object{{"schema", "edi.assistant/1"}, {"type", "skill_catalog"}}));
+        if (!reply.ok || reply.value.size() > Limits::context_bytes) throw std::runtime_error("Workflow catalog is unavailable");
+        const auto catalog = object(reply.value);
+        const auto rows = catalog.value("skills").toArray();
+        if (catalog.value("selected_id").toString() != id || rows.size() > static_cast<qsizetype>(Limits::models))
+            throw std::runtime_error("Workflow catalog does not match current context");
+        skills.assign(rows);
+        selected_skill = id; skill_catalog_binding = binding;
+    }
     void sync() {
         const Object next_core = controller ? object(controller->state()) : Object{};
 #ifndef __EMSCRIPTEN__
@@ -872,6 +897,7 @@ struct AssistantViewModel::State {
             const auto item = value.toObject(); choices.append(Object{{"id", item.value("id")},
                 {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", item.value("available").toBool()}});
         }
+        sync_skills();
         models.assign(choices);
         select_from_catalog(choices);
         if (core.value("pending_plan_id").toString().isEmpty()) plan = {};
@@ -905,6 +931,7 @@ struct AssistantViewModel::State {
             QObject::disconnect(project->fit(), nullptr, &owner, nullptr);
         }
         controller.reset(); retentions.clear(); failure_slot.reset(); queued_request.clear();
+        skill_catalog_binding.clear(); selected_skill.clear(); skills.assign({});
         selected_reply.clear(); selected_rows = {}; selected_files.assign(selected_rows); selected_rows_dirty = false;
         project = next; plan = {}; question = {};
         edi::assistant::Hooks hooks;
@@ -995,6 +1022,8 @@ QStringList AssistantViewModel::availableEfforts() const {
 }
 RowTableModel* AssistantViewModel::messages() const { return &state_->messages; }
 RowTableModel* AssistantViewModel::selectedFiles() const { return &state_->selected_files; }
+RowTableModel* AssistantViewModel::skills() const { return &state_->skills; }
+QString AssistantViewModel::selectedSkill() const { return state_->selected_skill; }
 QVariantMap AssistantViewModel::pendingPlan() const { return state_->plan.toVariantMap(); }
 QVariantMap AssistantViewModel::pendingQuestion() const { return state_->question.toVariantMap(); }
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
@@ -1024,6 +1053,12 @@ void AssistantViewModel::setSelectedEffort(const QString& effort) {
     if (!effort.isEmpty() && !availableEfforts().contains(effort)) { state_->preference_error = tr("This reasoning effort is unavailable."); state_->notify(); return; }
     if (state_->effort != effort) { state_->effort = effort; state_->remember_choice(); state_->notify(); }
     else { state_->remember_choice(); state_->notify(); }
+}
+void AssistantViewModel::selectSkill(const QString& id) {
+    try {
+        const auto reply = state_->command({{"type", "select_skill"}, {"id", id}});
+        if (reply.ok) { state_->consented_context.clear(); state_->sync(); }
+    } catch (...) { state_->error = state_->storage_error; state_->notify(); }
 }
 void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(project); }
 void AssistantViewModel::send(const QString& text) {

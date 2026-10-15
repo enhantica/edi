@@ -12,6 +12,7 @@
 
 #include "assistant_json.hpp"
 #include "assistant_capabilities.hpp"
+#include "assistant_skills.hpp"
 #include "edi/calculation.hpp"
 #include "edi/categories.hpp"
 #include "edi/fit_job.hpp"
@@ -51,6 +52,81 @@ J parameters(Project& project) {
     }
     return rows;
 }
+// Original model metadata only; no calculation, guessing, data arrays or repair.
+J project_metadata(const Project* project) {
+    A structures, datasets, aliases, constraints;
+    std::uint64_t used = 2;
+    const auto append = [&](A& target, J row) {
+        const auto size = payload_size(row, Limits::context_bytes) + (target.empty() ? 0 : 1);
+        if (size > Limits::context_bytes - used) refuse("resource_exhausted", "Project metadata exceeds context capacity");
+        used += size; target.push_back(std::move(row));
+    };
+    const auto finite = [](double value) -> J {
+        if (!std::isfinite(value)) return nullptr;
+        return value;
+    };
+    const auto optional = [&](const std::optional<double>& value) -> J { return value ? finite(*value) : J(nullptr); };
+    if (project) {
+        for (const auto& structure : project->structures) {
+            A sites, anisotropic;
+            for (const auto& site : structure->atom_sites)
+                append(sites, O{{"id", site->id.value()}, {"type_symbol", site->type_symbol.get()},
+                                {"wyckoff", site->wyckoff_letter.get()}, {"adp_type", site->adp_type.get()}});
+            for (const auto& site : structure->atom_site_aniso) append(anisotropic, site->id.value());
+            const auto& sg = structure->space_group;
+            append(structures, O{{"id", KeyTraits<Structure>::canonical(structure->name.value())},
+                {"space_group", O{{"hm", sg.name_h_m.get()}, {"setting", sg.coord_system_code.get()},
+                                 {"it_number", sg.it_number ? J(*sg.it_number) : J(nullptr)}}},
+                {"sites", std::move(sites)}, {"anisotropic_site_ids", std::move(anisotropic)}});
+        }
+        for (const auto& experiment : project->experiments) {
+            A exclusions, phases;
+            for (const auto& region : experiment->excluded_regions)
+                append(exclusions, O{{"id", region->id.value()}, {"first", finite(region->first.get())}, {"second", finite(region->second.get())}});
+            for (const auto& phase : experiment->linked_structures)
+                append(phases, O{{"structure_id", KeyTraits<Structure>::canonical(phase->structure_id.value())}, {"enabled", phase->enabled.get()}});
+            J axis;
+            std::string data_status = "absent", weighting = "unavailable";
+            std::size_t intensity_count = 0, sigma_count = 0;
+            if (experiment->data) {
+                const auto& data = *experiment->data;
+                const auto& theta = data.two_theta.get(); const auto& tof = data.time_of_flight.get();
+                intensity_count = data.intensity_meas.get().size(); sigma_count = data.intensity_meas_su.get().size();
+                data_status = "invalid";
+                if (bool(theta) != bool(tof)) {
+                    const auto& values = theta ? *theta : *tof;
+                    bool valid = true;
+                    for (const auto value : values) valid = valid && std::isfinite(value);
+                    for (const auto value : data.intensity_meas.get()) valid = valid && std::isfinite(value);
+                    bool usable_su = sigma_count == values.size() && sigma_count != 0;
+                    for (const auto value : data.intensity_meas_su.get()) usable_su = usable_su && std::isfinite(value) && value > 0;
+                    const bool measured = intensity_count == values.size() && (sigma_count == 0 || usable_su);
+                    if (valid && (experiment->calculation_only || measured)) data_status = "present";
+                    if (valid) {
+                        const auto bounds = std::minmax_element(values.begin(), values.end());
+                        axis = O{{"kind", theta ? "two_theta" : "time_of_flight"}, {"unit", theta ? "degrees" : "µs"},
+                                 {"count", static_cast<double>(values.size())},
+                                 {"min", values.empty() ? J(nullptr) : J(*bounds.first)}, {"max", values.empty() ? J(nullptr) : J(*bounds.second)}};
+                    }
+                    if (valid && measured && usable_su) weighting = "measured_standard_uncertainty";
+                }
+            }
+            append(datasets, O{{"id", KeyTraits<BraggPdExperiment>::canonical(experiment->name.value())},
+                {"beam_mode", token(experiment->effective_beam_mode())}, {"probe", token(experiment->experiment_type.effective_radiation_probe())},
+                {"calculation_only", experiment->calculation_only}, {"data_status", data_status}, {"axis", std::move(axis)},
+                {"observations", O{{"intensity_count", static_cast<double>(intensity_count)}, {"sigma_count", static_cast<double>(sigma_count)}, {"weighting", weighting}}},
+                {"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
+                {"background", O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
+                                 {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}}}});
+        }
+        for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.get()}});
+        for (const auto& constraint : project->constraints)
+            append(constraints, O{{"id", constraint->id.value()}, {"expression", constraint->expression.get()}, {"enabled", constraint->enabled.get()}});
+    }
+    return O{{"structures", std::move(structures)}, {"datasets", std::move(datasets)},
+             {"relations", O{{"aliases", std::move(aliases)}, {"constraints", std::move(constraints)}}}};
+}
+
 J diagnostics(Project* project) {
     A rows;
     if (project) {
@@ -176,6 +252,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     std::string conversation, request_trial;
     std::string phase = "disconnected", connection, turn, request, model, effort, text, active_job, question;
     J capabilities = A{}, history = A{}, attachments = A{};
+    std::string selected_skill_id = "project-assistance";
     J question_record;
     SelectedFiles selected;
     J selected_manifest; // bounded descriptors only; canonical bytes live once in selected.files
@@ -283,9 +360,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         J project;
         if (live) project = O{{"id", version.project_id}, {"revision", std::to_string(version.revision)},
                              {"name", live->metadata.name}, {"fitting_mode", live->fitting_mode}};
-        return O{{"schema", "edi.assistant.context/1"}, {"project", project},
-                 {"parameters", live ? parameters(*live) : J(A{})}, {"diagnostics", diagnostics(live)},
-                 {"selected_files", prospective_selection ? *prospective_selection : selection()}};
+        auto result = project_metadata(live);
+        set(result, "schema", "edi.assistant.context/1"); set(result, "project", std::move(project));
+        set(result, "parameters", live ? parameters(*live) : J(A{})); set(result, "diagnostics", diagnostics(live));
+        set(result, "selected_files", prospective_selection ? *prospective_selection : selection());
+        set(result, "skills", skill_context(selected_skill_id, manifest()));
+        bounded(result, Limits::context_bytes); return result;
     }
 
     Reply update_files(std::string collection_id, std::uint64_t expected_generation,
@@ -1130,6 +1210,22 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     Reply user(const J& command) {
         output_failure = OutputFailure::none;
         envelope(command); const auto type = string(command, "type");
+        if (type == "skill_catalog") {
+            shape(command, {"schema", "type"});
+            return success(skill_catalog(selected_skill_id, !selected.files.empty(), manifest()));
+        }
+        if (type == "select_skill") {
+            shape(command, {"schema", "type", "id"});
+            if (!turn.empty() || !active_job.empty() || !question_call.empty() || (plan && plan->approved) ||
+                !holds.empty() || !retentions.empty() || trial)
+                refuse("busy", "Finish the current assistant operation before changing workflow");
+            auto next = string(command, "id");
+            const auto admitted_context = skill_context(next, manifest());
+            auto prospective = context(); set(prospective, "skills", admitted_context); bounded(prospective, Limits::context_bytes);
+            auto result = success(O{{"selected_id", next}});
+            selected_skill_id = std::move(next);
+            return result;
+        }
         if (type == "cancel") {
             shape(command, {"schema", "type"}); user_scope_committed = true;
             return stop() ? success() : output_refusal();
