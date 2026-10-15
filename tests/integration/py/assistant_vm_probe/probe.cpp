@@ -37,6 +37,7 @@ Array rows(edi_app::RowTableModel* model) {
 }
 }
 int main(int argc,char** argv) {
+    const bool codex_mode=argc==2 && QByteArray(argv[1])=="--codex";
     QTemporaryDir storage;
     if(!storage.isValid())return 97;
     qputenv("XDG_DATA_HOME",storage.path().toUtf8());
@@ -46,7 +47,11 @@ int main(int argc,char** argv) {
     QGuiApplication::setApplicationName("vm-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
     edi_app::use_fresh_settings();
     FixtureServices fixture; // Outlives actual Session/VM/native callbacks and teardown.
-    auto session=std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
+    const auto make_session=[&]() -> std::unique_ptr<edi_app::Session> {
+        if(codex_mode)return std::make_unique<edi_app::Session>(nullptr);
+        return std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
+    };
+    auto session=make_session();
     const auto history=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history.json";
     int model_changes=0;
 #ifdef EDI_TEST_SELECTED_FILES
@@ -179,7 +184,7 @@ int main(int argc,char** argv) {
             else if(op=="destroy")session.reset();
             else if(op=="recreate") {
                 if(session)throw std::invalid_argument("retire the real Session before recreation");
-                session=std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);observe();
+                session=make_session();observe();
             } else if(op=="archive_seed") {
                 if(session)throw std::invalid_argument("seed isolated persisted history only without a live VM");
                 QDir().mkpath(QFileInfo(history).absolutePath());QFile file(history);
