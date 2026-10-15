@@ -69,17 +69,33 @@ TestCase {
         verify(waitForPolish(window), "I16/INT1: the actual row completes layout");
         window.update();
         verify(waitForRendering(window.contentItem), "I16/INT1: the actual literal row renders");
-        const body = Ui.itemsWithProperty(row, "readOnly").find(control => control.visible && control.text === text);
+        const body = Ui.itemsWithProperty(row, "readOnly").find(control => control.visible && (data.kind === "assistant" || control.text === text));
         verify(body !== undefined, "I16/INT1: complete original body remains visible in the actual delegate");
-        compare(body.textFormat, TextEdit.PlainText, "I16/INT1: technical markup stays literal PlainText");
+        compare(row.text, text, "I16/MD: original backing row retains exact source bytes");
+        if (data.kind !== "assistant")
+            compare(body.textFormat, TextEdit.PlainText, "I16/INT1: user/activity technical markup stays literal PlainText");
         compare(body.readOnly, true, "I16/INT1: transcript body remains read-only");
         compare(body.selectByMouse, true, "I16/INT1: transcript body remains selectable");
-        body.select(5, 17);
-        compare(body.selectedText, text.slice(5, 17), "I16/INT1: nontrivial selection preserves exact original characters");
+        if (data.kind === "assistant") {
+            const rendered = body.getText(0, body.length);
+            verify(rendered.includes("cell = 5.43 Å <b>literal</b>"), "MD/INT1: actual assistant document retains original scientific literal and does not parse HTML");
+            verify(rendered.includes("第二行 — selectable technical text"), "MD/INT1: actual rendered Unicode body remains complete");
+            const start = rendered.indexOf("5.43");
+            verify(start >= 0, "MD/INT1: original nontrivial value is present before selecting");
+            body.select(start, start + 4);
+            compare(body.selectedText, "5.43", "MD/INT1: rendered assistant selection preserves independently planted characters");
+        } else {
+            body.select(5, 17);
+            compare(body.selectedText, text.slice(5, 17), "I16/INT1: nontrivial selection preserves exact original characters");
+        }
         if (data.author) {
             const semantics = accessibleText(row);
             verify(data.author.test(semantics), "I16/INT1: actual accessible names/descriptions distinguish human and assistant authors");
-            verify(semantics.includes(text), "I16/INT1: complete body remains in the accessible semantic content");
+            if (data.kind === "assistant") {
+                for (const line of text.split("\n"))
+                    verify(semantics.includes(line.trim()), "MD/INT1: complete original assistant content remains accessible");
+            } else
+                verify(semantics.includes(text), "I16/INT1: complete body remains in the accessible semantic content");
         } else {
             verify(Ui.text(row).includes("Activity"), "I16/INT1: existing Activity author-label control remains visibly identified");
         }

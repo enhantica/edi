@@ -4,6 +4,7 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include <QAccessible>
+#include <QClipboard>
 #include <QDir>
 #include <QGuiApplication>
 #include <QFont>
@@ -209,6 +210,10 @@ int main(int argc,char** argv) {
                 if(!QMetaObject::invokeMethod(body,"select",Q_ARG(int,input["start"].toInt()),Q_ARG(int,input["end"].toInt())))
                     throw std::runtime_error("actual TextEdit selection unavailable");
                 if(input["type_x"].toBool())QTest::keyClick(window,Qt::Key_X);
+            } else if(markdown_mode && op=="markdown_copy") {
+                if(!QMetaObject::invokeMethod(markdown_body(),"copy"))
+                    throw std::runtime_error("actual TextEdit copy unavailable");
+                result={{"clipboard",QGuiApplication::clipboard()->text()}};
             } else if(markdown_mode && op=="fixture_image") {
                 const auto path=storage.path()+"/original-image.png";
                 QImage image(4,4,QImage::Format_ARGB32);image.fill(Qt::red);

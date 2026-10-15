@@ -78,6 +78,10 @@ def test_actual_assistant_document_renders_bold_code_lists_and_keeps_original_se
     ], 'MD: real Qt list blocks retain both original items rather than a handwritten replacement'
     selected = markdown.command('markdown_select', start=0, end=4)['ui']
     assert selected['selected'] == 'Bold', 'MD: nontrivial actual rendered selection is selectable'
+    copied = markdown.command('markdown_copy')['reply']
+    assert copied['clipboard'] == 'Bold', (
+        'MD: actual Qt copy preserves the independently selected rendered characters'
+    )
     after = markdown.command('markdown_select', start=0, end=4, type_x=True)['ui']
     assert after['plain'] == observed['plain'] and after['original'] == ORIGINAL, (
         'MD: actual keyboard edit cannot mutate displayed or original transcript bytes'
