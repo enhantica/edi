@@ -3944,6 +3944,8 @@ struct IterationRecord {
     // The step's parameter values by edi identity path — what a live surface draws the pattern of.
     // Carried on the streamed record only (a subscriber's); the history keeps none.
     std::map<std::string, double> values;
+    /// Engine raw weighted residual objective; absent for historical records that did not retain it.
+    std::optional<double> objective_value;
 };
 
 // Why a refinement stopped — deliberately NOT collapsed into `converged`, so a fit that exhausted

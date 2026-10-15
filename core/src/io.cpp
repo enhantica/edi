@@ -8,6 +8,8 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+
+#include <type_traits>
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
 #include "edi/validation.hpp"
@@ -4186,13 +4188,15 @@ UndoFitOutcome restore_fit_start(Project& project) {
 }
 
 void copy_fit_result(Project& to, const Project& from) {
-    to.fit_result = from.fit_result;
+    FitResultRecord prepared = from.fit_result;
+    static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+    to.fit_result = std::move(prepared);
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
     }
 }
 
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) {
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept {
     to.fit_n_data_points = from.fit_n_data_points;
     to.fit_prof_r_factor = from.fit_prof_r_factor;
     to.fit_prof_wr_factor = from.fit_prof_wr_factor;

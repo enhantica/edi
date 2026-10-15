@@ -246,7 +246,7 @@ UndoFitOutcome restore_fit_start(Project& project);
 void copy_fit_result(Project& to, const Project& from);
 // One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
 // from its counterpart in another copy of the project.
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept;
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
 // A correlation row's coefficient as a number (its text, read in the C locale); NaN when it is not one.

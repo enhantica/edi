@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <variant>
@@ -45,6 +46,7 @@ struct Value {
 };
 
 std::string write(const Value& value);
+std::uint64_t encoded_size(const Value& value, std::uint64_t limit = UINT64_MAX);
 Value parse(const std::string& text);
 
 }  // namespace edi::json

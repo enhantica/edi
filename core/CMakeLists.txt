@@ -37,6 +37,7 @@ add_library(edi_core STATIC
     src/structure_scene.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/openai_capabilities_data.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp
 )
 add_library(edi::core ALIAS edi_core)
@@ -68,6 +69,11 @@ set(EDI_REPORT_JS_FILE ${PROJECT_SOURCE_DIR}/data/report/report.js)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_REPORT_JS_FILE})
 file(READ ${EDI_REPORT_JS_FILE} EDI_REPORT_JS)
 configure_file(src/report_js_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp @ONLY)
+
+set(EDI_OPENAI_CAPABILITIES_FILE ${PROJECT_SOURCE_DIR}/data/assistant/openai-capabilities.json)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_OPENAI_CAPABILITIES_FILE})
+file(READ ${EDI_OPENAI_CAPABILITIES_FILE} EDI_OPENAI_CAPABILITIES)
+configure_file(src/openai_capabilities_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/openai_capabilities_data.cpp @ONLY)
 
 target_include_directories(edi_core
     PUBLIC

@@ -516,7 +516,7 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
             for (std::size_t i = 0; i < category.fields.size(); ++i) {
                 const CategoryField& field = category.fields[i];
                 ParameterEntry entry{field.parameter, "", "structure", structure->name, category.id, "", field.name,
-                                     field.refinable, field.fittable};
+                                     field.refinable, field.fittable, field.used_by_profile};
                 const std::string root = detail::structure_root(project, *structure);
                 if (category.id == "atom_site") {
                     entry.row_label = structure->atom_sites[i / 5]->id;
@@ -563,7 +563,7 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
             for (std::size_t i = 0; i < fields.size(); ++i) {
                 const CategoryField& field = fields[i];
                 ParameterEntry entry{field.parameter, "", "experiment", experiment->name, category.id, "", field.name,
-                                     field.refinable, field.fittable};
+                                     field.refinable, field.fittable, field.used_by_profile};
                 std::string label = field.name;
                 std::string spelled = prefix + category.id + "." + field.name;
                 // A loop row is named by its id, never its position (the owner, 2026-10-11); the engine's label

@@ -35,6 +35,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <type_traits>
 #include <vector>
 
 #include "edi/edits.hpp"
@@ -253,7 +254,10 @@ class Edit {
                 to.free = from.free.get(); to.start_value = from.start_value.get();
                 to.start_uncertainty = from.start_uncertainty.get();
             }
-            copy_fit_result(project, *source);
+            static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+            project.fit_result = std::move(source->fit_result);
+            for (std::size_t i = 0; i < project.experiments.size(); ++i)
+                copy_fit_share(*project.experiments[i], *source->experiments[i]);
         });
     }
     // A background point's fixed position: one recorded assignment, which cannot fail.

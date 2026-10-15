@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 
+#include "edi/assistant_limits.hpp"
 #include "edi/edit.hpp"
 #include "edi/model.hpp"
 #include "edi/worker.hpp"
@@ -74,6 +75,8 @@ class OpenAiStream {
     OpenAiStream& operator=(const OpenAiStream&) = delete;
     Reply feed(std::string_view bytes);
     Reply finish();
+    /// Original completed Responses output items, including opaque reasoning, for stateless replay.
+    JsonText output() const;
 
    private:
     struct State;

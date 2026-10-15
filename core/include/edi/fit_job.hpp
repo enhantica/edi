@@ -75,7 +75,9 @@ class FitJob {
         std::function<void(int)> polled;
     };
 
-    FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams = {});
+    /// The optional production checkpoint predicate runs on the worker thread, including owner-thread kits.
+    /// It must be nonthrowing and thread-safe for that kit; elapsed budgets are checked without GUI polling.
+    FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams = {}, CancelCallback checkpoint = {});
     // Cancels a fit in progress; nothing of it is delivered afterwards.
     ~FitJob();
     FitJob(const FitJob&) = delete;

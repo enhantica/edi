@@ -15,7 +15,7 @@ namespace edi::assistant::detail {
 using J = json::Value;
 using O = json::Object;
 using A = json::Array;
-inline constexpr std::size_t kMessageLimit = 1024 * 1024;
+inline constexpr std::size_t kMessageLimit = Limits::message_bytes;
 
 struct Refusal : std::runtime_error {
     std::string code;
@@ -26,7 +26,13 @@ struct Refusal : std::runtime_error {
 }
 inline Reply success(J value = O{}) { return {true, {}, json::write(value)}; }
 inline Reply failure(const std::string& code, const std::string& message) {
-    return {false, "edi.assistant." + code, json::write(O{{"message", message}})};
+    std::string safe;
+    for (unsigned char c : message) {
+        if (safe.size() >= Limits::error_bytes) break;
+        if (c >= 32 && c != 127) safe.push_back(static_cast<char>(c));
+    }
+    while (!safe.empty() && static_cast<unsigned char>(safe.back()) >= 0x80) safe.pop_back();
+    return {false, "edi.assistant." + code, json::write(O{{"message", safe}})};
 }
 inline bool has(const J& value, const std::string& key) {
     for (const auto& [name, item] : value.object("object")) {
@@ -76,14 +82,44 @@ inline bool utf8(std::string_view text) {
     }
     return true;
 }
-inline J parse(const std::string& text) {
-    if (text.size() > kMessageLimit || !utf8(text)) refuse("invalid_json", "Invalid UTF-8 or oversized message");
+inline J parse(const std::string& text, std::uint64_t limit = Limits::message_bytes) {
+    if (text.size() > limit || !utf8(text)) refuse("invalid_json", "Invalid UTF-8 or oversized message");
+    std::uint64_t depth = 0;
+    bool quoted = false, escaped = false;
+    for (char c : text) {
+        if (quoted) { if (escaped) escaped = false; else if (c == '\\') escaped = true; else if (c == '"') quoted = false; }
+        else if (c == '"') quoted = true;
+        else if (c == '{' || c == '[') { if (++depth > Limits::json_depth) refuse("invalid_json", "JSON nesting limit exceeded"); }
+        else if ((c == '}' || c == ']') && depth) --depth;
+    }
     try { J result = json::parse(text); unique(result); return result; }
     catch (const Refusal&) { throw; }
     catch (const std::exception& error) { refuse("invalid_json", error.what()); }
 }
+inline J canonical(J value) {
+    if (auto* object = std::get_if<O>(&value.data)) {
+        for (auto& member : *object) member.second = canonical(std::move(member.second));
+        std::sort(object->begin(), object->end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    } else if (auto* array = std::get_if<A>(&value.data)) for (auto& item : *array) item = canonical(std::move(item));
+    return value;
+}
+inline std::uint64_t payload_size(const J& value, std::uint64_t limit = UINT64_MAX) {
+    try { return json::encoded_size(value, limit); }
+    catch (const std::length_error&) { refuse("resource_exhausted", "Assistant payload limit exceeded"); }
+}
+
+inline void bounded(const J& value, std::uint64_t bytes, std::uint64_t count = UINT64_MAX) {
+    if (const auto* array = std::get_if<A>(&value.data); array && array->size() > count)
+        refuse("resource_exhausted", "Assistant collection count limit exceeded");
+    try { (void)json::encoded_size(value, bytes); }
+    catch (const std::length_error&) { refuse("resource_exhausted", "Assistant payload limit exceeded"); }
+}
+
 inline std::string string(const J& value, const char* name, bool empty = false) {
     const auto result = value.at(name).string(name);
+    const std::string key(name);
+    if ((key.ends_with("_id") || key == "model" || key == "effort") && result.size() > Limits::id_bytes)
+        refuse("resource_exhausted", "Assistant identifier exceeds limit");
     if (!empty && result.empty()) refuse("invalid_argument", std::string(name) + " is empty");
     return result;
 }

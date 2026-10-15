@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/assistant.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <limits>
 #include <map>
@@ -9,7 +10,9 @@
 #include <utility>
 
 #include "assistant_json.hpp"
+#include "assistant_capabilities.hpp"
 #include "edi/calculation.hpp"
+#include "edi/categories.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
@@ -32,14 +35,18 @@ J parameters(Project& project) {
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
+    std::uint64_t bytes = 2;
     for (const auto& entry : parameter_entries(project)) {
         const Parameter& p = *entry.parameter;
         const auto named = names.find(&p);
         const std::string unique_name = named == names.end() ? std::string() : named->second;
-        rows.emplace_back(O{{"path", entry.path}, {"unique_name", unique_name}, {"value", p.value.get()},
+        J row = O{{"path", entry.path}, {"unique_name", unique_name}, {"value", p.value.get()},
                             {"uncertainty", p.uncertainty.get() ? J(*p.uncertainty.get()) : J(nullptr)},
                             {"free", p.free.get()}, {"dependence", dependence(p.dependence)},
-                            {"unit", p.spec ? p.spec->units : "dimensionless"}});
+                            {"unit", p.spec ? p.spec->units : "dimensionless"}};
+        const auto growth = payload_size(row, Limits::context_bytes) + (rows.empty() ? 0 : 1);
+        if (growth > Limits::context_bytes - bytes) refuse("resource_exhausted", "Project parameter context exceeds limit");
+        bytes += growth; rows.push_back(std::move(row));
     }
     return rows;
 }
@@ -83,6 +90,10 @@ J manifest() {
          {"objective", object({{"absolute_tolerance", num}, {"relative_tolerance", num}},
                               {"absolute_tolerance", "relative_tolerance"})}},
         {"summary", "groups", "budget", "objective"});
+    add("ask_question", "Ask the real user for scientific choices; wait for their answer before continuing",
+        {{"text", text}, {"options", array(object({{"id", text}, {"label", text}, {"description", text}}, {"id", "label", "description"}))},
+         {"recommended", O{{"type", A{"string", "null"}}}}, {"allow_free_text", O{{"type", "boolean"}}}},
+        {"text", "options", "recommended", "allow_free_text"});
     add("set_parameters", "Set approved independent parameter values",
         {{"values", array(object({{"path", text}, {"value", num}}, {"path", "value"}))}}, {"values"}, true);
     add("set_free", "Choose the approved independent free flags",
@@ -101,8 +112,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     Revision version;
     std::uint64_t serial = 0, event_serial = 0;
     bool open = true, ready = false, response_done = false, had_tools = false;
+    std::string conversation, request_trial;
     std::string phase = "disconnected", connection, turn, request, model, effort, text, active_job, question;
     J capabilities = A{}, history = A{}, attachments = A{};
+    J question_record;
+    std::string question_call;
+    std::map<std::string, std::pair<std::string, Reply>> answers;
     struct Plan {
         std::string id;
         J description;
@@ -116,8 +131,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     };
     std::optional<Plan> plan;
     struct Trial {
-        std::string id, group;
-        std::shared_ptr<Project> project;
+        std::string id, group, call_id;
+        J scope;
+        std::shared_ptr<Project> project, accepted;
+        WorkStamps accepted_stamps, fitted_stamps;
+        edi::detail::FitInputs accepted_inputs, fitted_inputs;
+        work::Ticket baseline_ticket = 0;
         std::uint64_t revision = 0;
         double baseline = std::numeric_limits<double>::quiet_NaN();
         std::optional<FitReport> report;
@@ -125,6 +144,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     };
     std::shared_ptr<Trial> trial;
     struct Cached { std::string binding; Reply reply; };
+    std::uint64_t history_used = 2, cache_used = 2;
+    std::string admitting_call, active_call;
+    J admitting_event;
+    struct Hold { std::uint64_t history = 0, cache = 0; };
+    std::map<std::string, Hold> holds;
     std::map<std::string, Cached> calls;
 
     State(work::Worker& runner, Hooks services) : worker(runner), hooks(std::move(services)) {
@@ -133,7 +157,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 std::chrono::steady_clock::now().time_since_epoch()).count());
         };
     }
-    std::string id(const char* kind) { return std::string(kind) + '-' + std::to_string(++serial); }
+    std::string id(const char* kind) {
+        static std::atomic<std::uint64_t> next{0};
+        auto value = next.load();
+        do {
+            if (value == UINT64_MAX) refuse("resource_exhausted", "Assistant identity limit exceeded");
+        } while (!next.compare_exchange_weak(value, value + 1));
+        return std::string(kind) + '-' + std::to_string(value + 1);
+    }
     J state() const {
         return O{{"state", phase}, {"project_id", version.project_id}, {"revision", std::to_string(version.revision)},
                  {"active_turn_id", turn}, {"active_job_id", active_job},
@@ -147,19 +178,101 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         return O{{"schema", "edi.assistant.context/1"}, {"project", project},
                  {"parameters", live ? parameters(*live) : J(A{})}, {"diagnostics", diagnostics(live)}};
     }
-    void emit(const std::string& type, O fields = {}) {
+    void emit(const std::string& type, O fields = {}, const J* scope = nullptr) {
         if (!open || !hooks.event) return;
         fields.emplace_back("schema", "edi.assistant/1"); fields.emplace_back("type", type);
         fields.emplace_back("event_id", std::to_string(++event_serial));
-        fields.emplace_back("connection_id", connection); fields.emplace_back("turn_id", turn);
-        fields.emplace_back("project_id", version.project_id); fields.emplace_back("revision", std::to_string(version.revision));
+        fields.emplace_back("connection_id", scope ? scope->at("connection_id") : J(connection));
+        fields.emplace_back("turn_id", scope ? scope->at("turn_id") : J(turn));
+        fields.emplace_back("request_id", scope ? scope->at("request_id") : J(request));
+        fields.emplace_back("project_id", scope ? scope->at("project_id") : J(version.project_id));
+        fields.emplace_back("revision", scope ? scope->at("revision") : J(std::to_string(version.revision)));
         hooks.event(json::write(fields));
     }
     void status(std::string next) { phase = std::move(next); emit("state_changed", {{"state", state()}}); }
-    void history_item(J item) { std::get<A>(history.data).push_back(std::move(item)); }
+    std::uint64_t held_history() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.history; return n; }
+    std::uint64_t held_cache() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.cache; return n; }
+    void check_history(const std::vector<J>& items, std::uint64_t future = 0) const {
+        auto bytes = history_used; auto count = history.array("history").size();
+        for (const auto& item : items) {
+            const auto size = payload_size(item, Limits::history_bytes);
+            const auto growth = size + (count ? 1 : 0);
+            if (growth > Limits::history_bytes - bytes) refuse("resource_exhausted", "Conversation history limit exceeded");
+            bytes += growth; ++count;
+        }
+        if (held_history() + future > Limits::history_bytes - bytes || count + holds.size() + (future ? 1 : 0) > Limits::history_entries)
+            refuse("resource_exhausted", "Conversation terminal capacity is unavailable");
+    }
+    void history_item(J item) {
+        check_history({item});
+        auto& rows = std::get<A>(history.data);
+        history_used += payload_size(item) + (rows.empty() ? 0 : 1);
+        rows.push_back(std::move(item));
+    }
+    J invocation(const J& event) const {
+        J arguments = event.at("arguments");
+        if (has(event, "plan_id")) set(arguments, "plan_id", event.at("plan_id"));
+        return O{{"type", "tool_call"}, {"call_id", string(event, "call_id")}, {"name", string(event, "name")}, {"arguments", arguments}};
+    }
+    J result_row(const std::string& call, const Reply& result, bool pending = false, const J* scope = nullptr) const {
+        return O{{"type", "tool_result"}, {"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}, {"connection_id", scope ? scope->at("connection_id") : J(connection)}, {"turn_id", scope ? scope->at("turn_id") : J(turn)}, {"request_id", scope ? scope->at("request_id") : J(request)}, {"project_id", scope ? scope->at("project_id") : J(version.project_id)}, {"revision", scope ? scope->at("revision") : J(std::to_string(version.revision))}};
+    }
+    std::uint64_t cache_size(const J& event, const Reply& result) const {
+        return payload_size(O{{"binding", canonical(event)}, {"reply", result_row(string(event, "call_id"), result, false, &event)}});
+    }
+    void preflight(const Reply& result, bool pending = false) {
+        if (admitting_call.empty()) return;
+        const auto call_row = invocation(admitting_event);
+        const auto reply_row = result_row(admitting_call, result, pending);
+        const auto cache = cache_size(admitting_event, result) + (calls.empty() ? 0 : 1);
+        if (calls.size() + 1 > Limits::completed_calls || cache + held_cache() > Limits::completed_call_bytes - cache_used)
+            refuse("resource_exhausted", "Completed-call capacity is unavailable");
+        std::uint64_t reserve = 0;
+        if (pending) {
+            const J skeleton = result_row(admitting_call, success(), false);
+            reserve = payload_size(skeleton) - 2 + Limits::message_bytes + 1;
+        }
+        check_history({call_row, reply_row}, reserve);
+        if (pending) {
+            const auto final_cache = payload_size(O{{"binding", canonical(admitting_event)}, {"reply", result_row(admitting_call, success())}}) - 2 + Limits::message_bytes;
+            const auto growth = final_cache > cache ? final_cache - cache : 0;
+            if (cache + growth + held_cache() > Limits::completed_call_bytes - cache_used)
+                refuse("resource_exhausted", "Completed terminal capacity is unavailable");
+        }
+    }
+    void finish_call(const std::string& call, const Reply& result) {
+        const auto old = calls.find(call);
+        if (old == calls.end()) return;
+        const auto hold = holds.find(call);
+        const auto held = hold == holds.end() ? Hold{} : hold->second;
+        const auto event = parse(old->second.binding, Limits::completed_call_bytes);
+        const auto row = result_row(call, result, false, &event);
+        bounded(parse(result.value), Limits::message_bytes);
+        const auto previous = cache_size(event, old->second.reply);
+        const auto next = cache_size(event, result);
+        if (next > previous && next - previous > Limits::completed_call_bytes - cache_used)
+            refuse("resource_exhausted", "Completed tool outcome exceeds reserved capacity");
+        // The reservation belongs to this settlement; other pending calls keep theirs.
+        holds.erase(call);
+        try { check_history({row}); }
+        catch (...) { if (held.history || held.cache) holds.emplace(call, held); throw; }
+        Reply prepared = result;
+        auto& rows = std::get<A>(history.data);
+        rows.reserve(rows.size() + 1);
+        cache_used = cache_used - previous + next;
+        old->second.reply = std::move(prepared);
+        history_item(row);
+        emit("tool_result", {{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}}, &event);
+    }
     void stop() {
-        turn.clear(); request.clear(); plan.reset(); calls.clear();
-        if (trial && trial->job && trial->job->running()) { trial->job->cancel(); status("cancelling"); }
+        if (!question.empty()) {
+            finish_call(question_call, failure("interrupted", "The question was interrupted before an answer"));
+            emit("question_invalidated", {{"question_id", question}});
+            question.clear(); question_record = J{}; question_call.clear();
+        }
+        turn.clear(); request.clear(); plan.reset();
+        if (trial && trial->baseline_ticket) worker.cancel(trial->baseline_ticket);
+        if (trial && (trial->baseline_ticket || (trial->job && trial->job->running()))) { if (trial->job) trial->job->cancel(); status("cancelling"); }
         else { trial.reset(); active_job.clear(); status(ready ? "idle" : "disconnected"); }
     }
     void stamps() { if (plan && live) { plan->stamps = work_stamps(*live); plan->inputs = edi::detail::inputs_of(*live); } }
@@ -172,21 +285,25 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!plan || !plan->approved || !has(event, "plan_id") || string(event, "plan_id") != plan->id)
             refuse("approval_required", "Approve this plan in the assistant before execution");
         current();
-        if (hooks.monotonic_ms() - plan->started >= plan->max_ms) {
+        if (const auto now = hooks.monotonic_ms(); now < plan->started || now - plan->started >= plan->max_ms) {
             stop(); refuse("out_of_scope", "The approved elapsed-time budget is exhausted");
         }
     }
     void send_request() {
+        request_trial = trial ? trial->id : "";
         request = id("request"); response_done = false; had_tools = false;
+        const auto project_context = context();
+        bounded(project_context, Limits::context_bytes);
         O out{{"schema", "edi.assistant/1"}, {"type", "request"}, {"connection_id", connection},
-              {"turn_id", turn}, {"request_id", request}, {"model", model}, {"text", text},
-              {"attachments", attachments}, {"context", context()}, {"history", history}, {"tools", manifest()}};
+              {"turn_id", turn}, {"request_id", request}, {"conversation_id", conversation}, {"model", model}, {"text", text},
+              {"attachments", attachments}, {"context", project_context}, {"history", history}, {"tools", manifest()}};
         if (!effort.empty()) out.emplace_back("effort", effort);
+        bounded(out, Limits::request_bytes);
         status("streaming");
         if (hooks.provider_request) hooks.provider_request(json::write(out));
     }
     void continue_turn() {
-        if (!response_done || !active_job.empty() || (plan && !plan->approved)) return;
+        if (!response_done || !active_job.empty() || !question.empty() || (plan && !plan->approved)) return;
         if (had_tools && !turn.empty()) send_request();
         else { turn.clear(); request.clear(); status(ready ? "idle" : "disconnected"); }
     }
@@ -243,19 +360,60 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             next.absolute = number(objective, "absolute_tolerance"); next.relative = number(objective, "relative_tolerance");
             if (next.absolute < 0 || next.relative < 0) refuse("invalid_argument", "Negative objective tolerance");
             if (trial || !active_job.empty()) refuse("busy", "Finish the current trial first");
+            preflight(success(O{{"plan_id", next.id}}));
             plan = std::move(next); stamps();
             J shown = args; set(shown, "plan_id", plan->id);
             emit("plan_proposed", {{"plan", shown}, {"plan_id", plan->id}}); status("awaiting_approval");
             return success(O{{"plan_id", plan->id}});
         }
+        if (name == "ask_question") {
+            shape(args, {"text", "options", "recommended", "allow_free_text"});
+            if (!question.empty() || !active_job.empty() || (plan && !plan->approved)) refuse("busy", "Another human decision or fit is pending");
+            const auto checked_text = [](const J& object, const char* key, std::uint64_t limit) {
+                const auto value = string(object, key);
+                if (value.find_first_not_of(" \t\r\n") == std::string::npos) refuse("invalid_argument", "Question text must not be blank");
+                if (value.size() > limit) refuse("resource_exhausted", "Question text exceeds its limit");
+            };
+            checked_text(args, "text", Limits::question_text_bytes);
+            const auto& options = args.at("options").array("options");
+            if (options.size() > Limits::question_options) refuse("resource_exhausted", "Too many question options");
+            if (options.size() == 1) refuse("invalid_argument", "Supply zero or at least two options");
+            std::set<std::string> ids;
+            for (const auto& option : options) {
+                shape(option, {"id", "label", "description"});
+                const auto option_id = string(option, "id");
+                if (option_id.empty() || option_id.size() > 32 || option_id.front() < 'a' || option_id.front() > 'z' ||
+                    !std::all_of(option_id.begin(), option_id.end(), [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'; }) || !ids.insert(option_id).second)
+                    refuse("invalid_argument", "Invalid or duplicate question option ID");
+                checked_text(option, "label", Limits::question_option_label_bytes);
+                checked_text(option, "description", Limits::question_option_description_bytes);
+            }
+            const bool free_text = args.at("allow_free_text").boolean("allow_free_text");
+            if (options.empty()) {
+                if (!free_text || !args.at("recommended").is_null()) refuse("invalid_argument", "A text question requires free text and no recommendation");
+            } else if (args.at("recommended").is_null() || !ids.count(args.at("recommended").string("recommended")))
+                refuse("invalid_argument", "Recommendation must name an offered option");
+            const auto next = id("question");
+            preflight(success(O{{"question_id", next}, {"pending", true}}), true);
+            J shown = args;
+            for (const auto* key : {"connection_id", "turn_id", "request_id", "project_id", "revision", "call_id"}) set(shown, key, event.at(key));
+            set(shown, "question_id", next);
+            question = next; question_record = shown; question_call = admitting_call;
+            emit("question", {{"question", shown}}); status("awaiting_answer");
+            return success(O{{"question_id", next}, {"pending", true}});
+        }
         static const std::set<std::string> mutations{"set_parameters", "set_free", "begin_trial", "fit_trial", "evaluate_trial", "discard_trial"};
         if (!mutations.count(name)) refuse("unknown_tool", "Unknown tool: " + name);
         approved(event);
+        if (request_trial != (trial ? trial->id : "")) refuse("stale_revision", "This request belongs to another candidate generation");
         if (name == "set_parameters" || name == "set_free") {
             if (!active_job.empty()) refuse("busy", "A fit is running");
+            if (trial && trial->report) refuse("invalid_argument", "Discard the fitted trial before changing its setup");
             Project& target = trial ? *trial->project : *live;
             const auto rows = paths(target);
             const auto& allowed = trial ? plan->groups.at(trial->group) : plan->allowed;
+            std::map<std::string, ParameterEntry> metadata;
+            for (const auto& row : parameter_entries(target)) metadata.emplace(row.path, row);
             const bool values = name == "set_parameters";
             shape(args, {values ? "values" : "flags"});
             std::set<std::string> seen;
@@ -269,14 +427,24 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 auto [parameter, unique_name] = rows.at(path);
                 if (parameter->dependence != Dependence::Independent) refuse("out_of_scope", "Dependent parameter: " + path);
                 if (values) edits.emplace_back(unique_name, number(row, "value"));
-                else flags.emplace_back(unique_name, row.at("free").boolean("free"));
+                else {
+                    const bool free = row.at("free").boolean("free");
+                    const auto& meta = metadata.at(path);
+                    if (free && (!meta.refinable || !meta.fittable || !meta.used_by_profile))
+                        refuse("out_of_scope", "The parameter is not independently fittable in this profile");
+                    flags.emplace_back(unique_name, free);
+                }
             }
             if (seen.empty()) refuse("invalid_argument", "Empty parameter batch");
             Project validated = target;
             if (values) Edit::parameter_values(validated, edits)();
             else Edit::set_free(validated, flags)();
-            complete_relations(validated);
+            if (!validated.aliases.empty() || !validated.constraints.empty()) complete_relations(validated);
+            else refresh_relations(validated);
             const Edit change = values ? Edit::parameter_values(target, std::move(edits)) : Edit::set_free(target, std::move(flags));
+            O predicted{{"revision", std::to_string(version.revision + (trial ? 0 : 1))}};
+            if (trial) { predicted.emplace_back("trial_id", trial->id); predicted.emplace_back("candidate_revision", std::to_string(trial->revision + 1)); }
+            preflight(success(predicted));
             if (trial) { change(); ++trial->revision; }
             else apply(change);
             O result{{"revision", std::to_string(version.revision)}};
@@ -290,14 +458,28 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (plan->trials >= plan->max_trials) refuse("out_of_scope", "Trial budget exhausted");
             auto next = std::make_shared<Trial>();
             next->id = id("trial"); next->group = group; next->project = std::make_shared<Project>(*live);
-            if (live->fit_result.held() && live->fit_result.objective_name == "chi_square") next->baseline = live->fit_result.objective_value;
-            trial = std::move(next); ++plan->trials;
+            refresh_relations(*next->project);
+            const auto candidate_paths = paths(*next->project);
+            const auto group_paths = plan->groups.at(group);
+            std::map<std::string, ParameterEntry> metadata;
+            for (const auto& row : parameter_entries(*next->project)) metadata.emplace(row.path, row);
+            for (auto* parameter : next->project->parameters()) parameter->free = false;
+            for (const auto& path : group_paths) {
+                const auto& row = metadata.at(path);
+                if (!row.refinable || !row.fittable || !row.used_by_profile || row.parameter->dependence != Dependence::Independent)
+                    refuse("out_of_scope", "The selected group contains a nonfittable parameter");
+                candidate_paths.at(path).first->free = true;
+            }
+            next->accepted = std::make_shared<Project>(*live);
+            next->accepted_stamps = work_stamps(*live); next->accepted_inputs = edi::detail::inputs_of(*live);
+            preflight(success(O{{"trial_id", next->id}}));
+            trial = std::move(next); request_trial = trial->id; ++plan->trials;
             return success(O{{"trial_id", trial->id}});
         }
         shape(args, {"trial_id"});
         if (!trial || string(args, "trial_id") != trial->id) refuse("unknown_trial", "Unknown trial");
         if (!active_job.empty()) refuse("busy", "Wait for the fit to settle");
-        if (name == "discard_trial") { trial.reset(); return success(O{{"discarded", true}}); }
+        if (name == "discard_trial") { preflight(success(O{{"discarded", true}})); trial.reset(); return success(O{{"discarded", true}}); }
         if (name == "fit_trial") {
             if (trial->report) refuse("invalid_argument", "This trial has already been fitted");
             const auto mode = effective_fitting_mode(*trial->project);
@@ -306,26 +488,107 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto max_iterations = static_cast<int>(plan->max_iterations);
             if (trial->project->minimizer_max_iterations == 0 || trial->project->minimizer_max_iterations > max_iterations)
                 trial->project->minimizer_max_iterations = max_iterations;
-            const auto job_id = id("job"); active_job = job_id;
-            const std::weak_ptr<State> weak = shared_from_this();
-            const std::weak_ptr<Trial> weak_candidate = trial;
+            const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true); active_job = job_id; active_call = admitting_call; trial->call_id = admitting_call; trial->scope = event;
+            const auto self = shared_from_this();
             FitJob::Hooks callbacks;
-            callbacks.iterated = [weak, job_id](const IterationRecord& iteration) {
-                if (const auto state = weak.lock(); state && state->open && state->active_job == job_id)
-                    state->emit("job_progress", {{"job_id", job_id}, {"objective", iteration.reduced_chi_square}});
+            callbacks.iterated = [self, job_id](const IterationRecord& iteration) {
+                if (self->open && self->active_job == job_id)
+                    self->emit("job_progress", {{"job_id", job_id}, {"objective", iteration.objective_value ? J(*iteration.objective_value) : J(nullptr)}, {"reduced_chi_square", iteration.reduced_chi_square}}, self->trial ? &self->trial->scope : nullptr);
             };
-            callbacks.finished = [weak, weak_candidate, job_id](const FitReport& report) {
-                const auto state = weak.lock();
-                const auto candidate = weak_candidate.lock();
-                if (!state || !candidate || !state->open || state->active_job != job_id) return;
+            callbacks.finished = [self, job_id](const FitReport& report) {
+                const auto& state = self;
+                const auto candidate = state->trial;
+                if (!candidate || !state->open || state->active_job != job_id) return;
                 candidate->report = report; state->active_job.clear();
-                state->emit("job_finished", {{"job_id", job_id}, {"adopted", report.adopted()}, {"message", report.refusal},
-                                             {"converged", report.result && report.result->converged}});
+                candidate->job.reset();
+                candidate->fitted_stamps = work_stamps(*candidate->project);
+                candidate->fitted_inputs = edi::detail::inputs_of(*candidate->project);
+                const auto status = [](FitStatus value) {
+                    switch (value) {
+                        case FitStatus::DONE: return "done";
+                        case FitStatus::MAX_ITER: return "max_iter";
+                        case FitStatus::NO_STEP: return "no_step";
+                        case FitStatus::CANCELLED: return "cancelled";
+                        case FitStatus::SUPERSEDED: return "superseded";
+                        case FitStatus::UNAVAILABLE: return "unavailable";
+                        default: return "error";
+                    }
+                };
+                O values, uncertainties;
+                if (report.result) {
+                    for (const auto& item : report.result->values) values.emplace_back(item.first, item.second);
+                    for (const auto& item : report.result->uncertainty) uncertainties.emplace_back(item.first, item.second);
+                }
+                const auto& record = candidate->project->fit_result;
+                J outcome = O{{"job_id", job_id}, {"trial_id", candidate->id}, {"status", status(report.status)},
+                    {"message", report.refusal}, {"candidate_adopted", report.adopted()}, {"live_adopted", false},
+                    {"converged", report.result && report.result->converged}, {"objective_name", "chi_square"},
+                    {"objective", report.adopted() ? J(record.objective_value) : J(nullptr)},
+                    {"baseline_objective", std::isfinite(candidate->baseline) ? J(candidate->baseline) : J(nullptr)},
+                    {"reduced_chi_square", report.result ? J(report.result->reduced_chi_square) : J(nullptr)},
+                    {"rwp", report.result ? J(report.result->rwp) : J(nullptr)},
+                    {"iterations", report.result ? report.result->iterations : 0},
+                    {"n_points_fitted", report.result ? J(static_cast<double>(report.result->n_points_fitted)) : J(nullptr)},
+                    {"n_free_parameters", record.n_free_parameters}, {"values", values}, {"uncertainties", uncertainties},
+                    {"diagnostics", diagnostics(candidate->project.get())}};
+                const Reply terminal = report.status == FitStatus::ERROR || report.status == FitStatus::SUPERSEDED || report.status == FitStatus::CANCELLED
+                    ? Reply{false, "edi.assistant.interrupted", json::write(outcome)} : success(outcome);
+                state->finish_call(candidate->call_id, terminal);
+                state->emit("job_finished", {{"job_id", job_id}, {"result", outcome}, {"status", status(report.status)},
+                    {"candidate_adopted", report.adopted()}, {"live_adopted", false}}, &candidate->scope);
                 if (state->turn.empty()) { state->trial.reset(); state->status(state->ready ? "idle" : "disconnected"); }
                 else { state->status("streaming"); state->continue_turn(); }
             };
-            trial->job = std::make_unique<FitJob>(*trial->project, worker, std::move(callbacks));
-            if (!trial->job->start()) { active_job.clear(); refuse("busy", "The fit could not start"); }
+            const auto now = hooks.monotonic_ms();
+            const auto elapsed = now >= plan->started ? now - plan->started : plan->max_ms;
+            const auto remaining = plan->max_ms - std::min(plan->max_ms, elapsed);
+            const auto wall_start = std::chrono::steady_clock::now();
+            const auto policy_start = hooks.monotonic_ms();
+            const auto clock = hooks.monotonic_ms;
+            const auto expired = [remaining, wall_start, policy_start, clock] {
+#if EDI_WORKER_OWNER_THREAD
+                const auto value = clock();
+                if (value < policy_start || value - policy_start >= remaining) return true;
+#endif
+                return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - wall_start).count() >= static_cast<std::int64_t>(std::min<std::uint64_t>(remaining, INT64_MAX));
+            };
+            trial->job = std::make_unique<FitJob>(*trial->project, worker, std::move(callbacks), FitJob::Seams{}, expired);
+            auto baseline = trial->accepted;
+            const auto candidate_slots = named_slots(*trial->project);
+            const auto baseline_slots = named_slots(*baseline);
+            if (candidate_slots.size() != baseline_slots.size()) refuse("stale_revision", "Baseline parameter identities changed");
+            for (std::size_t i = 0; i < candidate_slots.size(); ++i) {
+                if (candidate_slots[i].unique_name != baseline_slots[i].unique_name) refuse("stale_revision", "Baseline parameter identities changed");
+                baseline_slots[i].parameter->free = candidate_slots[i].parameter->free.get();
+            }
+            const auto candidate_id = trial->id;
+            trial->baseline_ticket = worker.submit("assistant-baseline", [self, baseline, candidate_id, expired, mode](const work::CancelToken& token, const work::Emit&) {
+                std::optional<double> objective;
+                std::string error;
+                try {
+                    if (!token.cancelled() && !expired()) {
+                        const auto started = [&objective](const FitPreamble& facts) { objective = facts.pre_fit.objective_value; };
+                        if (mode == "joint") baseline->fit_joint(IterationCallback{}, started, [] { return true; });
+                        else baseline->fit(IterationCallback{}, started, [] { return true; });
+                    }
+                } catch (const std::exception&) { error = "The accepted baseline could not be evaluated"; }
+                return [self, candidate_id, objective, error] {
+                    if (!self->open || !self->trial || self->trial->id != candidate_id) return;
+                    auto& candidate = *self->trial; candidate.baseline_ticket = 0;
+                    if (!objective || !std::isfinite(*objective) || !error.empty() || self->turn.empty()) {
+                        FitReport refused; refused.status = self->turn.empty() ? FitStatus::CANCELLED : FitStatus::ERROR;
+                        refused.refusal = error.empty() ? "The baseline was interrupted or unavailable" : error;
+                        candidate.report = refused; candidate.job.reset(); const auto job_id = self->active_job; self->active_job.clear();
+                        self->finish_call(candidate.call_id, {false, "edi.assistant.interrupted", json::write(O{{"job_id", job_id}, {"trial_id", candidate.id}, {"status", self->turn.empty() ? "cancelled" : "error"}, {"message", refused.refusal}, {"candidate_adopted", false}, {"live_adopted", false}})});
+                        self->emit("job_finished", {{"job_id", job_id}, {"status", self->turn.empty() ? "cancelled" : "error"}, {"message", refused.refusal}, {"live_adopted", false}}, &candidate.scope);
+                        self->status("interrupted");
+                        if (self->turn.empty()) self->trial.reset();
+                        return;
+                    }
+                    candidate.baseline = *objective;
+                    if (!candidate.job->start()) { self->active_job.clear(); self->status("failed"); }
+                };
+            });
             emit("job_started", {{"job_id", job_id}, {"trial_id", trial->id}}); status("executing");
             return success(O{{"job_id", job_id}});
         }
@@ -333,6 +596,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const auto candidate = trial;
         const auto& report = *candidate->report;
         bool accepted = report.status == FitStatus::DONE && report.result && report.result->converged;
+        if (!unchanged_since(*live, candidate->accepted_stamps) || edi::detail::inputs_of(*live) != candidate->accepted_inputs ||
+            !unchanged_since(*candidate->project, candidate->fitted_stamps) || edi::detail::inputs_of(*candidate->project) != candidate->fitted_inputs)
+            refuse("stale_revision", "The fit evidence no longer describes the accepted and candidate states");
         const auto& record = candidate->project->fit_result;
         const double objective = record.objective_value;
         accepted = accepted && record.held() && record.objective_name == "chi_square" && std::isfinite(objective);
@@ -345,9 +611,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         }
         const std::string reason = accepted ? "Converged comparable improvement" :
             (std::isfinite(candidate->baseline) ? "The trial did not meet the approved acceptance criteria" : "The accepted project needs a baseline objective before automatic adoption");
-        if (accepted) apply(Edit::assistant_result(*live, candidate->project));
         O result{{"accepted", accepted}, {"reason", reason}, {"trial_id", candidate->id},
-                 {"revision", std::to_string(version.revision)}, {"diagnostics", diagnostics(candidate->project.get())}};
+                 {"revision", std::to_string(version.revision + (accepted ? 1 : 0))}, {"diagnostics", diagnostics(candidate->project.get())}};
+        preflight(success(result));
+        if (accepted) apply(Edit::assistant_result(*live, candidate->project));
         emit("trial_finished", {{"result", result}}); trial.reset();
         return success(result);
     }
@@ -364,9 +631,25 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         }
         if (type == "answer") {
             shape(command, {"schema", "type", "question_id", "answer"});
-            if (question.empty() || string(command, "question_id") != question) refuse("invalid_argument", "No matching question");
-            emit("question_answered", {{"question_id", question}, {"answer", string(command, "answer", true)}});
-            question.clear(); continue_turn(); return success();
+            const auto question_id = string(command, "question_id"); const auto answer = string(command, "answer");
+            if (const auto old = answers.find(question_id); old != answers.end()) {
+                if (old->second.first != answer) refuse("invalid_argument", "This question was already answered differently");
+                return old->second.second;
+            }
+            if (question.empty() || question_id != question) refuse("invalid_argument", "No matching live question");
+            if (answer.size() > Limits::question_answer_bytes) refuse("resource_exhausted", "Question answer exceeds limit");
+            bool selected = false;
+            for (const auto& option : question_record.at("options").array("options")) if (string(option, "id") == answer) selected = true;
+            if (!selected && (!question_record.at("allow_free_text").boolean("allow_free_text") || answer.find_first_not_of(" \t\r\n") == std::string::npos))
+                refuse("invalid_argument", "Choose an offered option or provide permitted free text");
+            if (string(question_record, "connection_id") != connection || string(question_record, "project_id", true) != version.project_id || detail::revision(question_record) != version.revision)
+                refuse("invalid_argument", "Question scope changed");
+            const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", selected ? J(answer) : J(nullptr)}});
+            if (answers.size() >= Limits::completed_calls) refuse("resource_exhausted", "Answered-question capacity is unavailable");
+            finish_call(question_call, result);
+            answers.emplace(question, std::make_pair(answer, result));
+            emit("question_answered", {{"question_id", question}, {"answer", answer}});
+            question.clear(); question_record = J{}; question_call.clear(); continue_turn(); return result;
         }
         if (type != "message") refuse("invalid_argument", "Unknown user command");
         shape(command, {"schema", "type", "text", "connection_id", "model"}, {"effort", "attachments"});
@@ -384,7 +667,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             refuse("out_of_scope", "Attachment transfer requires the pending selected-handle unit");
         text = string(command, "text"); model = selected; effort = selected_effort;
         attachments = A{}; turn = id("turn");
-        history_item(O{{"type", "message"}, {"role", "user"}, {"text", text}}); send_request();
+        if (conversation.empty()) conversation = id("conversation");
+        history_item(O{{"type", "message"}, {"role", "user"}, {"text", text}, {"turn_id", turn}, {"request_id", ""}}); send_request();
         return success(O{{"turn_id", turn}, {"request_id", request}});
     }
     Reply provider(const J& event) {
@@ -393,9 +677,20 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             shape(event, {"schema", "type", "connection_id", "status", "capabilities"});
             const auto state = string(event, "status");
             if (state != "ready" && state != "disconnected" && state != "expired") refuse("invalid_argument", "Invalid connection status");
+            bounded(event.at("capabilities"), Limits::http_json_bytes, Limits::models);
+            std::set<std::string> model_ids;
             for (const auto& item : event.at("capabilities").array("capabilities")) {
                 shape(item, {"id", "display_name", "efforts", "attachment_types"}); string(item, "id"); string(item, "display_name");
-                for (const J& effort_value : item.at("efforts").array("efforts")) effort_value.string("effort");
+                if (!model_ids.insert(string(item, "id")).second) refuse("invalid_argument", "Duplicate model ID");
+                bounded(item.at("efforts"), Limits::http_json_bytes, Limits::model_options);
+                bounded(item.at("attachment_types"), Limits::http_json_bytes, Limits::model_options);
+                const auto mapped = openai_efforts(string(item, "id"));
+                for (const J& option : item.at("efforts").array("efforts")) {
+                    const auto tag = option.string("effort");
+                    if (!effort_tag(tag)) refuse("invalid_argument", "Unsupported reasoning effort tag");
+                    if (!mapped.array("efforts").empty() && std::none_of(mapped.array("efforts").begin(), mapped.array("efforts").end(), [&](const J& x) { return x.string("effort") == tag; }))
+                        refuse("invalid_argument", "Unsupported model effort combination");
+                }
                 for (const J& attachment : item.at("attachment_types").array("attachment_types")) attachment.string("attachment type");
             }
             const auto next = string(event, "connection_id");
@@ -411,39 +706,61 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (turn.empty() || string(event, "turn_id") != turn || string(event, "request_id") != request)
             refuse(type == "tool_call" && !turn.empty() ? "invalid_argument" : "interrupted", "Provider event does not belong to the active request");
         if (type == "text_delta") {
+            if (response_done) refuse("interrupted", "Text arrived after response completion");
             const auto delta = string(event, "text", true);
-            emit("message_delta", {{"text", delta}});
-            history_item(O{{"type", "message"}, {"role", "assistant"}, {"text", delta}}); return success();
+            auto& rows = std::get<A>(history.data);
+            if (!rows.empty() && rows.back().get("type").string("type") == "message" && rows.back().get("role").string("role") == "assistant" &&
+                rows.back().get("turn_id").string("turn_id") == turn && rows.back().get("request_id").string("request_id") == request) {
+                const auto& previous = rows.back().at("text").string("text");
+                const auto growth = payload_size(J(delta)) - 2;
+                if (growth + held_history() > Limits::history_bytes - history_used) refuse("resource_exhausted", "Conversation text limit exceeded");
+                J next = rows.back(); set(next, "text", previous + delta); rows.back() = std::move(next); history_used += growth;
+            } else history_item(O{{"type", "message"}, {"role", "assistant"}, {"text", delta}, {"turn_id", turn}, {"request_id", request}});
+            emit("message_delta", {{"text", delta}}); return success();
         }
         if (type == "turn_finished") {
+            if (response_done) refuse("interrupted", "Response is already terminal");
             const auto result = string(event, "status");
             if (result != "completed" && result != "failed" && result != "interrupted") refuse("invalid_argument", "Invalid terminal status");
             if (result != "completed") { stop(); status("interrupted"); return failure("interrupted", "Provider turn did not complete"); }
             response_done = true; continue_turn(); return success();
         }
         const auto call = string(event, "call_id");
-        const auto binding = json::write(event);
+        const auto binding = json::write(canonical(event));
         if (const auto old = calls.find(call); old != calls.end()) {
             if (old->second.binding != binding) refuse("invalid_argument", "Call ID reused with different content");
             return old->second.reply;
         }
         if (response_done) refuse("interrupted", "Tool arrived after response completion");
-        if (!live || string(event, "project_id") != version.project_id) refuse("stale_project", "Project changed");
+        if (!question.empty()) refuse("busy", "Answer the pending question before another tool");
+        const bool no_project_question = string(event, "name") == "ask_question" && !live && string(event, "project_id", true).empty();
+        if (!no_project_question && (!live || string(event, "project_id") != version.project_id)) refuse("stale_project", "Project changed");
         if (detail::revision(event) != version.revision) refuse("stale_revision", "Project revision changed");
+        admitting_call = call; admitting_event = event;
         Reply result;
         try { result = tool(event); }
         catch (const Refusal& error) { result = failure(error.code, error.what()); }
         catch (const std::exception& error) { result = failure("invalid_argument", error.what()); }
+        const bool pending = result.ok && (string(event, "name") == "fit_trial" || string(event, "name") == "ask_question");
+        preflight(result, pending);
+        cache_used += cache_size(event, result) + (calls.empty() ? 0 : 1);
         calls.emplace(call, Cached{binding, result}); had_tools = true;
-        history_item(O{{"type", "tool_call"}, {"call_id", call}, {"name", string(event, "name")}, {"arguments", event.at("arguments")}});
-        history_item(O{{"type", "tool_result"}, {"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}});
-        emit("tool_result", {{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}});
+        history_item(invocation(event));
+        history_item(result_row(call, result, pending));
+        if (pending) {
+            const auto terminal_history = payload_size(result_row(call, success())) - 2 + Limits::message_bytes + 1;
+            const auto next_cache = payload_size(O{{"binding", canonical(event)}, {"reply", result_row(call, success())}}) - 2 + Limits::message_bytes;
+            const auto previous_cache = cache_size(event, result);
+            holds[call] = {terminal_history, next_cache > previous_cache ? next_cache - previous_cache : 0};
+        }
+        emit("tool_result", {{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}});
+        admitting_call.clear();
         return result;
     }
 };
 
 Controller::Controller(work::Worker& worker, Hooks hooks) : state_(std::make_shared<State>(worker, std::move(hooks))) {}
-Controller::~Controller() { state_->open = false; state_->stop(); }
+Controller::~Controller() { state_->open = false; state_->stop(); state_->trial.reset(); }
 Reply Controller::attach(Project* project, std::string project_id) {
     if ((project == nullptr) != project_id.empty()) return failure("invalid_argument", "A project requires a session ID");
     if (project && project_id == state_->version.project_id) {
@@ -451,7 +768,7 @@ Reply Controller::attach(Project* project, std::string project_id) {
         return success();
     }
     state_->stop(); state_->live = project; state_->version = {std::move(project_id), 0};
-    state_->history = A{}; state_->emit("state_changed", {{"state", state_->state()}}); return success();
+    state_->history = A{}; state_->history_used = 2; state_->calls.clear(); state_->cache_used = 2; state_->holds.clear(); state_->answers.clear(); state_->conversation = state_->id("conversation"); state_->emit("state_changed", {{"state", state_->state()}}); return success();
 }
 Revision Controller::revision() const { return state_->version; }
 void Controller::notify_changed() { ++state_->version.revision; state_->stop(); }
@@ -466,10 +783,15 @@ Reply Controller::provider_event(const JsonText& event) {
     catch (const std::exception& error) { return failure("invalid_argument", error.what()); }
 }
 JsonText Controller::state() const { return json::write(state_->state()); }
-JsonText Controller::context() const { return json::write(state_->context()); }
+JsonText Controller::context() const {
+    try { const auto context = state_->context(); bounded(context, Limits::context_bytes); return json::write(context); }
+    catch (...) { return json::write(O{{"schema", "edi.assistant.context/1"}, {"error", O{{"code", "edi.assistant.resource_exhausted"}, {"message", "Project context exceeds the assistant limit."}}}}); }
+}
 void Controller::poll() {
-    if (state_->plan && state_->plan->approved && state_->hooks.monotonic_ms() - state_->plan->started >= state_->plan->max_ms)
-        state_->stop();
+    if (state_->plan && state_->plan->approved) {
+        const auto now = state_->hooks.monotonic_ms();
+        if (now < state_->plan->started || now - state_->plan->started >= state_->plan->max_ms) state_->stop();
+    }
 }
 void Controller::cancel() { state_->stop(); }
 }  // namespace edi::assistant

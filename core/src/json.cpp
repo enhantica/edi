@@ -17,6 +17,18 @@ namespace {
     throw std::invalid_argument(std::string("report JSON: ") + what + " is not " + expected);
 }
 
+struct SizeCounter {
+    std::uint64_t size = 0, limit;
+    void count(std::uint64_t n) {
+        if (n > limit - size) throw std::length_error("JSON encoded size limit exceeded");
+        size += n;
+    }
+    void operator+=(char) { count(1); }
+    void operator+=(const char* text) { count(std::char_traits<char>::length(text)); }
+    void operator+=(const std::string& text) { count(text.size()); }
+    void append(const char* begin, const char* end) { count(static_cast<std::uint64_t>(end - begin)); }
+};
+
 void append_utf8(std::string& out, std::uint32_t code) {
     if (code < 0x80) {
         out += static_cast<char>(code);
@@ -35,7 +47,8 @@ void append_utf8(std::string& out, std::uint32_t code) {
     }
 }
 
-void write_escaped(std::string& out, const std::string& text) {
+template <typename Output>
+void write_escaped(Output& out, const std::string& text) {
     static const char* const hex = "0123456789abcdef";
     out += '"';
     for (std::size_t i = 0; i < text.size(); ++i) {
@@ -84,7 +97,8 @@ void write_escaped(std::string& out, const std::string& text) {
     out += '"';
 }
 
-void write_value(std::string& out, const Value& value) {
+template <typename Output>
+void write_value(Output& out, const Value& value) {
     if (value.is_null()) {
         out += "null";
     } else if (const bool* flag = std::get_if<bool>(&value.data)) {
@@ -448,6 +462,12 @@ const Value& Value::get(const std::string& key) const {
         }
     }
     return missing;
+}
+
+std::uint64_t encoded_size(const Value& value, std::uint64_t limit) {
+    SizeCounter counter{0, limit};
+    write_value(counter, value);
+    return counter.size;
 }
 
 std::string write(const Value& value) {

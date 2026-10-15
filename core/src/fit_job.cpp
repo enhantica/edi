@@ -101,13 +101,14 @@ FitFrame frame_of(Project& preview, const std::map<std::string, double>& values)
 // Shared with the job and the deliveries on their way, so a delivery that arrives after the FitJob is
 // gone finds `open` false and does nothing.
 struct FitJob::State {
-    State(Project& project, work::Worker& runner, Hooks callbacks, Seams injected)
-        : live(project), worker(runner), hooks(std::move(callbacks)), seams(std::move(injected)) {}
+    State(Project& project, work::Worker& runner, Hooks callbacks, Seams injected, CancelCallback checkpoint)
+        : live(project), worker(runner), hooks(std::move(callbacks)), seams(std::move(injected)), checkpoint(std::move(checkpoint)) {}
 
     Project& live;
     work::Worker& worker;
     Hooks hooks;
     Seams seams;
+    CancelCallback checkpoint;
     bool open = true;
     work::Ticket ticket = 0;  // the running fit's job, or 0
     // Set by the owner when it has shown a frame, cleared by the worker when it emits one.
@@ -158,8 +159,8 @@ struct FitJob::State {
     }
 };
 
-FitJob::FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams)
-    : state_(std::make_shared<State>(live, worker, std::move(hooks), std::move(seams))) {}
+FitJob::FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams, CancelCallback checkpoint)
+    : state_(std::make_shared<State>(live, worker, std::move(hooks), std::move(seams), std::move(checkpoint))) {}
 
 FitJob::~FitJob() {
     state_->open = false;
@@ -275,7 +276,7 @@ bool FitJob::start(const Project* scan_template) {
                 if (self->seams.polled) {
                     self->seams.polled(polls);
                 }
-                return token.cancelled();
+                return token.cancelled() || (self->checkpoint && self->checkpoint());
             };
             try {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
