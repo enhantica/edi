@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T07:46:55Z
+# measured_utc = 2026-10-15T07:49:39Z
 #
-# Recorded from: seq22 first diagnostic preservation checkpoint: three reached native reason/code losses, three prior-VM missing-card reds; new VM diagnostic path remains unexecuted
-# Collected tests: 13838; with a reported duration: 7606
+# Recorded from: seq22 core diagnostic context: five reached safe-stage/first-reason reds and three actual successful public controls; no admission relaxation
+# Collected tests: 13846; with a reported duration: 7609
 # Module-scoped fixture costs recorded: 58
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13505
+# inventory_python = 13513
 # inventory_cpp = 333
-# inventory_measured = 12078
-# inventory_unmeasured = 1760
+# inventory_measured = 12081
+# inventory_unmeasured = 1765
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10168,6 +10168,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_async_retention_failur
 0.050	tests/system/py/test_e11_t5_async_settlement.py::test_failed_baseline_settles_with_complete_refusal_and_recoverable_conversation[unavailable-baseline]
 0.240	tests/system/py/test_e11_t5_async_settlement.py::test_shared_fitjob_start_failure_retains_prior_finished_state_without_false_running[direct-control]
 0.220	tests/system/py/test_e11_t5_async_settlement.py::test_shared_fitjob_start_failure_retains_prior_finished_state_without_false_running[direct-submit-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_first_public_parser_reason_survives_repeated_feed_and_finish[changed-completed-item]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_first_public_parser_reason_survives_repeated_feed_and_finish[malformed-json]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_known_invalid_field_reports_safe_event_and_field_without_echoing_values[delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_known_invalid_field_reports_safe_event_and_field_without_echoing_values[item_id]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_known_invalid_field_reports_safe_event_and_field_without_echoing_values[output_index]
+0.030	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_malformed_unknown_payload_has_only_bounded_safe_json_diagnostic
+0.020	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_official_opaque_reasoning_and_complete_tool_are_preserved_without_public_reasoning
+0.020	tests/system/py/test_e11_t5_core_diagnostic_context.py::test_official_text_lifecycle_remains_a_successful_control
 0.560	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[allocation-after-live-write-joint]
 0.170	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[allocation-after-live-write-single]
 0.560	tests/system/py/test_e11_t5_fit_publication.py::test_real_fit_publication_is_complete_or_preserves_exact_original_before_callback[positive-joint]
