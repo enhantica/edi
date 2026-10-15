@@ -13,6 +13,22 @@ Rectangle {
     id: composer
     required property AssistantViewModel assistant
     required property Item toggleControl
+    property Item popupBoundary: composer.parent
+    property Item previousFocusItem: toggleControl
+    readonly property Item firstFocusItem: editor
+    readonly property real actionSize: EaStyle.Sizes.toolButtonHeight * 0.75
+    function closeChoices() { models.popup.close(); efforts.popup.close(); }
+    function choiceX(control, menuWidth) {
+        return Math.max(0, Math.min(popupBoundary.width - menuWidth, control.mapToItem(popupBoundary, 0, 0).x));
+    }
+    function choiceY(control, menuHeight) {
+        return Math.max(0, Math.min(popupBoundary.height - menuHeight, control.mapToItem(popupBoundary, 0, 0).y - menuHeight));
+    }
+    onWidthChanged: closeChoices()
+    Connections {
+        target: Preferences
+        function onSideBarOnLeftChanged() { composer.closeChoices(); }
+    }
     property bool hasPreviousUserMessage: false
     property bool hasNextUserMessage: false
     signal previousUserRequested()
@@ -179,7 +195,7 @@ Rectangle {
                 selectedTextColor: EaStyle.Colors.themeBackground
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: addFilesButton
-                KeyNavigation.backtab: composer.toggleControl
+                KeyNavigation.backtab: composer.previousFocusItem
                 onTextChanged: ++composer.textRevision
                 onSelectionStartChanged: composer.rememberSelection()
                 onSelectionEndChanged: composer.rememberSelection()
@@ -222,6 +238,18 @@ Rectangle {
                 id: addFilesButton
                 objectName: "assistant.files.add"
                 fontIcon: "plus"
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                showBackground: false
+                background: Rectangle {
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    color: "transparent"
+                    radius: width * 0.5
+                    border.width: addFilesButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                    border.color: EaStyle.Colors.themeForeground
+                }
                 enabled: !WebFiles.available && !composer.assistant.canCancel
                 ToolTip.text: WebFiles.available ? qsTr("Browser file selection is not available yet") : qsTr("Add files")
                 Accessible.name: qsTr("Add files")
@@ -249,16 +277,29 @@ Rectangle {
                     let measured = width;
                     for (let i = 0; i < composer.assistant.models.count; ++i)
                         measured = Math.max(measured, menuFontMetrics.advanceWidth(composer.assistant.models.text(i, "displayName")) + AppSizes.unit * 3);
-                    return Math.min(measured, Math.max(width, Window.width - AppSizes.unit * 2));
+                    return Math.min(measured, Math.max(0, composer.popupBoundary.width - AppSizes.unit * 2));
                 }
+                popup.parent: composer.popupBoundary
+                popup.margins: 0
                 popup.width: menuWidth
-                popup.x: Math.min(0, Window.width - mapToItem(null, 0, 0).x - menuWidth - AppSizes.unit)
+                popup.height: Math.min(models.popup.contentItem.implicitHeight + models.popup.topPadding + models.popup.bottomPadding,
+                    Math.max(0, composer.popupBoundary.height - AppSizes.unit * 2))
+                popup.x: composer.choiceX(models, models.popup.width)
+                popup.y: composer.choiceY(models, models.popup.height)
                 delegate: EaElements.MenuItem {
                     required property var model
+                    id: modelOption
                     required property int index
                     width: models.popup.width
-                    height: EaStyle.Sizes.comboBoxHeight
+                    height: Math.max(EaStyle.Sizes.comboBoxHeight, implicitContentHeight + topPadding + bottomPadding)
                     text: model.displayName
+                    contentItem: EaElements.Label {
+                        text: modelOption.text
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WrapAnywhere
+                        font: modelOption.font
+                        color: models.foregroundColor
+                    }
                     textFormat: Text.PlainText
                     enabled: model.available
                     highlighted: models.highlightedIndex === index
@@ -271,7 +312,7 @@ Rectangle {
                     color: "transparent"
                     radius: AppSizes.unit * 0.25
                     border.width: models.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.appBarComboBoxBorder
+                    border.color: EaStyle.Colors.themeForeground
                 }
                 model: composer.assistant.models
                 textRole: "displayName"
@@ -290,10 +331,15 @@ Rectangle {
                     let measured = width;
                     for (const value of effortValues)
                         measured = Math.max(measured, menuFontMetrics.advanceWidth(effortLabel(value)) + AppSizes.unit * 3);
-                    return Math.min(measured, Math.max(width, Window.width - AppSizes.unit * 2));
+                    return Math.min(measured, Math.max(0, composer.popupBoundary.width - AppSizes.unit * 2));
                 }
+                popup.parent: composer.popupBoundary
+                popup.margins: 0
                 popup.width: menuWidth
-                popup.x: Math.min(0, Window.width - mapToItem(null, 0, 0).x - menuWidth - AppSizes.unit)
+                popup.height: Math.min(efforts.popup.contentItem.implicitHeight + efforts.popup.topPadding + efforts.popup.bottomPadding,
+                    Math.max(0, composer.popupBoundary.height - AppSizes.unit * 2))
+                popup.x: composer.choiceX(efforts, efforts.popup.width)
+                popup.y: composer.choiceY(efforts, efforts.popup.height)
                 function effortLabel(value) {
                     switch (value) {
                     case "": return qsTr("Auto");
@@ -317,7 +363,24 @@ Rectangle {
                     color: "transparent"
                     radius: AppSizes.unit * 0.25
                     border.width: efforts.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.appBarComboBoxBorder
+                    border.color: EaStyle.Colors.themeForeground
+                }
+                delegate: EaElements.MenuItem {
+                    id: effortOption
+                    required property var modelData
+                    required property int index
+                    width: efforts.popup.width
+                    height: Math.max(EaStyle.Sizes.comboBoxHeight, implicitContentHeight + topPadding + bottomPadding)
+                    text: modelData
+                    textFormat: Text.PlainText
+                    highlighted: efforts.highlightedIndex === index
+                    contentItem: EaElements.Label {
+                        text: effortOption.text
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WrapAnywhere
+                        font: effortOption.font
+                        color: efforts.foregroundColor
+                    }
                 }
                 model: effortValues.map(value => effortLabel(value))
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
@@ -332,16 +395,19 @@ Rectangle {
             Item { Layout.fillWidth: true }
             EaElements.ToolButton {
                 id: previousUserButton
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 objectName: "assistant.previousUserMessage"
                 fontIcon: "chevron-up"
                 enabled: composer.hasPreviousUserMessage
                 background: Rectangle {
-                    implicitWidth: addFilesButton.implicitWidth
+                    implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: previousUserButton.backgroundColor()
+                    color: "transparent"
                     border.width: previousUserButton.activeFocus ? 1 : 0
-                    border.color: EaStyle.Colors.themeForegroundHighlight
+                    border.color: EaStyle.Colors.themeForeground
                 }
                 ToolTip.text: qsTr("Previous user message")
                 Accessible.name: ToolTip.text
@@ -352,16 +418,19 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: nextUserButton
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 objectName: "assistant.nextUserMessage"
                 fontIcon: "chevron-down"
                 enabled: composer.hasNextUserMessage
                 background: Rectangle {
-                    implicitWidth: addFilesButton.implicitWidth
+                    implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: nextUserButton.backgroundColor()
+                    color: "transparent"
                     border.width: nextUserButton.activeFocus ? 1 : 0
-                    border.color: EaStyle.Colors.themeForegroundHighlight
+                    border.color: EaStyle.Colors.themeForeground
                 }
                 ToolTip.text: qsTr("Next user message")
                 Accessible.name: ToolTip.text
@@ -372,8 +441,11 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: stopButton
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 background: Rectangle {
-                    implicitWidth: addFilesButton.implicitWidth
+                    implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
                     color: composer.canSteer && composer.hasDraft ? stopButton.backgroundColor() : (EaStyle.Colors.isDarkPalette ? "white" : "black")
@@ -401,11 +473,14 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: sendButton
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 background: Rectangle {
-                    implicitWidth: addFilesButton.implicitWidth
+                    implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : sendButton.backgroundColor()
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : "transparent"
                 }
                 contentItem: EaElements.Label {
                     text: sendButton.fontIcon

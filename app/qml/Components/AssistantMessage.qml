@@ -15,19 +15,22 @@ Rectangle {
     property string rowId: ""
     property bool highlighted: false
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
+    readonly property bool summarizedActivity: kind === "activity" && payload &&
+        ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan"].indexOf(payload.type) >= 0
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
     signal detailsChanging()
     function resetDetails() {
         if (commandDisclosure) commandDisclosure.checked = false;
         if (disclosure) disclosure.checked = false;
-        for (const viewport of [commandViewport, technicalViewport])
+        for (const viewport of [commandViewport, activityViewport, technicalViewport])
             if (viewport && viewport.contentItem && viewport.contentItem.contentY !== undefined)
                 viewport.contentItem.contentY = 0;
-        for (const field of [body, commandText, directoryText, outputText, technicalText])
+        for (const field of [body, commandText, directoryText, outputText, activityText, technicalText])
             if (field) field.deselect();
     }
     onDisclosureIdentityChanged: resetDetails()
     onCommandActivityChanged: resetDetails()
+    onSummarizedActivityChanged: resetDetails()
     ListView.onPooled: resetDetails()
     ListView.onReused: resetDetails()
     function commandCaption() {
@@ -38,7 +41,7 @@ Rectangle {
         // alone proves a settled command outcome.
         if (!settled || row.status !== actual) {
             if (actual === "inProgress" && row.status === "in_progress")
-                return qsTr("Running command");
+                return activityLabel(true);
             let unconfirmed = qsTr("Command outcome unconfirmed");
             if (row.status === "interrupted") unconfirmed += qsTr(" · activity interrupted");
             else if (row.status === "failed") unconfirmed += qsTr(" · activity failed");
@@ -46,14 +49,43 @@ Rectangle {
             else if (row.status === "refused" || row.status === "declined") unconfirmed += qsTr(" · activity refused");
             return unconfirmed;
         }
-        let caption = actual === "completed" ? qsTr("Ran command · completed")
+        let caption = actual === "completed" ? activityLabel(false)
                     : actual === "failed" ? qsTr("Command failed")
                     : actual === "declined" ? qsTr("Command declined")
                     : qsTr("Command interrupted");
-        if (payload && typeof payload.exitCode === "number" && Number.isFinite(payload.exitCode) && Number.isInteger(payload.exitCode))
-            caption = qsTr("%1 · exit %2").arg(caption).arg(payload.exitCode);
         return caption;
     }
+    function activityLabel(running) {
+        if (!commandActivity) {
+            const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
+                mcpToolCall: qsTr("Tool activity"), dynamicToolCall: qsTr("Tool activity"),
+                collabAgentToolCall: qsTr("Agent activity"), plan: qsTr("Plan update")};
+            return names[payload.type] || qsTr("Activity");
+        }
+        const actions = payload.commandActions;
+        let category = "";
+        if (Array.isArray(actions) && actions.length > 0) {
+            category = actions[0] && typeof actions[0].type === "string" ? actions[0].type : "";
+            for (const action of actions)
+                if (!action || action.type !== category) { category = ""; break; }
+        }
+        if (category === "read") return running ? qsTr("Reading files") : qsTr("Read files");
+        if (category === "listFiles") return running ? qsTr("Listing files") : qsTr("Listed files");
+        if (category === "search") return running ? qsTr("Searching files") : qsTr("Searched files");
+        return running ? qsTr("Running command") : qsTr("Ran command");
+    }
+    function activityCaption() {
+        if (commandActivity) return commandCaption();
+        const label = activityLabel(row.status === "in_progress");
+        if (row.status === "in_progress") return label;
+        // Keep the normalized public outcome visible; do not manufacture a
+        // tool exit code or promote its retained in-progress original.
+        return label + " · " + row.status;
+    }
+    TextMetrics { id: activityCaptionMetrics; font: commandDisclosure.font; text: row.activityCaption() }
+    readonly property string activityIcon: commandActivity ? "terminal"
+        : payload && payload.type === "fileChange" ? "file-alt"
+        : payload && payload.type === "webSearch" ? "globe" : "tasks"
     color: "transparent"
     implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
     TextMetrics {
@@ -95,22 +127,23 @@ Rectangle {
         width: bubble.width - (row.kind === "user" ? AppSizes.unit * 2 : 0)
         spacing: AppSizes.unit * 0.4
         EaElements.Label {
-            visible: row.kind !== "user" && row.kind !== "assistant" && !row.commandActivity
+            visible: row.kind !== "user" && row.kind !== "assistant" && !row.summarizedActivity
             text: qsTr("Activity")
             font.bold: true
         }
         EaElements.Label {
-            visible: row.kind !== "user" && row.kind !== "assistant" && !row.commandActivity && row.status.length > 0
+            visible: row.kind !== "user" && row.kind !== "assistant" && !row.summarizedActivity && row.status.length > 0
             text: row.status
             textFormat: Text.PlainText
         }
         TextEdit {
             id: body
             width: parent.width
-            visible: !row.commandActivity
+            visible: !row.summarizedActivity
             AssistantMarkdown {
                 document: body.textDocument
-                source: row.commandActivity ? "" : row.text
+                source: row.summarizedActivity ? "" : row.text
+                accentColor: EaStyle.Colors.link
                 markdown: row.kind === "assistant"
             }
             readOnly: true
@@ -120,7 +153,7 @@ Rectangle {
             selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
             onLinkActivated: link => {}
-            wrapMode: TextEdit.Wrap
+            wrapMode: TextEdit.WrapAnywhere
             color: EaStyle.Colors.themeForeground
             font.family: EaStyle.Fonts.fontFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize
@@ -130,12 +163,21 @@ Rectangle {
         }
         EaElements.Button {
             id: commandDisclosure
-            objectName: "assistant.command.toggle"
-            visible: row.commandActivity
+            objectName: row.commandActivity ? "assistant.command.toggle" : "assistant.activity.toggle"
+            visible: row.summarizedActivity
             checkable: true
-            text: row.commandCaption()
+            text: row.activityCaption()
+            implicitWidth: activityGlyph.implicitWidth + activityCaptionMetrics.advanceWidth + AppSizes.unit * 0.5 + leftPadding + rightPadding
+            width: Math.min(parent.width, implicitWidth)
+            contentItem: Row {
+                spacing: AppSizes.unit * 0.5
+                EaElements.Label { id: activityGlyph; text: row.activityIcon; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
+                EaElements.Label { width: Math.max(0, commandDisclosure.availableWidth - activityGlyph.width - parent.spacing); text: commandDisclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+            }
             Accessible.name: text
-            Accessible.description: checked ? qsTr("Hide the literal command and its available output") : qsTr("Show the literal command and its available output")
+            Accessible.description: row.commandActivity
+                ? (checked ? qsTr("Hide the literal command and its available output") : qsTr("Show the literal command and its available output"))
+                : (checked ? qsTr("Hide activity details") : qsTr("Show activity details"))
             onPressed: row.detailsChanging()
         }
         ScrollView {
@@ -153,6 +195,13 @@ Rectangle {
                 id: commandFields
                 width: commandViewport.availableWidth
                 spacing: AppSizes.unit * 0.4
+                LiteralDetails {
+                    width: parent.width
+                    fieldName: qsTr("Retained command status")
+                    text: commandViewport.visible ? qsTr("Status: %1").arg(row.payload.status || qsTr("unavailable"))
+                        + (typeof row.payload.exitCode === "number" && Number.isInteger(row.payload.exitCode)
+                            ? qsTr(" · exit %1").arg(row.payload.exitCode) : "") : ""
+                }
                 EaElements.Label { text: qsTr("Command"); font.bold: true }
                 LiteralDetails {
                     id: commandText
@@ -182,11 +231,28 @@ Rectangle {
                 }
             }
         }
+        ScrollView {
+            id: activityViewport
+            width: parent.width
+            visible: row.summarizedActivity && !row.commandActivity && commandDisclosure.checked
+            height: visible ? Math.min(activityText.implicitHeight, AppSizes.unit * 18) : 0
+            contentWidth: availableWidth
+            contentHeight: activityText.implicitHeight
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+            LiteralDetails {
+                id: activityText
+                width: activityViewport.availableWidth
+                fieldName: qsTr("Activity")
+                text: activityViewport.visible ? row.text : ""
+            }
+        }
         EaElements.Button {
             id: disclosure
-            visible: row.kind !== "assistant" && row.kind !== "user" && Object.keys(row.payload || {}).length > 0 && (!row.commandActivity || commandDisclosure.checked)
+            visible: row.kind !== "assistant" && row.kind !== "user" && Object.keys(row.payload || {}).length > 0 && (!row.summarizedActivity || commandDisclosure.checked)
             checkable: true
-            text: row.commandActivity ? qsTr("Technical details") : checked ? qsTr("Hide details") : qsTr("Inspect details")
+            text: row.summarizedActivity ? qsTr("Technical details") : checked ? qsTr("Hide details") : qsTr("Inspect details")
             onPressed: row.detailsChanging()
         }
         ScrollView {

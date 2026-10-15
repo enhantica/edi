@@ -418,3 +418,12 @@ its actual command status and available exit code. All original fields remain
 available unchanged in disclosure. This same presentation rule covers Stop,
 transport/deadline retirement, sign-out/workspace retirement and archived reload;
 no event emitter or protocol authority is changed.
+
+
+## Compact controls and readable activity
+
+Keep the existing popup, manual workspace geometry and sole appbar opener. Secondary composer actions use three quarters of the prior actual tool-button size; plus/navigation are transparent with ordinary visible theme focus, while Send/Stop retain their distinct primary colors and actual enabled semantics. Skills moves to the existing header. Model/effort popups map their anchors into the assistant viewport, bound both dimensions there and wrap item labels. Close choices on hide, side or width changes. Top/bottom strokes overlay the existing appbar/statusbar separator coordinates; never add a neighbouring stroke.
+
+Retained typed activity is muted and expandable. Command categories come only from agreeing supported commandActions, never shell text. Public normalized retirement remains authoritative when an original command is still inProgress: show an unconfirmed command outcome and the actual enclosing interruption/failure, not a fake command exit. Real exit/status/output and immutable payload remain inside literal details. Other recognized event kinds follow the same compact disclosure; unrecognized refusals and questions remain visible. Delegate reuse collapses disclosure; expansion retains the existing reader/tail rules.
+
+A subtle working cue requires actual agent_active, a shown panel and no pending question/plan; canCancel alone is not execution evidence. The existing shared translation duration controls its animation. No new motion preference or numerical progress is invented. Passive Markdown keeps Qt MarkdownNoHTML and the no-resource document; only presentation margins, indentation, wrap behavior and theme anchor color change. No source text, hidden break characters, automatic URL opening or fetch is introduced. Long code/path/table rendering and popup confinement require actual Qt witnesses before a visual claim.

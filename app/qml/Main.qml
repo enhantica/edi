@@ -341,6 +341,22 @@ EaComponents.ApplicationWindow {
         onClosed: window.restoreAssistantFocus()
     }
 
+    Repeater {
+        model: [false, true]
+        delegate: Rectangle {
+            required property bool modelData
+            parent: window.contentItem
+            visible: assistantPanel.visible && window.assistantWorkflowPage !== null
+            x: Preferences.sideBarOnLeft ? 0 : window.contentItem.width - width
+            y: modelData ? window.contentItem.height - EaStyle.Sizes.statusBarHeight - height
+                         : EaStyle.Sizes.appBarHeight - height
+            width: activeAssistantHost ? activeAssistantHost.width : 0
+            height: EaStyle.Sizes.borderThickness
+            z: 100
+            color: EaStyle.Colors.appBorder
+        }
+    }
+
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal
     // shows the core's message.
     function saveProject() {

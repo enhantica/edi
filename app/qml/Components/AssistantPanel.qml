@@ -31,7 +31,7 @@ Popup {
     readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
     onShownChanged: {
-        if (!shown) { panel.retireConsentSend(); connectionDialog.close(); }
+        if (!shown) { panel.retireConsentSend(); connectionDialog.close(); composer.closeChoices(); }
     }
     visible: ApplicationInfo.assistantAvailable && shown
     x: 0
@@ -156,7 +156,7 @@ Popup {
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: signOutButton.visible && signOutButton.enabled ? signOutButton : connectionButton
                         text: qsTr("Clear")
-                        KeyNavigation.tab: usageButton
+                        KeyNavigation.tab: skillsButton
                         ToolTip.text: qsTr("Clear conversation")
                         Accessible.name: ToolTip.text
                         EaElements.ToolTip {
@@ -165,11 +165,23 @@ Popup {
                         }
                         onClicked: panel.assistant.clearHistory()
                     }
+                    EaElements.Button {
+                        id: skillsButton
+                        objectName: "assistant.workflow"
+                        text: qsTr("Skills")
+                        Accessible.name: qsTr("Skills · %1 available").arg(panel.assistant.skills.count)
+                        ToolTip.text: Accessible.name
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: clearButton
+                        KeyNavigation.tab: usageButton
+                        onClicked: skillsDialog.open()
+                    }
                     EaElements.ToolButton {
                         id: usageButton
                         objectName: "assistant.usage"
                         KeyNavigation.priority: KeyNavigation.BeforeItem
-                        KeyNavigation.backtab: clearButton
+                        KeyNavigation.backtab: skillsButton
+                        KeyNavigation.tab: composer.firstFocusItem
                         ToolTip.text: qsTr("Usage data unavailable")
                         Accessible.name: qsTr("Usage data unavailable")
                         Accessible.description: qsTr("This connection does not provide context or subscription usage metrics.")
@@ -206,18 +218,6 @@ Popup {
                 anchors.bottom: parent.bottom
                 anchors.margins: AppSizes.unit
                 spacing: AppSizes.unit * 0.855
-                EaElements.Button {
-                    objectName: "assistant.workflow"
-                    Layout.fillWidth: true
-                    text: {
-                        for (let i = 0; i < panel.assistant.skills.count; ++i)
-                            if (panel.assistant.skills.text(i, "id") === panel.assistant.selectedSkill)
-                                return qsTr("Workflow: %1 · %2").arg(panel.assistant.skills.text(i, "title")).arg(panel.assistant.skills.text(i, "version"));
-                        return qsTr("Skills · %1 available").arg(panel.assistant.skills.count);
-                    }
-                    Accessible.name: text
-                    onClicked: skillsDialog.open()
-                }
                 ListView {
                     id: conversation
                     objectName: "assistant.messages"
@@ -373,6 +373,24 @@ Popup {
                     text: qsTr("Inspect outgoing project context")
                     onClicked: connectionDialog.open()
                 }
+                EaElements.Label {
+                    id: workStatus
+                    objectName: "assistant.working"
+                    Layout.fillWidth: true
+                    visible: panel.shown && panel.visible && panel.assistant.state === "agent_active"
+                        && Object.keys(panel.assistant.pendingQuestion).length === 0
+                        && Object.keys(panel.assistant.pendingPlan).length === 0
+                    text: qsTr("Working…")
+                    textFormat: Text.PlainText
+                    color: EaStyle.Colors.themeForegroundMinor
+                    Accessible.name: qsTr("Assistant is working")
+                    SequentialAnimation on opacity {
+                        running: workStatus.visible && EaStyle.Times.translationChange > 0
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 0.5; to: 1; duration: EaStyle.Times.translationChange * 2 }
+                        NumberAnimation { from: 1; to: 0.5; duration: EaStyle.Times.translationChange * 2 }
+                    }
+                }
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.leftMargin: -AppSizes.unit
@@ -385,6 +403,8 @@ Popup {
                     Layout.fillWidth: true
                     assistant: panel.assistant
                     toggleControl: panel.toggleControl
+                    popupBoundary: panel.contentItem
+                    previousFocusItem: usageButton
                     hasPreviousUserMessage: conversation.previousUserIndex >= 0
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)
@@ -394,15 +414,6 @@ Popup {
                         connectionDialog.open();
                     }
                 }
-            }
-            // Keep one visible assistant/status-bar boundary inside the strip.
-            Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                height: EaStyle.Sizes.borderThickness
-                color: EaStyle.Colors.appBorder
-                z: 3
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
             DropArea {

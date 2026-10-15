@@ -2,6 +2,12 @@
 #include "assistant_markdown.hpp"
 
 #include <QImage>
+#include <QFontMetricsF>
+#include <QTextBlock>
+#include <QTextList>
+#include <QTextTable>
+#include <QTextOption>
+#include <vector>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QTextFormat>
@@ -25,6 +31,53 @@ AssistantMarkdown::AssistantMarkdown(QObject* parent) : QObject(parent) {}
 QQuickTextDocument* AssistantMarkdown::document() const { return target_; }
 QString AssistantMarkdown::source() const { return source_; }
 bool AssistantMarkdown::markdown() const { return markdown_; }
+QColor AssistantMarkdown::accentColor() const { return accent_color_; }
+void AssistantMarkdown::setAccentColor(const QColor& color) {
+    if (accent_color_ == color) return;
+    accent_color_ = color;
+    if (document_ && markdown_) {
+        try { formatPresentation(); } catch (...) {}
+    }
+}
+void AssistantMarkdown::formatPresentation() {
+    if (!document_) return;
+    auto option = document_->defaultTextOption();
+    option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    document_->setDefaultTextOption(option);
+    const qreal line = QFontMetricsF(document_->defaultFont()).height();
+    document_->setIndentWidth(line * 1.25);
+    // QTextDocument retains the semantic list/code/table structure. Relax only
+    // parsed no-wrap block presentation, never inject characters into content.
+    std::vector<std::pair<int, int>> anchors;
+    for (auto block = document_->begin(); block.isValid(); block = block.next()) {
+        auto format = block.blockFormat();
+        format.setNonBreakableLines(false);
+        const bool listed = block.textList() != nullptr;
+        format.setTopMargin(listed && block.previous().textList() == block.textList() ? 0 : line * 0.25);
+        format.setBottomMargin(listed && block.next().textList() == block.textList() ? 0 : line * 0.4);
+        QTextCursor cursor(block);
+        cursor.setBlockFormat(format);
+        if (auto* table = cursor.currentTable()) {
+            auto table_format = table->format();
+            table_format.setWidth(QTextLength(QTextLength::PercentageLength, 100));
+            table->setFormat(table_format);
+        }
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            const auto fragment = it.fragment();
+            if (fragment.isValid() && fragment.charFormat().isAnchor())
+                anchors.emplace_back(fragment.position(), fragment.length());
+        }
+    }
+    if (!accent_color_.isValid()) return;
+    QTextCharFormat accent;
+    accent.setForeground(accent_color_);
+    for (const auto& [position, length] : anchors) {
+        QTextCursor cursor(document_);
+        cursor.setPosition(position);
+        cursor.setPosition(position + length, QTextCursor::KeepAnchor);
+        cursor.mergeCharFormat(accent);
+    }
+}
 void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
     if (target_ == target) return;
     target_ = target;
@@ -71,6 +124,7 @@ void AssistantMarkdown::render() noexcept {
             image.insertText(alternative, QTextCharFormat{});
             cursor = image;
         }
+        formatPresentation();
     } catch (...) {
         // Formatting failure cannot alter canonical history or manufacture a
         // provider result. Preserve the exact original as literal text if possible.
