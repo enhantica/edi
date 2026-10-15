@@ -75,3 +75,23 @@ phases, masked population, experimental uncertainties and joint bank weights. Th
 promise a populated raw-objective member. Independent replay must still establish currency and comparability for
 single/joint data, exclusions, weights and changed fixed settings. The broader publication, retention and native
 failure repairs remain separate units; this scoped checkpoint does not establish their closure.
+
+Publication helpers return an explicit outcome. A failed event or state preparation retires the scope and prevents
+subsequent provider dispatch, normal-phase publication and successful acknowledgement. An already-started fit
+keeps its prepared receipt and is cancelled for later settlement. A question's complete interrupted history/cache
+alternative is prepared before exposing the question, so a failed question publication cannot leave an orphan
+pending hold. Allocation and length failures pass through the typed resource funnel instead of becoming malformed
+JSON or an ordinary invalid-argument tool result. New-command preparation still preserves prior work.
+
+The Responses decoder binds public content to its required item, output index and content index. Each part keeps
+its original kind and separate text/part completion state; later deltas cannot mutate finalized content. Text/refusal
+done, content-part done, output-item done and terminal output must agree with the public text already emitted.
+Multiple parts and messages remain independent; original complete output retains its opaque provider fields.
+The protocol source is the official [Responses streaming-events reference](https://developers.openai.com/api/reference/resources/responses/streaming-events).
+These scoped repairs do not complete the held terminal lease, native replay recovery or aggregate resource units.
+
+Tool-result envelope construction stages its owning fields and moves the parsed result into the envelope.
+It avoids a second recursive JSON copy through an initializer-list temporary during preparation. Resource
+exceptions from any remaining read, copy or preflight stage propagate to the bound interruption funnel;
+no ordinary acknowledgement or provider dispatch follows that failure. This is the same envelope and
+original invocation binding, with no change to the admitted scientific result or resource policy.

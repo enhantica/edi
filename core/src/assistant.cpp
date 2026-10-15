@@ -112,6 +112,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     Revision version;
     std::uint64_t serial = 0, event_serial = 0;
     bool open = true, ready = false, response_done = false, had_tools = false;
+    enum class OutputFailure { none, interrupted, resource };
+    OutputFailure output_failure = OutputFailure::none;
+    bool user_scope_committed = false;
     std::string conversation, request_trial;
     std::string phase = "disconnected", connection, turn, request, model, effort, text, active_job, question;
     J capabilities = A{}, history = A{}, attachments = A{};
@@ -159,9 +162,26 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         CallMap::node_type call;
         HoldMap::node_type hold;
         std::uint64_t history_bytes = 0, cache_bytes = 0;
+        // A question can fail publication after admission. Prepare its complete
+        // interrupted alternative before exposing the pending question.
+        J interrupted_history;
+        CallMap::node_type interrupted_call;
+        std::uint64_t interrupted_history_bytes = 0, interrupted_cache_bytes = 0;
     };
     std::optional<Admission> admission;
-    Reply admitted() { return std::move(admission->result); }
+    Reply admitted() {
+        if (!admission) throw std::logic_error("No prepared assistant admission");
+        return std::move(admission->result);
+    }
+    Reply output_refusal() const {
+        return output_failure == OutputFailure::resource
+            ? failure("resource_exhausted", "Assistant output could not be retained")
+            : failure("interrupted", "Assistant publication was interrupted");
+    }
+    void publication_failed(OutputFailure reason) noexcept {
+        output_failure = reason;
+        interrupt_output();
+    }
 
     State(work::Worker& runner, Hooks services) : worker(runner), hooks(std::move(services)) {
         if (!hooks.monotonic_ms) hooks.monotonic_ms = [] {
@@ -202,12 +222,23 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         hooks.event(json::write(fields));
     }
     template <typename Fields>
-    void safe_emit(const std::string& type, Fields&& fields, const J* scope = nullptr) noexcept {
-        try { emit(type, fields(), scope); } catch (...) { interrupt_output(); }
+    bool safe_emit(std::string_view type, Fields&& fields, const J* scope = nullptr) noexcept {
+        if (output_failure != OutputFailure::none) return false;
+        try { emit(std::string(type), fields(), scope); return true; }
+        catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
+        catch (const Refusal& error) { publication_failed(error.code == "resource_exhausted" ? OutputFailure::resource : OutputFailure::interrupted); }
+        catch (...) { publication_failed(OutputFailure::interrupted); }
+        return false;
     }
-    void status(std::string_view next) noexcept {
-        try { phase.assign(next); emit("state_changed", {{"state", state()}}); }
-        catch (...) { interrupt_output(); }
+    bool status(std::string_view next) noexcept {
+        if (output_failure != OutputFailure::none) return false;
+        try { phase.assign(next); emit("state_changed", {{"state", state()}}); return true; }
+        catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
+        catch (const Refusal& error) { publication_failed(error.code == "resource_exhausted" ? OutputFailure::resource : OutputFailure::interrupted); }
+        catch (...) { publication_failed(OutputFailure::interrupted); }
+        return false;
     }
     std::uint64_t held_history() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.history; return n; }
     std::uint64_t held_cache() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.cache; return n; }
@@ -234,7 +265,21 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         return O{{"type", "tool_call"}, {"call_id", string(event, "call_id")}, {"name", string(event, "name")}, {"arguments", arguments}};
     }
     J result_row(const std::string& call, const Reply& result, bool pending = false, const J* scope = nullptr) const {
-        return O{{"type", "tool_result"}, {"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}, {"connection_id", scope ? scope->at("connection_id") : J(connection)}, {"turn_id", scope ? scope->at("turn_id") : J(turn)}, {"request_id", scope ? scope->at("request_id") : J(request)}, {"project_id", scope ? scope->at("project_id") : J(version.project_id)}, {"revision", scope ? scope->at("revision") : J(std::to_string(version.revision))}};
+        // Build independently owned fields in stages. Move the parsed result into
+        // the envelope instead of copying its whole recursive JSON tree through
+        // an initializer_list while constructing the surrounding temporary.
+        auto value = parse(result.value);
+        O row;
+        row.reserve(11);
+        row.emplace_back("type", "tool_result"); row.emplace_back("call_id", call);
+        row.emplace_back("ok", result.ok); row.emplace_back("code", result.code);
+        row.emplace_back("result", std::move(value)); row.emplace_back("pending", pending);
+        row.emplace_back("connection_id", scope ? scope->at("connection_id").string("connection_id") : connection);
+        row.emplace_back("turn_id", scope ? scope->at("turn_id").string("turn_id") : turn);
+        row.emplace_back("request_id", scope ? scope->at("request_id").string("request_id") : request);
+        row.emplace_back("project_id", scope ? scope->at("project_id").string("project_id") : version.project_id);
+        row.emplace_back("revision", scope ? scope->at("revision").string("revision") : std::to_string(version.revision));
+        return row;
     }
     std::uint64_t cache_size(const J& event, const Reply& result) const {
         return payload_size(O{{"binding", canonical(event)}, {"reply", result_row(string(event, "call_id"), result, false, &event)}});
@@ -278,7 +323,30 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             staged_hold.emplace(admitting_call, Hold{terminal_history, next_cache > previous_cache ? next_cache - previous_cache : 0});
             prepared.hold = staged_hold.extract(admitting_call);
         }
+        if (pending && string(admitting_event, "name") == "ask_question") {
+            const auto interrupted = failure("interrupted", "The question was interrupted before an answer");
+            prepared.interrupted_history = prepared.history;
+            std::get<A>(prepared.interrupted_history.data).push_back(result_row(admitting_call, interrupted, false, &admitting_event));
+            prepared.interrupted_history_bytes = payload_size(prepared.interrupted_history, Limits::history_bytes);
+            prepared.interrupted_cache_bytes = cache_used + cache_size(admitting_event, interrupted) + (calls.empty() ? 0 : 1);
+            if (prepared.interrupted_cache_bytes + held_cache() > Limits::completed_call_bytes)
+                refuse("resource_exhausted", "Interrupted-question capacity is unavailable");
+            CallMap staged_interrupted;
+            staged_interrupted.emplace(admitting_call, Cached{json::write(canonical(admitting_event)), interrupted});
+            prepared.interrupted_call = staged_interrupted.extract(admitting_call);
+        }
         admission.emplace(std::move(prepared));
+    }
+    void commit_admission(bool interrupted_question = false) noexcept {
+        if (interrupted_question && !admission->interrupted_call.empty()) {
+            history = std::move(admission->interrupted_history); history_used = admission->interrupted_history_bytes;
+            cache_used = admission->interrupted_cache_bytes; calls.insert(std::move(admission->interrupted_call));
+        } else {
+            history = std::move(admission->history); history_used = admission->history_bytes;
+            cache_used = admission->cache_bytes; calls.insert(std::move(admission->call));
+            if (!admission->hold.empty()) holds.insert(std::move(admission->hold));
+        }
+        admission.reset();
     }
     void finish_call(const std::string& call, const Reply& result) {
         const auto old = calls.find(call);
@@ -371,18 +439,20 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!next_effort.empty()) out.emplace_back("effort", next_effort);
         bounded(out, Limits::request_bytes); return out;
     }
-    void send_request() {
+    bool send_request() {
         const auto next_request = id("request");
         const auto outgoing = json::write(request_payload(turn, next_request, conversation, text, model, effort, history));
         request_trial = trial ? trial->id : "";
         request = next_request; response_done = false; had_tools = false;
-        status("streaming");
+        if (!status("streaming")) return false;
         if (hooks.provider_request) hooks.provider_request(outgoing);
+        return true;
     }
-    void continue_turn() {
-        if (!response_done || !active_job.empty() || !question.empty() || (plan && !plan->approved)) return;
-        if (had_tools && !turn.empty()) send_request();
-        else { turn.clear(); request.clear(); status(ready ? "idle" : "disconnected"); }
+    bool continue_turn() {
+        if (output_failure != OutputFailure::none) return false;
+        if (!response_done || !active_job.empty() || !question.empty() || (plan && !plan->approved)) return true;
+        if (had_tools && !turn.empty()) return send_request();
+        turn.clear(); request.clear(); return status(ready ? "idle" : "disconnected");
     }
     std::map<std::string, std::pair<Parameter*, std::string>> paths(Project& project) {
         std::map<const Parameter*, std::string> names;
@@ -400,7 +470,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const auto message = hooks.apply(edit, structural);
         if (!message.empty()) refuse("apply_refused", message);
         ++version.revision;
-        try { stamps(); } catch (...) { plan.reset(); phase = "interrupted"; }
+        try { stamps(); }
+        catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
+        catch (...) { publication_failed(OutputFailure::interrupted); }
     }
     Reply tool(const J& event) {
         const auto name = string(event, "name");
@@ -443,7 +516,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             J shown = args; set(shown, "plan_id", next.id);
             preflight(success(O{{"plan_id", next.id}}));
             plan = std::move(next);
-            safe_emit("plan_proposed", [&] { return O{{"plan", shown}, {"plan_id", plan ? plan->id : ""}}; }); status("awaiting_approval");
+            if (!safe_emit("plan_proposed", [&] { return O{{"plan", shown}, {"plan_id", plan ? plan->id : ""}}; })) return admitted();
+            status("awaiting_approval");
             return admitted();
         }
         if (name == "ask_question") {
@@ -480,7 +554,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             auto question_id = next; auto call = admitting_call; J stored = shown;
             preflight(success(O{{"question_id", next}, {"pending", true}}), true);
             question = std::move(question_id); question_record = std::move(stored); question_call = std::move(call);
-            safe_emit("question", [&] { return O{{"question", shown}}; }); status("awaiting_answer");
+            if (!safe_emit("question", [&] { return O{{"question", shown}}; })) return admitted();
+            status("awaiting_answer");
             return admitted();
         }
         static const std::set<std::string> mutations{"set_parameters", "set_free", "begin_trial", "fit_trial", "evaluate_trial", "discard_trial"};
@@ -620,7 +695,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                     {"candidate_adopted", report.adopted()}, {"live_adopted", false}}, &candidate->scope);
                 if (candidate->quarantined) { state->status("interrupted"); return; }
                 if (state->turn.empty()) { state->trial.reset(); state->status(state->ready ? "idle" : "disconnected"); }
-                else { state->status("streaming"); state->continue_turn(); }
+                else if (state->status("streaming")) state->continue_turn();
             };
             const auto now = hooks.monotonic_ms();
             const auto elapsed = now >= plan->started ? now - plan->started : plan->max_ms;
@@ -677,7 +752,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (trial->project->minimizer_max_iterations == 0 || trial->project->minimizer_max_iterations > max_iterations)
                 trial->project->minimizer_max_iterations = max_iterations;
             active_job = std::move(next_job); active_call = std::move(next_active_call);
-            safe_emit("job_started", [&] { return O{{"job_id", job_id}, {"trial_id", trial->id}}; }); status("executing");
+            if (!safe_emit("job_started", [&] { return O{{"job_id", job_id}, {"trial_id", trial->id}}; })) return admitted();
+            status("executing");
             return admitted();
         }
         if (!trial->report) refuse("busy", "Fit the trial before evaluating it");
@@ -703,12 +779,17 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                  {"revision", std::to_string(version.revision + (accepted ? 1 : 0))}, {"diagnostics", diagnostics(candidate->project.get())}};
         preflight(success(result));
         if (accepted) apply(Edit::assistant_result(*live, candidate->project));
-        safe_emit("trial_finished", [&] { return O{{"result", result}}; }); trial.reset();
+        if (!safe_emit("trial_finished", [&] { return O{{"result", result}}; })) return admitted();
+        trial.reset();
         return admitted();
     }
     Reply user(const J& command) {
+        output_failure = OutputFailure::none;
         envelope(command); const auto type = string(command, "type");
-        if (type == "cancel") { shape(command, {"schema", "type"}); stop(); return success(); }
+        if (type == "cancel") {
+            shape(command, {"schema", "type"}); user_scope_committed = true; stop();
+            return output_failure == OutputFailure::none ? success() : output_refusal();
+        }
         if (type == "approve_plan") {
             shape(command, {"schema", "type", "plan_id", "project_id", "revision"});
             if (string(command, "project_id") != version.project_id) refuse("stale_project", "Project changed");
@@ -716,9 +797,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (!plan || string(command, "plan_id") != plan->id) refuse("approval_required", "Plan is no longer pending");
             if (plan->approved) { approved(command); return success(O{{"plan_id", plan->id}}); }
             current(); const auto started = hooks.monotonic_ms();
+            user_scope_committed = true;
             plan->approved = true; plan->started = started;
-            safe_emit("plan_approved", [&] { return O{{"plan_id", plan ? plan->id : ""}}; });
-            status("streaming"); continue_turn(); return success();
+            if (!safe_emit("plan_approved", [&] { return O{{"plan_id", plan ? plan->id : ""}}; }) ||
+                !status("streaming") || !continue_turn()) return output_refusal();
+            return success();
         }
         if (type == "answer") {
             shape(command, {"schema", "type", "question_id", "answer"});
@@ -737,10 +820,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 refuse("invalid_argument", "Question scope changed");
             const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", selected ? J(answer) : J(nullptr)}});
             if (answers.size() >= Limits::completed_calls) refuse("resource_exhausted", "Answered-question capacity is unavailable");
+            user_scope_committed = true;
             finish_call(question_call, result);
             answers.emplace(question, std::make_pair(answer, result));
             emit("question_answered", {{"question_id", question}, {"answer", answer}});
-            question.clear(); question_record = J{}; question_call.clear(); continue_turn(); return result;
+            question.clear(); question_record = J{}; question_call.clear();
+            if (!continue_turn()) return output_refusal();
+            return result;
         }
         if (type != "message") refuse("invalid_argument", "Unknown user command");
         shape(command, {"schema", "type", "text", "connection_id", "model"}, {"effort", "attachments"});
@@ -769,16 +855,18 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         auto admitted_message = success(O{{"turn_id", next_turn}, {"request_id", next_request}});
         auto next_trial = trial ? trial->id : std::string();
         // All context/history/wire/return construction succeeded before admission commits.
+        user_scope_committed = true;
         text = std::move(next_text); model = std::move(selected); effort = std::move(selected_effort); attachments = A{};
         turn = std::move(next_turn); request = std::move(next_request); conversation = std::move(next_conversation);
         history_used += growth;
         history = std::move(next_history); request_trial = std::move(next_trial); response_done = false; had_tools = false;
-        status("streaming");
+        if (!status("streaming")) return output_refusal();
         try { if (hooks.provider_request) hooks.provider_request(outgoing); }
         catch (...) { interrupt_output(); return failure("interrupted", "The admitted provider request could not start"); }
         return admitted_message;
     }
     Reply provider(const J& event) {
+        output_failure = OutputFailure::none;
         envelope(event); const auto type = string(event, "type");
         if (type == "connection") {
             shape(event, {"schema", "type", "connection_id", "status", "capabilities"});
@@ -804,7 +892,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto next = string(event, "connection_id");
             if (next != connection || state != "ready") { stop(); reset_conversation(); }
             connection = next; ready = state == "ready"; capabilities = event.at("capabilities");
-            status(ready ? "idle" : "disconnected"); return success();
+            if (!status(ready ? "idle" : "disconnected")) return output_refusal();
+            return success();
         }
         if (type != "text_delta" && type != "tool_call" && type != "turn_finished") refuse("invalid_argument", "Unknown provider event");
         if (type == "text_delta") shape(event, {"schema", "type", "connection_id", "turn_id", "request_id", "text"});
@@ -831,7 +920,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto result = string(event, "status");
             if (result != "completed" && result != "failed" && result != "interrupted") refuse("invalid_argument", "Invalid terminal status");
             if (result != "completed") { interrupt_output(); return failure("interrupted", "Provider turn did not complete"); }
-            response_done = true; continue_turn(); return success();
+            response_done = true;
+            if (!continue_turn()) return output_refusal();
+            return success();
         }
         const auto call = string(event, "call_id");
         const auto binding = json::write(canonical(event));
@@ -844,6 +935,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const bool no_project_question = string(event, "name") == "ask_question" && !live && string(event, "project_id", true).empty();
         if (!no_project_question && (!live || string(event, "project_id") != version.project_id)) refuse("stale_project", "Project changed");
         if (detail::revision(event) != version.revision) refuse("stale_revision", "Project revision changed");
+        const auto name = string(event, "name");
         admitting_call = call; admitting_event = event; admission.reset();
         Reply result;
         try { result = tool(event); }
@@ -852,15 +944,18 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (error.code == "resource_exhausted") throw;
             result = failure(error.code, error.what());
         }
+        catch (const std::bad_alloc&) { throw; }
+        catch (const std::length_error&) { throw; }
         catch (const std::exception& error) { admission.reset(); result = failure("invalid_argument", error.what()); }
-        const bool pending = result.ok && (string(event, "name") == "fit_trial" || string(event, "name") == "ask_question");
+        const bool pending = result.ok && (name == "fit_trial" || name == "ask_question");
         if (!admission) preflight(result, pending);
-        history = std::move(admission->history); history_used = admission->history_bytes;
-        cache_used = admission->cache_bytes; calls.insert(std::move(admission->call));
-        if (!admission->hold.empty()) holds.insert(std::move(admission->hold));
-        admission.reset(); had_tools = true;
-        safe_emit("tool_result", [&] { return O{{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}}; }, &event);
+        const bool failed_publication = output_failure != OutputFailure::none;
+        commit_admission(failed_publication && name == "ask_question");
         admitting_call.clear();
+        if (failed_publication) return output_refusal();
+        had_tools = true;
+        if (!safe_emit("tool_result", [&] { return O{{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}}; }, &event))
+            return output_refusal();
         return result;
     }
 };
@@ -879,8 +974,14 @@ Reply Controller::attach(Project* project, std::string project_id) {
 Revision Controller::revision() const { return state_->version; }
 void Controller::notify_changed() { ++state_->version.revision; state_->stop(); }
 Reply Controller::user_command(const JsonText& command) {
+    state_->user_scope_committed = false;
     try { return state_->user(parse(command)); }
-    catch (const Refusal& error) { return failure(error.code, error.what()); }
+    catch (const Refusal& error) {
+        if (error.code == "resource_exhausted" && state_->user_scope_committed) state_->interrupt_output();
+        return failure(error.code, error.what());
+    }
+    catch (const std::bad_alloc&) { if (state_->user_scope_committed) state_->interrupt_output(); return failure("resource_exhausted", "Assistant publication could not be retained"); }
+    catch (const std::length_error&) { if (state_->user_scope_committed) state_->interrupt_output(); return failure("resource_exhausted", "Assistant publication exceeds its capacity"); }
     catch (const std::exception& error) { return failure("invalid_argument", error.what()); }
 }
 Reply Controller::provider_event(const JsonText& event) {

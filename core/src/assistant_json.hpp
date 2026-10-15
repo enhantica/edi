@@ -94,6 +94,8 @@ inline J parse(const std::string& text, std::uint64_t limit = Limits::message_by
     }
     try { J result = json::parse(text); unique(result); return result; }
     catch (const Refusal&) { throw; }
+    catch (const std::bad_alloc&) { throw; }
+    catch (const std::length_error&) { throw; }
     catch (const std::exception& error) { refuse("invalid_json", error.what()); }
 }
 inline J canonical(J value) {

@@ -11,14 +11,25 @@ using namespace detail;
 struct OpenAiStream::State {
     std::string turn, request, pending, record, failure_code;
     Sink sink;
-    bool terminal = false, failed = false, refused = false, unbound_text = false;
+    bool terminal = false, failed = false, refused = false;
     std::uint64_t wire = 0, events = 0, retained_base = 0;
-    struct Item { J original; bool done = false; };
+    // Provider item/part identities belong only to this decoder. The normalized
+    // controller text envelope remains unchanged (Responses streaming-events).
+    struct Part {
+        std::string kind, text;
+        bool text_done = false, part_done = false, deltas = false;
+        J complete;
+    };
+    struct Item {
+        J original;
+        bool done = false;
+        std::uint64_t index = 0;
+        std::map<std::uint64_t, Part> parts;
+    };
     struct Call { std::string id, name, arguments; bool emitted = false, deltas = false; };
     std::map<std::string, Item> items;
     std::map<std::string, Call> calls;
     std::vector<std::string> order;
-    std::set<std::string> text_items;
 
     void emit(O fields) {
         fields.emplace_back("schema", "edi.assistant/1"); fields.emplace_back("turn_id", turn); fields.emplace_back("request_id", request);
@@ -34,6 +45,11 @@ struct OpenAiStream::State {
         std::uint64_t size = 0;
         for (const auto& [id, item] : items) {
             size += id.size() + payload_size(item.original, Limits::stream_retained_bytes);
+            for (const auto& [index, part] : item.parts) {
+                (void)index;
+                size += payload_size(O{{"content_index", std::to_string(index)}, {"type", part.kind}, {"text", part.text},
+                                       {"text_done", part.text_done}, {"part_done", part.part_done}, {"complete", part.complete}}, Limits::stream_retained_bytes);
+            }
             if (size > Limits::stream_retained_bytes) refuse("resource_exhausted", "Provider retained-item limit exceeded");
         }
         for (const auto& [id, call] : calls) {
@@ -63,14 +79,63 @@ struct OpenAiStream::State {
         event.emplace_back("arguments", std::move(domain));
         call.arguments = arguments; call.emitted = true; retained(); emit(std::move(event));
     }
-    void item(const J& original, bool done) {
+    std::uint64_t index(const J& event, const char* key) const {
+        const auto value = number(event, key);
+        if (value < 0 || value > 9007199254740991.0 || std::floor(value) != value)
+            refuse("invalid_argument", "Provider content index must be a nonnegative safe integer");
+        return static_cast<std::uint64_t>(value);
+    }
+    Item& message_item(const J& event) {
+        const auto id = identifier(event, "item_id");
+        const auto found = items.find(id);
+        if (found == items.end() || string(found->second.original, "type") != "message" || found->second.done)
+            refuse("invalid_argument", "Content names an unavailable, incompatible or completed item");
+        if (index(event, "output_index") != found->second.index)
+            refuse("invalid_argument", "Provider output index changed");
+        return found->second;
+    }
+    Part& content(Item& owner, std::uint64_t slot, const std::string& kind) {
+        if (kind != "output_text" && kind != "refusal")
+            refuse("invalid_argument", "Unsupported public content kind");
+        auto found = owner.parts.find(slot);
+        if (found == owner.parts.end()) {
+            if (slot != owner.parts.size()) refuse("invalid_argument", "Provider content index is unavailable");
+            found = owner.parts.emplace(slot, Part{kind}).first;
+        }
+        if (found->second.kind != kind) refuse("invalid_argument", "Provider content kind changed");
+        return found->second;
+    }
+    void completed_text(Part& part, const std::string& text) {
+        if ((part.text_done || part.deltas) && part.text != text)
+            refuse("invalid_argument", "Final provider content contradicts its public text");
+        const bool publish = !part.text_done && !part.deltas;
+        const auto before = payload_size(J(part.text)), after = payload_size(J(text));
+        if (after > before && after - before > Limits::stream_retained_bytes - retained_base)
+            refuse("resource_exhausted", "Provider retained text exceeds limit");
+        part.text = text; part.text_done = true;
+        if (part.kind == "refusal") refused = true;
+        retained();
+        if (publish && !text.empty()) emit({{"type", "text_delta"}, {"text", text}});
+    }
+    void completed_part(Part& part, const J& original) {
+        if (part.part_done) {
+            if (json::write(canonical(part.complete)) != json::write(canonical(original)))
+                refuse("invalid_argument", "Completed provider part changed");
+            return;
+        }
+        const auto key = part.kind == "refusal" ? "refusal" : "text";
+        completed_text(part, string(original, key, true));
+        part.complete = original; part.part_done = true; retained();
+    }
+    void item(const J& original, bool done, std::uint64_t output_index) {
         const auto id = identifier(original, "id"); const auto type = string(original, "type");
         const auto prior = items.find(id);
         if (prior == items.end()) {
             if (items.size() >= Limits::stream_items) refuse("resource_exhausted", "Provider item count exceeds limit");
-            order.push_back(id); items.emplace(id, Item{original, false});
+            order.push_back(id); items.emplace(id, Item{original, false, output_index, {}});
         } else if (string(prior->second.original, "type") != type) refuse("invalid_argument", "Provider item type changed");
         auto& held = items.at(id);
+        if (held.index != output_index) refuse("invalid_argument", "Provider output index changed");
         if (held.done) {
             if (!done || json::write(canonical(held.original)) != json::write(canonical(original))) refuse("invalid_argument", "Completed provider item changed");
             return;
@@ -86,15 +151,16 @@ struct OpenAiStream::State {
             } else if (found->second.id != call_id || found->second.name != name) refuse("invalid_argument", "Provider tool identity changed");
             if (done) tool(calls.at(id), string(original, "arguments", true));
         }
-        held.original = original; held.done = done; retained();
-        if (done && type == "message") for (const auto& content : original.at("content").array("content")) {
-            const auto kind = string(content, "type");
-            if (kind == "refusal") {
-                refused = true;
-                if (!text_items.count(id) && !unbound_text) emit({{"type", "text_delta"}, {"text", string(content, "refusal", true)}});
-            } else if (kind == "output_text" && !text_items.count(id) && !unbound_text)
-                emit({{"type", "text_delta"}, {"text", string(content, "text", true)}});
+        if (type == "message") {
+            std::uint64_t slot = 0;
+            for (const auto& original_part : original.at("content").array("content")) {
+                const auto kind = string(original_part, "type");
+                auto& part = content(held, slot++, kind);
+                if (done) completed_part(part, original_part);
+            }
+            if (done && slot != held.parts.size()) refuse("invalid_argument", "Completed provider message lost content parts");
         }
+        held.original = original; held.done = done; retained();
     }
     void event() {
         if (record.empty()) return;
@@ -104,18 +170,42 @@ struct OpenAiStream::State {
         if (body == "[DONE]") { if (!terminal) refuse("interrupted", "Stream ended without terminal response"); return; }
         if (terminal) refuse("invalid_argument", "Data after terminal response");
         const auto message = parse(body); const auto type = string(message, "type");
-        if (type == "response.output_text.delta" || type == "response.refusal.delta") {
-            if (has(message, "item_id")) {
-                const auto id = identifier(message, "item_id");
-                const auto found = items.find(id);
-                if (found == items.end() || string(found->second.original, "type") != "message" || found->second.done)
-                    refuse("invalid_argument", "Text delta names an unavailable, incompatible or completed item");
-                text_items.insert(id);
-            } else unbound_text = true;
-            if (type == "response.refusal.delta") refused = true;
-            emit({{"type", "text_delta"}, {"text", string(message, "delta", true)}});
+        if (type == "response.output_text.delta" || type == "response.refusal.delta" ||
+            type == "response.output_text.done" || type == "response.refusal.done") {
+            auto& owner = message_item(message);
+            auto& part = content(owner, index(message, "content_index"),
+                                 type.starts_with("response.refusal.") ? "refusal" : "output_text");
+            if (type.ends_with(".done")) {
+                completed_text(part, string(message, part.kind == "refusal" ? "refusal" : "text", true));
+            } else {
+                if (part.text_done || part.part_done) refuse("invalid_argument", "Text arrived after content completion");
+                const auto delta = string(message, "delta", true);
+                if (payload_size(J(delta)) - 2 > Limits::stream_retained_bytes - retained_base)
+                    refuse("resource_exhausted", "Provider retained text exceeds limit");
+                part.text += delta; part.deltas = true; retained();
+                if (part.kind == "refusal") refused = true;
+                emit({{"type", "text_delta"}, {"text", delta}});
+            }
+        } else if (type == "response.content_part.added" || type == "response.content_part.done") {
+            auto& owner = message_item(message);
+            const auto& original = message.at("part");
+            const auto slot = index(message, "content_index");
+            const auto kind = string(original, "type");
+            if (type.ends_with(".added") && owner.parts.contains(slot))
+                refuse("invalid_argument", "Provider content part already exists");
+            auto& part = content(owner, slot, kind);
+            if (type.ends_with(".done")) completed_part(part, original);
+            else {
+                part.text = string(original, kind == "refusal" ? "refusal" : "text", true);
+                retained();
+                if (!part.text.empty()) {
+                    part.deltas = true;
+                    if (kind == "refusal") refused = true;
+                    emit({{"type", "text_delta"}, {"text", part.text}});
+                }
+            }
         } else if (type == "response.output_item.added" || type == "response.output_item.done") {
-            item(message.at("item"), type == "response.output_item.done");
+            item(message.at("item"), type == "response.output_item.done", index(message, "output_index"));
         } else if (type == "response.function_call_arguments.delta" || type == "response.function_call_arguments.done") {
             const auto id = identifier(message, "item_id"); const auto found = calls.find(id);
             if (found == calls.end()) refuse("invalid_argument", "Arguments for an unknown tool item");
@@ -131,7 +221,7 @@ struct OpenAiStream::State {
         } else if (type == "response.completed" || type == "response.failed" || type == "response.incomplete" || type == "error") {
             std::string status = "failed";
             if (has(message, "response") && has(message.at("response"), "output"))
-                for (const auto& output : message.at("response").at("output").array("output")) item(output, true);
+                for (std::uint64_t slot = 0; const auto& output : message.at("response").at("output").array("output")) item(output, true, slot++);
             if (type == "response.completed") {
                 if (string(message.at("response"), "status") != "completed") refuse("provider_error", "Completion has no completed response");
                 for (const auto& entry : calls) if (!entry.second.emitted) refuse("interrupted", "Incomplete function call at completion");
