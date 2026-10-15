@@ -285,12 +285,13 @@ TestCase {
         try {
             Preferences.sideBarSide = "Left";
             window.minimumWidth = 400;
-            window.width = 1280;
+            window.width = 1600;
             rendered();
             toggle();
             const about = item("home.about");
             const host = item("workflow.home.sidebarHost");
             const initial = rect(about);
+            const initialWidth = window.width;
             const strip = rect(host);
             console.log("POP3_GEOMETRY_INITIAL", JSON.stringify({
                 window: [window.width, window.height],
@@ -308,7 +309,7 @@ TestCase {
             if (data.partial) {
                 // Choose a finite width from captured centered-layout geometry, then
                 // independently require a real exposed edge; no invented target rect.
-                window.width = 1280 - 2 * (initial[0] - (strip[0] + strip[2] - initial[2] * 0.75));
+                window.width = initialWidth - 2 * (initial[0] - (strip[0] + strip[2] - initial[2] * 0.75));
                 rendered();
                 const edge = rect(about);
                 const edgeStrip = rect(host);
@@ -340,7 +341,7 @@ TestCase {
             tryVerify(() => !about.activeFocus, 500, "I16/POP3: geometry changes re-evaluate covered keyboard eligibility");
             keyClick(Qt.Key_Space);
             compare(item("about").visible, false, "I16/POP3: covered Home action cannot activate through the popup");
-            window.width = 1280;
+            window.width = 1600;
             rendered();
             mouseClick(about);
             tryCompare(item("about"), "visible", true, 500, "I16/POP3: genuine outside Home controls remain usable without a whole-page blocker");
