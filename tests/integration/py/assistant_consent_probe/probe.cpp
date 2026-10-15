@@ -150,6 +150,8 @@ int main(int argc,char** argv) {
                 messages.push_back(value);
             }
             vm["messages"]=messages;
+            vm["selected_model"]=session->assistant()->selectedModel();
+            vm["selected_effort"]=session->assistant()->selectedEffort();
         }
         return Object{{"vm",vm},{"ui",ui}};
     };
@@ -166,7 +168,10 @@ int main(int argc,char** argv) {
                         throw std::invalid_argument("original typing fixture uses printable ASCII");
                     QTest::keyClick(window,character.toLatin1(),Qt::NoModifier,1);
                 }
-            } else if(submit_mode && op=="click_send")click(find("assistant.send"),window);
+            } else if(submit_mode && op=="clear_history")session->assistant()->clearHistory();
+            else if(submit_mode && op=="close_project")session->closeProject();
+            else if(submit_mode && op=="select_skill")session->assistant()->selectSkill(input["id"].toString());
+            else if(submit_mode && op=="click_send")click(find("assistant.send"),window);
             else if(submit_mode && op=="press_enter") {
                 auto* editor=find("assistant.composer");click(editor,window);
                 QTest::keyClick(window,Qt::Key_Return,Qt::NoModifier,1);

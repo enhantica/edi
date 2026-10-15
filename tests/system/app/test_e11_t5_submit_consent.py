@@ -50,7 +50,7 @@ class Submit(prior.Consent):
 
 
 @pytest.fixture
-def submit(monkeypatch, signer):
+def submit(monkeypatch, signer, request):
     binary = Path(os.environ['EDI_ASSISTANT_CONSENT_PROBE'])
     assert binary.is_file(), 'SEND SETUP: coherent actual Session/native/QML consumer exists'
     monkeypatch.setenv('QT_QPA_PLATFORM', 'offscreen')
@@ -69,10 +69,18 @@ def submit(monkeypatch, signer):
         assert actor.ready(), (
             'SEND SETUP: genuine independently signed offline connection is ready'
         )
-        created = actor.command('create_project', name='Original newly disclosed send scope')
-        assert created['reply']['created'] and actor.last['vm']['consent_required'], (
-            'SEND: real project attachment requires current outgoing-context consent'
-        )
+        if getattr(request, 'param', False):
+            # Public same-selected workflow action invalidates consent without changing context.
+            actor.command('select_skill', id='project-assistance')
+            assert actor.last['vm']['consent_required'], (
+                'DT1 SETUP: genuine public selection requires consent '
+                'in projectless default context'
+            )
+        else:
+            created = actor.command('create_project', name='Original newly disclosed send scope')
+            assert created['reply']['created'] and actor.last['vm']['consent_required'], (
+                'SEND: real project attachment requires current outgoing-context consent'
+            )
         actor.command('type_draft', text=PROMPT)
         assert actor.last['ui']['draft'] == PROMPT and actor.last['ui']['send']['enabled'], (
             'SEND: genuine actual-editor typing enables the visible real Send control'
@@ -159,4 +167,42 @@ def test_changed_pending_consent_cannot_auto_dispatch_old_attempt(submit, change
     )
     assert not any(row.get('kind') == 'user' for row in submit.last['vm']['messages']), (
         'SEND: stale consent attempt cannot create an invisible or duplicate admitted prompt'
+    )
+
+
+@pytest.mark.parametrize('submit', [True], indirect=True, ids=['projectless'])
+@pytest.mark.parametrize('retirement', ['clear_history', 'close_project'])
+def test_same_context_real_retirement_revokes_pending_submit_intent(submit, retirement):
+    opened_from_submit(submit, 'click_send')
+    before = submit.last['vm']
+    assert prior.native.json.loads(before['context'])['project'] is None, (
+        'DT1: actual pending intent belongs to genuine projectless context'
+    )
+    ready_ids = [
+        event['connection_id']
+        for event in submit.last['events']
+        if event.get('type') == 'connection' and event.get('status') == 'ready'
+    ]
+    submit.command(retirement)
+    after = submit.last['vm']
+    assert after['context'] == before['context'] and after['connected'], (
+        'DT1: actual public Clear/null-owner bind retires conversation '
+        'despite identical context bytes'
+    )
+    assert (after['selected_model'], after['selected_effort']) == (
+        before['selected_model'],
+        before['selected_effort'],
+    ), 'DT1: genuine retirement witness keeps actual model and effort unchanged'
+    assert ready_ids == [
+        event['connection_id']
+        for event in submit.last['events']
+        if event.get('type') == 'connection' and event.get('status') == 'ready'
+    ], 'DT1: same-context conversation retirement does not manufacture an account change'
+    if submit.last['ui']['dialog'].get('visible'):
+        submit.command('click_accept')
+    assert not requests(submit) and submit.last['ui']['draft'] == PROMPT, (
+        'DT1: approving after actual retirement cannot revive the old pending send intent'
+    )
+    assert not any(row.get('kind') == 'user' for row in submit.last['vm']['messages']), (
+        'DT1: retired intent leaves no invisible or duplicate admitted user row'
     )
