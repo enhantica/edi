@@ -176,7 +176,11 @@ _peak.type cwl-tch-pseudo-voigt
 _peak.broad_gauss_u 0.1
 _peak.broad_gauss_v 0
 _peak.broad_gauss_w 0.1
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0.1
+_peak.cutoff_fwhm 8
 _instrument.setup_wavelength 1.909
+_instrument.calib_twotheta_offset 0
 _data_range.two_theta_min 10
 _data_range.two_theta_max 10.2
 _data_range.two_theta_step 0.1
@@ -309,7 +313,7 @@ def test_derived_unknown_optional_letter_and_equivalent_orbit_image_preserve_phy
     for line in text.splitlines():
         prepared = line
         fields = line.split()
-        if fields and fields[0] in expected_sites:
+        if len(fields) >= 9 and fields[0] in expected_sites:
             if image:
                 fields[2:5] = [format(x, '.17g') for x in expected_sites[fields[0]][1]]
             if unknown is not None:
