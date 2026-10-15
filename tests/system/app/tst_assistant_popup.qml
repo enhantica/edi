@@ -45,6 +45,8 @@ TestCase {
         const requested = !Preferences.assistantShown;
         mouseClick(control);
         tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
+        if (requested)
+            tryCompare(popup, "opened", true, 2000, "I16/slide: settled opening waits for actual enter completion");
         rendered();
     }
     function scopeObservation(stage) {
@@ -96,7 +98,7 @@ TestCase {
     }
     function cleanup() {
         Preferences.dialogShown = false;
-        if (popup && popup.visible)
+        if (popup && Preferences.assistantShown)
             toggle();
     }
     function cleanupTestCase() {
@@ -411,6 +413,66 @@ TestCase {
             Preferences.sideBarSide = savedSide;
         }
     }
+    function test_connection_header_reachable_by_real_keyboard_data() {
+        return [
+            {
+                tag: "tab",
+                backwards: false
+            },
+            {
+                tag: "backtab",
+                backwards: true
+            }
+        ];
+    }
+    function test_connection_header_reachable_by_real_keyboard(data) {
+        Session.closeProject();
+        window.appBarCentralTabs.currentIndex = 0;
+        rendered();
+        compare(assistant.connected, false, "I12/HDR1: this real native owner is genuinely disconnected, not a fabricated account state");
+        toggle();
+        const button = item("assistant.toggle");
+        const editor = item("assistant.composer");
+        tryVerify(() => editor.activeFocus, 500, "I16/HDR1: normal opening places real input focus in the actual composer");
+        // Establish keyboard-only entry through the existing actual opener, without forceFocus.
+        for (let step = 0; step < 32 && !button.activeFocus; ++step)
+            keyClick(Qt.Key_Tab, Qt.ShiftModifier);
+        verify(button.activeFocus, "I16/HDR1: genuine reverse traversal reaches the sole appbar control");
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", false, 2000, "I16/HDR1: actual keyboard opener also closes the popup");
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "opened", true, 2000, "I16/HDR1: genuine appbar keyboard activation completes actual popup opening");
+        const connection = item("assistant.connection");
+        verify(connection.visible && connection.enabled, "I12/HDR1: actual Sign in is available to a disconnected user");
+        const visited = [];
+        for (let step = 0; step < 32 && !connection.activeFocus; ++step) {
+            keyClick(Qt.Key_Tab, data.backwards ? Qt.ShiftModifier : Qt.NoModifier);
+            const focus = window.activeFocusItem;
+            if (focus && visited.indexOf(focus.objectName) < 0)
+                visited.push(focus.objectName);
+        }
+        console.log("HEADER_KEYBOARD", data.tag, JSON.stringify(visited));
+        verify(connection.activeFocus, "I12/I16/HDR1: normal forward and reverse keyboard routes reach the genuine Sign in action");
+        compare(assistant.connected, false, "I12/HDR1: keyboard reachability does not fabricate authentication");
+    }
+    function test_project_close_during_actual_enter_preserves_requested_chat() {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I4/slide: actual project supplies the entering workflow owner");
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        mouseClick(item("assistant.toggle"));
+        compare(Preferences.assistantShown, true, "I16/slide: real appbar establishes the open request before retirement");
+        verify(popup.visible && !popup.opened, "I16/slide: retirement genuinely interrupts actual enter rather than a settled or hidden popup");
+        scopeObservation("enter-before-project-close");
+        Session.closeProject();
+        mouseClick(item("appBar.tab.home"));
+        rendered();
+        scopeObservation("enter-after-project-close-render");
+        compare(Preferences.assistantShown, true, "I16/slide: project retirement does not cancel the intentional open request");
+        tryCompare(popup, "opened", true, 2000, "I16/slide: requested chat recovers actual completed opening after an interrupted project-host retirement");
+        compare(Session.project, null, "I4/slide: showing chat does not recreate the retired project");
+        compare(popup.parent, item("workflow.home.sidebarHost"), "I16/slide: recovered popup belongs to the real current Home host");
+        sameRect(rect(popup.contentItem), rect(item("workflow.home.sidebarHost")));
+    }
     function test_rapid_slide_keeps_actual_plot_and_input_scope() {
         if (popup.visible)
             toggle();
@@ -477,11 +539,13 @@ TestCase {
         toggle();
         // Continue is intentionally hidden by the existing owner rule. Exercise a
         // genuine visible manual tab instead of requiring a retired action to appear.
-        const desiredTab = manual.currentIndex === 0 ? 1 : 0;
-        const manualTab = findChild(manual, desiredTab === 0 ? "sideBar.tab.basic" : "sideBar.tab.extras");
+        const basicTab = findChild(manual, "sideBar.tab.basic");
+        verify(basicTab !== null && typeof basicTab.checked === "boolean", "I16/slide: actual Qt TabButton exposes the checked observer before choosing its opposite");
+        const manualTab = findChild(manual, basicTab.checked ? "sideBar.tab.extras" : "sideBar.tab.basic");
+        verify(manualTab !== null && typeof manualTab.checked === "boolean" && !manualTab.checked, "I16/slide: opposite real tab is initially unchecked before physical input");
         verify(manualTab !== null && manualTab.visible && manualTab.enabled, "I16/slide: genuine visible manual tab is restored after full exit");
         mouseClick(manualTab);
-        tryCompare(manual, "currentIndex", desiredTab, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
+        tryCompare(manualTab, "checked", true, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
         editor.clear();
     }
 }
