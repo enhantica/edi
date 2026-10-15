@@ -194,7 +194,7 @@ persistence_phase 1
     return project
 
 
-def verify_published_pbso4(reopened, expected_sites):
+def verify_published_pbso4(reopened, expected_sites, *, equivalent=False):
     assert reopened.space_group.name_h_m == 'P n m a', (
         'CIF: missing optional Wyckoff column cannot change the actual declared space group'
     )
@@ -221,9 +221,11 @@ def verify_published_pbso4(reopened, expected_sites):
         actual = [
             float(getattr(site, field).value) % 1 for field in ('fract_x', 'fract_y', 'fract_z')
         ]
-        assert actual == pytest.approx([x % 1 for x in coordinates], abs=1e-12), (
-            'CIF: optional-letter resolution cannot move the published physical fractional site'
-        )
+        if not equivalent:
+            assert actual == pytest.approx([x % 1 for x in coordinates], abs=1e-12), (
+                'CIF: optional-letter resolution cannot move '
+                'the published physical fractional site'
+            )
         assert site.type_symbol == element and float(site.occupancy.value) == 1.0, (
             'CIF: resolving an optional label cannot change element or published site occupancy'
         )
@@ -251,6 +253,19 @@ def verify_published_pbso4(reopened, expected_sites):
             'CIF REFERENCE: original coordinates and independent cctbx '
             'operations reproduce input count'
         )
+        if equivalent:
+            actual_orbit = set()
+            for operation in group['operations']:
+                r, t = operation['r'], operation['t']
+                actual_orbit.add(
+                    tuple(
+                        round((sum(r[3 * i + j] * actual[j] for j in range(3)) + t[i]) % 1, 10)
+                        for i in range(3)
+                    )
+                )
+            assert actual_orbit == orbit, (
+                'WYC1: actual engine completion cannot change the independent full physical orbit'
+            )
 
 
 @pytest.mark.parametrize('factory', ['from_cif_path', 'from_cif_str'])
@@ -267,8 +282,13 @@ def test_genuine_classic_cif_without_optional_letters_saves_and_reopens_unchange
     project = persistence_project(structure)
     target = tmp_path / 'saved-original-cif'
     project.save_as(target)
-    reopened = edi.Project.load(target).structure
-    verify_published_pbso4(reopened, PUBLISHED_PBSO4)
+    loaded = edi.Project.load(target)
+    verify_published_pbso4(loaded.structure, PUBLISHED_PBSO4)
+    loaded.calculate()
+    verify_published_pbso4(loaded.structure, PUBLISHED_PBSO4)
+    completed = tmp_path / 'saved-after-actual-completion'
+    loaded.save_as(completed)
+    verify_published_pbso4(edi.Project.load(completed).structure, PUBLISHED_PBSO4)
     assert source.read_bytes() == original, (
         'CIF: actual factory/persistence cannot mutate source bytes'
     )
@@ -326,11 +346,77 @@ def test_derived_unknown_optional_letter_and_equivalent_orbit_image_preserve_phy
         lines.append(prepared)
     selected = tmp_path / 'explicitly-derived-original.cif'
     selected.write_text('\n'.join(lines) + '\n')
-    structure = edi.StructureFactory.from_cif_path(selected)
-    project = persistence_project(structure)
-    target = tmp_path / 'saved-derived-input'
-    project.save_as(target)
-    verify_published_pbso4(edi.Project.load(target).structure, expected_sites)
+    exercise_cif_completion(selected, tmp_path, expected_sites, allow_unsupported=image)
     assert source.read_bytes() == original, (
         'CIF DERIVED INPUT: unknown tokens/orbit-image controls never alter the genuine original'
+    )
+
+
+def roundtrip_completed_cif(target, completed, expected_sites):
+    loaded = edi.Project.load(target)
+    loaded.calculate()
+    verify_published_pbso4(loaded.structure, expected_sites, equivalent=True)
+    loaded.save_as(completed)
+    verify_published_pbso4(edi.Project.load(completed).structure, expected_sites, equivalent=True)
+
+
+def exercise_cif_completion(selected, tmp_path, expected_sites, *, allow_unsupported):
+    original = selected.read_bytes()
+    target = tmp_path / 'saved-derived-input'
+    completed = tmp_path / 'saved-derived-completed'
+    try:
+        project = persistence_project(edi.StructureFactory.from_cif_path(selected))
+        project.calculate()  # Existing ordinary engine dependent-coordinate completion.
+        verify_published_pbso4(project.structure, expected_sites, equivalent=True)
+        project.save_as(target)
+        roundtrip_completed_cif(target, completed, expected_sites)
+    except edi.IoError as error:
+        assert allow_unsupported, 'WYC1: genuine supported canonical inputs cannot become refusals'
+        message = str(error).lower()
+        assert (
+            'wyckoff' in message
+            and any(
+                token in message
+                for token in ('unsupported', 'not supported', 'cannot infer', 'unable to infer')
+            )
+            and any(
+                token in message
+                for token in ('represent', 'parameter', 'coordinate', 'compatib', 'orbit')
+            )
+        ), (
+            'WYC1: only a precise unsupported-parameterization refusal '
+            'is an allowed staged boundary'
+        )
+        assert not target.exists() and not completed.exists(), (
+            'WYC1: unsupported parameterization cannot publish a partially saved candidate'
+        )
+    assert selected.read_bytes() == original, (
+        'WYC1: accepted/refused completion preserves selected bytes'
+    )
+
+
+@pytest.mark.parametrize('nonrepresentative', [False, True])
+def test_rational_pnma_inferred_parameterization_survives_real_engine_or_refuses_precisely(
+    tmp_path, nonrepresentative
+):
+    # Closed rational substitution into independent Pnma operators. The third
+    # equivalent point is NOT compatible with blindly fixing its y to1/4.
+    source = ROOT / 'tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif'
+    original = source.read_bytes()
+    xyz = (7 / 8, 3 / 4, 15 / 16) if nonrepresentative else (1 / 8, 1 / 4, 1 / 16)
+    expected = dict(PUBLISHED_PBSO4)
+    expected['Pb'] = ('Pb', xyz, 4)
+    lines = []
+    for line in original.decode().splitlines():
+        fields = line.split()
+        if len(fields) >= 9 and fields[0] == 'Pb':
+            fields[2:5] = [format(x, '.17g') for x in xyz]
+            lines.append(' '.join(fields))
+        else:
+            lines.append(line)
+    selected = tmp_path / 'explicit-rational-derived.cif'
+    selected.write_text('\n'.join(lines) + '\n')
+    exercise_cif_completion(selected, tmp_path, expected, allow_unsupported=nonrepresentative)
+    assert source.read_bytes() == original, (
+        'WYC1: rational derived-input controls never rewrite the genuine published CIF'
     )
