@@ -95,3 +95,20 @@ It avoids a second recursive JSON copy through an initializer-list temporary dur
 exceptions from any remaining read, copy or preflight stage propagate to the bound interruption funnel;
 no ordinary acknowledgement or provider dispatch follows that failure. This is the same envelope and
 original invocation binding, with no change to the admitted scientific result or resource policy.
+
+Stop keeps its correlated question call until terminal preparation/commit succeeds. It revokes answer and
+execution authority first, carries typed publication failure to acknowledging callers, and retains the call/hold
+for retry if preparation still fails. A fresh message cannot replace that identity before settlement;
+Stop remains available while its correlated terminal is pending. The common terminal path reserves history space and prepares its cache,
+row and shown payload before consuming the hold or changing a pending receipt; it moves those prepared values
+at commit. Completed outcomes remain immutable. Attach and connection replacement cannot acknowledge a new
+scope after failed Stop settlement; void cancellation/deadline/manual-change callers expose interruption.
+
+Provider part lookup proves a prior content_part.added identity; contiguous indices cannot declare themselves
+through deltas or done markers. Completed item snapshots retain their separate fallback admission. A unique
+output-position map covers messages, functions and opaque items, argument events validate the same required
+position, and terminal output must account for every retained item without replacement or omission. Original
+output is returned in position order. The documented reasoning_text variant retains its own reasoning owner
+and opaque part lifecycle; no hidden reasoning is emitted as public assistant text. This also preserves final
+original reasoning/encrypted fields for stateless continuation. Broader quota/retention and native replay
+recovery remain separately held; these changes do not establish their closure.

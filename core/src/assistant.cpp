@@ -7,6 +7,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <type_traits>
 #include <utility>
 
 #include "assistant_json.hpp"
@@ -201,7 +202,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         return O{{"state", phase}, {"project_id", version.project_id}, {"revision", std::to_string(version.revision)},
                  {"active_turn_id", turn}, {"active_job_id", active_job},
                  {"pending_plan_id", plan && !plan->approved ? plan->id : ""},
-                 {"pending_question_id", question}, {"can_cancel", !turn.empty() || !active_job.empty()}};
+                 {"pending_question_id", question}, {"can_cancel", !turn.empty() || !active_job.empty() || !question_call.empty()}};
     }
     J context() const {
         J project;
@@ -242,19 +243,22 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
     std::uint64_t held_history() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.history; return n; }
     std::uint64_t held_cache() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.cache; return n; }
-    void check_history(const std::vector<J>& items, std::uint64_t future = 0) const {
+    void check_history(std::initializer_list<const J*> items, std::uint64_t future = 0, const std::string& settling = {}) const {
         auto bytes = history_used; auto count = history.array("history").size();
         for (const auto& item : items) {
-            const auto size = payload_size(item, Limits::history_bytes);
+            const auto size = payload_size(*item, Limits::history_bytes);
             const auto growth = size + (count ? 1 : 0);
             if (growth > Limits::history_bytes - bytes) refuse("resource_exhausted", "Conversation history limit exceeded");
             bytes += growth; ++count;
         }
-        if (held_history() + future > Limits::history_bytes - bytes || count + holds.size() + (future ? 1 : 0) > Limits::history_entries)
+        const auto own = holds.find(settling);
+        const auto released = own == holds.end() ? 0 : own->second.history;
+        if (held_history() - released + future > Limits::history_bytes - bytes ||
+            count + holds.size() - (own == holds.end() ? 0 : 1) + (future ? 1 : 0) > Limits::history_entries)
             refuse("resource_exhausted", "Conversation terminal capacity is unavailable");
     }
     void history_item(J item) {
-        check_history({item});
+        check_history({&item});
         auto& rows = std::get<A>(history.data);
         history_used += payload_size(item) + (rows.empty() ? 0 : 1);
         rows.push_back(std::move(item));
@@ -282,7 +286,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         return row;
     }
     std::uint64_t cache_size(const J& event, const Reply& result) const {
-        return payload_size(O{{"binding", canonical(event)}, {"reply", result_row(string(event, "call_id"), result, false, &event)}});
+        auto binding = canonical(event);
+        auto reply = result_row(string(event, "call_id"), result, false, &event);
+        O row; row.reserve(2);
+        row.emplace_back("binding", std::move(binding)); row.emplace_back("reply", std::move(reply));
+        return payload_size(std::move(row));
     }
     void preflight(const Reply& result, bool pending = false) {
         if (admitting_call.empty()) return;
@@ -297,7 +305,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const J skeleton = result_row(admitting_call, success(), false);
             reserve = payload_size(skeleton) - 2 + Limits::message_bytes + 1;
         }
-        check_history({call_row, reply_row}, reserve);
+        check_history({&call_row, &reply_row}, reserve);
         if (pending) {
             const auto final_cache = payload_size(O{{"binding", canonical(admitting_event)}, {"reply", result_row(admitting_call, success())}}) - 2 + Limits::message_bytes;
             const auto growth = final_cache > cache ? final_cache - cache : 0;
@@ -352,25 +360,30 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const auto old = calls.find(call);
         if (old == calls.end()) return;
         const auto hold = holds.find(call);
-        const auto held = hold == holds.end() ? Hold{} : hold->second;
+        if (hold == holds.end()) return; // A completed outcome cannot be replaced by interruption.
         const auto event = parse(old->second.binding, Limits::completed_call_bytes);
-        const auto row = result_row(call, result, false, &event);
+        auto row = result_row(call, result, false, &event);
         bounded(parse(result.value), Limits::message_bytes);
-        const auto previous = cache_size(event, old->second.reply);
-        const auto next = cache_size(event, result);
-        if (next > previous && next - previous > Limits::completed_call_bytes - cache_used)
+        const auto previous = cache_size(event, old->second.reply), next = cache_size(event, result);
+        const auto used = cache_used - previous;
+        const auto other_cache = held_cache() - hold->second.cache;
+        if (next + other_cache > Limits::completed_call_bytes - used)
             refuse("resource_exhausted", "Completed tool outcome exceeds reserved capacity");
-        // The reservation belongs to this settlement; other pending calls keep theirs.
-        holds.erase(call);
-        try { check_history({row}); }
-        catch (...) { if (held.history || held.cache) holds.emplace(call, held); throw; }
+        check_history({&row}, 0, call);
         Reply prepared = result;
         auto& rows = std::get<A>(history.data);
+        const auto bytes = history_used + payload_size(row) + (rows.empty() ? 0 : 1);
         rows.reserve(rows.size() + 1);
-        cache_used = cache_used - previous + next;
-        old->second.reply = std::move(prepared);
-        history_item(row);
-        emit("tool_result", {{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}}, &event);
+        auto value = parse(result.value);
+        O shown; shown.reserve(4);
+        shown.emplace_back("call_id", call); shown.emplace_back("ok", result.ok);
+        shown.emplace_back("code", result.code); shown.emplace_back("result", std::move(value));
+        // All throwing preparation precedes consuming the hold or changing the
+        // pending receipt. A failed Stop can retry this same correlated call.
+        static_assert(std::is_nothrow_move_constructible_v<J>);
+        old->second.reply = std::move(prepared); rows.push_back(std::move(row));
+        history_used = bytes; cache_used = used + next; holds.erase(call);
+        emit("tool_result", std::move(shown), &event);
     }
     void reset_conversation() {
         auto next = id("conversation");
@@ -380,44 +393,57 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
     void interrupt_output() noexcept {
         plan.reset(); response_done = true; turn.clear(); request.clear();
-        const auto interrupted_question = std::move(question_call);
-        question.clear(); question_record = J{}; question_call.clear();
+        // Revoke human-answer authority immediately, but retain the correlated
+        // call/record until its terminal really commits (or explicit teardown).
+        question.clear();
         if (trial) {
             trial->quarantined = true;
             try { if (trial->baseline_ticket) worker.cancel(trial->baseline_ticket); } catch (...) {}
             try { if (trial->job) trial->job->cancel(); } catch (...) {}
         }
-        if (!interrupted_question.empty()) {
-            try { finish_call(interrupted_question, failure("interrupted", "The question was interrupted")); } catch (...) {}
+        if (!question_call.empty()) {
+            try {
+                finish_call(question_call, failure("interrupted", "The question was interrupted"));
+                question_call.clear(); question_record = J{};
+            } catch (...) { /* Keep the call and hold available for a later Stop/recovery. */ }
         }
         phase = "interrupted";
         try { emit("state_changed", {{"state", state()}}); } catch (...) {}
     }
-    void stop() noexcept {
+    bool stop() noexcept {
+        output_failure = OutputFailure::none;
         try {
-            // Revoke the request before notifying any retaining/rendering host.
+            // Revocation precedes every allocating terminal operation. A Stop
+            // failure never restores permission to answer, execute or continue.
             turn.clear(); request.clear(); plan.reset();
-            if (!question.empty()) {
-                const auto call = std::move(question_call);
+            if (!question_call.empty()) {
                 const auto question_id = std::move(question);
-                question.clear(); question_record = J{}; question_call.clear();
-                finish_call(call, failure("interrupted", "The question was interrupted before an answer"));
-                safe_emit("question_invalidated", [&] { return O{{"question_id", question_id}}; });
+                question.clear();
+                finish_call(question_call, failure("interrupted", "The question was interrupted before an answer"));
+                question_call.clear(); question_record = J{};
+                if (!safe_emit("question_invalidated", [&] { return O{{"question_id", question_id}}; })) return false;
             }
             if (trial && trial->baseline_ticket) worker.cancel(trial->baseline_ticket);
             if (trial && (trial->baseline_ticket || (trial->job && trial->job->running()))) {
                 if (trial->job) trial->job->cancel();
-                status("cancelling");
-            } else {
-                if (!trial || !trial->quarantined) trial.reset();
-                active_job.clear(); status(ready ? "idle" : "disconnected");
+                return status("cancelling");
             }
-        } catch (...) { interrupt_output(); }
+            if (!trial || !trial->quarantined) trial.reset();
+            active_job.clear(); return status(ready ? "idle" : "disconnected");
+        } catch (const std::bad_alloc&) { publication_failed(OutputFailure::resource); }
+        catch (const std::length_error&) { publication_failed(OutputFailure::resource); }
+        catch (const Refusal& error) { publication_failed(error.code == "resource_exhausted" ? OutputFailure::resource : OutputFailure::interrupted); }
+        catch (...) { publication_failed(OutputFailure::interrupted); }
+        return false;
+    }
+    void require_stopped() {
+        if (!stop()) refuse(output_failure == OutputFailure::resource ? "resource_exhausted" : "interrupted",
+                             "Assistant cancellation could not be retained");
     }
     void stamps() { if (plan && live) { plan->stamps = work_stamps(*live); plan->inputs = edi::detail::inputs_of(*live); } }
     void current() {
         if (plan && (!unchanged_since(*live, plan->stamps) || edi::detail::inputs_of(*live) != plan->inputs)) {
-            stop(); refuse("stale_revision", "The project changed outside the approved action");
+            require_stopped(); refuse("stale_revision", "The project changed outside the approved action");
         }
     }
     void approved(const J& event) {
@@ -425,7 +451,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             refuse("approval_required", "Approve this plan in the assistant before execution");
         current();
         if (const auto now = hooks.monotonic_ms(); now < plan->started || now - plan->started >= plan->max_ms) {
-            stop(); refuse("out_of_scope", "The approved elapsed-time budget is exhausted");
+            require_stopped(); refuse("out_of_scope", "The approved elapsed-time budget is exhausted");
         }
     }
     J request_payload(const std::string& next_turn, const std::string& next_request,
@@ -787,8 +813,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         output_failure = OutputFailure::none;
         envelope(command); const auto type = string(command, "type");
         if (type == "cancel") {
-            shape(command, {"schema", "type"}); user_scope_committed = true; stop();
-            return output_failure == OutputFailure::none ? success() : output_refusal();
+            shape(command, {"schema", "type"}); user_scope_committed = true;
+            return stop() ? success() : output_refusal();
         }
         if (type == "approve_plan") {
             shape(command, {"schema", "type", "plan_id", "project_id", "revision"});
@@ -831,6 +857,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (type != "message") refuse("invalid_argument", "Unknown user command");
         shape(command, {"schema", "type", "text", "connection_id", "model"}, {"effort", "attachments"});
         if (!ready || string(command, "connection_id") != connection) refuse("connection_required", "Connect a provider first");
+        // An interrupted question whose terminal still could not be retained
+        // must settle before a new conversation action can replace its identity.
+        if (question.empty() && !question_call.empty()) require_stopped();
         if (!turn.empty() || !active_job.empty()) refuse("busy", "A conversation turn is running");
         auto selected = string(command, "model");
         auto selected_effort = has(command, "effort") ? string(command, "effort") : "";
@@ -848,7 +877,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         auto next_turn = id("turn"), next_request = id("request");
         auto next_conversation = conversation.empty() ? id("conversation") : conversation;
         const J user_row = O{{"type", "message"}, {"role", "user"}, {"text", next_text}, {"turn_id", next_turn}, {"request_id", ""}};
-        check_history({user_row});
+        check_history({&user_row});
         J next_history = history; std::get<A>(next_history.data).push_back(user_row);
         const auto outgoing = json::write(request_payload(next_turn, next_request, next_conversation, next_text, selected, selected_effort, next_history));
         const auto growth = payload_size(user_row) + (history.array("history").empty() ? 0 : 1);
@@ -890,7 +919,10 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 for (const J& attachment : item.at("attachment_types").array("attachment_types")) attachment.string("attachment type");
             }
             const auto next = string(event, "connection_id");
-            if (next != connection || state != "ready") { stop(); reset_conversation(); }
+            if (next != connection || state != "ready") {
+                if (!stop()) { ready = false; return output_refusal(); }
+                reset_conversation();
+            }
             connection = next; ready = state == "ready"; capabilities = event.at("capabilities");
             if (!status(ready ? "idle" : "disconnected")) return output_refusal();
             return success();
@@ -968,7 +1000,8 @@ Reply Controller::attach(Project* project, std::string project_id) {
         if (project != state_->live) return failure("stale_project", "A replacement project requires a fresh session ID");
         return success();
     }
-    state_->stop(); state_->live = project; state_->version = {std::move(project_id), 0};
+    if (!state_->stop()) return state_->output_refusal();
+    state_->live = project; state_->version = {std::move(project_id), 0};
     state_->history = A{}; state_->history_used = 2; state_->calls.clear(); state_->cache_used = 2; state_->holds.clear(); state_->answers.clear(); state_->conversation = state_->id("conversation"); state_->emit("state_changed", {{"state", state_->state()}}); return success();
 }
 Revision Controller::revision() const { return state_->version; }
