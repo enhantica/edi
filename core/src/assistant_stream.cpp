@@ -39,7 +39,7 @@ struct OpenAiStream::State {
         // Include names passed indirectly through identifier/index and at/get,
         // as well as public text, refusal and function-argument delta fields.
         const std::string_view supplied(error.what());
-        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "item", "part", "delta", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id"}) {
+        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "item", "part", "delta", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id", "role", "annotations", "summary", "encrypted_content"}) {
             const auto missing = std::string("report JSON: no member '") + field + "'";
             if (supplied == missing) return diagnostic(missing);
             for (const char* expected : {"a boolean", "a number", "a string", "an array", "an object"}) {
@@ -172,7 +172,48 @@ struct OpenAiStream::State {
         retained();
         if (publish && part.kind != "reasoning_text" && !text.empty()) emit({{"type", "text_delta"}, {"text", text}});
     }
+    void known_part_shape(const J& original) const {
+        const auto kind = string(original, "type");
+        if (kind == "output_text") {
+            (void)string(original, "text", true);
+            // Annotations remain opaque original metadata, but their required
+            // container must exist and have the published array shape.
+            (void)original.at("annotations").array("annotations");
+        } else if (kind == "refusal") {
+            (void)string(original, "refusal", true);
+        } else if (kind == "reasoning_text") {
+            (void)string(original, "text", true);
+        } else refuse("invalid_argument", "Unsupported public content kind");
+    }
+    void finalized_known_shape(const J& original) const {
+        const auto kind = string(original, "type");
+        if (kind == "message") {
+            if (string(original, "role") != "assistant")
+                refuse("invalid_argument", "Provider output message is not an assistant message");
+            for (const auto& part : original.at("content").array("content")) {
+                const auto type = string(part, "type");
+                if (type != "output_text" && type != "refusal")
+                    refuse("invalid_argument", "Completed content has an incompatible owner");
+                known_part_shape(part);
+            }
+        } else if (kind == "reasoning") {
+            for (const auto& summary : original.at("summary").array("summary")) {
+                if (string(summary, "type") != "summary_text")
+                    refuse("invalid_argument", "Provider reasoning summary has an incompatible kind");
+                (void)string(summary, "text", true);
+            }
+            if (has(original, "encrypted_content") &&
+                !std::holds_alternative<std::nullptr_t>(original.at("encrypted_content").data))
+                (void)string(original, "encrypted_content", true);
+            if (has(original, "content")) for (const auto& part : original.at("content").array("content")) {
+                if (string(part, "type") != "reasoning_text")
+                    refuse("invalid_argument", "Completed content has an incompatible owner");
+                known_part_shape(part);
+            }
+        }
+    }
     void completed_part(Part& part, const J& original) {
+        known_part_shape(original);
         if (part.part_done) {
             if (json::write(canonical(part.complete)) != json::write(canonical(original)))
                 refuse("invalid_argument", "Completed provider part changed");
@@ -195,6 +236,7 @@ struct OpenAiStream::State {
     }
     void item(const J& original, bool done, std::uint64_t output_index) {
         const auto id = identifier(original, "id"); const auto type = string(original, "type");
+        if (done) finalized_known_shape(original);
         const auto prior = items.find(id);
         if (prior == items.end()) {
             if (items.size() >= Limits::stream_items) refuse("resource_exhausted", "Provider item count exceeds limit");
