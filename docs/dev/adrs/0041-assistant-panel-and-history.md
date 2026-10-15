@@ -218,3 +218,25 @@ on that same app-bar control, without changing its accessible name, identity, de
 This corrects review46 HDR1; the independent baseline proved a forward Sign in omission while its
 reverse case already passed. Existing source63 motion and host ownership remain unchanged. Actual
 connected/connecting and platform/focus cases still need their own reached runtime evidence.
+
+
+## First real desktop selected-file intake
+
+The actual lower-left plus begins the VM's one-shot initiating capability before opening the existing
+native FileDialog. Accept/reject and file-drop carry that exact original capability; no completion
+mints authority. Clear/rebind, manual revision, Stop, account/connection retirement and teardown fence
+pending intake before receiver cleanup. Disconnected/Home selection is permitted without provider I/O.
+
+Native reads use actual regular-file handles, admit declared count/file/aggregate bounds before vector
+growth, read bounded chunks and refuse changed/incomplete reads atomically. Only the Controller owns
+admitted bytes. The VM retains bounded descriptors, publishes actual rows/removal and clears prior
+scope consent. A successful core admission remains acknowledged if row delivery later fails: its exact
+descriptor is retained and sending is blocked while presentation recovers, rather than silently treating
+admitted files as a preflight refusal. No selected bytes enter saved project/history implicitly.
+
+Disclosure names the actual selected files and permits bounded read_selected_file outcomes under the
+same request/account/project/collection/currentness and complete history limits. No provider upload,
+path permission, converter, project creation or fit is implied. Browser action/drop stays disabled until
+its shared bounded WebFiles pipeline and genuine File transfer are implemented and independently
+qualified. Both computer-browser and scientific import/skills scope remain owed; desktop method tests
+alone do not prove a genuine OS chooser gesture, Windows/Mac or a live subscription tool turn.

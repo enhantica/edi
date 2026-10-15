@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QUrl>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
@@ -29,6 +30,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString selectedEffort READ selectedEffort WRITE setSelectedEffort NOTIFY selectedEffortChanged)
     Q_PROPERTY(QStringList availableEfforts READ availableEfforts NOTIFY availableEffortsChanged)
     Q_PROPERTY(edi_app::RowTableModel* messages READ messages CONSTANT)
+    Q_PROPERTY(edi_app::RowTableModel* selectedFiles READ selectedFiles CONSTANT)
     Q_PROPERTY(QVariantMap pendingPlan READ pendingPlan NOTIFY pendingPlanChanged)
     Q_PROPERTY(QVariantMap pendingQuestion READ pendingQuestion NOTIFY pendingQuestionChanged)
     Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
@@ -51,6 +53,7 @@ class AssistantViewModel : public QObject {
     QString selectedEffort() const;
     QStringList availableEfforts() const;
     RowTableModel* messages() const;
+    RowTableModel* selectedFiles() const;
     QVariantMap pendingPlan() const;
     QVariantMap pendingQuestion() const;
     QString activeJobId() const;
@@ -69,8 +72,13 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void signIn();
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void clearHistory();
+    Q_INVOKABLE QString beginFileSelection();
+    Q_INVOKABLE bool addSelectedFiles(const QString& requestId, const QList<QUrl>& urls);
+    Q_INVOKABLE void cancelFileSelection(const QString& requestId);
+    Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void fileSelectionRetired(const QString& requestId);
     void stateChanged();
     void connectedChanged();
     void connectionLabelChanged();

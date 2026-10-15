@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include "edi/assistant_limits.hpp"
+#include "edi/assistant_files.hpp"
 #include "edi/edit.hpp"
 #include "edi/model.hpp"
 #include "edi/worker.hpp"
@@ -60,6 +61,9 @@ class Controller {
     /// Borrow a project under a fresh nonempty session ID, or detach with nullptr and an empty ID.
     Reply attach(edi::Project* project, std::string project_id);
     Revision revision() const;
+    /// Owner-thread selected bytes, committed atomically only when no assistant work is active.
+    Reply update_selected_files(std::string collection_id, std::uint64_t expected_generation,
+                                std::vector<SelectedFile> added, std::vector<std::string> removed);
     /// Notify a manual edit, undo, save/readback or publication outside this controller.
     void notify_changed();
     /// Admit a trusted UI action. Provider traffic must use provider_event, never this entry.

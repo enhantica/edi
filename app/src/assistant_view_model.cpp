@@ -2,6 +2,9 @@
 #include "assistant_view_model.hpp"
 
 #include <QFile>
+#include <QThread>
+#include <array>
+#include <limits>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -16,6 +19,19 @@
 #include <algorithm>
 #include <map>
 
+#if defined(Q_OS_WIN)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#else
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #ifndef __EMSCRIPTEN__
@@ -28,6 +44,45 @@ namespace {
 using Object = QJsonObject;
 std::string json(const Object& object) { return QJsonDocument(object).toJson(QJsonDocument::Compact).toStdString(); }
 Object object(const std::string& text) { return QJsonDocument::fromJson(QByteArray::fromStdString(text)).object(); }
+
+void open_selected_regular(QFile& file, const QString& path) {
+#if defined(Q_OS_WIN)
+    const auto native = QDir::toNativeSeparators(path).toStdWString();
+    HANDLE handle = CreateFileW(native.c_str(), GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+        FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    if (handle == INVALID_HANDLE_VALUE) throw std::runtime_error("Selected file could not be opened");
+    BY_HANDLE_FILE_INFORMATION information{};
+    if (GetFileType(handle) != FILE_TYPE_DISK || !GetFileInformationByHandle(handle, &information) ||
+        (information.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT))) {
+        CloseHandle(handle); throw std::runtime_error("Select regular files directly, not folders, devices or links");
+    }
+    const int descriptor = _open_osfhandle(reinterpret_cast<intptr_t>(handle), _O_RDONLY | _O_BINARY);
+    if (descriptor < 0) { CloseHandle(handle); throw std::runtime_error("Selected file could not be opened"); }
+    if (!file.open(descriptor, QIODevice::ReadOnly | QIODevice::Unbuffered, QFileDevice::AutoCloseHandle)) {
+        _close(descriptor); throw std::runtime_error("Selected file could not be read");
+    }
+#else
+    const auto native = QFile::encodeName(path);
+    int flags = O_RDONLY | O_NONBLOCK;
+#ifdef O_CLOEXEC
+    flags |= O_CLOEXEC;
+#endif
+#ifdef O_NOFOLLOW
+    flags |= O_NOFOLLOW;
+#endif
+    const int descriptor = ::open(native.constData(), flags);
+    if (descriptor < 0) throw std::runtime_error("Selected file could not be opened");
+    struct stat information{};
+    if (::fstat(descriptor, &information) != 0 || !S_ISREG(information.st_mode)) {
+        ::close(descriptor); throw std::runtime_error("Select regular files directly, not folders, devices or links");
+    }
+    if (!file.open(descriptor, QIODevice::ReadOnly | QIODevice::Unbuffered, QFileDevice::AutoCloseHandle)) {
+        ::close(descriptor); throw std::runtime_error("Selected file could not be read");
+    }
+#endif
+}
+
 class Rows : public RowTableModel {
    public:
     Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr)
@@ -69,6 +124,19 @@ struct AssistantViewModel::State {
     QJsonArray history;
     Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history};
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
+    QJsonArray selected_rows;
+    Rows selected_files{{"id", "name", "bytes", "textReadable", "format"}, &owner, &selected_rows};
+    std::string selected_reply; // bounded descriptors only; canonical bytes belong solely to Controller
+    bool selected_rows_dirty = false, file_staging = false, file_authority_exhausted = false;
+    std::uint64_t file_epoch = 0, file_connection_epoch = 0;
+    struct FileSelection {
+        QString id, collection_id, next_collection_id, connection_id, native_status;
+        std::uint64_t owner_generation = 0, epoch = 0, connection_epoch = 0, selection_generation = 0;
+        edi::assistant::Controller* controller = nullptr;
+        ProjectViewModel* project = nullptr;
+        edi::assistant::Revision revision;
+    };
+    std::optional<FileSelection> file_selection;
     Object core, native, plan, question;
     QString model, effort, error;
     bool own_edit = false, auth_pending = false;
@@ -95,6 +163,135 @@ struct AssistantViewModel::State {
     const QString capacity_error = QObject::tr("Assistant history capacity is unavailable. Existing history and project state are preserved.");
     const QString storage_error = QObject::tr("Assistant history could not be saved. The pending outcome and project state are preserved; retry after storage is available.");
     const QString quarantine_error = QObject::tr("The complete assistant outcome is pending retention. Stop preserves it; retry retention or explicitly clear the conversation.");
+
+
+    void retire_file_selection() noexcept {
+        if (file_epoch == UINT64_MAX) file_authority_exhausted = true;
+        else ++file_epoch;
+        QString id;
+        if (file_selection) { id = std::move(file_selection->id); file_selection.reset(); }
+        // Authority is already gone before receiver cleanup can allocate or reenter.
+        if (!id.isEmpty()) try { emit owner.fileSelectionRetired(id); } catch (...) {}
+    }
+    Object file_context() const {
+        if (!controller) throw std::runtime_error("The assistant owner is unavailable");
+        const auto text = controller->context();
+        if (text.size() > edi::assistant::Limits::context_bytes) throw std::length_error("Selected-file context exceeds limit");
+        QJsonParseError parsing;
+        const auto document = QJsonDocument::fromJson(QByteArray::fromStdString(text), &parsing);
+        if (parsing.error != QJsonParseError::NoError || !document.isObject()) throw std::runtime_error("Selected-file context is unavailable");
+        const auto context = document.object();
+        if (context.contains("error") || !context.value("selected_files").isObject())
+            throw std::length_error("Selected-file context is unavailable within its limit");
+        return context.value("selected_files").toObject();
+    }
+    static std::uint64_t file_generation(const Object& descriptor) {
+        bool valid = false;
+        const auto value = descriptor.value("generation").toString().toULongLong(&valid);
+        if (!valid) throw std::runtime_error("Selected-file generation is unavailable");
+        return value;
+    }
+    Object file_native_state() const {
+#ifndef __EMSCRIPTEN__
+        return connection ? object(connection->state()) : Object{};
+#else
+        return {{"status", "disconnected"}};
+#endif
+    }
+    bool file_current(const FileSelection& scope) const {
+        if (!publishing || file_authority_exhausted || scope.epoch != file_epoch ||
+            scope.owner_generation != generation || scope.controller != controller.get() || scope.project != project ||
+            scope.connection_epoch != file_connection_epoch || !controller) return false;
+        const auto revision = controller->revision();
+        if (revision.project_id != scope.revision.project_id || revision.revision != scope.revision.revision) return false;
+        const auto current_native = file_native_state();
+        if (current_native.value("connection_id").toString() != scope.connection_id ||
+            current_native.value("status").toString() != scope.native_status) return false;
+        const auto descriptor = file_context();
+        return descriptor.value("collection_id").toString() == scope.collection_id &&
+            file_generation(descriptor) == scope.selection_generation;
+    }
+    bool flush_selected_rows() {
+        if (!selected_rows_dirty) return true;
+        try {
+            if (selected_reply.size() > edi::assistant::Limits::context_bytes) throw std::length_error("Selected-file descriptor exceeds limit");
+            QJsonParseError parsing;
+            const auto document = QJsonDocument::fromJson(QByteArray::fromStdString(selected_reply), &parsing);
+            if (parsing.error != QJsonParseError::NoError || !document.isObject() || !document.object().value("files").isArray())
+                throw std::runtime_error("Selected-file descriptor is unavailable");
+            const auto descriptor = document.object();
+            QJsonArray rows;
+            for (const auto& value : descriptor.value("files").toArray()) {
+                const auto file = value.toObject();
+                rows.append(Object{{"id", file.value("id")}, {"name", file.value("name")}, {"bytes", file.value("bytes")},
+                                   {"textReadable", file.value("text_readable")}, {"format", file.value("format")}});
+            }
+            selected_rows.swap(rows);
+            selected_files.assign(selected_rows);
+            selected_rows_dirty = false;
+            if (error == QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.")) error.clear();
+            return true;
+        } catch (...) {
+            error = QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.");
+            return false;
+        }
+    }
+    void observe_file_connection(const Object& incoming) {
+        if (incoming.value("type") != "connection") return;
+        const auto next = incoming.value("connection_id").toString();
+        if (next != connection_scope || incoming.value("status") != "ready") {
+            if (file_connection_epoch == UINT64_MAX) file_authority_exhausted = true;
+            else ++file_connection_epoch;
+            retire_file_selection(); consented_context.clear();
+        }
+    }
+    std::vector<edi::assistant::SelectedFile> read_selected_urls(const QList<QUrl>& urls, const Object& current) {
+        using Bounds = edi::assistant::SelectedFileLimits;
+        const auto old = current.value("files").toArray();
+        if (urls.size() > static_cast<qsizetype>(Bounds::files) ||
+            urls.size() > static_cast<qsizetype>(Bounds::files) - old.size())
+            throw std::length_error("Selected-file count exceeds limit");
+        std::uint64_t total = 0;
+        for (const auto& value : old) {
+            const auto n = value.toObject().value("bytes").toDouble(-1);
+            if (n < 0 || n > static_cast<double>(Bounds::collection_bytes) ||
+                static_cast<std::uint64_t>(n) > Bounds::collection_bytes - total)
+                throw std::length_error("Selected-file collection exceeds limit");
+            total += static_cast<std::uint64_t>(n);
+        }
+        std::vector<edi::assistant::SelectedFile> files;
+        files.reserve(static_cast<std::size_t>(urls.size()));
+        for (const auto& url : urls) {
+            if (!url.isLocalFile() || url.hasQuery() || url.hasFragment() || !QDir::isAbsolutePath(url.toLocalFile()))
+                throw std::runtime_error("Select local regular files using the file chooser or a file drop");
+            QFile file;
+            open_selected_regular(file, url.toLocalFile());
+            const auto size = file.size();
+            if (size < 0 || static_cast<std::uint64_t>(size) > Bounds::file_bytes ||
+                static_cast<std::uint64_t>(size) > Bounds::collection_bytes - total)
+                throw std::length_error("Selected-file byte limit exceeded");
+            edi::assistant::SelectedFile next;
+            next.id = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+            next.relative_name = QFileInfo(url.toLocalFile()).fileName().toUtf8().toStdString();
+            if (next.relative_name.size() > Bounds::name_bytes)
+                throw std::length_error("Selected-file name exceeds limit");
+            next.bytes.resize(static_cast<std::size_t>(size)); // declared size admitted before growth
+            std::size_t offset = 0;
+            while (offset < next.bytes.size()) {
+                const auto count = std::min<std::size_t>(Bounds::read_bytes, next.bytes.size() - offset);
+                const auto read = file.read(reinterpret_cast<char*>(next.bytes.data() + offset), static_cast<qint64>(count));
+                if (read <= 0) throw std::runtime_error("Selected file changed or could not be read");
+                offset += static_cast<std::size_t>(read);
+            }
+            char extra = 0;
+            const auto extra_count = file.read(&extra, 1); // fixed stack byte; no unadmitted vector growth
+            if (extra_count != 0 || file.error() != QFileDevice::NoError)
+                throw std::runtime_error("Selected file changed or could not be read");
+            total += next.bytes.size();
+            files.push_back(std::move(next));
+        }
+        return files;
+    }
 
     static Object public_row(const QString& kind, const QString& text, const Object& payload, const QString& status) {
         return {{"id", QUuid::createUuid().toString(QUuid::WithoutBraces)}, {"kind", kind},
@@ -287,7 +484,7 @@ struct AssistantViewModel::State {
         property("contextConsentRequired", owner.contextConsentRequired(), &AssistantViewModel::contextPreviewChanged);
     }
     ~State() {
-        publishing = false; timer.stop(); ++generation;
+        publishing = false; retire_file_selection(); timer.stop(); ++generation;
 #ifndef __EMSCRIPTEN__
         try { if (connection) connection->cancel(core.value("active_turn_id").toString().toStdString()); } catch (...) {}
 #endif
@@ -327,7 +524,9 @@ struct AssistantViewModel::State {
 #ifndef __EMSCRIPTEN__
         const auto sink = [this](const std::string& text) {
             const auto incoming_generation = generation;
-            const auto incoming = object(text);
+            Object incoming;
+            try { incoming = object(text); observe_file_connection(incoming); }
+            catch (...) { retire_file_selection(); throw; }
             // Snapshot native diagnostics at the exact terminal emission, not
             // after queued callbacks can change the connection's last error.
             QString emitted_code;
@@ -377,6 +576,7 @@ struct AssistantViewModel::State {
             try {
                 if (controller) controller->poll();
                 if (render_dirty) { messages.assign(history); render_dirty = false; }
+                if (selected_rows_dirty) (void)flush_selected_rows();
                 sync();
             } catch (...) { error = storage_error; render_dirty = true; }
         });
@@ -572,6 +772,7 @@ struct AssistantViewModel::State {
         return reply;
     }
     void bind(ProjectViewModel* next) {
+        retire_file_selection();
 #ifndef __EMSCRIPTEN__
         if (controller && connection) connection->cancel(core.value("active_turn_id").toString().toStdString());
 #endif
@@ -582,6 +783,7 @@ struct AssistantViewModel::State {
             QObject::disconnect(project->fit(), nullptr, &owner, nullptr);
         }
         controller.reset(); retentions.clear(); failure_slot.reset(); queued_request.clear();
+        selected_reply.clear(); selected_rows = {}; selected_files.assign(selected_rows); selected_rows_dirty = false;
         project = next; plan = {}; question = {};
         edi::assistant::Hooks hooks;
         hooks.reserve_terminal = [this](const std::string& input) { return reserve(input); };
@@ -632,9 +834,9 @@ struct AssistantViewModel::State {
         if (project) {
             controller->attach(project->assistantProject(), QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString());
             QObject::connect(project, &ProjectViewModel::projectEdited, &owner, [this] {
-                if (controller && !own_edit) { controller->notify_changed(); plan = {}; question = {}; sync(); }
+                if (controller && !own_edit) { retire_file_selection(); controller->notify_changed(); plan = {}; question = {}; sync(); }
             });
-            QObject::connect(project->fit(), &FitViewModel::finished, &owner, [this] { if (controller) controller->notify_changed(); });
+            QObject::connect(project->fit(), &FitViewModel::finished, &owner, [this] { retire_file_selection(); if (controller) controller->notify_changed(); });
         }
 #ifndef __EMSCRIPTEN__
         const auto state = object(connection->state());
@@ -670,10 +872,11 @@ QStringList AssistantViewModel::availableEfforts() const {
     return {};
 }
 RowTableModel* AssistantViewModel::messages() const { return &state_->messages; }
+RowTableModel* AssistantViewModel::selectedFiles() const { return &state_->selected_files; }
 QVariantMap AssistantViewModel::pendingPlan() const { return state_->plan.toVariantMap(); }
 QVariantMap AssistantViewModel::pendingQuestion() const { return state_->question.toVariantMap(); }
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
-bool AssistantViewModel::canCancel() const { return state_->auth_pending || state_->core.value("can_cancel").toBool(); }
+bool AssistantViewModel::canCancel() const { return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
 QString AssistantViewModel::lastError() const { return state_->error; }
 QString AssistantViewModel::contextPreview() const { return state_->controller ? QString::fromStdString(state_->controller->context()) : QString(); }
 bool AssistantViewModel::contextConsentRequired() const {
@@ -707,6 +910,7 @@ void AssistantViewModel::send(const QString& text) {
             static_cast<std::uint64_t>(text.toUtf8().size()) > State::Limits::message_bytes) {
             state_->error = state_->capacity_error; state_->notify(); return;
         }
+        if (state_->selected_rows_dirty && !state_->flush_selected_rows()) { state_->notify(); return; }
         if (canCancel()) { state_->error = tr("Stop the active operation before sending another message."); state_->notify(); return; }
         if (contextConsentRequired()) { state_->error = tr("Inspect and approve the outgoing project context before sending."); state_->notify(); return; }
         if (!state_->flush_failure() || !state_->reserve_failure()) { state_->notify(); return; }
@@ -752,6 +956,7 @@ void AssistantViewModel::approvePlan(const QString& id) {
 }
 void AssistantViewModel::answerQuestion(const QString& id, const QString& answer) { state_->command({{"type", "answer"}, {"question_id", id}, {"answer", answer}}); }
 void AssistantViewModel::cancel() {
+    state_->retire_file_selection();
     state_->queued_request.clear(); // retire not-yet-dispatched work before any callback
 #ifndef __EMSCRIPTEN__
     if (state_->auth_pending) {
@@ -778,6 +983,7 @@ void AssistantViewModel::signIn() {
     state_->sync(); state_->notify();
 }
 void AssistantViewModel::signOut() {
+    state_->retire_file_selection(); state_->consented_context.clear();
     state_->queued_request.clear(); state_->auth_pending = false;
 #ifndef __EMSCRIPTEN__
     state_->connection->sign_out();
@@ -798,6 +1004,103 @@ void AssistantViewModel::clearHistory() {
         } else state_->error.clear();
         state_->sync();
     } catch (...) { state_->error = state_->storage_error; (void)state_->queue_render(); }
+}
+
+QString AssistantViewModel::beginFileSelection() {
+    if (QThread::currentThread() != thread()) return {};
+#ifdef __EMSCRIPTEN__
+    state_->error = tr("File selection is unavailable until the browser transfer is implemented."); state_->notify(); return {};
+#else
+    try {
+        if (!state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
+            throw std::runtime_error("The selected-file owner is unavailable");
+        if (state_->auth_pending || (state_->project && state_->project->fit()->running()))
+            throw std::runtime_error("Finish the active operation before selecting files");
+        if (!state_->flush_selected_rows()) { state_->notify(); return {}; }
+        const auto descriptor = state_->file_context();
+        const auto native = state_->file_native_state();
+        State::FileSelection scope;
+        scope.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        scope.collection_id = descriptor.value("collection_id").toString();
+        scope.next_collection_id = scope.collection_id.isEmpty() ? QUuid::createUuid().toString(QUuid::WithoutBraces) : scope.collection_id;
+        scope.selection_generation = State::file_generation(descriptor);
+        scope.owner_generation = state_->generation; scope.controller = state_->controller.get(); scope.project = state_->project;
+        scope.revision = state_->controller->revision(); scope.epoch = state_->file_epoch + 1;
+        scope.connection_epoch = state_->file_connection_epoch;
+        scope.connection_id = native.value("connection_id").toString(); scope.native_status = native.value("status").toString();
+        // The existing core door supplies the one policy decision, with an empty no-op that cannot alter bytes.
+        const auto check = state_->controller->update_selected_files(scope.next_collection_id.toStdString(), scope.selection_generation, {}, {});
+        if (!check.ok) { state_->error = State::bounded_error(object(check.value).value("message").toString()); state_->notify(); return {}; }
+        const auto id = scope.id;
+        state_->retire_file_selection();
+        // A reentrant retirement receiver cannot be overwritten by the outer prepared begin.
+        if (scope.epoch != state_->file_epoch || state_->file_selection || scope.owner_generation != state_->generation) return {};
+        state_->file_selection.emplace(std::move(scope));
+        state_->error.clear();
+        try { state_->notify(); } catch (...) {} // a committed capability still returns its actual ID
+        return id;
+    } catch (...) { state_->error = tr("File selection could not be prepared. Existing files are preserved."); try { state_->notify(); } catch (...) {} return {}; }
+#endif
+}
+bool AssistantViewModel::addSelectedFiles(const QString& requestId, const QList<QUrl>& urls) {
+    if (QThread::currentThread() != thread() || !state_->file_selection || state_->file_selection->id != requestId) return false;
+    bool admitted = false;
+    const auto owner_at_entry = state_->generation, epoch_at_entry = state_->file_epoch;
+    try {
+        if (!state_->file_current(*state_->file_selection)) { state_->retire_file_selection(); return false; }
+        auto scope = std::move(*state_->file_selection); state_->file_selection.reset();
+        state_->file_staging = true; // consumed once, but Stop/rebind can still retire its epoch
+        try {
+            if (urls.isEmpty()) throw std::runtime_error("No files were selected");
+            if (state_->project && state_->project->fit()->running()) throw std::runtime_error("Finish the active operation before selecting files");
+            auto files = state_->read_selected_urls(urls, state_->file_context());
+            if (!state_->file_current(scope)) throw std::runtime_error("The selected-file owner changed");
+            auto result = state_->controller->update_selected_files(scope.next_collection_id.toStdString(), scope.selection_generation, std::move(files), {});
+            admitted = result.ok;
+            if (admitted) {
+                state_->selected_reply = std::move(result.value); // noexcept transfer of the core-prepared descriptor
+                state_->selected_rows_dirty = true;
+                state_->consented_context.clear(); state_->error.clear();
+                (void)state_->flush_selected_rows();
+            } else state_->error = State::bounded_error(object(result.value).value("message").toString());
+        } catch (const std::exception& error) { state_->error = State::bounded_error(QString::fromUtf8(error.what())); }
+        catch (...) { state_->error = tr("Selected files could not be retained. Existing files are preserved."); }
+        state_->file_staging = false;
+        // All staging has ended before temporary chooser/transport ownership may be released.
+        try { emit fileSelectionRetired(requestId); } catch (...) {}
+        try { state_->notify(); } catch (...) {}
+        return admitted; // actual admission, including a recoverable post-admission presentation failure
+    } catch (...) {
+        if (state_->generation != owner_at_entry || state_->file_epoch != epoch_at_entry ||
+            (state_->file_selection && state_->file_selection->id != requestId)) return admitted;
+        state_->file_staging = false;
+        if (state_->file_selection && state_->file_selection->id == requestId) state_->retire_file_selection();
+        state_->error = tr("Selected files could not be retained. Inspect the file list before retrying.");
+        try { state_->notify(); } catch (...) {}
+        return admitted;
+    }
+}
+void AssistantViewModel::cancelFileSelection(const QString& requestId) {
+    if (QThread::currentThread() != thread() || !state_->file_selection || state_->file_selection->id != requestId) return;
+    state_->retire_file_selection(); state_->notify();
+}
+bool AssistantViewModel::removeSelectedFile(const QString& id) {
+    if (QThread::currentThread() != thread() || !state_->publishing) return false;
+    bool admitted = false;
+    try {
+        if (state_->file_selection || state_->file_staging || state_->auth_pending ||
+            (state_->project && state_->project->fit()->running())) throw std::runtime_error("Finish the active operation before changing files");
+        if (!state_->flush_selected_rows()) { state_->notify(); return false; }
+        const auto current = state_->file_context();
+        auto result = state_->controller->update_selected_files(current.value("collection_id").toString().toStdString(), State::file_generation(current), {}, {id.toStdString()});
+        admitted = result.ok;
+        if (admitted) {
+            state_->selected_reply = std::move(result.value); state_->selected_rows_dirty = true;
+            state_->consented_context.clear(); state_->error.clear(); (void)state_->flush_selected_rows();
+        } else state_->error = State::bounded_error(object(result.value).value("message").toString());
+        state_->notify();
+    } catch (...) { state_->error = tr("Selected file could not be removed. Inspect the retained file list before retrying."); try { state_->notify(); } catch (...) {} }
+    return admitted;
 }
 
 }  // namespace edi_app

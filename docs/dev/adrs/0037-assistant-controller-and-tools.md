@@ -159,3 +159,21 @@ a truthful nonexecuting disconnected state. Unchanged-ready/malformed input rema
 detach does not require a new conversation identity to retire its owner; a later message prepares one
 transactionally. A proposed new project attachment may prepare its identity before committing retirement,
 so rejected new-owner preparation preserves the existing owner. No old request or outcome is retagged.
+
+
+## Human-selected immutable input and bounded reads
+
+The existing Controller owns one bounded selected-byte collection. Its trusted update door validates
+identity/generation, names/counts/raw bytes and the full prospective context/reply/storage before
+no-throw moves commit the batch; refusal preserves prior collection and scientific state. No active
+turn/fit/question/approved plan/terminal ownership is cancelled to make room. Explicit project owner
+replacement retires the collection; automatic connection retirement keeps local bytes but invalidates
+outgoing disclosure through the existing account/conversation lifecycle. Hosts must retire pending
+chooser authority independently, using the approved initiating capability contract.
+
+A request exposes only bounded descriptors; read_selected_file returns exact strict UTF-8 ranges with
+collection/generation and original tool correlation. GPX/binary input stays unsupported rather than
+executed. No path argument, provider upload, scientific converter or project mutation is introduced.
+Existing full tool/result/history reservations apply to escaped read outcomes. Native/browser chooser,
+pre-growth transfer and actual consent are separate required host implementation/qualification work;
+this core preparation alone does not establish a functional add-files UI.

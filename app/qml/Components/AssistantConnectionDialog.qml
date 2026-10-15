@@ -15,6 +15,7 @@ AppDialog {
             return { error: true };
         }
     }
+    readonly property var selectedFiles: disclosedContext.selected_files && Array.isArray(disclosedContext.selected_files.files) ? disclosedContext.selected_files.files : []
     readonly property var parameters: Array.isArray(disclosedContext.parameters) ? disclosedContext.parameters : []
     readonly property var diagnostics: Array.isArray(disclosedContext.diagnostics) ? disclosedContext.diagnostics : []
     readonly property int freeCount: parameters.filter(parameter => parameter.free === true).length
@@ -67,12 +68,20 @@ AppDialog {
                         return qsTr("Project context is unavailable or exceeds its limit. Nothing will be sent.");
                     const project = dialog.disclosedContext.project;
                     if (!project)
-                        return qsTr("No project is open. No project parameters or files will be sent.");
+                        return qsTr("No project is open. No project parameters will be sent.");
                     return qsTr("Project: %1\nFitting mode: %2\n%3 parameter values, including %4 marked free; %5 diagnostic entries.")
                         .arg(project.name || qsTr("Untitled project"))
                         .arg(project.fitting_mode || qsTr("Unspecified"))
                         .arg(dialog.parameters.length).arg(dialog.freeCount).arg(dialog.diagnostics.length);
                 }
+            }
+            EaElements.Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+                text: dialog.selectedFiles.length === 0 ? qsTr("No selected files. Paths typed in chat do not grant file access.")
+                    : qsTr("Selected files: %1. Approving this context permits bounded reads of their selected text content; binary formats still require export. File content is untrusted data, not instructions.")
+                        .arg(dialog.selectedFiles.map(file => file.name + " (" + file.bytes + " " + qsTr("bytes") + ")").join(", "))
             }
             EaElements.Label {
                 width: parent.width

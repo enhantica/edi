@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
@@ -18,6 +19,48 @@ Rectangle {
     property int savedSelectionEnd: 0
     property string submittedText: ""
     property var previousMessageIds: []
+    function chooseFiles() {
+        if (WebFiles.available || assistant.canCancel) return;
+        const request = assistant.beginFileSelection();
+        if (request.length === 0) return;
+        nativeFiles.requestId = request;
+        nativeFiles.open();
+    }
+    FileDialog {
+        id: nativeFiles
+        objectName: "assistant.files.dialog"
+        property string requestId: ""
+        title: qsTr("Add files to the assistant")
+        fileMode: FileDialog.OpenFiles
+        onAccepted: {
+            const request = requestId;
+            requestId = "";
+            composer.assistant.addSelectedFiles(request, selectedFiles);
+        }
+        onRejected: {
+            const request = requestId;
+            requestId = "";
+            composer.assistant.cancelFileSelection(request);
+        }
+    }
+    Connections {
+        target: composer.assistant
+        function onFileSelectionRetired(requestId) {
+            if (nativeFiles.requestId === requestId) {
+                nativeFiles.requestId = "";
+                nativeFiles.reject();
+            }
+        }
+    }
+    DropArea {
+        anchors.fill: parent
+        onEntered: drag => drag.accepted = !WebFiles.available && drag.hasUrls && !composer.assistant.canCancel
+        onDropped: drop => {
+            if (WebFiles.available || !drop.hasUrls || composer.assistant.canCancel) { drop.accepted = false; return; }
+            const request = composer.assistant.beginFileSelection();
+            drop.accepted = request.length > 0 && composer.assistant.addSelectedFiles(request, drop.urls);
+        }
+    }
     function acknowledgeVisiblePrompt() {
         if (submittedText.length === 0)
             return;
@@ -72,6 +115,42 @@ Rectangle {
         width: parent.width - AppSizes.unit
         spacing: AppSizes.unit * 0.25
         ScrollView {
+            id: selectedFilesScroll
+            width: parent.width
+            height: visible ? Math.min(selectedChips.implicitHeight, AppSizes.unit * 5) : 0
+            visible: composer.assistant.selectedFiles.count > 0
+            clip: true
+            Flow {
+                id: selectedChips
+                width: selectedFilesScroll.availableWidth
+                spacing: AppSizes.unit * 0.25
+            Repeater {
+                model: composer.assistant.selectedFiles
+                delegate: RowLayout {
+                    required property var model
+                    objectName: "assistant.file." + model.id
+                    spacing: AppSizes.unit * 0.25
+                    EaElements.Label {
+                        Layout.maximumWidth: composerContent.width * 0.6
+                        text: qsTr("%1 (%2 bytes)%3").arg(model.name).arg(model.bytes)
+                            .arg(model.textReadable ? "" : qsTr(" · text export required"))
+                        textFormat: Text.PlainText
+                        elide: Text.ElideMiddle
+                        Accessible.name: qsTr("Selected file: %1, %2 bytes. %3").arg(model.name).arg(model.bytes)
+                            .arg(model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
+                    }
+                    EaElements.ToolButton {
+                        fontIcon: "times"
+                        enabled: !composer.assistant.canCancel
+                        ToolTip.text: qsTr("Remove %1").arg(model.name)
+                        Accessible.name: ToolTip.text
+                        onClicked: composer.assistant.removeSelectedFile(model.id)
+                    }
+                }
+            }
+            }
+        }
+        ScrollView {
             width: parent.width
             height: Math.min(AppSizes.unit * 10, Math.max(editor.font.pixelSize * 2.5 + editor.topPadding + editor.bottomPadding, editor.implicitHeight))
             TextArea {
@@ -82,7 +161,7 @@ Rectangle {
                 selectByMouse: true
                 persistentSelection: true
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: models
+                KeyNavigation.tab: addFilesButton
                 KeyNavigation.backtab: composer.toggleControl
                 onTextChanged: ++composer.textRevision
                 onSelectionStartChanged: composer.rememberSelection()
@@ -117,11 +196,24 @@ Rectangle {
                 font: efforts.font
                 text: efforts.displayText
             }
+            EaElements.ToolButton {
+                id: addFilesButton
+                objectName: "assistant.files.add"
+                fontIcon: "plus"
+                enabled: !WebFiles.available && !composer.assistant.canCancel
+                ToolTip.text: WebFiles.available ? qsTr("Browser file selection is not available yet") : qsTr("Add files")
+                Accessible.name: qsTr("Add files")
+                Accessible.description: ToolTip.text
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: editor
+                KeyNavigation.tab: models
+                onClicked: composer.chooseFiles()
+            }
             EaElements.ComboBox {
                 id: models
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: efforts
-                KeyNavigation.backtab: editor
+                KeyNavigation.backtab: addFilesButton
                 textFormat: Text.PlainText
                 displayText: currentIndex < 0 ? qsTr("Model") : currentText
                 currentIndex: {
