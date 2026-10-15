@@ -149,14 +149,15 @@ Rectangle {
             clip: true
             Flow {
                 id: selectedChips
-                width: selectedFilesScroll.availableWidth
+                x: editor.leftPadding
+                width: Math.max(0, selectedFilesScroll.availableWidth - editor.leftPadding - editor.rightPadding)
                 spacing: AppSizes.unit * 0.75
             Repeater {
                 model: composer.assistant.selectedFiles
                 delegate: RowLayout {
                     required property var model
                     objectName: "assistant.file." + model.id
-                    spacing: AppSizes.unit * 0.25
+                    spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.maximumWidth: composerContent.width * 0.6
                         text: qsTr("%1 (%2 bytes)%3").arg(model.name).arg(model.bytes)
@@ -167,11 +168,20 @@ Rectangle {
                             .arg(model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
                     }
                     EaElements.ToolButton {
+                        id: removeFileButton
                         fontIcon: "times"
                         implicitWidth: composer.actionSize
                         implicitHeight: composer.actionSize
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
                         showBackground: false
+                        contentItem: EaElements.Label {
+                            text: removeFileButton.fontIcon
+                            font.family: EaStyle.Fonts.iconsFamily
+                            font.pixelSize: removeFileButton.font.pixelSize * 1.25
+                            color: removeFileButton.foregroundColor()
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                        }
                         enabled: !composer.assistant.canCancel
                         ToolTip.text: qsTr("Remove %1").arg(model.name)
                         Accessible.name: ToolTip.text

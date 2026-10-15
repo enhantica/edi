@@ -403,7 +403,7 @@ Popup {
                             anchors.centerIn: parent
                             source: workStatus.branded ? "../../resources/logo/AssistantWorking.svg" : "../../resources/logo/AssistantSpinner.svg"
                             sourceSize: Qt.size(width, height)
-                            color: EaStyle.Colors.themeForegroundMinor
+                            color: EaStyle.Colors.themeAccent
                             fillMode: Image.PreserveAspectFit
                             Accessible.ignored: true
                         }
