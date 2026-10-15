@@ -62,3 +62,9 @@ Sign in with ChatGPT and Approve context name the existing actions explicitly; u
 remains PlainText. A typed local path is text, not file access: the chooser/drop handle/import unit remains
 unimplemented, so no decorative attachment control claims that capability. These QML changes need actual
 production visual/interaction verification; source syntax checks are not that evidence.
+
+The consent action label follows the current connected role while open as well as on opening. The
+local dialog bounds its width and complete disclosure viewport to the overlay, preserving the themed
+header and ordinary standard-button footer outside the scrolling content. Summary and exact technical
+context are retained in full and literal text; scrolling changes presentation only. Actual narrow/short,
+long-project-name, technical-details and mid-dialog connection-transition exercises remain required.
