@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <vector>
 #include "assistant_json.hpp"
 
 namespace edi::assistant {
@@ -64,7 +65,7 @@ struct OpenAiStream::State {
         std::uint64_t index = 0;
         std::map<std::uint64_t, Part> parts;
     };
-    struct Call { std::string id, name, arguments; bool emitted = false, deltas = false; };
+    struct Call { std::string id, name, arguments; bool arguments_done = false, deltas = false; };
     std::map<std::string, Item> items;
     std::map<std::string, Call> calls;
     std::map<std::uint64_t, std::string> positions;
@@ -103,19 +104,25 @@ struct OpenAiStream::State {
     }
     void tool(Call& call, const std::string& arguments) {
         const auto args = parse(arguments); args.object("arguments");
-        if (call.emitted) {
+        if (call.arguments_done) {
             if (json::write(canonical(parse(call.arguments))) != json::write(canonical(args))) refuse("invalid_argument", "Conflicting completed tool arguments");
             return;
         }
         if (call.deltas && json::write(canonical(parse(call.arguments))) != json::write(canonical(args)))
             refuse("invalid_argument", "Completed tool arguments contradict their deltas");
         if (call.id.empty() || call.name.empty()) refuse("invalid_argument", "Incomplete tool identity");
+        // Argument finalization is preparation, never execution authority.
+        // Both item.done and arguments.done wait for the entire successful group.
+        call.arguments = arguments; call.arguments_done = true; retained();
+    }
+    void publish_tool(const Call& call) {
+        const auto args = parse(call.arguments);
         O domain, event{{"type", "tool_call"}, {"call_id", call.id}, {"name", call.name}};
         for (const auto& [key, value] : args.object("arguments")) {
             if (key == "plan_id") event.emplace_back(key, value); else domain.emplace_back(key, value);
         }
         event.emplace_back("arguments", std::move(domain));
-        call.arguments = arguments; call.emitted = true; retained(); emit(std::move(event));
+        emit(std::move(event));
     }
     std::uint64_t index(const J& event, const char* key) const {
         const auto value = number(event, key);
@@ -175,6 +182,17 @@ struct OpenAiStream::State {
         completed_text(part, string(original, key, true));
         part.complete = original; part.part_done = true; retained();
     }
+    bool semantic_complete(const J& original) const {
+        const auto type = string(original, "type");
+        // Message status is required. Reasoning and function-call status are
+        // optional in their actual output-union schemas; absence remains absence.
+        if (!has(original, "status")) return type == "reasoning" || type == "function_call";
+        return string(original, "status") == "completed";
+    }
+    bool omittable(const Item& held) const {
+        const auto type = string(held.original, "type");
+        return held.done && (type == "message" || type == "reasoning") && semantic_complete(held.original);
+    }
     void item(const J& original, bool done, std::uint64_t output_index) {
         const auto id = identifier(original, "id"); const auto type = string(original, "type");
         const auto prior = items.find(id);
@@ -202,7 +220,7 @@ struct OpenAiStream::State {
                 for (const auto& entry : calls) if (entry.second.id == call_id) refuse("invalid_argument", "Provider call ID reused by another item");
                 calls.emplace(id, Call{call_id, name, {}});
             } else if (found->second.id != call_id || found->second.name != name) refuse("invalid_argument", "Provider tool identity changed");
-            if (done) tool(calls.at(id), string(original, "arguments", true));
+            if (done && semantic_complete(original)) tool(calls.at(id), string(original, "arguments", true));
         }
         // Live content identities start only through content_part.added.
         // A complete item snapshot may introduce completed parts without deltas.
@@ -227,22 +245,33 @@ struct OpenAiStream::State {
         const auto& output = response.at("output").array("output");
         if (output.size() > Limits::stream_items) refuse("resource_exhausted", "Terminal provider item count exceeds limit");
         std::set<std::string> membership;
+        std::set<std::uint64_t> resolved_positions;
+        std::vector<std::uint64_t> final_positions;
+        std::uint64_t previous_position = 0;
+        bool has_previous_position = false;
         for (std::uint64_t slot = 0; const auto& original : output) {
             const auto id = identifier(original, "id");
             if (!membership.insert(id).second) refuse("invalid_argument", "Terminal provider item ID is repeated");
             const auto prior = items.find(id);
-            if (prior != items.end() && prior->second.index != slot)
-                refuse("invalid_argument", "Terminal provider item changed output position");
-            const auto position = positions.find(slot++);
+            // A compact terminal summary's offset is not a replacement for a
+            // known original stream position. Unseen snapshots cannot steal one.
+            const auto resolved = prior == items.end() ? slot : prior->second.index;
+            const auto position = positions.find(resolved);
             if (position != positions.end() && position->second != id)
                 refuse("invalid_argument", "Terminal provider output replaced an existing item");
+            if (!resolved_positions.insert(resolved).second)
+                refuse("invalid_argument", "Terminal provider output repeats an original position");
+            if (has_previous_position && resolved <= previous_position)
+                refuse("invalid_argument", "Terminal provider original item order changed");
+            previous_position = resolved; has_previous_position = true;
+            final_positions.push_back(resolved); ++slot;
         }
         std::uint64_t omitted = 0, unfinished = 0;
         const char* first_kind = "other";
         const char* first_status = "absent_or_null";
         bool first_done = false;
         for (const auto& [id, held] : items) {
-            if (membership.contains(id)) continue;
+            if (membership.contains(id) || omittable(held)) continue;
             if (!held.done) ++unfinished;
             if (++omitted != 1) continue;
             // Structural diagnostics only. Never print an ID, arbitrary type or
@@ -262,7 +291,8 @@ struct OpenAiStream::State {
             ", retained=" + std::to_string(items.size()) + ", terminal=" + std::to_string(output.size()) +
             ", unfinished=" + std::to_string(unfinished) + ", first_kind=" + first_kind + ", first_status=" + first_status +
             ", wire_done=" + (first_done ? "yes" : "no") + ")");
-        for (std::uint64_t slot = 0; const auto& original : output) item(original, true, slot++);
+        std::size_t slot = 0;
+        for (const auto& original : output) item(original, true, final_positions.at(slot++));
     }
     void event() {
         if (record.empty()) return;
@@ -336,7 +366,7 @@ struct OpenAiStream::State {
             if ((has(message, "call_id") && identifier(message, "call_id") != call.id) || (has(message, "name") && identifier(message, "name") != call.name))
                 refuse("invalid_argument", "Tool argument identity changed");
             if (type.ends_with(".delta")) {
-                if (call.emitted) refuse("invalid_argument", "Arguments changed after completion");
+                if (call.arguments_done) refuse("invalid_argument", "Arguments changed after completion");
                 const auto delta = string(message, "delta", true);
                 if (delta.size() > Limits::message_bytes - call.arguments.size()) refuse("invalid_json", "Tool arguments exceed message limit");
                 call.arguments += delta; call.deltas = true; retained();
@@ -347,9 +377,22 @@ struct OpenAiStream::State {
             else if (type == "response.completed") refuse("invalid_argument", "Completed event has no response");
             if (type == "response.completed") {
                 if (string(message.at("response"), "status") != "completed") refuse("provider_error", "Completion has no completed response");
-                for (const auto& entry : calls) if (!entry.second.emitted) refuse("interrupted", "Incomplete function call at completion");
-                for (const auto& entry : items) if (!entry.second.done) refuse("interrupted", "Incomplete output item at completion");
+                for (const auto& entry : calls) if (!entry.second.arguments_done) refuse("interrupted", "Incomplete function call at completion");
+                for (const auto& entry : items) {
+                    if (!entry.second.done) refuse("interrupted", "Incomplete output item at completion");
+                    const auto kind = string(entry.second.original, "type");
+                    if ((kind == "message" || kind == "reasoning" || kind == "function_call") && !semantic_complete(entry.second.original))
+                        refuse("interrupted", "Provider output item is not semantically completed");
+                }
                 status = refused ? "failed" : "completed";
+                if (status == "completed") {
+                    // All originals, membership and semantic status passed before
+                    // either early normalized tool path can publish any call.
+                    for (const auto& [position, id] : positions) {
+                        (void)position;
+                        if (const auto found = calls.find(id); found != calls.end()) publish_tool(found->second);
+                    }
+                }
             } else if (type == "response.incomplete") status = "interrupted";
             terminal = true;
             emit({{"type", "turn_finished"}, {"status", status}, {"message", refused ? "The model refused the request." : (status == "completed" ? "" : "The provider response failed or was incomplete.")}});

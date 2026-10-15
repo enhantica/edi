@@ -138,3 +138,9 @@ A fully prepared first safe reply is published separately and survives later rep
 Fallback/reply construction can still throw under exhaustion, but cannot reopen the decoder, consume
 more wire or publish a successful terminal. No permanent-memory delivery guarantee, resource-category
 redesign or output/tool-policy change follows from this rejection fence.
+
+### Completed nonexecuting originals and final call authority
+
+Review50/owner prototype staging permits the existing active decoder to keep genuine finalized message/reasoning originals across an explicit compact or empty successful final output array. Known IDs retain their original positions/order; a compact offset cannot rebind them, and unseen terminal snapshots cannot steal positions. Message status remains required; the actual reasoning/function output-union status is optional, so absence stays absent only with genuine finalization/full call arguments and successful call membership. Explicit incomplete/in-progress/failed, null or wrong-type status never authorizes a completed known item. Partial or unknown originals cannot qualify for omission.
+
+Both item.done and arguments.done now prepare call arguments without publishing normalized tool calls. All successful terminal originals/membership/status checks must pass first, then calls publish in original output order. Omitted executable calls still refuse; failed/incomplete/refused groups publish no calls. Native continues to hold them until the physical successful HTTP finish, preserving trailing-data/status/error/cancel fences. Complete terminal-only snapshots remain supported; no SDK accumulator projection, new provider backend or live-cure claim follows. Existing caps, immutable duplicates, first safe failure and replay/retention policy remain.
