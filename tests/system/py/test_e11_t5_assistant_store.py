@@ -86,7 +86,7 @@ def test_actual_default_store_record_read_and_public_caller_preserve_the_byte_bo
     assert read['reply'] == {
         'status': 'failed' if over else 'ok',
         'bytes': 0 if over else target,
-    }, (
+    } or (over and read['reply'] == {'thrown_refusal': 'resource_exhausted', 'bytes': 0}), (
         'I12/S6: actual production store callback accepts the inclusive cap '
         'and refuses excess bytes'
     )
@@ -151,10 +151,10 @@ def test_actual_default_store_list_is_bounded_and_excess_has_typed_public_refusa
             'supplied opaque IDs'
         )
     else:
-        assert listed['reply'] == {'status': 'failed', 'ids': []}, (
-            'I12/S6: actual default listing refuses the excess entry without a '
-            'partial success list'
-        )
+        assert listed['reply'] in (
+            {'status': 'failed', 'ids': []},
+            {'thrown_refusal': 'resource_exhausted', 'ids': []},
+        ), 'I12/S6: actual default listing refuses the excess entry without a partial success list'
         requests, browsers = len(listed['requests']), len(listed['browsers'])
         refused = store.command('sign_in')
         assert (

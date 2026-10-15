@@ -1,4 +1,5 @@
 // Tests-owned isolated component over actual production Qt store callbacks.
+#include "../../../../core/src/assistant_json.hpp"
 #include "fixture_services.hpp"
 #include "connection_services.hpp"
 #include <QCryptographicHash>
@@ -47,10 +48,16 @@ int main(int argc,char** argv) {
     auto production=native::production_services();
     auto dependencies=fixture.dependencies;
     dependencies.read_record=[&](const native::RecordKey& record) {
-        const auto result=production.dependencies.read_record(record);
-        fixture.store_reads.push_back(Object{{"key",QString::fromStdString(key(record))},
-            {"bytes",static_cast<double>(result.bytes.size())},{"status",status(result.status)}});
-        return result;
+        try {
+            const auto result=production.dependencies.read_record(record);
+            fixture.store_reads.push_back(Object{{"key",QString::fromStdString(key(record))},
+                {"bytes",static_cast<double>(result.bytes.size())},{"status",status(result.status)}});
+            return result;
+        } catch(const edi::assistant::detail::Refusal& refused) {
+            fixture.store_reads.push_back(Object{{"key",QString::fromStdString(key(record))},
+                {"bytes",0},{"thrown_refusal",QString::fromStdString(refused.code)}});
+            throw;
+        }
     };
     dependencies.write_record=[&](const native::RecordKey& record,const QByteArray& bytes) {
         const auto result=production.dependencies.write_record(record,bytes);
@@ -107,12 +114,20 @@ int main(int argc,char** argv) {
             if(op=="store_put")install(input);
             else if(op=="store_put_batch")for(const auto& row:input["records"].toArray())install(row.toObject());
             else if(op=="store_read") {
-                const auto read=dependencies.read_record(record_key(input["key"].toString()));
-                result={{"status",status(read.status)},{"bytes",static_cast<double>(read.bytes.size())}};
+                try {
+                    const auto read=dependencies.read_record(record_key(input["key"].toString()));
+                    result={{"status",status(read.status)},{"bytes",static_cast<double>(read.bytes.size())}};
+                } catch(const edi::assistant::detail::Refusal& refused) {
+                    result={{"thrown_refusal",QString::fromStdString(refused.code)},{"bytes",0}};
+                }
             } else if(op=="store_list") {
-                const auto list=dependencies.list_registrations();Array ids;
-                for(const auto& id:list.ids)ids.push_back(QString::fromStdString(id));
-                result={{"status",status(list.status)},{"ids",ids}};
+                try {
+                    const auto list=dependencies.list_registrations();Array ids;
+                    for(const auto& id:list.ids)ids.push_back(QString::fromStdString(id));
+                    result={{"status",status(list.status)},{"ids",ids}};
+                } catch(const edi::assistant::detail::Refusal& refused) {
+                    result={{"thrown_refusal",QString::fromStdString(refused.code)},{"ids",Array{}}};
+                }
             } else if(op=="sign_in")result=reply(connection->sign_in());
             else if(op=="connect_saved")result=reply(connection->connect_saved(input["id"].toString().toStdString()));
             else if(op=="recreate") {
