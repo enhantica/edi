@@ -18,12 +18,13 @@ J bundled(const J& tools) {
     std::set<std::string> ids;
     for (const auto& entry : entries) {
         shape(entry, {"id", "version", "title", "summary", "path", "sha256", "requires", "capabilities", "references"});
-        const auto id = string(entry, "id"), version = string(entry, "version");
+        const auto& id = entry.at("id").string("id"); const auto& version = entry.at("version").string("version");
         if (id.size() > Limits::id_bytes || version.size() > Limits::id_bytes || !ids.insert(id).second)
             refuse("invalid_argument", "Invalid bundled skill identity");
-        (void)string(entry, "title"); (void)string(entry, "summary");
+        if (id.empty() || version.empty() || entry.at("title").string("title").empty() || entry.at("summary").string("summary").empty())
+            refuse("invalid_argument", "Empty bundled skill metadata");
         if (string(entry, "path") != id + "/SKILL.md") refuse("invalid_argument", "Invalid bundled skill package path");
-        const auto hash = string(entry, "sha256");
+        const auto& hash = entry.at("sha256").string("sha256");
         const auto resource = std::find_if(resources.begin(), resources.end(), [&](const auto& r) { return r.id == id; });
         if (resource == resources.end() || resource->sha256 != hash || resource->content.empty())
             refuse("invalid_argument", "Bundled skill content/hash mismatch");
@@ -50,25 +51,38 @@ const SkillResource& content_for(std::string_view id) {
     if (found == resources.end()) refuse("invalid_argument", "Unknown bundled workflow");
     return *found;
 }
-void append_bounded(A& rows, J row, std::uint64_t& used) {
-    const auto added = payload_size(row, Limits::context_bytes) + (rows.empty() ? 0 : 1);
-    if (added > Limits::context_bytes - used) refuse("resource_exhausted", "Bundled workflow catalog exceeds context capacity");
-    used += added; rows.push_back(std::move(row));
+void charge(std::uint64_t& used, std::uint64_t amount, std::uint64_t limit) {
+    if (used > limit || amount > limit - used) refuse("resource_exhausted", "Bundled workflow output exceeds context capacity");
+    used += amount;
+}
+std::uint64_t text_size(std::string_view text, std::uint64_t limit) {
+    try { return json::encoded_string_size(text, limit); }
+    catch (const std::length_error&) { refuse("resource_exhausted", "Bundled workflow text exceeds context capacity"); }
+}
+void member(std::uint64_t& used, std::string_view key, std::uint64_t value, std::uint64_t limit, bool comma) {
+    charge(used, text_size(key, limit) + 1 + (comma ? 1 : 0), limit); charge(used, value, limit);
 }
 }
-J skill_context(std::string_view selected, const J& tools) {
+J skill_context(std::string_view selected, const J& tools, std::uint64_t limit) {
     const auto index = bundled(tools);
     for (const auto& entry : index.at("skills").array("skills")) if (string(entry, "id") == selected) {
         const auto& resource = content_for(selected);
+        std::uint64_t used = 4; // complete one-row array plus object braces
+        member(used, "id", payload_size(entry.at("id"), limit), limit, false);
+        member(used, "version", payload_size(entry.at("version"), limit), limit, true);
+        member(used, "sha256", payload_size(entry.at("sha256"), limit), limit, true);
+        member(used, "content", text_size(resource.content, limit), limit, true);
         J row = O{{"id", string(entry, "id")}, {"version", string(entry, "version")},
                   {"sha256", string(entry, "sha256")}, {"content", std::string(resource.content)}};
-        bounded(row, Limits::context_bytes);
         return A{std::move(row)};
     }
     refuse("invalid_argument", "Unknown bundled workflow");
 }
 J skill_catalog(std::string_view selected, bool has_selected_files, const J& tools) {
     auto index = bundled(tools); A rows; std::uint64_t used = 2;
+    // The outer object/selected identity and complete array are charged first.
+    member(used, "selected_id", text_size(selected, Limits::context_bytes), Limits::context_bytes, false);
+    member(used, "skills", 2, Limits::context_bytes, true);
     bool found = false;
     for (const auto& entry : index.at("skills").array("skills")) {
         const auto id = string(entry, "id");
@@ -76,11 +90,18 @@ J skill_catalog(std::string_view selected, bool has_selected_files, const J& too
         bool available = true;
         for (const auto& prerequisite : entry.at("requires").array("requires"))
             if (prerequisite.string("requires") == "selected_files" && !has_selected_files) available = false;
+        const auto& content = content_for(id).content;
+        const std::string_view blocked = available ? "" : "Select the relevant files before this workflow can inspect them.";
+        auto row_size = payload_size(entry, Limits::context_bytes);
+        member(row_size, "content", text_size(content, Limits::context_bytes), Limits::context_bytes, true);
+        member(row_size, "available", available ? 4 : 5, Limits::context_bytes, true);
+        member(row_size, "blocked_reason", text_size(blocked, Limits::context_bytes), Limits::context_bytes, true);
+        charge(used, row_size + (rows.empty() ? 0 : 1), Limits::context_bytes);
         J row = entry;
-        set(row, "content", std::string(content_for(id).content));
+        set(row, "content", std::string(content));
         set(row, "available", available);
         set(row, "blocked_reason", available ? "" : "Select the relevant files before this workflow can inspect them.");
-        append_bounded(rows, std::move(row), used);
+        rows.push_back(std::move(row));
     }
     if (!found) refuse("invalid_argument", "Unknown bundled workflow");
     J result = O{{"selected_id", std::string(selected)}, {"skills", std::move(rows)}};

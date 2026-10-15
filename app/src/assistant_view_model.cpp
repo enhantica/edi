@@ -127,7 +127,7 @@ struct AssistantViewModel::State {
     Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history};
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
     Rows skills{{"id", "version", "title", "summary", "path", "sha256", "requires", "capabilities", "references", "content", "available", "blocked_reason"}, &owner};
-    QString selected_skill;
+    QString selected_skill, workflow_error;
     QByteArray skill_catalog_binding;
     QJsonArray selected_rows;
     Rows selected_files{{"id", "name", "bytes", "textReadable", "format"}, &owner, &selected_rows};
@@ -864,25 +864,31 @@ struct AssistantViewModel::State {
         }
     }
     void sync_skills() {
-        if (!controller) { skills.assign({}); selected_skill.clear(); skill_catalog_binding.clear(); return; }
-        // Canonical core context owns selection. Catalog bytes are immutable and
-        // availability depends only on the actual selected-file prerequisite.
-        const auto context = object(controller->context());
-        if (context.contains("error")) throw std::runtime_error("Workflow context is unavailable");
-        const auto selected = context.value("skills").toArray();
-        if (selected.size() != 1) throw std::runtime_error("Workflow selection is unavailable");
-        const auto id = selected.first().toObject().value("id").toString();
-        const bool files = !context.value("selected_files").toObject().value("files").toArray().isEmpty();
-        const auto binding = id.toUtf8() + (files ? ":files" : ":empty");
-        if (binding == skill_catalog_binding) return;
-        const auto reply = controller->user_command(json(Object{{"schema", "edi.assistant/1"}, {"type", "skill_catalog"}}));
-        if (!reply.ok || reply.value.size() > Limits::context_bytes) throw std::runtime_error("Workflow catalog is unavailable");
-        const auto catalog = object(reply.value);
-        const auto rows = catalog.value("skills").toArray();
-        if (catalog.value("selected_id").toString() != id || rows.size() > static_cast<qsizetype>(Limits::models))
-            throw std::runtime_error("Workflow catalog does not match current context");
-        skills.assign(rows);
-        selected_skill = id; skill_catalog_binding = binding;
+        try {
+            if (!controller) { skills.assign({}); selected_skill.clear(); skill_catalog_binding.clear(); workflow_error.clear(); return; }
+            // This bounded host door is independent of project-context size or
+            // scientific validity; it must remain usable for smaller-skill recovery.
+            const auto reply = controller->user_command(json(Object{{"schema", "edi.assistant/1"}, {"type", "skill_catalog"}}));
+            if (!reply.ok) {
+                workflow_error = bounded_error(object(reply.value).value("message").toString()); return;
+            }
+            if (reply.value.size() > Limits::context_bytes) throw std::length_error("Workflow catalog exceeds context capacity");
+            const auto catalog = object(reply.value);
+            if (!catalog.value("selected_id").isString() || !catalog.value("skills").isArray())
+                throw std::runtime_error("Workflow catalog is unavailable");
+            const auto id = catalog.value("selected_id").toString();
+            const auto rows = catalog.value("skills").toArray();
+            if (id.isEmpty() || rows.size() > static_cast<qsizetype>(Limits::models))
+                throw std::runtime_error("Workflow catalog exceeds its bounded model");
+            auto binding = id.toUtf8();
+            for (const auto& row : rows) binding.append(row.toObject().value("available").toBool() ? '1' : '0');
+            if (binding != skill_catalog_binding) { skills.assign(rows); selected_skill = id; skill_catalog_binding = binding; }
+            workflow_error.clear();
+        } catch (...) {
+            // A normal assistant-capacity/catalog refusal cannot unwind manual
+            // Session project replacement or prevent other state synchronization.
+            workflow_error = QObject::tr("Workflow guidance is unavailable within the assistant limits.");
+        }
     }
     void sync() {
         const Object next_core = controller ? object(controller->state()) : Object{};
@@ -1028,7 +1034,7 @@ QVariantMap AssistantViewModel::pendingPlan() const { return state_->plan.toVari
 QVariantMap AssistantViewModel::pendingQuestion() const { return state_->question.toVariantMap(); }
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
 bool AssistantViewModel::canCancel() const { return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
-QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : state_->preference_error; }
+QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : state_->preference_error; }
 QString AssistantViewModel::contextPreview() const { return state_->controller ? QString::fromStdString(state_->controller->context()) : QString(); }
 bool AssistantViewModel::contextConsentRequired() const {
     return !state_->controller || QJsonDocument(object(state_->controller->context())).toJson(QJsonDocument::Compact) != state_->consented_context;

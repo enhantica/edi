@@ -52,17 +52,121 @@ J parameters(Project& project) {
     }
     return rows;
 }
-// Original model metadata only; no calculation, guessing, data arrays or repair.
+// Exact borrowed-value admission through the existing JSON writer's byte rules.
+std::uint64_t encoded_text(std::string_view text, bool identity = false) {
+    if ((identity && text.size() > Limits::id_bytes) || !utf8(text))
+        refuse(identity && text.size() > Limits::id_bytes ? "resource_exhausted" : "invalid_argument", "Invalid or oversized project metadata text");
+    try { return json::encoded_string_size(text, Limits::context_bytes); }
+    catch (const std::length_error&) { refuse("resource_exhausted", "Project metadata text exceeds context capacity"); }
+}
+std::uint64_t encoded_fields(std::initializer_list<std::pair<std::string_view, std::uint64_t>> fields) {
+    std::uint64_t total = 2;
+    bool comma = false;
+    for (const auto& [key, value] : fields) {
+        const auto prefix = encoded_text(key) + 1 + (comma ? 1 : 0);
+        if (prefix > Limits::context_bytes - total || value > Limits::context_bytes - total - prefix)
+            refuse("resource_exhausted", "Project metadata object exceeds context capacity");
+        total += prefix + value; comma = true;
+    }
+    return total;
+}
+template<class Range, class Size>
+std::uint64_t encoded_rows(const Range& rows, Size size) {
+    std::uint64_t total = 2;
+    bool comma = false;
+    for (const auto& row : rows) {
+        const auto value = size(row);
+        const std::uint64_t prefix = comma ? 1 : 0;
+        if (prefix > Limits::context_bytes - total || value > Limits::context_bytes - total - prefix)
+            refuse("resource_exhausted", "Project metadata array exceeds context capacity");
+        total += prefix + value; comma = true;
+    }
+    return total;
+}
+std::uint64_t encoded_finite(double value) {
+    if (!std::isfinite(value)) refuse("invalid_argument", "Project metadata contains a nonfinite scientific value");
+    return payload_size(J(value), Limits::context_bytes);
+}
+std::uint64_t encoded_optional(const std::optional<double>& value) { return value ? encoded_finite(*value) : 4; }
+std::string_view metadata_key(const ItemKey& value, std::string_view fallback) {
+    const auto& raw = value.value();
+    (void)encoded_text(raw, true);
+    return raw.empty() ? fallback : std::string_view(raw);
+}
+
+std::uint64_t project_metadata_size(const Project* project) {
+    if (!project) return encoded_fields({{"structures", 2}, {"datasets", 2},
+        {"relations", encoded_fields({{"aliases", 2}, {"constraints", 2}})}});
+    const auto structures = encoded_rows(project->structures, [](const auto& structure) {
+        const auto sites = encoded_rows(structure->atom_sites, [](const auto& site) {
+            return encoded_fields({{"id", encoded_text(site->id.value(), true)}, {"type_symbol", encoded_text(site->type_symbol.value())},
+                {"wyckoff", encoded_text(site->wyckoff_letter.value())}, {"adp_type", encoded_text(site->adp_type.value())}});
+        });
+        const auto anisotropic = encoded_rows(structure->atom_site_aniso, [](const auto& site) { return encoded_text(site->id.value(), true); });
+        const auto& sg = structure->space_group;
+        return encoded_fields({{"id", encoded_text(metadata_key(structure->name, "structure"), true)},
+            {"space_group", encoded_fields({{"hm", encoded_text(sg.name_h_m.value())}, {"setting", encoded_text(sg.coord_system_code.value())},
+                {"it_number", sg.it_number ? payload_size(J(*sg.it_number)) : 4}})},
+            {"sites", sites}, {"anisotropic_site_ids", anisotropic}});
+    });
+    const auto datasets = encoded_rows(project->experiments, [](const auto& experiment) {
+        const auto exclusions = encoded_rows(experiment->excluded_regions, [](const auto& region) {
+            return encoded_fields({{"id", encoded_text(region->id.value(), true)}, {"first", encoded_finite(region->first.get())}, {"second", encoded_finite(region->second.get())}});
+        });
+        const auto phases = encoded_rows(experiment->linked_structures, [](const auto& phase) {
+            return encoded_fields({{"structure_id", encoded_text(metadata_key(phase->structure_id, "structure"), true)}, {"enabled", phase->enabled.get() ? 4 : 5}});
+        });
+        std::uint64_t axis_size = 4, intensity_count = 0, sigma_count = 0;
+        std::string_view data_status = "absent", weighting = "unavailable";
+        if (experiment->data) {
+            const auto& data = *experiment->data;
+            const auto& theta = data.two_theta.get(); const auto& tof = data.time_of_flight.get();
+            intensity_count = data.intensity_meas.get().size(); sigma_count = data.intensity_meas_su.get().size();
+            data_status = "invalid";
+            if (bool(theta) != bool(tof)) {
+                const auto& values = theta ? *theta : *tof;
+                bool valid = true;
+                for (const auto value : values) valid = valid && std::isfinite(value);
+                for (const auto value : data.intensity_meas.get()) valid = valid && std::isfinite(value);
+                bool usable_su = sigma_count == values.size() && sigma_count != 0;
+                for (const auto value : data.intensity_meas_su.get()) usable_su = usable_su && std::isfinite(value) && value > 0;
+                const bool measured = intensity_count == values.size() && (sigma_count == 0 || usable_su);
+                const bool mode_matches = bool(theta) == (experiment->effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH);
+                const bool observations_valid = experiment->calculation_only ? intensity_count == 0 && sigma_count == 0 : measured;
+                if (valid && mode_matches && observations_valid) data_status = "present";
+                if (valid) {
+                    const auto bounds = std::minmax_element(values.begin(), values.end());
+                    axis_size = encoded_fields({{"kind", encoded_text(theta ? "two_theta" : "time_of_flight")}, {"unit", encoded_text(theta ? "degrees" : "µs")},
+                        {"count", payload_size(J(static_cast<double>(values.size())))}, {"min", values.empty() ? 4 : encoded_finite(*bounds.first)},
+                        {"max", values.empty() ? 4 : encoded_finite(*bounds.second)}});
+                }
+                if (valid && mode_matches && observations_valid && !experiment->calculation_only && usable_su) weighting = "measured_standard_uncertainty";
+            }
+        }
+        return encoded_fields({{"id", encoded_text(metadata_key(experiment->name, "experiment"), true)},
+            {"beam_mode", encoded_text(token(experiment->effective_beam_mode()))}, {"probe", encoded_text(token(experiment->experiment_type.effective_radiation_probe()))},
+            {"calculation_only", experiment->calculation_only ? 4 : 5}, {"data_status", encoded_text(data_status)}, {"axis", axis_size},
+            {"observations", encoded_fields({{"intensity_count", payload_size(J(static_cast<double>(intensity_count)))},
+                {"sigma_count", payload_size(J(static_cast<double>(sigma_count)))}, {"weighting", encoded_text(weighting)}})},
+            {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
+            {"background", encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
+                {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)}})}});
+    });
+    const auto aliases = encoded_rows(project->aliases, [](const auto& alias) {
+        return encoded_fields({{"id", encoded_text(alias->id.value(), true)}, {"parameter_unique_name", encoded_text(alias->parameter_unique_name.value(), true)}});
+    });
+    const auto constraints = encoded_rows(project->constraints, [](const auto& constraint) {
+        return encoded_fields({{"id", encoded_text(constraint->id.value(), true)}, {"expression", encoded_text(constraint->expression.value())}, {"enabled", constraint->enabled.get() ? 4 : 5}});
+    });
+    return encoded_fields({{"structures", structures}, {"datasets", datasets}, {"relations", encoded_fields({{"aliases", aliases}, {"constraints", constraints}})}});
+}
+
+// Construction follows complete borrowed-value preflight; no nested value is charged twice.
 J project_metadata(const Project* project) {
     A structures, datasets, aliases, constraints;
-    std::uint64_t used = 2;
-    const auto append = [&](A& target, J row) {
-        const auto size = payload_size(row, Limits::context_bytes) + (target.empty() ? 0 : 1);
-        if (size > Limits::context_bytes - used) refuse("resource_exhausted", "Project metadata exceeds context capacity");
-        used += size; target.push_back(std::move(row));
-    };
+    const auto append = [](A& target, J row) { target.push_back(std::move(row)); };
     const auto finite = [](double value) -> J {
-        if (!std::isfinite(value)) return nullptr;
+        if (!std::isfinite(value)) refuse("invalid_argument", "Project metadata contains a nonfinite scientific value");
         return value;
     };
     const auto optional = [&](const std::optional<double>& value) -> J { return value ? finite(*value) : J(nullptr); };
@@ -101,14 +205,16 @@ J project_metadata(const Project* project) {
                     bool usable_su = sigma_count == values.size() && sigma_count != 0;
                     for (const auto value : data.intensity_meas_su.get()) usable_su = usable_su && std::isfinite(value) && value > 0;
                     const bool measured = intensity_count == values.size() && (sigma_count == 0 || usable_su);
-                    if (valid && (experiment->calculation_only || measured)) data_status = "present";
+                    const bool mode_matches = bool(theta) == (experiment->effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH);
+                    const bool observations_valid = experiment->calculation_only ? intensity_count == 0 && sigma_count == 0 : measured;
+                    if (valid && mode_matches && observations_valid) data_status = "present";
                     if (valid) {
                         const auto bounds = std::minmax_element(values.begin(), values.end());
                         axis = O{{"kind", theta ? "two_theta" : "time_of_flight"}, {"unit", theta ? "degrees" : "µs"},
                                  {"count", static_cast<double>(values.size())},
                                  {"min", values.empty() ? J(nullptr) : J(*bounds.first)}, {"max", values.empty() ? J(nullptr) : J(*bounds.second)}};
                     }
-                    if (valid && measured && usable_su) weighting = "measured_standard_uncertainty";
+                    if (valid && mode_matches && observations_valid && !experiment->calculation_only && usable_su) weighting = "measured_standard_uncertainty";
                 }
             }
             append(datasets, O{{"id", KeyTraits<BraggPdExperiment>::canonical(experiment->name.value())},
@@ -356,16 +462,42 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                  {"pending_plan_id", plan && !plan->approved ? plan->id : ""},
                  {"pending_question_id", question}, {"can_cancel", !turn.empty() || !active_job.empty() || !question_call.empty()}};
     }
-    J context(const J* prospective_selection = nullptr) const {
-        J project;
-        if (live) project = O{{"id", version.project_id}, {"revision", std::to_string(version.revision)},
-                             {"name", live->metadata.name}, {"fitting_mode", live->fitting_mode}};
+    J context(const J* prospective_selection = nullptr, std::string_view prospective_skill = {}) const {
+        const auto selected_id = prospective_skill.empty() ? std::string_view(selected_skill_id) : prospective_skill;
+        const auto metadata_bytes = project_metadata_size(live);
+        // Prior-art owning arrays have their own admitted bounded roles; borrow
+        // them when charging the complete context, then move only after it fits.
+        auto parameter_context = live ? parameters(*live) : J(A{});
+        auto diagnostic_context = diagnostics(live);
+        const auto& selection_context = prospective_selection ? *prospective_selection : selected_manifest;
+        J empty_selection;
+        const J* selection_value = &selection_context;
+        if (selection_context.is_null()) { empty_selection = O{{"collection_id", ""}, {"generation", "0"}, {"files", A{}}}; selection_value = &empty_selection; }
+        const auto revision_text = std::to_string(version.revision);
+        const auto project_bytes = live ? encoded_fields({{"id", encoded_text(version.project_id, true)}, {"revision", encoded_text(revision_text)},
+            {"name", encoded_text(live->metadata.name)}, {"fitting_mode", encoded_text(live->fitting_mode)}}) : 4;
+        // metadata_bytes already includes braces and all three metadata members.
+        // Adding siblings replaces no child budget and counts each member once.
+        auto complete = metadata_bytes;
+        const auto member_size = [&](std::string_view key, std::uint64_t size) {
+            const auto prefix = encoded_text(key) + 2; // comma + colon
+            if (prefix > Limits::context_bytes - complete || size > Limits::context_bytes - complete - prefix)
+                refuse("resource_exhausted", "Project context exceeds the assistant limit");
+            complete += prefix + size;
+        };
+        member_size("schema", encoded_text("edi.assistant.context/1")); member_size("project", project_bytes);
+        member_size("parameters", payload_size(parameter_context, Limits::context_bytes));
+        member_size("diagnostics", payload_size(diagnostic_context, Limits::context_bytes));
+        member_size("selected_files", payload_size(*selection_value, Limits::context_bytes));
+        member_size("skills", 0);
+        auto workflow = skill_context(selected_id, manifest(), Limits::context_bytes - complete);
         auto result = project_metadata(live);
+        J project;
+        if (live) project = O{{"id", version.project_id}, {"revision", revision_text}, {"name", live->metadata.name}, {"fitting_mode", live->fitting_mode}};
         set(result, "schema", "edi.assistant.context/1"); set(result, "project", std::move(project));
-        set(result, "parameters", live ? parameters(*live) : J(A{})); set(result, "diagnostics", diagnostics(live));
-        set(result, "selected_files", prospective_selection ? *prospective_selection : selection());
-        set(result, "skills", skill_context(selected_skill_id, manifest()));
-        bounded(result, Limits::context_bytes); return result;
+        set(result, "parameters", std::move(parameter_context)); set(result, "diagnostics", std::move(diagnostic_context));
+        set(result, "selected_files", *selection_value); set(result, "skills", std::move(workflow));
+        return result;
     }
 
     Reply update_files(std::string collection_id, std::uint64_t expected_generation,
@@ -1219,9 +1351,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (!turn.empty() || !active_job.empty() || !question_call.empty() || (plan && plan->approved) ||
                 !holds.empty() || !retentions.empty() || trial)
                 refuse("busy", "Finish the current assistant operation before changing workflow");
-            auto next = string(command, "id");
-            const auto admitted_context = skill_context(next, manifest());
-            auto prospective = context(); set(prospective, "skills", admitted_context); bounded(prospective, Limits::context_bytes);
+            const auto& proposed = command.at("id").string("id");
+            if (proposed.empty()) refuse("invalid_argument", "Workflow identity is empty");
+            (void)encoded_text(proposed, true);
+            auto next = proposed;
+            const auto prospective = context(nullptr, next);
             auto result = success(O{{"selected_id", next}});
             selected_skill_id = std::move(next);
             return result;
@@ -1525,6 +1659,7 @@ Reply Controller::provider_event(const JsonText& event) {
 JsonText Controller::state() const { return json::write(state_->state()); }
 JsonText Controller::context() const {
     try { const auto context = state_->context(); bounded(context, Limits::context_bytes); return json::write(context); }
+    catch (const Refusal& error) { return json::write(O{{"schema", "edi.assistant.context/1"}, {"error", O{{"code", "edi.assistant." + error.code}, {"message", error.code == "resource_exhausted" ? "Project context exceeds the assistant limit." : "Project context contains invalid or unsupported metadata."}}}}); }
     catch (...) { return json::write(O{{"schema", "edi.assistant.context/1"}, {"error", O{{"code", "edi.assistant.resource_exhausted"}, {"message", "Project context exceeds the assistant limit."}}}}); }
 }
 void Controller::poll() {

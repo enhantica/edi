@@ -11,5 +11,5 @@ struct SkillResource { std::string_view id, sha256, content; };
 std::string_view skill_index_data();
 std::span<const SkillResource> skill_resource_data();
 J skill_catalog(std::string_view selected, bool has_selected_files, const J& tools);
-J skill_context(std::string_view selected, const J& tools);
+J skill_context(std::string_view selected, const J& tools, std::uint64_t limit = Limits::context_bytes);
 }

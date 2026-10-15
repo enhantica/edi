@@ -48,7 +48,7 @@ void append_utf8(std::string& out, std::uint32_t code) {
 }
 
 template <typename Output>
-void write_escaped(Output& out, const std::string& text) {
+void write_escaped(Output& out, std::string_view text) {
     static const char* const hex = "0123456789abcdef";
     out += '"';
     for (std::size_t i = 0; i < text.size(); ++i) {
@@ -462,6 +462,12 @@ const Value& Value::get(const std::string& key) const {
         }
     }
     return missing;
+}
+
+std::uint64_t encoded_string_size(std::string_view text, std::uint64_t limit) {
+    SizeCounter counter{0, limit};
+    write_escaped(counter, text);
+    return counter.size;
 }
 
 std::uint64_t encoded_size(const Value& value, std::uint64_t limit) {
