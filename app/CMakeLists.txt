@@ -201,6 +201,8 @@ qt_add_qml_module(edi_app_module
         qml/Style/AppSizes.qml
     RESOURCES
         resources/logo/App.svg
+        resources/logo/AssistantWorking.svg
+        resources/logo/AssistantSpinner.svg
 )
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module

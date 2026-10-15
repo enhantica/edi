@@ -150,7 +150,7 @@ Rectangle {
             Flow {
                 id: selectedChips
                 width: selectedFilesScroll.availableWidth
-                spacing: AppSizes.unit * 0.25
+                spacing: AppSizes.unit * 0.75
             Repeater {
                 model: composer.assistant.selectedFiles
                 delegate: RowLayout {
@@ -168,6 +168,10 @@ Rectangle {
                     }
                     EaElements.ToolButton {
                         fontIcon: "times"
+                        implicitWidth: composer.actionSize
+                        implicitHeight: composer.actionSize
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
+                        showBackground: false
                         enabled: !composer.assistant.canCancel
                         ToolTip.text: qsTr("Remove %1").arg(model.name)
                         Accessible.name: ToolTip.text
@@ -480,7 +484,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : "transparent"
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : EaStyle.Colors.themeBackgroundDisabled
                 }
                 contentItem: EaElements.Label {
                     text: sendButton.fontIcon

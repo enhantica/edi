@@ -453,3 +453,23 @@ The copied result is a host-owned directory outside the runtime's writable root.
 Publication prepares syscall byte arguments, hashes and checks initiating currentness, then immediately reopens/rechecks both the actual selected parent and named stage before the common Linux/Mac non-overwrite rename branches. The pinned source alone cannot authorize a substituted name. The remaining instruction-level same-user namespace race is not claimed inode-conditionally atomic; no overwrite/delete/copy fallback or mutable-path cleanup is added. A selected-parent change observed before publication refuses instead of claiming the stale recovery pathname as successful.
 
 The first native picker callback calls the Session's real saveAsCurrent(token) action before reading the initiating project's suggested name or opening the leaf dialog. That action and final completeSaveAs share the same SaveIntent owner/epoch/project/work-stamp/lease/readiness predicate. Repeated, Clear/account-retired, manually replaced or edited owners cannot open the stale second form. Cancellation and the final one-shot consumption remain intact.
+
+
+### Disabled primary action and boundary-first reply wrapping
+
+Disabled Send retains the existing themeBackgroundDisabled circular backing, with its actual disabled foreground/admission unchanged. Plus and user-message navigation remain transparent secondary actions; enabled Send/Stop keep the existing monochrome primary palette. Reply bodies use Qt TextEdit.Wrap (WrapAtWordBoundaryOrAnywhere), preserving word boundaries before falling back for unbroken paths/URLs/code. The passive document's nonbreakable-block correction remains; canonical/copied bytes, no-resource behavior and technical literal details are unchanged.
+
+
+### Compact disclosure and recognized refusal details
+
+Activity and technical disclosures use the same small centered chevron. Retained decision/item reference rows show one muted expandable outcome, with the existing app-authored explanation inside. Known decision fields receive ordinary labels; the unmodified JSON remains selectable behind Original payload. A decision/item pair never invents a user, Desktop destination or reason. Disabled-primary backing and boundary-first body wrapping remain as above.
+
+
+File-removal controls use the existing transparent EA secondary-button treatment, a smaller glyph and the same compact action hit area. Only Flow's inter-file gap increases; each filename stays close to its own remove action. Original model IDs, disabled/accessibility behavior, responsive wrapping and literal elided names remain.
+
+
+### Steady work text and one icon choice per appearance
+
+The real work cue retains its existing execution/question/plan/visibility predicate and label accessibility. Working… stays at full text opacity. Its small fixed monochrome icon slot chooses once when the cue becomes visible between the simple ring and genuine EasyDiffraction BW mark, keeping that choice until hidden; hidden cues stop their animations. The BW source is unchanged easyscience/assets-branding easydiffraction/icons/bw.svg, git blob5813e570173676bc1ccb94868315b1ff880abff4. QtQuick.Controls.impl IconImage (already used by EA controls) supplies theme tint without a new effect/dependency.
+
+Branded motion reuses the actual EA SplashScreen RotationAnimation and Edi WASM make_logo.py/splash.css curve:2160 degrees in2000ms, Easing.OutInElastic amplitude1/period0.3. It is not a linear approximation of the generated CSS keyframes. The simple ring uses the selected preview's1600ms linear loop. Existing zero translation-time behavior leaves a static icon. Neither icon represents elapsed progress, provider usage or a fabricated live operation; no status predicate, protocol, canonical message or auth state changes.

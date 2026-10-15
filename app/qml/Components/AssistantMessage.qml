@@ -15,17 +15,19 @@ Rectangle {
     property string rowId: ""
     property bool highlighted: false
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
-    readonly property bool summarizedActivity: kind === "activity" && payload &&
+    readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
+    readonly property bool summarizedActivity: decisionActivity || kind === "activity" && payload &&
         ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan"].indexOf(payload.type) >= 0
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
     signal detailsChanging()
     function resetDetails() {
         if (commandDisclosure) commandDisclosure.checked = false;
         if (disclosure) disclosure.checked = false;
+        if (originalDisclosure) originalDisclosure.checked = false;
         for (const viewport of [commandViewport, activityViewport, technicalViewport])
             if (viewport && viewport.contentItem && viewport.contentItem.contentY !== undefined)
                 viewport.contentItem.contentY = 0;
-        for (const field of [body, commandText, directoryText, outputText, activityText, technicalText])
+        for (const field of [body, commandText, directoryText, outputText, activityText, technicalText, originalText])
             if (field) field.deselect();
     }
     onDisclosureIdentityChanged: resetDetails()
@@ -78,6 +80,12 @@ Rectangle {
         return running ? qsTr("Running command") : qsTr("Ran command");
     }
     function activityCaption() {
+        if (decisionActivity) {
+            if (row.status === "refused" || row.status === "declined") return qsTr("Request refused");
+            if (row.status === "interrupted") return qsTr("Request interrupted");
+            if (row.status === "failed") return qsTr("Request failed");
+            return qsTr("Request outcome");
+        }
         if (commandActivity) return commandCaption();
         const label = activityLabel(row.status === "in_progress");
         if (row.status === "in_progress") return label;
@@ -87,9 +95,6 @@ Rectangle {
     }
     TextMetrics { id: technicalCaptionMetrics; font: disclosure.font; text: disclosure.text }
     TextMetrics { id: activityCaptionMetrics; font: commandDisclosure.font; text: row.activityCaption() }
-    readonly property string activityIcon: commandActivity ? "terminal"
-        : payload && payload.type === "fileChange" ? "file-alt"
-        : payload && payload.type === "webSearch" ? "globe" : "tasks"
     color: "transparent"
     implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
     TextMetrics {
@@ -157,7 +162,7 @@ Rectangle {
             selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
             onLinkActivated: link => {}
-            wrapMode: TextEdit.WrapAnywhere
+            wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
             font.family: EaStyle.Fonts.fontFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize
@@ -175,8 +180,8 @@ Rectangle {
             width: Math.min(parent.width, implicitWidth)
             contentItem: Row {
                 spacing: AppSizes.unit * 0.5
-                EaElements.Label { id: activityGlyph; text: row.activityIcon; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
-                EaElements.Label { width: Math.max(0, commandDisclosure.availableWidth - activityGlyph.width - parent.spacing); text: commandDisclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+                EaElements.Label { id: activityGlyph; text: commandDisclosure.checked ? "chevron-down" : "chevron-right"; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
+                EaElements.Label { width: Math.max(0, commandDisclosure.availableWidth - activityGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: commandDisclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
             }
             Accessible.name: text
             Accessible.description: row.commandActivity
@@ -261,8 +266,8 @@ Rectangle {
             width: Math.min(parent.width, implicitWidth)
             contentItem: Row {
                 spacing: AppSizes.unit * 0.5
-                EaElements.Label { id: technicalGlyph; text: disclosure.checked ? "chevron-down" : "chevron-right"; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
-                EaElements.Label { width: Math.max(0, disclosure.availableWidth - technicalGlyph.width - parent.spacing); text: disclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+                EaElements.Label { id: technicalGlyph; text: disclosure.checked ? "chevron-down" : "chevron-right"; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
+                EaElements.Label { width: Math.max(0, disclosure.availableWidth - technicalGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: disclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
             }
             Accessible.name: text
             Accessible.description: qsTr("Show or hide the original retained technical payload. The explanation and actual outcome remain above.")
@@ -272,17 +277,45 @@ Rectangle {
             id: technicalViewport
             width: parent.width
             visible: disclosure.visible && disclosure.checked
-            height: visible ? Math.min(technicalText.implicitHeight, AppSizes.unit * 18) : 0
+            height: visible ? Math.min(technicalFields.implicitHeight, AppSizes.unit * 18) : 0
             contentWidth: availableWidth
-            contentHeight: technicalText.implicitHeight
+            contentHeight: technicalFields.implicitHeight
             clip: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
-            LiteralDetails {
-                id: technicalText
+            Column {
+                id: technicalFields
                 width: technicalViewport.availableWidth
-                fieldName: qsTr("Technical details")
-                text: technicalViewport.visible ? JSON.stringify(row.payload, null, 2) : ""
+                spacing: AppSizes.unit * 0.4
+                LiteralDetails {
+                    id: technicalText
+                    width: parent.width
+                    fieldName: qsTr("Technical details")
+                    text: !technicalViewport.visible ? "" : row.decisionActivity
+                        ? qsTr("Decision: %1\nAction reference: %2").arg(row.payload.decision === "decline" ? qsTr("Declined") : row.payload.decision).arg(row.payload.item_id)
+                        : JSON.stringify(row.payload, null, 2)
+                }
+                EaElements.Button {
+                    id: originalDisclosure
+                    visible: row.decisionActivity
+                    checkable: true
+                    text: qsTr("Original payload")
+                    width: Math.min(parent.width, implicitWidth)
+                    contentItem: Row {
+                        spacing: AppSizes.unit * 0.5
+                        EaElements.Label { width: AppSizes.unit; height: parent.height; text: originalDisclosure.checked ? "chevron-down" : "chevron-right"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
+                        EaElements.Label { anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: originalDisclosure.text; color: EaStyle.Colors.themeForegroundMinor }
+                    }
+                    Accessible.name: text
+                    onPressed: row.detailsChanging()
+                }
+                LiteralDetails {
+                    id: originalText
+                    width: parent.width
+                    visible: row.decisionActivity && originalDisclosure.checked
+                    fieldName: qsTr("Original payload")
+                    text: visible && technicalViewport.visible ? JSON.stringify(row.payload, null, 2) : ""
+                }
             }
         }
     }

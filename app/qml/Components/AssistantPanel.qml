@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl as ControlsImpl
 import QtQuick.Layouts
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
@@ -384,11 +385,50 @@ Popup {
                     textFormat: Text.PlainText
                     color: EaStyle.Colors.themeForegroundMinor
                     Accessible.name: qsTr("Assistant is working")
-                    SequentialAnimation on opacity {
-                        running: workStatus.visible && EaStyle.Times.translationChange > 0
+                    property bool branded: false
+                    leftPadding: AppSizes.unit + AppSizes.unit * 0.5
+                    onVisibleChanged: {
+                        if (visible) branded = Math.random() < 0.5;
+                        else workGlyph.rotation = 0;
+                    }
+                    Item {
+                        width: AppSizes.unit
+                        height: width
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        ControlsImpl.IconImage {
+                            id: workGlyph
+                            width: EaStyle.Sizes.fontPixelSize * 0.75
+                            height: width
+                            anchors.centerIn: parent
+                            source: workStatus.branded ? "../../resources/logo/AssistantWorking.svg" : "../../resources/logo/AssistantSpinner.svg"
+                            sourceSize: Qt.size(width, height)
+                            color: EaStyle.Colors.themeForegroundMinor
+                            fillMode: Image.PreserveAspectFit
+                            Accessible.ignored: true
+                        }
+                    }
+                    RotationAnimation {
+                        target: workGlyph
+                        property: "rotation"
+                        running: workStatus.visible && workStatus.branded && EaStyle.Times.translationChange > 0
                         loops: Animation.Infinite
-                        NumberAnimation { from: 0.5; to: 1; duration: EaStyle.Times.translationChange * 2 }
-                        NumberAnimation { from: 1; to: 0.5; duration: EaStyle.Times.translationChange * 2 }
+                        from: 0
+                        to: 360 * 6
+                        duration: 2000
+                        easing.type: Easing.OutInElastic
+                        easing.amplitude: 1
+                        easing.period: 0.3
+                    }
+                    RotationAnimation {
+                        target: workGlyph
+                        property: "rotation"
+                        running: workStatus.visible && !workStatus.branded && EaStyle.Times.translationChange > 0
+                        loops: Animation.Infinite
+                        from: 0
+                        to: 360
+                        duration: 1600
+                        easing.type: Easing.Linear
                     }
                 }
                 Rectangle {
