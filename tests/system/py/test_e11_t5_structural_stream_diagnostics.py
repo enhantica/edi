@@ -5,7 +5,7 @@ https://developers.openai.com/api/reference/resources/responses/streaming-events
 Diagnostics are independently counted structural facts, never raw provider contents.
 Packet710585daf/S-R2 now permits omitted completed nonexecuting originals.
 The message/reasoning diagnostic witnesses therefore retain semantically unfinished
-originals, including wire-done originals; omitted executable authority stays refused.
+originals, including wire-done originals; only genuinely finalized calls gain omission authority.
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ def facts(message, aliases):
         ('message', 'in_progress', True, 1),
         ('message', 'in_progress', False, 1),
         ('reasoning', 'in_progress', True, 1),
-        ('function_call', 'completed', True, 1),
+        ('function_call', 'completed', False, 1),
         (PRIVATE, 'completed', True, 1),
         ('reasoning', PRIVATE, True, 1),
         ('reasoning', 'in_progress', True, 12),
@@ -83,7 +83,7 @@ def facts(message, aliases):
         'message-wire-done-semantically-unfinished',
         'message-unfinished',
         'reasoning-wire-done-semantically-unfinished',
-        'function-done',
+        'function-unfinalized',
         'unknown-kind',
         'unknown-status',
         'multiple-missing',

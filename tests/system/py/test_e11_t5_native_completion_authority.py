@@ -154,14 +154,17 @@ def test_native_unentitled_function_original_never_crosses_physical_finish(nativ
     before_finish = feed(
         native,
         index,
-        [originals.item_event(call), originals.complete([] if fault == 'omitted' else [call])],
+        [
+            originals.item_event(call, done=fault != 'omitted'),
+            originals.complete([] if fault == 'omitted' else [call]),
+        ],
     )
     settled = native.command('finish', index=index, failure=0)
     terminals = bound(settled, request, 'turn_finished')
     assert not bound(before_finish, request, 'tool_call') and not bound(
         settled, request, 'tool_call'
     ), (
-        'S-R2: omitted/explicit partial/failed/null/wrong-type call status never releases '
+        'S-R3: unfinalized omitted/explicit partial/failed/null/wrong-type call never releases '
         'actual native work despite complete parseable original arguments'
     )
     assert terminals and all(e['status'] != 'completed' for e in terminals), (

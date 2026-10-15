@@ -178,7 +178,7 @@ def test_function_authority_and_immutable_originals_remain_strict(host, fault):
     value = original('message' if fault == 'changed-content' else 'function_call')
     if fault in {'incomplete', 'failed'}:
         value['status'] = fault
-    prefix = wire(host, [item_event(value)])
+    prefix = wire(host, [item_event(value, done=fault != 'omitted')])
     final = copy.deepcopy(value)
     if fault == 'changed-call-id':
         final['call_id'] = 'different-call'
@@ -194,7 +194,7 @@ def test_function_authority_and_immutable_originals_remain_strict(host, fault):
         else prefix
     )
     assert not refused['reply']['ok'] and not completed(refused), (
-        'S-R2: omitted/partial/failed calls and explicit identity/content contradictions '
+        'S-R3: unfinalized omitted/partial/failed calls and identity/content contradictions '
         'cannot authorize successful continuation'
     )
     assert not host.command('stream_finish')['reply']['ok'], (

@@ -160,18 +160,18 @@ def test_function_argument_events_require_their_actual_output_position(host, end
     ('kind', 'ending'),
     [(kind, 'replaced') for kind in KINDS] + [('function_call', 'omitted')],
 )
-def test_final_response_cannot_omit_or_replace_previously_completed_items(host, kind, ending):
+def test_final_response_cannot_omit_unfinalized_or_replace_completed_items(host, kind, ending):
     # Reviewed packet710585daf/S-R2 deliberately permits omission of completed
     # nonexecuting originals. Those two former refusal rows now have positive
     # exact-original gates in test_e11_t5_completed_output_authority.py.
-    # Accident: every retained item is done, but final output membership disagrees.
+    # S-R3 permits finalized omitted calls; unfinalized originals remain refused.
     host.command('stream_start')
-    first = wire(host, [item_event(original(kind))])
-    assert first['reply']['ok'], 'I3/T3: the planted completed item reaches actual retention'
+    first = wire(host, [item_event(original(kind), done=ending != 'omitted')])
+    assert first['reply']['ok'], 'I3/T3: the planted original reaches actual retention'
     final = [] if ending == 'omitted' else [original(kind, 'replacement-B')]
     refused = wire(host, [complete(final)])
     assert not refused['reply']['ok'], (
-        'I3/T3/S-R2: final membership must retain executable calls and cannot replace held items'
+        'I3/T3/S-R3: omission requires genuine done originals and cannot replace held items'
     )
     assert not any(
         event.get('type') == 'turn_finished' and event.get('status') == 'completed'
