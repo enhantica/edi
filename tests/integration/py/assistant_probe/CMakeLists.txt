@@ -15,3 +15,8 @@ endif()
 add_executable(assistant_fit_publication_probe fit_publication_probe.cpp)
 target_include_directories(assistant_fit_publication_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_fit_publication_probe PRIVATE edi::core)
+
+add_executable(assistant_terminal_retention_probe probe.cpp)
+target_compile_definitions(assistant_terminal_retention_probe PRIVATE EDI_TEST_TERMINAL_RETENTION=1)
+target_include_directories(assistant_terminal_retention_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_terminal_retention_probe PRIVATE edi::core)

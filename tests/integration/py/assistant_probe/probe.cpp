@@ -4,6 +4,9 @@
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "json.hpp"
+#ifdef EDI_TEST_TERMINAL_RETENTION
+#include "terminal_retention_fixture.hpp"
+#endif
 
 #include <cstdlib>
 #include <new>
@@ -122,9 +125,18 @@ int main() {
     auto clock_start = std::chrono::steady_clock::now();
     int applies = 0;
     bool refuse_apply = false;
-    edi::assistant::Controller controller(worker, {
+#ifdef EDI_TEST_TERMINAL_RETENTION
+    const char* retention_mode=std::getenv("EDI_TEST_RETENTION_MODE");
+    IndependentRetention retention(retention_mode?retention_mode:"accept");
+#endif
+    edi::assistant::Hooks controller_hooks{
         [&](const std::string& text) { events.push_back(edi::json::parse(text)); },
-        [&](const std::string& text) { requests.push_back(edi::json::parse(text)); },
+        [&](const std::string& text) {
+#ifdef EDI_TEST_TERMINAL_RETENTION
+            if(retention.mode!="headless") retention.record("request");
+#endif
+            requests.push_back(edi::json::parse(text));
+        },
         [&](const edi::Edit& edit, bool) {
             ++applies;
             if (refuse_apply) return std::string("independent host refusal");
@@ -136,7 +148,13 @@ int main() {
             if (steady_clock) return now + static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-clock_start).count());
             return now;
         }
-    });
+    };
+#ifdef EDI_TEST_TERMINAL_RETENTION
+    if(retention.mode!="headless") controller_hooks.reserve_terminal=[&](const std::string& text) {
+        return retention.reserve(text);
+    };
+#endif
+    edi::assistant::Controller controller(worker,std::move(controller_hooks));
     IndependentHoldRelease release_before_controller_teardown{queue_hold};
     double owner_work_max_ms=0;
     auto deliver = [&](int milliseconds) {
@@ -418,6 +436,9 @@ int main() {
                 {"owner_clock_violations", owner_clock_violations.load()},
                 {"owner_work_max_ms",owner_work_max_ms},
                 {"owner_thread_kit", static_cast<bool>(EDI_WORKER_OWNER_THREAD)}};
+#ifdef EDI_TEST_TERMINAL_RETENTION
+            std::get<Object>(output.data).emplace_back("retention",retention.observation());
+#endif
             std::cout << edi::json::write(output) << '\n' << std::flush;
         } catch (const std::exception& error) {
             std::cout << edi::json::write(Object{{"probe_error", error.what()}}) << '\n' << std::flush;

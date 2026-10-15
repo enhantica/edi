@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T03:14:54Z
+# measured_utc = 2026-10-15T03:16:26Z
 #
-# Recorded from: seq8 focused actual 9a25145 official native message lifecycle refusal fixture; prior rows preserved
-# Collected tests: 13596; with a reported duration: 7487
+# Recorded from: seq8 focused actual 9a25145 absent accepted TerminalRetention API setup holes, no executed lease behavior; prior rows preserved
+# Collected tests: 13608; with a reported duration: 7487
 # Module-scoped fixture costs recorded: 52
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13263
+# inventory_python = 13275
 # inventory_cpp = 333
 # inventory_measured = 11959
-# inventory_unmeasured = 1637
+# inventory_unmeasured = 1649
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10127,6 +10127,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::t
 2.370	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-app-pinned]
 2.310	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-consumer]
 2.350	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-question]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[headless-fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[headless-question]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_retaining_role_prestart_refusal_is_atomic_and_sanitized[null-fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_retaining_role_prestart_refusal_is_atomic_and_sanitized[null-question]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_retaining_role_prestart_refusal_is_atomic_and_sanitized[throw-fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_retaining_role_prestart_refusal_is_atomic_and_sanitized[throw-question]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_started_failure_and_quarantine_preserve_recovery_until_explicit_teardown[settle-false-fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_started_failure_and_quarantine_preserve_recovery_until_explicit_teardown[settle-false-question]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_started_failure_and_quarantine_preserve_recovery_until_explicit_teardown[started-false-fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_started_failure_and_quarantine_preserve_recovery_until_explicit_teardown[started-false-question]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start2-free2]
