@@ -176,3 +176,14 @@ Normal transcript bodies expose localized You/Assistant/Activity identity with t
 text name, retaining the selected unboxed/bubble appearance. The compact effort's full explanation
 uses an actual existing styled ToolTip on hover or keyboard focus, respecting the shared tooltip
 preference; setting attached text alone is not considered visible explanation delivery.
+
+
+## Owner-selected short composer and shared selector surface
+
+The owner's actual reference photograph selects the lower-toolbar arrangement with a short initial
+entry, growing with actual text to the existing finite scroll limit. Model and effort selectors measure
+their real display content and share the rounded composer surface rather than separate filled boxes;
+normal keyboard focus retains its visible border, tooltip and accessible name. Send/Stop stays at the
+right. The actual selected manual-sidebar host is unchanged, and Right/light before/open/after captures
+must compare that same rectangle and scientific workspace. File selection is a separate functional
+boundary: no enabled decorative plus button or implied upload is added by this presentation change.

@@ -38,7 +38,7 @@ Rectangle {
     implicitHeight: composerContent.implicitHeight + AppSizes.unit
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.appBorder
-    radius: AppSizes.unit * 0.75
+    radius: AppSizes.unit
     function rememberSelection() {
         if (editor.activeFocus) {
             savedSelectionStart = editor.selectionStart;
@@ -73,7 +73,7 @@ Rectangle {
         spacing: AppSizes.unit * 0.25
         ScrollView {
             width: parent.width
-            height: Math.min(AppSizes.unit * 10, Math.max(AppSizes.unit * 4, editor.implicitHeight))
+            height: Math.min(AppSizes.unit * 10, Math.max(editor.font.pixelSize * 2.5 + editor.topPadding + editor.bottomPadding, editor.implicitHeight))
             TextArea {
                 id: editor
                 objectName: "assistant.composer"
@@ -107,6 +107,16 @@ Rectangle {
         RowLayout {
             width: parent.width
             spacing: AppSizes.unit * 0.25
+            TextMetrics {
+                id: modelLabelMetrics
+                font: models.font
+                text: models.displayText
+            }
+            TextMetrics {
+                id: effortLabelMetrics
+                font: efforts.font
+                text: efforts.displayText
+            }
             EaElements.ComboBox {
                 id: models
                 KeyNavigation.priority: KeyNavigation.BeforeItem
@@ -132,7 +142,15 @@ Rectangle {
                     highlighted: models.highlightedIndex === index
                 }
                 objectName: "assistant.model"
-                Layout.fillWidth: true
+                Layout.preferredWidth: modelLabelMetrics.advanceWidth + AppSizes.unit * 2.5
+                Layout.maximumWidth: composerContent.width * 0.45
+                background: Rectangle {
+                    implicitHeight: EaStyle.Sizes.comboBoxHeight
+                    color: "transparent"
+                    radius: AppSizes.unit * 0.25
+                    border.width: models.activeFocus ? 1 : 0
+                    border.color: EaStyle.Colors.themeForegroundHighlight
+                }
                 model: composer.assistant.models
                 textRole: "displayName"
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
@@ -160,7 +178,15 @@ Rectangle {
                 }
                 currentIndex: effortValues.indexOf(composer.assistant.selectedEffort)
                 objectName: "assistant.effort"
-                Layout.preferredWidth: AppSizes.unit * 7
+                Layout.preferredWidth: effortLabelMetrics.advanceWidth + AppSizes.unit * 2.5
+                Layout.maximumWidth: composerContent.width * 0.3
+                background: Rectangle {
+                    implicitHeight: EaStyle.Sizes.comboBoxHeight
+                    color: "transparent"
+                    radius: AppSizes.unit * 0.25
+                    border.width: efforts.activeFocus ? 1 : 0
+                    border.color: EaStyle.Colors.themeForegroundHighlight
+                }
                 model: effortValues.map(value => effortLabel(value))
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: composer.assistant.selectedEffort === "" ? qsTr("Provider default") : currentText
@@ -171,6 +197,7 @@ Rectangle {
                 Accessible.name: qsTr("Reasoning effort")
                 onActivated: index => composer.assistant.selectedEffort = effortValues[index]
             }
+            Item { Layout.fillWidth: true }
             EaElements.ToolButton {
                 id: stopButton
                 KeyNavigation.priority: KeyNavigation.BeforeItem
