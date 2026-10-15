@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shlex
 import shutil
+import sys
 from operator import itemgetter
 from pathlib import Path
 
@@ -220,7 +222,23 @@ def test_receipt_without_successful_retained_completion_cannot_adopt(result_fact
         assert actor.last['vm']['can_cancel'], 'H2: real active work remains stoppable'
 
 
-@pytest.mark.parametrize('variant', ['foreign', 'hash', 'undeclared', 'symlink', 'directories'])
+@pytest.mark.parametrize(
+    'variant',
+    [
+        'foreign',
+        'hash',
+        'undeclared',
+        'symlink',
+        'directories',
+        'receipt-fifo',
+        'data-fifo',
+        'receipt-link',
+        'depth',
+        'duplicates',
+        'receipt-bytes',
+        'calculation-only',
+    ],
+)
 def test_invalid_or_unclosed_result_never_replaces_empty_owner(result_factory, variant):
     actor, trace = result_factory(variant)
     start(actor, trace)
@@ -232,6 +250,10 @@ def test_invalid_or_unclosed_result_never_replaces_empty_owner(result_factory, v
     assert state['handoff']['last_error'] or state['last_error'], (
         'H2: rejected saved result has an honest visible bounded explanation'
     )
+    assert all(
+        len(value.encode()) <= 512
+        for value in [state['handoff']['last_error'], state['last_error']]
+    ), 'HLP: refusal explanations remain within the approved error-byte bound'
 
 
 @pytest.mark.parametrize('retirement', ['clear', 'project', 'steer'])
@@ -267,12 +289,17 @@ def begin_export(actor):
     return result['intent']
 
 
+@pytest.mark.parametrize('parent_alias', [False, True])
 def test_fresh_parent_child_export_reopens_without_mutating_original_parent(
-    result_factory, tmp_path
+    result_factory, tmp_path, parent_alias
 ):
     actor, _, _ = adopted(result_factory)
     parent = tmp_path / 'Owned Desktop'
     parent.mkdir()
+    if parent_alias:
+        alias = tmp_path / 'Desktop alias'
+        alias.symlink_to(parent, target_is_directory=True)
+        parent = alias
     intent = begin_export(actor)
     result = actor.command(
         'save_as_complete', intent=intent, parent=str(parent), leaf='original-copy'
@@ -284,7 +311,7 @@ def test_fresh_parent_child_export_reopens_without_mutating_original_parent(
         'H2: no residual stage or unrelated parent replacement after publication'
     )
     snapshot = project_readback(result['vm'])
-    assert Path(snapshot['path']) == parent / 'original-copy', (
+    assert Path(snapshot['path']).resolve() == (parent / 'original-copy').resolve(), (
         'H2: displayed Save target changes only to the committed child'
     )
     assert not result['vm']['handoff']['needs_save_as'], (
@@ -294,6 +321,29 @@ def test_fresh_parent_child_export_reopens_without_mutating_original_parent(
     assert not again['reply']['accepted'] and not (parent / 'duplicate').exists(), (
         'H2: successful callback consumes its authority exactly once'
     )
+
+
+def test_trusted_temporary_root_alias_uses_the_same_real_consumer(
+    result_factory, monkeypatch, tmp_path
+):
+    real = tmp_path / 'actual-trusted-temporary-root'
+    real.mkdir()
+    alias = tmp_path / 'trusted-temporary-alias'
+    alias.symlink_to(real, target_is_directory=True)
+    binary = os.environ['EDI_ASSISTANT_WORKFLOW_VM_PROBE']
+    launcher = tmp_path / 'actual-consumer-with-normal-temp-environment'
+    launcher.write_text(
+        f'#!{sys.executable}\nimport os,sys\n'
+        f'os.environ["TMPDIR"]={str(alias)!r}\n'
+        f'os.execv({binary!r}, [{binary!r}, *sys.argv[1:]])\n'
+    )
+    launcher.chmod(0o700)
+    monkeypatch.setenv('EDI_ASSISTANT_WORKFLOW_VM_PROBE', str(launcher))
+    actor, _, observed = adopted(result_factory)
+    assert Path(observed['cwd']).resolve().is_relative_to(real), (
+        'HLP SETUP: ordinary trusted TMPDIR alias reaches the actual real Session process'
+    )
+    project_readback(actor.last['vm'])
 
 
 @pytest.mark.parametrize('collision', ['file', 'directory', 'symlink'])

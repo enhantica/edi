@@ -80,7 +80,7 @@ def handoff_metadata(value):
     return None
 
 
-def result_start(request):
+def result_start(request):  # noqa: PLR0912, PLR0914, PLR0915 -- finite original-input cases
     """Ordinary owned peer files; never a tool/model or host publication API."""
     metadata = handoff_metadata(request['params'])
     observed = {'metadata': metadata, 'cwd': cwd, 'prepared': False}
@@ -129,7 +129,39 @@ def result_start(request):
             # Approved SelectedFileLimits::files32 also bounds represented entries.
             for index in range(33):
                 (project / ('extra-original-directory-' + str(index))).mkdir()
-        receipt.write_text(json.dumps(result), encoding='utf-8')
+        elif variant == 'data-fifo':
+            chosen = project / entries[0]['path']
+            chosen.unlink()
+            os.mkfifo(chosen)
+        elif variant == 'calculation-only':
+            chosen = project / 'experiments/hrpt.edi'
+            prefix = chosen.read_text().split('loop_\n_data.two_theta\n', 1)[0]
+            chosen.write_text(
+                prefix + '_data_range.two_theta_min 10\n'
+                '_data_range.two_theta_max 10.2\n_data_range.two_theta_step 0.1\n'
+            )
+            entry = next(v for v in entries if v['path'] == 'experiments/hrpt.edi')
+            data = chosen.read_bytes()
+            entry.update(bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
+        elif variant == 'depth':
+            nested = None
+            for _ in range(65):  # Public Limits::json_depth64; harmless finite input.
+                nested = [nested]
+            result['original_nested_metadata'] = nested
+        text = json.dumps(result)
+        if variant == 'duplicates':
+            text = '{"intent":' + json.dumps(metadata['intent']) + ',' + text[1:]
+        elif variant == 'receipt-bytes':
+            # Legal JSON whitespace, beyond approved1MiB receipt budget.
+            text = ' ' * 1048577 + text
+        if variant == 'receipt-fifo':
+            os.mkfifo(receipt)
+        elif variant == 'receipt-link':
+            outside = trace.parent / 'outside-original-receipt.json'
+            outside.write_text(text)
+            receipt.symlink_to(outside)
+        else:
+            receipt.write_text(text, encoding='utf-8')
         observed.update(prepared=True, receipt=str(receipt), project=str(project), files=entries)
     trace.with_suffix('.result.json').write_text(json.dumps(observed), encoding='utf-8')
     reply(request, {'turn': turn('inProgress')})
