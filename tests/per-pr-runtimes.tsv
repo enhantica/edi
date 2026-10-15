@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T07:05:28Z
+# measured_utc = 2026-10-15T07:06:33Z
 #
-# Recorded from: seq19 real question archive-settlement refusal: two reached expected-red holes; prior thirty VM assertions unchanged
-# Collected tests: 13803; with a reported duration: 7597
+# Recorded from: seq19 scope retirement: eight real controls; two qualified detach reds; six connection qualification holes, not behavioral proof
+# Collected tests: 13819; with a reported duration: 7605
 # Module-scoped fixture costs recorded: 56
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13470
+# inventory_python = 13486
 # inventory_cpp = 333
-# inventory_measured = 12069
-# inventory_unmeasured = 1734
+# inventory_measured = 12077
+# inventory_unmeasured = 1742
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10201,6 +10201,22 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_recovery_boundaries.py
 0.030	tests/system/py/test_e11_t5_recovery_boundaries.py::test_synchronous_request_failure_settles_every_reached_owner_continuation[initial-delivered-control]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_recovery_boundaries.py::test_synchronous_request_failure_settles_every_reached_owner_continuation[turn-finished-callback-refusal]
 0.030	tests/system/py/test_e11_t5_recovery_boundaries.py::test_synchronous_request_failure_settles_every_reached_owner_continuation[turn-finished-delivered-control]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[changed-ready-bad_alloc]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[changed-ready-length_error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[detach-bad_alloc]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[detach-length_error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[disconnect-bad_alloc]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[disconnect-length_error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[expiry-bad_alloc]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[expiry-length_error]
+0.360	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[new-attach-bad_alloc]
+0.340	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_pre_retirement_identity_failure_obeys_observed_scope_ownership[new-attach-length_error]
+0.090	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_unarmed_valid_retirement_releases_the_actual_owner[changed-ready]
+0.130	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_unarmed_valid_retirement_releases_the_actual_owner[detach]
+0.090	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_unarmed_valid_retirement_releases_the_actual_owner[disconnect]
+0.360	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_unarmed_valid_retirement_releases_the_actual_owner[expiry]
+0.170	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_unchanged_or_rejected_connection_is_distinct_from_observed_retirement[malformed]
+0.190	tests/system/py/test_e11_t5_scope_retirement_allocations.py::test_unchanged_or_rejected_connection_is_distinct_from_observed_retirement[unchanged-ready]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-None]
 3.190	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-build]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[extension-consumer-None]

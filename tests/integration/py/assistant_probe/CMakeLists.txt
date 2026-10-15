@@ -37,3 +37,10 @@ target_compile_definitions(assistant_recovery_boundaries_probe PRIVATE
     EDI_TEST_TERMINAL_RETENTION=1 EDI_TEST_ADMISSION_FAULT=1)
 target_include_directories(assistant_recovery_boundaries_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_recovery_boundaries_probe PRIVATE edi::core)
+
+add_executable(assistant_scope_retirement_probe probe.cpp)
+target_compile_definitions(assistant_scope_retirement_probe PRIVATE
+    EDI_TEST_RETIREMENT_OBSERVER=1 EDI_TEST_RECOVERY_BOUNDARIES=1
+    EDI_TEST_ASYNC_SETTLEMENT=1 EDI_TEST_TERMINAL_RETENTION=1 EDI_TEST_ADMISSION_FAULT=1)
+target_include_directories(assistant_scope_retirement_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_scope_retirement_probe PRIVATE edi::core)

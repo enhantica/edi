@@ -466,6 +466,56 @@ int main() {
                 result = reply(controller.attach(project.get(), input.at("id").string("id")));
             } else if (op == "detach") {
                 result = reply(controller.attach(nullptr, ""));
+#ifdef EDI_TEST_RETIREMENT_OBSERVER
+            } else if(op == "identity_probe") {
+                // A separate genuine public Controller observes the shared ID sequence.
+                // It never changes the subject controller or runs inside the fault window.
+                if(independent_fault::enabled)throw std::runtime_error("identity observer must be disarmed");
+                Value captured;
+                edi::assistant::Hooks witness_hooks;
+                witness_hooks.event=[](const std::string&){};
+                witness_hooks.provider_request=[&](const std::string& wire){captured=edi::json::parse(wire);};
+                witness_hooks.monotonic_ms=[] {return std::uint64_t{107};};
+                edi::assistant::Controller witness(worker,std::move(witness_hooks));
+                if(!witness.attach(nullptr,"").ok)throw std::runtime_error("identity observer attach refused");
+                const auto ready=Object{{"schema","edi.assistant/1"},{"type","connection"},
+                    {"connection_id","identity-observer"},{"status","ready"},
+                    {"capabilities",Array{Object{{"id","gpt-6.1-sol"},{"display_name","Independent identity control"},
+                        {"efforts",Array{"high"}},{"attachment_types",Array{}}}}}};
+                if(!witness.provider_event(edi::json::write(ready)).ok)throw std::runtime_error("identity observer connection refused");
+                if(!witness.user_command(edi::json::write(Object{{"schema","edi.assistant/1"},{"type","message"},
+                    {"text","Independent identity control"},{"connection_id","identity-observer"},
+                    {"model","gpt-6.1-sol"},{"effort","high"}})).ok)
+                    throw std::runtime_error("identity observer message refused");
+                result=Object{{"conversation_id",captured.at("conversation_id")},
+                    {"turn_id",captured.at("turn_id")},{"request_id",captured.at("request_id")}};
+            } else if(op == "identity_string_control") {
+                const auto suffix=static_cast<std::uint64_t>(input.at("suffix").number("suffix"));
+                const auto ordinal=static_cast<std::uint64_t>(input.at("ordinal").number("ordinal"));
+                const bool length=input.at("length").boolean("length");
+                std::string value;bool threw=false;
+                {
+                    independent_fault::Arm armed(ordinal,length);
+                    try {value=std::string("conversation")+'-'+std::to_string(suffix);}
+                    catch(const std::bad_alloc&) {threw=true;}
+                    catch(const std::length_error&) {threw=true;}
+                }
+                result=Object{{"value",value},{"threw",threw},
+                    {"inline_capacity",static_cast<double>(std::string{}.capacity())}};
+            } else if(op == "fault_attach") {
+                const auto id=input.at("id").string("id");
+                const bool detach=input.at("detach").boolean("detach");
+                const auto ordinal=static_cast<std::uint64_t>(input.at("ordinal").number("ordinal"));
+                const bool length=input.at("length").boolean("length");
+                edi::assistant::Reply actual;std::string thrown;
+                {
+                    independent_fault::Arm armed(ordinal,length);
+                    try {actual=controller.attach(detach?nullptr:project.get(),id);}
+                    catch(const std::bad_alloc&) {thrown="bad_alloc";}
+                    catch(const std::length_error&) {thrown="length_error";}
+                }
+                result=thrown.empty()?reply(actual):Value(Object{{"returned",false},{"exception",thrown}});
+#endif
 #ifdef EDI_TEST_ADMISSION_FAULT
             } else if (op == "fault_user" || op == "fault_provider") {
                 const auto payload=edi::json::write(input.at("payload"));
