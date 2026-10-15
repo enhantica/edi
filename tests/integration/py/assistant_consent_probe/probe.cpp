@@ -11,6 +11,7 @@
 #include <QFontInfo>
 #include <QImage>
 #include <QQuickTextDocument>
+#include <QScopeGuard>
 #include <QTextBlock>
 #include <QTextFragment>
 #include <QTextList>
@@ -28,6 +29,10 @@
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 namespace {
+class ProviderControlDocument final : public QTextDocument {
+protected:
+    QVariant loadResource(int, const QUrl&) override { return {}; }
+};
 void drain(int ms=30) {
     QElapsedTimer elapsed;elapsed.start();
     do {QCoreApplication::processEvents(QEventLoop::AllEvents,1);} while(elapsed.elapsed()<ms);
@@ -221,8 +226,51 @@ int main(int argc,char** argv) {
                 result={{"url",QUrl::fromLocalFile(path).toString()},{"saved",saved},
                     {"valid_original_image",!reread.isNull()}};
             } else if(markdown_mode && op=="markdown_resource") {
-                const auto resource=markdown_document()->resource(QTextDocument::ImageResource,QUrl(input["url"].toString()));
-                result={{"resource_valid",resource.isValid() && !resource.isNull()}};
+                const QImage original(storage.path()+"/original-image.png");
+                if(original.isNull())throw std::runtime_error("owned image resource control missing");
+                auto* document=markdown_document();
+                const auto prior_document_provider=document->resourceProvider();
+                const auto prior_global_provider=QTextDocument::defaultResourceProvider();
+                const auto restore=qScopeGuard([&] {
+                    document->setResourceProvider(prior_document_provider);
+                    QTextDocument::setDefaultResourceProvider(prior_global_provider);
+                });
+                int document_calls=0,global_calls=0;
+                document->setResourceProvider([&](const QUrl&) -> QVariant {
+                    ++document_calls;return original;
+                });
+                QTextDocument::setDefaultResourceProvider([&](const QUrl&) -> QVariant {
+                    ++global_calls;return original;
+                });
+                const auto resource=document->resource(QTextDocument::ImageResource,QUrl(input["url"].toString()));
+                auto image=resource.value<QImage>();
+                if(image.isNull() && resource.metaType().id()==QMetaType::QByteArray)
+                    image=QImage::fromData(resource.toByteArray());
+                const int subject_document_calls=document_calls,subject_global_calls=global_calls;
+
+                // Independent Qt controls: an invalid loader must reach each fallback.
+                ProviderControlDocument document_control;
+                document_control.setResourceProvider([&](const QUrl&) -> QVariant {
+                    ++document_calls;return original;
+                });
+                const auto document_image=document_control.resource(QTextDocument::ImageResource,
+                    QUrl("edi-test-resource:document-control")).value<QImage>();
+                const int document_control_calls=document_calls-subject_document_calls;
+                const int document_control_global_calls=global_calls-subject_global_calls;
+                ProviderControlDocument global_control;
+                const auto global_image=global_control.resource(QTextDocument::ImageResource,
+                    QUrl("edi-test-resource:global-control")).value<QImage>();
+                result={{"resource_valid",resource.isValid() && !resource.isNull()},
+                    {"resource_type",QString::fromLatin1(resource.metaType().name())},
+                    {"image_null",image.isNull()},{"image_width",image.width()},
+                    {"image_height",image.height()},
+                    {"document_provider_calls",subject_document_calls},
+                    {"global_provider_calls",subject_global_calls},
+                    {"document_control_calls",document_control_calls},
+                    {"document_control_global_calls",document_control_global_calls},
+                    {"global_control_calls",global_calls-subject_global_calls-document_control_global_calls},
+                    {"document_control_image",!document_image.isNull() && document_image.size()==original.size()},
+                    {"global_control_image",!global_image.isNull() && global_image.size()==original.size()}};
             } else if(submit_mode && op=="type_draft") {
                 auto* editor=find("assistant.composer");click(editor,window);
                 const auto text=input["text"].toString();

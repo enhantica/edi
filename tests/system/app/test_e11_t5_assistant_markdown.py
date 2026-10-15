@@ -111,6 +111,16 @@ def test_actual_document_refuses_owned_valid_image_resource_and_does_not_parse_h
         'MD: Qt Markdown disables HTML interpretation while retaining the original provider bytes'
     )
     resource = markdown.command('markdown_resource', url=image['url'])['reply']
-    assert not resource['resource_valid'], (
-        'MD: actual displayed document refuses even valid local image fallback from provider prose'
+    assert (
+        resource['document_control_image']
+        and resource['global_control_image']
+        and resource['document_control_calls'] == 1
+        and resource['document_control_global_calls'] == 0
+        and resource['global_control_calls'] == 1
+    ), 'MD SETUP: invalid-loader controls exercise real document/global image providers'
+    assert resource['image_null'] and resource['image_width'] == resource['image_height'] == 0, (
+        'MD: actual displayed document exposes no usable local image payload from provider prose'
+    )
+    assert resource['document_provider_calls'] == resource['global_provider_calls'] == 0, (
+        'MD: actual displayed document blocks both fallback providers before image loading'
     )
