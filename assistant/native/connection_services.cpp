@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "connection_services.hpp"
+#include "assistant_json.hpp"
 
 #include <QDateTime>
 #include <QDesktopServices>
@@ -88,9 +89,13 @@ struct Services : QObject {
 #endif
         if (key.kind == RecordKind::credentials && !acquire(key.id)) return {StoreStatus::failed, {}};
         QFile file(name);
-        if (info.size() > static_cast<qint64>(Limits::record_bytes) || !file.open(QIODevice::ReadOnly)) return {StoreStatus::failed, {}};
+        if (info.size() > static_cast<qint64>(Limits::record_bytes))
+            detail::refuse("resource_exhausted", "Own record exceeds the assistant limit");
+        if (!file.open(QIODevice::ReadOnly)) return {StoreStatus::failed, {}};
         const auto bytes = file.read(static_cast<qint64>(Limits::record_bytes) + 1);
-        if (file.error() != QFile::NoError || !file.atEnd() || bytes.size() > static_cast<qint64>(Limits::record_bytes)) return {StoreStatus::failed, {}};
+        if (file.error() != QFile::NoError) return {StoreStatus::failed, {}};
+        if (!file.atEnd() || bytes.size() > static_cast<qint64>(Limits::record_bytes))
+            detail::refuse("resource_exhausted", "Own record exceeds the assistant limit");
         return {StoreStatus::ok, bytes};
     }
     StoreStatus write(const RecordKey& key, const QByteArray& bytes) {
@@ -124,7 +129,8 @@ struct Services : QObject {
         if (!protect()) return {StoreStatus::failed, {}};
         RegistrationList result{StoreStatus::ok, {}};
         const auto files = QDir(root + "/registrations").entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
-        if (files.size() > static_cast<qsizetype>(Limits::registrations)) return {StoreStatus::failed, {}};
+        if (files.size() > static_cast<qsizetype>(Limits::registrations))
+            detail::refuse("resource_exhausted", "Own registration count exceeds the assistant limit");
         for (const auto& info : files) {
             if (!info.isFile() || info.isSymLink() || !info.fileName().endsWith(".json")) return {StoreStatus::failed, {}};
             const auto id = info.fileName().chopped(5).toStdString();

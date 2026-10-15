@@ -118,7 +118,8 @@ struct ChatGptConnection::State : QObject {
     std::uint64_t pending_call_bytes = 2;
     QJsonArray replay;
     QString conversation_project;
-    struct Replay { qsizetype after; QJsonArray items; };
+    bool continuation_blocked = false;
+    struct Replay { qsizetype after; QJsonArray items; bool completed = true; };
     std::vector<Replay> replay_groups;
     bool revoke_uncertain = false, erased = true;
     Object revoking;
@@ -170,7 +171,7 @@ struct ChatGptConnection::State : QObject {
     }
     void fail(const QString& message, const QString& code = "edi.assistant.provider_error") {
         ++generation; cancel_operations(); signing_in = false; renewing = false; signing_out = false; revoking = {}; callback.close();
-        nonce.clear(); verifier.clear(); expected_state.clear(); credentials = {}; replay = {}; replay_groups.clear();
+        nonce.clear(); verifier.clear(); expected_state.clear(); credentials = {}; replay = {}; replay_groups.clear(); continuation_blocked = false;
         if (release_records) release_records();
         set_error(message, code); emit_connection("disconnected");
     }
@@ -319,7 +320,8 @@ struct ChatGptConnection::State : QObject {
     }
     void list() {
         const auto result = services.list_registrations();
-        if (result.status == StoreStatus::failed || result.ids.size() > Limits::registrations) throw std::invalid_argument("Registration listing unavailable");
+        if (result.ids.size() > Limits::registrations) detail::refuse("resource_exhausted", "Own registration count exceeds the assistant limit");
+        if (result.status == StoreStatus::failed) throw std::invalid_argument("Registration listing unavailable");
         QJsonArray next; std::set<std::string> ids;
         for (const auto& id : result.ids) {
             if (!registration_id(id) || !ids.insert(id).second) throw std::invalid_argument("Invalid registration listing");
@@ -658,14 +660,41 @@ Reply ChatGptConnection::send(const JsonText& input) {
         if (history.size() > static_cast<qsizetype>(Limits::history_entries) || QJsonDocument(history).toJson(QJsonDocument::Compact).size() > static_cast<qsizetype>(Limits::history_bytes))
             return no("Conversation exceeds the assistant limit.", "edi.assistant.resource_exhausted");
         const auto marker = source.value("conversation_id").toString();
-        if (!marker.isEmpty() && marker != s.conversation_project) { s.replay_groups.clear(); s.replay = {}; s.conversation_project = marker; }
+        if (!marker.isEmpty() && marker != s.conversation_project) {
+            s.replay_groups.clear(); s.replay = {}; s.conversation_project = marker; s.continuation_blocked = false;
+        }
+        if (s.continuation_blocked)
+            return no("This conversation has an unanswered provider call. Start a new conversation to continue safely.", "edi.assistant.interrupted");
         QJsonArray messages;
         for (qsizetype i = 0; i <= history.size(); ++i) {
-            for (const auto& group : s.replay_groups) if (group.after == i) for (const auto& item : group.items) messages.append(item);
+            for (const auto& group : s.replay_groups) if (group.completed && group.after == i) for (const auto& item : group.items) messages.append(item);
             if (i == history.size()) break;
             const auto row = history[i].toObject(); const auto type = row.value("type").toString();
             if (type == "message" && row.value("role") == "user") messages.append(Object{{"role", "user"}, {"content", row.value("text")}});
             else if (type == "tool_result" && !row.value("pending").toBool()) messages.append(Object{{"type", "function_call_output"}, {"call_id", row.value("call_id")}, {"output", QString::fromStdString(json(row))}});
+        }
+        // Every original call on stateless input requires exactly one settled
+        // output. The controller's captured-revision fence is never weakened to
+        // manufacture that output. A refused later call creates an explicit,
+        // visible recovery boundary, retaining the original evidence locally.
+        QSet<QString> awaiting, completed;
+        bool paired = true;
+        for (const auto& item : messages) {
+            const auto row = item.toObject(); const auto type = row.value("type").toString();
+            if (type == "function_call") {
+                const auto call = row.value("call_id").toString();
+                if (call.isEmpty() || awaiting.contains(call) || completed.contains(call)) { paired = false; break; }
+                awaiting.insert(call);
+            } else if (type == "function_call_output") {
+                const auto call = row.value("call_id").toString();
+                if (!awaiting.remove(call)) { paired = false; break; }
+                completed.insert(call);
+            }
+        }
+        if (!paired || !awaiting.isEmpty()) {
+            s.continuation_blocked = true;
+            s.set_error("This conversation has an unanswered or inconsistent provider call. Start a new conversation to continue safely.", "edi.assistant.interrupted");
+            return no(s.error, s.error_code);
         }
         QJsonArray functions;
         for (const auto& entry : source.value("tools").toArray()) {
@@ -705,12 +734,21 @@ Reply ChatGptConnection::send(const JsonText& input) {
             if (replay.size() > static_cast<qsizetype>(Limits::replay_items) || QJsonDocument(replay).toJson(QJsonDocument::Compact).size() > static_cast<qsizetype>(Limits::replay_bytes)) {
                 s.inference_failed("Provider continuation exceeds the assistant limit.", "edi.assistant.resource_exhausted"); return;
             }
-            s.replay = replay; if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output});
+            // Retain every original completed item under the replay-role bound,
+            // but only semantically completed responses become continuation.
+            // Failed calls were deferred and never dispatched, so retry can use
+            // the previous clean replay without manufacturing tool outcomes.
+            const bool completed = s.pending_terminal.value("status") == "completed";
+            s.replay = replay;
+            if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output, completed});
             auto terminal = std::exchange(s.pending_terminal, Object{});
             auto calls = std::exchange(s.pending_calls, QJsonArray{}); s.pending_call_bytes = 2;
             s.stream.reset();
             const auto generation = s.generation;
-            if (terminal.value("status") != "completed") s.set_error("The provider response failed, was incomplete or refused. Retry or reconnect.");
+            if (terminal.value("status") != "completed") {
+                s.set_error("Provider reply failed, incomplete or refused. No tools ran. Retry uses the last completed reply.");
+                terminal["message"] = s.error;
+            }
             else {
                 s.error.clear(); s.error_code.clear();
                 for (const auto& call : calls) {
@@ -745,7 +783,7 @@ void ChatGptConnection::sign_out() {
     s.revoking = s.credentials;
     ++s.generation; s.cancel_operations(); s.callback.close(); s.signing_in = false; s.renewing = false;
     s.credentials = {}; s.models = {}; s.label.clear(); s.subject.clear(); s.expected_state.clear(); s.nonce.clear(); s.verifier.clear();
-    s.replay = {}; s.replay_groups.clear(); s.signing_out = true; s.erased = true; s.revoke_attempts = 0; s.revoke_retry_at = 0;
+    s.replay = {}; s.replay_groups.clear(); s.continuation_blocked = false; s.signing_out = true; s.erased = true; s.revoke_attempts = 0; s.revoke_retry_at = 0;
     s.emit_connection("disconnected");
     try {
         s.revoke_started = s.now();

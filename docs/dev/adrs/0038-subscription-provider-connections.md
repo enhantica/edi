@@ -49,3 +49,20 @@ is charged while held, alongside current registration/credential/revocation obje
 current slot avoids retaining an uncharged duplicate. Per-record/aggregate excess has the declared resource code
 and a bounded generated explanation. This scoped repair does not close pending request/rotation/socket/accounting
 or real-UI retention matrices, nor establish live provider access or CI qualification.
+
+Stateless continuation distinguishes retained evidence from replay eligibility. Original completed output
+items from failed, incomplete or refused responses remain charged to the bounded local replay role, but
+their provisional unexecuted calls are excluded from outgoing continuation. The same visible conversation
+can Retry from its last completed response; a generated bounded failure explains that no tools ran.
+Completed responses retain their exact original items. Before physical dispatch, every included original
+function call must have exactly one correlated settled output. Later calls in a successful edit batch
+receive the controller's original-bound stale-revision refusals. Inconsistent executed history instead
+gets an explicit recovery refusal, without weakening the project/revision fence or inventing outcomes.
+Account or explicit conversation replacement retires this replay scope.
+
+The production protected-record adapter reports known per-record byte and registration-count exhaustion
+through the existing internal typed resource refusal, as does the common injected-list count check.
+Absent records, ordinary I/O and security-policy failures retain their distinct existing behavior; quota
+refusal neither erases grants nor starts browser/provider work. This narrow category correction does not
+establish pre-growth admission for directory materialization, racing file growth, outgoing buffers or
+rotation aggregates. Actual live-provider and complete retaining-role verification remain owed.

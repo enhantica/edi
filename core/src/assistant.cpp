@@ -111,6 +111,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     Hooks hooks;
     Project* live = nullptr;
     Revision version;
+    Revision request_version;
     std::uint64_t serial = 0, event_serial = 0;
     bool open = true, ready = false, response_done = false, had_tools = false;
     enum class OutputFailure { none, interrupted, resource };
@@ -468,6 +469,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     bool send_request() {
         const auto next_request = id("request");
         const auto outgoing = json::write(request_payload(turn, next_request, conversation, text, model, effort, history));
+        auto captured = version;
+        request_version = std::move(captured);
         request_trial = trial ? trial->id : "";
         request = next_request; response_done = false; had_tools = false;
         if (!status("streaming")) return false;
@@ -883,12 +886,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const auto growth = payload_size(user_row) + (history.array("history").empty() ? 0 : 1);
         auto admitted_message = success(O{{"turn_id", next_turn}, {"request_id", next_request}});
         auto next_trial = trial ? trial->id : std::string();
+        auto captured = version;
         // All context/history/wire/return construction succeeded before admission commits.
         user_scope_committed = true;
         text = std::move(next_text); model = std::move(selected); effort = std::move(selected_effort); attachments = A{};
         turn = std::move(next_turn); request = std::move(next_request); conversation = std::move(next_conversation);
         history_used += growth;
-        history = std::move(next_history); request_trial = std::move(next_trial); response_done = false; had_tools = false;
+        history = std::move(next_history); request_trial = std::move(next_trial); request_version = std::move(captured); response_done = false; had_tools = false;
         if (!status("streaming")) return output_refusal();
         try { if (hooks.provider_request) hooks.provider_request(outgoing); }
         catch (...) { interrupt_output(); return failure("interrupted", "The admitted provider request could not start"); }
@@ -951,7 +955,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (response_done) refuse("interrupted", "Response is already terminal");
             const auto result = string(event, "status");
             if (result != "completed" && result != "failed" && result != "interrupted") refuse("invalid_argument", "Invalid terminal status");
-            if (result != "completed") { interrupt_output(); return failure("interrupted", "Provider turn did not complete"); }
+            if (result != "completed") {
+                const auto message = has(event, "message") ? string(event, "message", true) : std::string();
+                interrupt_output();
+                return failure("interrupted", message.empty() ? "Provider turn did not complete" : message);
+            }
             response_done = true;
             if (!continue_turn()) return output_refusal();
             return success();
@@ -966,7 +974,22 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!question.empty()) refuse("busy", "Answer the pending question before another tool");
         const bool no_project_question = string(event, "name") == "ask_question" && !live && string(event, "project_id", true).empty();
         if (!no_project_question && (!live || string(event, "project_id") != version.project_id)) refuse("stale_project", "Project changed");
-        if (detail::revision(event) != version.revision) refuse("stale_revision", "Project revision changed");
+        const auto captured_revision = detail::revision(event);
+        if (captured_revision != version.revision) {
+            // A later call from this exact authenticated request remains an
+            // invocation even when an earlier call advanced the live revision.
+            // Record a correlated refusal; never execute it under a fresh stamp.
+            // Foreign/arbitrary stale inputs keep their ordinary hard refusal.
+            if (captured_revision != request_version.revision || string(event, "project_id", true) != request_version.project_id)
+                refuse("stale_revision", "Project revision changed");
+            event.at("arguments").object("arguments");
+            auto result = failure("stale_revision", "An earlier action changed the project; inspect the current context before proposing another edit");
+            admitting_call = call; admitting_event = event; admission.reset();
+            preflight(result); commit_admission(); admitting_call.clear(); had_tools = true;
+            if (!safe_emit("tool_result", [&] { return O{{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", false}}; }, &event))
+                return output_refusal();
+            return result;
+        }
         const auto name = string(event, "name");
         admitting_call = call; admitting_event = event; admission.reset();
         Reply result;

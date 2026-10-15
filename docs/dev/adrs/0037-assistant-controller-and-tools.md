@@ -112,3 +112,11 @@ output is returned in position order. The documented reasoning_text variant reta
 and opaque part lifecycle; no hidden reasoning is emitted as public assistant text. This also preserves final
 original reasoning/encrypted fields for stateless continuation. Broader quota/retention and native replay
 recovery remain separately held; these changes do not establish their closure.
+
+A request retains its original project/revision separately from the current live revision. When an earlier
+approved call in that same authenticated request changes the project, later calls still receive a complete
+original-call-bound stale-revision outcome in history and the immutable receipt cache. They never execute
+under a refreshed stamp. Foreign request/project/revision inputs retain their ordinary refusal. This extends
+the existing closed edit door and semantic call identity rather than granting a provider new authority.
+Failed native responses can supply a bounded generated explanation through the existing terminal message;
+the core exposes that failure while retiring its execution scope.
