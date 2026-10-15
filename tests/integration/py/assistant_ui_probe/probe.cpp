@@ -140,7 +140,7 @@ int main(int argc,char** argv) {
         auto types=link_at.parameterTypes();
         for(int y=2;y<std::min(160.,item->height());y+=4) for(int x=2;x<std::min(512.,item->width());x+=4) {
             QString link;qreal px=x,py=y;
-            if(!link_at.invoke(object,Qt::DirectConnection,Q_RETURN_ARG(QString,link),QGenericArgument(types[0].constData(),&px),QGenericArgument(types[1].constData(),&py)))
+            if(!link_at.invoke(object,Qt::DirectConnection,QGenericReturnArgument("QString",&link),QGenericArgument(types[0].constData(),&px),QGenericArgument(types[1].constData(),&py)))
                 throw std::runtime_error("public Qt text link hit-test invocation failed");
             if(link.isEmpty()) continue;
             QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,item->mapToScene(QPointF(x,y)).toPoint());
@@ -177,7 +177,9 @@ int main(int argc,char** argv) {
             const auto& model=observed->project()->project();
             project={{"name",QString::fromStdString(model.metadata.name)},
                      {"cell_a",model.structure().cell.length_a.value.get()},
-                     {"cell_a_free",model.structure().cell.length_a.free.get()}};
+                     {"cell_a_free",model.structure().cell.length_a.free.get()},
+                     {"report_embedded",observed->project()->report()->embedLibraries()},
+                     {"can_undo",observed->project()->canUndo()}};
         }
         return {{"alive",true},{"singleton_identity",singleton==observed&&qml_assistant==observed->assistant()},
                 {"engine_parent",observed->parent()==engine.get()},
@@ -234,6 +236,8 @@ int main(int argc,char** argv) {
             else if(op=="create") result={{"created",observed->createProject(input["name"].toString(),"independent fixture")}};
             else if(op=="close_project") observed->closeProject();
             else if(op=="save_as") result={{"saved",observed->saveAs(QUrl::fromLocalFile(input["path"].toString()))}};
+            else if(op=="report_toggle") observed->project()->report()->setEmbedLibraries(!observed->project()->report()->embedLibraries());
+            else if(op=="undo") observed->project()->undo();
             else if(op=="clear_history") observed->assistant()->clearHistory();
             else if(op=="cancel") observed->assistant()->cancel();
             else if(op=="sign_out") observed->assistant()->signOut();

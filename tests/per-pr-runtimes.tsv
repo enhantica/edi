@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T00:47:34Z
+# measured_utc = 2026-10-15T00:51:28Z
 #
-# E11-T5 seq2 final real-core focused source7d16964: /home/andrewsazonov/runs/ai-assistant/tests-seq2-final-focused-corrected.log; 57 failed (20 missing question feature), 50 passed; failed nodes remain explicit holes; all other bank rows preserved
+# E11-T5 seq2 final owner admission41setup errors and candidate-retirement2behavior reds; actual logs /home/andrewsazonov/runs/ai-assistant/tests-seq2-{owner-final-admission,candidate-retirement}.log; existing rows preserved
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,10 +27,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13181
+# inventory_python = 13187
 # inventory_cpp = 333
 # inventory_measured = 11829
-# inventory_unmeasured = 1685
+# inventory_unmeasured = 1691
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6333,6 +6333,10 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.p
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_engine_refuses_invalid_owner_transfer_without_replacing_existing_owner[already-configured]
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_engine_refuses_invalid_owner_transfer_without_replacing_existing_owner[null]
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_engine_refuses_invalid_owner_transfer_without_replacing_existing_owner[parented]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval[cancel]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval[report-setting]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval[report-undo]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval[save-as]
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_render_observers_have_real_bounded_image_and_url_positive_controls
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[0-session]
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.py::test_required_services_validate_before_real_owner_or_vm_external_io[0-vm]
@@ -10011,6 +10015,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-typed-edit]
 1.070	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-live-preview]
 1.050	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-typed-edit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[new-candidate]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-candidate]
@@ -13565,7 +13571,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
-# module-cost: 0.203	tests/system/app/test_e11_t5_assistant_connected.py
+# module-cost: 0.060	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py

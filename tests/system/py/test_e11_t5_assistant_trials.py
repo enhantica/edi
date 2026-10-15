@@ -469,3 +469,38 @@ def test_iteration_objective_is_the_original_weighted_residual_not_reduced_quali
         'I8/I13: a field labelled objective carries the independently calculated '
         'weighted residual on the original population, not reduced chi-square'
     )
+
+
+@pytest.mark.parametrize('replacement', [False, True], ids=['no-candidate', 'new-candidate'])
+def test_retired_candidate_request_cannot_retarget_distinct_late_mutation(host, replacement):
+    load_source(host, baseline=False)
+    paths = useful_paths(host)
+    plan = approve(host, paths)
+    begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+    assert begun['reply']['ok'], 'I8: the original isolated candidate is genuinely admitted'
+    old_binding = host.binding()
+    old_trial = begun['reply']['value']['trial_id']
+    discarded = host.tool('discard_trial', {'trial_id': old_trial}, plan_id=plan)
+    assert discarded['reply']['ok'], 'I8: the original candidate target has been retired'
+    if replacement:
+        begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+        assert begun['reply']['ok'] and begun['reply']['value']['trial_id'] != old_trial, (
+            'I8: a distinct current candidate is admitted through the current request scope'
+        )
+    original = host.last['snapshot']
+    path = next(path for path in paths if path.endswith('.scale'))
+    result = host.tool(
+        'set_parameters',
+        {'values': [{'path': path, 'value': 17.31}]},
+        **old_binding,
+        call_id='late-former-candidate',
+        plan_id=plan,
+    )
+    assert not result['reply']['ok'], (
+        'I2/I7/I8: a distinct delayed call from a retired candidate request cannot '
+        'retarget the accepted live project or a replacement candidate'
+    )
+    assert result['snapshot'] == original, (
+        'I4/I7: rejecting a retired candidate call preserves exact accepted '
+        'state and row identities'
+    )

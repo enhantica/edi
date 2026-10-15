@@ -450,3 +450,44 @@ def test_effort_options_use_reviewed_capabilities_and_ignore_untrusted_catalog_l
     assert ui.last['image_requests'] == 0 and ui.last['activated_urls'] == [], (
         'I12: rejecting undocumented effort metadata causes no image or URL side effects'
     )
+
+
+@pytest.mark.parametrize('ending', ['save-as', 'report-setting', 'report-undo', 'cancel'])
+def test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval(
+    ui, signer, tmp_path, ending
+):
+    source = copy_project(tmp_path, 'manual-boundary')
+    assert ui.command('open', path=str(source))['reply']['opened'], (
+        'I4/I7: a complete writable independent project reaches the actual manual owner'
+    )
+    if ending == 'report-undo':
+        ui.command('report_toggle')
+        assert ui.last['ui']['project']['can_undo'], (
+            'I4/I7: the ordinary report edit creates a real Undo entry before approval'
+        )
+    authenticate(ui, signer)
+    index, _ = begin_request(ui)
+    native_protocol.stream(ui, index, function_events('propose_plan', proposal('Manual boundary')))
+    assert ui.last['ui']['pending_plan'], (
+        'I2: a real provider proposal is displayed before the independent manual action'
+    )
+    before = ui.last['ui']['project']
+    if ending == 'save-as':
+        result = ui.command('save_as', path=str(tmp_path / 'saved-as'))
+        assert result['reply']['saved'], (
+            'I4/I7: ordinary save-as succeeds even when numeric values remain unchanged'
+        )
+    elif ending == 'report-setting':
+        ui.command('report_toggle')
+    elif ending == 'report-undo':
+        ui.command('undo')
+    else:
+        ui.command('cancel')
+    if ending in {'report-setting', 'report-undo'}:
+        assert ui.last['ui']['project']['report_embedded'] != before['report_embedded'], (
+            'I4/I7: the actual report setting or Undo changes its real persisted setting'
+        )
+    assert not ui.last['ui']['pending_plan'], (
+        'I2/I7: save-as, report edit/Undo and cancel retire authoritative visible approval '
+        'instead of retaining an actionable stale card'
+    )
