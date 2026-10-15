@@ -120,7 +120,7 @@ def test_legitimate_partial_tool_is_bounded_nonexecuting_evidence_not_local_json
                 ),
                 'one_non_success_terminal': len(terminals) == 1
                 and terminals[0]['status'] != 'completed',
-                'original_bounded_partial_evidence': output == [item],
+                'incomplete_absent_from_completed_replay': output == [],
             })
         finally:
             host.close()
