@@ -348,7 +348,7 @@ EaComponents.ApplicationWindow {
             parent: window.contentItem
             visible: assistantPanel.visible && window.assistantWorkflowPage !== null
             x: Preferences.sideBarOnLeft ? 0 : window.contentItem.width - width
-            y: modelData ? window.contentItem.height - EaStyle.Sizes.statusBarHeight - height
+            y: modelData ? window.contentItem.height - EaStyle.Sizes.statusBarHeight
                          : EaStyle.Sizes.appBarHeight - height
             width: activeAssistantHost ? activeAssistantHost.width : 0
             height: EaStyle.Sizes.borderThickness
