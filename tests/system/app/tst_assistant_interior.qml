@@ -67,6 +67,7 @@ TestCase {
         });
         verify(row !== null, "I16/INT1: each real production delegate accepts its independently supplied kind/body");
         verify(waitForPolish(window), "I16/INT1: the actual row completes layout");
+        window.update();
         verify(waitForRendering(window.contentItem), "I16/INT1: the actual literal row renders");
         const body = Ui.itemsWithProperty(row, "readOnly").find(control => control.visible && control.text === text);
         verify(body !== undefined, "I16/INT1: complete original body remains visible in the actual delegate");

@@ -198,12 +198,30 @@ TestCase {
             }
         ];
     }
+    function keyboardObservation(stage, button) {
+        const focus = window.activeFocusItem;
+        console.log("KEYBOARD_OBSERVATION", stage, JSON.stringify({
+            windowActive: window.active,
+            windowVisible: window.visible,
+            popupVisible: popup.visible,
+            shown: Preferences.assistantShown,
+            focusName: focus ? focus.objectName : null,
+            focusClass: focus ? String(focus) : null,
+            buttonFocus: button.activeFocus,
+            buttonVisible: button.visible,
+            buttonEnabled: button.enabled,
+            buttonDown: button.down
+        }));
+    }
     function test_keyboard_can_return_to_appbar(data) {
         if (popup.visible)
             toggle();
         const button = item("assistant.toggle");
+        keyboardObservation("before-focus-" + data.tag, button);
         button.forceActiveFocus();
+        keyboardObservation("after-focus-" + data.tag, button);
         keyClick(Qt.Key_Space);
+        keyboardObservation("after-space-" + data.tag, button);
         tryCompare(popup, "visible", true, 500, "I16/POP1: real keyboard appbar activation opens chat");
         const composer = item("assistant.composer");
         tryVerify(() => composer.activeFocus, 500, "I16/POP1: traversal starts from the actual focused composer");
