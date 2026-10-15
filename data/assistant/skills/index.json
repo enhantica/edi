@@ -1,0 +1,76 @@
+{
+  "schema": "edi.assistant.skills/1",
+  "skills": [
+    {
+      "id": "project-assistance",
+      "version": "1.0.0",
+      "title": "Review an Edi project",
+      "summary": "Inspect actual project context and propose bounded approved work.",
+      "path": "project-assistance/SKILL.md",
+      "sha256": "a9f07057b55e797b1ca4f8f00c4810ee563d57b4da5e2f56e4612fda23741bc0",
+      "requires": [],
+      "capabilities": [
+        "inspect_project",
+        "list_parameters",
+        "diagnostics",
+        "read_selected_file",
+        "ask_question",
+        "propose_plan",
+        "set_parameters",
+        "set_free",
+        "begin_trial",
+        "fit_trial",
+        "evaluate_trial",
+        "discard_trial"
+      ],
+      "references": [
+        {
+          "title": "IUCr Rietveld refinement guidelines",
+          "url": "https://journals.iucr.org/j/issues/1999/01/00/gl0561/"
+        }
+      ]
+    },
+    {
+      "id": "fullprof-intake",
+      "version": "1.0.0",
+      "title": "Inspect a FullProf project",
+      "summary": "Inspect selected PCR/data companions; conversion remains unavailable.",
+      "path": "fullprof-intake/SKILL.md",
+      "sha256": "4940d32bfb12da9aa9cd1309371ba4ff1160f3e3c5f648bd265cc1cb589cf185",
+      "requires": [
+        "selected_files"
+      ],
+      "capabilities": [
+        "read_selected_file",
+        "ask_question"
+      ],
+      "references": [
+        {
+          "title": "FullProf official documentation",
+          "url": "https://www2017.ill.eu/sites/fullprof/documentation.html"
+        }
+      ]
+    },
+    {
+      "id": "gsas-intake",
+      "version": "1.0.0",
+      "title": "Inspect GSAS/GSAS-II material",
+      "summary": "Inspect selected text exports; binary GPX conversion remains unavailable.",
+      "path": "gsas-intake/SKILL.md",
+      "sha256": "f6fcbbc0727a394ddfdc2ee1acc6106187c7daac97766a9712d23a1637e3a7f4",
+      "requires": [
+        "selected_files"
+      ],
+      "capabilities": [
+        "read_selected_file",
+        "ask_question"
+      ],
+      "references": [
+        {
+          "title": "GSAS-II Full CIF tutorial",
+          "url": "https://advancedphotonsource.github.io/GSAS-II-tutorials/CIFtutorial/CIFtutorial.html"
+        }
+      ]
+    }
+  ]
+}

@@ -63,7 +63,9 @@ in the same change — see `AGENTS.md` §ADRs.
 
 | [0037](0037-assistant-controller-and-tools.md) | Assistant controller and tools | Accepted | 🟡 | High | One Qt-free controller; separate user approval and provider events, checked typed edits, bounded streams and isolated real fit trials; scan/persistent recovery pending |
 | [0038](0038-subscription-provider-connections.md) | Subscription provider connections | Accepted | 🟡 | High | Native SIWC ChatGPT candidate; issuer-verified credentials, bounded streamed Responses; live account and other providers/platforms pending |
-| [0041](0041-assistant-panel-and-history.md) | Assistant panel and conversation history | Accepted | 🟡 | High | Opposite sidebar, existing components, explicit approval and bounded separate history; actual visual/live proof pending |
+| [0041](0041-assistant-panel-and-history.md) | Assistant panel and conversation history | Accepted | 🟡 | High | Appbar-only overlay on the actual sidebar, existing components, explicit approval and bounded history; live provider proof pending |
+
+| [0042](0042-assistant-product-skills.md) | Versioned assistant product guidance | Accepted | 🟡 | High | Initial exact content/index present; embedded loading, consented context and resource browsing pending |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`

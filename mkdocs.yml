@@ -72,6 +72,7 @@ nav:
           - dev/adrs/0037-assistant-controller-and-tools.md
           - dev/adrs/0038-subscription-provider-connections.md
           - dev/adrs/0041-assistant-panel-and-history.md
+          - dev/adrs/0042-assistant-product-skills.md
           - dev/adrs/template.md
       - Design:
           - dev/design/assistant-plan.md
