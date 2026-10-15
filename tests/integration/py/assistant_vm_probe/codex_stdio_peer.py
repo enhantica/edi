@@ -128,8 +128,8 @@ def clear_ordered_interrupt(request):
     clear_observation('interrupt-received', {**original, 'request_id': request['id']})
 
     def acknowledge():
-        reply(request, {})
         clear_observation('interrupt-ack', {**original, 'request_id': request['id']})
+        reply(request, {})
 
     def terminal():
         clear_completion(original, 'Original late reply after Clear', old=True)
