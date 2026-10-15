@@ -242,6 +242,7 @@ def test_failed_preference_read_retries_on_same_live_owner_after_storage_recover
     assert facts['same_bytes_after_restore'] and facts['same_inode_after_restore'] and facts['qt_readable_after_restore'], 'I13/PREF1: recovery uses the same independently readable original store, not a user-choice replacement'
     assert facts['after_reconnect']['pair'] == (LUNA, 'none'), 'I13/PREF1: same live owner retries failed load and restores actual user choice after genuine reconnect'
     assert facts['physical_inferences'] == 0 and facts['original_store_after_recovery'], 'I13/PREF1: read recovery neither sends inference nor rewrites the original user choice'
+    assert not facts['after_reconnect']['error'], 'I13/PREF2: restored original preference retires its obsolete read-failure diagnostic'
 
 
 def test_confirmed_absent_store_is_a_legal_available_default(launch, signer):
@@ -253,3 +254,72 @@ def test_confirmed_absent_store_is_a_legal_available_default(launch, signer):
         connected(absent, signer)
         assert pair(absent) == (SOL, ''), 'I13/PREF1: genuine absence permits a current available model with Provider default'
         assert not prior.responses(absent), 'I13/PREF1: absent preference restoration never fabricates an inference'
+
+
+@pytest.mark.parametrize('retry', ['select_model', 'select_effort'])
+def test_failed_save_then_same_value_retry_retires_only_resolved_error(launch, signer, retry):
+    facts = {}
+    with launch() as saving:
+        connected(saving, signer)
+        choose(saving, SOL, 'high')
+        store = Path(saving.last['settings_file'])
+        original = store.read_bytes()
+        mode = stat.S_IMODE(store.stat().st_mode)
+        parent_mode = stat.S_IMODE(store.parent.stat().st_mode)
+        try:
+            store.chmod(0o444)
+            store.parent.chmod(0o555)
+            with pytest.raises(PermissionError):
+                with store.open('ab'):
+                    pass
+            choose(saving, LUNA, 'none')
+            facts['failed_save'] = {'pair': pair(saving), 'error': saving.last['vm']['last_error'], 'original_bytes_preserved': store.read_bytes() == original}
+        finally:
+            store.parent.chmod(parent_mode)
+            store.chmod(mode)
+        saving.command(retry, id=LUNA if retry == 'select_model' else 'none')
+        facts['after_retry'] = {'pair': pair(saving), 'error': saving.last['vm']['last_error'], 'inferences': len(prior.responses(saving))}
+    with launch() as restarted:
+        connected(restarted, signer)
+        facts['restarted_pair'] = pair(restarted)
+    print(json.dumps({'PREF2_save': facts}, ensure_ascii=False))
+    assert facts['failed_save']['error'] and facts['failed_save']['original_bytes_preserved'], 'I13/PREF2: actual write denial has a public failure while preserving original saved bytes'
+    assert facts['after_retry']['pair'] == (LUNA, 'none') and facts['restarted_pair'] == (LUNA, 'none'), 'I13/PREF2: genuine same-value retry durably saves the complete intended pair'
+    assert not facts['after_retry']['error'] and facts['after_retry']['inferences'] == 0, 'I13/PREF2: successful explicit retry clears its stale save diagnostic without inference'
+
+
+@pytest.mark.parametrize('problem', ['unavailable-model', 'unavailable-effort', 'invalid-pair'])
+def test_explicit_valid_choice_retires_saved_choice_warning(launch, signer, problem):
+    with launch() as first:
+        connected(first, signer)
+        choose(first)
+        store = Path(first.last['settings_file'])
+    if problem != 'unavailable-model':
+        original = store.read_bytes()
+        assert original.count(LUNA.encode()) == 1, 'I13/PREF2: independently selected original model uniquely identifies the saved value without guessing a settings key'
+        replacement = SOL.encode() if problem == 'unavailable-effort' else b''
+        store.write_bytes(original.replace(LUNA.encode(), replacement, 1))
+        qualified = qualify_read(store)
+        assert qualified['qsettings_status'] == 0, 'I13/PREF2: rejected choice is inside readable legal INI, not an unrelated read failure'
+    offered = catalog(SOL) if problem == 'unavailable-model' else catalog(SOL, LUNA)
+    with launch(offered) as recovered:
+        connected(recovered, signer)
+        before = recovered.last['vm']['last_error']
+        choose(recovered, SOL, 'high')
+        after = recovered.last['vm']['last_error']
+        assert before, 'I13/PREF2: unavailable or invalid saved pair has a genuine public preference warning'
+        assert not after, 'I13/PREF2: accepted explicit valid pair retires its obsolete saved-choice warning'
+        assert not prior.responses(recovered), 'I13/PREF2: preference warning recovery sends no inference'
+
+
+def test_successful_preference_save_preserves_unrelated_provider_failure(launch, signer):
+    with launch() as failed:
+        connected(failed, signer)
+        failed.command('sign_in')
+        prior.failed_response(failed, 'failed')
+        original_error = failed.last['vm']['last_error']
+        original_rows = failed.last['vm']['messages']
+        assert original_error and not failed.last['vm']['can_cancel'], 'I13/PREF2: genuine settled offline provider failure establishes an unrelated public diagnostic'
+        choose(failed, SOL, 'high')
+        assert failed.last['vm']['last_error'] == original_error, 'I13/PREF2: successful preference save cannot erase an unrelated provider failure'
+        assert failed.last['vm']['messages'] == original_rows, 'I3/PREF2: preference recovery leaves the original complete provider failure card intact'
