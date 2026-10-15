@@ -184,6 +184,10 @@ _instrument.calib_twotheta_offset 0
 _data_range.two_theta_min 10
 _data_range.two_theta_max 10.2
 _data_range.two_theta_step 0.1
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+persistence_phase 1
 """
     )
     project.experiment.linked_structure.structure_id = structure.name
