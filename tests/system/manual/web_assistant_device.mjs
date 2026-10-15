@@ -41,7 +41,7 @@ export async function inspectAssistantDevices({send,evaluate,frame,url,record,ca
         Object.defineProperty(navigator,name,{configurable:true,get:()=>value});
       window.__ediDeviceFixture=facts.id;
       if(!sessionStorage.getItem('edi-device-seeded-'+facts.id)) {
-        localStorage.setItem('edi.settings.ini','[Assistant]\nshown=true\nwidth=347\n[Edi.Preferences]\nsideBarSide=Left\n');
+        localStorage.setItem('edi.settings.ini',${JSON.stringify('[Assistant]\nshown=true\nwidth=347\n[Edi.Preferences]\nsideBarSide=Left\n')});
         sessionStorage.setItem('edi-device-seeded-'+facts.id,'true');
       }
     })();`;
