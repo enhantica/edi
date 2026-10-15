@@ -359,3 +359,12 @@ install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
 if(TARGET edi_assistant_native)
     target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
 endif()
+
+# ADR-0041: one native official-runtime frontend, with ordinary Qt process ownership.
+if(NOT EMSCRIPTEN)
+    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp)
+    file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
+         ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
+    qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
+                     BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
+endif()

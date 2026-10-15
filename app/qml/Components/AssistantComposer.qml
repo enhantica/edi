@@ -23,6 +23,8 @@ Rectangle {
     property int savedSelectionStart: 0
     property int savedSelectionEnd: 0
     property string submittedText: ""
+    readonly property bool canSteer: assistant.state === "agent_active"
+    readonly property bool hasDraft: editor.text.trim().length > 0
     property var previousMessageIds: []
     function chooseFiles() {
         if (WebFiles.available || assistant.canCancel) return;
@@ -99,7 +101,7 @@ Rectangle {
         submit();
     }
     function submit() {
-        if (!assistant.connected || assistant.canCancel || editor.text.trim().length === 0)
+        if (!assistant.connected || (assistant.canCancel && !canSteer) || !hasDraft)
             return;
         if (assistant.contextConsentRequired) {
             contextApprovalRequested(editor.text);
@@ -201,7 +203,7 @@ Rectangle {
         RowLayout {
             id: composerToolbar
             readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth
-                - Math.max(sendButton.implicitWidth, stopButton.implicitWidth)
+                - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0)
                 - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * 6)
             width: parent.width
             spacing: AppSizes.unit * 0.5
@@ -374,19 +376,19 @@ Rectangle {
                     implicitWidth: addFilesButton.implicitWidth
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: EaStyle.Colors.isDarkPalette ? "white" : "black"
+                    color: composer.canSteer && composer.hasDraft ? stopButton.backgroundColor() : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                 }
                 contentItem: EaElements.Label {
                     opacity: stopButton.enabled ? 1 : 0.35
                     text: stopButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: stopButton.font.pixelSize * 1.25
-                    color: EaStyle.Colors.isDarkPalette ? "black" : "white"
+                    color: composer.canSteer && composer.hasDraft ? stopButton.foregroundColor() : (EaStyle.Colors.isDarkPalette ? "black" : "white")
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: composer.toggleControl
+                KeyNavigation.tab: sendButton.visible ? sendButton : composer.toggleControl
                 KeyNavigation.backtab: nextUserButton
                 objectName: "assistant.stop"
                 fontIcon: "stop"
@@ -421,8 +423,8 @@ Rectangle {
                 text: qsTr("Send")
                 ToolTip.text: text
                 highlighted: true
-                visible: !composer.assistant.canCancel
-                enabled: composer.assistant.connected && !composer.assistant.canCancel && editor.text.trim().length > 0
+                visible: !composer.assistant.canCancel || (composer.canSteer && composer.hasDraft)
+                enabled: composer.assistant.connected && (!composer.assistant.canCancel || composer.canSteer) && composer.hasDraft
                 Accessible.name: text
                 onClicked: composer.submit()
             }

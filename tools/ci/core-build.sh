@@ -68,9 +68,14 @@ trap 'rm -f "$BUILD_LOCK/owner"; rmdir "$BUILD_LOCK" 2>/dev/null || true' EXIT
 export EDI_PRODUCER_LOCK_HELD="$$.$RANDOM.$RANDOM"; printf '%s\n' "$EDI_PRODUCER_LOCK_HELD" >"$BUILD_LOCK/owner"
 # Acquire crysta as a CMake package, inside this producer lock: the pinned SDK (ADR-0017), or
 # CRYSTA_SDK_DIR's candidate. Needs the crysta link deps in the env (eigen/sleef/openmp) — see pixi.toml.
-bash tools/ci/build-crysta.sh
+if [ -n "${EDI_CRYSTA_PREFIX:-}" ]; then
+  [ -z "${CI:-}" ] || { echo "core-build: local development prefix refused in CI" >&2; exit 1; }
+  [ -d "$EDI_CRYSTA_PREFIX" ] || { echo "core-build: local crysta prefix is missing" >&2; exit 1; }
+else
+  bash tools/ci/build-crysta.sh
+fi
 # The linked commit's corpus and reference source for edi's tests (fetched, never built).
-bash tools/ci/crysta-src.sh
+[ -n "${EDI_CRYSTA_PREFIX:-}" ] || bash tools/ci/crysta-src.sh
 # A consumer job restores the artifact `native · <platform>` built once for this run, each bound field
 # and every restored byte checked against it, and compiles nothing.
 if [ "${EDI_NATIVE_ARTIFACT:-}" = 1 ]; then
@@ -80,7 +85,10 @@ fi
 # prefix, so edi configures against THAT prefix and into its own build tree. Keeping the two apart is
 # what lets a consumer run and edi's own pinned build coexist in one checkout without either
 # invalidating the other.
-if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
+if [ -n "${EDI_CRYSTA_PREFIX:-}" ]; then
+  CRYSTA_PREFIX="$EDI_CRYSTA_PREFIX"
+  EDI_BUILD_DIR=build/app-python
+elif [ -n "${CRYSTA_SDK_DIR:-}" ]; then
   CRYSTA_PREFIX="$ROOT/build/crysta-consumer-prefix"
   EDI_BUILD_DIR=build/ci-consumer
 else
@@ -100,7 +108,7 @@ printf '%s\n' "$SDK_CONTENT" > "$SDK_MARKER"
 # The declared deployment target on every configure, as for crysta above, so edi's objects and
 # its link agree with the crysta objects they link.
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" \
+  -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" -DEDI_BUILD_APP=OFF -DEDI_BUILD_BINDINGS=ON \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
 cmake --build "$EDI_BUILD_DIR" -j
 # Further targets in this same tree, under this lock (the C++ tier's edi_tests).
@@ -108,7 +116,11 @@ cmake --build "$EDI_BUILD_DIR" -j
 # Review-7 F7: tie provenance to the edi artifact actually LINKED. The prefix stamp and source
 # record are mutable across resolves; this record names the crysta the just-built edi contains,
 # and downstream consumers select it instead of re-reading whatever a later resolve left behind.
-cp "$CRYSTA_PREFIX/.crysta-sha" "$EDI_BUILD_DIR/.crysta-linked-sha"
+if [ -f "$CRYSTA_PREFIX/.crysta-sha" ]; then
+  cp "$CRYSTA_PREFIX/.crysta-sha" "$EDI_BUILD_DIR/.crysta-linked-sha"
+else
+  rm -f "$EDI_BUILD_DIR/.crysta-linked-sha"
+fi
 
 printf '%s\n' "$SDK_CONTENT" > "$EDI_BUILD_DIR/.crysta-linked-content.tmp"
 mv "$EDI_BUILD_DIR/.crysta-linked-content.tmp" "$EDI_BUILD_DIR/.crysta-linked-content"

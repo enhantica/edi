@@ -213,7 +213,7 @@ Popup {
                         for (let i = 0; i < panel.assistant.skills.count; ++i)
                             if (panel.assistant.skills.text(i, "id") === panel.assistant.selectedSkill)
                                 return qsTr("Workflow: %1 · %2").arg(panel.assistant.skills.text(i, "title")).arg(panel.assistant.skills.text(i, "version"));
-                        return qsTr("Workflow unavailable");
+                        return qsTr("Skills · %1 available").arg(panel.assistant.skills.count);
                     }
                     Accessible.name: text
                     onClicked: skillsDialog.open()

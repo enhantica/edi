@@ -13,10 +13,11 @@ AppDialog {
     readonly property int selectedIndex: {
         for (let i = 0; i < assistant.skills.count; ++i)
             if (assistant.skills.text(i, "id") === assistant.selectedSkill) return i;
-        return -1;
+        return assistant.selectedSkill.length === 0 && assistant.skills.count > 0 ? Math.min(inspectedIndex, assistant.skills.count - 1) : -1;
     }
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
-    title: qsTr("Workflow guidance")
+    title: qsTr("Edi skills")
+    property int inspectedIndex: 0
     width: Math.min(AppSizes.unit * 44, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
     contentWidth: Math.max(0, width - leftPadding - rightPadding)
@@ -44,16 +45,17 @@ AppDialog {
                 model: dialog.assistant.skills
                 delegate: Column {
                     required property var model
+                    required property int index
                     width: content.width
                     spacing: AppSizes.unit * 0.25
                     EaElements.Button {
                         width: parent.width
                         text: model.title + " · " + model.version
                         checkable: true
-                        checked: model.id === dialog.assistant.selectedSkill
-                        enabled: !dialog.assistant.canCancel
+                        checked: dialog.assistant.selectedSkill.length === 0 ? index === dialog.selectedIndex : model.id === dialog.assistant.selectedSkill
+                        enabled: dialog.assistant.selectedSkill.length === 0 || !dialog.assistant.canCancel
                         Accessible.name: text + (checked ? qsTr(" · selected") : "")
-                        onClicked: dialog.assistant.selectSkill(model.id)
+                        onClicked: { if (dialog.assistant.selectedSkill.length === 0) dialog.inspectedIndex = index; else dialog.assistant.selectSkill(model.id); }
                     }
                     EaElements.Label {
                         width: parent.width

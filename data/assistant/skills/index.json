@@ -7,7 +7,7 @@
       "title": "Review an Edi project",
       "summary": "Inspect actual project context and propose bounded approved work.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "a9f07057b55e797b1ca4f8f00c4810ee563d57b4da5e2f56e4612fda23741bc0",
+      "sha256": "a11a06c33a5928502b2595cfddfb66704faab46c7fadc4712120c708fd630876",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -36,7 +36,7 @@
       "title": "Inspect a FullProf project",
       "summary": "Inspect selected PCR/data companions; conversion remains unavailable.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "4940d32bfb12da9aa9cd1309371ba4ff1160f3e3c5f648bd265cc1cb589cf185",
+      "sha256": "77f21326dccc31ad8b8a9bb63ac77e4067f1272b9685cb13acdd61187b165d79",
       "requires": [
         "selected_files"
       ],
@@ -57,7 +57,7 @@
       "title": "Inspect GSAS/GSAS-II material",
       "summary": "Inspect selected text exports; binary GPX conversion remains unavailable.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "f6fcbbc0727a394ddfdc2ee1acc6106187c7daac97766a9712d23a1637e3a7f4",
+      "sha256": "5cd3de0942c2b17d6e90e54e1ad3a23d3256278e9f004997e9c1128cb9c6f64a",
       "requires": [
         "selected_files"
       ],

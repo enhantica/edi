@@ -48,5 +48,13 @@ fi
     cmake --build "$2" --target crysta_core crysta_cli
     cmake --install "$2" --prefix "$3" >/dev/null' _ "$src" "$tree" "$prefix"
 
+# The default environment owns the binding-compatible nanobind toolchain. Its
+# CPython stable-ABI extension is consumed by the app Python, which has numpy/yaml.
+# Do not enable bindings in the Qt/app graph (a different nanobind environment).
+"${clean[@]}" EDI_CRYSTA_PREFIX="$prefix" "$pixi_bin" run --as-is --manifest-path "$PWD/pixi.toml" -e default bash tools/ci/core-build.sh
+export EDI_EXTENSION_DIR="$PWD/build/app-python/python/edi"
+export EDI_AGENT_PYTHON="$CONDA_PREFIX/bin/python"
+export PYTHONPATH="$PWD/lib${PYTHONPATH:+:$PYTHONPATH}"
+"$EDI_AGENT_PYTHON" -c 'import edi; print("app-with-crysta: Edi Python bridge ready")'
 EDI_CRYSTA_PREFIX="$prefix" EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh
 exec bash tools/ci/app-run.sh "$@"

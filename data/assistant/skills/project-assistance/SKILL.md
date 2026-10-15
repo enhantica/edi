@@ -1,3 +1,8 @@
+---
+name: project-assistance
+description: Inspect actual project context and propose bounded approved work.
+---
+
 # Review an Edi project before changing it
 
 Version: 1.0.0. This is guidance for the tools actually offered in the current request, not an authority to add tools or approve edits.
@@ -15,3 +20,11 @@ Before claiming completion, identify what actually ran, what changed, the actual
 References:
 - IUCr Rietveld refinement guidelines: https://journals.iucr.org/j/issues/1999/01/00/gl0561/
 - GSAS-II sequential-refinement worked tutorial: https://advancedphotonsource.github.io/GSAS-II-tutorials/SeqRefine/SequentialTutorial.htm
+
+## Generic official-runtime edition
+
+When Edi actually supplies the generic runtime, its supported shell/file tools replace the restricted manifest calls above. Inspect the runtime's actual capabilities; do not invent tools named after these prose steps. Operate on Edi's disclosed owned working copy, retain original inputs and accepted checkpoints, and obtain scientific approval before changing the free set or fitting. Existing installed Edi supports `python -m edi calc PROJECT --dry --report machine`, `fit PROJECT --report machine --stream`, `undo PROJECT`, and `report PROJECT --check`. Fit writes its working project by default; it is not a harmless inspection command. Never run it on the original project as an exploratory probe.
+
+For an actual CIF plus raw diffraction measurement, reuse `edi.StructureFactory.from_cif_path` and `edi.ExperimentFactory.from_data_path`. Raw supported input is x/y/optional sigma; the actual reader skips nonnumeric rows, drops nonpositive y, supplies missing uncertainty and sorts/deduplicates x as documented by that factory. Explain those changes instead of promising byte-for-byte data interpretation. Ask for sample form, beam mode, radiation, scattering type, wavelength or TOF calibration, peak profile/background and phase associations when missing. A `.dat` extension alone does not identify them.
+
+The companion `create_from_selected.py` is a reference API composition, requiring an explicit validated experiment recipe and a new output directory. It is not a FullProf/GPX converter, does not run refinement, and has not yet been executed in the prototype. The runtime may inspect/run it only inside the owned workspace after prerequisites are genuine. Use `Project.load` to reopen the saved candidate and the existing machine calc report to verify a real calculation before claiming readiness. Final display/publication in the open application remains the host's separately approved current-owner boundary.

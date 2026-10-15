@@ -98,6 +98,8 @@ AppDialog {
                     let title = workflow ? workflow.id : qsTr("Unavailable");
                     if (workflow) for (let i = 0; i < dialog.assistant.skills.count; ++i)
                         if (dialog.assistant.skills.text(i, "id") === workflow.id) title = dialog.assistant.skills.text(i, "title");
+                    if (dialog.assistant.selectedSkill.length === 0)
+                        return qsTr("The official agent uses a staged working copy of this project and the selected files. All bundled Edi skills are registered; relevant content is loaded on demand. Its ordinary shell/file tools may read files permitted by the runtime. Edi admits workspace writes with network disabled and declines broader authority requests; this is not a private read jail or a guarantee that inherited runtime extensions are confined. No result is automatically adopted into the open project. Inspect the exact context below.");
                     return qsTr("Workflow: %1 · %2. Its exact bundled content is included.\n%3 structures with site/space-group metadata; %4 datasets with axis, observations, weighting, exclusions and phases; %5 aliases and %6 constraints. See exact outgoing context for every field.")
                         .arg(title).arg(workflow ? workflow.version : "")
                         .arg(dialog.structures.length).arg(dialog.datasets.length)
