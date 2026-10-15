@@ -14,7 +14,14 @@ _spec = importlib.util.spec_from_file_location(
 )
 protocol = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(protocol)
-host = protocol.host
+protocol_host = protocol.host
+
+
+@pytest.fixture
+def host(protocol_host):
+    # Real optimizer setup/publication may take longer than a pure protocol reply.
+    protocol_host.reply_timeout = 5
+    return protocol_host
 
 
 def rows(result):
@@ -388,4 +395,77 @@ def test_real_joint_fit_adoption_then_discard_preserves_both_banks(host):
     assert discarded['reply']['ok'] and discarded['snapshot'] == best, (
         'I8: discarding the next trial preserves every captured '
         'bank/structure/result/optional/start/row identity of accepted joint state'
+    )
+
+
+@pytest.mark.parametrize('source', ['single', 'joint'])
+@pytest.mark.parametrize('candidate_target', [False, True], ids=['live', 'candidate'])
+def test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata(
+    host, source, candidate_target
+):
+    if source == 'single':
+        load_source(host, baseline=False)
+        host.command('profile', name='cwl-pseudo-voigt-berar-baldinozzi')
+    else:
+        host.command(
+            'load',
+            path=str(ROOT / 'docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project'),
+        )
+        host.start()
+    fixed = [path for path, row in rows(host.last).items() if not row['fittable']]
+    if not fixed:
+        assert rows(host.last) and all(row['fittable'] for row in rows(host.last).values()), (
+            'I2/I9: an all-fittable source is recorded as a metadata control, '
+            'not claimed as an exercised fixed-setting refusal'
+        )
+        return
+    host.start()
+    plan = approve(host, fixed)
+    if candidate_target:
+        result = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+        assert result['reply']['ok'], (
+            'I8: declared fixed-setting values can be scoped on an isolated candidate'
+        )
+    violations = []
+    for path in fixed:
+        result = host.tool('set_free', {'flags': [{'path': path, 'free': True}]}, plan_id=plan)
+        if result['reply']['ok']:
+            violations.append(path)
+    assert not violations, (
+        'I2/I9: every independently declared nonfittable setting refuses '
+        'executable freedom across CW/TOF and live/candidate routes'
+    )
+
+
+@pytest.mark.parametrize('source', ['single', 'joint'])
+def test_iteration_objective_is_the_original_weighted_residual_not_reduced_quality(host, source):
+    if source == 'single':
+        load_source(host)
+        paths = useful_paths(host)
+    else:
+        result = host.command(
+            'load',
+            path=str(ROOT / 'docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project'),
+        )
+        paths = [path for path in rows(result) if path.endswith(('.scale', '.cell.length_a'))]
+        host.command('manual_fit', free_paths=[path for path in paths if path.endswith('.scale')])
+        host.start()
+    plan = approve(host, paths)
+    trial = candidate(host, plan, paths)
+    settled = settle(host)
+    progress = [event for event in settled['events'] if event.get('type') == 'job_progress']
+    assert progress, (
+        'I8/I13: a genuinely moving single/joint optimizer emits measured iteration evidence'
+    )
+    result = host.tool('evaluate_trial', {'trial_id': trial}, plan_id=plan)
+    assert result['reply']['ok'] and result['reply']['value']['accepted'], (
+        'I8: the converged physical witness is adopted before independently '
+        'measuring its original weighted objective'
+    )
+    measured = host.command('objective')
+    assert progress[-1]['objective'] == pytest.approx(
+        measured['reply']['objective'], rel=1e-7, abs=1e-7
+    ), (
+        'I8/I13: a field labelled objective carries the independently calculated '
+        'weighted residual on the original population, not reduced chi-square'
     )

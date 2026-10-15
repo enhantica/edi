@@ -402,3 +402,32 @@ def test_fit_terminal_reservation_refuses_before_dispatch_when_history_cannot_ho
     assert len([e for e in fitted['events'] if e.get('type') == 'job_started']) == len([
         e for e in before['events'] if e.get('type') == 'job_started'
     ]), 'I10: refusing a terminal reservation starts no background scientific job'
+
+
+def test_running_job_terminal_hold_cannot_be_spent_by_further_public_text(host):
+    spec = importlib.util.spec_from_file_location(
+        'e11_t5_running_reservation', Path(__file__).with_name('test_e11_t5_assistant_trials.py')
+    )
+    trials = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(trials)
+    trials.load_source(host)
+    paths = trials.useful_paths(host)
+    original = host.last['snapshot']
+    prefix = protocol.envelope('text_delta', **host.binding(), text='x' * 65536)
+    assert host.command('provider_repeat', count=8, payload=prefix)['reply']['accepted'] == 8, (
+        'I3: the independently bounded half-MiB prefix fits before a real job reservation'
+    )
+    plan = trials.approve(host, paths)
+    trials.candidate(host, plan, paths)
+    assert 8 * 65536 + 9 * 65536 + 1048576 > 2097152, (
+        'I3: independent content bytes plus the full terminal hold exceed the '
+        'history ceiling before JSON wrapper overhead'
+    )
+    pressure = protocol.envelope('text_delta', **host.binding(), text='y' * 65536)
+    result = host.command('provider_repeat', count=9, payload=pressure)
+    resource(result['reply']['last'])
+    settled = trials.settle(host)
+    assert settled['snapshot'] == original and not settled['state']['active_job_id'], (
+        'I8/I10: resource interruption cancels/settles real queued work and '
+        'preserves exact accepted scientific state'
+    )

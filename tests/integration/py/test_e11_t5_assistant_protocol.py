@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA = 'edi.assistant/1'
-MODEL = 'independent-fixture-model'
+MODEL = 'gpt-6.1-sol'
 
 
 def envelope(kind, **fields):
