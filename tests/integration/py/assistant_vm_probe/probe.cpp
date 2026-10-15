@@ -9,6 +9,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+#include <QMetaProperty>
+#endif
 #include <QPointer>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -68,6 +71,15 @@ int main(int argc,char** argv) {
     auto snapshot=[&]()->Object {
         if(!session)return {{"alive",false}};
         auto* vm=session->assistant();Object project;
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+        const auto* meta=vm->metaObject();
+        const auto catalog_index=meta->indexOfProperty("skills");
+        const auto selection_index=meta->indexOfProperty("selectedSkill");
+        const auto catalog_property=catalog_index>=0 ? meta->property(catalog_index) : QMetaProperty();
+        const auto selection_property=selection_index>=0 ? meta->property(selection_index) : QMetaProperty();
+        auto* catalog=catalog_property.isValid()
+            ? vm->property("skills").value<edi_app::RowTableModel*>() : nullptr;
+#endif
         if(session->project()) {
             const auto& value=session->project()->project();Array parameters;
             edi::Project captured(value);
@@ -84,6 +96,19 @@ int main(int argc,char** argv) {
 #ifdef EDI_TEST_SELECTED_FILES
             {"selected_files",rows(vm->selectedFiles())},{"retired_selections",retired_selections},
             {"project_present",session->project()!=nullptr},
+#endif
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+            {"workflow_surface",Object{
+                {"catalog_property",catalog_property.isValid() && catalog_property.isReadable()},
+                {"catalog_readonly",catalog_property.isValid() && !catalog_property.isWritable()},
+                {"catalog_constant",catalog_property.isValid() && catalog_property.isConstant()},
+                {"selected_property",selection_property.isValid() && selection_property.isReadable()},
+                {"selected_readonly",selection_property.isValid() && !selection_property.isWritable()},
+                {"selected_notify",selection_property.isValid() && selection_property.hasNotifySignal()},
+                {"select_method",meta->indexOfMethod("selectSkill(QString)")>=0}}},
+            {"skills",catalog ? QJsonValue(rows(catalog)) : QJsonValue(QJsonValue::Null)},
+            {"selected_skill",selection_property.isValid()
+                ? QJsonValue::fromVariant(vm->property("selectedSkill")) : QJsonValue(QJsonValue::Null)},
 #endif
             {"last_error",vm->lastError()},{"messages",rows(vm->messages())},{"models",rows(vm->models())},
             {"selected_model",vm->selectedModel()},{"selected_effort",vm->selectedEffort()},
@@ -108,6 +133,16 @@ int main(int argc,char** argv) {
             const auto op=input["op"].toString();Object result;
             if(op=="sign_in")session->assistant()->signIn();
             else if(op=="sign_out")session->assistant()->signOut();
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+            else if(op=="select_skill") {
+                auto* vm=session->assistant();
+                const bool present=vm->metaObject()->indexOfMethod("selectSkill(QString)")>=0;
+                const bool invoked=present && QMetaObject::invokeMethod(vm,"selectSkill",Qt::DirectConnection,
+                    Q_ARG(QString,input["id"].toString()));
+                // Invocation is only an observation of the public Qt method, not admission success.
+                result={{"method_present",present},{"invoked",invoked}};
+            }
+#endif
             else if(op=="send_text")session->assistant()->send(input["text"].toString());
             else if(op=="answer")session->assistant()->answerQuestion(input["id"].toString(),input["answer"].toString());
             else if(op=="approve")session->assistant()->approvePlan(input["id"].toString());
