@@ -44,3 +44,7 @@ target_compile_definitions(assistant_scope_retirement_probe PRIVATE
     EDI_TEST_ASYNC_SETTLEMENT=1 EDI_TEST_TERMINAL_RETENTION=1 EDI_TEST_ADMISSION_FAULT=1)
 target_include_directories(assistant_scope_retirement_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_scope_retirement_probe PRIVATE edi::core)
+
+add_executable(assistant_stream_failure_latch_probe stream_failure_latch_probe.cpp)
+target_include_directories(assistant_stream_failure_latch_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_stream_failure_latch_probe PRIVATE edi::core)

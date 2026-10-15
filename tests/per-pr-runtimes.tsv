@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T08:32:57Z
+# measured_utc = 2026-10-15T08:57:06Z
 #
-# Recorded from: seq24 actual source36 structural facts pass after equivalent-label observation correction; seven later-finish first-cause reds and one matching-text control
-# Collected tests: 13880; with a reported duration: 7625
+# Recorded from: seq26 R1 currentf0af public-Sink diagnostic-preparation fence: eight qualified allocation/length reds, eleven actual ordinary/cachecopy/natural refusal/success controls
+# Collected tests: 13899; with a reported duration: 7636
 # Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13547
+# inventory_python = 13566
 # inventory_cpp = 333
-# inventory_measured = 12097
-# inventory_unmeasured = 1783
+# inventory_measured = 12108
+# inventory_unmeasured = 1791
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10345,6 +10345,25 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecyc
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[changed-completed-item]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[malformed-json]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[truncated]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_complete_nonthrowing_sink_remains_a_real_success_control
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[allocation-terminal-plain]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[allocation-terminal-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[allocation-text-plain]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[allocation-text-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[length-terminal-plain]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[length-terminal-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[length-text-plain]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_failure_latch.py::test_diagnostic_preparation_failure_cannot_reopen_or_complete_rejected_stream[length-text-refusal]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_exhausted_copy_of_already_latched_reply_keeps_fence_and_original_cause[terminal-plain]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_exhausted_copy_of_already_latched_reply_keeps_fence_and_original_cause[terminal-refusal]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_exhausted_copy_of_already_latched_reply_keeps_fence_and_original_cause[text-plain]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_exhausted_copy_of_already_latched_reply_keeps_fence_and_original_cause[text-refusal]
+0.050	tests/system/py/test_e11_t5_stream_failure_latch.py::test_natural_refusal_then_cached_copy_exhaustion_does_not_resume[quota]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_natural_refusal_then_cached_copy_exhaustion_does_not_resume[schema]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_unarmed_sink_failure_retains_complete_first_cause_and_rejection[terminal-plain]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_unarmed_sink_failure_retains_complete_first_cause_and_rejection[terminal-refusal]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_unarmed_sink_failure_retains_complete_first_cause_and_rejection[text-plain]
+0.010	tests/system/py/test_e11_t5_stream_failure_latch.py::test_unarmed_sink_failure_retains_complete_first_cause_and_rejection[text-refusal]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_a_later_message_cannot_inherit_the_previous_messages_started_part[output_text]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_a_later_message_cannot_inherit_the_previous_messages_started_part[refusal]
 0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[matching-duplicate-function_call]
