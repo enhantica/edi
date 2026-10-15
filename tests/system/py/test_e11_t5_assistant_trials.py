@@ -276,3 +276,28 @@ def test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
     assert rejected['snapshot'] == best, (
         'I8: a later rejected trial preserves the exact accepted best state'
     )
+
+
+@pytest.mark.parametrize('door', [False, True], ids=['typed-edit', 'live-preview'])
+@pytest.mark.parametrize(
+    'armed', [False, True], ids=['positive-publication', 'allocation-failure']
+)
+def test_result_publication_is_complete_or_preserves_exact_original_state(host, door, armed):
+    load_source(host)
+    before = host.last['snapshot']
+    result = host.command('publication_fault', door=door, armed=armed)
+    if result['reply']['threw']:
+        assert result['reply']['fired'], (
+            'I4: the independent allocation failpoint actually fired during publication'
+        )
+        assert result['snapshot'] == before, (
+            'I4/I8: throwing publication preserves the exact original parameter/result state '
+            'and row identities'
+        )
+    else:
+        assert result['reply']['complete'], (
+            'I4/I8: publication without a throwing partial state commits the whole prepared result'
+        )
+        assert result['snapshot'] != before, (
+            'I4: the positive publication control performs an actual state change'
+        )

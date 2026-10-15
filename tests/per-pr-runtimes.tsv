@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T23:59:14Z
+# measured_utc = 2026-10-15T00:03:04Z
 #
-# Recorded from: unchanged prior bank plus tests-seq2-sdk-expanded-replay.log/.costs.json; thirty executed SDK replacement failures; initial Ninja setup failure excluded.
+# Recorded from: unchanged prior bank plus tests-seq2-core-full.log/.costs.json; thirty-two actual real-core trial/publication/parser/state cases, eight passing costs and twenty-four failed holes.
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,10 +27,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13038
+# inventory_python = 13060
 # inventory_cpp = 333
-# inventory_measured = 11821
-# inventory_unmeasured = 1550
+# inventory_measured = 11825
+# inventory_unmeasured = 1568
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -9860,15 +9860,37 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e09_t75_native_executi
 0.170	tests/system/py/test_e09_t75_staging_scratch.py::test_python_ci_staging_obeys_the_job_boundary[term-corpus-policy]
 0.210	tests/system/py/test_e09_t75_update_refusal.py::test_admitted_field_pagination_changes_the_requested_page
 3.880	tests/system/py/test_e09_t75_update_refusal.py::test_successful_updater_retry_cannot_erase_a_transport_refusal
-0.550	tests/system/py/test_e11_t5_assistant_trials.py::test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_call_arguments_cannot_be_extended_and_completed_again
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_call_replay_is_independent_of_json_object_member_order
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_plan_response_cannot_be_reopened_by_a_late_callback[text_delta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_completed_plan_response_cannot_be_reopened_by_a_late_callback[turn_finished]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_partial_arguments_across_distinct_calls_share_one_retained_budget
+0.020	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[ascii-at]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[ascii-over]
+0.010	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[unicode-at]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_provider_identifier_budget_uses_decoded_utf8_bytes[unicode-over]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_public_json_depth_is_bounded_before_unknown_field_validation
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_repeated_output_index_cannot_change_its_original_call_identity[call_id-changed-call]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_repeated_output_index_cannot_change_its_original_call_identity[id-changed-item]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_repeated_output_index_cannot_change_its_original_call_identity[name-diagnostics]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_same_response_text_deltas_coalesce_without_losing_public_text
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_stream_event_budget_counts_unknown_records_without_retaining_them
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_stream_wire_budget_counts_comments_and_is_sticky
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_unique_provider_item_and_call_bounds_are_inclusive[function_call-64]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_unique_provider_item_and_call_bounds_are_inclusive[message-256]
+2.050	tests/system/py/test_e11_t5_assistant_trials.py::test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[False]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[True]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_post_fit_candidate_edits_cannot_reuse_old_evidence_for_adoption[free]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_post_fit_candidate_edits_cannot_reuse_old_evidence_for_adoption[value]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_preexisting_free_cell_cannot_escape_a_scale_only_approval
-1.340	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[cancel]
-0.600	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[detach]
-0.920	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[manual-edit]
+1.890	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[cancel]
+1.950	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[detach]
+1.940	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[manual-edit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-live-preview]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-typed-edit]
+0.950	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-live-preview]
+0.950	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-typed-edit]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-candidate]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[build-retry-app-local]

@@ -5,6 +5,8 @@
 #include "edi/parameter_walk.hpp"
 #include "json.hpp"
 
+#include <cstdlib>
+#include <new>
 #include <deque>
 #include <chrono>
 #include <condition_variable>
@@ -15,6 +17,32 @@
 #include <mutex>
 #include <memory>
 #include <string>
+
+namespace {
+thread_local bool publication_fault_armed=false;
+thread_local bool publication_fault_fired=false;
+thread_local edi::Parameter* publication_observed_parameter=nullptr;
+thread_local edi::Project* publication_observed_project=nullptr;
+thread_local double publication_original_value=0;
+thread_local const std::string* publication_expected_message=nullptr;
+void publication_allocation_boundary() {
+    if(publication_fault_armed && publication_observed_parameter->value.get()!=publication_original_value &&
+       publication_observed_project->fit_result.message!=*publication_expected_message) {
+        publication_fault_armed=false; publication_fault_fired=true;
+        throw std::bad_alloc();
+    }
+}
+}
+void* operator new(std::size_t size) {
+    publication_allocation_boundary();
+    if(void* memory=std::malloc(size ? size : 1)) return memory;
+    throw std::bad_alloc();
+}
+void* operator new[](std::size_t size) { return ::operator new(size); }
+void operator delete(void* memory) noexcept { std::free(memory); }
+void operator delete[](void* memory) noexcept { std::free(memory); }
+void operator delete(void* memory,std::size_t) noexcept { std::free(memory); }
+void operator delete[](void* memory,std::size_t) noexcept { std::free(memory); }
 
 using edi::json::Array;
 using edi::json::Object;
@@ -126,6 +154,29 @@ int main() {
                 preview = std::make_unique<edi::LivePreview>(*project, worker, edi::LivePreview::Hooks{});
                 if(!input.get("mode").is_null()) project->fitting_mode=input.at("mode").string("mode");
                 result = reply(controller.attach(project.get(), "project-A"));
+            } else if (op == "publication_fault") {
+                auto fitted=std::make_shared<edi::Project>(*project);
+                auto& target=project->structure().cell.length_a;
+                fitted->structure().cell.length_a.value=target.value.get()*1.01;
+                fitted->structure().cell.length_a.uncertainty=.037;
+                fitted->structure().cell.length_a.start_value=target.value.get();
+                fitted->fit_result.message=std::string(4096,'m');
+                auto edit=edi::Edit::assistant_result(*project,fitted);
+                publication_observed_parameter=&target;
+                publication_observed_project=project.get();
+                publication_original_value=target.value.get();
+                publication_expected_message=&fitted->fit_result.message;
+                publication_fault_fired=false;
+                publication_fault_armed=input.at("armed").boolean("armed");
+                bool threw=false;
+                try {
+                    if(input.at("door").boolean("door")) preview->apply(edit);
+                    else edit();
+                } catch(const std::bad_alloc&) { threw=true; }
+                publication_fault_armed=false;
+                result=Object{{"threw",threw},{"fired",publication_fault_fired},
+                              {"complete",target.value.get()==fitted->structure().cell.length_a.value.get() &&
+                               project->fit_result.message==fitted->fit_result.message}};
             } else if (op == "manual_fit") {
                 if(!input.get("free_paths").is_null()) {
                     std::set<std::string> paths;
@@ -176,6 +227,20 @@ int main() {
                 result=Object{{"deliveries",count}};
             } else if (op == "clear_events") {
                 events.clear(); result=Object{};
+            } else if (op == "clear_requests") {
+                if(requests.size()>1) requests.erase(requests.begin(),requests.end()-1);
+                result=Object{};
+            } else if (op == "provider_repeat") {
+                edi::assistant::Reply last;
+                int accepted=0;
+                const auto text=edi::json::write(input.at("payload"));
+                const int count=static_cast<int>(input.at("count").number("count"));
+                for(int i=0;i<count;++i) {
+                    last=controller.provider_event(text);
+                    if(!last.ok) break;
+                    ++accepted;
+                }
+                result=Object{{"accepted",accepted},{"last",reply(last)}};
             } else if (op == "attach") {
                 result = reply(controller.attach(project.get(), input.at("id").string("id")));
             } else if (op == "detach") {
@@ -216,6 +281,25 @@ int main() {
                 for (const auto& value : input.at("bytes").array("bytes"))
                     bytes.push_back(static_cast<char>(static_cast<unsigned char>(value.number("byte"))));
                 result = reply(stream->feed(bytes));
+            } else if (op == "stream_repeat" || op == "stream_chunks") {
+                edi::assistant::Reply last;
+                int accepted=0;
+                if(op == "stream_repeat") {
+                    const auto text=input.at("text").string("text");
+                    const int count=static_cast<int>(input.at("count").number("count"));
+                    for(int i=0;i<count;++i) {
+                        last=stream->feed(text);
+                        if(!last.ok) break;
+                        ++accepted;
+                    }
+                } else {
+                    for(const auto& chunk:input.at("chunks").array("chunks")) {
+                        last=stream->feed(chunk.string("chunk"));
+                        if(!last.ok) break;
+                        ++accepted;
+                    }
+                }
+                result=Object{{"accepted",accepted},{"last",reply(last)}};
             } else if (op == "stream_finish") {
                 result = reply(stream->finish());
             } else if (op == "inspect") {
