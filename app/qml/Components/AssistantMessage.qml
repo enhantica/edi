@@ -85,6 +85,7 @@ Rectangle {
         // tool exit code or promote its retained in-progress original.
         return label + " · " + row.status;
     }
+    TextMetrics { id: technicalCaptionMetrics; font: disclosure.font; text: disclosure.text }
     TextMetrics { id: activityCaptionMetrics; font: commandDisclosure.font; text: row.activityCaption() }
     readonly property string activityIcon: commandActivity ? "terminal"
         : payload && payload.type === "fileChange" ? "file-alt"
@@ -255,7 +256,16 @@ Rectangle {
             id: disclosure
             visible: row.kind !== "assistant" && row.kind !== "user" && Object.keys(row.payload || {}).length > 0 && (!row.summarizedActivity || commandDisclosure.checked)
             checkable: true
-            text: row.summarizedActivity ? qsTr("Technical details") : checked ? qsTr("Hide details") : qsTr("Inspect details")
+            text: checked ? qsTr("Hide technical details") : qsTr("Technical details")
+            implicitWidth: technicalGlyph.implicitWidth + technicalCaptionMetrics.advanceWidth + AppSizes.unit * 0.5 + leftPadding + rightPadding
+            width: Math.min(parent.width, implicitWidth)
+            contentItem: Row {
+                spacing: AppSizes.unit * 0.5
+                EaElements.Label { id: technicalGlyph; text: disclosure.checked ? "chevron-down" : "chevron-right"; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
+                EaElements.Label { width: Math.max(0, disclosure.availableWidth - technicalGlyph.width - parent.spacing); text: disclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+            }
+            Accessible.name: text
+            Accessible.description: qsTr("Show or hide the original retained technical payload. The explanation and actual outcome remain above.")
             onPressed: row.detailsChanging()
         }
         ScrollView {
