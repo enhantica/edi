@@ -381,11 +381,11 @@ struct AssistantViewModel::State {
             error = capacity_error; return false;
         }
         auto bytes = archive_size(next);
-        auto slots = static_cast<std::uint64_t>(next.size());
+        auto message_count = static_cast<std::uint64_t>(next.size());
         const auto add = [&](std::uint64_t growth, std::uint64_t count) {
             if (bytes > Limits::ui_history_bytes || growth > Limits::ui_history_bytes - bytes ||
-                slots > Limits::ui_messages || count > Limits::ui_messages - slots) return false;
-            bytes += growth; slots += count; return true;
+                message_count > Limits::ui_messages || count > Limits::ui_messages - message_count) return false;
+            bytes += growth; message_count += count; return true;
         };
         if (!add(0, 0)) { error = capacity_error; return false; }
         for (const auto& [id, lease] : retentions) {
