@@ -23,7 +23,7 @@ _spec.loader.exec_module(budget)
 loader = budget.loader
 
 
-def original_resources(large=False):
+def original_resources(*, large=False):
     entries, resources = budget.fixture([
         'L' * 950000 if large else 'Original project guidance',
         'Original smaller intake',
@@ -37,7 +37,7 @@ def original_resources(large=False):
 
 
 def model(loader, fault='none', exclusions=0, *, recovery=False, mutate=None):
-    entries, resources = original_resources(recovery)
+    entries, resources = original_resources(large=recovery)
     index = {'schema': 'edi.assistant.skills/1', 'skills': entries}
     if mutate:
         index = mutate(index)
@@ -80,11 +80,13 @@ def test_real_nested_exclusions_charge_each_complete_serialized_row_once(loader)
     dataset(expected)['excluded_regions'] = rows
     extent = len(budget.encoded(expected))
     assert budget.LIMIT // 2 < extent < budget.LIMIT, (
-        'S1: independently composed complete context fits the existing cap despite nested-row double charge'
+        'S1: independently composed complete context fits the existing cap despite '
+        'nested-row double charge'
     )
     actual = model(loader, exclusions=count)['context']
     assert actual == expected, (
-        'S1: legal nested exclusions preserve original identities/endpoints and complete context at true capacity'
+        'S1: legal nested exclusions preserve original identities/endpoints and '
+        'complete context at true capacity'
     )
 
 
@@ -98,7 +100,8 @@ def test_nonfinite_present_metadata_is_explicitly_invalid_not_absent(loader, fau
     )
     actual = model(loader, fault)['context']
     assert explicit_invalid(actual, control), (
-        'SK3: nonfinite present weight/exclusion/background must be refused or explicitly diagnosed, never relabelled absent'
+        'SK3: nonfinite present weight/exclusion/background must be refused or '
+        'explicitly diagnosed, never relabelled absent'
     )
 
 
@@ -110,7 +113,8 @@ def test_axis_mode_and_calculation_only_cannot_hide_invalid_observed_columns(loa
     control = model(loader)['context']
     actual = model(loader, fault)['context']
     assert explicit_invalid(actual, control), (
-        'SK3: actual beam/axis agreement and genuine empty-observation grid semantics constrain present status'
+        'SK3: actual beam/axis agreement and genuine empty-observation grid '
+        'semantics constrain present status'
     )
 
 
@@ -119,7 +123,8 @@ def test_genuine_calculation_only_empty_observations_and_optional_absence_remain
     assert 'error' not in observed, 'SK3: true empty-observation calculation grid remains legal'
     row = dataset(observed)
     assert row['data_status'] == 'present' and row['calculation_only'], (
-        'SK3: valid real calculation-only grid remains truthfully present without fit-readiness inference'
+        'SK3: valid real calculation-only grid remains truthfully present without '
+        'fit-readiness inference'
     )
     assert row['observations']['intensity_count'] == row['observations']['sigma_count'] == 0, (
         'SK3: original empty observation vectors remain empty'
@@ -132,7 +137,8 @@ def test_genuine_calculation_only_empty_observations_and_optional_absence_remain
 def test_new_metadata_identity_obeys_existing_identity_capacity(loader):
     observed = model(loader, 'long-id')['context']
     assert observed.get('error'), (
-        'S1: metadata identity above existing id_bytes refuses before publishing oversized identity'
+        'S1: metadata identity above existing id_bytes refuses before publishing '
+        'oversized identity'
     )
 
 
@@ -140,10 +146,12 @@ def test_prospective_smaller_skill_recovers_without_validating_old_oversized_sel
     observed = model(loader, exclusions=4000, recovery=True)
     recovery = observed['recovery']
     assert recovery['small_selection']['ok'] and recovery['attached']['ok'], (
-        'SK4: actual ordinary small selection and real project attachment establish recovery control'
+        'SK4: actual ordinary small selection and real project attachment establish '
+        'recovery control'
     )
     assert 'error' not in recovery['small_context'] and recovery['large_selection']['ok'], (
-        'SK4: same real project fits small guidance and large guidance is independently valid projectless'
+        'SK4: same real project fits small guidance and large guidance is '
+        'independently valid projectless'
     )
     assert recovery['large_context'].get('error'), (
         'SK4: actual old selection plus attached project reaches complete-context refusal'
@@ -171,7 +179,8 @@ def test_controller_resource_error_is_typed_bounded_and_never_echoes_untrusted_k
 
     context = model(loader, mutate=mutate)['context']
     assert context.get('error') and context['error']['code'] == 'edi.assistant.invalid_argument', (
-        'SK5: malformed trusted-resource shape preserves actual typed invalid-argument classification'
+        'SK5: malformed trusted-resource shape preserves actual typed '
+        'invalid-argument classification'
     )
     message = context['error']['message']
     assert (
@@ -179,5 +188,6 @@ def test_controller_resource_error_is_typed_bounded_and_never_echoes_untrusted_k
         and marker not in message
         and 'PRIVATE_RESOURCE' not in message
     ), (
-        'SK5: public context refusal remains bounded app-owned text without rejected key/value leakage'
+        'SK5: public context refusal remains bounded app-owned text without rejected '
+        'key/value leakage'
     )
