@@ -431,8 +431,7 @@ def test_initial_argument_type_capacity_and_declaration_cannot_be_overwritten(
     events.extend([originals.item_event(value), originals.complete([value] if repeat else [])])
     observed = originals.wire(host, events)
     assert not observed['reply']['ok'] and not calls(observed), (
-        'FC2: initial wrong type/contradiction cannot disappear into a '
-        'later valid done original'
+        'FC2: initial wrong type/contradiction cannot disappear into a later valid done original'
     )
 
 
@@ -473,3 +472,66 @@ def test_supplied_content_event_response_identity_cannot_rebind_later_call(host)
     assert not refused['reply']['ok'] and not calls(refused), (
         'FC1: supplied content-event response identity binds the whole later callable group'
     )
+
+
+@pytest.mark.parametrize('repeat', [False, True], ids=['omitted-final', 'repeated-final'])
+@pytest.mark.parametrize('changed', [False, True], ids=['same-declaration', 'changed-declaration'])
+@pytest.mark.parametrize(
+    'position',
+    [
+        'complete-before-finalization',
+        'complete-after-finalization',
+        'prefix-before-delta',
+        'prefix-after-delta',
+        'prefix-after-finalization',
+    ],
+)
+def test_initial_declaration_duplicate_survives_only_unchanged_original(
+    host, position, changed, repeat
+):
+    # Argument object/order/whitespace below are independent original fixtures.
+    # Full final spelling intentionally differs from the immutable initial text.
+    host.command('stream_start')
+    complete_initial = '{"x":1,"y":2}'
+    prefix_initial = '{"x":'
+    canonical_equivalent_final = '{ "y": 2, "x": 1 }'
+    initial = complete_initial if position.startswith('complete') else prefix_initial
+    value = call('immutable-declaration-A')
+    value['arguments'] = canonical_equivalent_final
+    added = originals.item_event(
+        {**value, 'status': 'in_progress', 'arguments': initial}, done=False
+    )
+    duplicate = copy.deepcopy(added)
+    if changed:
+        duplicate['item']['arguments'] = (
+            '{"x":9,"y":2}' if position.startswith('complete') else '{"z":'
+        )
+    events = [added]
+    before = position in {'complete-before-finalization', 'prefix-before-delta'}
+    if before:
+        events.append(duplicate)
+    if position.startswith('prefix'):
+        events.append(argument_event(value, 'delta', '1,"y":2}'))
+    if position == 'prefix-after-delta':
+        events.append(duplicate)
+    events.append(argument_event(value, 'done', canonical_equivalent_final))
+    if position in {'complete-after-finalization', 'prefix-after-finalization'}:
+        events.append(duplicate)
+    # The duplicate is always before item.done. This never reopens a finalized item.
+    events.extend([originals.item_event(value), originals.complete([value] if repeat else [])])
+    observed = originals.wire(host, events)
+    if changed:
+        assert not observed['reply']['ok'] and not calls(observed), (
+            'FC2: changed repeated initial declarations refuse before any callable publication'
+        )
+    else:
+        assert observed['reply']['ok'] and len(calls(observed)) == 1, (
+            'FC2: actual unchanged initial declaration remains valid before/after delta and '
+            'canonically equivalent byte-distinct argument finalization'
+        )
+        assert calls(observed)[0]['arguments'] == {'x': 1, 'y': 2}, (
+            'FC2: matching duplicate preserves independently planted complete argument object'
+        )
+        assert host.command('stream_output')['reply'] == [value], (
+            'FC2: duplicate declarations retain one exact completed original, not two calls'
+        )
