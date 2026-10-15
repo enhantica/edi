@@ -47,7 +47,34 @@ TestCase {
         tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
         rendered();
     }
+    function scopeObservation(stage) {
+        const button = item("assistant.toggle");
+        const parent = popup.parent;
+        const host = window.activeAssistantHost;
+        const focus = window.activeFocusItem;
+        console.log("POPUP_SCOPE", stage, JSON.stringify({
+            shown: Preferences.assistantShown,
+            visible: popup.visible,
+            opened: popup.opened,
+            page: window.appBarCentralTabs.currentIndex,
+            projectPresent: Session.project !== null,
+            parentName: parent ? parent.objectName : null,
+            parentVisible: parent ? parent.visible : null,
+            parentEnabled: parent ? parent.enabled : null,
+            parentRect: parent ? rect(parent) : null,
+            hostName: host ? host.objectName : null,
+            parentIsHost: parent === host,
+            windowActive: window.active,
+            focusName: focus ? focus.objectName : null,
+            focusClass: focus ? String(focus) : null,
+            buttonFocus: button.activeFocus,
+            buttonDown: button.down,
+            buttonEnabled: button.enabled,
+            buttonVisible: button.visible
+        }));
+    }
     function capture(stem) {
+        scopeObservation("capture-" + stem);
         // QtTest's actual framebuffer adapter supports the C++-created window root.
         // Item.grabToImage requires a QML engine on that root; this root has none.
         const image = grabImage(window.contentItem);
@@ -90,8 +117,11 @@ TestCase {
         keyClick(Qt.Key_A, Qt.ControlModifier | Qt.ShiftModifier);
         compare(popup.visible, false, "I16/popup: retired global shortcut cannot open chat");
         const button = item("assistant.toggle");
+        scopeObservation("home-before-focus");
         button.forceActiveFocus();
+        scopeObservation("home-before-space");
         keyClick(Qt.Key_Space);
+        scopeObservation("home-after-space");
         tryCompare(popup, "visible", true, 500, "I16/popup: normal keyboard activation of appbar opens chat");
         compare(popup.modal, false, "I16/popup: sidebar popup does not block the whole window");
         compare(popup.dim, false, "I16/popup: sidebar popup does not dim scientific content");
@@ -263,12 +293,17 @@ TestCase {
         verify(oldField.activeFocus, "I16/POP2: real manual field owns focus before pointer opening");
         toggle();
         verify(popup.visible, "I16/POP2: pointer opens the actual popup without changing widget focus policy");
+        scopeObservation("scope-before-replacement-" + data.tag);
         if (data.replacement) {
             Session.closeProject();
+            scopeObservation("scope-after-close");
             verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/POP2: real replacement creates the next project scope");
+            scopeObservation("scope-after-open");
         }
         const tab = item("appBar.tab.home");
+        scopeObservation("scope-before-home-" + data.tag);
         mouseClick(tab);
+        scopeObservation("scope-after-home-" + data.tag);
         tryCompare(window.appBarCentralTabs, "currentIndex", 0, 500, "I16/POP2: real outside navigation changes the current page while chat is open");
         verify(popup.visible, "I16/POP2: navigation does not become an alternate dismissal");
         toggle();
@@ -440,10 +475,13 @@ TestCase {
         compare(editor.selectionStart, selectedStart, "I16/slide: interrupted show/hide restores actual selection start");
         compare(editor.selectionEnd, selectedEnd, "I16/slide: interrupted show/hide restores actual selection end");
         toggle();
-        const continued = findChild(manual, "sideBar.continue");
-        verify(continued !== null && continued.visible && continued.enabled, "I16/slide: real manual Continue is restored after full exit");
-        mouseClick(continued);
-        tryCompare(window.appBarCentralTabs, "currentIndex", 2, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
+        // Continue is intentionally hidden by the existing owner rule. Exercise a
+        // genuine visible manual tab instead of requiring a retired action to appear.
+        const desiredTab = manual.currentIndex === 0 ? 1 : 0;
+        const manualTab = findChild(manual, desiredTab === 0 ? "sideBar.tab.basic" : "sideBar.tab.extras");
+        verify(manualTab !== null && manualTab.visible && manualTab.enabled, "I16/slide: genuine visible manual tab is restored after full exit");
+        mouseClick(manualTab);
+        tryCompare(manual, "currentIndex", desiredTab, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
         editor.clear();
     }
 }
