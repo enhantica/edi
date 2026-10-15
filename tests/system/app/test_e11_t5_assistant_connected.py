@@ -32,6 +32,12 @@ class RealUi(native_protocol.Native):
     def send_text(self, text='Inspect the displayed project'):
         return self.command('send_text', text=text)
 
+    def batch_callbacks(self, callbacks):
+        # Bound each fixture command; production limits and per-command timeout are unchanged.
+        for offset in range(0, len(callbacks), 16):
+            self.command('callback_batch', callbacks=callbacks[offset : offset + 16])
+        return self.last
+
 
 @pytest.fixture
 def ui(monkeypatch):

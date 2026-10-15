@@ -300,7 +300,21 @@ int main(int argc,char** argv) {
                         {"admitted_before_drain",admitted_before_drain},
                         {"sent_before_drain",sent_before_drain},{"accepted_dialog",accepted}};
             }
-            else if(op=="callback_then_open") {
+            else if(op=="callback_batch") {
+                // Fixture scheduling bound, not a provider or production resource policy.
+                const auto callbacks=input["callbacks"].toArray();
+                if(callbacks.isEmpty() || callbacks.size()>16)
+                    throw std::invalid_argument("fixture callback batch must contain one to sixteen callbacks");
+                for(const auto& callback:callbacks) {
+                    const auto name=callback.toObject()["op"].toString();
+                    if(name!="headers" && name!="data" && name!="finish")
+                        throw std::invalid_argument("fixture batch contains a non-transport command");
+                }
+                for(const auto& callback:callbacks) {
+                    fixture.dispatch(callback.toObject());
+                    QCoreApplication::processEvents(QEventLoop::AllEvents,1);
+                }
+            } else if(op=="callback_then_open") {
                 fixture.dispatch(input["callback"].toObject());
                 result={{"opened",observed->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
             } else if(op=="resize") {window->setMinimumWidth(400);window->resize(input["width"].toInt(),768);}

@@ -150,6 +150,24 @@ class Native:
         return self.last
 
     def respond(self, index, body, *, status=200):
+        batch = getattr(self, 'batch_callbacks', None)
+        if batch is not None:
+            callbacks = [
+                {
+                    'op': 'headers',
+                    'index': index,
+                    'status': status,
+                    'headers': [['Content-Type', 'application/json']],
+                }
+            ]
+            if body is not None:
+                raw = json.dumps(body, ensure_ascii=False, separators=(',', ':')).encode()
+                callbacks.append({
+                    'op': 'data',
+                    'index': index,
+                    'base64': base64.b64encode(raw).decode(),
+                })
+            return batch([*callbacks, {'op': 'finish', 'index': index, 'failure': 0}])
         self.command(
             'headers', index=index, status=status, headers=[['Content-Type', 'application/json']]
         )
@@ -632,6 +650,17 @@ def stream(native, index, events, *, width=65536):
         'data: ' + json.dumps(event, ensure_ascii=False, separators=(',', ':')) + '\n\n'
         for event in events
     ).encode()
+    batch = getattr(native, 'batch_callbacks', None)
+    if batch is not None:
+        batch([
+            {
+                'op': 'data',
+                'index': index,
+                'base64': base64.b64encode(wire[offset : offset + width]).decode(),
+            }
+            for offset in range(0, len(wire), width)
+        ])
+        return native.command('finish', index=index, failure=0)
     for offset in range(0, len(wire), width):
         native.command(
             'data', index=index, base64=base64.b64encode(wire[offset : offset + width]).decode()
