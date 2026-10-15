@@ -3,7 +3,9 @@
 Official event/item schema:
 https://developers.openai.com/api/reference/resources/responses/streaming-events
 Diagnostics are independently counted structural facts, never raw provider contents.
-This does not authorize accepting an omitted output item or executing its tool call.
+Packet710585daf/S-R2 now permits omitted completed nonexecuting originals.
+The message/reasoning diagnostic witnesses therefore retain semantically unfinished
+originals, including wire-done originals; omitted executable authority stays refused.
 """
 
 from __future__ import annotations
@@ -69,18 +71,18 @@ def facts(message, aliases):
 @pytest.mark.parametrize(
     ('kind', 'status', 'wire_done', 'count'),
     [
-        ('message', 'completed', True, 1),
+        ('message', 'in_progress', True, 1),
         ('message', 'in_progress', False, 1),
-        ('reasoning', 'completed', True, 1),
+        ('reasoning', 'in_progress', True, 1),
         ('function_call', 'completed', True, 1),
         (PRIVATE, 'completed', True, 1),
         ('reasoning', PRIVATE, True, 1),
-        ('reasoning', 'completed', True, 12),
+        ('reasoning', 'in_progress', True, 12),
     ],
     ids=[
-        'message-done',
+        'message-wire-done-semantically-unfinished',
         'message-unfinished',
-        'reasoning-done',
+        'reasoning-wire-done-semantically-unfinished',
         'function-done',
         'unknown-kind',
         'unknown-status',
