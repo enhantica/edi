@@ -93,7 +93,12 @@ if [ "$CONFIGURATION" = "consumer" ] && [ -n "${CRYSTA_CONSUMER_SRC:-}" ] \
 fi
 echo "crysta-consumer: proving the unit's linked crysta $PREFIX_SHA ($CONFIGURATION configuration)"
 
-SDK_CONTENT="$(python tools/ci/sdk_content_identity.py "$PREFIX")"
+SDK_CONTENT="$(python "$ROOT/tools/ci/sdk_content_identity.py" "$PREFIX")"
+CONTENT_LINKED="${LINKED%-sha}-content"
+if [ ! -f "$CONTENT_LINKED" ] || [ "$(cat "$CONTENT_LINKED")" != "$SDK_CONTENT" ]; then
+  echo "ERROR: selected SDK content differs from edi's successfully linked unit; rerun 'pixi run core-build' for this configuration before proving the installed consumer" >&2
+  exit 1
+fi
 # Configure the standalone consumer with Python discovery disabled — a fresh C++-only project.
 rm -rf "$BUILD"
 # --no-warn-unused-cli: the disable-Python flags are intentionally belt-and-suspenders; when the consumer
@@ -104,6 +109,6 @@ cmake -S "$SRC" -B "$BUILD" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Rel
   -DCMAKE_DISABLE_FIND_PACKAGE_Python2=ON \
   -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
 printf '%s\n' "$SDK_CONTENT" > "$BUILD/.edi-sdk-build-key"
-cmake --build "$BUILD" --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
+cmake --build "$BUILD" -j
 "$BUILD/crysta_consumer"
 echo "crysta zero-Python installed-consumer gate: PASS"

@@ -128,9 +128,18 @@ tree, and the installed-consumer proof always rebuilt fresh. A replacement SDK a
 older header mtimes, so path/source-stamp identity alone cannot establish object compatibility. The app key now
 includes `tools/ci/sdk_content_identity.py`'s deterministic digest of the complete selected prefix's logical
 paths and regular-file contents, following installed directory links with cycle/special-file refusal. Core's
-ordinary and candidate trees retain the same content key and rebuild their generated trees when it changes or
+ordinary and candidate trees retain an attempt content key and rebuild their generated trees when it changes or
 is absent; the standalone consumer remains fresh and records its selected content key. Same-content recovery
 reuses generated objects, independently of mtimes. A failed configure/build retains its attempt key so an
 unchanged retry can continue. Pinned, candidate and local app-prefix routes all use this one digest; CI still
 refuses the local app-prefix override. This is cache invalidation, not a substitute for fingerprint/ABI checks,
 qualified SDK provenance, the committed pin or official CI evidence. No SDK/source/fixture is modified.
+
+
+The successful core build separately writes `.crysta-linked-content` after its build steps complete. The
+standalone installed-consumer proof compares its selected prefix digest with that **successful** unit's
+content record as well as the existing source-commit records, including explicit extension selection. A
+same-source content replacement refuses until that selected edi unit is rebuilt; an attempt marker or a
+failed configure/build is not successful content provenance. The standalone helper resolves from the entry's
+absolute repository root, preserving invocation from outside the checkout. Existing core/consumer build argv
+remain unchanged; the app and explicitly invoked diagnostic builds retain their existing parallel controls.

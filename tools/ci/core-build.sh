@@ -102,10 +102,13 @@ printf '%s\n' "$SDK_CONTENT" > "$SDK_MARKER"
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
-cmake --build "$EDI_BUILD_DIR" --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
+cmake --build "$EDI_BUILD_DIR" -j
 # Further targets in this same tree, under this lock (the C++ tier's edi_tests).
-[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
+[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} -j
 # Review-7 F7: tie provenance to the edi artifact actually LINKED. The prefix stamp and source
 # record are mutable across resolves; this record names the crysta the just-built edi contains,
 # and downstream consumers select it instead of re-reading whatever a later resolve left behind.
 cp "$CRYSTA_PREFIX/.crysta-sha" "$EDI_BUILD_DIR/.crysta-linked-sha"
+
+printf '%s\n' "$SDK_CONTENT" > "$EDI_BUILD_DIR/.crysta-linked-content.tmp"
+mv "$EDI_BUILD_DIR/.crysta-linked-content.tmp" "$EDI_BUILD_DIR/.crysta-linked-content"
