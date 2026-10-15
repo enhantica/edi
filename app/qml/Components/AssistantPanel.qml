@@ -151,11 +151,11 @@ Popup {
                         Accessible.name: qsTr("Usage data unavailable")
                         Accessible.description: qsTr("This connection does not provide context or subscription usage metrics.")
                         contentItem: Item {
-                            implicitWidth: AppSizes.unit * 0.7
-                            implicitHeight: AppSizes.unit * 0.7
+                            implicitWidth: AppSizes.unit * 0.85
+                            implicitHeight: AppSizes.unit * 0.85
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: AppSizes.unit * 0.7
+                                width: AppSizes.unit * 0.85
                                 height: width
                                 radius: width * 0.5
                                 color: "transparent"
@@ -182,7 +182,7 @@ Popup {
                 anchors.top: header.bottom
                 anchors.bottom: parent.bottom
                 anchors.margins: AppSizes.unit
-                spacing: AppSizes.unit * 0.75
+                spacing: AppSizes.unit * 0.855
                 ListView {
                     id: conversation
                     objectName: "assistant.messages"

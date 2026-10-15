@@ -277,3 +277,8 @@ Ownerd03c7aff4 uses Effort as the disconnected/undiscovered placeholder, then th
 ### Cause-specific preference persistence recovery
 
 PREF3 keeps an unsuccessful explicit write separate from read/selection diagnostics inside the existing VM. Reading an older pair, confirmed absence or restoring an available in-memory choice cannot acknowledge that a newer explicit choice was persisted. Only a successful explicit write through the existing sync/flush path, or retirement of that configured store's ownership, clears its save cause. Same-value retries and pre-staging/sync/flush exceptions use that same boundary. Existing unrelated operation errors retain priority; no public error/settings interface is added.
+
+
+### Final owner composer order and uniform actions
+
+Ownerda4acf953 supersedes the preceding primary/navigation arrangement: plus, flat selectors, Previous/Next, then rightmost Send/Stop. All composer actions derive their circular size from the actual plus control; wider current-style gaps and remaining selector width preserve a compact toolbar. The primary background remains black in light mode/white in dark mode even when disabled; disabled state and subdued icon remain honest. Keyboard links follow the same actual order, skip disabled ends and return to the sole appbar toggle. The usage inner ring is modestly larger than the immediately preceding version while its full hit target remains unchanged. No provider, admission, cancellation, settings or public API changes.
