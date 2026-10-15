@@ -939,3 +939,238 @@ def test_gn4_unrevoked_original_question_still_completes_once(generic):
     assert not state['pending_question'] and not state['last_error'], (
         'GN4: unrevoked answer and genuine completed originals settle normally'
     )
+
+
+# RPC1/CTX1/RPC2: pinned092d3acd dispatcher and public text-input semantics.
+# Complete disclosure equality is a roundtrip/currentness invariant, not a
+# production-generated scientific golden. No official runtime is launched.
+@pytest.mark.parametrize('method', ['turn/start', 'turn/steer'])
+@pytest.mark.parametrize('opt_in', [False, True])
+def test_rpc83_peer_qualifies_actual_experimental_field_negotiation(tmp_path, method, opt_in):
+    config = tmp_path / 'original-peer-input.json'
+    config.write_text(json.dumps({'scenario': 'hold', 'trace': str(tmp_path / 'wire.jsonl')}))
+    messages = [
+        {
+            'id': 1,
+            'method': 'initialize',
+            'params': {
+                'clientInfo': {'name': 'original-contract-control', 'version': '1'},
+                'capabilities': {'experimentalApi': opt_in},
+            },
+        },
+        {
+            'id': 2,
+            'method': method,
+            'params': {
+                'threadId': 'original-thread',
+                'expectedTurnId': 'original-turn',
+                'input': [{'type': 'text', 'text': 'Original harmless input'}],
+                'additionalContext': {'original': {'kind': 'untrusted', 'value': 'Original data'}},
+            },
+        },
+    ]
+    result = subprocess.run(
+        [sys.executable, str(PEER)],
+        input=''.join(json.dumps(row) + '\n' for row in messages),
+        text=True,
+        capture_output=True,
+        timeout=2,
+        check=False,
+        env={**os.environ, 'EDI_TEST_CODEX_PEER_INPUT': str(config)},
+    )
+    assert result.returncode == 0, 'RPC1 SETUP: ordinary owned peer completes finite input'
+    replies = [json.loads(line) for line in result.stdout.splitlines()]
+    reply = next(row for row in replies if row.get('id') == 2)
+    assert ('result' in reply) == opt_in, (
+        'RPC1: actual experimental field is rejected before dispatch unless negotiated'
+    )
+    if not opt_in:
+        assert reply['error'] == {
+            'code': -32600,
+            'message': method + '.additionalContext requires experimentalApi capability',
+        }, 'RPC1: peer enforces the independently pinned dispatcher refusal for both methods'
+        assert not any(row.get('method') == 'turn/started' for row in replies), (
+            'RPC1: an unnegotiated experimental request never reaches turn admission'
+        )
+
+
+def test_rpc83_real_hello_uses_negotiated_supported_fields_and_completes(generic):
+    actor, trace = generic()
+    connect(actor)
+    actor.command('send_text', text='Hello — original RPC contract control')
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['last_error'])
+            or any(row.get('text') == 'Original offline reply' for row in value['messages'])
+        ),
+    )
+    actual = records(trace)
+    initialize = next(row for row in actual if row.get('method') == 'initialize')
+    started = started_requests(trace)
+    assert len(started) == 1, 'RPC1: the original Hello is physically submitted exactly once'
+    supplied = started[0]['params'].get('additionalContext') is not None
+    assert not supplied or initialize['params'].get('capabilities', {}).get('experimentalApi'), (
+        'RPC1: actual supplied experimental context requires genuine initialize opt-in'
+    )
+    assert (
+        state['connected']
+        and not state['last_error']
+        and any(
+            row.get('text') == 'Original offline reply' and row.get('status') == 'completed'
+            for row in state['messages']
+        )
+    ), 'RPC1: strict published request admission completes Hello without an apparent sign-out'
+    assert len(users(actor, 'Hello — original RPC contract control')) == 1, (
+        'RPC1: successful admission preserves exactly the original public user row'
+    )
+
+
+def rpc83_context_inputs(params):
+    found = []
+    for item in params.get('input', []):
+        if item.get('type') != 'text' or not isinstance(item.get('text'), str):
+            continue
+        text = item['text']
+        for offset, char in enumerate(text):
+            if char != '{':
+                continue
+            try:
+                value, _ = json.JSONDecoder().raw_decode(text, offset)
+            except ValueError:
+                continue
+            if isinstance(value, dict) and value.get('schema') == 'edi.assistant.context/1':
+                found.append(value)
+    return found
+
+
+@pytest.mark.parametrize('route', ['start', 'steer'])
+def test_rpc83_complete_approved_project_context_is_separate_current_user_data(generic, route):
+    actor, trace = generic('rpc83:hold')
+    opened = actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))
+    assert opened['reply']['opened'], 'CTX1 SETUP: original project opens through real Session'
+    connect(actor)
+    expected = actor.last['vm']['context']
+    assert expected['project'] is not None and expected['parameters'], (
+        'CTX1 SETUP: disclosure includes genuine current project/parameter data'
+    )
+    # Pinned utils/string truncate.rs uses4 bytes per approximate token. This is
+    # its version-specific truncation threshold, not a universal tokenizer claim.
+    assert len(json.dumps(expected, ensure_ascii=False, separators=(',', ':')).encode()) > 4000, (
+        'CTX1 SETUP: complete original disclosure exceeds pinned additional-context byte budget'
+    )
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+    assert not actor.last['vm']['context_consent_required'], (
+        'CTX1: actual current disclosure is acknowledged through the existing public action'
+    )
+    actor.command('send_text', text='Original complete-context initial draft')
+    if route == 'steer':
+        settle(actor, lambda value: value['can_cancel'] or bool(value['last_error']))
+        actor.command('send_text', text='Original complete-context followup draft')
+    method = 'turn/' + route
+    sent = [row for row in records(trace) if row.get('method') == method]
+    assert len(sent) == 1, 'CTX1: actual start or steer reaches its original current wire boundary'
+    params = sent[0]['params']
+    assert not params.get('additionalContext'), (
+        'CTX1: complete project/file data cannot enter privileged or silently truncated fragments'
+    )
+    assert rpc83_context_inputs(params) == [expected], (
+        'CTX1: ordinary user text carries exactly the complete current approved disclosure'
+    )
+    draft = (
+        'Original complete-context ' + ('initial' if route == 'start' else 'followup') + ' draft'
+    )
+    assert sum(row.get('text') == draft for row in params['input']) == 1, (
+        'CTX1: the exact user draft is a separate input once, '
+        'never merged into context instructions'
+    )
+    public = users(actor, draft)
+    assert len(public) == 1 and params['clientUserMessageId'] == public[0]['id'], (
+        'CTX1: actual once-only input retains the original stable public user identity'
+    )
+    thread = next(row for row in records(trace) if row.get('method') == 'thread/start')
+    assert all(
+        'edi.assistant.context/1' not in str(thread['params'].get(field, ''))
+        for field in ('developerInstructions', 'baseInstructions')
+    ), 'CTX1: project-derived context is not promoted into trusted thread instructions'
+    if route == 'steer':
+        assert params['expectedTurnId'] == '019a0290-0000-7000-8000-000000000002', (
+            'CTX1: admitted followup retains the real active turn, never becomes a new start'
+        )
+    actor.command('cancel')
+
+
+@pytest.mark.parametrize('reason', ['no-active', 'review', 'compact'])
+def test_rpc83_exact_pre_admission_steer_refusal_preserves_account_and_original(generic, reason):
+    actor, trace = generic('rpc83:refuse:' + reason)
+    connect(actor)
+    actor.command('send_text', text='Original admitted work before definite refusal')
+    settle(actor, lambda value: value['can_cancel'] or bool(value['last_error']))
+    assert actor.last['vm']['can_cancel'] and not actor.last['vm']['last_error'], (
+        'RPC2 SETUP: genuine original turn is admitted before the independent refused followup'
+    )
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original definitely refused followup')
+    state = settle(actor, lambda value: bool(value['last_error']))
+    assert state['connected'] and original_peer_is_live(identity), (
+        'RPC2: proven pre-admission refusal retains the genuine authenticated owned process'
+    )
+    assert 'turn/steer' in state['last_error'] and '-32600' in state['last_error'], (
+        'RPC2: bounded refusal identifies actual pending method and numeric structured category'
+    )
+    assert len(state['last_error'].encode()) <= 512, (
+        'RPC2: refusal uses existing bounded diagnostics'
+    )
+    refused = users(actor, 'Original definitely refused followup')
+    assert len(refused) == 1 and refused[0]['status'] not in {'pending', 'completed'}, (
+        'RPC2: only its own refused row settles without fabricated successful admission'
+    )
+    if reason == 'no-active':
+        settle(
+            actor,
+            lambda value: any(
+                row.get('text') == 'Original offline reply' for row in value['messages']
+            ),
+        )
+        assert not actor.last['vm']['can_cancel'], (
+            'RPC2: genuinely finished original remains settled after delayed steer refusal'
+        )
+    else:
+        assert state['can_cancel'], (
+            'RPC2: unrelated admitted original work stays active and stoppable'
+        )
+        actor.command('cancel')
+    assert len(started_requests(trace)) == 1, (
+        'RPC2: definite nonadmission never auto-replays input'
+    )
+    assert sum(row.get('method') == 'turn/steer' for row in records(trace)) == 1, (
+        'RPC2: refusal cannot silently retry or convert the followup into another operation'
+    )
+
+
+@pytest.mark.parametrize('variant', ['raw', 'spoof', 'eof'])
+def test_rpc83_uncertain_or_unrecognized_failure_remains_private_fenced_and_not_replayed(
+    generic, variant
+):
+    actor, trace = generic('rpc83:unknown:' + variant)
+    connect(actor)
+    actor.command('send_text', text='Original uncertain prompt must not auto-replay')
+    state = settle(actor, lambda value: bool(value['last_error']))
+    assert len(state['last_error'].encode()) <= 512 and all(
+        secret not in state['last_error']
+        for secret in ('ORIGINAL_PRIVATE_PAYLOAD', 'ORIGINAL_PRIVATE_ERROR_DATA')
+    ), 'RPC2: arbitrary error text/data and spoofed known prefixes are never exposed'
+    for _ in range(3):
+        actor.command('inspect')
+    assert len(started_requests(trace)) == 1, (
+        'RPC2: uncertain/refused/EOF input is never automatically replayed as a new turn'
+    )
+    assert not any(
+        row.get('kind') == 'assistant' and row.get('status') == 'completed'
+        for row in actor.last['vm']['messages']
+    ), 'RPC2: unknown failure or process loss cannot fabricate a completed response'
+    rows = users(actor, 'Original uncertain prompt must not auto-replay')
+    assert len(rows) == 1 and rows[0]['status'] != 'completed', (
+        'RPC2: uncertain original input remains visible without invented completed admission'
+    )

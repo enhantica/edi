@@ -22,6 +22,7 @@ turn_id = '019a0290-0000-7000-8000-000000000002'
 server_id = 'original-approval-1'
 turn_number = 0
 pending_starts = []
+experimental_api = False
 
 
 def emit(value):
@@ -375,7 +376,28 @@ for line in sys.stdin:
             )
             complete()
         continue
+    # Pinned092d3acd message_processor gates annotated params before dispatch.
+    # This is protocol qualification, not a model/runtime execution simulator.
+    if method in {'turn/start', 'turn/steer'} and not experimental_api:
+        annotated = next(
+            (
+                key
+                for key in ('additionalContext', 'responsesapiClientMetadata')
+                if params.get(key) is not None
+            ),
+            None,
+        )
+        if annotated is not None:
+            emit({
+                'id': request['id'],
+                'error': {
+                    'code': -32600,
+                    'message': method + '.' + annotated + ' requires experimentalApi capability',
+                },
+            })
+            continue
     if method == 'initialize':
+        experimental_api = (params.get('capabilities') or {}).get('experimentalApi') is True
         reply(
             request,
             {
@@ -521,6 +543,24 @@ for line in sys.stdin:
             value['modelProvider'] = 'other-original-provider'
         reply(request, value)
     elif method == 'turn/start':
+        if scenario.startswith('rpc83:unknown:'):
+            variant = scenario.rsplit(':', 1)[1]
+            if variant == 'eof':
+                sys.exit(0)
+            message = 'ORIGINAL_PRIVATE_PAYLOAD must never be rendered'
+            if variant == 'spoof':
+                message = (
+                    'turn/start.additionalContext requires experimentalApi capability ' + message
+                )
+            emit({
+                'id': request['id'],
+                'error': {
+                    'code': -32600,
+                    'message': message,
+                    'data': {'secret': 'ORIGINAL_PRIVATE_ERROR_DATA'},
+                },
+            })
+            continue
         turn_number += 1
         if scenario.startswith('gn:'):
             # New independent turns have distinct authoritative original IDs.
@@ -531,7 +571,7 @@ for line in sys.stdin:
             continue  # Genuine received request; no turn ID is admitted yet.
         reply(request, {'turn': turn('inProgress')})
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
-        if scenario in {'hold', 'steer-no-ack'}:
+        if scenario in {'hold', 'steer-no-ack'} or scenario.startswith('rpc83:'):
             continue
         if scenario == 'approval-expansion':
             notify(
@@ -578,6 +618,16 @@ for line in sys.stdin:
         else:
             complete()
     elif method == 'turn/steer':
+        if scenario.startswith('rpc83:refuse:'):
+            kind = scenario.rsplit(':', 1)[1]
+            if kind == 'no-active':
+                # The original really finishes before this delayed request is refused.
+                complete()
+                message = 'no active turn to steer'
+            else:
+                message = 'cannot steer a ' + kind + ' turn'
+            emit({'id': request['id'], 'error': {'code': -32600, 'message': message}})
+            continue
         if scenario.startswith('gn:'):
             gn_steer(request)
             continue
