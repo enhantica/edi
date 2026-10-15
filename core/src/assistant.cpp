@@ -211,7 +211,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         return std::string(kind) + '-' + std::to_string(value + 1);
     }
     J state() const {
-        return O{{"state", phase}, {"project_id", version.project_id}, {"revision", std::to_string(version.revision)},
+        return O{{"state", phase.empty() ? (ready ? "idle" : "disconnected") : phase}, {"project_id", version.project_id}, {"revision", std::to_string(version.revision)},
                  {"active_turn_id", turn}, {"active_job_id", active_job},
                  {"pending_plan_id", plan && !plan->approved ? plan->id : ""},
                  {"pending_question_id", question}, {"can_cancel", !turn.empty() || !active_job.empty() || !question_call.empty()}};
@@ -547,11 +547,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         history = A{}; history_used = 2; calls.clear(); cache_used = 2;
         answers.clear(); conversation.clear(); admitting_call.clear(); admitting_event = J{};
         output_failure = OutputFailure::none;
+        phase.clear(); // state() reports nonexecuting idle/disconnected without allocating here.
     }
     void reset_conversation() {
-        auto next = id("conversation");
-        retire_scope();
-        conversation = std::move(next);
+        // This is an observed, validated native retirement, not a rejected new
+        // owner proposal: revoke before preparing any replacement identity.
+        retire_scope(); ready = false; connection.clear(); capabilities = A{};
+        conversation = id("conversation");
     }
     void interrupt_output() noexcept {
         plan.reset(); response_done = true; turn.clear(); request.clear();
@@ -1086,9 +1088,16 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 }
                 for (const J& attachment : item.at("attachment_types").array("attachment_types")) attachment.string("attachment type");
             }
-            const auto next = string(event, "connection_id");
+            // Validate by reference: copying a valid new identity is itself
+            // fallible and must not precede mandatory old-scope retirement.
+            const auto& next = event.at("connection_id").string("connection_id");
+            if (next.empty()) refuse("invalid_argument", "connection_id is empty");
+            if (next.size() > Limits::id_bytes) refuse("resource_exhausted", "Assistant identifier exceeds limit");
             if (next != connection || state != "ready") reset_conversation();
-            connection = next; ready = state == "ready"; capabilities = event.at("capabilities");
+            auto next_connection = next;
+            auto next_capabilities = event.at("capabilities");
+            connection = std::move(next_connection); capabilities = std::move(next_capabilities);
+            ready = state == "ready";
             if (!status(ready ? "idle" : "disconnected")) return output_refusal();
             return success();
         }
@@ -1193,18 +1202,33 @@ Controller::~Controller() {
     state_->retire_scope();
 }
 Reply Controller::attach(Project* project, std::string project_id) {
-    if ((project == nullptr) != project_id.empty()) return failure("invalid_argument", "A project requires a session ID");
-    if (project && project_id == state_->version.project_id) {
-        if (project != state_->live) return failure("stale_project", "A replacement project requires a fresh session ID");
+    try {
+        if ((project == nullptr) != project_id.empty()) return failure("invalid_argument", "A project requires a session ID");
+        if (project && project_id == state_->version.project_id) {
+            if (project != state_->live) return failure("stale_project", "A replacement project requires a fresh session ID");
+            return success();
+        }
+        if (!project) {
+            // Explicit detach must retire even when allocating a fresh ID or
+            // publishing its final state is impossible. A later message can
+            // prepare its new conversation transactionally.
+            state_->retire_scope(); state_->live = nullptr;
+            state_->version.project_id.clear(); state_->version.revision = 0;
+        } else {
+            // A rejected new-owner preparation leaves the old owner intact.
+            auto next_conversation = state_->id("conversation");
+            state_->retire_scope();
+            state_->live = project; state_->version = {std::move(project_id), 0};
+            state_->conversation = std::move(next_conversation);
+        }
+        if (!state_->safe_emit("state_changed", [&] { return O{{"state", state_->state()}}; })) return state_->output_refusal();
         return success();
-    }
-    auto next_conversation = state_->id("conversation");
-    state_->retire_scope();
-    state_->live = project; state_->version = {std::move(project_id), 0};
-    state_->conversation = std::move(next_conversation);
-    state_->phase = state_->ready ? "idle" : "disconnected";
-    state_->emit("state_changed", {{"state", state_->state()}}); return success();
+    } catch (const std::bad_alloc&) { return failure("resource_exhausted", "Project owner publication could not be retained"); }
+    catch (const std::length_error&) { return failure("resource_exhausted", "Project owner publication exceeds its capacity"); }
+    catch (const Refusal& error) { return failure(error.code, error.what()); }
+    catch (...) { return failure("interrupted", "Project owner publication was interrupted"); }
 }
+
 Revision Controller::revision() const { return state_->version; }
 void Controller::notify_changed() { ++state_->version.revision; state_->stop(); }
 Reply Controller::user_command(const JsonText& command) {

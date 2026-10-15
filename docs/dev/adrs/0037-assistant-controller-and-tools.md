@@ -152,3 +152,10 @@ All continuation callers share one contained request-construction/dispatch bound
 callback or construction failure revokes the undelivered request and approval, retains already committed
 answers/tool/scientific outcomes and visibly interrupts; initial send uses the same dispatch containment.
 No fresh revision, auto-approval, synthetic outcome or new public getter is introduced.
+
+Validated native disconnect/expiry/changed-connection observations retire execution before allocating any
+replacement identity or catalog copy. Allocation failure leaves the old turn/approval/job/lease fenced and
+a truthful nonexecuting disconnected state. Unchanged-ready/malformed input remains distinct. Explicit
+detach does not require a new conversation identity to retire its owner; a later message prepares one
+transactionally. A proposed new project attachment may prepare its identity before committing retirement,
+so rejected new-owner preparation preserves the existing owner. No old request or outcome is retagged.
