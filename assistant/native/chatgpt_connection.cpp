@@ -596,7 +596,7 @@ Reply ChatGptConnection::connect_saved(std::string id) {
         ++s.generation; s.cancel_operations(); s.connection.clear(); s.models = {}; s.emit_connection("disconnected");
         s.credentials = saved->take(); s.renewing = true;
         QUrlQuery form; form.addQueryItem("grant_type", "refresh_token"); form.addQueryItem("client_id", client);
-        form.addQueryItem("refresh_token", saved->value("refresh_token").toString()); form.addQueryItem("resource", "https://api.openai.com/v1");
+        form.addQueryItem("refresh_token", s.credentials.value("refresh_token").toString()); form.addQueryItem("resource", "https://api.openai.com/v1");
         s.token(form, [&s, client](Object tokens) { s.verify(tokens, client, true); });
         return ok();
     } catch (const detail::Refusal& e) { s.fail("Saved authorization exceeded the assistant limit.", "edi.assistant." + q(e.code)); return no(s.error, s.error_code); }
