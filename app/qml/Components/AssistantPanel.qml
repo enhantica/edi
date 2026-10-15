@@ -389,6 +389,15 @@ Popup {
                     }
                 }
             }
+            // Keep one visible assistant/status-bar boundary inside the strip.
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: EaStyle.Sizes.borderThickness
+                color: EaStyle.Colors.appBorder
+                z: 3
+            }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
             DropArea {
                 id: chatFilesDrop
