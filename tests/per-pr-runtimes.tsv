@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T03:12:15Z
+# measured_utc = 2026-10-15T03:14:54Z
 #
-# Recorded from: seq8 focused actual 9a25145 core first green plus sealed b6 FitJob publication; prior rows preserved
+# Recorded from: seq8 focused actual 9a25145 official native message lifecycle refusal fixture; prior rows preserved
 # Collected tests: 13596; with a reported duration: 7487
 # Module-scoped fixture costs recorded: 52
 #
@@ -9931,7 +9931,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.p
 0.120	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[missing-issued-client]
 0.120	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[state]
 0.140	tests/system/py/test_e11_t5_assistant_native.py::test_catalog_intersects_account_order_with_exact_reviewed_capabilities
-0.330	tests/system/py/test_e11_t5_assistant_native.py::test_fragmented_model_refusal_is_public_and_never_an_empty_success
+0.485	tests/system/py/test_e11_t5_assistant_native.py::test_fragmented_model_refusal_is_public_and_never_an_empty_success
 0.150	tests/system/py/test_e11_t5_assistant_native.py::test_full_jwks_key_count_precedes_matching_key_filter[64]
 0.140	tests/system/py/test_e11_t5_assistant_native.py::test_full_jwks_key_count_precedes_matching_key_filter[65]
 0.120	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[destroy]
@@ -13668,7 +13668,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 0.099	tests/system/py/test_e11_t5_assistant_native.py
+# module-cost: 0.095	tests/system/py/test_e11_t5_assistant_native.py
 # module-cost: 0.056	tests/system/py/test_e11_t5_assistant_native_transitions.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py

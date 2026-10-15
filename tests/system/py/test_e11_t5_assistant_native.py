@@ -911,6 +911,17 @@ def test_fragmented_model_refusal_is_public_and_never_an_empty_success(native, s
         index,
         [
             {
+                'type': 'response.output_item.added',
+                'output_index': 0,
+                'item': {
+                    'type': 'message',
+                    'id': 'message-one',
+                    'role': 'assistant',
+                    'status': 'in_progress',
+                    'content': [],
+                },
+            },
+            {
                 'type': 'response.refusal.delta',
                 'item_id': 'message-one',
                 'output_index': 0,
