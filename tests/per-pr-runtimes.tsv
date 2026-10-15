@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T03:16:26Z
+# measured_utc = 2026-10-15T03:28:26Z
 #
-# Recorded from: seq8 focused actual 9a25145 absent accepted TerminalRetention API setup holes, no executed lease behavior; prior rows preserved
-# Collected tests: 13608; with a reported duration: 7487
+# Recorded from: seq9 official Responses content lifecycle on sealed9a binary; prior rows preserved
+# Collected tests: 13632; with a reported duration: 7489
 # Module-scoped fixture costs recorded: 52
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13275
+# inventory_python = 13299
 # inventory_cpp = 333
-# inventory_measured = 11959
-# inventory_unmeasured = 1649
+# inventory_measured = 11961
+# inventory_unmeasured = 1671
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10127,6 +10127,30 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::t
 2.370	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-app-pinned]
 2.310	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-consumer]
 2.350	tests/system/py/test_e11_t5_sdk_replacement.py::test_sdk_replacement_at_the_same_prefix_rebuilds_consuming_objects[retarget-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[channel-done-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[channel-done-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[part-done-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_finalized_content_is_immutable_before_output_item_completion[part-done-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[fractional-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[fractional-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[missing-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[missing-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[negative-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[negative-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[string-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[string-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[unstarted-part-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_invalid_content_identity_cannot_append_to_a_live_message[unstarted-part-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[completed-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[completed-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[open-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[open-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[unstarted-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[unstarted-refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[wrong-kind-output_text]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[wrong-kind-refusal]
+0.260	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[output_text]
+0.170	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[refusal]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-fit]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-question]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[headless-fit]
