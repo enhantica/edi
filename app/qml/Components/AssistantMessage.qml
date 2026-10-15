@@ -62,7 +62,10 @@ Rectangle {
                 collabAgentToolCall: qsTr("Agent activity"), plan: qsTr("Plan update")};
             return names[payload.type] || qsTr("Activity");
         }
-        const actions = payload.commandActions;
+        // Retained JSON arrays arrive as QVariantList/QML sequences, which
+        // need not satisfy Array.isArray. Project this bounded JSON field only;
+        // canonical payload bytes and shell text remain untouched.
+        const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
         let category = "";
         if (Array.isArray(actions) && actions.length > 0) {
             category = actions[0] && typeof actions[0].type === "string" ? actions[0].type : "";
