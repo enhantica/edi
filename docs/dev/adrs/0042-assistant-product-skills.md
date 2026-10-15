@@ -38,3 +38,8 @@ The staged example requires DONE and converged at each boundary before starting 
 ## Adaptive scientific guidance
 
 The automatically discovered refinement-strategy resource adds conditional staging, accepted checkpoints, correlated-group cycling, ADP model support and mixed-site guidance. Its 5–10-pass ceiling is an explicit owner exploration budget, not a universal solver/convergence rule. Existing generic authorization to create/refine does not require fresh approval for every ordinary free group; actual runtime and restricted typed-plan approval controls still apply. No C++ refinement controller, format converter, new tool registration or whole-corpus prompt is introduced. The manifest binds exact updated bytes; only relevant resource content is loaded through the existing skill discovery route. Primary scientific references are McCusker/IUCr and GSAS-II; no claim is made to have hydrated Young's local LFS book pointer.
+
+
+## Native saved-result guidance
+
+The project-assistance resource version 1.1.0 extends its existing ordinary Python/API composition with the app's exact `EDI_RESULT_HANDOFF_V1` file receipt convention. It saves/reopens an actual self-contained native candidate, hashes the complete supported file set, and waits for host verification. It neither adds provider tools nor grants arbitrary Desktop access. Fresh host Save As is a separate native user-selected export. The manifest hash binds the updated shipped bytes; automatic runtime discovery remains the existing path. The documented classic CIF/prepared XYE witness is explicitly scoped and is not a general FullProf/GPX conversion or scientific quality claim.

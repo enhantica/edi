@@ -134,3 +134,8 @@ future intentional refinement still follows the model's ordinary symmetry rules.
 Independent canonical, equivalent-image, periodic-lift, tied/rank-reduced and
 ADP-bearing acceptance/refusal gates remain necessary. The broader arbitrary-CIF
 representative transformation capability remains open.
+
+
+## Assistant native-result loader admission
+
+The app-private saved-result path uses a core-private `load_assistant_project` entry in `core/src/assistant_project_io.hpp`. It reuses `io.cpp`'s actual grammar and model builders, requires embedded measured data before generated-axis allocation, and refuses external scan/report declarations before materialization. Public factory/directory-loader behavior and scientific values remain unchanged. The caller first bounds and seals the exact native file set; this entry adds no independent parser, science inference, public Python API or new engine dependency.

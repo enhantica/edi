@@ -16,6 +16,7 @@
 
 namespace edi_app {
 class ProjectViewModel;
+class Session;
 
 /// Native QML presentation of the shared controller. Owned by Session, including while no project is open.
 class AssistantViewModel : public QObject {
@@ -101,6 +102,9 @@ class AssistantViewModel : public QObject {
     void contextPreviewChanged();
 
    private:
+    friend class Session;
+    void setResultProject(ProjectViewModel* project);
+    bool resultSettledReady() const;
     struct State;
     std::unique_ptr<State> state_;
 };

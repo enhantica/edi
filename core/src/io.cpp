@@ -21,6 +21,7 @@
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
 #include "import_symmetry.hpp"
+#include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 
 #include <algorithm>
@@ -1376,7 +1377,7 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     return data;
 }
 
-BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
+BraggPdExperiment experiment_from_block(const Block& block, const std::string& where, bool embedded_only = false) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
     BraggPdExperiment experiment;
@@ -1930,6 +1931,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         experiment.background.assign(std::move(points));
     }
     experiment.data = parse_measured_data(block, resolved.mode, where);
+    if (embedded_only && !experiment.data.has_value()) {
+        throw IoError("assistant result requires embedded measured data; generated grids are unsupported: " + where);
+    }
 
     // The one-loader ruling ("one loader, project contents select calculate vs fit"): a block may
     // declare its measured `_data` loop (fit-ready) or its `_data_range.<axis>_min/_max/_step`
@@ -3211,7 +3215,8 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+namespace {
+Project load_project_impl(const std::string& directory, const WarningSink& on_warning, bool assistant_result) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3262,7 +3267,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
             }
         }
-        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
         // The file's own contents declare its category — a `_data` loop means measured data
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
@@ -3304,6 +3309,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 }
             }
             if (const Loop* files = block.loop_with("_report_file.name")) {
+                if (assistant_result && !files->rows.empty()) throw IoError("assistant result external report files are unsupported");
                 for (const auto& row : files->rows) {
                     ReportFile file;
                     file.name = loop_cell(*files, row, "_report_file.name", where);
@@ -3324,6 +3330,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         const Block block =
             parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
         const std::string* mode = block.find("_fitting_mode.type");
+        if (assistant_result && (block.find("_sequential_fit.data_dir") ||
+            (mode && is_scan_fitting_mode(*mode)))) {
+            throw IoError("assistant result external scan declarations are unsupported");
+        }
         if (mode != nullptr) {
             // Review-1 F4: the closed set is enforced at LOAD on this side too. Without it a
             // lookalike survived loading and then performed one plausible template fit through
@@ -4050,6 +4060,16 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     refresh_relations(project, warn, true);
     return project;
 }
+
+} // namespace
+Project load_project(const std::string& directory, const WarningSink& on_warning) {
+    return load_project_impl(directory, on_warning, false);
+}
+namespace detail {
+Project load_assistant_project(const std::string& directory) {
+    return load_project_impl(directory, {}, true);
+}
+} // namespace detail
 
 double parse_edi_double(const std::string& text, const std::string& where) {
     // Review-10 F2: the ONE numeric boundary, exported for the adapter's start_tied parsing —

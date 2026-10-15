@@ -6,6 +6,11 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QPointer>
+#include <QUuid>
+#include "assistant_result.hpp"
+#include "../../core/src/assistant_project_io.hpp"
+#include "edi/calculation.hpp"
 #include <algorithm>
 #include <utility>
 #include <filesystem>
@@ -107,16 +112,33 @@ void WarningListModel::recount() {
 
 // ---- Session ------------------------------------------------------------------------------------
 
+struct Session::SaveIntent {
+    QString id;
+    QPointer<ProjectViewModel> project;
+    quint64 epoch;
+    edi::WorkStamps stamps;
+    std::shared_ptr<ImmutableAssistantResult> result;
+    bool fresh;
+};
+
 Session::Session(QObject* parent)
-    : QObject(parent), assistant_(new AssistantViewModel(this)), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
+    : QObject(parent), assistant_(new AssistantViewModel(this)), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
+}
 
 #ifndef __EMSCRIPTEN__
 Session::Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent)
     : QObject(parent), assistant_(new AssistantViewModel(std::move(dependencies), this)),
-      examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
+      examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
+}
 #endif
 
-Session::~Session() { assistant_->setProject(nullptr); }
+Session::~Session() {
+    disconnect(assistant_, nullptr, this, nullptr);
+    assistant_->setProject(nullptr);
+    delete project_; project_ = nullptr; // Finish file-backed readers before destroying the snapshot lease.
+}
 
 bool Session::openProject(const QUrl& directory) {
     if (openProjectAt(directory)) {
@@ -206,7 +228,7 @@ QString Session::projectLocation() const {
 }
 
 bool Session::needsSaveAs() const {
-    return project_ != nullptr && (project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
+    return project_ != nullptr && (fresh_result_ || project_->path().isEmpty() || !opened_example_.isEmpty() || read_only_copy_);
 }
 
 bool Session::save() {
@@ -223,6 +245,9 @@ bool Session::save() {
 }
 
 bool Session::saveAs(const QUrl& directory) {
+    if (fresh_result_) {
+        setLastError(tr("Choose a parent directory and a fresh project folder through Save As.")); return false;
+    }
     if (project_ == nullptr) {
         return false;
     }
@@ -395,7 +420,22 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
     return true;
 }
 
-void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
+void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
+                             bool managedResult, std::shared_ptr<ImmutableAssistantResult> result,
+                             std::optional<edi::WorkStamps> resultStamps) {
+    retireAssistantIntent();
+    if (managedResult) {
+        try { assistant_->setResultProject(project); }
+        catch (...) {
+            // Preparation failed before the host project commit. Restore the old
+            // attachment fail-closed; never leave a borrowed candidate dangling.
+            try { assistant_->setProject(project_); } catch (...) {}
+            throw;
+        }
+    }
+    auto previous_result = std::move(assistant_result_); // Outlives deletion of the previous ProjectViewModel below.
+    assistant_result_ = std::move(result); fresh_result_ = bool(assistant_result_);
+    result_edited_ = false; result_saved_stamps_ = std::move(resultStamps);
     read_only_copy_ = false;
     // Every piece of the session's state — the project, its load warnings, the example it came from,
     // the cleared error — is in place before any consumer is told, so a handler of one signal reads
@@ -403,10 +443,14 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     ProjectViewModel* previous = project_;
     const QString previous_example = opened_example_;
     project_ = project;
-    assistant_->setProject(project_);
+    if (!managedResult) assistant_->setProject(project_);
     opened_example_ = example;
     warnings_->setMessages(warnings);
     if (project_ != nullptr) {
+        connect(project_, &ProjectViewModel::projectEdited, this, [this] {
+            if (fresh_result_) result_edited_ = true;
+            retireAssistantIntent();
+        });
         connect(project_, &ProjectViewModel::refused, this, &Session::setLastError);
         connect(project_, &ProjectViewModel::recalculated, this, &Session::syncCalculationMessages);
         // A load's or a removal's account: each one listed as its own message.
@@ -431,6 +475,102 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         // now rather than at the next event-loop turn: projects opened back to back (a script, a
         // test) must hold one project's pages, not every one opened so far.
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+}
+
+void Session::retireExportIntent() noexcept { save_intent_.reset(); }
+void Session::retireAssistantIntent() noexcept {
+    if (assistant_epoch_ == UINT64_MAX) assistant_epoch_exhausted_ = true;
+    else ++assistant_epoch_;
+    save_intent_.reset();
+}
+bool Session::emptyAssistantOwner(quint64 epoch) const noexcept {
+    return !assistant_epoch_exhausted_ && assistant_epoch_ == epoch && !project_;
+}
+bool Session::adoptAssistantResult(std::shared_ptr<ImmutableAssistantResult> result, quint64 epoch,
+                                   const std::function<bool()>& current) {
+    if (!result || !emptyAssistantOwner(epoch) || !current()) return false;
+    // Load only the captured host lease; no runtime writer can change this tree.
+    auto project = load_captured_assistant_result(*result);
+    project.path.clear(); project.metadata.path.clear(); // The displayed unsaved model never writes into the sealed lease.
+    const auto saved = edi::work_stamps(project);
+    auto model = std::make_unique<ProjectViewModel>(std::move(project), this);
+    if (!edi::unchanged_since(*model->assistantProject(), saved))
+        throw std::runtime_error("Saved result changed during host model preparation");
+    if (!emptyAssistantOwner(epoch) || !current()) return false;
+    model->setModified(true);
+    auto* adopted = model.release();
+    try { replaceProject(adopted, {}, {}, true, std::move(result), saved); }
+    catch (...) { if (project_ != adopted) delete adopted; throw; }
+    return true;
+}
+QString Session::beginSaveAs() {
+    save_intent_.reset();
+    if (!project_ || assistant_epoch_exhausted_ || project_->fit()->running() || !assistant_->resultSettledReady()) {
+        setLastError(tr("Finish the current operation before choosing a Save As destination.")); return {};
+    }
+    if (fresh_result_ && (result_edited_ || !result_saved_stamps_ ||
+        !edi::unchanged_since(*project_->assistantProject(), *result_saved_stamps_))) {
+        setLastError(tr("Save the unchanged assistant result before editing. Edited-result export is not available in this first path.")); return {};
+    }
+    try {
+        auto intent = std::make_unique<SaveIntent>();
+        intent->id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        intent->project = project_; intent->epoch = assistant_epoch_;
+        intent->stamps = edi::work_stamps(*project_->assistantProject());
+        intent->result = assistant_result_; intent->fresh = fresh_result_;
+        const auto id = intent->id; save_intent_ = std::move(intent); return id;
+    } catch (...) { setLastError(tr("Save As could not capture the current project.")); return {}; }
+}
+void Session::cancelSaveAs(const QString& intent) {
+    if (save_intent_ && save_intent_->id == intent) save_intent_.reset();
+}
+bool Session::saveIntentCurrent(const SaveIntent& intent) const {
+    return !assistant_epoch_exhausted_ && intent.epoch == assistant_epoch_ && intent.project &&
+        intent.project == project_ && intent.result == assistant_result_ && intent.fresh == fresh_result_ &&
+        !project_->fit()->running() && assistant_->resultSettledReady() &&
+        edi::unchanged_since(*project_->assistantProject(), intent.stamps);
+}
+bool Session::saveAsCurrent(const QString& token) const {
+    return save_intent_ && save_intent_->id == token && saveIntentCurrent(*save_intent_);
+}
+bool Session::completeSaveAs(const QString& token, const QUrl& parent, const QString& leaf) {
+    if (!save_intent_ || save_intent_->id != token) {
+        setLastError(tr("This Save As request is no longer current; no project was exported.")); return false;
+    }
+    auto intent = std::move(save_intent_); // One-shot even if preparation refuses.
+    const auto current = [&] { return saveIntentCurrent(*intent); };
+    if (!parent.isLocalFile() || !current()) { setLastError(tr("Save As was cancelled by a project or operation change.")); return false; }
+    if (!intent->fresh) {
+        // Same initiating-owner guard for the pre-existing native picker path.
+        if (!leaf.isEmpty()) { setLastError(tr("This project uses the ordinary directory Save As.")); return false; }
+        return saveAs(parent);
+    }
+    if (!assistant_result_ || result_edited_ || !result_saved_stamps_ ||
+        !edi::unchanged_since(*project_->assistantProject(), *result_saved_stamps_)) {
+        setLastError(tr("This first export supports the unchanged opened assistant result. Save a fresh result before editing; edited-result export is not yet available.")); return false;
+    }
+    std::unique_ptr<AssistantResultExport> prepared;
+    try {
+        // Copy the exact bounded saved artifact; do not invoke an unbounded scratch writer.
+        prepared = std::make_unique<AssistantResultExport>(*assistant_result_, parent.toLocalFile(), leaf);
+        // All recovery strings/receipt buffers are allocated BEFORE disk publication.
+        QString exported = prepared->destination();
+        QJsonArray files = prepared->files();
+        prepared->publish(current);
+        exported_result_.swap(exported); exported_files_.swap(files); // Nonallocating retention after commit.
+        if (!current()) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
+        auto model = std::make_unique<ProjectViewModel>(prepared->reopen(), this);
+        if (!current()) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
+        auto* opened = model.release();
+        try { replaceProject(opened, {}, {}, true); }
+        catch (...) { if (project_ != opened) delete opened; throw; }
+        emit projectDirectoryUsed(exported_result_);
+        return true;
+    } catch (...) {
+        if (prepared && prepared->committed()) setLastError(tr("Exported, but not opened: %1").arg(prepared->destination()));
+        else setLastError(tr("Save As was refused. Use a fresh folder name in a writable parent; the displayed project and existing destinations are preserved. An unpublished temporary export folder may remain for recovery."));
+        return false;
     }
 }
 

@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "title": "Review an Edi project",
       "summary": "Inspect actual project context and propose bounded approved work.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "ebbd7b60f498235688d71ca2f73b8e616f4a3a69eb9fa3c79cb98340286bbb6e",
+      "sha256": "07928b58a24d406797ae425f83cc4da29cdc46cd972b701f128dd3fbe775e18e",
       "requires": [],
       "capabilities": [
         "inspect_project",

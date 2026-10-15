@@ -421,6 +421,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void published(const edi::PreviewResult& result);
     void publishCalculating();
     void setLastError(const QString& error);
+    friend class Session;
     void setModified(bool modified);
 
     std::unique_ptr<edi::Project> project_;

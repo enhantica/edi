@@ -377,6 +377,11 @@ EaComponents.ApplicationWindow {
         if (Session.project === null)
             return;
         if (!WebFiles.available) {
+            if (saveFolder.visible || freshProjectFolder.visible) return;
+            const intent = Session.beginSaveAs();
+            if (!intent.length) { saveError.open(); return; }
+            saveFolder.intent = intent;
+            saveFolder.fresh = Session.needsFreshSaveAs;
             saveFolder.open();
             return;
         }
@@ -403,10 +408,59 @@ EaComponents.ApplicationWindow {
 
     FolderDialog {
         id: saveFolder
-        title: qsTr("Save the project into a directory")
+        property string intent: ""
+        property bool fresh: false
+        title: fresh ? qsTr("Choose a parent directory for a new project folder") : qsTr("Save the project into a directory")
+        onRejected: { Session.cancelSaveAs(intent); intent = ""; }
         onAccepted: {
-            if (!Session.saveAs(selectedFolder))
-                saveError.open();
+            const token = intent;
+            intent = "";
+            // Validate the captured initiating owner before presenting a second
+            // form or reading its project name. The final action rechecks too.
+            if (!Session.saveAsCurrent(token)) { Session.cancelSaveAs(token); return; }
+            if (fresh) {
+                freshProjectFolder.intent = token;
+                freshProjectFolder.destinationParent = selectedFolder;
+                freshFolderName.text = Session.project ? Session.project.name : "";
+                freshProjectFolder.open();
+            } else if (!Session.completeSaveAs(token, selectedFolder, "")) saveError.open();
+        }
+    }
+    AppDialog {
+        id: freshProjectFolder
+        objectName: "assistant.resultSaveAs"
+        parent: Overlay.overlay
+        property string intent: ""
+        property url destinationParent
+        title: qsTr("Save in a fresh project folder")
+        standardButtons: Dialog.Save | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: freshFolderContent.implicitHeight
+        onOpened: freshFolderName.forceActiveFocus()
+        onRejected: { Session.cancelSaveAs(intent); intent = ""; }
+        onAccepted: {
+            const token = intent;
+            intent = "";
+            if (!Session.completeSaveAs(token, destinationParent, freshFolderName.text)) saveError.open();
+        }
+        Column {
+            id: freshFolderContent
+            width: freshProjectFolder.contentWidth
+            spacing: AppSizes.unit
+            EaElements.Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+                text: qsTr("Existing folders are preserved. Choose a new project folder name.")
+            }
+            EaElements.TextField {
+                id: freshFolderName
+                objectName: "assistant.resultFolderName"
+                width: parent.width
+                placeholderText: qsTr("New project folder")
+                selectByMouse: true
+                Accessible.name: qsTr("New project folder name")
+            }
         }
     }
 
