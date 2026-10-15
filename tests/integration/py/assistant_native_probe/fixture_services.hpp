@@ -50,7 +50,7 @@ struct Operation: native::HttpOperation {
 struct FixtureServices {
     std::vector<std::shared_ptr<Pending>> operations;
     std::map<std::string,QByteArray> records;
-    Array events,browsers,writes,erasures,services;
+    Array events,browsers,writes,erasures,services,store_reads;
     std::int64_t wall=1800000000;
     std::uint64_t elapsed=100;
     std::string fail;
@@ -73,6 +73,8 @@ struct FixtureServices {
     dependencies.read_record=[this](const native::RecordKey& record)->native::RecordRead{
         if(failure("read")) return {native::StoreStatus::failed,{}};
         auto found=records.find(key(record));
+        store_reads.push_back(Object{{"key",QString::fromStdString(key(record))},
+            {"bytes",found==records.end()?0.:static_cast<double>(found->second.size())}});
         return found==records.end() ? native::RecordRead{native::StoreStatus::absent,{}}
                                    : native::RecordRead{native::StoreStatus::ok,found->second};
     };
@@ -99,7 +101,11 @@ struct FixtureServices {
     }
     Object dispatch(const Object& input) {
         auto op=input["op"].toString(); Object result;
-            if(op=="fail") fail=input["value"].toString().toStdString();
+            if(op=="store_put") {
+                records[input["key"].toString().toStdString()]=input["utf8"].toString().toUtf8();
+            } else if(op=="clear_store_receipts") {
+                store_reads=Array{};writes=Array{};erasures=Array{};
+            } else if(op=="fail") fail=input["value"].toString().toStdString();
             else if(op=="advance") {
                 wall+=static_cast<std::int64_t>(input["seconds"].toDouble());
                 elapsed+=static_cast<std::uint64_t>(input["milliseconds"].toDouble());
@@ -146,7 +152,8 @@ struct FixtureServices {
             }
             for(const auto& [name,bytes]:records) stored.push_back(Object{{"key",QString::fromStdString(name)},{"bytes",QString::fromUtf8(bytes)}});
             Object output{{"events",events},{"browsers",browsers},{"requests",requests},
-                          {"records",stored},{"writes",writes},{"erasures",erasures},{"services",services}};
+                          {"records",stored},{"writes",writes},{"erasures",erasures},{"services",services},
+                          {"store_reads",store_reads}};
         return output;
     }
 };

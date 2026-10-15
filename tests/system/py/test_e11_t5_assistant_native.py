@@ -246,10 +246,8 @@ class Native:
         return query
 
     def ready(self):
-        return any(
-            event.get('type') == 'connection' and event.get('status') == 'ready'
-            for event in self.last['events']
-        )
+        # state() is the current native generation, unlike the cumulative event archive.
+        return self.last['state'].get('status') == 'ready'
 
     def close(self):
         self.process.stdin.close()
@@ -388,15 +386,23 @@ def test_callback_refusal_never_exchanges_a_code(native, patch):
         'list-throw',
     ],
 )
-def test_service_failure_is_caught_and_does_not_fabricate_a_connection(native, signer, failure):
+def test_service_failure_is_caught_and_does_not_fabricate_a_connection(native, failure):
     native.command('fail', value=failure)
     observed = len(native.last['services'])
     if failure.startswith(('read', 'list')):
         native.command('recreate')
-    if failure.startswith('write'):
-        native.authenticate(signer)
-    else:
-        native.command('sign_in')
+    native.command('sign_in')
+    native.automatic()
+    if failure.startswith('request'):
+        # HTTP starts only after the genuine browser callback has been admitted.
+        query = {
+            key: values[0]
+            for key, values in parse_qs(urlsplit(native.last['browsers'][-1]).query).items()
+        }
+        native.command(
+            'callback',
+            query={'code': 'synthetic-code', 'state': query['state'], 'client_id': CLIENT},
+        )
         native.automatic()
     result = native.last
     service = failure.split('-', 1)[0]
@@ -519,13 +525,39 @@ def test_signout_preserves_mapping_and_reports_unconfirmed_remote_or_local_erasu
         native.respond(index, None)
     if failure == 'network':
         native.command('advance', seconds=0, milliseconds=10000)
-    assert [r for r in native.last['records'] if r['key'].startswith('1:')] == registration, (
-        'I12: sign-out preserves the nonsecret account/client registration'
+    retained = [row for row in native.last['records'] if row['key'].startswith('1:')]
+    assert [row['key'] for row in retained] == [row['key'] for row in registration], (
+        'I12: sign-out preserves the nonsecret account/client registration association'
     )
+    for before, after in zip(registration, retained, strict=True):
+        original, current = json.loads(before['bytes']), json.loads(after['bytes'])
+        assert all(current.get(key) == value for key, value in original.items()), (
+            'I12: sign-out preserves every admitted nonsecret identity/client/host/display field'
+        )
+        extra = {key: value for key, value in current.items() if key not in original}
+        assert not extra or extra == {'blocked': True}, (
+            'I12: erasure failure may add only a typed nonsecret blocked marker'
+        )
+        assert len(after['bytes'].encode('utf-8')) <= 1048576, (
+            'I12/F6: a retained nonsecret mapping remains within its declared record ceiling'
+        )
+        assert not any(
+            secret in after['bytes']
+            for secret in ('synthetic-access-v1', 'synthetic-refresh-v1', native.jwt)
+        ), 'I12: nonsecret registration metadata never embeds access/refresh/identity tokens'
     assert native.last['state'].get('last_error'), (
         'I12: unconfirmed revocation or failed local erasure is disclosed '
         'instead of claiming complete teardown'
     )
+    if failure == 'erase':
+        native.command('recreate')
+        native.command('connect_saved', id=registration[0]['key'][2:])
+        assert not native.ready(), (
+            'I12: unconfirmed erasure cannot reuse a saved grant after recreation'
+        )
+        assert native.last['state'].get('last_error') or native.last['reply'].get('ok') is False, (
+            'I12: blocked grant reuse remains an explicit refusal rather than silent readiness'
+        )
 
 
 def provider_request(native, *, request_id='request-one', history=None):
@@ -820,10 +852,14 @@ def test_signout_then_reauthorization_reuses_issued_client_and_stable_host(nativ
 
 
 def test_refresh_is_serial_and_late_rotation_cannot_resurrect_signed_out_account(native, signer):
-    native.authenticate(signer)
+    native.authenticate(signer, claims_patch={'exp': WALL + 7200})
     assert native.ready(), 'I12: refresh control begins from verified synthetic readiness'
     before = len(native.last['requests'])
     native.command('advance', seconds=3600, milliseconds=3600000)
+    registration = next(
+        row['key'][2:] for row in native.last['records'] if row['key'].startswith('1:')
+    )
+    native.command('connect_saved', id=registration)
     request = provider_request(native)
     native.command('send', payload=request)
     native.command('send', payload={**request, 'request_id': 'request-two'})
@@ -994,4 +1030,73 @@ def test_no_eligible_or_malformed_catalog_never_silently_becomes_ready(native, s
     assert not native.ready() and native.last['state'].get('last_error'), (
         'I13: missing capabilities, malformed identity and aggregate catalog overflow '
         'fail closed with a visible prerequisite rather than a fabricated default'
+    )
+
+
+@pytest.mark.parametrize('key_count', [64, 65])
+def test_full_jwks_key_count_precedes_matching_key_filter(native, signer, key_count):
+    sign, source = signer
+    matching = dict(source['keys'][0])
+    # Multiple distinct kid aliases for one valid RSA public key are valid JWK objects.
+    # The original signer still uses the original matching kid; no verifier is replaced.
+    keys = [matching] + [
+        {**matching, 'kid': 'unused-independent-alias-' + str(index)}
+        for index in range(1, key_count)
+    ]
+    jwks = {'keys': keys}
+    encoded = json.dumps(jwks, separators=(',', ':')).encode('utf-8')
+    assert len(encoded) < 1048576, (
+        'I12/F6: the key-count witness stays below the separate whole-HTTP JSON cap'
+    )
+    native.authenticate((sign, jwks))
+    if key_count == 64:
+        assert native.ready(), (
+            'I12/F6: a valid inclusive 64-key JWKS still verifies its actual matching RSA key'
+        )
+    else:
+        assert not native.ready(), (
+            'I12/F6: an unused sixty-fifth key cannot evade the full-set admission limit'
+        )
+        assert native.last['state'].get('last_error_code') == 'edi.assistant.resource_exhausted', (
+            'I12/F6: valid over-count JWKS reports the declared resource refusal'
+        )
+        assert not any(row['key'].startswith('2:') for row in native.last['records']), (
+            'I12/F6: over-count verification persists no grant'
+        )
+
+
+@pytest.mark.parametrize('record_kind', ['host', 'credentials'])
+def test_oversized_own_record_is_refused_before_parsing_or_replacement(
+    native, signer, record_kind
+):
+    native.authenticate(signer)
+    assert native.ready(), 'I12/F6: the source record comes from real verified offline sign-in'
+    saved = {row['key']: row['bytes'] for row in native.last['records']}
+    prefix = '0:' if record_kind == 'host' else '2:'
+    key = next(key for key in saved if key.startswith(prefix))
+    # Valid JSON whitespace grows a real native-created record, never invents a record schema.
+    raw = saved[key].encode('utf-8')
+    over = raw + b' ' * (1048577 - len(raw))
+    native.command('store_put', key=key, utf8=over.decode('utf-8'))
+    native.command('clear_store_receipts')
+    native.command('recreate')
+    if record_kind == 'credentials':
+        registration = next(key[2:] for key in saved if key.startswith('1:'))
+        native.command('connect_saved', id=registration)
+    else:
+        native.command('sign_in')  # stable host loading is lazy until the real browser flow.
+    reached = native.last['store_reads']
+    assert any(row['key'] == key and row['bytes'] == 1048577 for row in reached), (
+        'I12/F6: the intended oversized actual own-record read is reached'
+    )
+    assert not native.ready(), 'I12/F6: an oversized saved record cannot establish readiness'
+    assert native.last['state'].get('last_error_code') == 'edi.assistant.resource_exhausted', (
+        'I12/F6: oversized record bytes use the bounded declared resource refusal'
+    )
+    after = {row['key']: row['bytes'] for row in native.last['records']}
+    assert all(after[old] == value for old, value in saved.items() if old != key), (
+        'I12/F6: failed own-record admission preserves every unrelated admitted record'
+    )
+    assert native.last['writes'] == [] and native.last['erasures'] == [], (
+        'I12/F6: oversized loading neither rewrites a valid mapping nor erases a grant'
     )

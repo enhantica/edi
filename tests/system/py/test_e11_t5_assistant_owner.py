@@ -54,7 +54,7 @@ def test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll
     )
     assert free['reply']['ok'], 'I8: the real candidate has an explicit useful fittable free set'
     protected = free['snapshot']
-    owner.command('clock', steady=True)
+    owner.command('clock', steady=False, fit_admission=True)
     started = owner.tool('fit_trial', {'trial_id': trial}, plan_id=plan)
     assert started['reply']['ok'], (
         'I10: elapsed enforcement must be exercised inside an admitted optimizer job'
@@ -68,8 +68,10 @@ def test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll
     assert result['snapshot'] == protected, (
         'I8/I10: optimizer work never publishes into accepted live state before evaluation'
     )
-    if elapsed == 25 and result['owner_work_max_ms'] >= elapsed:
-        assert not terminal[-1].get('converged'), (
+    # T carries scientific fields in its declared result payload; shortened errors have none.
+    scientific = terminal[-1].get('result', {})
+    if elapsed == 25:
+        assert not scientific.get('converged'), (
             'I10: an optimizer exceeding its approved elapsed budget cannot '
             'claim ordinary convergence while the owner event loop is occupied'
         )
@@ -81,10 +83,21 @@ def test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll
             'I10: budget exhaustion preserves the exact accepted state through late evaluation'
         )
     else:
-        assert terminal[-1].get('converged'), (
+        assert scientific.get('converged'), (
             'I8/I10: the same real source makes useful progress with a sufficient finite budget'
         )
         evaluated = owner.tool('evaluate_trial', {'trial_id': trial}, plan_id=plan)
         assert evaluated['reply']['ok'] and evaluated['reply']['value'].get('accepted'), (
             'I8/I10: deadline enforcement retains the useful real owner-thread fit/adoption path'
         )
+
+
+@pytest.mark.parametrize('elapsed_budget', [50, 5000], ids=['expired-in-queue', 'useful-budget'])
+def test_owner_thread_elapsed_budget_includes_actual_queued_wait(owner, elapsed_budget):
+    observed = owner.command('inspect')
+    assert observed['owner_thread_kit'], (
+        'I10/F7: queued-before-start behavior executes the actual owner-thread core kit'
+    )
+    trials.test_approved_elapsed_budget_includes_time_waiting_on_actual_worker(
+        owner, elapsed_budget
+    )

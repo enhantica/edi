@@ -165,7 +165,8 @@ int main(int argc,char** argv) {
         auto qml_assistant=expression.evaluate().value<QObject*>();
         Array texts,controls;
         for(auto* object:objects(window)) {
-            if(object->property("text").isValid()) texts.push_back(text_observation(object));
+            if(auto* item=qobject_cast<QQuickItem*>(object); item && item->isVisible() && object->property("text").isValid())
+                texts.push_back(text_observation(object));
             if(auto* item=qobject_cast<QQuickItem*>(object);item&&!object->objectName().isEmpty())
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
                     {"enabled",item->isEnabled()},{"width",item->width()},{"height",item->height()},
@@ -176,8 +177,8 @@ int main(int argc,char** argv) {
         if(observed->project()) {
             const auto& model=observed->project()->project();
             project={{"name",QString::fromStdString(model.metadata.name)},
-                     {"cell_a",model.structure().cell.length_a.value.get()},
-                     {"cell_a_free",model.structure().cell.length_a.free.get()},
+                     {"cell_a",model.structures.empty()?QJsonValue():QJsonValue(model.structure().cell.length_a.value.get())},
+                     {"cell_a_free",model.structures.empty()?QJsonValue():QJsonValue(model.structure().cell.length_a.free.get())},
                      {"report_embedded",observed->project()->report()->embedLibraries()},
                      {"can_undo",observed->project()->canUndo()}};
         }
@@ -243,6 +244,62 @@ int main(int argc,char** argv) {
             else if(op=="sign_out") observed->assistant()->signOut();
             else if(op=="select_model") observed->assistant()->setSelectedModel(input["id"].toString());
             else if(op=="select_effort") observed->assistant()->setSelectedEffort(input["id"].toString());
+            else if(op=="owner_queue_escape") {
+                const auto callbacks=input["callbacks"].toArray();
+                Array phases;
+                if(input["schedule"].toString()=="queued-transport") {
+                    if(!QMetaObject::invokeMethod(observed,[&fixture,callbacks] {
+                        for(const auto& value:callbacks) fixture.dispatch(value.toObject());
+                    },Qt::QueuedConnection)) throw std::runtime_error("old transport callback not queued");
+                    phases.push_back("old HTTP callbacks queued on actual owner");
+                } else if(input["schedule"].toString()=="direct-native") {
+                    for(const auto& value:callbacks) fixture.dispatch(value.toObject());
+                    phases.push_back("old callbacks invoked and returned");
+                } else throw std::invalid_argument("unknown independent callback schedule");
+                const auto before_retire=model_rows(observed->assistant()->messages());
+                if(input["retirement"].toString()=="project") {
+                    if(!observed->openProject(QUrl::fromLocalFile(input["path"].toString())))
+                        throw std::runtime_error("actual new project open failed");
+                } else if(input["retirement"].toString()=="history") {
+                    observed->assistant()->clearHistory();
+                } else throw std::invalid_argument("unknown independent retirement");
+                phases.push_back("actual scope retired");
+                const auto old_operations=fixture.operations.size();
+                observed->assistant()->send(input["text"].toString());
+                bool accepted=false;
+                if(observed->assistant()->contextConsentRequired()) {
+                    auto* button=find("assistant.connection");
+                    auto* item=qobject_cast<QQuickItem*>(button);
+                    if(!item || !item->isVisible() || !item->isEnabled() ||
+                       !QMetaObject::invokeMethod(button,"clicked",Qt::DirectConnection))
+                        throw std::runtime_error("actual context inspection control unavailable");
+                }
+                for(auto* object:objects(window)) {
+                    if(!object->property("visible").toBool() || !object->property("title").isValid()) continue;
+                    if(object->metaObject()->indexOfMethod("accept()")<0) continue;
+                    Array texts;
+                    for(auto* child:objects(object)) if(child->property("text").isValid()) texts.push_back(text_observation(child));
+                    disclosures.push_back(Object{{"title",object->property("title").toString()},{"texts",texts}});
+                    if(!QMetaObject::invokeMethod(object,"accept",Qt::DirectConnection))
+                        throw std::runtime_error("real disclosure acceptance did not execute");
+                    accepted=true;break;
+                }
+                if(accepted) observed->assistant()->send(input["text"].toString());
+                Array sent_before_drain;
+                for(std::size_t index=old_operations;index<fixture.operations.size();++index)
+                    if(fixture.operations[index]->request.url.path()=="/v1/responses")
+                        sent_before_drain.push_back(static_cast<double>(index));
+                phases.push_back("new actual public send before queue drain");
+                bool admitted_before_drain=false;
+                for(const auto& value:model_rows(observed->assistant()->messages())) {
+                    const auto row=value.toObject();
+                    if(row.value("kind")=="user" && row.value("text")==input.value("text"))
+                        admitted_before_drain=observed->assistant()->canCancel();
+                }
+                result={{"phases",phases},{"before_retire",before_retire},
+                        {"admitted_before_drain",admitted_before_drain},
+                        {"sent_before_drain",sent_before_drain},{"accepted_dialog",accepted}};
+            }
             else if(op=="callback_then_open") {
                 fixture.dispatch(input["callback"].toObject());
                 result={{"opened",observed->openProject(QUrl::fromLocalFile(input["path"].toString()))}};

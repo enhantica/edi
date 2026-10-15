@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T01:28:15Z
+# measured_utc = 2026-10-15T02:33:24Z
 #
-# Recorded from: E11-T5 seq3 SDK1-4 held producer92b8d58; focused tests-seq3-sdk-class-followup.log plus corrected tests-seq3-sdk-content-final.log; six behavioral failed holes, passing completed rows only; all other bank rows/holes retained
-# Collected tests: 13529; with a reported duration: 7390
+# Recorded from: E11-T5 seq7 frozen b6 core/native; completed focused tests-seq7-{core-corrected,core-final,status-corrected,owner-final,native-corrected}; failed nodes stay holes; UI-final writer refused passing runtime breaches, no UI measurements invented; unrelated prior rows retained
+# Collected tests: 13547; with a reported duration: 7462
 # Module-scoped fixture costs recorded: 51
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13196
+# inventory_python = 13214
 # inventory_cpp = 333
-# inventory_measured = 11862
-# inventory_unmeasured = 1667
+# inventory_measured = 11934
+# inventory_unmeasured = 1613
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -9927,58 +9927,64 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.p
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_stream_wire_budget_counts_comments_and_is_sticky
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_unique_provider_item_and_call_bounds_are_inclusive[function_call-64]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_boundaries.py::test_unique_provider_item_and_call_bounds_are_inclusive[message-256]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[denied]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[missing-issued-client]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[state]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_catalog_intersects_account_order_with_exact_reviewed_capabilities
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_fragmented_model_refusal_is_public_and_never_an_empty_success
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[destroy]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[sign-out]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[0]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[1]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[2]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[3]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[4]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[5]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[6]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[7]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_http_and_sign_in_deadlines_use_injected_monotonic_clock
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[data-before-headers]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[header-count]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[oversize-body]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[oversize-headers]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[repeated-headers]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[duplicate]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[malformed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[over-cap]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[unknown-only]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_loopback_pkce_verified_jwt_and_catalog_establish_only_synthetic_readiness
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_signature_and_direct_use_scope_are_both_required[scope]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_signature_and_direct_use_scope_are_both_required[signature]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[audience]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[expiry]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[issuer]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[nonce]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[subject]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_refresh_is_serial_and_late_rotation_cannot_resurrect_signed_out_account
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[browser-throw]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[browser]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[list-throw]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[list]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[read-throw]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[read]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[request-null]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[request-throw]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[write-throw]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[write]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_signout_preserves_mapping_and_reports_unconfirmed_remote_or_local_erasure[erase]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_signout_preserves_mapping_and_reports_unconfirmed_remote_or_local_erasure[network]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_signout_then_reauthorization_reuses_issued_client_and_stable_host
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_stateless_continuation_preserves_original_encrypted_reasoning_and_arguments
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_successful_http_with_streamed_failure_is_visible_and_never_completed[failed]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_successful_http_with_streamed_failure_is_visible_and_never_completed[incomplete]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll[deadline-inside-work]
-1.940	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll[positive-useful-work]
+0.110	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[denied]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[missing-issued-client]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_callback_refusal_never_exchanges_a_code[state]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_catalog_intersects_account_order_with_exact_reviewed_capabilities
+0.330	tests/system/py/test_e11_t5_assistant_native.py::test_fragmented_model_refusal_is_public_and_never_an_empty_success
+0.150	tests/system/py/test_e11_t5_assistant_native.py::test_full_jwks_key_count_precedes_matching_key_filter[64]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_full_jwks_key_count_precedes_matching_key_filter[65]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[destroy]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_late_http_callbacks_after_teardown_cannot_touch_records_or_reconnect[sign-out]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[0]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[1]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[2]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[3]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[4]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[5]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[6]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_missing_native_dependency_refuses_before_any_external_service[7]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_native_http_and_sign_in_deadlines_use_injected_monotonic_clock
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[data-before-headers]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[header-count]
+0.170	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[oversize-body]
+0.130	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[oversize-headers]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_native_transport_enforces_order_and_aggregate_bounds[repeated-headers]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[duplicate]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[malformed]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[over-cap]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_no_eligible_or_malformed_catalog_never_silently_becomes_ready[unknown-only]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_oversized_own_record_is_refused_before_parsing_or_replacement[credentials]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_native.py::test_oversized_own_record_is_refused_before_parsing_or_replacement[host]
+0.141	tests/system/py/test_e11_t5_assistant_native.py::test_real_loopback_pkce_verified_jwt_and_catalog_establish_only_synthetic_readiness
+0.130	tests/system/py/test_e11_t5_assistant_native.py::test_real_signature_and_direct_use_scope_are_both_required[scope]
+0.150	tests/system/py/test_e11_t5_assistant_native.py::test_real_signature_and_direct_use_scope_are_both_required[signature]
+0.150	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[audience]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[expiry]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[issuer]
+0.130	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[nonce]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_real_verifier_rejects_invalid_identity_claims_without_saving_grant[subject]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_refresh_is_serial_and_late_rotation_cannot_resurrect_signed_out_account
+0.010	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[browser-throw]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[browser]
+0.010	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[list-throw]
+0.010	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[list]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[read-throw]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[read]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[request-null]
+0.120	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[request-throw]
+0.030	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[write-throw]
+0.020	tests/system/py/test_e11_t5_assistant_native.py::test_service_failure_is_caught_and_does_not_fabricate_a_connection[write]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_signout_preserves_mapping_and_reports_unconfirmed_remote_or_local_erasure[erase]
+0.140	tests/system/py/test_e11_t5_assistant_native.py::test_signout_preserves_mapping_and_reports_unconfirmed_remote_or_local_erasure[network]
+0.150	tests/system/py/test_e11_t5_assistant_native.py::test_signout_then_reauthorization_reuses_issued_client_and_stable_host
+0.200	tests/system/py/test_e11_t5_assistant_native.py::test_stateless_continuation_preserves_original_encrypted_reasoning_and_arguments
+0.160	tests/system/py/test_e11_t5_assistant_native.py::test_successful_http_with_streamed_failure_is_visible_and_never_completed[failed]
+0.160	tests/system/py/test_e11_t5_assistant_native.py::test_successful_http_with_streamed_failure_is_visible_and_never_completed[incomplete]
+1.370	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_elapsed_budget_includes_actual_queued_wait[expired-in-queue]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_elapsed_budget_includes_actual_queued_wait[useful-budget]
+2.790	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll[deadline-inside-work]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_owner.py::test_owner_thread_optimizer_enforces_deadline_without_waiting_for_owner_poll[positive-useful-work]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_human_answer_cannot_resume_a_retired_project_or_connection_scope[cancel]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_human_answer_cannot_resume_a_retired_project_or_connection_scope[connection-expiry]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_human_answer_cannot_resume_a_retired_project_or_connection_scope[manual-edit]
@@ -9999,29 +10005,41 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_text_limit_counts_decoded_utf8_bytes[unicode-at]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_text_limit_counts_decoded_utf8_bytes[unicode-over]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_questions.py::test_question_without_a_project_is_nonmutating_and_attachment_retires_it
-0.910	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-joint]
+0.900	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-joint]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[candidate-single]
-0.980	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-joint]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-single]
-1.960	tests/system/py/test_e11_t5_assistant_trials.py::test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[False]
+0.910	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-joint]
+0.320	tests/system/py/test_e11_t5_assistant_trials.py::test_all_declared_fixed_settings_refuse_free_flags_across_real_project_metadata[live-single]
+0.790	tests/system/py/test_e11_t5_assistant_trials.py::test_approved_elapsed_budget_includes_time_waiting_on_actual_worker[expired-in-queue]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_approved_elapsed_budget_includes_time_waiting_on_actual_worker[useful-budget]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_consecutive_useful_trials_keep_complete_results_and_accepted_best_state
+0.350	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[False]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_fixed_profile_setting_can_be_edited_but_never_freed[True]
+3.560	tests/system/py/test_e11_t5_assistant_trials.py::test_genuine_native_status_survives_scientific_terminal_and_provider_continuation[1-max_iter-joint]
+0.360	tests/system/py/test_e11_t5_assistant_trials.py::test_genuine_native_status_survives_scientific_terminal_and_provider_continuation[1-max_iter-single]
+3.570	tests/system/py/test_e11_t5_assistant_trials.py::test_genuine_native_status_survives_scientific_terminal_and_provider_continuation[1000-done-joint]
+0.410	tests/system/py/test_e11_t5_assistant_trials.py::test_genuine_native_status_survives_scientific_terminal_and_provider_continuation[1000-done-single]
+3.340	tests/system/py/test_e11_t5_assistant_trials.py::test_independent_native_workflow_reaches_status_trigger[1-max_iter-joint]
+0.880	tests/system/py/test_e11_t5_assistant_trials.py::test_independent_native_workflow_reaches_status_trigger[1-max_iter-single]
+3.320	tests/system/py/test_e11_t5_assistant_trials.py::test_independent_native_workflow_reaches_status_trigger[1000-done-joint]
+1.040	tests/system/py/test_e11_t5_assistant_trials.py::test_independent_native_workflow_reaches_status_trigger[1000-done-single]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_iteration_objective_is_the_original_weighted_residual_not_reduced_quality[joint]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_iteration_objective_is_the_original_weighted_residual_not_reduced_quality[single]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_post_fit_candidate_edits_cannot_reuse_old_evidence_for_adoption[free]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_post_fit_candidate_edits_cannot_reuse_old_evidence_for_adoption[value]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_preexisting_free_cell_cannot_escape_a_scale_only_approval
-1.880	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[cancel]
-1.890	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[detach]
-1.730	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[manual-edit]
-4.490	tests/system/py/test_e11_t5_assistant_trials.py::test_real_joint_fit_adoption_then_discard_preserves_both_banks
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-live-preview]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-typed-edit]
-1.070	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-live-preview]
-1.050	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-typed-edit]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[new-candidate]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
+0.500	tests/system/py/test_e11_t5_assistant_trials.py::test_post_fit_candidate_edits_cannot_reuse_old_evidence_for_adoption[free]
+0.540	tests/system/py/test_e11_t5_assistant_trials.py::test_post_fit_candidate_edits_cannot_reuse_old_evidence_for_adoption[value]
+0.580	tests/system/py/test_e11_t5_assistant_trials.py::test_preexisting_free_cell_cannot_escape_a_scale_only_approval
+0.510	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[cancel]
+0.940	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[detach]
+0.740	tests/system/py/test_e11_t5_assistant_trials.py::test_real_fit_late_completion_never_restores_over_accepted_or_manual_state[manual-edit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_real_joint_fit_adoption_then_discard_preserves_both_banks
+3.290	tests/system/py/test_e11_t5_assistant_trials.py::test_real_zero_free_error_or_preflight_refusal_never_becomes_fit_success[joint]
+0.400	tests/system/py/test_e11_t5_assistant_trials.py::test_real_zero_free_error_or_preflight_refusal_never_becomes_fit_success[single]
+0.660	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-live-preview]
+0.210	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[allocation-failure-typed-edit]
+0.320	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-live-preview]
+0.200	tests/system/py/test_e11_t5_assistant_trials.py::test_result_publication_is_complete_or_preserves_exact_original_state[positive-publication-typed-edit]
+0.290	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[new-candidate]
+0.230	tests/system/py/test_e11_t5_assistant_trials.py::test_retired_candidate_request_cannot_retarget_distinct_late_mutation[no-candidate]
+0.990	tests/system/py/test_e11_t5_assistant_trials.py::test_scientific_terminal_reaches_the_next_provider_request
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_assistant_trials.py::test_stale_manual_fit_record_is_not_used_as_the_accepted_state_baseline
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-None]
 3.190	tests/system/py/test_e11_t5_sdk_content_bond.py::test_standalone_proof_requires_the_actual_successful_selected_unit_content[consumer-build]
@@ -13601,7 +13619,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 0.091	tests/system/py/test_e11_t5_assistant_native.py
+# module-cost: 0.099	tests/system/py/test_e11_t5_assistant_native.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py

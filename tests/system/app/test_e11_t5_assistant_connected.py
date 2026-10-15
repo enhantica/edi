@@ -83,6 +83,7 @@ def begin_request(ui):
     ]
     if not pending:
         # A changed content scope may require another actual disclosure dialog.
+        ui.command('click', name='assistant.connection')
         disclosure = ui.command('accept_dialog')
         assert disclosure['reply']['accepted'], (
             'I12: a withheld request exposes a real consent action instead of '
@@ -228,9 +229,10 @@ def test_render_observers_have_real_bounded_image_and_url_positive_controls(ui):
 
 @pytest.mark.parametrize('sink', ['plan', 'error', 'message', 'plan-details'])
 def test_provider_text_is_literal_in_actual_plan_error_message_and_detail_renderers(
-    ui, signer, sink
+    ui, signer, sink, tmp_path
 ):
     ui.command('create', name='literal_source')
+    ui.command('open', path=str(copy_project(tmp_path, 'literal_source')))
     authenticate(ui, signer)
     marker = 'UNTRUSTED-' + sink
     payload = literal_payload(ui, marker)
@@ -342,8 +344,8 @@ def test_queued_old_native_tool_cannot_create_a_plan_after_real_project_replacem
     )
 
 
-def test_project_disclosure_is_bound_to_the_actual_project_sent_after_switch(ui, signer):
-    ui.command('create', name='bound_disclosure_A')
+def test_project_disclosure_is_bound_to_the_actual_project_sent_after_switch(ui, signer, tmp_path):
+    ui.command('open', path=str(copy_project(tmp_path, 'bound_disclosure_A')))
     authenticate(ui, signer)
     earlier = len(ui.last['ui']['disclosures'])
     ui.command('create', name='bound_disclosure_B')
@@ -491,3 +493,115 @@ def test_real_manual_save_report_and_cancel_boundaries_retire_visible_approval(
         'I2/I7: save-as, report edit/Undo and cancel retire authoritative visible approval '
         'instead of retaining an actionable stale card'
     )
+
+
+def old_callback_sequence(index, ending, marker):
+    events = [{'type': 'response.output_text.delta', 'delta': marker}]
+    if ending != 'text-only':
+        status = 'failed' if ending == 'failed' else 'completed'
+        events.append({
+            'type': 'response.' + status,
+            'response': {'id': 'old-response', 'status': status, 'output': []},
+        })
+    wire = ''.join(
+        'data: ' + json.dumps(event, separators=(',', ':')) + '\n\n' for event in events
+    ).encode('utf-8')
+    callbacks = [{'op': 'data', 'index': index, 'base64': base64.b64encode(wire).decode()}]
+    if ending != 'text-only':
+        callbacks.append({'op': 'finish', 'index': index, 'failure': 0})
+    return callbacks
+
+
+@pytest.mark.parametrize('retirement', ['project', 'history'])
+@pytest.mark.parametrize('ending', ['text-only', 'failed', 'completed'])
+@pytest.mark.parametrize('schedule', ['queued-transport', 'direct-native'])
+def test_old_text_and_terminal_callbacks_cannot_cross_actual_new_request(
+    ui, signer, tmp_path, retirement, ending, schedule
+):
+    authenticate(ui, signer)
+    first = copy_project(tmp_path, 'owner_A')
+    ui.command('open', path=str(first))
+    old_index, _ = begin_request(ui)
+    target = copy_project(tmp_path, 'owner_B') if retirement == 'project' else first
+    marker = 'RETIRED-TRANSPORT-MARKER'
+    old_state = ui.last['ui']['project']
+    result = ui.command(
+        'owner_queue_escape',
+        retirement=retirement,
+        schedule=schedule,
+        path=str(target),
+        text='New ordinary current request',
+        callbacks=old_callback_sequence(old_index, ending, marker),
+    )
+    assert result['reply']['admitted_before_drain'], (
+        'I4/F5: a real new owner turn is admitted before old queued callbacks drain'
+    )
+    # The real owner queues native dispatch; wire creation follows its owner delivery.
+    sent = [
+        index
+        for index, request in enumerate(result['requests'])
+        if index > old_index and request['url'] == native_protocol.API + '/responses'
+    ]
+    assert len(sent) == 1, 'I4/F5: one admitted current turn dispatches one new native request'
+    current = sent[0]
+    prior_marked = [
+        row
+        for row in result['reply']['before_retire']
+        if marker in json.dumps(row, ensure_ascii=False)
+    ]
+    marked = [
+        row for row in result['ui']['messages'] if marker in json.dumps(row, ensure_ascii=False)
+    ]
+    prior_text = {row['id']: row['text'] for row in prior_marked}
+    assert not marked or (
+        retirement == 'project'
+        and all(row['id'] in prior_text and row['text'] == prior_text[row['id']] for row in marked)
+    ), 'I4/F5: retired queued text adds no new row; prior legitimate history may remain'
+    assert result['requests'][old_index]['cancelled'], (
+        'I4/F5: old native work is retired before a new actual owner request'
+    )
+    assert not result['requests'][current]['cancelled'], (
+        'I4/F5: old terminal cannot cancel or settle the newly dispatched current request'
+    )
+    assert result['ui']['project'] == old_state, (
+        'I4/F5: delayed old callbacks preserve the exact independently copied project values'
+    )
+    ui.command(
+        'headers', index=current, status=200, headers=[['Content-Type', 'text/event-stream']]
+    )
+    native_protocol.stream(
+        ui,
+        current,
+        [
+            {'type': 'response.output_text.delta', 'delta': 'CURRENT-TRANSPORT-MARKER'},
+            {
+                'type': 'response.completed',
+                'response': {'id': 'new-response', 'status': 'completed', 'output': []},
+            },
+        ],
+    )
+    assert 'CURRENT-TRANSPORT-MARKER' in json.dumps(ui.last['ui']['messages']), (
+        'I4/F5: current native text still reaches the real panel after old delivery'
+    )
+
+
+@pytest.mark.parametrize('ending', ['text-only', 'failed', 'completed'])
+def test_same_old_event_witness_reaches_actual_owner_without_retirement(
+    ui, signer, tmp_path, ending
+):
+    authenticate(ui, signer)
+    source = copy_project(tmp_path, 'positive_owner')
+    ui.command('open', path=str(source))
+    index, _ = begin_request(ui)
+    marker = 'POSITIVE-TRANSPORT-MARKER'
+    for callback in old_callback_sequence(index, ending, marker):
+        command = dict(callback)
+        operation = command.pop('op')
+        ui.command(operation, **command)
+    assert marker in json.dumps(ui.last['ui']['messages'], ensure_ascii=False), (
+        'I4/F5: exactly the same valid native text reaches the real panel without scope retirement'
+    )
+    if ending == 'failed':
+        assert ui.last['state']['last_error'], (
+            'I13/F5: a current genuine failed terminal remains visible through the actual owner'
+        )

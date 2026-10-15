@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
+import re
+import shutil
 from pathlib import Path
 
 import pytest
@@ -483,6 +486,9 @@ def test_retired_candidate_request_cannot_retarget_distinct_late_mutation(host, 
     discarded = host.tool('discard_trial', {'trial_id': old_trial}, plan_id=plan)
     assert discarded['reply']['ok'], 'I8: the original candidate target has been retired'
     if replacement:
+        # A completed provider response settles its tools before a fresh request may target
+        # a replacement candidate. Keep the captured old binding for the late-call escape.
+        host.provider('turn_finished', **host.binding(), status='completed')
         begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
         assert begun['reply']['ok'] and begun['reply']['value']['trial_id'] != old_trial, (
             'I8: a distinct current candidate is admitted through the current request scope'
@@ -503,4 +509,262 @@ def test_retired_candidate_request_cannot_retarget_distinct_late_mutation(host, 
     assert result['snapshot'] == original, (
         'I4/I7: rejecting a retired candidate call preserves exact accepted '
         'state and row identities'
+    )
+
+
+def nested_objects(value):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from nested_objects(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from nested_objects(child)
+
+
+def prepared_native_case(host, tmp_path, mode, iterations):
+    source = (
+        'pd-neut-cwl_cosio-d20_start-1'
+        if mode == 'single'
+        else 'pd-neut-tof_ferrite-austenite-beer_joint'
+    )
+    target = tmp_path / 'native-source'
+    shutil.copytree(ROOT / 'docs/user/cli' / source / 'project', target)
+    analysis = target / 'analysis/analysis.edi'
+    text = analysis.read_text()
+    if '_minimizer.max_iterations' in text:
+        text = re.sub(
+            r'(?m)^_minimizer.max_iterations\s+[^\n]+',
+            f'_minimizer.max_iterations {iterations}',
+            text,
+        )
+    else:
+        text += f'\n_minimizer.max_iterations {iterations}\n'
+    analysis.write_text(text)
+    loaded = host.command('load', path=str(target))
+    paths = useful_paths(host)
+    assert loaded['context']['project']['fitting_mode'] == mode, (
+        'I8/F4: the actual serialized scientific fixture declares its single/joint mode'
+    )
+    assert paths, 'I8/F4: the native qualification has a real nonempty useful free group'
+    return target, paths
+
+
+def reload_exact_free_group(host, target, paths):
+    host.command('load', path=str(target))
+    # One real setup edit avoids serializing the entire joint project per free flag.
+    host.command('prepare_free_group', paths=paths)
+    host.start()
+
+
+@pytest.mark.parametrize('mode', ['single', 'joint'])
+@pytest.mark.parametrize(('iterations', 'expected_status'), [(1, 'max_iter'), (1000, 'done')])
+def test_independent_native_workflow_reaches_status_trigger(
+    host, tmp_path, mode, iterations, expected_status
+):
+    # Separate real native qualification from controller projection to bound each end-to-end case.
+    _, paths = prepared_native_case(host, tmp_path, mode, iterations)
+    native = host.command('manual_fit', free_paths=paths)['reply']
+    assert native['status'] == expected_status, (
+        'F4 fixture qualification: direct real FitJob reaches the declared native status'
+    )
+    assert native['converged'] == (expected_status == 'done'), (
+        'F4 fixture qualification: actual native convergence distinguishes DONE from MAX_ITER'
+    )
+
+
+@pytest.mark.parametrize('mode', ['single', 'joint'])
+@pytest.mark.parametrize(('iterations', 'expected_status'), [(1, 'max_iter'), (1000, 'done')])
+def test_genuine_native_status_survives_scientific_terminal_and_provider_continuation(
+    host, tmp_path, mode, iterations, expected_status
+):
+    _, paths = prepared_native_case(host, tmp_path, mode, iterations)
+    host.command('prepare_free_group', paths=paths)
+    host.start()
+    before = host.last['snapshot']
+    plan = approve(host, paths, iterations=iterations)
+    candidate(host, plan, paths)
+    job = host.last['state']['active_job_id']
+    old_request = host.binding()['request_id']
+    host.provider('turn_finished', **host.binding(), status='completed')
+    settled = settle(host)
+    terminal = [
+        event
+        for event in settled['events']
+        if event.get('type') == 'job_finished' and event.get('job_id') == job
+    ]
+    assert len(terminal) == 1, (
+        'I8/F4: actual optimizer settlement emits exactly one correlated full terminal'
+    )
+    status_rows = [
+        obj
+        for obj in nested_objects(terminal)
+        if str(obj.get('status', '')).lower()
+        in {'done', 'max_iter', 'no_step', 'cancelled', 'error', 'superseded'}
+    ]
+    assert status_rows and all(
+        str(obj['status']).lower() == expected_status for obj in status_rows
+    ), 'I8/F4: terminal projection preserves genuine DONE/MAX_ITER'
+    convergence = [obj['converged'] for obj in nested_objects(terminal) if 'converged' in obj]
+    assert convergence and all(value == (expected_status == 'done') for value in convergence), (
+        'I8/F4: full terminal preserves independently observed native convergence'
+    )
+    assert settled['snapshot'] == before, (
+        'I8/F4: even a genuine DONE terminal remains isolated until explicit evaluation/adoption'
+    )
+    latest = settled['requests'][-1]
+    assert latest['request_id'] != old_request, (
+        'I13/F4: settled actual work resumes its provider continuation with a fresh request'
+    )
+    results = [
+        obj
+        for obj in nested_objects(latest['history'])
+        if obj.get('type') == 'tool_result' and job in json.dumps(obj, ensure_ascii=False)
+    ]
+    assert any(
+        str(child.get('status', '')).lower() == expected_status
+        for result in results
+        for child in nested_objects(result)
+    ), 'I8/I13/F4: continuation retains the full correlated scientific terminal'
+    later = host.command('fence', milliseconds=800)
+    assert (
+        sum(
+            event.get('type') == 'job_finished' and event.get('job_id') == job
+            for event in later['events']
+        )
+        == 1
+    ), 'I10/F4: fencing late delivery cannot duplicate a scientific terminal'
+
+
+@pytest.mark.parametrize('mode', ['single', 'joint'])
+def test_real_zero_free_error_or_preflight_refusal_never_becomes_fit_success(host, tmp_path, mode):
+    target, paths = prepared_native_case(host, tmp_path, mode, 1000)
+    native = host.command('manual_fit', free_paths=[])['reply']
+    assert native['status'] == 'error', (
+        'F4 fixture qualification: actual zero-free native work reports ERROR'
+    )
+    reload_exact_free_group(host, target, [])
+    before = host.last['snapshot']
+    plan = approve(host, paths)
+    begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+    assert begun['reply']['ok'], (
+        'I8/F4: the actual zero-free candidate is admitted before fit preflight'
+    )
+    trial = begun['reply']['value']['trial_id']
+    # begin_trial intentionally applies the approved group; explicitly clear it on the candidate.
+    cleared = host.tool(
+        'set_free', {'flags': [{'path': path, 'free': False} for path in paths]}, plan_id=plan
+    )
+    assert cleared['reply']['ok'], 'I8/F4: real approved candidate flags reach the zero-free path'
+    fitted = host.tool('fit_trial', {'trial_id': trial}, plan_id=plan)
+    if fitted['reply']['ok']:
+        job = fitted['state']['active_job_id']
+        settled = settle(host)
+        terminals = [
+            event
+            for event in settled['events']
+            if event.get('type') == 'job_finished' and event.get('job_id') == job
+        ]
+        assert len(terminals) == 1, (
+            'I8/F4: an admitted actual failing FitJob still settles exactly once'
+        )
+        assert any(
+            str(obj.get('status', '')).lower() == 'error' for obj in nested_objects(terminals)
+        ), 'I8/F4: actual failing scientific work cannot be projected as successful DONE/NO_STEP'
+    else:
+        assert not fitted['state']['active_job_id'], (
+            'I8/F4: a legal synchronous scientific preflight refusal does not invent an async job'
+        )
+    assert host.last['snapshot'] == before, (
+        'I8/F4: native-error/preflight preserves the exact captured accepted state'
+    )
+
+
+@pytest.mark.parametrize('elapsed_budget', [50, 5000], ids=['expired-in-queue', 'useful-budget'])
+def test_approved_elapsed_budget_includes_time_waiting_on_actual_worker(host, elapsed_budget):
+    load_source(host)
+    paths = useful_paths(host)
+    before = host.last['snapshot']
+    host.command('clock', steady=False)
+    plan = approve(host, paths, elapsed=elapsed_budget)
+    armed = host.command('queue_hold')
+    assert armed['reply']['armed'], 'I10/F7: the actual worker queue hold is established'
+    begun = host.tool('begin_trial', {'group_id': 'workflow'}, plan_id=plan)
+    assert begun['reply']['ok'], 'I8/F7: queue witness starts an actual isolated candidate'
+    trial = begun['reply']['value']['trial_id']
+    free = host.tool(
+        'set_free', {'flags': [{'path': path, 'free': True} for path in paths]}, plan_id=plan
+    )
+    assert free['reply']['ok'], 'I8/F7: approved real flags are prepared before timed admission'
+    host.command('clock', steady=True)
+    started = host.tool('fit_trial', {'trial_id': trial}, plan_id=plan)
+    assert started['reply']['ok'], 'I10/F7: actual fit enters the held worker queue'
+    job_id = host.last['state']['active_job_id']
+    assert host.last['state']['active_job_id'], (
+        'I10/F7: the real scientific job was admitted before the waiting deadline exercise'
+    )
+    try:
+        waiting = host.command('queue_elapsed', milliseconds=100)
+        receipt = waiting['reply']
+        assert receipt['elapsed_ms'] >= 100, (
+            'I10/F7: actual steady elapsed time exceeds the approved short budget before release'
+        )
+        assert receipt['submitted'] > 0, (
+            'I10/F7: a real later job is submitted behind the held actual worker delivery'
+        )
+        assert receipt['started'] == 0, (
+            'I10/F7: scientific work has not started during its admitted queue wait'
+        )
+    finally:
+        host.command('queue_release')
+    settled = settle(host)
+    assert not settled['state']['active_job_id'], (
+        'I10/F7: admitted queued work settles once after the actual queue is released'
+    )
+    assert settled['snapshot'] == before, (
+        'I8/F7: queued candidate work never publishes over the captured accepted state by itself'
+    )
+    evaluated = host.tool('evaluate_trial', {'trial_id': trial}, plan_id=plan)
+    if elapsed_budget == 50:
+        terminals = [
+            event
+            for event in settled['events']
+            if event.get('type') == 'job_finished' and event.get('job_id') == job_id
+        ]
+        assert len(terminals) == 1, (
+            'I10/F7: already-expired admitted work has exactly one correlated settled terminal'
+        )
+
+        def terminal_statuses(value):
+            found = []
+            if isinstance(value, dict):
+                status = str(value.get('status', '')).lower()
+                if status in {'done', 'max_iter', 'no_step', 'cancelled', 'error', 'superseded'}:
+                    found.append(status)
+                for child in value.values():
+                    found.extend(terminal_statuses(child))
+            elif isinstance(value, list):
+                for child in value:
+                    found.extend(terminal_statuses(child))
+            return found
+
+        statuses = terminal_statuses(terminals)
+        assert statuses and all(status in {'cancelled', 'error'} for status in statuses), (
+            'I10/F7: expired-before-start work cannot report a successful scientific optimization'
+        )
+        assert not evaluated['reply']['ok'] or not evaluated['reply']['value'].get(
+            'accepted', False
+        ), 'I10/F7: expired-before-start work cannot be adopted as a successful improvement'
+        assert evaluated['snapshot'] == before, (
+            'I8/F7: expired queued work preserves the exact original accepted state'
+        )
+    else:
+        assert evaluated['reply']['ok'] and evaluated['reply']['value']['accepted'], (
+            'I8/F7: an otherwise-identical real queued moving fit is useful with sufficient budget'
+        )
+        assert evaluated['snapshot'] != before, (
+            'I8/F7: the positive larger-budget witness actually moves and adopts fitted state'
+        )
+    assert evaluated['owner_clock_violations'] == 0, (
+        'I10/F7: real elapsed checks preserve the clock dependency owner-thread contract'
     )

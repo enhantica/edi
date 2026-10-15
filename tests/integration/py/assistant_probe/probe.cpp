@@ -75,17 +75,40 @@ Value snapshot(edi::Project& p) {
 }
 }
 
+
+// Independent queued-before-start observation; never substitutes optimizer results.
+struct IndependentQueueHold {
+    std::mutex mutex;
+    std::condition_variable condition;
+    bool entered=false, released=false;
+    void release() {
+        {std::lock_guard lock(mutex);released=true;}
+        condition.notify_all();
+    }
+};
+struct IndependentHoldRelease {
+    std::shared_ptr<IndependentQueueHold>& hold;
+    ~IndependentHoldRelease() {if(hold) hold->release();}
+};
+
 int main() {
     std::mutex mutex;
     std::condition_variable arrived;
     const auto owner = std::this_thread::get_id();
     std::atomic<int> owner_clock_violations{0};
     std::deque<edi::work::Delivery> deliveries;
+    std::mutex queue_trace_mutex;
+    std::vector<edi::work::Event> queue_trace;
+    std::size_t queue_mark=0;
+    edi::work::Ticket queue_predecessor=0;
+    std::shared_ptr<IndependentQueueHold> queue_hold;
     edi::work::Worker worker([&](edi::work::Delivery delivery) {
         std::lock_guard lock(mutex);
         deliveries.push_back(std::move(delivery));
         arrived.notify_one();
-    });
+    }, {.clock_ns={}, .trace=[&](const edi::work::Event& event) {
+        std::lock_guard lock(queue_trace_mutex);queue_trace.push_back(event);
+    }});
     auto project = std::make_unique<edi::Project>();
     project->structure().cell.length_a.value = 4.37;
     project->structure().cell.length_b.value = 5.19;
@@ -95,6 +118,7 @@ int main() {
     Array events, requests;
     std::uint64_t now = 107;
     bool steady_clock = false;
+    bool clock_on_fit = false;
     auto clock_start = std::chrono::steady_clock::now();
     int applies = 0;
     bool refuse_apply = false;
@@ -113,6 +137,7 @@ int main() {
             return now;
         }
     });
+    IndependentHoldRelease release_before_controller_teardown{queue_hold};
     double owner_work_max_ms=0;
     auto deliver = [&](int milliseconds) {
         edi::work::Delivery next;
@@ -199,6 +224,11 @@ int main() {
                 result=Object{{"threw",threw},{"fired",publication_fault_fired},
                               {"complete",target.value.get()==fitted->structure().cell.length_a.value.get() &&
                                project->fit_result.message==fitted->fit_result.message}};
+            } else if (op == "prepare_free_group") {
+                std::set<std::string> paths;
+                for(const auto& item:input.at("paths").array("paths")) paths.insert(item.string("path"));
+                for(auto& item:edi::parameter_entries(*project)) item.parameter->free=paths.contains(item.path);
+                project->note_edit(); controller.notify_changed(); result=Object{};
             } else if (op == "manual_fit") {
                 if(!input.get("free_paths").is_null()) {
                     std::set<std::string> paths;
@@ -226,8 +256,49 @@ int main() {
                 preview->apply(edi::Edit::peak_profile(project->experiment(),input.at("name").string("profile")));
                 controller.notify_changed(); result=Object{};
             } else if (op == "clock") {
-                steady_clock=input.at("steady").boolean("steady"); owner_work_max_ms=0; clock_start=std::chrono::steady_clock::now();
+                steady_clock=input.at("steady").boolean("steady"); clock_on_fit=!input.get("fit_admission").is_null() && input.at("fit_admission").boolean("fit_admission"); owner_work_max_ms=0; clock_start=std::chrono::steady_clock::now();
                 result=Object{};
+            } else if (op == "queue_hold") {
+                if(queue_hold) throw std::invalid_argument("queue hold already exists");
+                queue_hold=std::make_shared<IndependentQueueHold>();
+                {std::lock_guard lock(queue_trace_mutex);queue_mark=queue_trace.size();}
+#if !EDI_WORKER_OWNER_THREAD
+                auto hold=queue_hold;
+                queue_predecessor=worker.submit("independent-preceding-job",
+                    [hold](const edi::work::CancelToken& stop,const edi::work::Emit&) {
+                        std::unique_lock lock(hold->mutex);
+                        hold->entered=true;hold->condition.notify_all();
+                        hold->condition.wait_for(lock,std::chrono::seconds(2),[&] {
+                            return hold->released || stop.cancelled();
+                        });
+                        return edi::work::Delivery{};
+                    });
+                std::unique_lock lock(hold->mutex);
+                if(!hold->condition.wait_for(lock,std::chrono::milliseconds(500),[&] {return hold->entered;}))
+                    throw std::runtime_error("independent preceding job never entered");
+#endif
+                result=Object{{"armed",true}};
+            } else if(op == "queue_elapsed") {
+                const int delay=static_cast<int>(input.at("milliseconds").number("milliseconds"));
+                if(!queue_hold || delay<1 || delay>250) throw std::invalid_argument("independent bounded queue delay");
+                const auto began=std::chrono::steady_clock::now();
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+                const auto spent=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-began).count();
+                std::size_t submitted=0,started=0;
+                {std::lock_guard lock(queue_trace_mutex);
+                 for(std::size_t i=queue_mark;i<queue_trace.size();++i) {
+                    const auto& event=queue_trace[i];
+                    if(event.id<=queue_predecessor) continue;
+                    submitted+=event.kind==edi::work::EventKind::Submitted;
+                    started+=event.kind==edi::work::EventKind::Started;
+                 }}
+                std::size_t pending;
+                {std::lock_guard lock(mutex);pending=deliveries.size();}
+                result=Object{{"elapsed_ms",spent},{"submitted",static_cast<double>(submitted)},
+                              {"started",static_cast<double>(started)},{"pending_owner_deliveries",static_cast<double>(pending)}};
+            } else if(op == "queue_release") {
+                if(!queue_hold) throw std::invalid_argument("independent hold is not armed");
+                queue_hold->release();result=Object{{"released",true}};
             } else if (op == "fence") {
                 const int milliseconds=static_cast<int>(input.at("milliseconds").number("milliseconds"));
                 auto completed=std::make_shared<bool>(false);
@@ -281,6 +352,10 @@ int main() {
             } else if (op == "user_raw") {
                 result = reply(controller.user_command(input.at("text").string("text")));
             } else if (op == "provider") {
+                if(clock_on_fit && !input.at("payload").get("name").is_null() &&
+                   input.at("payload").at("name").string("name")=="fit_trial") {
+                    clock_on_fit=false; steady_clock=true; clock_start=std::chrono::steady_clock::now();
+                }
                 result = reply(controller.provider_event(edi::json::write(input.at("payload"))));
             } else if (op == "external") {
                 const auto path = input.at("path").string("path");
