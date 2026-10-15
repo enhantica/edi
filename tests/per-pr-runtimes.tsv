@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T07:23:58Z
+# measured_utc = 2026-10-15T07:46:55Z
 #
-# Recorded from: seq20 finite real VM B1-B3 old3b/old5d baseline: one actual passing complete cost, twelve reached red holes; B4 and exact B3 interval remain unqualified
-# Collected tests: 13832; with a reported duration: 7606
-# Module-scoped fixture costs recorded: 57
+# Recorded from: seq22 first diagnostic preservation checkpoint: three reached native reason/code losses, three prior-VM missing-card reds; new VM diagnostic path remains unexecuted
+# Collected tests: 13838; with a reported duration: 7606
+# Module-scoped fixture costs recorded: 58
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13499
+# inventory_python = 13505
 # inventory_cpp = 333
 # inventory_measured = 12078
-# inventory_unmeasured = 1754
+# inventory_unmeasured = 1760
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10305,6 +10305,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecyc
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[wrong-kind-refusal]
 0.260	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[output_text]
 0.170	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[refusal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[changed-completed-item]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[malformed-json]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[truncated]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[changed-completed-item]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[malformed-json]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[truncated]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_a_later_message_cannot_inherit_the_previous_messages_started_part[output_text]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::test_a_later_message_cannot_inherit_the_previous_messages_started_part[refusal]
 0.020	tests/system/py/test_e11_t5_stream_membership.py::test_complete_snapshots_and_matching_duplicates_preserve_original_output[matching-duplicate-function_call]
@@ -13912,6 +13918,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.128	tests/system/py/test_e11_t5_assistant_store.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 0.073	tests/system/py/test_e11_t5_store_write_quota.py
+# module-cost: 0.065	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
