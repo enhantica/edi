@@ -438,6 +438,81 @@ TestCase {
         literalCommandDetails(row, original);
         compareRetainedPayload(row.payload, original);
     }
+    function hasCompleteUnicodeScalars(text) {
+        for (let index = 0; index < text.length; ++index) {
+            const unit = text.charCodeAt(index);
+            if (unit >= 0xD800 && unit <= 0xDBFF) {
+                const next = text.charCodeAt(++index);
+                if (!(next >= 0xDC00 && next <= 0xDFFF)) return false;
+            } else if (unit >= 0xDC00 && unit <= 0xDFFF) return false;
+        }
+        return true;
+    }
+    function selectOriginalTechnicalPayload(row, original) {
+        revealTechnicalDetails(row);
+        const editor = Ui.itemsWithProperty(row, "readOnly").find(item => item.visible && item.text.includes(original.diagnosticMarker));
+        verify(editor !== undefined, "CAP: complete canonical originals remain in reachable literal technical details");
+        compare(editor.textFormat, TextEdit.PlainText, "CAP: original metadata is displayed as literal text");
+        compareRetainedPayload(JSON.parse(editor.text), original);
+        editor.selectAll();
+        compare(editor.selectedText, editor.text, "CAP: complete original metadata remains selectable without excerpt loss");
+    }
+    function test_activity_excerpt_keeps_complete_unicode_scalars_data() {
+        return [{tag: "read-name", kind: "commandExecution"}, {tag: "tool-name", kind: "mcpToolCall"}];
+    }
+    function test_activity_excerpt_keeps_complete_unicode_scalars(data) {
+        const value = "A".repeat(39) + "\uD83E\uDDEA" + " original.cif";
+        verify(hasCompleteUnicodeScalars(value), "CAP1 SETUP: the original supplementary scalar is well formed before presentation");
+        const original = data.kind === "commandExecution" ? commandItem("completed", 0)
+            : {id: "unicode-tool", type: "mcpToolCall", server: "owned", tool: value, arguments: {}, status: "completed"};
+        if (data.kind === "commandExecution")
+            original.commandActions = [{type: "read", command: original.command, name: value, path: "/owned/" + value}];
+        original.diagnosticMarker = "CAP1_COMPLETE_ORIGINAL";
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: "Original Unicode activity", status: "completed", payload: original
+        });
+        verify(row !== null, "CAP1: actual shared activity presentation accepts the original scalar-boundary metadata");
+        renderedRow(row);
+        const control = commandDisclosure(row);
+        verify(control.text.includes("·"), "CAP1: the actual scalar-boundary input reaches a described activity caption");
+        const labels = Ui.itemsWithProperty(control, "elide").filter(item => item.visible && item.text === control.text);
+        verify(labels.length > 0, "CAP1: actual excerpt is present in a rendered caption text item");
+        for (const text of [control.text, labels[0].text]) {
+            verify(hasCompleteUnicodeScalars(text), "CAP1: visible excerpts never split a supplementary Unicode scalar");
+            verify(!text.includes("\uFFFD"), "CAP1: clipping valid originals must not introduce a replacement glyph");
+        }
+        mouseClick(control);
+        renderedRow(row);
+        selectOriginalTechnicalPayload(row, original);
+        compareRetainedPayload(row.payload, original);
+    }
+    function test_malformed_action_arrays_remain_opaque_data() {
+        return [{tag: "nulls", actions: [null, null]},
+            {tag: "missing-types", actions: [{name: "original.cif"}, {path: "/owned/original"}]},
+            {tag: "primitives", actions: [7, "read"]}];
+    }
+    function test_malformed_action_arrays_remain_opaque(data) {
+        const original = commandItem("completed", 0);
+        original.commandActions = data.actions;
+        original.diagnosticMarker = "CAP2_COMPLETE_ORIGINAL";
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind: "activity", text: original.command, status: "completed", payload: original
+        });
+        verify(row !== null, "CAP2: actual delegate accepts retained opaque JSON action metadata");
+        renderedRow(row);
+        const control = commandDisclosure(row);
+        verify(typeof control.text === "string" && control.text.length > 0,
+            "CAP2: malformed action entries keep a usable caption rather than a script failure");
+        verify(/command|ran/i.test(control.text.split("·")[0]),
+            "CAP2: untyped entries retain the conservative command category");
+        verify(!/combined|multiple|several|\b[2-9]\s+(?:actions?|commands?|steps?)\b/i.test(control.text),
+            "CAP2: raw invalid array length cannot invent a combined-action description");
+        mouseClick(control);
+        renderedRow(row);
+        literalCommandDetails(row, original);
+        selectOriginalTechnicalPayload(row, original);
+        compareRetainedPayload(row.payload, original);
+    }
     function test_literal_rows_keep_author_information_data() {
         return [
             {

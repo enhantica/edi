@@ -75,6 +75,16 @@ def test_actual_transcript_delegate_author_semantics():
             'PASS   : edi_app::AssistantInterior::'
             'test_activity_description_uses_original_structured_source(' + tag + ')'
         ) in output, 'DESC1: structured-source and opaque-description controls execute\n' + output
+    for tag in ['read-name', 'tool-name']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_activity_excerpt_keeps_complete_unicode_scalars(' + tag + ')'
+        ) in output, 'CAP1: actual scalar-boundary excerpt controls execute\n' + output
+    for tag in ['nulls', 'missing-types', 'primitives']:
+        assert (
+            'PASS   : edi_app::AssistantInterior::'
+            'test_malformed_action_arrays_remain_opaque(' + tag + ')'
+        ) in output, 'CAP2: opaque action arrays and original selection execute\n' + output
     assert result.returncode == 0, (
         'I16/INT1: actual delegate presentation completes without hidden failures\n' + output
     )
