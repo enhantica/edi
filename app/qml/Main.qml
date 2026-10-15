@@ -160,7 +160,7 @@ EaComponents.ApplicationWindow {
             id: assistantToggle
             KeyNavigation.tab: assistantPanel.visible && Preferences.assistantShown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
-            fontIcon: "comments"
+            fontIcon: "robot"
             enabled: ApplicationInfo.assistantAvailable
             ToolTip.text: ApplicationInfo.assistantAvailable ? qsTr("Show or hide assistant") : ApplicationInfo.assistantUnavailableReason
             Accessible.name: qsTr("Show or hide assistant")

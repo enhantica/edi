@@ -13,7 +13,7 @@ Popup {
     objectName: "assistant.popup"
     required property AssistantViewModel assistant
     required property Item toggleControl
-    readonly property Item firstFocusItem: clearButton
+    readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
     visible: ApplicationInfo.assistantAvailable && shown
     x: 0
@@ -96,6 +96,9 @@ Popup {
                     EaElements.Button {
                         id: connectionButton
                         objectName: "assistant.connection"
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: panel.toggleControl
+                        KeyNavigation.tab: signOutButton.visible && signOutButton.enabled ? signOutButton : clearButton
                         Layout.maximumWidth: header.width * 0.45
                         text: !panel.assistant.connected && panel.assistant.state !== "connecting" ? qsTr("Sign in") : panel.assistant.connectionLabel
                         Accessible.name: text
@@ -115,6 +118,10 @@ Popup {
                         onClicked: connectionDialog.open()
                     }
                     EaElements.ToolButton {
+                        id: signOutButton
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: connectionButton
+                        KeyNavigation.tab: clearButton
                         visible: panel.assistant.connected
                         fontIcon: "sign-out-alt"
                         ToolTip.text: qsTr("Sign out")
@@ -124,7 +131,7 @@ Popup {
                     EaElements.ToolButton {
                         id: clearButton
                         KeyNavigation.priority: KeyNavigation.BeforeItem
-                        KeyNavigation.backtab: panel.toggleControl
+                        KeyNavigation.backtab: signOutButton.visible && signOutButton.enabled ? signOutButton : connectionButton
                         fontIcon: "trash-alt"
                         ToolTip.text: qsTr("Clear conversation")
                         Accessible.name: ToolTip.text

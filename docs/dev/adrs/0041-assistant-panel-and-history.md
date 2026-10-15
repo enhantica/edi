@@ -205,3 +205,16 @@ only actual close restores a still-current page/host/project/epoch target. A clo
 receive deferred composer focus, and rapid reversals keep the same conversation and selection tree.
 Actual intermediate-frame confinement and interrupted transitions require runtime observation; these
 source mechanics alone do not establish device, accessibility, provider or full-task readiness.
+
+
+## Header navigation after compact connection placement
+
+The app-bar Tab entry now starts with the actual Sign in/account button, followed by conditional
+visible/enabled Sign out and then Clear. Explicit reverse edges include the same header actions; the
+existing later children/composer/sole app-bar toggle routes remain. Moving the controls does not make
+keyboard reachability implicit. The bundled Font Awesome robot replaces the old chat-bubbles glyph
+on that same app-bar control, without changing its accessible name, identity, device gate or action.
+
+This corrects review46 HDR1; the independent baseline proved a forward Sign in omission while its
+reverse case already passed. Existing source63 motion and host ownership remain unchanged. Actual
+connected/connecting and platform/focus cases still need their own reached runtime evidence.
