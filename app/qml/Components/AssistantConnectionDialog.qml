@@ -43,6 +43,10 @@ AppDialog {
     }
     onAccepted: assistant.signIn()
     ScrollView {
+        ScrollBar.vertical: EaElements.ScrollBar {
+            policy: ScrollBar.AsNeeded
+            interactive: false
+        }
         id: disclosure
         objectName: "assistant.contextDisclosureScroll"
         width: dialog.contentWidth
@@ -97,6 +101,10 @@ AppDialog {
                 Accessible.name: text
             }
             ScrollView {
+                ScrollBar.vertical: EaElements.ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                    interactive: false
+                }
                 visible: details.checked
                 width: parent.width
                 height: visible ? AppSizes.unit * 20 : 0

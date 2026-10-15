@@ -240,3 +240,21 @@ path permission, converter, project creation or fit is implied. Browser action/d
 its shared bounded WebFiles pipeline and genuine File transfer are implemented and independently
 qualified. Both computer-browser and scientific import/skills scope remain owed; desktop method tests
 alone do not prove a genuine OS chooser gesture, Windows/Mac or a live subscription tool turn.
+
+
+## Explicit effort, remembered choices and sidebar scroll indicators
+
+Owner94ffecaa5 makes the compact effort selector explicit and reuses the FIRST manual-sidebar indicator: pinned EasyApplication SideBarColumn attaches EaElements.ScrollBar with AsNeeded and interactive false. Chat, draft/file overflow, plan and disclosure retain their existing complete contents, reading/tail logic and selection; only the actual shared indicator/settings replace the bare defaults.
+
+The VM uses the existing configured settings_file_path()/QSettings Ini store and store_settings_now() browser flush, matching ProjectViewModel's application preference boundary. No configured path means no storage access or personal/default fallback. One QStringList model/effort pair at Assistant/Providers/chatgpt/selection binds the last actual user choice to this provider, independent of opaque connection/account IDs; another provider needs its own explicit adapter identity. Restore only from a current available catalog and while no operation is active. Sign-out, transient empty catalogs, Clear/project rebind and automatic unavailable-value/default fallbacks never overwrite the saved user pair. Missing/unavailable choices remain truthful and may be restored once supported; explicit user selection replaces the pair. A local sync failure reports that the current choice was not saved, without inferring provider success or sending a request. This extends existing setters rather than adding a public settings service/API.
+
+Original SAMPLE messages for visual inspection are fixtures in an isolated task-owned history.json, rendered by the actual history/AssistantMessage route. They are visibly marked SAMPLE and do not represent an account/provider/scientific outcome. Usage metrics and user-message arrows from owner221a76dac are a separate unfinished private continuation; this candidate does not pretend to supply them.
+
+
+### Preference read recovery, local navigation and honest usage
+
+PREF1 private review71 identifies a failed load cached as completed. The load boundary now binds/clears old-store association before preparation, checks sync/contains/value status before absence or acceptance, and marks completion only after a successful validated read or confirmed absence/rejection. Access/preparation failures remain retryable on the same path; saved user choice is not replaced by the automatic catalog fallback. This is a correction within the existing configured store, not a new API or permanent-memory guarantee.
+
+Owner221/a8d/e41 add previous/next actual-user-message chevrons above the composer, with actual row IDs/kinds/order and ListView boundary positioning, disabled ends, preserved selection/draft and explicit reading cursor. The larger blue straight-arrow Send and same-place white-square Stop retain existing admission/busy/cancel logic; follow-up steering while busy remains unimplemented pending its real provider lifecycle contract. Owner6f02 makes the same Clear action a compact header text button with its existing full accessible meaning. Usage is a neutral unavailable ring/details dialog until a separately reviewed real account-bound metric exists; no percent, elapsed fill, token estimate or provider request is fabricated.
+
+The native URL DropArea moves from the nested composer to ONE visible/current chat-body boundary including messages and composer. It captures the original accepted VM capability before reading/admitting the dropped URLs. Ordinary text drops remain with existing text editors; hidden/exiting/device-ineligible/browser chat admits nothing. No native directory/browser-transfer/import permission or new public interface is introduced.

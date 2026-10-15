@@ -23,6 +23,10 @@ Column {
         text: qsTr("Approve the listed parameter groups and budget. Each isolated trial fixes all other parameters; only the chosen group is free. The accepted project changes only after a converged comparable improvement.")
     }
     ScrollView {
+        ScrollBar.vertical: EaElements.ScrollBar {
+            policy: ScrollBar.AsNeeded
+            interactive: false
+        }
         width: parent.width
         height: Math.min(details.implicitHeight, AppSizes.unit * 14)
         clip: true

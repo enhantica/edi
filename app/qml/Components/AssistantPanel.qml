@@ -128,14 +128,37 @@ Popup {
                         Accessible.name: ToolTip.text
                         onClicked: panel.assistant.signOut()
                     }
-                    EaElements.ToolButton {
+                    EaElements.Button {
                         id: clearButton
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: signOutButton.visible && signOutButton.enabled ? signOutButton : connectionButton
-                        fontIcon: "trash-alt"
+                        text: qsTr("Clear")
+                        KeyNavigation.tab: usageButton
                         ToolTip.text: qsTr("Clear conversation")
                         Accessible.name: ToolTip.text
+                        EaElements.ToolTip {
+                            text: clearButton.ToolTip.text
+                            visible: (clearButton.hovered || clearButton.activeFocus) && EaGlobals.Vars.showToolTips
+                        }
                         onClicked: panel.assistant.clearHistory()
+                    }
+                    EaElements.ToolButton {
+                        id: usageButton
+                        objectName: "assistant.usage"
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: clearButton
+                        ToolTip.text: qsTr("Usage data unavailable")
+                        Accessible.name: qsTr("Usage data unavailable")
+                        Accessible.description: qsTr("This connection does not provide context or subscription usage metrics.")
+                        contentItem: Rectangle {
+                            implicitWidth: AppSizes.unit
+                            implicitHeight: AppSizes.unit
+                            radius: width * 0.5
+                            color: "transparent"
+                            border.width: 2
+                            border.color: EaStyle.Colors.themeForegroundDisabled
+                        }
+                        onClicked: usageDialog.open()
                     }
                 }
                 Rectangle {
@@ -147,6 +170,7 @@ Popup {
                 }
             }
             ColumnLayout {
+                id: chatBody
                 z: 1
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -172,6 +196,47 @@ Popup {
                         status: model.status
                     }
                     property bool followsTail: true
+                    property string jumpedUserId: ""
+                    readonly property int previousUserIndex: userTarget(-1)
+                    readonly property int nextUserIndex: userTarget(1)
+                    function userTarget(direction) {
+                        const count = panel.assistant.messages.count;
+                        const position = contentY;
+                        const layoutHeight = contentHeight;
+                        if (count === 0 || layoutHeight <= 0) return -1;
+                        // An explicit boundary remains the cursor even when the final row clamps at the end.
+                        if (jumpedUserId.length > 0) {
+                            let current = -1;
+                            for (let i = 0; i < count; ++i)
+                                if (panel.assistant.messages.text(i, "id") === jumpedUserId) { current = i; break; }
+                            if (current >= 0) {
+                                for (let i = current + direction; i >= 0 && i < count; i += direction)
+                                    if (panel.assistant.messages.text(i, "kind") === "user") return i;
+                                return -1;
+                            }
+                        }
+                        let first = indexAt(1, position + 1);
+                        if (first < 0) first = indexAt(1, position + spacing + 2);
+                        if (first < 0) first = atYEnd ? count - 1 : 0;
+                        let candidate = -1;
+                        for (let i = 0; i < count; ++i) {
+                            if (panel.assistant.messages.text(i, "kind") !== "user") continue;
+                            const item = itemAtIndex(i);
+                            const before = item ? item.y < position - 0.5 : i < first;
+                            const after = item ? item.y > position + 0.5 : i > first;
+                            if (direction < 0 && before) candidate = i;
+                            if (direction > 0 && after) return i;
+                        }
+                        return direction < 0 ? candidate : -1;
+                    }
+                    function jumpToUser(direction) {
+                        const target = direction < 0 ? previousUserIndex : nextUserIndex;
+                        if (target < 0) return;
+                        jumpedUserId = panel.assistant.messages.text(target, "id");
+                        followsTail = false;
+                        cancelFlick();
+                        positionViewAtIndex(target, ListView.Beginning);
+                    }
                     property string lastUserId: ""
                     function observeUserAdmission() {
                         let latest = "";
@@ -182,8 +247,10 @@ Popup {
                             }
                         }
                         if (latest !== lastUserId) {
-                            if (latest.length > 0)
+                            if (latest.length > 0) {
                                 followsTail = true;
+                                jumpedUserId = "";
+                            }
                             lastUserId = latest;
                         }
                     }
@@ -201,10 +268,13 @@ Popup {
                     }
                     onContentHeightChanged: followOutput()
                     onContentYChanged: {
-                        if (moving || historyScrollBar.pressed)
+                        if (moving || historyScrollBar.pressed) {
+                            jumpedUserId = "";
                             followsTail = atYEnd;
+                        }
                     }
-                    onMovementEnded: followsTail = atYEnd
+                    onMovementStarted: jumpedUserId = ""
+                    onMovementEnded: { if (jumpedUserId.length === 0) followsTail = atYEnd; }
                     Component.onCompleted: {
                         observeUserAdmission();
                         followOutput();
@@ -213,8 +283,10 @@ Popup {
                         target: panel.assistant.messages
                         function onDataChanged() { conversation.observeUserAdmission(); conversation.followOutput(); }
                     }
-                    ScrollBar.vertical: ScrollBar {
+                    ScrollBar.vertical: EaElements.ScrollBar {
                         id: historyScrollBar
+                        policy: ScrollBar.AsNeeded
+                        interactive: false
                         onPressedChanged: {
                             if (!pressed)
                                 conversation.followsTail = conversation.atYEnd;
@@ -254,11 +326,73 @@ Popup {
                     text: qsTr("Inspect outgoing project context")
                     onClicked: connectionDialog.open()
                 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: AppSizes.unit * 0.25
+                    Item { Layout.fillWidth: true }
+                    EaElements.ToolButton {
+                        objectName: "assistant.previousUserMessage"
+                        fontIcon: "chevron-up"
+                        enabled: conversation.previousUserIndex >= 0
+                        ToolTip.text: qsTr("Previous user message")
+                        Accessible.name: ToolTip.text
+                        onClicked: conversation.jumpToUser(-1)
+                    }
+                    EaElements.ToolButton {
+                        objectName: "assistant.nextUserMessage"
+                        fontIcon: "chevron-down"
+                        enabled: conversation.nextUserIndex >= 0
+                        ToolTip.text: qsTr("Next user message")
+                        Accessible.name: ToolTip.text
+                        onClicked: conversation.jumpToUser(1)
+                    }
+                }
                 AssistantComposer {
                     id: composer
                     Layout.fillWidth: true
                     assistant: panel.assistant
                     toggleControl: panel.toggleControl
+                }
+            }
+            // One real file boundary covers transcript and composer, not ordinary text or the header.
+            DropArea {
+                id: chatFilesDrop
+                anchors.fill: chatBody
+                z: 2
+                enabled: panel.visible && panel.shown && ApplicationInfo.assistantAvailable && !WebFiles.available
+                onEntered: drag => drag.accepted = drag.hasUrls && !panel.assistant.canCancel
+                onDropped: drop => {
+                    if (!chatFilesDrop.enabled || !drop.hasUrls || panel.assistant.canCancel) { drop.accepted = false; return; }
+                    const request = panel.assistant.beginFileSelection();
+                    drop.accepted = request.length > 0 && panel.assistant.addSelectedFiles(request, drop.urls);
+                }
+            }
+        }
+        AppDialog {
+            id: usageDialog
+            title: qsTr("Usage")
+            standardButtons: Dialog.Close
+            width: Math.min(AppSizes.unit * 27, Math.max(0, parent.width - AppSizes.unit * 2))
+            Column {
+                width: parent.width
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Context window: unavailable")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Subscription session and weekly limits: unavailable")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("This connection does not supply these metrics. No usage percentage is inferred from conversation length or elapsed time.")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
                 }
             }
         }

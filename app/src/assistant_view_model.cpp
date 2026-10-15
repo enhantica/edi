@@ -2,6 +2,7 @@
 #include "assistant_view_model.hpp"
 
 #include <QFile>
+#include <QSettings>
 #include <QThread>
 #include <array>
 #include <limits>
@@ -32,6 +33,7 @@
 #include <unistd.h>
 #endif
 
+#include "engine_setup.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #ifndef __EMSCRIPTEN__
@@ -139,6 +141,10 @@ struct AssistantViewModel::State {
     std::optional<FileSelection> file_selection;
     Object core, native, plan, question;
     QString model, effort, error;
+    // Edi preferences, scoped to this provider, never a connection ID or provider profile.
+    QString choice_store, remembered_model, remembered_effort;
+    bool restore_choice_pending = true, choice_warning_shown = false, choice_read_complete = false;
+
     bool own_edit = false, auth_pending = false;
     QString observed_native_error;
     std::uint64_t generation = 0;
@@ -725,6 +731,127 @@ struct AssistantViewModel::State {
         } else if (type == "error") error = bounded_error(value.value("message").toString());
         if (!queue_render()) throw std::runtime_error("Assistant presentation queue is unavailable");
     }
+    void load_choice_preference() noexcept {
+        try {
+            const auto path = settings_file_path();
+            if (path.isEmpty()) return; // Never fall back to a personal/default QSettings store.
+            if (path != choice_store) {
+                // Retire the old association before any fallible new-store preparation.
+                remembered_model.clear(); remembered_effort.clear();
+                choice_read_complete = false;
+                restore_choice_pending = true; choice_warning_shown = false;
+                choice_store = path;
+            }
+            if (choice_read_complete) return;
+            QSettings settings(path, QSettings::IniFormat);
+            settings.sync(); // Import actual same-path recovery before interpreting absence.
+            const auto key = QStringLiteral("Assistant/Providers/chatgpt/selection");
+            const bool present = settings.contains(key);
+            if (settings.status() != QSettings::NoError) {
+                error = QObject::tr("Assistant preferences could not be read. Restoration will retry when the store is available.");
+                return; // Failure is NOT a completed read, including failed contains().
+            }
+            if (!present) {
+                remembered_model.clear(); remembered_effort.clear();
+                choice_read_complete = true; // Confirmed successful absence, not an I/O failure.
+                return;
+            }
+            const auto value = settings.value(key);
+            const auto pair = value.toStringList();
+            if (settings.status() != QSettings::NoError) {
+                error = QObject::tr("Assistant preferences could not be read. Restoration will retry when the store is available.");
+                return;
+            }
+            if (value.metaType().id() != QMetaType::QStringList || pair.size() != 2 ||
+                pair[0].isEmpty() || static_cast<std::uint64_t>(pair[0].toUtf8().size()) > Limits::id_bytes ||
+                static_cast<std::uint64_t>(pair[1].toUtf8().size()) > Limits::id_bytes) {
+                remembered_model.clear(); remembered_effort.clear();
+                choice_read_complete = true; // Deliberate rejection of successfully read malformed data.
+                error = QObject::tr("The saved assistant selection is unavailable. Choose a model and reasoning effort again.");
+                return;
+            }
+            // All preparation/validation precedes completion. A failed attempt remains retryable.
+            auto next_model = pair[0]; auto next_effort = pair[1];
+            remembered_model.swap(next_model); remembered_effort.swap(next_effort);
+            choice_read_complete = true;
+        } catch (...) {
+            choice_read_complete = false;
+            try { error = QObject::tr("Assistant preferences could not be read. Restoration will retry when the store is available."); } catch (...) {}
+        }
+    }
+    void remember_choice() noexcept {
+        try {
+            if (owner.canCancel() || native.value("status") != "ready") return;
+            bool offered = false;
+            for (const auto& value : native.value("models").toArray()) {
+                const auto row = value.toObject();
+                if (row.value("id") == model && row.value("available").toBool())
+                    offered = effort.isEmpty() || row.value("efforts").toArray().contains(effort);
+            }
+            if (!offered) return;
+            load_choice_preference();
+            remembered_model = model; remembered_effort = effort;
+            restore_choice_pending = false; choice_warning_shown = false;
+            const auto path = settings_file_path();
+            if (path.isEmpty()) return; // Direct Session/early construction: no default/personal-store fallback.
+            QSettings settings(path, QSettings::IniFormat);
+            // A single value binds the effort to its actual model; fallback never writes this value.
+            settings.setValue(QStringLiteral("Assistant/Providers/chatgpt/selection"), QStringList{model, effort});
+            settings.sync();
+            if (settings.status() != QSettings::NoError) {
+                error = QObject::tr("The assistant selection changed, but its preference could not be saved.");
+                return;
+            }
+            choice_read_complete = true;
+            store_settings_now(); // The existing browser flush; desktop settings already synced.
+        } catch (...) {
+            try { error = QObject::tr("The assistant selection changed, but its preference could not be saved."); } catch (...) {}
+        }
+    }
+    void select_from_catalog(const QJsonArray& choices) {
+        if (native.value("status") != "ready" || choices.isEmpty()) {
+            restore_choice_pending = true;
+            return; // Sign-out/empty catalogs must neither erase nor persist an automatic fallback.
+        }
+        if (owner.canCancel()) return;
+        load_choice_preference();
+        const auto available = [&](const QString& id) {
+            for (const auto& value : choices) {
+                const auto row = value.toObject();
+                if (row.value("id") == id && row.value("available").toBool()) return row;
+            }
+            return Object{};
+        };
+        if (restore_choice_pending && !remembered_model.isEmpty()) {
+            const auto saved = available(remembered_model);
+            if (!saved.isEmpty()) {
+                model = remembered_model;
+                const bool supported = remembered_effort.isEmpty() || saved.value("efforts").toArray().contains(remembered_effort);
+                effort = supported ? remembered_effort : QString();
+                restore_choice_pending = !supported;
+                if (!supported && !choice_warning_shown) {
+                    error = QObject::tr("The saved reasoning effort is unavailable. Provider default is selected; your preference is preserved.");
+                    choice_warning_shown = true;
+                }
+            } else if (!choice_warning_shown) {
+                error = QObject::tr("The saved model is unavailable. Inspect the available model and effort before sending; your preference is preserved.");
+                choice_warning_shown = true;
+            }
+        }
+        if (available(model).isEmpty()) {
+            const bool replacing_explicit = !model.isEmpty();
+            model.clear(); effort.clear();
+            for (const auto& value : choices) if (value.toObject().value("available").toBool()) {
+                model = value.toObject().value("id").toString(); break;
+            }
+            if (replacing_explicit && !choice_warning_shown)
+                error = QObject::tr("The previous model is unavailable. Inspect the new model and Provider default effort before sending.");
+        }
+        if (!effort.isEmpty() && !available(model).value("efforts").toArray().contains(effort)) {
+            effort.clear();
+            error = QObject::tr("The previous reasoning effort is unavailable. Selection reset to Provider default.");
+        }
+    }
     void sync() {
         const Object next_core = controller ? object(controller->state()) : Object{};
 #ifndef __EMSCRIPTEN__
@@ -739,19 +866,7 @@ struct AssistantViewModel::State {
                 {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", item.value("available").toBool()}});
         }
         models.assign(choices);
-        bool selected_available = false;
-        for (const auto& choice : choices) if (choice.toObject().value("id") == model && choice.toObject().value("available").toBool()) selected_available = true;
-        if (!selected_available) {
-            const bool replacing_explicit = !model.isEmpty();
-            model.clear(); effort.clear();
-            if (replacing_explicit) error = QObject::tr("The previous model is unavailable. Inspect the new model and Provider default effort before sending.");
-            for (const auto& choice : choices) if (choice.toObject().value("available").toBool()) { model = choice.toObject().value("id").toString(); break; }
-        }
-        const auto efforts = owner.availableEfforts();
-        if (!effort.isEmpty() && !efforts.contains(effort)) {
-            effort.clear();
-            error = QObject::tr("The previous reasoning effort is unavailable. Selection reset to Provider default.");
-        }
+        select_from_catalog(choices);
         if (core.value("pending_plan_id").toString().isEmpty()) plan = {};
         if (core.value("pending_question_id").toString().isEmpty()) question = {};
         const auto native_error = native.value("last_error").toString();
@@ -891,8 +1006,8 @@ void AssistantViewModel::setSelectedModel(const QString& model) {
                 state_->effort.clear();
                 state_->error = tr("The previous reasoning effort is unavailable for this model. Selection reset to Provider default.");
             }
-            state_->model = model; state_->sync();
-        }
+            state_->model = model; state_->remember_choice(); state_->sync();
+        } else { state_->remember_choice(); state_->notify(); }
         return;
     }
     state_->error = tr("This model is unavailable."); state_->notify();
@@ -900,7 +1015,8 @@ void AssistantViewModel::setSelectedModel(const QString& model) {
 void AssistantViewModel::setSelectedEffort(const QString& effort) {
     if (canCancel() && effort != state_->effort) { state_->error = tr("Stop the active operation before changing its reasoning effort."); state_->notify(); return; }
     if (!effort.isEmpty() && !availableEfforts().contains(effort)) { state_->error = tr("This reasoning effort is unavailable."); state_->notify(); return; }
-    if (state_->effort != effort) { state_->effort = effort; state_->notify(); }
+    if (state_->effort != effort) { state_->effort = effort; state_->remember_choice(); state_->notify(); }
+    else { state_->remember_choice(); state_->notify(); }
 }
 void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(project); }
 void AssistantViewModel::send(const QString& text) {

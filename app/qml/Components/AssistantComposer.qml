@@ -52,15 +52,6 @@ Rectangle {
             }
         }
     }
-    DropArea {
-        anchors.fill: parent
-        onEntered: drag => drag.accepted = !WebFiles.available && drag.hasUrls && !composer.assistant.canCancel
-        onDropped: drop => {
-            if (WebFiles.available || !drop.hasUrls || composer.assistant.canCancel) { drop.accepted = false; return; }
-            const request = composer.assistant.beginFileSelection();
-            drop.accepted = request.length > 0 && composer.assistant.addSelectedFiles(request, drop.urls);
-        }
-    }
     function acknowledgeVisiblePrompt() {
         if (submittedText.length === 0)
             return;
@@ -115,6 +106,10 @@ Rectangle {
         width: parent.width - AppSizes.unit
         spacing: AppSizes.unit * 0.25
         ScrollView {
+            ScrollBar.vertical: EaElements.ScrollBar {
+                policy: ScrollBar.AsNeeded
+                interactive: false
+            }
             id: selectedFilesScroll
             width: parent.width
             height: visible ? Math.min(selectedChips.implicitHeight, AppSizes.unit * 5) : 0
@@ -151,6 +146,10 @@ Rectangle {
             }
         }
         ScrollView {
+            ScrollBar.vertical: EaElements.ScrollBar {
+                policy: ScrollBar.AsNeeded
+                interactive: false
+            }
             width: parent.width
             height: Math.min(AppSizes.unit * 10, Math.max(editor.font.pixelSize * 2.5 + editor.topPadding + editor.bottomPadding, editor.implicitHeight))
             TextArea {
@@ -268,10 +267,11 @@ Rectangle {
                     default: return qsTr("Unavailable");
                     }
                 }
+                displayText: qsTr("Effort: %1").arg(effortLabel(composer.assistant.selectedEffort))
                 currentIndex: effortValues.indexOf(composer.assistant.selectedEffort)
                 objectName: "assistant.effort"
                 Layout.preferredWidth: effortLabelMetrics.advanceWidth + AppSizes.unit * 2.5
-                Layout.maximumWidth: composerContent.width * 0.3
+                Layout.maximumWidth: composerContent.width * 0.4
                 background: Rectangle {
                     implicitHeight: EaStyle.Sizes.comboBoxHeight
                     color: "transparent"
@@ -281,7 +281,7 @@ Rectangle {
                 }
                 model: effortValues.map(value => effortLabel(value))
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
-                ToolTip.text: composer.assistant.selectedEffort === "" ? qsTr("Provider default") : currentText
+                ToolTip.text: composer.assistant.selectedEffort === "" ? qsTr("Provider default: the model or provider chooses the reasoning effort") : qsTr("Reasoning effort: %1").arg(currentText)
                 EaElements.ToolTip {
                     text: efforts.ToolTip.text
                     visible: (efforts.hovered || efforts.activeFocus) && EaGlobals.Vars.showToolTips && text !== ""
@@ -292,6 +292,20 @@ Rectangle {
             Item { Layout.fillWidth: true }
             EaElements.ToolButton {
                 id: stopButton
+                background: Rectangle {
+                    implicitWidth: EaStyle.Sizes.toolButtonHeight * 1.2
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: stopButton.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeBackgroundDisabled
+                }
+                contentItem: EaElements.Label {
+                    text: stopButton.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: stopButton.font.pixelSize * 1.25
+                    color: stopButton.enabled ? "white" : EaStyle.Colors.themeForegroundDisabled
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: sendButton
                 KeyNavigation.backtab: efforts
@@ -306,6 +320,20 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: sendButton
+                background: Rectangle {
+                    implicitWidth: EaStyle.Sizes.toolButtonHeight * 1.2
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: sendButton.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeBackgroundDisabled
+                }
+                contentItem: EaElements.Label {
+                    text: sendButton.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: sendButton.font.pixelSize * 1.25
+                    color: sendButton.enabled ? "white" : EaStyle.Colors.themeForegroundDisabled
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: composer.toggleControl
                 KeyNavigation.backtab: stopButton
