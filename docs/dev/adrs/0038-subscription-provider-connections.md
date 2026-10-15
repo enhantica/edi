@@ -107,3 +107,11 @@ never used for token exchange. Existing state/code/PKCE/nonce, loopback, signatu
 account identity guards remain unchanged. No callback URL or credential is logged, and no saved store
 is deleted to retry. This fixes a documented returning-callback compatibility defect; the owner's exact
 callback and the separate live chat failure remain unobserved.
+
+A terminal-array omission keeps its existing invalid_argument refusal and execution policy. Its bounded
+reason reports only retained/terminal/missing/wire-unfinished counts and the first omitted item's fixed
+known kind/status/wire-done classification; unknown or wrong-typed values receive app-owned labels.
+First means map iteration, not stream order, and wire-done does not assert semantic completion. No IDs,
+arbitrary strings, arguments, text or reasoning are exposed. All output shape/size, identity/position and
+membership guards remain. This diagnoses the owner-reached finalization failure; it does not authorize
+unioning omitted outputs, establish a missing reasoning item or claim that live chat succeeds.

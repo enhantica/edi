@@ -221,10 +221,31 @@ struct OpenAiStream::State {
             if (position != positions.end() && position->second != id)
                 refuse("invalid_argument", "Terminal provider output replaced an existing item");
         }
+        std::uint64_t omitted = 0, unfinished = 0;
+        const char* first_kind = "other";
+        const char* first_status = "absent_or_null";
+        bool first_done = false;
         for (const auto& [id, held] : items) {
-            (void)held;
-            if (!membership.contains(id)) refuse("invalid_argument", "Terminal provider output omitted a retained item");
+            if (membership.contains(id)) continue;
+            if (!held.done) ++unfinished;
+            if (++omitted != 1) continue;
+            // Structural diagnostics only. Never print an ID, arbitrary type or
+            // status string, public text, arguments or encrypted/reasoning data.
+            const auto* kind = std::get_if<std::string>(&held.original.get("type").data);
+            for (const char* known : {"message", "function_call", "reasoning"})
+                if (kind && *kind == known) { first_kind = known; break; }
+            const auto& value = held.original.get("status");
+            if (const auto* status = std::get_if<std::string>(&value.data)) {
+                first_status = "other";
+                for (const char* known : {"completed", "incomplete", "in_progress"})
+                    if (*status == known) { first_status = known; break; }
+            } else if (!std::holds_alternative<std::nullptr_t>(value.data)) first_status = "other";
+            first_done = held.done;
         }
+        if (omitted) refuse("invalid_argument", "Terminal provider output omitted a retained item (missing=" + std::to_string(omitted) +
+            ", retained=" + std::to_string(items.size()) + ", terminal=" + std::to_string(output.size()) +
+            ", unfinished=" + std::to_string(unfinished) + ", first_kind=" + first_kind + ", first_status=" + first_status +
+            ", wire_done=" + (first_done ? "yes" : "no") + ")");
         for (std::uint64_t slot = 0; const auto& original : output) item(original, true, slot++);
     }
     void event() {
