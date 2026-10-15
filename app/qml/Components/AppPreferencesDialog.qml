@@ -265,11 +265,28 @@ AppDialog {
             RowLabel {
                 text: qsTr("Assistant") + ":"
             }
-            RowCheckBox {
-                objectName: "preferences.assistantShown"
-                checked: Preferences.assistantShown
-                onToggled: Preferences.assistantShown = checked
-                ToolTip.text: qsTr("Show the assistant opposite the workflow sidebar")
+            Column {
+                width: dialog.controlWidth
+                spacing: dialog.stackSpacing
+                RowCheckBox {
+                    objectName: "preferences.assistantShown"
+                    enabled: ApplicationInfo.assistantAvailable
+                    checked: ApplicationInfo.assistantAvailable && Preferences.assistantShown
+                    onToggled: {
+                        if (ApplicationInfo.assistantAvailable)
+                            Preferences.assistantShown = checked;
+                    }
+                    ToolTip.text: ApplicationInfo.assistantAvailable ? qsTr("Show the assistant opposite the workflow sidebar") : ApplicationInfo.assistantUnavailableReason
+                    Accessible.description: ApplicationInfo.assistantUnavailableReason
+                }
+                EaElements.Label {
+                    objectName: "preferences.assistantUnavailableReason"
+                    visible: !ApplicationInfo.assistantAvailable
+                    width: parent.width
+                    text: ApplicationInfo.assistantUnavailableReason
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WordWrap
+                }
             }
 
             RowLabel {

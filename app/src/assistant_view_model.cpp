@@ -621,7 +621,7 @@ struct AssistantViewModel::State {
                         controller->cancel(); sync();
                     }
 #else
-                    error = QObject::tr("Browser subscription access needs the local companion.");
+                    error = QObject::tr("Browser AI connection is unavailable in this build.");
                     retain_failure(captured, "edi.assistant.connection_required", error);
                     controller->cancel(); sync();
 #endif
@@ -773,7 +773,7 @@ void AssistantViewModel::signIn() {
     state_->auth_pending = reply.ok;
     state_->error = reply.ok ? QString() : State::bounded_error(object(reply.value).value("message").toString());
 #else
-    state_->error = tr("Browser subscription access needs the local companion, which is not available in this desktop slice.");
+    state_->error = tr("Browser AI connection is unavailable in this build.");
 #endif
     state_->sync(); state_->notify();
 }

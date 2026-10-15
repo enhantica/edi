@@ -68,3 +68,33 @@ local dialog bounds its width and complete disclosure viewport to the overlay, p
 header and ordinary standard-button footer outside the scrolling content. Summary and exact technical
 context are retained in full and literal text; scrolling changes presentation only. Actual narrow/short,
 long-project-name, technical-details and mid-dialog connection-transition exercises remain required.
+
+
+## Device eligibility and assistant entry
+
+ApplicationInfo captures one bounded browser-device decision during construction, before its CONSTANT
+assistantAvailable/assistantUnavailableReason properties are observed by QML. Native desktop stays
+eligible without navigator inspection. Eligibility means the computer can open assistant setup, not
+that a browser provider connector or subscription is working. Existing connected/catalog/context
+consent/currentness and scientific permissions remain authoritative.
+
+The existing Emscripten browser bridge reads only bounded userAgent/platform, maxTouchPoints and optional
+userAgentData mobile/platform. Each string is admitted at4096 UTF-16 code units inside JavaScript before
+any conversion; no token, network/high-entropy request or persisted fingerprint is involved. Missing,
+throwing, malformed, oversized, mobile or contradictory facts refuse. Explicit mobile evidence wins.
+Recognized Windows/Linux/ChromeOS computers remain eligible regardless of touch or width. ChromeOS UA
+and Linux legacy platform are compatible; Chrome OS/Chromium OS branding is normalized. Macintosh without
+an explicit consistent desktop hint requires a supplied0/1 touch fact; high-touch/unknown Macs refuse,
+including iPadOS desktop-style identification. This is conservative UI availability, not a security grant.
+
+The toolbar remains visible but disabled with an accessible reason. The shortcut and click handlers,
+panel effective visibility, focus helper and Preferences action all consume the same immutable decision.
+Unsupported Preferences show an unchecked disabled control and a visible wrapped literal explanation;
+no hover is required. Enforcing availability never overwrites saved shown/width/side preferences. Thus a
+restored true default cannot show a phone panel or reserve chart margins, while eligible computers retain
+their prior choice. Narrowness is presentation, not a reason to disable a recognized computer.
+
+The two browser VM messages state only that AI connection is unavailable in this build. No local runtime,
+provider authorization, responsive redesign, B/Q lifecycle repair, live chat or device/CI readiness follows.
+The reviewed connection dialog and current manual/scientific UI are unchanged. Actual native/browser
+entry and accessible-explanation gates plus rendered behavior remain required.

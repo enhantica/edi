@@ -70,9 +70,13 @@ EaComponents.ApplicationWindow {
         EaElements.ToolButton {
             objectName: "assistant.toggle"
             fontIcon: "comments"
-            ToolTip.text: qsTr("Show or hide assistant")
-            Accessible.name: ToolTip.text
+            enabled: ApplicationInfo.assistantAvailable
+            ToolTip.text: ApplicationInfo.assistantAvailable ? qsTr("Show or hide assistant") : ApplicationInfo.assistantUnavailableReason
+            Accessible.name: qsTr("Show or hide assistant")
+            Accessible.description: ApplicationInfo.assistantUnavailableReason
             onClicked: {
+                if (!ApplicationInfo.assistantAvailable)
+                    return;
                 Preferences.assistantShown = !Preferences.assistantShown;
                 if (Preferences.assistantShown)
                     assistantPanel.focusComposer();
@@ -230,7 +234,10 @@ EaComponents.ApplicationWindow {
     }
     Shortcut {
         sequences: ["Ctrl+Shift+A", "Meta+Shift+A"]
+        enabled: ApplicationInfo.assistantAvailable
         onActivated: {
+            if (!ApplicationInfo.assistantAvailable)
+                return;
             Preferences.assistantShown = !Preferences.assistantShown;
             if (Preferences.assistantShown)
                 assistantPanel.focusComposer();

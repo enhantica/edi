@@ -15,11 +15,13 @@ Rectangle {
     property real panelWidth: Preferences.assistantWidth
     property bool onLeft: !Preferences.sideBarOnLeft
     property bool overlayMode: false
-    visible: shown
+    visible: ApplicationInfo.assistantAvailable && shown
     width: Math.min(panelWidth, parent ? parent.width : panelWidth)
     color: EaStyle.Colors.appBarBackground
     border.color: EaStyle.Colors.appBorder
     function focusComposer() {
+        if (!ApplicationInfo.assistantAvailable || !visible)
+            return;
         composer.focusEditor();
     }
 
