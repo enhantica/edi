@@ -75,10 +75,17 @@ CodexAgent::CodexAgent(QObject* parent) : QObject(parent) {
 void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
     checkDeadline(); if (failed_) return;
     const auto now = clock_.elapsed();
+    // A second clock sample can cross the old deadline after checkDeadline.
+    // Expiry must never become the zero/disabled sentinel for a new role.
+    if (operation_start_ >= 0 && (now < operation_start_ || now < last_activity_ ||
+        (total_ms_ && static_cast<quint64>(now - operation_start_) >= total_ms_) ||
+        (idle_ms_ && static_cast<quint64>(now - last_activity_) >= idle_ms_))) {
+        fail("The official agent operation exceeded its deadline."); return;
+    }
     if (operation_start_ < 0) { wire_bytes_ = 0; event_count_ = 0; }
     else if (total_ms_) {
         const auto elapsed = static_cast<quint64>(now - operation_start_);
-        const auto remaining = elapsed >= total_ms_ ? 0 : total_ms_ - elapsed;
+        const auto remaining = total_ms_ - elapsed;
         if (totalMs == 0 || totalMs > remaining) totalMs = remaining;
     }
     operation_start_ = now; last_activity_ = now;

@@ -354,3 +354,12 @@ A complete digest-verified official package plus the owned legal-resource bytes 
 Configure, normal-build and install verification all require every retained member to remain a regular nonlink file with its expected bytes. Server, code-mode host, rg, packaged zsh and Linux bwrap must additionally remain executable at each boundary. Metadata/legal resources have no executable requirement. Signed upstream bytes and mode-preserving installation remain unchanged; this is not a Mac signing, live-login or full distribution qualification.
 
 Generated verifier scripts also carry the immutable publication identity and are reused without rewrite. New app headers are configured only after the candidate tree is published and checked; old generated readers never point into unpublished staging.
+
+
+### Remaining progress, human-retirement and deadline siblings
+
+The pinned item/mcpToolCall/progress notification renews idle only for a bound current unfinished MCP original and a nonempty message within the existing encoded message bound. The transport already charges wire/event/record capacity; Edi does not retain or publish another progress-text copy. Unknown/stale traffic and empty messages remain inert.
+
+Stop revokes human completion synchronously as it begins bounded interrupt settlement: retire the visible/queued question identity, fence public answer callbacks and reject new server human-completion requests while revoke is pending. Terminal/error/request-resolution traffic remains admitted at its existing owner. No invented question result is sent, and repeated Stop/logout do not extend the deadline.
+
+Operation transitions recheck inclusive total/idle expiry and monotonic order at the actual new-role clock sample. A finite exhausted budget fails before subtraction/assignment; it never becomes the zero value reserved for an absent deadline. This applies to control/inference/revoke transitions without a new clock API or timeout increase.

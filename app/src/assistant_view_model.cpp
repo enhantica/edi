@@ -649,6 +649,16 @@ struct AssistantViewModel::State {
             // Deltas are genuine appends even when consecutive text is equal.
             // Private reasoning is neither displayed nor copied into the archive.
             if (!params.value("delta").toString().isEmpty()) agent->activity();
+        } else if (method == "item/mcpToolCall/progress") {
+            const auto id = generic_id(params.value("itemId"));
+            const auto message = params.value("message");
+            if (!generic_items.contains(id) || generic_final_items.contains(id) ||
+                generic_items.value(id).value("type") != "mcpToolCall" || !message.isString())
+                throw std::runtime_error("Agent MCP progress has no current unfinished original item");
+            generic_size(message, Limits::message_bytes);
+            // The transport already charges complete wire/event/record bytes.
+            // No additional retained copy or private tool text is published.
+            if (!message.toString().isEmpty()) agent->activity();
         } else if (method == "item/reasoning/summaryPartAdded") {
             const auto id = generic_id(params.value("itemId")); const auto index = params.value("summaryIndex");
             if (!generic_items.contains(id) || generic_final_items.contains(id) || generic_items.value(id).value("type") != "reasoning" ||
@@ -712,7 +722,7 @@ struct AssistantViewModel::State {
         notify();
     }
     void generic_server_request(const QJsonValue& id, const QString& method, const Object& params) {
-        if (!generic_bound(params)) { agent->reject(id); return; }
+        if (!generic_bound(params) || generic_revoke_pending) { agent->reject(id); return; }
         if (method == "item/commandExecution/requestApproval" || method == "item/fileChange/requestApproval") {
             // on-request approval can mean a sandbox escape. First prototype
             // never grants broader writes/network merely because it is once.
@@ -1798,7 +1808,7 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         try {
-            if (id != state_->generic_question_public_id || state_->generic_question_rpc.isUndefined() || !state_->generic_authenticated || state_->generic_retiring || !state_->generic_busy || state_->generic_turn.isEmpty() ||
+            if (id != state_->generic_question_public_id || state_->generic_question_rpc.isUndefined() || !state_->generic_authenticated || state_->generic_retiring || state_->generic_revoke_pending || !state_->generic_busy || state_->generic_turn.isEmpty() ||
                 state_->generic_question_thread != state_->generic_thread || state_->generic_question_turn != state_->generic_turn || !state_->generic_items.contains(state_->generic_question_item) || state_->generic_final_items.contains(state_->generic_question_item) ||
                 answer.toUtf8().size() > static_cast<qsizetype>(State::Limits::question_answer_bytes)) return;
             const auto rpc = state_->generic_question_rpc;
@@ -1821,6 +1831,7 @@ void AssistantViewModel::cancel() {
             if (state_->generic_retiring || state_->generic_revoke_pending) return;
             else if (state_->generic_busy && !state_->generic_turn.isEmpty()) {
                 state_->generic_revoke_pending = true;
+                state_->generic_retire_question();
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);
                 state_->generic_request("turn/interrupt", {{"threadId", state_->generic_thread}, {"turnId", state_->generic_turn}});
             } else if (state_->generic_connecting || state_->generic_busy) state_->generic_fail(tr("Agent sign-in or input was interrupted."));
