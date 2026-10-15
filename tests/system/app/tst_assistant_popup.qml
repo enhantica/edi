@@ -27,6 +27,8 @@ TestCase {
         return found;
     }
     function rendered() {
+        tryVerify(() => !Ui.moving(window.contentItem), 2000, "I16/popup: actual navigation finishes before geometry observations");
+        verify(waitForPolish(window, 2000), "I16/popup: queued layout settles before geometry observations");
         verify(waitForRendering(window.contentItem), "I16/popup: actual window renders after interaction");
     }
     function rect(control) {
@@ -44,14 +46,13 @@ TestCase {
         rendered();
     }
     function capture(stem) {
-        let finished = false;
-        let saved = false;
-        verify(window.contentItem.grabToImage(result => {
-            saved = result.saveToFile(stem + ".png");
-            finished = true;
-        }), "I16/popup: capture comes from the actual rendered Main window");
-        tryVerify(() => finished, 2000, "I16/popup: actual window capture completes");
-        verify(saved, "I16/popup: actual rendered capture is saved without image synthesis");
+        // QtTest's actual framebuffer adapter supports the C++-created window root.
+        // Item.grabToImage requires a QML engine on that root; this root has none.
+        const image = grabImage(window.contentItem);
+        verify(image.width > 0 && image.height > 0, "I16/popup: actual full-window framebuffer has nonempty dimensions");
+        // The documented QtTest save method throws on failure; it returns no bool.
+        image.save(stem + ".png");
+        console.log("POPUP_CAPTURE", stem, image.width, image.height);
     }
     function initTestCase() {
         oldSide = Preferences.sideBarSide;
@@ -291,6 +292,13 @@ TestCase {
             const host = item("workflow.home.sidebarHost");
             const initial = rect(about);
             const strip = rect(host);
+            console.log("POP3_GEOMETRY_INITIAL", JSON.stringify({
+                window: [window.width, window.height],
+                side: Preferences.sideBarSide,
+                target: initial,
+                strip: strip,
+                main: rect(item("workflow.home.mainContent"))
+            }));
             verify(initial[0] >= strip[0] + strip[2], "I16/POP3: initial real Home target is wholly outside the popup strip");
             // A cancelled pointer press focuses the normal widget without opening its dialog.
             mousePress(about, about.width / 2, about.height / 2);
@@ -305,6 +313,11 @@ TestCase {
                 const edge = rect(about);
                 const edgeStrip = rect(host);
                 const boundary = edgeStrip[0] + edgeStrip[2];
+                console.log("POP3_GEOMETRY_EDGE", JSON.stringify({
+                    window: [window.width, window.height],
+                    target: edge,
+                    strip: edgeStrip
+                }));
                 verify(edge[0] < boundary && edge[0] + edge[2] > boundary, "I16/POP3: actual target spans covered and exposed geometry");
                 const exposedX = boundary - edge[0] + (edge[0] + edge[2] - boundary) / 2;
                 mouseClick(about, exposedX, about.height / 2);
@@ -317,6 +330,11 @@ TestCase {
             rendered();
             const covered = rect(about);
             const movedStrip = rect(host);
+            console.log("POP3_GEOMETRY_COVERED", JSON.stringify({
+                window: [window.width, window.height],
+                target: covered,
+                strip: movedStrip
+            }));
             verify(covered[0] >= movedStrip[0] && covered[0] + covered[2] <= movedStrip[0] + movedStrip[2], "I16/POP3: actual resize moves the same Home target fully under the strip");
             verify(focused === about, "I16/POP3: geometry witness concerns the same actual focused QObject");
             tryVerify(() => !about.activeFocus, 500, "I16/POP3: geometry changes re-evaluate covered keyboard eligibility");
