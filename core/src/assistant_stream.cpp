@@ -22,8 +22,10 @@ struct OpenAiStream::State {
     std::string exception_diagnostic(const std::exception& error) const {
         // Accessor errors use app-owned field names. Preserve only exact known
         // forms; an arbitrary exception message may contain tool/user content.
+        // Include names passed indirectly through identifier/index and at/get,
+        // as well as public text, refusal and function-argument delta fields.
         const std::string_view supplied(error.what());
-        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "part", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id"}) {
+        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "item", "part", "delta", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id"}) {
             const auto missing = std::string("report JSON: no member '") + field + "'";
             if (supplied == missing) return diagnostic(missing);
             for (const char* expected : {"a boolean", "a number", "a string", "an array", "an object"}) {

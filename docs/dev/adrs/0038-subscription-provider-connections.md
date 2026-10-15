@@ -122,3 +122,10 @@ emitting events. Both typed refusals and sanitized decoder exceptions use this p
 categories, redaction and error-byte cap remain unchanged. An incomplete finish without a prior feed
 failure retains its existing interrupted result. Constructing or copying the failure can still allocate;
 this is first-cause preservation, not an allocation-failure delivery guarantee or live-chat compatibility fix.
+
+Known-field decoder diagnostics cover direct and helper-mediated accessors, including item/part
+containers and delta payloads for public text, refusal, reasoning and function arguments. Only exact
+missing-member or expected-type errors for fixed app-owned field names are retained; arbitrary keys,
+values and exception strings still receive a generic sanitized reason. The first-cause cache preserves
+that same bounded reason through later feed/finish. Acceptance, execution and resource categories do
+not change, and this does not identify the live omitted item or complete the broader diagnostic work.
