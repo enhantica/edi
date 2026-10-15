@@ -8,15 +8,40 @@ import edi.app
 AppDialog {
     id: dialog
     required property AssistantViewModel assistant
-    title: qsTr("Connect your ChatGPT subscription")
-    contentWidth: AppSizes.unit * 32
-    contentHeight: explanation.implicitHeight
+    title: assistant.connected ? qsTr("Approve outgoing project context") : qsTr("Connect your ChatGPT subscription")
+    contentWidth: AppSizes.unit * 40
+    contentHeight: content.implicitHeight
     standardButtons: Dialog.Ok | Dialog.Cancel
     onAccepted: assistant.signIn()
-    EaElements.Label {
-        id: explanation
+    Column {
+        id: content
         width: dialog.contentWidth
-        wrapMode: Text.Wrap
-        text: qsTr("Continue in OpenAI’s sign-in page using your own ChatGPT account. Your messages and selected project metadata will be sent to OpenAI. Project changes still require an approved plan. Edi stores this connection privately on this computer; credentials do not travel with your project. Subscription availability and limits depend on your account.")
+        spacing: AppSizes.unit
+        EaElements.Label {
+            width: parent.width
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            text: qsTr("Your messages and the project context below will be sent to OpenAI. Inspect the actual parameter paths, values, units, free flags and diagnostics before continuing. Files and attachments are not sent in this slice. Project changes require your approved plan. Edi stores its connection privately on this computer; credentials do not travel with the project. Subscription availability and limits depend on your account.")
+        }
+        ScrollView {
+            width: parent.width
+            height: AppSizes.unit * 20
+            clip: true
+            TextArea {
+                objectName: "assistant.contextPreview"
+                text: dialog.assistant.contextPreview
+                textFormat: TextEdit.PlainText
+                readOnly: true
+                selectByMouse: true
+                wrapMode: TextEdit.WrapAnywhere
+                Accessible.name: qsTr("Actual outgoing project context")
+            }
+        }
+        EaElements.Label {
+            width: parent.width
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            text: dialog.assistant.connected ? qsTr("Approve this scope to continue. A changed scope requires another inspection.") : qsTr("Continue in OpenAI’s own sign-in page using your ChatGPT account. No API key is requested.")
+        }
     }
 }

@@ -30,6 +30,7 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             EaElements.Label {
+            textFormat: Text.PlainText
                 text: qsTr("Assistant")
                 font.bold: true
                 Layout.fillWidth: true
@@ -51,7 +52,17 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             EaElements.Button {
+                id: connectionButton
                 objectName: "assistant.connection"
+                contentItem: EaElements.Label {
+                    text: connectionButton.text
+                    textFormat: Text.PlainText
+                    font: connectionButton.font
+                    color: connectionButton.foregroundColor()
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
                 Layout.fillWidth: true
                 text: panel.assistant.connectionLabel
                 onClicked: connectionDialog.open()
@@ -68,6 +79,24 @@ Rectangle {
             Layout.fillWidth: true
             EaElements.ComboBox {
                 id: models
+                textFormat: Text.PlainText
+                currentIndex: {
+                    const count = panel.assistant.models.count;
+                    for (let i = 0; i < count; ++i)
+                        if (panel.assistant.models.text(i, "id") === panel.assistant.selectedModel)
+                            return i;
+                    return -1;
+                }
+                delegate: EaElements.MenuItem {
+                    required property var model
+                    required property int index
+                    width: models.width
+                    height: EaStyle.Sizes.comboBoxHeight
+                    text: model.displayName
+                    textFormat: Text.PlainText
+                    enabled: model.available
+                    highlighted: models.highlightedIndex === index
+                }
                 objectName: "assistant.model"
                 Layout.fillWidth: true
                 model: panel.assistant.models
@@ -77,15 +106,19 @@ Rectangle {
                 onActivated: index => panel.assistant.selectedModel = panel.assistant.models.text(index, "id")
             }
             EaElements.ComboBox {
+                id: efforts
+                textFormat: Text.PlainText
+                currentIndex: panel.assistant.availableEfforts.indexOf(panel.assistant.selectedEffort)
                 objectName: "assistant.effort"
                 Layout.preferredWidth: AppSizes.unit * 7
-                model: [qsTr("Auto")].concat(panel.assistant.availableEfforts)
+                model: panel.assistant.availableEfforts
                 enabled: panel.assistant.connected && !panel.assistant.canCancel
                 Accessible.name: qsTr("Reasoning effort")
-                onActivated: index => panel.assistant.selectedEffort = index === 0 ? "" : panel.assistant.availableEfforts[index - 1]
+                onActivated: index => panel.assistant.selectedEffort = panel.assistant.availableEfforts[index]
             }
         }
         EaElements.Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: !panel.assistant.connected
             wrapMode: Text.Wrap
@@ -105,6 +138,8 @@ Rectangle {
                 width: conversation.width
                 kind: model.kind
                 text: model.text
+                payload: model.payload
+                status: model.status
             }
             onCountChanged: positionViewAtEnd()
             ScrollBar.vertical: ScrollBar {}
@@ -122,10 +157,17 @@ Rectangle {
             assistant: panel.assistant
         }
         EaElements.Label {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: panel.assistant.lastError.length > 0
             text: panel.assistant.lastError
             wrapMode: Text.Wrap
+        }
+        EaElements.Button {
+            Layout.fillWidth: true
+            visible: panel.assistant.connected && panel.assistant.contextConsentRequired
+            text: qsTr("Inspect outgoing project context")
+            onClicked: connectionDialog.open()
         }
         AssistantComposer {
             id: composer

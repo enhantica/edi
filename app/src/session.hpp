@@ -15,6 +15,9 @@
 #include "row_table_model.hpp"
 #include "assistant_view_model.hpp"
 
+class QQmlEngine;
+class QJSEngine;
+
 namespace edi_app {
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
@@ -90,7 +93,11 @@ class Session : public QObject {
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
 
    public:
-    explicit Session(QObject* parent = nullptr);
+    explicit Session(QObject* parent);
+    static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
+#ifndef __EMSCRIPTEN__
+    Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr);
+#endif
     ~Session() override;
 
     ProjectViewModel* project() const { return project_; }
@@ -153,6 +160,8 @@ class Session : public QObject {
     void setLastError(const QString& error);
 
     ProjectViewModel* project_ = nullptr;
+    friend void configure_engine(QQmlEngine&, std::unique_ptr<Session>);
+    bool engine_bound_ = false;
     AssistantViewModel* assistant_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;

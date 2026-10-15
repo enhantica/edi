@@ -17,7 +17,8 @@ Column {
         if (!assistant.connected || assistant.canCancel || editor.text.trim().length === 0)
             return;
         assistant.send(editor.text);
-        editor.clear();
+        if (assistant.lastError.length === 0)
+            editor.clear();
     }
     ScrollView {
         width: parent.width

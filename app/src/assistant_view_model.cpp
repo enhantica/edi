@@ -11,11 +11,14 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QUuid>
+#include <optional>
+#include <stdexcept>
 
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #ifndef __EMSCRIPTEN__
 #include "chatgpt_connection.hpp"
+#include "connection_services.hpp"
 #endif
 
 namespace edi_app {
@@ -58,6 +61,9 @@ struct AssistantViewModel::State {
     std::uint64_t generation = 0;
     QTimer timer{&owner};
     QString history_path;
+    QByteArray consented_context;
+    bool archive_refused = false;
+    using Limits = edi::assistant::Limits;
     QVariantMap observed;
     void notify() {
         auto property = [this](const QString& name, const auto& value, auto signal) {
@@ -75,25 +81,52 @@ struct AssistantViewModel::State {
         property("activeJobId", owner.activeJobId(), &AssistantViewModel::activeJobIdChanged);
         property("canCancel", owner.canCancel(), &AssistantViewModel::canCancelChanged);
         property("lastError", owner.lastError(), &AssistantViewModel::lastErrorChanged);
+        property("contextPreview", owner.contextPreview(), &AssistantViewModel::contextPreviewChanged);
+        property("contextConsentRequired", owner.contextConsentRequired(), &AssistantViewModel::contextPreviewChanged);
     }
-    explicit State(AssistantViewModel& vm) : owner(vm) {
+    explicit State(AssistantViewModel& vm) : owner(vm) { initialize(); }
+#ifndef __EMSCRIPTEN__
+    State(AssistantViewModel& vm, edi::assistant::native::NativeDependencies dependencies) : owner(vm) {
+        edi::assistant::native::validate_dependencies(dependencies);
+        initialize(std::move(dependencies));
+    }
+    void initialize(std::optional<edi::assistant::native::NativeDependencies> dependencies = {}) {
+#else
+    void initialize() {
+#endif
         idle_worker = std::make_unique<edi::work::Worker>([this](edi::work::Delivery delivery) {
             QMetaObject::invokeMethod(&owner, std::move(delivery), Qt::QueuedConnection);
         });
         history_path = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/history.json";
         QFile saved(history_path);
-        if (saved.open(QIODevice::ReadOnly) && saved.size() <= 1024 * 1024) history = QJsonDocument::fromJson(saved.readAll()).array();
+        if (QFileInfo::exists(history_path)) {
+            QJsonParseError parsing;
+            if (!saved.open(QIODevice::ReadOnly) || saved.size() > static_cast<qint64>(Limits::ui_history_bytes)) archive_refused = true;
+            else {
+                const auto bytes = saved.read(static_cast<qint64>(Limits::ui_history_bytes) + 1);
+                const auto document = QJsonDocument::fromJson(bytes, &parsing);
+                archive_refused = bytes.size() > static_cast<qint64>(Limits::ui_history_bytes) || parsing.error != QJsonParseError::NoError || !document.isArray() || document.array().size() > static_cast<qsizetype>(Limits::ui_messages);
+                if (!archive_refused) {
+                    for (const auto& row : document.array()) if (!row.isObject() || !row.toObject().value("text").isString() || !row.toObject().value("kind").isString()) archive_refused = true;
+                    if (!archive_refused) history = document.array();
+                }
+            }
+            if (archive_refused) error = QObject::tr("Saved assistant history could not be loaded within its limits. The file is preserved; clear history explicitly to start again.");
+        }
         messages.assign(history);
 #ifndef __EMSCRIPTEN__
-        connection = std::make_unique<edi::assistant::native::ChatGptConnection>([this](const std::string& text) {
-            QMetaObject::invokeMethod(&owner, [this, text] {
-                if (!controller) return;
+        const auto sink = [this](const std::string& text) {
+            const auto incoming_generation = generation;
+            QMetaObject::invokeMethod(&owner, [this, text, incoming_generation] {
+                if (!controller || incoming_generation != generation) return;
                 native = object(connection->state());
                 const auto reply = controller->provider_event(text);
-                if (!reply.ok && object(text).value("type") != "turn_finished") error = object(reply.value).value("message").toString();
+                if (!reply.ok) error = object(reply.value).value("message").toString();
                 sync();
             }, Qt::QueuedConnection);
-        });
+        };
+        if (dependencies) connection = std::make_unique<edi::assistant::native::ChatGptConnection>(sink, std::move(*dependencies));
+        else connection = std::make_unique<edi::assistant::native::ChatGptConnection>(sink);
 #endif
         timer.setInterval(200);
         QObject::connect(&timer, &QTimer::timeout, &owner, [this] {
@@ -102,33 +135,45 @@ struct AssistantViewModel::State {
         });
         timer.start();
     }
-    void append(const QString& kind, const QString& text, const Object& payload = {}) {
-        history.append(Object{{"id", QUuid::createUuid().toString(QUuid::WithoutBraces)}, {"kind", kind},
-                              {"text", text}, {"status", "completed"}, {"payload", payload}});
-        while (QJsonDocument(history).toJson(QJsonDocument::Compact).size() > 1024 * 1024 && history.size() > 1) history.removeFirst();
-        messages.assign(history); persist();
+    std::uint64_t archive_size(const QJsonArray& rows) const {
+        return static_cast<std::uint64_t>(QJsonDocument(rows).toJson(QJsonDocument::Compact).size());
+    }
+    bool admit(const QJsonArray& next) {
+        if (archive_refused || next.size() > static_cast<qsizetype>(Limits::ui_messages) || archive_size(next) > Limits::ui_history_bytes) {
+            error = QObject::tr("Assistant history capacity is unavailable. Existing history and project state are preserved.");
+            return false;
+        }
+        return true;
+    }
+    bool append(const QString& kind, const QString& text, const Object& payload = {}, const QString& row_status = "completed") {
+        auto next = history;
+        next.append(Object{{"id", QUuid::createUuid().toString(QUuid::WithoutBraces)}, {"kind", kind},
+                           {"text", text}, {"status", row_status}, {"payload", payload}});
+        if (!admit(next)) return false;
+        history = std::move(next); messages.assign(history); persist(); return true;
     }
     void persist() {
+        if (archive_refused) return;
+        const auto bytes = QJsonDocument(history).toJson(QJsonDocument::Compact);
         QDir().mkpath(QFileInfo(history_path).absolutePath());
         QSaveFile file(history_path);
-        if (file.open(QIODevice::WriteOnly)) {
-            file.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
-            file.write(QJsonDocument(history).toJson(QJsonDocument::Compact)); file.commit();
-        }
+        if (!file.open(QIODevice::WriteOnly) || !file.setPermissions(QFile::ReadOwner | QFile::WriteOwner) ||
+            file.write(bytes) != bytes.size() || !file.commit()) error = QObject::tr("Assistant history could not be saved; the current conversation remains visible.");
     }
     void event(const std::string& input) {
         const Object value = object(input); const auto type = value.value("type").toString();
         if (type == "message_delta") {
-            if (!history.isEmpty() && history.last().toObject().value("kind") == "assistant") {
+            if (!history.isEmpty() && history.last().toObject().value("kind") == "assistant" && history.last().toObject().value("payload").toObject().value("turn_id") == value.value("turn_id") && history.last().toObject().value("payload").toObject().value("request_id") == value.value("request_id")) {
                 auto last = history.last().toObject(); last["text"] = last.value("text").toString() + value.value("text").toString();
-                history.replace(history.size() - 1, last); messages.assign(history); persist();
-            } else append("assistant", value.value("text").toString());
+                auto next = history; next.replace(next.size() - 1, last); if (admit(next)) { history = std::move(next); messages.assign(history); persist(); } else if (controller) controller->cancel();
+            } else if (!append("assistant", value.value("text").toString(), value) && controller) controller->cancel();
         } else if (type == "plan_proposed") { plan = value.value("plan").toObject(); append("plan", plan.value("summary").toString(), plan); }
         else if (type == "plan_approved") plan = {};
         else if (type == "question") { question = value.value("question").toObject(); append("question", question.value("text").toString(), question); }
-        else if (type == "question_answered") question = {};
+        else if (type == "question_answered" || type == "question_invalidated") question = {};
         else if (type == "tool_result") {
-            append("tool", value.value("ok").toBool() ? QObject::tr("Project tool completed") : QObject::tr("Project tool refused"), value);
+            const bool pending = value.value("pending").toBool();
+            append("tool", pending ? QObject::tr("Project tool running") : (value.value("ok").toBool() ? QObject::tr("Project tool completed") : QObject::tr("Project tool refused")), value, pending ? "running" : (value.value("ok").toBool() ? "completed" : "refused"));
         } else if (type == "job_started") append("tool", QObject::tr("Refinement trial running"), value);
         else if (type == "trial_finished") append("trial", value.value("result").toObject().value("reason").toString(), value);
         else if (type == "error") error = value.value("message").toString();
@@ -145,10 +190,19 @@ struct AssistantViewModel::State {
         QJsonArray choices;
         for (const auto& value : native.value("models").toArray()) {
             const auto item = value.toObject(); choices.append(Object{{"id", item.value("id")},
-                {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", true}});
+                {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", item.value("available").toBool()}});
         }
         models.assign(choices);
-        if (model.isEmpty() && !choices.isEmpty()) model = choices.first().toObject().value("id").toString();
+        bool selected_available = false;
+        for (const auto& choice : choices) if (choice.toObject().value("id") == model && choice.toObject().value("available").toBool()) selected_available = true;
+        if (!selected_available) {
+            model.clear(); effort.clear();
+            for (const auto& choice : choices) if (choice.toObject().value("available").toBool()) { model = choice.toObject().value("id").toString(); break; }
+        }
+        const auto efforts = owner.availableEfforts();
+        if (!efforts.contains(effort)) effort = efforts.contains("medium") ? QString("medium") : (efforts.isEmpty() ? QString() : efforts.first());
+        if (core.value("pending_plan_id").toString().isEmpty()) plan = {};
+        if (core.value("pending_question_id").toString().isEmpty()) question = {};
         if (!native.value("last_error").toString().isEmpty()) error = native.value("last_error").toString();
         notify();
     }
@@ -161,7 +215,11 @@ struct AssistantViewModel::State {
         sync(); notify();
     }
     void bind(ProjectViewModel* next) {
+#ifndef __EMSCRIPTEN__
+        if (controller && connection) connection->cancel(core.value("active_turn_id").toString().toStdString());
+#endif
         ++generation;
+        consented_context.clear();
         if (project) {
             QObject::disconnect(project, nullptr, &owner, nullptr);
             QObject::disconnect(project->fit(), nullptr, &owner, nullptr);
@@ -179,6 +237,11 @@ struct AssistantViewModel::State {
             QMetaObject::invokeMethod(&owner, [this, text, scope] {
                 if (scope != generation) return;
 #ifndef __EMSCRIPTEN__
+                const auto requested_context = QJsonDocument(object(text).value("context").toObject()).toJson(QJsonDocument::Compact);
+                if (requested_context != consented_context) {
+                    error = QObject::tr("Project context changed. Inspect and approve the current outgoing context before continuing.");
+                    controller->cancel(); sync(); return;
+                }
                 const auto reply = connection->send(text);
                 if (!reply.ok) {
                     error = object(reply.value).value("message").toString();
@@ -199,14 +262,22 @@ struct AssistantViewModel::State {
         }
 #ifndef __EMSCRIPTEN__
         const auto state = object(connection->state());
+        QJsonArray capabilities;
+        for (const auto& row : state.value("models").toArray()) {
+            auto item = row.toObject(); if (item.take("available").toBool()) capabilities.append(item);
+        }
         if (state.value("status") == "ready") controller->provider_event(json(Object{{"schema", "edi.assistant/1"},
-            {"type", "connection"}, {"connection_id", state.value("connection_id")}, {"status", "ready"}, {"capabilities", state.value("models")}}));
+            {"type", "connection"}, {"connection_id", state.value("connection_id")}, {"status", "ready"}, {"capabilities", capabilities}}));
 #endif
         sync(); notify();
     }
 };
 
 AssistantViewModel::AssistantViewModel(QObject* parent) : QObject(parent), state_(std::make_unique<State>(*this)) { state_->bind(nullptr); }
+#ifndef __EMSCRIPTEN__
+AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent)
+    : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies))) { state_->bind(nullptr); }
+#endif
 AssistantViewModel::~AssistantViewModel() = default;
 QString AssistantViewModel::state() const { return state_->core.value("state").toString(); }
 bool AssistantViewModel::connected() const { return state_->native.value("status") == "ready"; }
@@ -227,15 +298,31 @@ QVariantMap AssistantViewModel::pendingQuestion() const { return state_->questio
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
 bool AssistantViewModel::canCancel() const { return state_->core.value("can_cancel").toBool(); }
 QString AssistantViewModel::lastError() const { return state_->error; }
-void AssistantViewModel::setSelectedModel(const QString& model) { if (state_->model != model) { state_->model = model; state_->effort.clear(); state_->notify(); } }
-void AssistantViewModel::setSelectedEffort(const QString& effort) { if (state_->effort != effort) { state_->effort = effort; state_->notify(); } }
+QString AssistantViewModel::contextPreview() const { return state_->controller ? QString::fromStdString(state_->controller->context()) : QString(); }
+bool AssistantViewModel::contextConsentRequired() const {
+    return !state_->controller || QJsonDocument(object(state_->controller->context())).toJson(QJsonDocument::Compact) != state_->consented_context;
+}
+void AssistantViewModel::setSelectedModel(const QString& model) {
+    for (const auto& row : state_->native.value("models").toArray()) if (row.toObject().value("id") == model && row.toObject().value("available").toBool()) {
+        if (state_->model != model) { state_->model = model; state_->effort.clear(); state_->sync(); } return;
+    }
+    state_->error = tr("This model is unavailable."); state_->notify();
+}
+void AssistantViewModel::setSelectedEffort(const QString& effort) {
+    if (!availableEfforts().contains(effort)) { state_->error = tr("This reasoning effort is unavailable."); state_->notify(); return; }
+    if (state_->effort != effort) { state_->effort = effort; state_->notify(); }
+}
 void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(project); }
 void AssistantViewModel::send(const QString& text) {
     if (text.trimmed().isEmpty()) return;
-    state_->append("user", text);
+    if (contextConsentRequired()) { state_->error = tr("Inspect and approve the outgoing project context before sending."); state_->notify(); return; }
+    auto prospective = state_->history;
+    prospective.append(Object{{"id", QUuid::createUuid().toString(QUuid::WithoutBraces)}, {"kind", "user"}, {"text", text}, {"status", "completed"}, {"payload", Object{}}});
+    if (!state_->admit(prospective)) { state_->notify(); return; }
     Object command{{"type", "message"}, {"text", text}, {"connection_id", state_->native.value("connection_id")}, {"model", state_->model}};
     if (!state_->effort.isEmpty()) command["effort"] = state_->effort;
     state_->command(command);
+    if (state_->error.isEmpty()) state_->append("user", text);
 }
 void AssistantViewModel::approvePlan(const QString& id) {
     const auto revision = state_->controller->revision();
@@ -250,6 +337,11 @@ void AssistantViewModel::cancel() {
     state_->controller->cancel(); state_->sync(); state_->notify();
 }
 void AssistantViewModel::signIn() {
+    if (!state_->controller) return;
+    const auto context = object(state_->controller->context());
+    if (context.contains("error")) { state_->error = tr("Project context exceeds the assistant limit; nothing was sent."); state_->notify(); return; }
+    state_->consented_context = QJsonDocument(context).toJson(QJsonDocument::Compact);
+    if (connected()) { state_->error.clear(); state_->notify(); return; }
 #ifndef __EMSCRIPTEN__
     const auto reply = state_->connection->sign_in();
     state_->error = reply.ok ? QString() : object(reply.value).value("message").toString();
@@ -267,6 +359,6 @@ void AssistantViewModel::signOut() {
 void AssistantViewModel::clearHistory() {
     if (canCancel()) return;
     state_->bind(state_->project);
-    state_->history = {}; state_->messages.assign({}); state_->persist(); state_->notify();
+    state_->archive_refused = false; state_->history = {}; state_->error.clear(); state_->messages.assign({}); state_->persist(); state_->notify();
 }
 }  // namespace edi_app

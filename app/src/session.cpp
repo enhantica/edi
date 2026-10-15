@@ -110,6 +110,12 @@ void WarningListModel::recount() {
 Session::Session(QObject* parent)
     : QObject(parent), assistant_(new AssistantViewModel(this)), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
 
+#ifndef __EMSCRIPTEN__
+Session::Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent)
+    : QObject(parent), assistant_(new AssistantViewModel(std::move(dependencies), this)),
+      examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {}
+#endif
+
 Session::~Session() { assistant_->setProject(nullptr); }
 
 bool Session::openProject(const QUrl& directory) {

@@ -80,3 +80,12 @@ that the metadata-bearing persisted grant fits. The common save path and actual 
 size excess through the existing typed resource refusal before I/O. Ordinary write/permission/lock failures
 retain their separate failure category, and sign-out still reports unconfirmed erasure truthfully. This does
 not establish full pre-growth or rotation-recovery atomicity beyond the reviewed known-size boundary.
+
+The partial app foundation now composes the default native connection through production main's
+`configure_engine(engine)` → Session → AssistantViewModel chain. The ordinary ChatGptConnection constructor
+supplies production Qt HTTP/browser/protected-record/clock services; the offline dependency constructor is
+native-only and is not the preview launch. The production CMake executable target is `edi_app`, not the Python
+extension or an independent test host. Its current local build prerequisite is the diagnostic integrated SDK;
+the committed SDK pin and official CI qualification remain unresolved. Building this draft branch alone is
+not a promise of a verified preview: VM terminal retention/failure cards, actual production smoke and live
+subscription verification remain unfinished under ADR0041.

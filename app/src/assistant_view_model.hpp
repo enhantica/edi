@@ -9,6 +9,9 @@
 
 #include "edi/assistant.hpp"
 #include "row_table_model.hpp"
+#ifndef __EMSCRIPTEN__
+#include "chatgpt_connection.hpp"
+#endif
 
 namespace edi_app {
 class ProjectViewModel;
@@ -31,9 +34,14 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
     Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
+    Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
 
    public:
     explicit AssistantViewModel(QObject* parent = nullptr);
+#ifndef __EMSCRIPTEN__
+    AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr);
+#endif
     ~AssistantViewModel() override;
     QString state() const;
     bool connected() const;
@@ -48,6 +56,8 @@ class AssistantViewModel : public QObject {
     QString activeJobId() const;
     bool canCancel() const;
     QString lastError() const;
+    QString contextPreview() const;
+    bool contextConsentRequired() const;
     void setSelectedModel(const QString& model);
     void setSelectedEffort(const QString& effort);
     /// Attach the live project through its existing worker and edit door; nullptr keeps a conversational session.
@@ -72,6 +82,7 @@ class AssistantViewModel : public QObject {
     void activeJobIdChanged();
     void canCancelChanged();
     void lastErrorChanged();
+    void contextPreviewChanged();
 
    private:
     struct State;

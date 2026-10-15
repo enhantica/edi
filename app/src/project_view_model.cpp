@@ -1969,6 +1969,7 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change) {
         setLastError(message);
         return message;
     }
+    emit projectEdited();
     if (scan_template_) {
         edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
     }
@@ -2182,6 +2183,9 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         setLastError(message);
         return message;
     }
+    // Saving may round/adopt values or partially advance files even if later readback refuses.
+    // Retire assistant authority before crossing that existing persistence boundary.
+    emit projectEdited();
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
     try {
