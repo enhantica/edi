@@ -89,61 +89,6 @@ Popup {
                     onClicked: panel.assistant.signOut()
                 }
             }
-            RowLayout {
-                Layout.fillWidth: true
-                EaElements.ComboBox {
-                    id: models
-                    textFormat: Text.PlainText
-                    currentIndex: {
-                        const count = panel.assistant.models.count;
-                        for (let i = 0; i < count; ++i)
-                            if (panel.assistant.models.text(i, "id") === panel.assistant.selectedModel)
-                                return i;
-                        return -1;
-                    }
-                    delegate: EaElements.MenuItem {
-                        required property var model
-                        required property int index
-                        width: models.width
-                        height: EaStyle.Sizes.comboBoxHeight
-                        text: model.displayName
-                        textFormat: Text.PlainText
-                        enabled: model.available
-                        highlighted: models.highlightedIndex === index
-                    }
-                    objectName: "assistant.model"
-                    Layout.fillWidth: true
-                    model: panel.assistant.models
-                    textRole: "displayName"
-                    enabled: panel.assistant.connected && !panel.assistant.canCancel
-                    Accessible.name: qsTr("Assistant model")
-                    onActivated: index => panel.assistant.selectedModel = panel.assistant.models.text(index, "id")
-                }
-                EaElements.ComboBox {
-                    id: efforts
-                    textFormat: Text.PlainText
-                    readonly property var effortValues: [""].concat(panel.assistant.availableEfforts)
-                    function effortLabel(value) {
-                        switch (value) {
-                        case "": return qsTr("Provider default");
-                        case "none": return qsTr("None");
-                        case "low": return qsTr("Low");
-                        case "medium": return qsTr("Medium");
-                        case "high": return qsTr("High");
-                        case "xhigh": return qsTr("Extra high");
-                        case "max": return qsTr("Maximum");
-                        default: return qsTr("Unavailable");
-                        }
-                    }
-                    currentIndex: effortValues.indexOf(panel.assistant.selectedEffort)
-                    objectName: "assistant.effort"
-                    Layout.preferredWidth: AppSizes.unit * 7
-                    model: effortValues.map(value => effortLabel(value))
-                    enabled: panel.assistant.connected && !panel.assistant.canCancel
-                    Accessible.name: qsTr("Reasoning effort")
-                    onActivated: index => panel.assistant.selectedEffort = effortValues[index]
-                }
-            }
             EaElements.Label {
                 textFormat: Text.PlainText
                 Layout.fillWidth: true

@@ -12,17 +12,31 @@ Rectangle {
     required property string text
     property var payload: ({})
     property string status: ""
-    color: kind === "user" ? EaStyle.Colors.contentBackground : EaStyle.Colors.appBarBackground
-    radius: AppSizes.unit * 0.5
-    implicitHeight: content.implicitHeight + AppSizes.unit * 1.5
+    color: "transparent"
+    implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
+    TextMetrics {
+        id: userTextMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: row.kind === "user" ? row.text : ""
+    }
+    Rectangle {
+        id: bubble
+        x: row.kind === "user" ? row.width - width : 0
+        width: row.kind === "user" ? Math.min(row.width - AppSizes.unit, Math.max(AppSizes.unit * 3, userTextMetrics.advanceWidth + AppSizes.unit * 2)) : row.width
+        height: row.implicitHeight
+        color: row.kind === "user" ? EaStyle.Colors.contentBackground : "transparent"
+        radius: row.kind === "user" ? AppSizes.unit * 0.75 : 0
+    }
     Column {
         id: content
-        x: AppSizes.unit
-        y: AppSizes.unit * 0.75
-        width: parent.width - AppSizes.unit * 2
+        x: bubble.x + (row.kind === "user" ? AppSizes.unit : 0)
+        y: row.kind === "user" ? AppSizes.unit * 0.75 : AppSizes.unit * 0.25
+        width: bubble.width - (row.kind === "user" ? AppSizes.unit * 2 : 0)
         spacing: AppSizes.unit * 0.4
         EaElements.Label {
-            text: row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")
+            visible: row.kind !== "user" && row.kind !== "assistant"
+            text: qsTr("Activity")
             font.bold: true
         }
         EaElements.Label {

@@ -140,3 +140,18 @@ an actual valid focus target or app-bar opener; Qt's automatic dismissal never b
 Draft/history/scientific state remain independent of visibility. Home is reachable without project creation.
 Actual desktop geometry/input/keyboard/scroll/busy/device exercises and captures remain owed; compiling
 or constructing a Popup alone does not establish ready chat, live provider access, CI or SDK qualification.
+
+
+## Observed Classic ChatGPT interior, edi controls
+
+The visual comparison uses actual official Classic macOS reference captures, not generated mockups or a
+claim about the newest unified app. A rounded existing-theme composer contains the actual model/effort
+choices and Send/Stop toolbar; the existing connection control stays honest about the disconnected state.
+Unimplemented attachment actions are absent. Existing submit acknowledgement, model/effort/default/busy,
+cancellation and literal/selectable text paths are retained. User text has a restrained right-aligned
+bubble; public assistant text is plain, without a copied logo or invented rich-content capability.
+
+Comparison A is the committed pre-interior layout; B is compact; C temporarily increases writing space
+using an explicit local QML patch. Normal native dependency rebuilds and actual-window captures identify
+every source/artifact/draft state, then restore only the owned variant patch. No runtime option framework,
+mock VM, fabricated conversation or live provider/scientific success is part of this visual comparison.
