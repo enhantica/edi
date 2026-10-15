@@ -379,3 +379,42 @@ One full-width assistant bottom separator uses existing app-border theme color/t
 Each existing pending steer correlation retains its original thread/expected-turn pair plus one local terminal-retained bit. The bit is set only after that exact thread/turn's completed, interrupted or failed original terminal has passed full validation and durable outcome publication. It does not claim that the pending follow-up executed. The bounded pending-RPC map owns this evidence; account/project/Clear/reconnect failure and retirement clear it with the existing request maps.
 
 An exact previously qualified pre-admission steer refusal can therefore settle only its own retained follow-up even after the original active turn was cleared. It still requires the literal owned response ID, original expected turn, current authenticated thread, actual pending row and nonretiring/nonrevoking authority. A subsequent same-owner turn does not erase the old pending receipt or get cancelled by its refusal. Unknown errors, absent/foreign correlation, changed thread/owner, Stop/account retirement, malformed terminal, failed outcome retention and uncertain delivery preserve the existing fences. No busy check is globally removed, no numeric category alone grants recovery, and no automatic replay/new turn or result is invented.
+
+
+### Compact literal command activity (owner live trial)
+
+Only activity rows whose retained original is `commandExecution` use a compact,
+checkable existing EasyApplication Button. The caption reports Running/Ran plus
+actual status and available numeric exit code; it does not infer a semantic file
+operation or scientific success from shell text. Real refusals without that
+original type keep their complete human explanation. User/error text stays
+literal and assistant prose retains passive Markdown.
+
+Expansion exposes complete admitted command, cwd and available aggregated output
+as separate labelled, selectable PlainText fields. Empty and unavailable output
+are distinct. A bounded scrolling viewport wraps long content; bytes are not
+truncated, independently summarized or accumulated. Technical JSON is secondary
+and formatted only while its own disclosure is open. Canonical VM text/payload,
+IDs/status, history/retention budgets and all execution/approval semantics stay
+unchanged. Disclosure grants no authority and never runs/retries a command.
+
+The Panel passes the actual public row ID. ID changes and ListView pooled/reused
+signals reset expansion, literal selection and detail scrolling so a recycled
+row cannot inherit another activity's disclosure. Actual disclosure press stops
+outer tail following before the height changes; no forced tail reposition is
+performed while a reader inspects details. Existing draft/selection/theme/main
+geometry remain unchanged. Actual narrow/light/dark/reuse/keyboard and tail
+qualification is still required; this source unit does not establish a saved
+artifact handoff, fit/conversion result or full scientific completion.
+
+
+ACT1 lifecycle fidelity: the compact caption reads BOTH the retained original
+item and the normalized public row status. An unfinished original is called
+Running only while its public activity is also in_progress. Interrupted/failed,
+refused or completed enclosing activity with no matching settled command outcome
+is explicitly unconfirmed; it never acquires an invented exit/completion from
+that host lifecycle. A genuinely matching settled original/public status retains
+its actual command status and available exit code. All original fields remain
+available unchanged in disclosure. This same presentation rule covers Stop,
+transport/deadline retirement, sign-out/workspace retirement and archived reload;
+no event emitter or protocol authority is changed.

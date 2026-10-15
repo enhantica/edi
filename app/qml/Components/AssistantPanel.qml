@@ -234,6 +234,12 @@ Popup {
                         text: model.text
                         payload: model.payload
                         status: model.status
+                        rowId: model.id
+                        onDetailsChanging: {
+                            conversation.cancelFlick();
+                            conversation.followsTail = false;
+                            conversation.jumpedUserId = "";
+                        }
                         highlighted: model.kind === "user" && model.id === conversation.jumpedUserId
                     }
                     property bool followsTail: true
