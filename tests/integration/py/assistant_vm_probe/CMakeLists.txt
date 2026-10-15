@@ -24,3 +24,13 @@ target_include_directories(assistant_selected_vm_probe PRIVATE
 target_link_libraries(assistant_selected_vm_probe PRIVATE edi_app_module edi_app_moduleplugin
     edi_assistant_native edi_gui_style edi_gui_globals edi_gui_logic edi_gui_animations
     edi_gui_maintenance edi_gui_elements edi_gui_components Qt6::Test Qt6::Network)
+
+# PRIVATE proposed additional target in existing assistant_vm_probe/CMakeLists.txt.
+# Existing resource/selected targets and their source remain byte-identical.
+qt_add_executable(assistant_preferences_vm_probe preferences_probe.cpp)
+set_target_properties(assistant_preferences_vm_probe PROPERTIES AUTOMOC ON)
+target_include_directories(assistant_preferences_vm_probe PRIVATE
+    "${EDI_SOURCE}/tests/integration/py/assistant_native_probe")
+target_link_libraries(assistant_preferences_vm_probe PRIVATE edi_app_module edi_app_moduleplugin
+    edi_assistant_native edi_gui_style edi_gui_globals edi_gui_logic edi_gui_animations
+    edi_gui_maintenance edi_gui_elements edi_gui_components Qt6::Test Qt6::Network)
