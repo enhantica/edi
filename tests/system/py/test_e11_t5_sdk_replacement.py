@@ -32,6 +32,9 @@ def sdk_world(tmp_path, entry, change):
     app = entry.startswith('app-')
     script = 'app-build.sh' if app else 'core-build.sh'
     shutil.copyfile(ROOT / 'tools/ci' / script, ci / script)
+    identity_helper = ROOT / 'tools/ci/sdk_content_identity.py'
+    if identity_helper.is_file():
+        shutil.copyfile(identity_helper, ci / identity_helper.name)
     (ci / 'crysta-src.sh').write_text('#!/bin/bash\nexit 0\n')
     (ci / 'build-crysta.sh').write_text(
         '#!/bin/bash\nset -eu\n'
