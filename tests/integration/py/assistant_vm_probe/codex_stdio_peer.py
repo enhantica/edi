@@ -134,6 +134,100 @@ def lifetime_output(channel):
     complete()
 
 
+def status_tool(kind, status):
+    value = {'id': 'authority-item', 'type': kind, 'status': status}
+    if kind == 'mcpToolCall':
+        value.update(server='original-offline-server', tool='original-tool', arguments={})
+    elif kind == 'dynamicToolCall':
+        value.update(tool='original-tool', arguments={})
+    else:
+        value.update(tool='wait', senderThreadId=thread_id, receiverThreadIds=[], agentsStates={})
+    return value
+
+
+def gn_remaining_start(case):
+    if case == 'partial-message':
+        publish_item(original_item('agentMessage'))
+        notify(
+            'item/agentMessage/delta',
+            {
+                'threadId': thread_id,
+                'turnId': turn_id,
+                'itemId': 'authority-item',
+                'delta': ' original partial suffix',
+            },
+        )
+        notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+    elif case == 'final-message-snapshot':
+        publish_item(original_item('agentMessage'))
+        final = turn('completed')
+        final['items'] = [original_item('agentMessage')]
+        notify('turn/completed', {'threadId': thread_id, 'turn': final})
+    elif case.startswith('status-'):
+        _, kind, route, status = case.split(':')
+        publish_item(status_tool(kind, 'inProgress'))
+        item = status_tool(kind, status)
+        if status == 'missing':
+            del item['status']
+        final = turn('completed')
+        if route == 'item':
+            publish_item(item, completed=True)
+        else:
+            final['items'] = [item]
+        notify('turn/completed', {'threadId': thread_id, 'turn': final})
+    elif case.startswith('interruption:'):
+        _, kind, outcome = case.split(':')
+        prior = original_item()
+        prior['id'] = 'prior-genuine-final'
+        publish_item(prior)
+        publish_item(prior, completed=True)
+        unfinished = original_item(kind, 'inProgress')
+        publish_item(unfinished)
+        final = turn(outcome)
+        final['items'] = [prior, unfinished]
+        if outcome == 'failed':
+            final['error'] = {'message': 'Original bounded failed turn'}
+        notify('turn/completed', {'threadId': thread_id, 'turn': final})
+    elif case.startswith('progress:'):
+        progress_original(case.split(':')[1])
+    else:
+        publish_item(original_item('agentMessage'))
+
+
+def progress_original(kind):
+    if kind == 'question':
+        ask_original()
+    elif kind == 'command':
+        publish_item(original_item('commandExecution', 'inProgress'))
+    elif kind == 'plan':
+        publish_item({'id': 'authority-item', 'type': 'plan', 'text': 'Original plan'})
+    else:
+        publish_item({'id': 'authority-item', 'type': 'reasoning', 'summary': [], 'content': []})
+
+
+def gn_progress(case):
+    kind = case.split(':')[1]
+    if kind == 'question':
+        return
+    methods = {
+        'command': 'item/commandExecution/outputDelta',
+        'plan': 'item/plan/delta',
+        'summary': 'item/reasoning/summaryTextDelta',
+        'reasoning': 'item/reasoning/textDelta',
+    }
+    params = {
+        'threadId': thread_id,
+        'turnId': turn_id,
+        'itemId': 'authority-item',
+        'delta': 'Original bounded current progress',
+    }
+    if kind == 'summary':
+        params['summaryIndex'] = 0
+    elif kind == 'reasoning':
+        params['contentIndex'] = 0
+    notify(methods[kind], params)
+
+
 def gn_start(request):
     if scenario == 'gn:logout-late-start':
         pending_starts.append(request)
@@ -141,7 +235,9 @@ def gn_start(request):
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
     case = scenario.removeprefix('gn:')
-    if case in {'question-wrong-resolve', 'question-stale-answer'}:
+    if case.startswith('r:'):
+        gn_remaining_start(case[2:])
+    elif case in {'question-wrong-resolve', 'question-stale-answer'}:
         ask_original()
     elif case in {'immutable-duplicate', 'immutable-type', 'immutable-delta'}:
         item = original_item('agentMessage' if case == 'immutable-delta' else 'commandExecution')
@@ -171,14 +267,13 @@ def gn_start(request):
 
 def gn_steer(request):
     case = scenario.removeprefix('gn:')
-    if case == 'steer-missing':
-        reply(request, {})
-        return
-    if case == 'steer-wrong':
-        reply(request, {'turnId': 'unrelated-turn'})
+    if case in {'steer-missing', 'steer-wrong'}:
+        reply(request, {} if case == 'steer-missing' else {'turnId': 'unrelated-turn'})
         return
     reply(request, {'turnId': turn_id})
-    if case.startswith('account-'):
+    if case.startswith('r:progress:'):
+        gn_progress(case[2:])
+    elif case.startswith('account-'):
         mode = case.removeprefix('account-')
         notify('account/updated', {'authMode': None if mode == 'null' else mode})
     elif case == 'missing-request-turn':
@@ -446,6 +541,8 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
+        if scenario == 'gn:r:stop-unsettled':
+            continue  # A genuine unsettled first revoke; no fabricated terminal/ack.
         reply(request, {})
         notify('turn/completed', {'threadId': thread_id, 'turn': turn('interrupted')})
     elif method in {'account/logout', 'account/login/cancel'}:

@@ -12,6 +12,7 @@ import subprocess
 import sys
 from operator import itemgetter
 from pathlib import Path
+from time import monotonic
 
 import pytest
 
@@ -40,7 +41,7 @@ class Generic(prior.Component):
 def generic(monkeypatch, tmp_path):
     actors = []
 
-    def create(scenario='complete'):
+    def create(scenario='complete', *, override='peer'):
         owned = tmp_path / str(len(actors))
         owned.mkdir()
         trace = owned / 'original-client-lines.jsonl'
@@ -49,7 +50,18 @@ def generic(monkeypatch, tmp_path):
         executable = owned / 'codex'
         executable.write_text(f'#!{sys.executable}\n' + PEER.read_text())
         executable.chmod(0o700)
-        monkeypatch.setenv('EDI_CODEX_DEVELOPMENT_EXECUTABLE', str(executable.resolve()))
+        if override == 'peer':
+            selected = str(executable.resolve())
+        elif override == 'relative':
+            selected = 'codex'
+        elif override == 'missing':
+            selected = str(owned / 'missing-original-peer')
+        else:
+            unexecutable = owned / 'nonexecutable-original-peer'
+            unexecutable.write_text('Original harmless nonexecutable fixture')
+            unexecutable.chmod(0o600)
+            selected = str(unexecutable.resolve())
+        monkeypatch.setenv('EDI_CODEX_DEVELOPMENT_EXECUTABLE', selected)
         monkeypatch.setenv('PATH', str(owned) + os.pathsep + os.environ['PATH'])
         monkeypatch.setenv('EDI_TEST_CODEX_PEER_INPUT', str(config))
         monkeypatch.setenv('TMPDIR', str(owned))
@@ -672,3 +684,145 @@ def test_gn3_actual_final_tool_original_remains_a_valid_completion(generic, kind
         'GN3: complete bound original and genuine turn terminal settle without interruption'
     )
     assert len(started_requests(trace)) == 1, 'GN3: final operation control dispatches once'
+
+
+def test_gn3r_partial_assistant_text_is_not_a_final_original(generic):
+    actor, _trace = generic('gn:r:partial-message')
+    connect(actor)
+    actor.command('send_text', text='Original partial assistant completion check')
+    state = settle(actor, lambda value: not value['can_cancel'])
+    assert not any(
+        row.get('kind') == 'assistant' and row.get('status') == 'completed'
+        for row in state['messages']
+    ), 'GN3-R: started text and deltas cannot become final from an empty completed snapshot'
+    assert state['last_error'], 'GN3-R: missing actual final message has truthful interruption'
+
+
+def test_gn3r_actual_final_message_snapshot_is_authoritative(generic):
+    actor, _trace = generic('gn:r:final-message-snapshot')
+    connect(actor)
+    actor.command('send_text', text='Original authoritative message snapshot check')
+    state = settle(actor, lambda value: not value['can_cancel'])
+    assert any(
+        row.get('text') == 'Original immutable text' and row.get('status') == 'completed'
+        for row in state['messages']
+    ), 'GN3-R: a genuine matching final snapshot can supply its actual complete message'
+    assert not state['last_error'], 'GN3-R: actual final snapshot is not refused as partial text'
+
+
+@pytest.mark.parametrize('kind', ['mcpToolCall', 'dynamicToolCall', 'collabAgentToolCall'])
+@pytest.mark.parametrize('route', ['item', 'snapshot'])
+@pytest.mark.parametrize('status', ['inProgress', 'missing'])
+def test_gn3r_status_bearing_tools_require_genuine_final_status(generic, kind, route, status):
+    actor, _trace = generic(f'gn:r:status-:{kind}:{route}:{status}')
+    connect(actor)
+    actor.command('send_text', text='Original status-bearing tool check')
+    state = settle(actor, lambda value: not value['can_cancel'])
+    assert not any(
+        row.get('payload', {}).get('id') == 'authority-item' and row.get('status') == 'completed'
+        for row in state['messages']
+    ), 'GN3-R: missing/inProgress tool status is not final via item or snapshot'
+    assert state['last_error'], 'GN3-R: malformed or unfinished successful tool outcome is refused'
+
+
+@pytest.mark.parametrize('kind', ['mcpToolCall', 'dynamicToolCall', 'collabAgentToolCall'])
+def test_gn3r_real_final_status_tool_remains_a_valid_original(generic, kind):
+    actor, _trace = generic(f'gn:r:status-:{kind}:item:completed')
+    connect(actor)
+    actor.command('send_text', text='Original valid status-bearing final tool')
+    state = settle(actor, lambda value: not value['can_cancel'])
+    row = authority_row(state)
+    assert row and row['status'] == row['payload']['status'] == 'completed', (
+        'GN3-R: genuine final status-bearing original remains complete and untruncated'
+    )
+    assert not state['last_error'], 'GN3-R: valid final tool sibling does not create interruption'
+
+
+@pytest.mark.parametrize('kind', ['commandExecution', 'fileChange'])
+@pytest.mark.parametrize('outcome', ['interrupted', 'failed'])
+def test_gn3r_non_success_snapshot_retains_unfinished_and_already_final_evidence(
+    generic, kind, outcome
+):
+    actor, _trace = generic(f'gn:r:interruption:{kind}:{outcome}')
+    connect(actor)
+    actor.command('send_text', text='Original non-success terminal with unfinished work')
+    state = settle(actor, lambda value: not value['can_cancel'])
+    assert state['connected'], (
+        'GN3-R: valid non-success snapshot settles without rejecting unfinished evidence'
+    )
+    unfinished = authority_row(state)
+    assert unfinished and unfinished['status'] != 'completed', (
+        'GN3-R: enclosing non-success retains unfinished work without invented final success'
+    )
+    assert unfinished['payload']['status'] == 'inProgress', (
+        'GN3-R: actual unfinished payload is preserved despite enclosing interrupted outcome'
+    )
+    complete = next(
+        row
+        for row in state['messages']
+        if row.get('payload', {}).get('id') == 'prior-genuine-final'
+    )
+    assert complete['status'] == 'completed' and complete['payload']['exitCode'] == 0, (
+        'GN3-R: prior genuine complete result survives a sibling interrupted/failed snapshot'
+    )
+
+
+@pytest.mark.parametrize('kind', ['command', 'plan', 'summary', 'reasoning', 'question'])
+def test_gn4r_current_progress_siblings_remain_valid_and_reasoning_stays_private(generic, kind):
+    actor, trace = generic('gn:r:progress:' + kind)
+    connect(actor)
+    actor.command('send_text', text='Original current progress control')
+    settle(actor, itemgetter('can_cancel'))
+    actor.command('send_text', text='Original current progress trigger')
+    state = actor.last['vm']
+    assert state['can_cancel'] and state['connected'] and not state['last_error'], (
+        'GN4-R: bounded bound command/plan/reasoning/question progress is valid active work'
+    )
+    if kind in {'summary', 'reasoning'}:
+        assert not any(
+            'Original bounded current progress' in row.get('text', '') for row in state['messages']
+        ), 'GN4-R: processing current reasoning progress does not publish its private text'
+    if kind == 'question':
+        assert state['pending_question'], 'GN4-R: genuine current user-input request is presented'
+    assert len(started_requests(trace)) == 1, 'GN4-R: progress never dispatches another turn'
+    # This short acceptance control does not prove renewal at the real120s idle deadline.
+
+
+def test_gn4r_repeated_stop_does_not_restart_first_owned_revoke_deadline(generic):
+    actor, trace = generic('gn:r:stop-unsettled')
+    connect(actor)
+    actor.command('send_text', text='Original unacknowledged Stop request')
+    settle(actor, itemgetter('can_cancel'))
+    identity = live_original_peer(actor)
+    began = monotonic()
+    actor.command('cancel')
+    assert matching_interrupt(trace), 'GN4-R SETUP: first Stop actually requests the original turn'
+    for _ in range(35):
+        actor.command('inspect')
+    assert monotonic() - began < 2, (
+        'GN4-R SETUP: repeated Stop occurs inside original revoke interval'
+    )
+    actor.command('cancel')
+    for _ in range(60):
+        if not original_peer_is_live(identity) or monotonic() - began >= 2.7:
+            break
+        actor.command('inspect')
+    assert not original_peer_is_live(identity) and not actor.last['vm']['can_cancel'], (
+        'GN4-R: duplicate Stop cannot extend the original fixed2s revoke through another interval'
+    )
+    assert len(started_requests(trace)) == 1, 'GN4-R: repeated Stop cannot replay original work'
+
+
+@pytest.mark.parametrize('override', ['relative', 'missing', 'nonexecutable'])
+def test_explicit_invalid_development_override_refuses_without_fallback(generic, override):
+    # Run only after static/cohort proof that invalid explicit selection is checked
+    # before any app-owned runtime launch. Never qualify this by launching Codex.
+    actor, trace = generic(override=override)
+    actor.command('sign_in')
+    state = settle(actor, lambda value: bool(value['last_error']))
+    assert not state['connected'] and len(state['last_error'].encode()) <= 512, (
+        'PACKAGE: invalid explicit absolute-executable contract has bounded visible refusal'
+    )
+    assert not records(trace) and not actor.peer_pid_file.exists(), (
+        'PACKAGE: invalid explicit override cannot silently launch the valid owned PATH fallback'
+    )
