@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T08:57:06Z
+# measured_utc = 2026-10-15T09:38:03Z
 #
-# Recorded from: seq26 R1 currentf0af public-Sink diagnostic-preparation fence: eight qualified allocation/length reds, eleven actual ordinary/cachecopy/natural refusal/success controls
-# Collected tests: 13899; with a reported duration: 7636
-# Module-scoped fixture costs recorded: 61
+# Recorded from: seq29 actual coherent source44 unfixed real-QML consent baseline: five reached Q2/Q3 product reds, two actual pointer Cancel/busy-refusal controls
+# Collected tests: 13906; with a reported duration: 7638
+# Module-scoped fixture costs recorded: 62
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13566
+# inventory_python = 13573
 # inventory_cpp = 333
-# inventory_measured = 12108
-# inventory_unmeasured = 1791
+# inventory_measured = 12110
+# inventory_unmeasured = 1796
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6364,6 +6364,13 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.p
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_keyboard_toggle_focus_and_multiline_composer]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_narrow_panel_keeps_controls_accessible]
+1.520	tests/system/app/test_e11_t5_consent_dialog.py::test_actual_accept_while_busy_preserves_the_current_admitted_turn
+0.990	tests/system/app/test_e11_t5_consent_dialog.py::test_actual_cancel_dismisses_without_approving_or_starting_a_connection
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_consent_dialog.py::test_long_project_disclosure_actions_and_full_exact_context_remain_reachable[large-font-details]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_consent_dialog.py::test_long_project_disclosure_actions_and_full_exact_context_remain_reachable[narrow-details]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_consent_dialog.py::test_long_project_disclosure_actions_and_full_exact_context_remain_reachable[narrow-summary]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_consent_dialog.py::test_open_dialog_updates_to_approval_and_actual_accept_approves_current_context
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_consent_dialog.py::test_open_dialog_updates_to_sign_in_and_actual_accept_starts_only_that_flow
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_approved_elapsed_budget_retires_dispatched_continuation_transport
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_dispatched_scope_revocation_cancels_original_native_and_allows_new_send[manual-value]
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_dispatched_scope_revocation_cancels_original_native_and_allows_new_send[ui-output-capacity]
@@ -13954,6 +13961,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 0.087	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
+# module-cost: 0.086	tests/system/app/test_e11_t5_consent_dialog.py
 # module-cost: 0.083	tests/system/app/test_e11_t5_vm_interruption.py
 # module-cost: 0.083	tests/system/app/test_e11_t5_vm_retention.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
