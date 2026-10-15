@@ -110,9 +110,13 @@ printf '%s\n' "$SDK_CONTENT" > "$SDK_MARKER"
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" -DEDI_BUILD_APP=OFF -DEDI_BUILD_BINDINGS=ON \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
-cmake --build "$EDI_BUILD_DIR" -j
+# Respect the developer command's forwarded build bound; a bare -j overrides
+# CMAKE_BUILD_PARALLEL_LEVEL and makes Ninja unbounded.
+BUILD_JOBS="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
+[[ "$BUILD_JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "core-build: parallel level must be a positive integer" >&2; exit 1; }
+cmake --build "$EDI_BUILD_DIR" --parallel "$BUILD_JOBS"
 # Further targets in this same tree, under this lock (the C++ tier's edi_tests).
-[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} -j
+[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} --parallel "$BUILD_JOBS"
 # Review-7 F7: tie provenance to the edi artifact actually LINKED. The prefix stamp and source
 # record are mutable across resolves; this record names the crysta the just-built edi contains,
 # and downstream consumers select it instead of re-reading whatever a later resolve left behind.

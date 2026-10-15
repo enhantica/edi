@@ -51,6 +51,10 @@ fi
 # The default environment owns the binding-compatible nanobind toolchain. Its
 # CPython stable-ABI extension is consumed by the app Python, which has numpy/yaml.
 # Do not enable bindings in the Qt/app graph (a different nanobind environment).
+# app-with-crysta previously needed only the app environment; a first-time
+# caller may not have the declared default environment yet. Honor its lockfile
+# before the compatible binding build, just as the crysta step above does.
+"${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$PWD/pixi.toml" -e default
 "${clean[@]}" EDI_CRYSTA_PREFIX="$prefix" "$pixi_bin" run --as-is --manifest-path "$PWD/pixi.toml" -e default bash tools/ci/core-build.sh
 export EDI_EXTENSION_DIR="$PWD/build/app-python/python/edi"
 export EDI_AGENT_PYTHON="$CONDA_PREFIX/bin/python"

@@ -53,7 +53,7 @@ private:
     QTimer timer_;
     qint64 operation_start_ = -1, last_activity_ = 0;
     quint64 total_ms_ = 0, idle_ms_ = 0, wire_bytes_ = 0, event_count_ = 0;
-    bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {});
+    bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {}, bool nonfatalPreflight = false);
     void read(QProcess* process, quint64 generation);
     void receive(const QByteArray& record);
     void fail(const char* explanation) noexcept;

@@ -18,6 +18,7 @@
 #include <QTemporaryDir>
 #include <QDesktopServices>
 #include <QMap>
+#include <QSet>
 #include "edi/io.hpp"
 #include <QUuid>
 #include <optional>
@@ -184,6 +185,7 @@ struct AssistantViewModel::State {
     // The default native facade uses one official runtime. The existing injected
     // NativeDependencies constructor is solely the old adapter's compatibility door.
     bool generic_mode = false, generic_connecting = false, generic_busy = false, generic_blocked = false;
+    bool generic_authenticated = false, generic_retiring = false, generic_writing_input = false;
     std::unique_ptr<CodexAgent> agent;
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
     Object generic_native{{"status", "disconnected"}};
@@ -191,10 +193,12 @@ struct AssistantViewModel::State {
     std::unique_ptr<QTemporaryDir> generic_input_cache;
     QStringList generic_skill_paths;
     QMap<QString, Object> generic_items;
-    QMap<QString, QString> generic_item_rows, generic_rpc_rows;
+    QMap<QString, QString> generic_item_rows, generic_rpc_rows, generic_rpc_turns;
+    QSet<QString> generic_final_items;
+    quint64 generic_catalog_bytes = 2; // Complete raw result objects, including array framing.
     std::optional<Object> generic_held_row;
     QJsonValue generic_question_rpc;
-    QString generic_question_item, generic_question_id;
+    QString generic_question_item, generic_question_id, generic_question_public_id, generic_question_thread, generic_question_turn;
     quint64 generic_item_bytes = 0;
 
     static QString generic_id(const QJsonValue& value) {
@@ -232,13 +236,13 @@ struct AssistantViewModel::State {
         if (!publish(std::move(next))) { generic_held_row = std::move(row); return false; }
         return true;
     }
-    void generic_fail(const QString& explanation) noexcept {
-        generic_busy = false; generic_connecting = false; generic_blocked = true;
-        if (agent) try { agent->retire(); } catch (...) {}
+    void generic_retire_question() noexcept {
+        question = {}; generic_question_rpc = {}; generic_question_id.clear();
+        generic_question_public_id.clear(); generic_question_item.clear();
+        generic_question_thread.clear(); generic_question_turn.clear();
+    }
+    void generic_interrupt_rows() noexcept {
         try {
-            generic_native["status"] = "disconnected"; native = generic_native;
-            generic_turn.clear(); generic_thread.clear(); question = {};
-            error = bounded_error(explanation);
             auto next = history;
             for (qsizetype i = 0; i < next.size(); ++i) {
                 auto row = next[i].toObject();
@@ -246,8 +250,21 @@ struct AssistantViewModel::State {
                     row["status"] = "interrupted"; next[i] = row;
                 }
             }
-            (void)publish(std::move(next)); notify();
-        } catch (...) {} // Revocation above does not depend on the diagnostic/archive.
+            (void)publish(std::move(next));
+        } catch (...) {} // Execution authority is fenced independently of diagnostics/storage.
+    }
+    void generic_fail(const QString& explanation) noexcept {
+        generic_authenticated = false; generic_retiring = false;
+        generic_busy = false; generic_connecting = false; generic_blocked = true;
+        retire_file_selection(); consented_context.clear(); generic_retire_question();
+        if (agent) try { agent->retire(); } catch (...) {}
+        generic_interrupt_rows();
+        generic_rpc_rows.clear(); generic_rpc_turns.clear();
+        generic_turn.clear(); generic_thread.clear();
+        try {
+            generic_native["status"] = "disconnected"; native = generic_native;
+            error = bounded_error(explanation); notify();
+        } catch (...) {}
     }
     QString generic_request(const QString& method, const Object& params = {}) {
         const auto id = agent->request(method, params);
@@ -325,11 +342,13 @@ struct AssistantViewModel::State {
         generic_skill_paths = std::move(skills); generic_workspace = workspace;
     }
     void generic_revoke_workspace() noexcept {
+        generic_authenticated = false; generic_retiring = false;
         if (agent) try { agent->retire(); } catch (...) {}
         generic_busy = false; generic_connecting = false;
+        generic_interrupt_rows();
         generic_thread.clear(); generic_turn.clear(); generic_login.clear(); generic_terminal_turn.clear();
-        generic_items.clear(); generic_item_rows.clear(); generic_rpc_rows.clear();
-        generic_question_rpc = {}; generic_question_id.clear(); generic_question_item.clear();
+        generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_rpc_rows.clear(); generic_rpc_turns.clear();
+        generic_retire_question();
         generic_item_bytes = 0; generic_workspace.clear(); generic_skill_paths.clear();
         // Keep retired workspace artifacts for explicit recovery; no live writer
         // is adopted, and no files are published back to the current project.
@@ -362,7 +381,9 @@ struct AssistantViewModel::State {
         if (project && project->fit()->running()) throw std::runtime_error("Finish the active manual fit first");
         if (generic_busy || generic_connecting || generic_held_row) throw std::runtime_error("Finish or clear the active agent operation first");
         generic_blocked = false; error.clear();
+        generic_revoke_workspace(); // Never relabel a modified recovery directory as a fresh snapshot.
         generic_prepare_workspace();
+        generic_catalog_bytes = 2;
         const auto executable = QStandardPaths::findExecutable("codex");
         if (executable.isEmpty()) {
             generic_fail(QObject::tr("Install the official Codex CLI to use the generic assistant.")); return;
@@ -383,7 +404,7 @@ struct AssistantViewModel::State {
         generic_request("thread/start", params);
     }
     void generic_response(const QString& id, const QString& method, const Object& reply) {
-        if (!publishing || !generic_mode) return;
+        if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (reply.contains("error")) {
             if (generic_rpc_rows.contains(id)) {
                 const auto rowId = generic_rpc_rows.take(id);
@@ -394,10 +415,11 @@ struct AssistantViewModel::State {
             // A rejected or uncertain steer is never guessed into a new turn.
             generic_fail(QObject::tr("The official agent refused the request. Inspect the retained message before retrying.")); return;
         }
+        if (!reply.value("result").isObject()) throw std::runtime_error("Agent reply result is invalid");
         const auto result = reply.value("result").toObject();
         if (method == "initialize") {
             if (!agent->notification("initialized")) throw std::runtime_error("Agent handshake failed");
-            agent->beginOperation(Limits::sign_in_ms, 0);
+            agent->settleOperation(); agent->beginOperation(Limits::sign_in_ms, 0);
             generic_request("account/read", {{"refreshToken", false}});
         } else if (method == "account/read") {
             const auto account = result.value("account").toObject();
@@ -405,7 +427,7 @@ struct AssistantViewModel::State {
                 generic_native["label"] = account.value("email").isString() ? account.value("email") : QJsonValue("ChatGPT");
                 generic_native["models"] = QJsonArray{};
                 generic_request("model/list", {{"includeHidden", true}});
-            } else if (account.isEmpty()) generic_request("account/login/start", {{"type", "chatgpt"}});
+            } else if (result.value("account").isNull()) generic_request("account/login/start", {{"type", "chatgpt"}});
             else throw std::runtime_error("Managed ChatGPT login is required");
         } else if (method == "account/login/start") {
             if (result.value("type") != "chatgpt") throw std::runtime_error("Managed ChatGPT login is required");
@@ -415,6 +437,11 @@ struct AssistantViewModel::State {
             if (!QDesktopServices::openUrl(url)) throw std::runtime_error("The sign-in browser could not be opened");
         } else if (method == "model/list") {
             if (!result.value("data").isArray()) throw std::runtime_error("Agent model catalog is unavailable");
+            const auto rawBytes = generic_size(result, Limits::http_json_bytes);
+            const quint64 separator = generic_catalog_bytes == 2 ? 0 : 1;
+            if (separator > Limits::http_json_bytes - generic_catalog_bytes || rawBytes > Limits::http_json_bytes - generic_catalog_bytes - separator)
+                throw std::length_error("The complete raw model catalog exceeds its aggregate limit");
+            generic_catalog_bytes += rawBytes + separator;
             auto choices = generic_native.value("models").toArray();
             const auto incoming = result.value("data").toArray();
             if (incoming.size() > static_cast<qsizetype>(Limits::models) - choices.size()) throw std::length_error("Agent model catalog exceeds limit");
@@ -426,7 +453,9 @@ struct AssistantViewModel::State {
                 QJsonArray efforts;
                 for (const auto& option : options) efforts.append(generic_id(option.toObject().value("reasoningEffort")));
                 if (!item.value("displayName").isString() || !item.value("hidden").isBool()) throw std::runtime_error("Agent model has invalid metadata");
-                choices.append(Object{{"id", slug}, {"display_name", item.value("displayName")}, {"efforts", efforts},
+                const auto defaultEffort = generic_id(item.value("defaultReasoningEffort"));
+                if (!efforts.contains(defaultEffort)) throw std::runtime_error("Agent default effort is not supported by its catalog");
+                choices.append(Object{{"default_effort", defaultEffort}, {"id", slug}, {"display_name", item.value("displayName")}, {"efforts", efforts},
                     {"available", !item.value("hidden").toBool()}, {"attachment_types", QJsonArray{}}});
             }
             generic_size(choices, Limits::http_json_bytes); generic_native["models"] = choices;
@@ -473,16 +502,21 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("Agent effective writable roots exceed the admitted workspace");
             generic_thread = generic_id(result.value("thread").toObject().value("id"));
             generic_native["connection_id"] = generic_thread; generic_native["status"] = "ready";
-            generic_connecting = false; agent->settleOperation(); error.clear();
+            generic_connecting = false; generic_authenticated = true; generic_retiring = false; agent->settleOperation(); error.clear();
         } else if (method == "turn/start") {
             const auto turn = result.value("turn").toObject();
             const auto turnId = generic_id(turn.value("id"));
             if (!generic_turn.isEmpty() && generic_turn != turnId) throw std::runtime_error("Agent turn identity changed");
             if (turnId != generic_terminal_turn) { generic_turn = turnId; generic_busy = true; }
             generic_acknowledge(id);
-        } else if (method == "turn/steer") generic_acknowledge(id);
+        } else if (method == "turn/steer") {
+            const auto expected = generic_rpc_turns.take(id);
+            if (expected.isEmpty() || generic_id(result.value("turnId")) != expected)
+                throw std::runtime_error("Agent steering reply has the wrong turn binding");
+            generic_acknowledge(id);
+        }
         else if (method == "account/logout") {
-            generic_revoke_workspace(); error.clear();
+            generic_revoke_workspace(); generic_blocked = false; error.clear();
         }
         sync(); notify();
     }
@@ -496,8 +530,45 @@ struct AssistantViewModel::State {
         }
     }
     bool generic_bound(const Object& params) const {
-        return !generic_thread.isEmpty() && params.value("threadId") == generic_thread &&
-            (!params.contains("turnId") || (!generic_turn.isEmpty() && params.value("turnId") == generic_turn));
+        return generic_authenticated && !generic_retiring && !generic_thread.isEmpty() && !generic_turn.isEmpty() &&
+            params.value("threadId").isString() && params.value("threadId") == generic_thread &&
+            params.value("turnId").isString() && params.value("turnId") == generic_turn;
+    }
+    bool generic_item(const Object& item, bool completed) {
+        const auto id = generic_id(item.value("id")), type = generic_id(item.value("type"));
+        if (!generic_items.contains(id) && generic_items.size() >= static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Agent item limit exceeded");
+        const auto old = generic_items.value(id);
+        if (!old.isEmpty() && old.value("type") != type) throw std::runtime_error("Agent item type changed");
+        if (generic_final_items.contains(id)) {
+            if (completed && old == item) return false;
+            throw std::runtime_error("An agent item changed after finalization");
+        }
+        if (!completed && !old.isEmpty()) {
+            if (old == item) return false;
+            throw std::runtime_error("A repeated agent item declaration changed");
+        }
+        if (type == "agentMessage" && !item.value("text").isString()) throw std::runtime_error("Agent text item is invalid");
+        if (type == "commandExecution") {
+            if (!item.value("command").isString() || !item.value("cwd").isString() || !item.value("commandActions").isArray() ||
+                !item.value("status").isString()) throw std::runtime_error("Agent command item is invalid");
+            if (!old.isEmpty() && (old.value("command") != item.value("command") || old.value("cwd") != item.value("cwd"))) throw std::runtime_error("Agent command identity changed");
+        }
+        if (type == "fileChange" && (!item.value("changes").isArray() || !item.value("status").isString())) throw std::runtime_error("Agent file item is invalid");
+        if (completed && (type == "commandExecution" || type == "fileChange") &&
+            item.value("status") != "completed" && item.value("status") != "failed" && item.value("status") != "declined")
+            throw std::runtime_error("Agent tool final item is not settled");
+        const auto oldBytes = old.isEmpty() ? 0 : generic_size(old, Limits::stream_retained_bytes);
+        const auto bytes = generic_size(item, Limits::stream_retained_bytes);
+        if (bytes > Limits::stream_retained_bytes - (generic_item_bytes - oldBytes) || !agent->retainOutput(generic_item_bytes - oldBytes + bytes)) throw std::length_error("Agent output exceeds retained limit");
+        generic_items[id] = item; generic_item_bytes = generic_item_bytes - oldBytes + bytes;
+        if (completed) { generic_final_items.insert(id); if (generic_question_item == id) generic_retire_question(); }
+        if (type == "userMessage" || type == "reasoning") return true;
+        if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
+        Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
+            {"status", completed ? (type == "agentMessage" ? "in_progress" : item.value("status").toString("completed")) : "in_progress"}, {"payload", type == "agentMessage" ? Object{} : item}};
+        if (!generic_present(row)) { generic_fail(storage_error); return false; }
+        return true;
     }
     void generic_event(const QString& method, const Object& params) {
         if (!publishing) return;
@@ -507,46 +578,32 @@ struct AssistantViewModel::State {
             generic_login.clear(); generic_request("account/read", {{"refreshToken", false}}); return;
         }
         if (method == "account/updated") {
-            if (params.value("authMode").isNull()) { generic_fail(QObject::tr("The agent account is no longer signed in.")); }
+            if (params.value("authMode") != "chatgpt" || generic_authenticated || !generic_thread.isEmpty())
+                generic_fail(QObject::tr("The agent account changed. Reconnect to approve the current account and a fresh working copy."));
             return;
         }
         if (method == "serverRequest/resolved") {
+            if (!generic_authenticated || params.value("threadId") != generic_thread) return;
             agent->resolved(params.value("requestId"));
-            if (params.value("requestId") == generic_question_rpc) { question = {}; generic_question_rpc = {}; }
+            if (params.value("requestId") == generic_question_rpc) generic_retire_question();
             notify(); return;
         }
         if (method == "turn/started") {
-            if (params.value("threadId") != generic_thread || !generic_busy) return;
+            if (!generic_authenticated || generic_retiring || params.value("threadId") != generic_thread || !generic_busy) return;
             const auto id = generic_id(params.value("turn").toObject().value("id"));
             if (!generic_turn.isEmpty() && generic_turn != id) throw std::runtime_error("Agent turn changed");
-            if (id == generic_terminal_turn) return;
+            if (id == generic_terminal_turn || id == generic_turn) return;
             generic_turn = id; agent->activity(); notify(); return;
         }
-        if (!generic_bound(params)) return;
-        agent->activity();
+        if (method == "turn/completed") {
+            if (!generic_authenticated || generic_retiring || params.value("threadId") != generic_thread || generic_turn.isEmpty()) return;
+        } else if (!generic_bound(params)) return;
         if (method == "item/started" || method == "item/completed") {
-            const auto item = params.value("item").toObject(); const auto id = generic_id(item.value("id"));
-            const auto type = generic_id(item.value("type"));
-            if (!generic_items.contains(id) && generic_items.size() >= static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Agent item limit exceeded");
-            const auto old = generic_items.value(id);
-            const auto oldBytes = old.isEmpty() ? 0 : generic_size(old, Limits::stream_retained_bytes);
-            const auto bytes = generic_size(item, Limits::stream_retained_bytes);
-            if (bytes > Limits::stream_retained_bytes - (generic_item_bytes - oldBytes)) throw std::length_error("Agent output exceeds retained limit");
-            if (!agent->retainOutput(generic_item_bytes - oldBytes + bytes)) throw std::length_error("Agent output exceeds retained limit");
-            generic_items[id] = item; generic_item_bytes = generic_item_bytes - oldBytes + bytes;
-            if (type == "userMessage" || type == "reasoning") return; // Runtime owns reasoning; no raw reasoning display.
-            if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-            const bool completed = method == "item/completed";
-            const auto text = type == "agentMessage" ? item.value("text").toString() :
-                type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
-            Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"},
-                {"text", text}, {"status", completed ? (type == "agentMessage" ? "in_progress" : item.value("status").toString()) : "in_progress"},
-                {"payload", type == "agentMessage" ? Object{} : item}};
-            if (!generic_present(row)) generic_fail(storage_error);
+            if (generic_item(params.value("item").toObject(), method == "item/completed")) agent->activity();
         } else if (method == "item/agentMessage/delta") {
             const auto id = generic_id(params.value("itemId"));
             if (!params.value("delta").isString()) throw std::runtime_error("Agent delta is invalid");
-            if (!generic_item_rows.contains(id)) throw std::runtime_error("Agent text has no original item");
+            if (!generic_item_rows.contains(id) || generic_items.value(id).value("type") != "agentMessage" || generic_final_items.contains(id)) throw std::runtime_error("Agent text has no current unfinished original item");
             for (const auto& value : history) if (value.toObject().value("id") == generic_item_rows.value(id)) {
                 auto row = value.toObject(); const auto delta = params.value("delta").toString();
                 const auto old = row.value("text").toString();
@@ -560,6 +617,7 @@ struct AssistantViewModel::State {
                 row["text"] = old + delta;
                 generic_size(row, Limits::message_bytes);
                 if (!generic_present(row)) generic_fail(storage_error);
+                else if (!delta.isEmpty()) agent->activity();
                 break;
             }
         } else if (method == "turn/completed") {
@@ -567,6 +625,13 @@ struct AssistantViewModel::State {
             if (generic_id(turn.value("id")) != generic_turn) return;
             const auto status = turn.value("status").toString();
             if (status != "completed" && status != "interrupted" && status != "failed") throw std::runtime_error("Agent terminal status is invalid");
+            if (turn.contains("items")) {
+                if (!turn.value("items").isArray()) throw std::runtime_error("Agent terminal snapshot is invalid");
+                for (const auto& value : turn.value("items").toArray()) { generic_item(value.toObject(), true); if (!generic_authenticated) return; }
+            }
+            if (status == "completed") for (auto it = generic_items.constBegin(); it != generic_items.constEnd(); ++it)
+                if (it.value().value("type") != "agentMessage" && it.value().value("type") != "userMessage" && it.value().value("type") != "reasoning" && !generic_final_items.contains(it.key()))
+                    throw std::runtime_error("Agent terminal omitted an unfinished activity outcome");
             auto next = history;
             for (qsizetype i = 0; i < next.size(); ++i) {
                 auto row = next[i].toObject();
@@ -574,8 +639,8 @@ struct AssistantViewModel::State {
             }
             if (!publish(std::move(next))) { generic_fail(storage_error); return; }
             generic_terminal_turn = generic_turn;
-            generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_item_bytes = 0;
-            question = {}; generic_question_rpc = {}; agent->retainOutput(0); agent->settleOperation();
+            generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0;
+            generic_retire_question(); agent->retainOutput(0); agent->settleOperation();
             if (status != "completed") error = QObject::tr("The official agent turn was interrupted or failed. Retained work is preserved.");
         }
         notify();
@@ -593,6 +658,8 @@ struct AssistantViewModel::State {
             if (!agent->answer(id, {{"decision", "decline"}})) generic_fail(QObject::tr("The agent refusal could not be delivered."));
         } else if (method == "item/tool/requestUserInput") {
             if (!question.isEmpty() || !params.value("questions").isArray() || params.value("questions").toArray().size() != 1) { agent->reject(id); return; }
+            const auto itemId = generic_id(params.value("itemId"));
+            if (!generic_items.contains(itemId) || generic_final_items.contains(itemId)) { agent->reject(id); return; }
             const auto q = params.value("questions").toArray().first().toObject();
             const auto qid = generic_id(q.value("id"));
             if (!q.value("question").isString() || q.value("question").toString().toUtf8().size() > static_cast<qsizetype>(Limits::question_text_bytes)) { agent->reject(id); return; }
@@ -604,36 +671,54 @@ struct AssistantViewModel::State {
                 if (!value.value("description").isString() || value.value("description").toString().toUtf8().size() > static_cast<qsizetype>(Limits::question_option_description_bytes)) throw std::length_error("Agent option description exceeds limit");
                 options.append(Object{{"id", label}, {"label", label}, {"description", value.value("description")}});
             }
-            question = {{"question_id", qid}, {"text", q.value("question")}, {"options", options}, {"allow_free_text", true}};
-            generic_question_rpc = id; generic_question_id = qid; generic_question_item = generic_id(params.value("itemId")); notify();
+            generic_question_public_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            question = {{"question_id", generic_question_public_id}, {"text", q.value("question")}, {"options", options}, {"allow_free_text", true}};
+            generic_question_rpc = id; generic_question_id = qid; generic_question_item = itemId; generic_question_thread = generic_thread; generic_question_turn = generic_turn; notify();
         } else agent->reject(id); // No fabricated result for unsupported callbacks.
     }
     void generic_send(const QString& text) {
-        if (generic_blocked || generic_connecting || generic_native.value("status") != "ready" || generic_held_row)
+        if (!generic_authenticated || generic_retiring || generic_blocked || generic_connecting || generic_native.value("status") != "ready" || generic_held_row)
             throw std::runtime_error("Connect the official agent or clear its interrupted conversation first");
         const auto context = owner.contextPreview();
         if (context.toUtf8().size() > static_cast<qsizetype>(Limits::context_bytes)) throw std::length_error("Agent context exceeds limit");
         const bool steering = generic_busy;
-        if (steering && generic_turn.isEmpty()) throw std::runtime_error("Wait for the current turn identity before adding input");
+        if (steering && generic_turn.isEmpty()) {
+            // No steer has been admitted or written. Keep the draft and the
+            // original running request alive; a preflight refusal is not a
+            // transport/retention failure and must not retire its process.
+            error = QObject::tr("The agent is starting this turn. Submit the retained draft when its turn is ready.");
+            notify(); return;
+        }
         Object params{{"threadId", generic_thread}, {"input", QJsonArray{Object{{"type", "text"}, {"text", text}}}}};
         const auto row = public_row("user", text, {}, "pending");
         params["clientUserMessageId"] = row.value("id");
         if (steering) params["expectedTurnId"] = generic_turn;
         else {
             params["model"] = model;
-            if (!effort.isEmpty()) params["effort"] = effort;
+            QString effectiveEffort = effort;
+            if (effectiveEffort.isEmpty()) {
+                for (const auto& value : generic_native.value("models").toArray()) {
+                    const auto entry = value.toObject();
+                    if (entry.value("id") == model) effectiveEffort = entry.value("default_effort").toString();
+                }
+                if (effectiveEffort.isEmpty()) throw std::runtime_error("The selected model has no supported default effort");
+            }
+            params["effort"] = effectiveEffort; // Explicit actual catalog default resets the sticky prior override.
             params["sandboxPolicy"] = Object{{"type", "workspaceWrite"}, {"writableRoots", QJsonArray{generic_workspace}},
                 {"networkAccess", false}, {"excludeSlashTmp", true}, {"excludeTmpdirEnvVar", true}};
             params["approvalPolicy"] = "on-request"; params["approvalsReviewer"] = "user";
             params["additionalContext"] = Object{{"edi", Object{{"kind", "application"}, {"value", context}}}};
             agent->beginOperation(Limits::inference_total_ms, Limits::inference_idle_ms);
         }
-        const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params, [this, row](const QString& id) {
-            generic_rpc_rows.insert(id, row.value("id").toString());
-            if (!generic_present(row)) { generic_rpc_rows.remove(id); return false; }
-            generic_busy = true; return true;
+        const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params, [this, row, steering](const QString& id) {
+            try {
+                if (steering) generic_rpc_turns.insert(id, generic_turn);
+                generic_rpc_rows.insert(id, row.value("id").toString());
+                if (!generic_present(row)) { generic_rpc_rows.remove(id); generic_rpc_turns.remove(id); return false; }
+                generic_writing_input = true; generic_busy = true; return true;
+            } catch (...) { generic_rpc_rows.remove(id); generic_rpc_turns.remove(id); return false; }
         });
-        if (rpc.isEmpty()) throw std::runtime_error("Agent input could not be admitted");
+        if (rpc.isEmpty()) { if (!steering && !generic_writing_input) agent->settleOperation(); throw std::runtime_error("Agent input could not be admitted"); }
         error.clear(); notify();
     }
 #endif
@@ -1510,7 +1595,12 @@ QString AssistantViewModel::state() const {
 #endif
     return state_->auth_pending ? QString("connecting") : state_->core.value("state").toString();
 }
-bool AssistantViewModel::connected() const { return state_->native.value("status") == "ready"; }
+bool AssistantViewModel::connected() const {
+#ifndef __EMSCRIPTEN__
+    if (state_->generic_mode) return state_->generic_authenticated && !state_->generic_retiring && state_->native.value("status") == "ready";
+#endif
+    return state_->native.value("status") == "ready";
+}
 QString AssistantViewModel::connectionLabel() const { return state() == "connecting" ? tr("Connecting to ChatGPT…") : connected() ? state_->native.value("label").toString() : tr("Connect ChatGPT"); }
 RowTableModel* AssistantViewModel::models() const { return &state_->models; }
 QString AssistantViewModel::selectedModel() const { return state_->model; }
@@ -1531,7 +1621,7 @@ QVariantMap AssistantViewModel::pendingQuestion() const { return state_->questio
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
 bool AssistantViewModel::canCancel() const {
 #ifndef __EMSCRIPTEN__
-    if (state_->generic_mode) return state_->generic_connecting || state_->generic_busy || state_->file_selection.has_value() || state_->file_staging;
+    if (state_->generic_mode) return state_->generic_retiring || state_->generic_connecting || state_->generic_busy || state_->file_selection.has_value() || state_->file_staging;
 #endif
     return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
 QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : state_->preference_error; }
@@ -1575,11 +1665,12 @@ void AssistantViewModel::send(const QString& text) {
     try {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
+            state_->generic_writing_input = false;
             if (static_cast<quint64>(text.size()) > State::Limits::message_bytes || static_cast<quint64>(text.toUtf8().size()) > State::Limits::message_bytes)
                 throw std::length_error("Agent message exceeds limit");
             if (contextConsentRequired()) { state_->error = tr("Approve the current outgoing context before sending."); state_->notify(); return; }
             if (state_->file_selection || state_->file_staging) { state_->error = tr("Finish file selection first."); state_->notify(); return; }
-            state_->generic_send(text); return;
+            state_->generic_send(text); state_->generic_writing_input = false; return;
         }
 #endif
         if (static_cast<std::uint64_t>(text.size()) > State::Limits::message_bytes ||
@@ -1620,7 +1711,11 @@ void AssistantViewModel::send(const QString& text) {
 
     } catch (...) {
 #ifndef __EMSCRIPTEN__
-        if (state_->generic_mode) { state_->generic_fail(tr("Agent input could not be admitted. Inspect the retained message before retrying.")); return; }
+        if (state_->generic_mode) {
+            if (state_->generic_writing_input || state_->generic_blocked) state_->generic_fail(tr("Agent input delivery is uncertain. Inspect the retained message before retrying."));
+            else { state_->error = tr("The new input was not admitted. The existing operation and draft are preserved."); try { state_->notify(); } catch (...) {} }
+            state_->generic_writing_input = false; return;
+        }
 #endif
         if (state_->controller) state_->controller->cancel();
         state_->queued_request.clear();
@@ -1637,11 +1732,12 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         try {
-            if (id != state_->generic_question_id || state_->generic_question_rpc.isUndefined() || !state_->generic_busy || state_->generic_turn.isEmpty() ||
+            if (id != state_->generic_question_public_id || state_->generic_question_rpc.isUndefined() || !state_->generic_authenticated || state_->generic_retiring || !state_->generic_busy || state_->generic_turn.isEmpty() ||
+                state_->generic_question_thread != state_->generic_thread || state_->generic_question_turn != state_->generic_turn || !state_->generic_items.contains(state_->generic_question_item) || state_->generic_final_items.contains(state_->generic_question_item) ||
                 answer.toUtf8().size() > static_cast<qsizetype>(State::Limits::question_answer_bytes)) return;
             const auto rpc = state_->generic_question_rpc;
             const auto key = state_->generic_question_id;
-            state_->generic_question_rpc = {}; state_->generic_question_id.clear(); state_->question = {};
+            state_->generic_retire_question();
             if (!state_->agent->answer(rpc, {{"answers", Object{{key, Object{{"answers", QJsonArray{answer}}}}}}}))
                 state_->generic_fail(tr("The question answer could not be delivered."));
             state_->notify();
@@ -1656,7 +1752,8 @@ void AssistantViewModel::cancel() {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         try {
-            if (state_->generic_busy && !state_->generic_turn.isEmpty()) {
+            if (state_->generic_retiring) { state_->generic_fail(tr("Agent sign-out was interrupted; account state must be checked before reconnecting.")); }
+            else if (state_->generic_busy && !state_->generic_turn.isEmpty()) {
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);
                 state_->generic_request("turn/interrupt", {{"threadId", state_->generic_thread}, {"turnId", state_->generic_turn}});
             } else if (state_->generic_connecting || state_->generic_busy) state_->generic_fail(tr("Agent sign-in or input was interrupted."));
@@ -1700,8 +1797,10 @@ void AssistantViewModel::signOut() {
     state_->retire_file_selection(); state_->consented_context.clear();
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
+        state_->generic_authenticated = false; state_->generic_retiring = true;
         state_->generic_busy = false; state_->generic_connecting = false;
-        state_->generic_turn.clear(); state_->question = {}; state_->generic_question_rpc = {};
+        state_->generic_retire_question(); state_->generic_interrupt_rows();
+        state_->generic_rpc_rows.clear(); state_->generic_rpc_turns.clear(); state_->generic_turn.clear();
         try { state_->agent->beginOperation(State::Limits::revoke_ms, 0); state_->generic_request("account/logout"); }
         catch (...) { state_->generic_revoke_workspace(); }
         state_->sync(); state_->notify(); return;

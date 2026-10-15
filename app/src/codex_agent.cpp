@@ -68,6 +68,7 @@ CodexAgent::CodexAgent(QObject* parent) : QObject(parent) {
     timer_.start();
 }
 void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
+    if (operation_start_ < 0) { wire_bytes_ = 0; event_count_ = 0; }
     operation_start_ = clock_.elapsed(); last_activity_ = operation_start_;
     total_ms_ = totalMs; idle_ms_ = idleMs;
 }
@@ -167,19 +168,19 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
     }
 }
 
-bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare) {
+bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare, bool nonfatalPreflight) {
     if (!process_ || failed_ || process_->state() != QProcess::Running) return false;
     checkDeadline(); if (failed_) return false;
     quint64 encoded = 0;
     if (!encodedSize(envelope, Limits::request_bytes, encoded)) {
-        fail("The official agent request exceeds the transport capacity."); return false;
+        if (!nonfatalPreflight) fail("The official agent request exceeds the transport capacity."); return false;
     }
     if (encoded >= Limits::request_bytes || static_cast<quint64>(process_->bytesToWrite()) > Limits::request_bytes - encoded - 1) {
-        fail("The official agent write queue exceeds the transport capacity."); return false;
+        if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity."); return false;
     }
     const auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
     if (static_cast<quint64>(wire.size()) != encoded) {
-        fail("The official agent request could not be encoded consistently."); return false;
+        if (!nonfatalPreflight) fail("The official agent request could not be encoded consistently."); return false;
     }
     const auto line = wire + '\n';
     if (prepare && !prepare()) return false;
@@ -190,19 +191,23 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
 }
 
 QString CodexAgent::request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare) {
-    if (failed_ || method.isEmpty() || pending_.size() >= pendingLimit || next_id_ == std::numeric_limits<quint64>::max()) return {};
-    const auto id = QStringLiteral("edi-%1-%2").arg(generation_).arg(++next_id_);
-    quint64 bytes = 0;
-    const QJsonObject envelope{{"id", id}, {"method", method}, {"params", params}};
-    if (!encodedSize(envelope, Limits::record_bytes, bytes) || bytes > Limits::retained_record_bytes - pending_bytes_) {
-        fail("The official agent pending requests exceed capacity."); return {};
-    }
-    pending_.insert(id, method); pending_sizes_.insert(id, bytes); pending_bytes_ += bytes;
-    pending_deadlines_.insert(id, clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms));
-    if (!write({{QStringLiteral("id"), id}, {QStringLiteral("method"), method}, {QStringLiteral("params"), params}}, [&] { return !prepare || prepare(id); })) {
-        pending_.remove(id); pending_deadlines_.remove(id); pending_bytes_ -= pending_sizes_.take(id); return {};
-    }
-    return id;
+    QString id; bool charged = false;
+    const auto discard = [&] {
+        pending_.remove(id); pending_deadlines_.remove(id);
+        if (charged) pending_bytes_ -= pending_sizes_.take(id); else pending_sizes_.remove(id);
+    };
+    try {
+        if (failed_ || method.isEmpty() || pending_.size() >= pendingLimit || next_id_ == std::numeric_limits<quint64>::max()) return {};
+        id = QStringLiteral("edi-%1-%2").arg(generation_).arg(++next_id_);
+        quint64 bytes = 0;
+        const QJsonObject envelope{{"id", id}, {"method", method}, {"params", params}};
+        if (!encodedSize(envelope, Limits::record_bytes, bytes) || bytes > Limits::retained_record_bytes - pending_bytes_) return {};
+        pending_.insert(id, method); pending_sizes_.insert(id, bytes);
+        pending_deadlines_.insert(id, clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms));
+        pending_bytes_ += bytes; charged = true;
+        if (!write(envelope, [&] { return !prepare || prepare(id); }, static_cast<bool>(prepare))) { discard(); return {}; }
+        return id;
+    } catch (...) { discard(); return {}; }
 }
 bool CodexAgent::notification(const QString& method, const QJsonObject& params) {
     return write({{QStringLiteral("method"), method}, {QStringLiteral("params"), params}});
