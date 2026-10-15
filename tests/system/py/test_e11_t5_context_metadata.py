@@ -178,9 +178,11 @@ def test_controller_resource_error_is_typed_bounded_and_never_echoes_untrusted_k
         return index
 
     context = model(loader, mutate=mutate)['context']
-    assert context.get('error') and context['error']['code'] == 'edi.assistant.invalid_argument', (
-        'SK5: malformed trusted-resource shape preserves actual typed '
-        'invalid-argument classification'
+    expected = (
+        'edi.assistant.invalid_json' if fault == 'duplicate' else 'edi.assistant.invalid_argument'
+    )
+    assert context.get('error') and context['error']['code'] == expected, (
+        'SK5: duplicate JSON and unknown-member shape preserve their distinct typed refusal codes'
     )
     message = context['error']['message']
     assert (

@@ -299,7 +299,13 @@ def test_manual_project_attachment_survives_assistant_context_capacity_and_keeps
         'SK4 SETUP: original documented exclusion loop is uniquely identified '
         'before fixture growth'
     )
-    rows = '\n'.join('owned-' + str(index) + ' 1.25 2.75' for index in range(20000))
+    originals = [
+        {'id': 'owned-' + str(index), 'first': 1.25, 'second': 2.75} for index in range(23000)
+    ]
+    assert len(json.dumps(originals, separators=(',', ':')).encode()) > 1048576, (
+        'SK4 SETUP: independently encoded original exclusion array alone exceeds context_bytes'
+    )
+    rows = '\n'.join(row['id'] + ' 1.25 2.75' for row in originals)
     bank.write_text(text.replace(original, '_excluded_region.end\n' + rows))
     vm = workflow_vm
     opened = vm.command('open', path=str(project))
