@@ -105,6 +105,17 @@ int main(int argc,char** argv) {
             else if(op=="select_model")session->assistant()->setSelectedModel(input["id"].toString());
             else if(op=="select_effort")session->assistant()->setSelectedEffort(input["id"].toString());
             else if(op=="open")result={{"opened",session->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
+            else if(op=="manual_value") {
+                if(!session->project())throw std::invalid_argument("manual edit requires the real open project");
+                auto* live=session->project()->assistantProject();
+                const auto path=input["path"].toString().toStdString();
+                edi::Parameter* selected=nullptr;
+                for(const auto& entry:edi::parameter_entries(*live))
+                    if(entry.path==path) {selected=entry.parameter;break;}
+                if(!selected)throw std::invalid_argument("manual edit path is absent from the real project");
+                const auto error=session->project()->apply(edi::Edit::value(*selected,input["value"].toDouble()),false);
+                result={{"error",error}};
+            }
             else if(op=="close_project")session->closeProject();
             else if(op=="destroy")session.reset();
             else if(op=="recreate") {

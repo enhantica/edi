@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T07:06:33Z
+# measured_utc = 2026-10-15T07:23:58Z
 #
-# Recorded from: seq19 scope retirement: eight real controls; two qualified detach reds; six connection qualification holes, not behavioral proof
-# Collected tests: 13819; with a reported duration: 7605
-# Module-scoped fixture costs recorded: 56
+# Recorded from: seq20 finite real VM B1-B3 old3b/old5d baseline: one actual passing complete cost, twelve reached red holes; B4 and exact B3 interval remain unqualified
+# Collected tests: 13832; with a reported duration: 7606
+# Module-scoped fixture costs recorded: 57
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13486
+# inventory_python = 13499
 # inventory_cpp = 333
-# inventory_measured = 12077
-# inventory_unmeasured = 1742
+# inventory_measured = 12078
+# inventory_unmeasured = 1754
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6364,6 +6364,19 @@ UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_assistant_connected.p
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_hiding_retains_conversation_owner_and_width]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_keyboard_toggle_focus_and_multiline_composer]
 0.000	tests/system/app/test_e11_t5_assistant_panel.py::test_assistant_behavior_in_the_real_qml_host[test_narrow_panel_keeps_controls_accessible]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_approved_elapsed_budget_retires_dispatched_continuation_transport
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_dispatched_scope_revocation_cancels_original_native_and_allows_new_send[manual-value]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_dispatched_scope_revocation_cancels_original_native_and_allows_new_send[ui-output-capacity]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_pending_failed_card_survives_automatic_expiry_until_real_storage_recovery[failed]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_pending_failed_card_survives_automatic_expiry_until_real_storage_recovery[incomplete]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_pending_failed_card_survives_automatic_expiry_until_real_storage_recovery[interrupted]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_pending_failed_card_survives_automatic_expiry_until_real_storage_recovery[refused]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_real_dispatch_refusal_retry_never_replays_invisible_or_duplicate_user[different-text]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_real_dispatch_refusal_retry_never_replays_invisible_or_duplicate_user[same-text]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_real_stop_retains_original_interruption_and_fences_late_completion[after-headers]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_real_stop_retains_original_interruption_and_fences_late_completion[after-text]
+UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_interruption.py::test_real_stop_retains_original_interruption_and_fences_late_completion[before-headers]
+0.600	tests/system/app/test_e11_t5_vm_interruption.py::test_uninterrupted_live_stream_is_a_real_transport_and_persistence_control
 UNMEASURED:failed-in-this-run	tests/system/app/test_e11_t5_vm_retention.py::test_busy_public_setters_refuse_selection_drift
 1.170	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_capacity_is_reserved_before_activity_or_work[capacity-control-bytes]
 0.690	tests/system/app/test_e11_t5_vm_retention.py::test_complete_question_capacity_is_reserved_before_activity_or_work[capacity-control-slots]
@@ -13874,6 +13887,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 0.087	tests/system/app/test_e11_t5_assistant_connected.py
 # module-cost: 2.758	tests/system/app/test_e11_t5_assistant_panel.py
+# module-cost: 0.083	tests/system/app/test_e11_t5_vm_interruption.py
 # module-cost: 0.083	tests/system/app/test_e11_t5_vm_retention.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
