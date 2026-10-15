@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-15T08:03:49Z
+# measured_utc = 2026-10-15T08:25:45Z
 #
-# Recorded from: seq22 returning callback: nine measured initial/returning guards, one actual omitted-issued-client red, three identity-verification premise holes behind that same omission
-# Collected tests: 13872; with a reported duration: 7621
+# Recorded from: seq23 bounded structural diagnostic gates: seven diagnostic reds/one matching-text control; three actual matched-native preservation controls after transparent contextual-prefix observation correction
+# Collected tests: 13880; with a reported duration: 7625
 # Module-scoped fixture costs recorded: 61
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13539
+# inventory_python = 13547
 # inventory_cpp = 333
-# inventory_measured = 12093
-# inventory_unmeasured = 1779
+# inventory_measured = 12097
+# inventory_unmeasured = 1783
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10339,9 +10339,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecyc
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_missing_item_identity_cannot_bypass_message_state[wrong-kind-refusal]
 0.260	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[output_text]
 0.170	tests/system/py/test_e11_t5_stream_content_lifecycle.py::test_two_distinct_content_parts_retain_exact_fragmented_unicode_without_cross_closing[refusal]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[changed-completed-item]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[malformed-json]
-UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[truncated]
+0.170	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[changed-completed-item]
+0.183	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[malformed-json]
+0.170	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code[truncated]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[changed-completed-item]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[malformed-json]
 UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py::test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_code[truncated]
@@ -10391,6 +10391,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_stream_membership.py::
 0.010	tests/system/py/test_e11_t5_stream_membership.py::test_repeating_an_item_at_a_changed_position_is_not_a_matching_duplicate[function_call]
 0.010	tests/system/py/test_e11_t5_stream_membership.py::test_repeating_an_item_at_a_changed_position_is_not_a_matching_duplicate[message]
 0.020	tests/system/py/test_e11_t5_stream_membership.py::test_repeating_an_item_at_a_changed_position_is_not_a_matching_duplicate[reasoning]
+0.020	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_matching_complete_message_remains_successful_with_exact_public_text
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[function-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[message-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[message-unfinished]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[multiple-missing]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[reasoning-done]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[unknown-kind]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e11_t5_structural_stream_diagnostics.py::test_missing_terminal_member_has_bounded_allowlisted_structural_facts[unknown-status]
 0.280	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-fit]
 0.030	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[accept-question]
 0.290	tests/system/py/test_e11_t5_terminal_retention.py::test_real_settlement_retains_exact_correlated_outcome_before_continuation[headless-fit]
@@ -13955,7 +13963,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.163	tests/system/py/test_e11_t5_reauthorization_callback.py
 # module-cost: 0.076	tests/system/py/test_e11_t5_sdk_content_bond.py
 # module-cost: 0.073	tests/system/py/test_e11_t5_store_write_quota.py
-# module-cost: 0.065	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py
+# module-cost: 0.197	tests/system/py/test_e11_t5_stream_diagnostic_preservation.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 14.935	tests/system/py/test_generated_correlation_saved_output.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py

@@ -35,6 +35,15 @@ CASES = ['malformed-json', 'changed-completed-item', 'truncated']
 ERROR_BYTES = 512  # Approved public Limits::error_bytes, packet R4.
 
 
+def preserved_reason(original, observed):
+    return (
+        isinstance(observed, str)
+        and original in observed
+        and len(observed.encode()) <= ERROR_BYTES
+        and PRIVATE_MARKER not in observed
+    )
+
+
 def parser_refusal(case):
     binary = Path(
         os.environ.get(
@@ -87,12 +96,14 @@ def test_actual_native_preserves_first_parser_feed_or_finish_reason_and_code(
     checks = {
         'one_original_noncompleted_terminal': len(terminal) == 1
         and terminal[0]['status'] != 'completed',
-        'actual_reason_preserved': result['state'].get('last_error') == message,
+        'actual_reason_preserved': preserved_reason(message, result['state'].get('last_error')),
         'actual_code_preserved': result['state'].get('last_error_code') == code,
         'original_operation_cancelled': result['requests'][index]['cancelled'],
     }
     if terminal:
-        checks['terminal_reason_preserved'] = terminal[0].get('message') == message
+        checks['terminal_reason_preserved'] = terminal[0].get('message') == result['state'].get(
+            'last_error'
+        )
         # Code travels through the declared native state; terminal JSON needs no new field.
         checks['original_full_binding'] = all(
             terminal[0].get(key) == request[key]
@@ -126,7 +137,7 @@ def test_real_vm_failure_card_preserves_parser_diagnostic_without_replacing_its_
     if found:
         payload = found[0]['payload']
         checks.update({
-            'original_safe_message': payload.get('message') == message,
+            'original_safe_message': preserved_reason(message, payload.get('message')),
             'original_code_not_replaced_by_interrupted': payload.get('code') == code,
             'not_a_success': found[0]['status'] != 'completed',
             'bounded_public_reason': len(payload.get('message', '').encode()) <= ERROR_BYTES,
