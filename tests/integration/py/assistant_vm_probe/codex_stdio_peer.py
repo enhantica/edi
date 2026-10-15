@@ -26,6 +26,7 @@ turn_number = 0
 result_thread_number = 0
 pending_starts = []
 experimental_api = False
+clear_prior = None
 
 
 def emit(value):
@@ -63,6 +64,59 @@ def complete():
         {'threadId': thread_id, 'turnId': turn_id, 'item': item, 'completedAtMs': 1},
     )
     notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+
+
+def clear_observation(kind, original):
+    with trace.with_suffix('.clear-events.jsonl').open('a', encoding='utf-8') as output:
+        output.write(json.dumps({'kind': kind, 'pid': os.getpid(), **original}) + '\n')
+
+
+def clear_completion(original, text, *, old=False):
+    clear_observation('old-emission' if old else 'completion', original)
+    binding = {'threadId': original['threadId'], 'turnId': original['turnId']}
+    if original.get('work'):
+        work = {**original['work'], 'status': 'completed', 'exitCode': 0}
+        notify('item/completed', {**binding, 'item': work, 'completedAtMs': 1})
+    suffix = '-late-message' if old else '-message'
+    item = {'type': 'agentMessage', 'id': original['turnId'] + suffix, 'text': text}
+    notify('item/started', {**binding, 'item': item})
+    notify('item/completed', {**binding, 'item': item, 'completedAtMs': 1})
+    notify('turn/completed', {
+        'threadId': original['threadId'],
+        'turn': {'id': original['turnId'], 'items': [], 'status': 'completed'},
+    })
+
+
+def clear_start(request):
+    global clear_prior, turn_id  # noqa: PLW0603 -- ordinary peer protocol state
+    # Real request trace survives a process replacement; never reuse a thread
+    # identity or manufacture an old-channel emission in a replacement process.
+    starts = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()
+              if json.loads(line).get('method') == 'turn/start']
+    turn_id = '019a0290-0000-7000-8000-' + f'{7000 + len(starts):012d}'
+    if clear_prior is not None:
+        clear_completion(clear_prior, 'Original late reply after Clear', old=True)
+    original = {'threadId': thread_id, 'turnId': turn_id}
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if len(starts) == 1 and scenario == 'clear:active':
+        work = {
+            'id': 'clear-prior-work', 'type': 'commandExecution', 'status': 'inProgress',
+            'command': 'Original harmless held command, never executed', 'commandActions': [],
+            'cwd': request['params']['sandboxPolicy']['writableRoots'][0],
+        }
+        original['work'] = work
+        notify('item/started', {
+            'threadId': original['threadId'], 'turnId': original['turnId'], 'item': work,
+        })
+        clear_prior = original
+        clear_observation('active', original)
+        return
+    clear_observation('start', original)
+    clear_completion(original, 'Original before Clear reply' if len(starts) == 1
+                     else 'Original fresh after Clear reply')
+    if len(starts) == 1:
+        clear_prior = original
 
 
 def handoff_metadata(value):
@@ -601,13 +655,14 @@ for line in sys.stdin:
                         'errors': [],
                         'skills': [
                             {
-                                'name': name,
-                                'description': 'Original fixture ' + name,
+                                'name': skill.parent.name,
+                                'description': 'Original fixture ' + skill.parent.name,
                                 'enabled': True,
                                 'scope': 'repo',
-                                'path': str(Path(cwd) / '.agents/skills' / name / 'SKILL.md'),
+                                'path': str(skill),
                             }
-                            for name in ['project-assistance', 'fullprof-intake', 'gsas-intake']
+                            for skill in sorted((Path(cwd) / '.agents/skills').glob('*/SKILL.md'))
+                            if skill.is_file() and not skill.is_symlink()
                         ],
                     }
                     for cwd in params.get('cwds', [])
@@ -619,6 +674,10 @@ for line in sys.stdin:
         if scenario.startswith('result:'):
             result_thread_number += 1
             thread_id = '019a0290-0000-7000-8000-' + f'{5000 + result_thread_number:012d}'
+        elif scenario.startswith('clear:'):
+            count = sum(json.loads(line).get('method') == 'thread/start'
+                        for line in trace.read_text(encoding='utf-8').splitlines())
+            thread_id = '019a0290-0000-7000-8000-' + f'{6000 + count:012d}'
         value = {
             'approvalPolicy': 'on-request',
             'approvalsReviewer': 'user',
@@ -677,6 +736,9 @@ for line in sys.stdin:
             })
             continue
         turn_number += 1
+        if scenario.startswith('clear:'):
+            clear_start(request)
+            continue
         if scenario.startswith('result:'):
             turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
             result_start(request)
@@ -758,6 +820,10 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
+        if scenario.startswith('clear:') and clear_prior is not None:
+            reply(request, {})
+            clear_completion(clear_prior, 'Original late reply after Clear', old=True)
+            continue
         if scenario == 'result:late':
             reply(request, {})
             complete()

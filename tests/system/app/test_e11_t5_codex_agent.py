@@ -151,6 +151,119 @@ def users(actor, text):
     ]
 
 
+def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two finite lifecycle paths
+    """Owner5d69: real managed authentication survives conversation retirement."""
+    actor, trace = generic('clear:' + scenario)
+    connect(actor)
+    account = actor.last['vm']['handoff']['account_label']
+    models = actor.last['vm']['models']
+    choice = (actor.last['vm']['selected_model'], actor.last['vm']['selected_effort'])
+    assert account == 'original@example.invalid' and models, (
+        'CLEAR SETUP: real managed account/read and model/list admit the original account'
+    )
+    assert {'account/read', 'model/list'} <= {row.get('method') for row in records(trace)}, (
+        'CLEAR SETUP: public readiness follows actual owned-peer account/catalog replies'
+    )
+    original_text = 'Original clear prior input'
+    fresh_text = 'Original clear fresh input'
+    actor.command('send_text', text=original_text)
+    if scenario == 'active':
+        settle(actor, lambda value: value['can_cancel'] and any(
+            row.get('payload', {}).get('id') == 'clear-prior-work'
+            for row in value['messages']
+        ))
+    else:
+        settle(actor, lambda value: not value['can_cancel'] and any(
+            row.get('kind') == 'assistant' and row.get('text') == 'Original before Clear reply'
+            for row in value['messages']
+        ))
+    assert len(users(actor, original_text)) == 1, (
+        'CLEAR SETUP: actual original turn has one retained admitted user identity'
+    )
+    original_row = users(actor, original_text)[0]['id']
+    original = started_requests(trace)
+    assert len(original) == 1 and original[0]['params']['clientUserMessageId'] == original_row, (
+        'CLEAR SETUP: retained original user identity matches its genuine turn/start'
+    )
+    identity = live_original_peer(actor)
+    before = actor.last['vm']
+    actor.command('clear_history')
+    # Observe retirement, then attempt a fresh user input without signing in.
+    # Gather both outcomes before predicates, so an obsolete error cannot mask recovery.
+    for _ in range(40):
+        actor.command('inspect')
+        if not actor.last['vm']['can_cancel']:
+            break
+    cleared = actor.last['vm']
+    actor.command('send_text', text=fresh_text)
+    for _ in range(40):
+        actor.command('inspect')
+        if any(row.get('text') == 'Original fresh after Clear reply'
+               for row in actor.last['vm']['messages']):
+            break
+    after = actor.last['vm']
+    sent = started_requests(trace)
+    peer_events = trace.with_suffix('.clear-events.jsonl')
+    observations = records(peer_events)
+    trace.with_suffix('.clear-public.json').write_text(json.dumps({
+        'before': before, 'cleared': cleared, 'after': after,
+        'original_peer_identity': identity,
+        'original_peer_still_live': original_peer_is_live(identity),
+        'peer_events': observations, 'requests': records(trace),
+    }, ensure_ascii=False, indent=2))
+    assert cleared['connected'] and cleared['handoff']['account_label'] == account, (
+        'CLEAR: retiring a conversation preserves genuine managed authentication/account'
+    )
+    assert cleared['models'] == models and (
+        cleared['selected_model'], cleared['selected_effort']
+    ) == choice, 'CLEAR: conversation retirement preserves the actual catalog and user choices'
+    assert not any((cleared['messages'], cleared['pending_question'], cleared['pending_plan'])), (
+        'CLEAR: original history and pending conversation controls are retired'
+    )
+    assert not cleared['can_cancel'], 'CLEAR: original operation settles after retirement'
+    if scenario == 'active':
+        interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
+        assert any(row['params']['threadId'] == original[0]['params']['threadId']
+                   and row['params']['turnId'] == observations[0]['turnId']
+                   for row in interrupts) or not original_peer_is_live(identity), (
+            'CLEAR: actual original work is interrupted or its original process has ceased'
+        )
+    assert after['connected'] and len(sent) == 2, (
+        'CLEAR: a fresh conversation dispatches once without another sign-in'
+    )
+    assert sent[1]['params']['threadId'] != sent[0]['params']['threadId'], (
+        'CLEAR: new user input uses a genuine distinct fresh runtime thread'
+    )
+    fresh_rows = users(actor, fresh_text)
+    assert len(fresh_rows) == 1 and fresh_rows[0]['id'] != original_row and (
+        fresh_rows[0]['id'] == sent[1]['params']['clientUserMessageId']
+    ), 'CLEAR: the fresh admitted prompt has its own once-only retained user identity'
+    fresh_wire = json.dumps(sent[1]['params']['input'], ensure_ascii=False)
+    assert fresh_wire.count(fresh_text) == 1 and original_text not in fresh_wire, (
+        'CLEAR: fresh context contains the new input once and never replays the old prompt'
+    )
+    assert sum(row.get('text') == 'Original fresh after Clear reply'
+               for row in after['messages']) == 1 and not after['can_cancel'], (
+        'CLEAR: genuine fresh turn completes once and settles its own operation'
+    )
+    assert not any(row.get('id') == original_row or row.get('text') in {
+        original_text, 'Original before Clear reply', 'Original late reply after Clear',
+    } for row in after['messages']), (
+        'CLEAR: old retained or delayed conversation events cannot revive retired history'
+    )
+    assert sum(row.get('method') == 'account/login/start' for row in records(trace)) == 0, (
+        'CLEAR: managed account readiness requires no new login interaction'
+    )
+
+
+def test_clear_settled_conversation_preserves_real_managed_account_and_fresh_send(generic):
+    clear_conversation_case(generic, 'settled')
+
+
+def test_clear_active_turn_retires_old_authority_without_signing_out(generic):
+    clear_conversation_case(generic, 'active')
+
+
 @pytest.mark.parametrize(
     'scenario',
     [
