@@ -194,7 +194,12 @@ struct AssistantViewModel::State {
     std::unique_ptr<QTemporaryDir> generic_input_cache;
     QStringList generic_skill_paths;
     QMap<QString, Object> generic_items;
-    QMap<QString, QString> generic_item_rows, generic_rpc_rows, generic_rpc_turns;
+    QMap<QString, QString> generic_item_rows, generic_rpc_rows;
+    struct PendingSteer {
+        QString thread, turn;
+        bool terminal_retained = false;
+    };
+    QMap<QString, PendingSteer> generic_rpc_turns;
     QSet<QString> generic_final_items;
     Object generic_plan_progress;
     QMap<QString, qint64> generic_summary_parts;
@@ -418,7 +423,8 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("Agent request refusal has an invalid shape");
             const auto number = static_cast<qint32>(code.toDouble());
             const auto reason = message.toString();
-            const auto expectedTurn = generic_rpc_turns.take(id);
+            const auto origin = generic_rpc_turns.take(id);
+            const auto expectedTurn = origin.turn;
             // Only exact pinned pre-dispatch/NotSubmitted reasons prove that
             // this input did not execute. Numeric categories alone do not.
             const bool contextGate = (method == "turn/start" && reason == "turn/start.additionalContext requires experimentalApi capability") ||
@@ -437,9 +443,10 @@ struct AssistantViewModel::State {
                 }
             }
             const bool nonadmitted = number == -32600 && (contextGate || steerReason || turnMismatch);
-            const bool currentInput = generic_authenticated && !generic_retiring && !generic_revoke_pending && generic_busy &&
-                ((method == "turn/start" && generic_turn.isEmpty()) ||
-                 (method == "turn/steer" && !expectedTurn.isEmpty() && expectedTurn == generic_turn));
+            const bool currentInput = generic_authenticated && !generic_retiring && !generic_revoke_pending &&
+                ((method == "turn/start" && generic_busy && generic_turn.isEmpty()) ||
+                 (method == "turn/steer" && !expectedTurn.isEmpty() && origin.thread == generic_thread &&
+                  ((generic_busy && expectedTurn == generic_turn) || origin.terminal_retained)));
             const bool retainSession = nonadmitted && currentInput && generic_rpc_rows.contains(id);
             // Display no arbitrary server prose/data, echoed input, path,
             // credential, reasoning or stderr. Known explanations are app-owned.
@@ -561,7 +568,7 @@ struct AssistantViewModel::State {
             generic_acknowledge(id);
         } else if (method == "turn/steer") {
             const auto expected = generic_rpc_turns.take(id);
-            if (expected.isEmpty() || generic_id(result.value("turnId")) != expected)
+            if (expected.turn.isEmpty() || expected.thread != generic_thread || generic_id(result.value("turnId")) != expected.turn)
                 throw std::runtime_error("Agent steering reply has the wrong turn binding");
             generic_acknowledge(id);
         }
@@ -760,6 +767,11 @@ struct AssistantViewModel::State {
                 if (row.value("status") == "in_progress") { row["status"] = status; next[i] = row; }
             }
             if (!publish(std::move(next))) { generic_fail(storage_error); return; }
+            // This receipt follows validation AND durable original-outcome
+            // retention. Keep it only on still-pending owned steer requests;
+            // their definite refusals may arrive after this terminal event.
+            for (auto it = generic_rpc_turns.begin(); it != generic_rpc_turns.end(); ++it)
+                if (it->thread == generic_thread && it->turn == generic_turn) it->terminal_retained = true;
             generic_terminal_turn = generic_turn;
             generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); generic_revoke_pending = false;
             generic_retire_question(); agent->retainOutput(0); agent->settleOperation();
@@ -837,7 +849,7 @@ struct AssistantViewModel::State {
         }
         const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params, [this, row, steering](const QString& id) {
             try {
-                if (steering) generic_rpc_turns.insert(id, generic_turn);
+                if (steering) generic_rpc_turns.insert(id, PendingSteer{generic_thread, generic_turn, false});
                 generic_rpc_rows.insert(id, row.value("id").toString());
                 if (!generic_present(row)) { generic_rpc_rows.remove(id); generic_rpc_turns.remove(id); return false; }
                 generic_writing_input = true; generic_busy = true; return true;
