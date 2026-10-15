@@ -1,0 +1,37 @@
+{
+  "utc": "2026-10-14T23:17:14.620697+00:00",
+  "sources": [
+    {
+      "url": "https://developers.openai.com/siwc/token-sharing-open-source/sign-in.md",
+      "sha256": "94e9158385ba3048ad3454785940c97c92d9d2dcf8dfda66b0f4418643d146a5",
+      "bytes": 16335
+    },
+    {
+      "url": "https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions.md",
+      "sha256": "ab3eb6b64956e7ca22edbe4eb70f67ab2245cf9aea197902b16c639a6cf8dfc1",
+      "bytes": 6393
+    },
+    {
+      "url": "https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference.md",
+      "sha256": "4cd568e57168de134717e5ed611d15d3505b88d30d6a45bd234b2a0a1ea96370",
+      "bytes": 3973
+    },
+    {
+      "url": "https://developers.openai.com/siwc/token-sharing-open-source/token-reference.md",
+      "sha256": "d48d4bee9f15062bf4cde08fe33fd32aab2a8df1a304dde70969eb528e07d0a1",
+      "bytes": 4240
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/reasoning.md",
+      "sha256": "a561487dd41db8828b5b9920d77275bdced3c3c07ba1fb9f3c3230c5aaeb925b",
+      "bytes": 70779
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/api-reference/responses-streaming.md",
+      "sha256": "310e18f833d9cd53e2b72cd88d2c5b6cde39959bc6e5bc8b7d07e3395262eb35",
+      "bytes": 337408
+    }
+  ],
+  "purpose": "Independent offline protocol fixtures only; synthetic tokens never establish live provider entitlement.",
+  "additional_acquisition_utc": "2026-10-15"
+}
