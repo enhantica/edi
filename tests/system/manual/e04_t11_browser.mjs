@@ -12,17 +12,20 @@ import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { inspectAssistantSelectedFiles } from './web_assistant_selected_files.mjs';
 import { inspectAssistantDevices } from './web_assistant_device.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
+const assistantFilesOnly = process.argv.includes('--assistant-files-only');
 const fileRequestsOnly = process.argv.includes('--file-requests-only');
 const assistantDevicesOnly = process.argv.includes('--assistant-devices-only');
 const standaloneDevice = process.argv.includes('--standalone-singlethread-device');
 assert(!standaloneDevice || (assistantDevicesOnly && mode === 'singlethread' &&
   !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only')),
   'standalone delivery is only the explicit singlethread device observation');
+assert(!assistantFilesOnly || (!assistantDevicesOnly && !fileRequestsOnly && !standaloneDevice), 'I15/files: selected-file route is a separate actual packed artifact scope');
 assert(!assistantDevicesOnly || !fileRequestsOnly, 'device and file-request scopes must be distinct');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
@@ -360,6 +363,10 @@ try {
       capture:id=>shot('device-'+id)});
     assert.equal(errors.length,0,'I16/device: actual device entries complete without browser exceptions');
     console.log(`${mode}: assistant device entries passed; no provider readiness claimed`);
+  } else if (assistantFilesOnly) {
+    await inspectAssistantSelectedFiles({send,evaluate,frame,click,waitAX,event,lastEvents,shot,scratch,output,mode});
+    assert.equal(errors.length,0,'I15/files: selected-file interaction has no browser exception');
+    console.log(`${mode}: selected browser chooser subset passed; drop/native picker/provider read remain separately unqualified`);
   } else {
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),

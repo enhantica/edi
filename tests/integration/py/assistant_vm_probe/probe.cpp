@@ -46,7 +46,14 @@ int main(int argc,char** argv) {
     auto session=std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     const auto history=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history.json";
     int model_changes=0;
+#ifdef EDI_TEST_SELECTED_FILES
+    Array retired_selections;
+#endif
     auto observe=[&] {
+#ifdef EDI_TEST_SELECTED_FILES
+        QObject::connect(session->assistant(), &edi_app::AssistantViewModel::fileSelectionRetired,
+            session.get(), [&](const QString& id){retired_selections.push_back(id);});
+#endif
         QObject::connect(session->assistant()->messages(),&edi_app::RowTableModel::countChanged,
             session.get(),[&]{++model_changes;});
     };
@@ -74,6 +81,10 @@ int main(int argc,char** argv) {
                 {"objective",value.fit_result.objective_value}};
         }
         return {{"alive",true},{"connected",vm->connected()},{"state",vm->state()},
+#ifdef EDI_TEST_SELECTED_FILES
+            {"selected_files",rows(vm->selectedFiles())},{"retired_selections",retired_selections},
+            {"project_present",session->project()!=nullptr},
+#endif
             {"last_error",vm->lastError()},{"messages",rows(vm->messages())},{"models",rows(vm->models())},
             {"selected_model",vm->selectedModel()},{"selected_effort",vm->selectedEffort()},
             {"available_efforts",QJsonArray::fromStringList(vm->availableEfforts())},
@@ -102,6 +113,19 @@ int main(int argc,char** argv) {
             else if(op=="approve")session->assistant()->approvePlan(input["id"].toString());
             else if(op=="cancel")session->assistant()->cancel();
             else if(op=="clear_history")session->assistant()->clearHistory();
+#ifdef EDI_TEST_SELECTED_FILES
+            else if(op=="selected_begin") {
+                result={{"request_id",session->assistant()->beginFileSelection()}};
+            } else if(op=="selected_cancel") {
+                session->assistant()->cancelFileSelection(input["request_id"].toString());
+            } else if(op=="selected_add") {
+                QList<QUrl> urls;
+                for(const auto& value:input["urls"].toArray()) urls.push_back(QUrl(value.toString()));
+                result={{"accepted",session->assistant()->addSelectedFiles(input["request_id"].toString(),urls)}};
+            } else if(op=="selected_remove") {
+                result={{"accepted",session->assistant()->removeSelectedFile(input["id"].toString())}};
+            }
+#endif
             else if(op=="select_model")session->assistant()->setSelectedModel(input["id"].toString());
             else if(op=="select_effort")session->assistant()->setSelectedEffort(input["id"].toString());
             else if(op=="open")result={{"opened",session->openProject(QUrl::fromLocalFile(input["path"].toString()))}};

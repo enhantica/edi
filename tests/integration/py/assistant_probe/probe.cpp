@@ -1,4 +1,9 @@
 #include "edi/assistant.hpp"
+#ifdef EDI_TEST_SELECTED_FILES
+#include "edi/assistant_files.hpp"
+#include <charconv>
+#include <cmath>
+#endif
 #include "edi/live_preview.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/io.hpp"
@@ -591,6 +596,40 @@ int main() {
                 result = edi::json::parse(stream->output());
             } else if (op == "stream_finish") {
                 result = reply(stream->finish());
+#ifdef EDI_TEST_SELECTED_FILES
+            } else if (op == "selected_update") {
+                std::uint64_t generation=0;
+                const auto& encoded=input.at("generation").string("generation");
+                const auto parsed=std::from_chars(encoded.data(),encoded.data()+encoded.size(),generation);
+                if(parsed.ec!=std::errc{} || parsed.ptr!=encoded.data()+encoded.size())
+                    throw std::invalid_argument("test generation must be a complete unsigned decimal");
+                std::vector<edi::assistant::SelectedFile> added;
+                for(const auto& value:input.at("added").array("added")) {
+                    edi::assistant::SelectedFile file;
+                    file.id=value.at("id").string("id");
+                    file.relative_name=value.at("name").string("name");
+                    if(!value.get("text").is_null()) {
+                        const auto& bytes=value.at("text").string("text");
+                        file.bytes.assign(bytes.begin(),bytes.end());
+                    } else if(!value.get("bytes").is_null()) {
+                        for(const auto& byte:value.at("bytes").array("bytes")) {
+                            const auto n=byte.number("byte");
+                            if(n<0 || n>255 || std::floor(n)!=n) throw std::invalid_argument("invalid fixture byte");
+                            file.bytes.push_back(static_cast<std::uint8_t>(n));
+                        }
+                    } else {
+                        const auto count=value.at("repeat").number("repeat");
+                        if(count<0 || count>67108865 || std::floor(count)!=count)
+                            throw std::invalid_argument("fixture repetition outside finite gate bound");
+                        file.bytes.assign(static_cast<std::size_t>(count),static_cast<std::uint8_t>('x'));
+                    }
+                    added.push_back(std::move(file));
+                }
+                std::vector<std::string> removed;
+                for(const auto& value:input.at("removed").array("removed")) removed.push_back(value.string("id"));
+                result=reply(controller.update_selected_files(input.at("collection").string("collection"),
+                    generation,std::move(added),std::move(removed)));
+#endif
             } else if (op == "inspect") {
                 result = Object{};
             } else throw std::invalid_argument("test host operation missing");

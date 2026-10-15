@@ -48,3 +48,8 @@ target_link_libraries(assistant_scope_retirement_probe PRIVATE edi::core)
 add_executable(assistant_stream_failure_latch_probe stream_failure_latch_probe.cpp)
 target_include_directories(assistant_stream_failure_latch_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_stream_failure_latch_probe PRIVATE edi::core)
+
+add_executable(assistant_selected_files_probe probe.cpp)
+target_compile_definitions(assistant_selected_files_probe PRIVATE EDI_TEST_SELECTED_FILES=1)
+target_include_directories(assistant_selected_files_probe PRIVATE "${EDI_SOURCE}/core/src")
+target_link_libraries(assistant_selected_files_probe PRIVATE edi::core)
