@@ -63,7 +63,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Layout.fillWidth: true
-                text: panel.assistant.connectionLabel
+                text: !panel.assistant.connected && panel.assistant.state !== "connecting" ? qsTr("Sign in with ChatGPT") : panel.assistant.connectionLabel
                 onClicked: connectionDialog.open()
             }
             EaElements.ToolButton {
