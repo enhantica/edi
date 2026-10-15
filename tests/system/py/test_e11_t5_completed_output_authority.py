@@ -135,9 +135,31 @@ def test_nonexecuting_original_still_requires_genuine_successful_response(host, 
                 }
             ],
         )
-    assert not completed(result) and not host.command('stream_finish')['reply']['ok'], (
+    assert not completed(result), (
         'S-R2: EOF/DONE/failed/incomplete never substitute for genuine completed response'
     )
+    finished = host.command('stream_finish')['reply']
+    if ending in {'failed', 'incomplete'}:
+        # Packet727-730 and the existing D3 contract distinguish successful decoding
+        # of a valid non-success terminal from a successful inference. Review79
+        # adjudicates this boolean; the original EOF/DONE refusal stays strict.
+        terminals = [e for e in result['stream_events'] if e.get('type') == 'turn_finished']
+        assert len(terminals) == 1 and terminals[0]['status'] != 'completed', (
+            'S-R2: a genuine failed/incomplete response publishes exactly one non-success terminal'
+        )
+        assert not any(e.get('type') == 'tool_call' for e in result['stream_events']), (
+            'S-R2: decoding a failed/incomplete terminal cannot authorize executable work'
+        )
+        assert host.command('stream_output')['reply'] == [], (
+            'S-R2: failed/incomplete exchanges contribute no completed originals to clean replay'
+        )
+        assert finished['ok'], (
+            'S-R2/D3: a valid non-success terminal may settle decoding without inference success'
+        )
+    else:
+        assert not finished['ok'], (
+            'S-R2: EOF/DONE without a valid semantic terminal refuses finish'
+        )
 
 
 @pytest.mark.parametrize(
