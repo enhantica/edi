@@ -4335,9 +4335,10 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // host crossing) so the post-hoc report can render the starting row; the streamed surface
             // additionally gets it in the preamble below.
             const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
+            // pre_fit_record promises Rwp/reduced chi2; obtain raw chi2 from this same provider (ADR-0037).
             const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
                                           crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                          crysta_pre_fit.unevaluable_trials, {}, crysta_pre_fit.chi_square};
+                                          crysta_pre_fit.unevaluable_trials, {}, provider.chi_square(provider.values())};
             // Preamble: fired ONCE here — after the provider is built (so the counts are
             // known) and the pre-fit is evaluated, BEFORE the LM loop. Empty callback => no host
             // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
@@ -5091,9 +5092,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             const double dof = detail::reduced_chi_square_dof(provider.n_data(), provider.n_free());
             // Pre-fit record at the joint start params — the shared residual seam, no fit.
             const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
+            // pre_fit_record promises Rwp/reduced chi2; obtain raw chi2 from this same provider (ADR-0037).
             const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
                                           crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                          crysta_pre_fit.unevaluable_trials, {}, crysta_pre_fit.chi_square};
+                                          crysta_pre_fit.unevaluable_trials, {}, provider.chi_square(provider.values())};
             // Preamble: fired ONCE before the loop with the joint bank names + counts.
             if (on_start) {
                 std::vector<std::string> bank_names;

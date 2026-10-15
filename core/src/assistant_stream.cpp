@@ -105,7 +105,13 @@ struct OpenAiStream::State {
         if (terminal) refuse("invalid_argument", "Data after terminal response");
         const auto message = parse(body); const auto type = string(message, "type");
         if (type == "response.output_text.delta" || type == "response.refusal.delta") {
-            if (has(message, "item_id")) text_items.insert(identifier(message, "item_id")); else unbound_text = true;
+            if (has(message, "item_id")) {
+                const auto id = identifier(message, "item_id");
+                const auto found = items.find(id);
+                if (found == items.end() || string(found->second.original, "type") != "message" || found->second.done)
+                    refuse("invalid_argument", "Text delta names an unavailable, incompatible or completed item");
+                text_items.insert(id);
+            } else unbound_text = true;
             if (type == "response.refusal.delta") refused = true;
             emit({{"type", "text_delta"}, {"text", string(message, "delta", true)}});
         } else if (type == "response.output_item.added" || type == "response.output_item.done") {

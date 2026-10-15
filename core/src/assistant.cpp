@@ -137,6 +137,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         WorkStamps accepted_stamps, fitted_stamps;
         edi::detail::FitInputs accepted_inputs, fitted_inputs;
         work::Ticket baseline_ticket = 0;
+        bool quarantined = false;
         std::uint64_t revision = 0;
         double baseline = std::numeric_limits<double>::quiet_NaN();
         std::optional<FitReport> report;
@@ -149,7 +150,18 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     J admitting_event;
     struct Hold { std::uint64_t history = 0, cache = 0; };
     std::map<std::string, Hold> holds;
-    std::map<std::string, Cached> calls;
+    using CallMap = std::map<std::string, Cached>;
+    using HoldMap = std::map<std::string, Hold>;
+    CallMap calls;
+    struct Admission {
+        Reply result;
+        J history;
+        CallMap::node_type call;
+        HoldMap::node_type hold;
+        std::uint64_t history_bytes = 0, cache_bytes = 0;
+    };
+    std::optional<Admission> admission;
+    Reply admitted() { return std::move(admission->result); }
 
     State(work::Worker& runner, Hooks services) : worker(runner), hooks(std::move(services)) {
         if (!hooks.monotonic_ms) hooks.monotonic_ms = [] {
@@ -189,7 +201,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         fields.emplace_back("revision", scope ? scope->at("revision") : J(std::to_string(version.revision)));
         hooks.event(json::write(fields));
     }
-    void status(std::string next) { phase = std::move(next); emit("state_changed", {{"state", state()}}); }
+    template <typename Fields>
+    void safe_emit(const std::string& type, Fields&& fields, const J* scope = nullptr) noexcept {
+        try { emit(type, fields(), scope); } catch (...) { interrupt_output(); }
+    }
+    void status(std::string_view next) noexcept {
+        try { phase.assign(next); emit("state_changed", {{"state", state()}}); }
+        catch (...) { interrupt_output(); }
+    }
     std::uint64_t held_history() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.history; return n; }
     std::uint64_t held_cache() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.cache; return n; }
     void check_history(const std::vector<J>& items, std::uint64_t future = 0) const {
@@ -222,8 +241,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
     void preflight(const Reply& result, bool pending = false) {
         if (admitting_call.empty()) return;
+        if (result.value.size() > Limits::message_bytes) refuse("resource_exhausted", "Tool result exceeds the assistant payload limit");
         const auto call_row = invocation(admitting_event);
-        const auto reply_row = result_row(admitting_call, result, pending);
+        const auto reply_row = result_row(admitting_call, result, pending, &admitting_event);
         const auto cache = cache_size(admitting_event, result) + (calls.empty() ? 0 : 1);
         if (calls.size() + 1 > Limits::completed_calls || cache + held_cache() > Limits::completed_call_bytes - cache_used)
             refuse("resource_exhausted", "Completed-call capacity is unavailable");
@@ -239,6 +259,26 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (cache + growth + held_cache() > Limits::completed_call_bytes - cache_used)
                 refuse("resource_exhausted", "Completed terminal capacity is unavailable");
         }
+        Admission prepared;
+        prepared.result = result;
+        prepared.history = history;
+        auto& next_rows = std::get<A>(prepared.history.data);
+        next_rows.reserve(next_rows.size() + 2);
+        next_rows.push_back(call_row); next_rows.push_back(reply_row);
+        prepared.history_bytes = payload_size(prepared.history, Limits::history_bytes);
+        prepared.cache_bytes = cache_used + cache;
+        CallMap staged_call;
+        staged_call.emplace(admitting_call, Cached{json::write(canonical(admitting_event)), result});
+        prepared.call = staged_call.extract(admitting_call);
+        if (pending) {
+            const auto terminal_history = payload_size(result_row(admitting_call, success())) - 2 + Limits::message_bytes + 1;
+            const auto next_cache = payload_size(O{{"binding", canonical(admitting_event)}, {"reply", result_row(admitting_call, success())}}) - 2 + Limits::message_bytes;
+            const auto previous_cache = cache_size(admitting_event, result);
+            HoldMap staged_hold;
+            staged_hold.emplace(admitting_call, Hold{terminal_history, next_cache > previous_cache ? next_cache - previous_cache : 0});
+            prepared.hold = staged_hold.extract(admitting_call);
+        }
+        admission.emplace(std::move(prepared));
     }
     void finish_call(const std::string& call, const Reply& result) {
         const auto old = calls.find(call);
@@ -264,16 +304,47 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         history_item(row);
         emit("tool_result", {{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}}, &event);
     }
-    void stop() {
-        if (!question.empty()) {
-            finish_call(question_call, failure("interrupted", "The question was interrupted before an answer"));
-            emit("question_invalidated", {{"question_id", question}});
-            question.clear(); question_record = J{}; question_call.clear();
+    void reset_conversation() {
+        auto next = id("conversation");
+        history = A{}; history_used = 2; calls.clear(); cache_used = 2;
+        holds.clear(); answers.clear(); conversation = std::move(next);
+        admitting_call.clear(); admitting_event = J{}; admission.reset();
+    }
+    void interrupt_output() noexcept {
+        plan.reset(); response_done = true; turn.clear(); request.clear();
+        const auto interrupted_question = std::move(question_call);
+        question.clear(); question_record = J{}; question_call.clear();
+        if (trial) {
+            trial->quarantined = true;
+            try { if (trial->baseline_ticket) worker.cancel(trial->baseline_ticket); } catch (...) {}
+            try { if (trial->job) trial->job->cancel(); } catch (...) {}
         }
-        turn.clear(); request.clear(); plan.reset();
-        if (trial && trial->baseline_ticket) worker.cancel(trial->baseline_ticket);
-        if (trial && (trial->baseline_ticket || (trial->job && trial->job->running()))) { if (trial->job) trial->job->cancel(); status("cancelling"); }
-        else { trial.reset(); active_job.clear(); status(ready ? "idle" : "disconnected"); }
+        if (!interrupted_question.empty()) {
+            try { finish_call(interrupted_question, failure("interrupted", "The question was interrupted")); } catch (...) {}
+        }
+        phase = "interrupted";
+        try { emit("state_changed", {{"state", state()}}); } catch (...) {}
+    }
+    void stop() noexcept {
+        try {
+            // Revoke the request before notifying any retaining/rendering host.
+            turn.clear(); request.clear(); plan.reset();
+            if (!question.empty()) {
+                const auto call = std::move(question_call);
+                const auto question_id = std::move(question);
+                question.clear(); question_record = J{}; question_call.clear();
+                finish_call(call, failure("interrupted", "The question was interrupted before an answer"));
+                safe_emit("question_invalidated", [&] { return O{{"question_id", question_id}}; });
+            }
+            if (trial && trial->baseline_ticket) worker.cancel(trial->baseline_ticket);
+            if (trial && (trial->baseline_ticket || (trial->job && trial->job->running()))) {
+                if (trial->job) trial->job->cancel();
+                status("cancelling");
+            } else {
+                if (!trial || !trial->quarantined) trial.reset();
+                active_job.clear(); status(ready ? "idle" : "disconnected");
+            }
+        } catch (...) { interrupt_output(); }
     }
     void stamps() { if (plan && live) { plan->stamps = work_stamps(*live); plan->inputs = edi::detail::inputs_of(*live); } }
     void current() {
@@ -289,18 +360,24 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             stop(); refuse("out_of_scope", "The approved elapsed-time budget is exhausted");
         }
     }
-    void send_request() {
-        request_trial = trial ? trial->id : "";
-        request = id("request"); response_done = false; had_tools = false;
-        const auto project_context = context();
-        bounded(project_context, Limits::context_bytes);
+    J request_payload(const std::string& next_turn, const std::string& next_request,
+                      const std::string& next_conversation, const std::string& next_text,
+                      const std::string& next_model, const std::string& next_effort, const J& next_history) const {
+        const auto project_context = context(); bounded(project_context, Limits::context_bytes);
         O out{{"schema", "edi.assistant/1"}, {"type", "request"}, {"connection_id", connection},
-              {"turn_id", turn}, {"request_id", request}, {"conversation_id", conversation}, {"model", model}, {"text", text},
-              {"attachments", attachments}, {"context", project_context}, {"history", history}, {"tools", manifest()}};
-        if (!effort.empty()) out.emplace_back("effort", effort);
-        bounded(out, Limits::request_bytes);
+              {"turn_id", next_turn}, {"request_id", next_request}, {"conversation_id", next_conversation},
+              {"model", next_model}, {"text", next_text}, {"attachments", A{}},
+              {"context", project_context}, {"history", next_history}, {"tools", manifest()}};
+        if (!next_effort.empty()) out.emplace_back("effort", next_effort);
+        bounded(out, Limits::request_bytes); return out;
+    }
+    void send_request() {
+        const auto next_request = id("request");
+        const auto outgoing = json::write(request_payload(turn, next_request, conversation, text, model, effort, history));
+        request_trial = trial ? trial->id : "";
+        request = next_request; response_done = false; had_tools = false;
         status("streaming");
-        if (hooks.provider_request) hooks.provider_request(json::write(out));
+        if (hooks.provider_request) hooks.provider_request(outgoing);
     }
     void continue_turn() {
         if (!response_done || !active_job.empty() || !question.empty() || (plan && !plan->approved)) return;
@@ -319,9 +396,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
     void apply(const Edit& edit, bool structural = false) {
         if (!hooks.apply) refuse("apply_refused", "No project edit host is attached");
+        if (version.revision == UINT64_MAX) refuse("resource_exhausted", "Project revision identity limit exceeded");
         const auto message = hooks.apply(edit, structural);
         if (!message.empty()) refuse("apply_refused", message);
-        ++version.revision; stamps();
+        ++version.revision;
+        try { stamps(); } catch (...) { plan.reset(); phase = "interrupted"; }
     }
     Reply tool(const J& event) {
         const auto name = string(event, "name");
@@ -360,11 +439,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             next.absolute = number(objective, "absolute_tolerance"); next.relative = number(objective, "relative_tolerance");
             if (next.absolute < 0 || next.relative < 0) refuse("invalid_argument", "Negative objective tolerance");
             if (trial || !active_job.empty()) refuse("busy", "Finish the current trial first");
+            next.stamps = work_stamps(*live); next.inputs = edi::detail::inputs_of(*live);
+            J shown = args; set(shown, "plan_id", next.id);
             preflight(success(O{{"plan_id", next.id}}));
-            plan = std::move(next); stamps();
-            J shown = args; set(shown, "plan_id", plan->id);
-            emit("plan_proposed", {{"plan", shown}, {"plan_id", plan->id}}); status("awaiting_approval");
-            return success(O{{"plan_id", plan->id}});
+            plan = std::move(next);
+            safe_emit("plan_proposed", [&] { return O{{"plan", shown}, {"plan_id", plan ? plan->id : ""}}; }); status("awaiting_approval");
+            return admitted();
         }
         if (name == "ask_question") {
             shape(args, {"text", "options", "recommended", "allow_free_text"});
@@ -394,13 +474,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             } else if (args.at("recommended").is_null() || !ids.count(args.at("recommended").string("recommended")))
                 refuse("invalid_argument", "Recommendation must name an offered option");
             const auto next = id("question");
-            preflight(success(O{{"question_id", next}, {"pending", true}}), true);
             J shown = args;
             for (const auto* key : {"connection_id", "turn_id", "request_id", "project_id", "revision", "call_id"}) set(shown, key, event.at(key));
             set(shown, "question_id", next);
-            question = next; question_record = shown; question_call = admitting_call;
-            emit("question", {{"question", shown}}); status("awaiting_answer");
-            return success(O{{"question_id", next}, {"pending", true}});
+            auto question_id = next; auto call = admitting_call; J stored = shown;
+            preflight(success(O{{"question_id", next}, {"pending", true}}), true);
+            question = std::move(question_id); question_record = std::move(stored); question_call = std::move(call);
+            safe_emit("question", [&] { return O{{"question", shown}}; }); status("awaiting_answer");
+            return admitted();
         }
         static const std::set<std::string> mutations{"set_parameters", "set_free", "begin_trial", "fit_trial", "evaluate_trial", "discard_trial"};
         if (!mutations.count(name)) refuse("unknown_tool", "Unknown tool: " + name);
@@ -447,9 +528,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             preflight(success(predicted));
             if (trial) { change(); ++trial->revision; }
             else apply(change);
-            O result{{"revision", std::to_string(version.revision)}};
-            if (trial) { result.emplace_back("trial_id", trial->id); result.emplace_back("candidate_revision", std::to_string(trial->revision)); }
-            return success(result);
+            return admitted();
         }
         if (name == "begin_trial") {
             shape(args, {"group_id"}); const auto group = string(args, "group_id");
@@ -466,29 +545,32 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             for (auto* parameter : next->project->parameters()) parameter->free = false;
             for (const auto& path : group_paths) {
                 const auto& row = metadata.at(path);
-                if (!row.refinable || !row.fittable || !row.used_by_profile || row.parameter->dependence != Dependence::Independent)
-                    refuse("out_of_scope", "The selected group contains a nonfittable parameter");
-                candidate_paths.at(path).first->free = true;
+                if (row.parameter->dependence != Dependence::Independent)
+                    refuse("out_of_scope", "The selected group contains a dependent parameter");
+                // Editable approved setup values need not be optimizer variables.
+                if (row.refinable && row.fittable && row.used_by_profile)
+                    candidate_paths.at(path).first->free = true;
             }
             next->accepted = std::make_shared<Project>(*live);
             next->accepted_stamps = work_stamps(*live); next->accepted_inputs = edi::detail::inputs_of(*live);
             preflight(success(O{{"trial_id", next->id}}));
-            trial = std::move(next); request_trial = trial->id; ++plan->trials;
-            return success(O{{"trial_id", trial->id}});
+            auto next_trial = next->id;
+            trial = std::move(next); request_trial = std::move(next_trial); ++plan->trials;
+            return admitted();
         }
         shape(args, {"trial_id"});
         if (!trial || string(args, "trial_id") != trial->id) refuse("unknown_trial", "Unknown trial");
         if (!active_job.empty()) refuse("busy", "Wait for the fit to settle");
-        if (name == "discard_trial") { preflight(success(O{{"discarded", true}})); trial.reset(); return success(O{{"discarded", true}}); }
+        if (name == "discard_trial") { preflight(success(O{{"discarded", true}})); trial.reset(); return admitted(); }
         if (name == "fit_trial") {
             if (trial->report) refuse("invalid_argument", "This trial has already been fitted");
             const auto mode = effective_fitting_mode(*trial->project);
             if (mode == "sequential" || mode == "independent")
                 refuse("out_of_scope", "Assistant scan trials require the pending checked result-artifact unit");
             const auto max_iterations = static_cast<int>(plan->max_iterations);
-            if (trial->project->minimizer_max_iterations == 0 || trial->project->minimizer_max_iterations > max_iterations)
-                trial->project->minimizer_max_iterations = max_iterations;
-            const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true); active_job = job_id; active_call = admitting_call; trial->call_id = admitting_call; trial->scope = event;
+            const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true);
+            auto next_call = admitting_call; auto next_scope = event;
+            auto next_job = job_id; auto next_active_call = admitting_call;
             const auto self = shared_from_this();
             FitJob::Hooks callbacks;
             callbacks.iterated = [self, job_id](const IterationRecord& iteration) {
@@ -536,6 +618,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 state->finish_call(candidate->call_id, terminal);
                 state->emit("job_finished", {{"job_id", job_id}, {"result", outcome}, {"status", status(report.status)},
                     {"candidate_adopted", report.adopted()}, {"live_adopted", false}}, &candidate->scope);
+                if (candidate->quarantined) { state->status("interrupted"); return; }
                 if (state->turn.empty()) { state->trial.reset(); state->status(state->ready ? "idle" : "disconnected"); }
                 else { state->status("streaming"); state->continue_turn(); }
             };
@@ -552,8 +635,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
 #endif
                 return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - wall_start).count() >= static_cast<std::int64_t>(std::min<std::uint64_t>(remaining, INT64_MAX));
             };
-            trial->job = std::make_unique<FitJob>(*trial->project, worker, std::move(callbacks), FitJob::Seams{}, expired);
-            auto baseline = trial->accepted;
+            auto prepared_job = std::make_unique<FitJob>(*trial->project, worker, std::move(callbacks), FitJob::Seams{}, expired);
+            auto baseline = std::make_shared<Project>(*trial->accepted);
             const auto candidate_slots = named_slots(*trial->project);
             const auto baseline_slots = named_slots(*baseline);
             if (candidate_slots.size() != baseline_slots.size()) refuse("stale_revision", "Baseline parameter identities changed");
@@ -562,7 +645,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 baseline_slots[i].parameter->free = candidate_slots[i].parameter->free.get();
             }
             const auto candidate_id = trial->id;
-            trial->baseline_ticket = worker.submit("assistant-baseline", [self, baseline, candidate_id, expired, mode](const work::CancelToken& token, const work::Emit&) {
+            const auto baseline_ticket = worker.submit("assistant-baseline", [self, baseline, candidate_id, expired, mode](const work::CancelToken& token, const work::Emit&) {
                 std::optional<double> objective;
                 std::string error;
                 try {
@@ -582,15 +665,20 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                         self->finish_call(candidate.call_id, {false, "edi.assistant.interrupted", json::write(O{{"job_id", job_id}, {"trial_id", candidate.id}, {"status", self->turn.empty() ? "cancelled" : "error"}, {"message", refused.refusal}, {"candidate_adopted", false}, {"live_adopted", false}})});
                         self->emit("job_finished", {{"job_id", job_id}, {"status", self->turn.empty() ? "cancelled" : "error"}, {"message", refused.refusal}, {"live_adopted", false}}, &candidate.scope);
                         self->status("interrupted");
-                        if (self->turn.empty()) self->trial.reset();
+                        if (self->turn.empty() && !candidate.quarantined) self->trial.reset();
                         return;
                     }
                     candidate.baseline = *objective;
                     if (!candidate.job->start()) { self->active_job.clear(); self->status("failed"); }
                 };
             });
-            emit("job_started", {{"job_id", job_id}, {"trial_id", trial->id}}); status("executing");
-            return success(O{{"job_id", job_id}});
+            trial->call_id = std::move(next_call); trial->scope = std::move(next_scope);
+            trial->job = std::move(prepared_job); trial->baseline_ticket = baseline_ticket;
+            if (trial->project->minimizer_max_iterations == 0 || trial->project->minimizer_max_iterations > max_iterations)
+                trial->project->minimizer_max_iterations = max_iterations;
+            active_job = std::move(next_job); active_call = std::move(next_active_call);
+            safe_emit("job_started", [&] { return O{{"job_id", job_id}, {"trial_id", trial->id}}; }); status("executing");
+            return admitted();
         }
         if (!trial->report) refuse("busy", "Fit the trial before evaluating it");
         const auto candidate = trial;
@@ -615,8 +703,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                  {"revision", std::to_string(version.revision + (accepted ? 1 : 0))}, {"diagnostics", diagnostics(candidate->project.get())}};
         preflight(success(result));
         if (accepted) apply(Edit::assistant_result(*live, candidate->project));
-        emit("trial_finished", {{"result", result}}); trial.reset();
-        return success(result);
+        safe_emit("trial_finished", [&] { return O{{"result", result}}; }); trial.reset();
+        return admitted();
     }
     Reply user(const J& command) {
         envelope(command); const auto type = string(command, "type");
@@ -626,8 +714,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (string(command, "project_id") != version.project_id) refuse("stale_project", "Project changed");
             if (detail::revision(command) != version.revision) refuse("stale_revision", "Project revision changed");
             if (!plan || string(command, "plan_id") != plan->id) refuse("approval_required", "Plan is no longer pending");
-            current(); plan->approved = true; plan->started = hooks.monotonic_ms();
-            emit("plan_approved", {{"plan_id", plan->id}}); status("streaming"); continue_turn(); return success();
+            if (plan->approved) { approved(command); return success(O{{"plan_id", plan->id}}); }
+            current(); const auto started = hooks.monotonic_ms();
+            plan->approved = true; plan->started = started;
+            safe_emit("plan_approved", [&] { return O{{"plan_id", plan ? plan->id : ""}}; });
+            status("streaming"); continue_turn(); return success();
         }
         if (type == "answer") {
             shape(command, {"schema", "type", "question_id", "answer"});
@@ -655,9 +746,11 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         shape(command, {"schema", "type", "text", "connection_id", "model"}, {"effort", "attachments"});
         if (!ready || string(command, "connection_id") != connection) refuse("connection_required", "Connect a provider first");
         if (!turn.empty() || !active_job.empty()) refuse("busy", "A conversation turn is running");
-        const auto selected = string(command, "model");
-        const auto selected_effort = has(command, "effort") ? string(command, "effort") : "";
+        auto selected = string(command, "model");
+        auto selected_effort = has(command, "effort") ? string(command, "effort") : "";
         bool supported = false;
+        const auto mapped_model = openai_efforts(selected);
+        if (mapped_model.array("efforts").empty()) refuse("invalid_argument", "Model has no reviewed capability mapping");
         for (const J& item : capabilities.array("capabilities")) if (string(item, "id") == selected) {
             supported = selected_effort.empty();
             for (const J& option : item.at("efforts").array("efforts")) if (option.string("effort") == selected_effort) supported = true;
@@ -665,11 +758,25 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!supported) refuse("invalid_argument", "Model or effort is not available");
         if (has(command, "attachments") && !command.at("attachments").array("attachments").empty())
             refuse("out_of_scope", "Attachment transfer requires the pending selected-handle unit");
-        text = string(command, "text"); model = selected; effort = selected_effort;
-        attachments = A{}; turn = id("turn");
-        if (conversation.empty()) conversation = id("conversation");
-        history_item(O{{"type", "message"}, {"role", "user"}, {"text", text}, {"turn_id", turn}, {"request_id", ""}}); send_request();
-        return success(O{{"turn_id", turn}, {"request_id", request}});
+        auto next_text = string(command, "text");
+        auto next_turn = id("turn"), next_request = id("request");
+        auto next_conversation = conversation.empty() ? id("conversation") : conversation;
+        const J user_row = O{{"type", "message"}, {"role", "user"}, {"text", next_text}, {"turn_id", next_turn}, {"request_id", ""}};
+        check_history({user_row});
+        J next_history = history; std::get<A>(next_history.data).push_back(user_row);
+        const auto outgoing = json::write(request_payload(next_turn, next_request, next_conversation, next_text, selected, selected_effort, next_history));
+        const auto growth = payload_size(user_row) + (history.array("history").empty() ? 0 : 1);
+        auto admitted_message = success(O{{"turn_id", next_turn}, {"request_id", next_request}});
+        auto next_trial = trial ? trial->id : std::string();
+        // All context/history/wire/return construction succeeded before admission commits.
+        text = std::move(next_text); model = std::move(selected); effort = std::move(selected_effort); attachments = A{};
+        turn = std::move(next_turn); request = std::move(next_request); conversation = std::move(next_conversation);
+        history_used += growth;
+        history = std::move(next_history); request_trial = std::move(next_trial); response_done = false; had_tools = false;
+        status("streaming");
+        try { if (hooks.provider_request) hooks.provider_request(outgoing); }
+        catch (...) { interrupt_output(); return failure("interrupted", "The admitted provider request could not start"); }
+        return admitted_message;
     }
     Reply provider(const J& event) {
         envelope(event); const auto type = string(event, "type");
@@ -685,6 +792,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 bounded(item.at("efforts"), Limits::http_json_bytes, Limits::model_options);
                 bounded(item.at("attachment_types"), Limits::http_json_bytes, Limits::model_options);
                 const auto mapped = openai_efforts(string(item, "id"));
+                if (mapped.array("efforts").empty()) refuse("invalid_argument", "Model has no reviewed capability mapping");
                 for (const J& option : item.at("efforts").array("efforts")) {
                     const auto tag = option.string("effort");
                     if (!effort_tag(tag)) refuse("invalid_argument", "Unsupported reasoning effort tag");
@@ -694,7 +802,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 for (const J& attachment : item.at("attachment_types").array("attachment_types")) attachment.string("attachment type");
             }
             const auto next = string(event, "connection_id");
-            if (next != connection || state != "ready") stop();
+            if (next != connection || state != "ready") { stop(); reset_conversation(); }
             connection = next; ready = state == "ready"; capabilities = event.at("capabilities");
             status(ready ? "idle" : "disconnected"); return success();
         }
@@ -722,7 +830,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (response_done) refuse("interrupted", "Response is already terminal");
             const auto result = string(event, "status");
             if (result != "completed" && result != "failed" && result != "interrupted") refuse("invalid_argument", "Invalid terminal status");
-            if (result != "completed") { stop(); status("interrupted"); return failure("interrupted", "Provider turn did not complete"); }
+            if (result != "completed") { interrupt_output(); return failure("interrupted", "Provider turn did not complete"); }
             response_done = true; continue_turn(); return success();
         }
         const auto call = string(event, "call_id");
@@ -736,24 +844,22 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const bool no_project_question = string(event, "name") == "ask_question" && !live && string(event, "project_id", true).empty();
         if (!no_project_question && (!live || string(event, "project_id") != version.project_id)) refuse("stale_project", "Project changed");
         if (detail::revision(event) != version.revision) refuse("stale_revision", "Project revision changed");
-        admitting_call = call; admitting_event = event;
+        admitting_call = call; admitting_event = event; admission.reset();
         Reply result;
         try { result = tool(event); }
-        catch (const Refusal& error) { result = failure(error.code, error.what()); }
-        catch (const std::exception& error) { result = failure("invalid_argument", error.what()); }
-        const bool pending = result.ok && (string(event, "name") == "fit_trial" || string(event, "name") == "ask_question");
-        preflight(result, pending);
-        cache_used += cache_size(event, result) + (calls.empty() ? 0 : 1);
-        calls.emplace(call, Cached{binding, result}); had_tools = true;
-        history_item(invocation(event));
-        history_item(result_row(call, result, pending));
-        if (pending) {
-            const auto terminal_history = payload_size(result_row(call, success())) - 2 + Limits::message_bytes + 1;
-            const auto next_cache = payload_size(O{{"binding", canonical(event)}, {"reply", result_row(call, success())}}) - 2 + Limits::message_bytes;
-            const auto previous_cache = cache_size(event, result);
-            holds[call] = {terminal_history, next_cache > previous_cache ? next_cache - previous_cache : 0};
+        catch (const Refusal& error) {
+            admission.reset();
+            if (error.code == "resource_exhausted") throw;
+            result = failure(error.code, error.what());
         }
-        emit("tool_result", {{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}});
+        catch (const std::exception& error) { admission.reset(); result = failure("invalid_argument", error.what()); }
+        const bool pending = result.ok && (string(event, "name") == "fit_trial" || string(event, "name") == "ask_question");
+        if (!admission) preflight(result, pending);
+        history = std::move(admission->history); history_used = admission->history_bytes;
+        cache_used = admission->cache_bytes; calls.insert(std::move(admission->call));
+        if (!admission->hold.empty()) holds.insert(std::move(admission->hold));
+        admission.reset(); had_tools = true;
+        safe_emit("tool_result", [&] { return O{{"call_id", call}, {"ok", result.ok}, {"code", result.code}, {"result", parse(result.value)}, {"pending", pending}}; }, &event);
         admitting_call.clear();
         return result;
     }
@@ -778,8 +884,19 @@ Reply Controller::user_command(const JsonText& command) {
     catch (const std::exception& error) { return failure("invalid_argument", error.what()); }
 }
 Reply Controller::provider_event(const JsonText& event) {
-    try { return state_->provider(parse(event)); }
-    catch (const Refusal& error) { return failure(error.code, error.what()); }
+    bool bound = false;
+    try {
+        const auto input = parse(event);
+        bound = !state_->turn.empty() && has(input, "connection_id") && has(input, "turn_id") && has(input, "request_id") &&
+            string(input, "connection_id") == state_->connection && string(input, "turn_id") == state_->turn && string(input, "request_id") == state_->request;
+        return state_->provider(input);
+    }
+    catch (const Refusal& error) {
+        if (bound && error.code == "resource_exhausted") state_->interrupt_output();
+        return failure(error.code, error.what());
+    }
+    catch (const std::length_error&) { if (bound) state_->interrupt_output(); return failure("resource_exhausted", "A retaining host exhausted its payload capacity"); }
+    catch (const std::bad_alloc&) { if (bound) state_->interrupt_output(); return failure("resource_exhausted", "Assistant output could not be retained"); }
     catch (const std::exception& error) { return failure("invalid_argument", error.what()); }
 }
 JsonText Controller::state() const { return json::write(state_->state()); }

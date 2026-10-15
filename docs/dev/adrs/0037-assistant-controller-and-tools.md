@@ -52,3 +52,26 @@ vocabulary; availability still comes solely from the user's account catalog. Thi
 about measured context windows or account entitlement. The compiled repair checkpoint is not a behavior/CI proof.
 Independent quota exhaustion, delayed lifecycle events, real owner rendering and live sign-in remain verification
 obligations; scan/recovery/conversion/provider/platform units remain incomplete.
+
+A refused new message leaves the previous execution conversation unchanged. The controller prepares its user row,
+context, complete outgoing request and reply before committing the new turn. A mutating tool likewise prepares its
+complete history/cache nodes and original-scope result before calling the edit door or changing the candidate.
+The original invocation scope remains the result's binding even when the action advances the project revision.
+Candidate iteration limits are clamped only after admission and baseline-job preparation succeed.
+
+Output exhaustion on an already bound request revokes its approval, interrupts the turn, cancels its worker and
+keeps its isolated candidate for recovery. Stale input and a refused new user message have no such authority over
+previous work. Connection replacement, disconnect and expiry retire the normalized execution history, tool and
+answer receipts and conversation identity together. The retained GUI archive is a separate display record.
+Repeated approval validates the existing allowance without resetting its original start time. Unknown model IDs
+cannot enter the core capability list even with Provider default: current account availability and the shipped
+exact capability map are both required. Completed public text/refusal items cannot accept later deltas.
+
+The baseline raw objective is evaluated with the same built residual provider's `chi_square(provider.values())`
+before optimization in both single and joint adapter paths. The provider already owns the current participating
+phases, masked population, experimental uncertainties and joint bank weights. This uses crysta's public
+`residual.hpp` evaluator, rather than reconstructing an objective from reduced chi-square or a historical result.
+`fit_report.hpp::pre_fit_record` promises the starting Rwp and reduced chi-square; its returned record does not
+promise a populated raw-objective member. Independent replay must still establish currency and comparability for
+single/joint data, exclusions, weights and changed fixed settings. The broader publication, retention and native
+failure repairs remain separate units; this scoped checkpoint does not establish their closure.
