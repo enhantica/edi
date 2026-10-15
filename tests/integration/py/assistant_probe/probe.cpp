@@ -115,12 +115,26 @@ int main() {
     bool fail_fit_submission=false;
     int fit_submissions=0,submission_failures=0;
 #endif
+#ifdef EDI_TEST_RECOVERY_BOUNDARIES
+    std::string fail_submission_channel;
+    bool fail_provider_request=false;
+    int provider_attempts=0,provider_failures=0;
+#endif
     edi::work::Worker worker([&](edi::work::Delivery delivery) {
         std::lock_guard lock(mutex);
         deliveries.push_back(std::move(delivery));
         arrived.notify_one();
     }, {.clock_ns={}, .trace=[&](const edi::work::Event& event) {
+#ifdef EDI_TEST_ADMISSION_FAULT
+        independent_fault::HostHook safe_trace;
+#endif
         std::lock_guard lock(queue_trace_mutex);queue_trace.push_back(event);
+#ifdef EDI_TEST_RECOVERY_BOUNDARIES
+        if(event.kind==edi::work::EventKind::Submitted && event.channel==fail_submission_channel) {
+            fail_submission_channel.clear();++submission_failures;
+            throw std::runtime_error("ordinary independent prequeue dependency failure");
+        }
+#endif
 #ifdef EDI_TEST_ASYNC_SETTLEMENT
         if(event.kind==edi::work::EventKind::Submitted && event.channel=="fit") {
             ++fit_submissions;
@@ -163,6 +177,13 @@ int main() {
 #ifdef EDI_TEST_ADMISSION_FAULT
             independent_fault::HostHook safe_host;
 #endif
+#ifdef EDI_TEST_RECOVERY_BOUNDARIES
+            ++provider_attempts;
+            if(fail_provider_request) {
+                fail_provider_request=false;++provider_failures;
+                throw std::runtime_error("ordinary independent provider callback failure");
+            }
+#endif
 #ifdef EDI_TEST_TERMINAL_RETENTION
             if(retention.mode!="headless") retention.record("request");
 #endif
@@ -188,7 +209,14 @@ int main() {
     };
 #ifdef EDI_TEST_TERMINAL_RETENTION
     if(retention.mode!="headless") controller_hooks.reserve_terminal=[&](const std::string& text) {
-        return retention.reserve(text);
+#ifdef EDI_TEST_ADMISSION_FAULT
+        independent_fault::HostHook safe_host;
+#endif
+        auto lease=retention.reserve(text);
+#ifdef EDI_TEST_ADMISSION_FAULT
+        independent_fault::event(Object{{"type","reserve_returned"}});
+#endif
+        return lease;
     };
 #endif
     edi::assistant::Controller controller(worker,std::move(controller_hooks));
@@ -314,6 +342,14 @@ int main() {
                 steady_clock=input.at("steady").boolean("steady"); clock_on_fit=!input.get("fit_admission").is_null() && input.at("fit_admission").boolean("fit_admission"); owner_work_max_ms=0; clock_start=std::chrono::steady_clock::now();
                 result=Object{};
 #ifdef EDI_TEST_ASYNC_SETTLEMENT
+#ifdef EDI_TEST_RECOVERY_BOUNDARIES
+            } else if(op == "provider_request_failure") {
+                fail_provider_request=input.at("armed").boolean("armed");result=Object{};
+            } else if(op == "submission_failure") {
+                fail_submission_channel=input.at("channel").string("channel");result=Object{};
+            } else if(op == "retention_policy") {
+                retention.mode=input.at("mode").string("mode");result=Object{};
+#endif
             } else if (op == "candidate_submit_failure") {
                 fail_fit_submission=input.at("armed").boolean("armed");result=Object{};
             } else if (op == "direct_submission") {
@@ -508,13 +544,35 @@ int main() {
             } else if (op == "inspect") {
                 result = Object{};
             } else throw std::invalid_argument("test host operation missing");
+            Array worker_jobs;
+            {
+                std::lock_guard lock(queue_trace_mutex);
+                for(std::size_t index=0;index<queue_trace.size();++index) {
+                    const auto& submitted=queue_trace[index];
+                    if(submitted.kind!=edi::work::EventKind::Submitted ||
+                       (submitted.channel!="fit" && submitted.channel!="assistant-baseline"))continue;
+                    bool finished=false,final_delivered=false;
+                    for(std::size_t next=index+1;next<queue_trace.size();++next) {
+                        const auto& event=queue_trace[next];
+                        if(event.id!=submitted.id || event.channel!=submitted.channel)continue;
+                        if(event.kind==edi::work::EventKind::Finished)finished=true;
+                        if(finished && event.kind==edi::work::EventKind::Delivered)final_delivered=true;
+                    }
+                    worker_jobs.emplace_back(Object{{"channel",submitted.channel},
+                        {"finished",finished},{"final_delivered",final_delivered}});
+                }
+            }
             Value output = Object{{"reply", result}, {"state", edi::json::parse(controller.state())},
                 {"context", edi::json::parse(controller.context())}, {"events", events},
-                {"requests", requests}, {"stream_events", stream_events},
+                {"requests", requests}, {"stream_events", stream_events}, {"worker_jobs",worker_jobs},
                 {"snapshot", snapshot(*project)}, {"apply_count", applies},
                 {"owner_clock_violations", owner_clock_violations.load()},
                 {"owner_work_max_ms",owner_work_max_ms},
                 {"owner_thread_kit", static_cast<bool>(EDI_WORKER_OWNER_THREAD)}};
+#ifdef EDI_TEST_RECOVERY_BOUNDARIES
+            std::get<Object>(output.data).emplace_back("provider_callback",Object{
+                {"attempts",provider_attempts},{"failures",provider_failures}});
+#endif
 #ifdef EDI_TEST_ASYNC_SETTLEMENT
             std::get<Object>(output.data).emplace_back("async_submission",Object{
                 {"fit_submissions",fit_submissions},{"failures",submission_failures}});

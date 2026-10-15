@@ -158,8 +158,17 @@ def test_started_failure_and_quarantine_preserve_recovery_until_explicit_teardow
     before_requests = len(admitted['requests'])
     if admitted['retention']['held']:
         cancelled = role.command('cancel')
-        assert cancelled['retention']['held'] == 1, (
-            'I10/S6: Stop cannot destroy a running or quarantined terminal allowance'
+        synchronous_question = (
+            operation == 'question'
+            and role.retention_mode == 'started-false'
+            and cancelled['retention']['settled'] == 1
+            and len(cancelled['retention']['terminals']) == 1
+            and cancelled['retention']['terminals'][0]['ok'] is False
+            and cancelled['retention']['terminals'][0]['pending'] is False
+        )
+        assert cancelled['retention']['held'] == (0 if synchronous_question else 1), (
+            'I10/S6: Stop preserves outstanding work; a synchronously settled question '
+            'consumes its hold only into its complete refusal'
         )
     if operation == 'fit':
         settled = trials.settle(role)

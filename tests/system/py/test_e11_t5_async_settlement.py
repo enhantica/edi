@@ -78,6 +78,16 @@ def terminals(observed, job):
     return [event for event in results if event.get('result', {}).get('job_id') == job]
 
 
+def finish_dispatched_continuation(actor):
+    """Complete only a request actually delivered to the provider hook."""
+    state = actor.last['state']
+    if state['state'] == 'streaming' and state['active_turn_id'] and actor.last['requests']:
+        request = actor.last['requests'][-1]
+        if request['turn_id'] == state['active_turn_id']:
+            return actor.provider('turn_finished', **actor.binding(), status='completed')
+    return actor.last
+
+
 def retry(actor):
     return actor.user(
         'message',
@@ -105,6 +115,7 @@ def test_failed_baseline_settles_with_complete_refusal_and_recoverable_conversat
         for event in settled['events']
         if event.get('type') == 'job_finished' and event.get('job_id') == job
     ]
+    finish_dispatched_continuation(host)
     new_turn = retry(host)
     checks = {
         'one_complete_tool_refusal': len(terminal) == 1 and terminal[0]['ok'] is False,
@@ -142,6 +153,7 @@ def test_candidate_start_submission_failure_is_contained_and_settled(host, armed
         'I10/S5: every admitted real candidate receives exactly one complete terminal'
     )
     if armed:
+        settled = finish_dispatched_continuation(host)
         assert (
             not settled['state']['active_turn_id'] or settled['state']['state'] == 'interrupted'
         ), 'I10/S5: failed submission visibly interrupts rather than resuming a successful phase'

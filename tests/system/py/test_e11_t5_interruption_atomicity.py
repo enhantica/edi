@@ -181,7 +181,7 @@ def test_one_shot_core_exhaustion_cannot_fall_through_publication_or_dispatch(
             assert failed['state']['state'] not in {'executing', 'streaming'}, (
                 'I10/N2: failed start publication stays interrupted or cancelling before delivery'
             )
-            failed = trials.settle(actor)
+            failed = trials.settle(actor, recover=True)
             assert not failed['state']['active_job_id'], (
                 'I10/N2: admitted work cancels and settles after publication failure'
             )

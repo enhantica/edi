@@ -75,11 +75,28 @@ def approve(host, paths, *, iterations=80, elapsed=5000, absolute=0.0):
     return plan
 
 
-def settle(host):
+def settle(host, *, recover=False):
     for _ in range(8):
         result = host.command('fence', milliseconds=800)
-        if result['reply']['fenced'] and not result['state']['active_job_id']:
-            return result
+        if result['reply']['fenced']:
+            if not result['state']['active_job_id']:
+                return result
+            # A complete quarantined terminal can retain a recovery ID after work ends.
+            retained = result.get('retention', {})
+            if retained.get('quarantined') and any(
+                row.get('pending') is False and isinstance(row.get('result'), dict)
+                for row in retained.get('terminals', [])
+            ):
+                return result
+            # Existing publication-failure cases recover only after actual baseline/fit
+            # final owner delivery plus the FIFO fence, never merely an interrupted phase.
+            jobs = result.get('worker_jobs', [])
+            if (
+                recover
+                and jobs
+                and all(row['finished'] and row['final_delivered'] for row in jobs)
+            ):
+                return host.command('cancel')
     pytest.fail('I10: the real worker must settle in the bounded independent host')
 
 
