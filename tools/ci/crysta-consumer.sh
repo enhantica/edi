@@ -93,6 +93,7 @@ if [ "$CONFIGURATION" = "consumer" ] && [ -n "${CRYSTA_CONSUMER_SRC:-}" ] \
 fi
 echo "crysta-consumer: proving the unit's linked crysta $PREFIX_SHA ($CONFIGURATION configuration)"
 
+SDK_CONTENT="$(python tools/ci/sdk_content_identity.py "$PREFIX")"
 # Configure the standalone consumer with Python discovery disabled — a fresh C++-only project.
 rm -rf "$BUILD"
 # --no-warn-unused-cli: the disable-Python flags are intentionally belt-and-suspenders; when the consumer
@@ -102,6 +103,7 @@ cmake -S "$SRC" -B "$BUILD" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Rel
   -DCMAKE_DISABLE_FIND_PACKAGE_Python=ON \
   -DCMAKE_DISABLE_FIND_PACKAGE_Python2=ON \
   -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
-cmake --build "$BUILD" -j
+printf '%s\n' "$SDK_CONTENT" > "$BUILD/.edi-sdk-build-key"
+cmake --build "$BUILD" --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 "$BUILD/crysta_consumer"
 echo "crysta zero-Python installed-consumer gate: PASS"

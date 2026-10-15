@@ -87,14 +87,24 @@ else
   CRYSTA_PREFIX="$ROOT/build/crysta-prefix"
   EDI_BUILD_DIR=build/ci
 fi
+# Restored SDK headers can predate existing objects even when the prefix path is unchanged.
+# Hash actual installed content, not timestamps or only the claimed source SHA (ADR-0017).
+SDK_CONTENT="$(python tools/ci/sdk_content_identity.py "$CRYSTA_PREFIX")"
+SDK_MARKER="$EDI_BUILD_DIR/.edi-sdk-build-key"
+if [ -d "$EDI_BUILD_DIR" ] && [ "$(cat "$SDK_MARKER" 2>/dev/null || true)" != "$SDK_CONTENT" ]; then
+  echo "core-build: SDK content changed; configuring $EDI_BUILD_DIR fresh"
+  rm -rf "$EDI_BUILD_DIR"
+fi
+mkdir -p "$EDI_BUILD_DIR"
+printf '%s\n' "$SDK_CONTENT" > "$SDK_MARKER"
 # The declared deployment target on every configure, as for crysta above, so edi's objects and
 # its link agree with the crysta objects they link.
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
-cmake --build "$EDI_BUILD_DIR" -j
+cmake --build "$EDI_BUILD_DIR" --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 # Further targets in this same tree, under this lock (the C++ tier's edi_tests).
-[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} -j
+[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 # Review-7 F7: tie provenance to the edi artifact actually LINKED. The prefix stamp and source
 # record are mutable across resolves; this record names the crysta the just-built edi contains,
 # and downstream consumers select it instead of re-reading whatever a later resolve left behind.
