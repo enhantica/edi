@@ -11,6 +11,27 @@ using namespace detail;
 struct OpenAiStream::State {
     std::string turn, request, pending, record, failure_code;
     Sink sink;
+    const char* diagnostic_stage = "SSE framing";
+    std::string diagnostic(const std::string& reason) const {
+        // The only dynamic member named by current Refusal messages is a JSON
+        // duplicate key. Do not copy an arbitrary provider-supplied member name.
+        const auto safe = reason.starts_with("Duplicate JSON member:") ? std::string("Duplicate JSON member in streamed response") : reason;
+        return std::string(diagnostic_stage) + ": " + safe;
+    }
+    std::string exception_diagnostic(const std::exception& error) const {
+        // Accessor errors use app-owned field names. Preserve only exact known
+        // forms; an arbitrary exception message may contain tool/user content.
+        const std::string_view supplied(error.what());
+        for (const char* field : {"id", "type", "item_id", "output_index", "content_index", "part", "text", "refusal", "call_id", "name", "arguments", "response", "status", "content", "namespace", "output", "object", "plan_id"}) {
+            const auto missing = std::string("report JSON: no member '") + field + "'";
+            if (supplied == missing) return diagnostic(missing);
+            for (const char* expected : {"a boolean", "a number", "a string", "an array", "an object"}) {
+                const auto typed = std::string("report JSON: ") + field + " is not " + expected;
+                if (supplied == typed) return diagnostic(typed);
+            }
+        }
+        return diagnostic("Stream decoder operation failed");
+    }
     bool terminal = false, failed = false, refused = false;
     std::uint64_t wire = 0, events = 0, retained_base = 0;
     // Provider item/part identities belong only to this decoder. The normalized
@@ -213,7 +234,18 @@ struct OpenAiStream::State {
         if (++events > Limits::stream_events) refuse("resource_exhausted", "Provider event count exceeds limit");
         if (body == "[DONE]") { if (!terminal) refuse("interrupted", "Stream ended without terminal response"); return; }
         if (terminal) refuse("invalid_argument", "Data after terminal response");
-        const auto message = parse(body); const auto type = string(message, "type");
+        diagnostic_stage = "event JSON";
+        const auto message = parse(body);
+        diagnostic_stage = "event type";
+        const auto type = string(message, "type");
+        diagnostic_stage = "unrecognized event";
+        // Diagnostics only: these existing decoder branches remain unchanged.
+        // Unknown event names, content, tool arguments and reasoning are never copied.
+        for (const char* known : {"response.output_text.delta", "response.refusal.delta", "response.output_text.done", "response.refusal.done",
+             "response.reasoning_text.delta", "response.reasoning_text.done", "response.content_part.added", "response.content_part.done",
+             "response.output_item.added", "response.output_item.done", "response.function_call_arguments.delta", "response.function_call_arguments.done",
+             "response.completed", "response.failed", "response.incomplete", "error"})
+            if (type == known) { diagnostic_stage = known; break; }
         if (type == "response.output_text.delta" || type == "response.refusal.delta" ||
             type == "response.output_text.done" || type == "response.refusal.done" ||
             type == "response.reasoning_text.delta" || type == "response.reasoning_text.done") {
@@ -295,6 +327,7 @@ Reply OpenAiStream::feed(std::string_view bytes) {
     auto& state = *state_;
     if (state.failed) return failure(state.failure_code, "The provider stream has already failed");
     try {
+        state.diagnostic_stage = "SSE framing";
         if (bytes.size() > Limits::stream_wire_bytes - state.wire) refuse("resource_exhausted", "Provider wire limit exceeded");
         state.wire += bytes.size();
         for (char c : bytes) {
@@ -303,7 +336,7 @@ Reply OpenAiStream::feed(std::string_view bytes) {
                 state.pending += c; state.partial(); continue;
             }
             auto line = std::exchange(state.pending, {}); if (!line.empty() && line.back() == '\r') line.pop_back();
-            if (line.empty()) state.event();
+            if (line.empty()) { state.event(); state.diagnostic_stage = "SSE framing"; }
             else if (line.starts_with("data:")) {
                 std::string_view data(line); data.remove_prefix(5); if (data.starts_with(' ')) data.remove_prefix(1);
                 if (data.size() + 1 > Limits::message_bytes + 1 - state.record.size()) refuse("invalid_json", "SSE event exceeds message limit");
@@ -311,8 +344,8 @@ Reply OpenAiStream::feed(std::string_view bytes) {
             }
         }
         return success();
-    } catch (const Refusal& e) { state.failed = true; state.failure_code = e.code; return failure(e.code, e.what()); }
-    catch (const std::exception&) { state.failed = true; state.failure_code = "invalid_argument"; return failure("invalid_argument", "Invalid provider stream"); }
+    } catch (const Refusal& e) { state.failed = true; state.failure_code = e.code; return failure(e.code, state.diagnostic(e.what())); }
+    catch (const std::exception& error) { state.failed = true; state.failure_code = "invalid_argument"; return failure("invalid_argument", state.exception_diagnostic(error)); }
 }
 Reply OpenAiStream::finish() {
     if (state_->failed) return failure(state_->failure_code, "Provider stream failed");
