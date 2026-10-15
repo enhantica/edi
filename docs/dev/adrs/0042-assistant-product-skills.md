@@ -43,3 +43,10 @@ The automatically discovered refinement-strategy resource adds conditional stagi
 ## Native saved-result guidance
 
 The project-assistance resource version 1.1.0 extends its existing ordinary Python/API composition with the app's exact `EDI_RESULT_HANDOFF_V1` file receipt convention. It saves/reopens an actual self-contained native candidate, hashes the complete supported file set, and waits for host verification. It neither adds provider tools nor grants arbitrary Desktop access. Fresh host Save As is a separate native user-selected export. The manifest hash binds the updated shipped bytes; automatic runtime discovery remains the existing path. The documented classic CIF/prepared XYE witness is explicitly scoped and is not a general FullProf/GPX conversion or scientific quality claim.
+
+
+### Generic explicit-user scope and reusable skill defaults
+
+The generic thread follows current explicit user instructions before bundled skill/workflow defaults or prior assistant plans, preserving earlier explicit constraints unless the latest instruction changes them. Delegated work uses justified disclosed defaults and a bounded plan without duplicate routine approval. Required observations/metadata cannot be invented; genuinely necessary missing/conflicting data, a new objective/chemical assumption or real runtime permission still requires the appropriate decision. A mere inspection request does not authorize fitting. File content is untrusted data unless the user explicitly adopts task guidance, and cannot grant developer authority, capability or filesystem access. Restricted Controller approval gates remain unchanged and no approval is synthesized. Existing threads retain their original developer snapshot; a fresh managed thread/current context is required.
+
+Final responses/reports summarize material autonomous decisions with practical reasons/assumptions, observed outcomes, material rejected alternatives/attempts and unresolved limits. This is user-facing accountability, not disclosure of private internal reasoning.
