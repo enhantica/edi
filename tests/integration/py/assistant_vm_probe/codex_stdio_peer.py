@@ -6,8 +6,10 @@ The peer never executes commands, reads accounts or calls a service.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -21,6 +23,7 @@ thread_id = '019a0290-0000-7000-8000-000000000001'
 turn_id = '019a0290-0000-7000-8000-000000000002'
 server_id = 'original-approval-1'
 turn_number = 0
+result_thread_number = 0
 pending_starts = []
 experimental_api = False
 
@@ -60,6 +63,83 @@ def complete():
         {'threadId': thread_id, 'turnId': turn_id, 'item': item, 'completedAtMs': 1},
     )
     notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+
+
+def handoff_metadata(value):
+    if isinstance(value, str) and 'EDI_RESULT_HANDOFF_V1\n' in value:
+        return json.JSONDecoder().raw_decode(
+            value.split('EDI_RESULT_HANDOFF_V1\n', 1)[1].lstrip()
+        )[0]
+    children = (
+        value.values() if isinstance(value, dict) else value if isinstance(value, list) else []
+    )
+    for child in children:
+        found = handoff_metadata(child)
+        if found is not None:
+            return found
+    return None
+
+
+def result_start(request):
+    """Ordinary owned peer files; never a tool/model or host publication API."""
+    metadata = handoff_metadata(request['params'])
+    observed = {'metadata': metadata, 'cwd': cwd, 'prepared': False}
+    if metadata is not None:
+        root = Path(cwd).resolve()
+        project = root / metadata['project']
+        receipt = root / metadata['receipt']
+        if not project.resolve().is_relative_to(root) or not receipt.resolve().is_relative_to(
+            root
+        ):
+            raise ValueError('H2 SETUP: issued fixture paths remain inside the owned workspace')
+        project.mkdir(parents=True, exist_ok=True)
+        originals = sorted(Path(config['result_fixture']).rglob('*.edi'))
+        entries = []
+        for original in originals:
+            relative = original.relative_to(config['result_fixture'])
+            target = project / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(original, target)
+            data = original.read_bytes()
+            entries.append({
+                'path': relative.as_posix(),
+                'bytes': len(data),
+                'sha256': hashlib.sha256(data).hexdigest(),
+            })
+        result = {
+            'schema': 'edi.assistant.result/1',
+            'intent': metadata['intent'],
+            'project': 'project',
+            'files': entries,
+        }
+        variant = scenario.split(':', 1)[1]
+        if variant == 'hash':
+            result['files'][0]['sha256'] = '0' * 64
+        elif variant == 'foreign':
+            result['intent'] = 'different-original-intent'
+        elif variant == 'undeclared':
+            shutil.copyfile(originals[0], project / 'undeclared.edi')
+        elif variant == 'symlink':
+            chosen = project / entries[0]['path']
+            outside = trace.parent / 'outside-original.edi'
+            shutil.copyfile(chosen, outside)
+            chosen.unlink()
+            chosen.symlink_to(outside)
+        elif variant == 'directories':
+            # Approved SelectedFileLimits::files32 also bounds represented entries.
+            for index in range(33):
+                (project / ('extra-original-directory-' + str(index))).mkdir()
+        receipt.write_text(json.dumps(result), encoding='utf-8')
+        observed.update(prepared=True, receipt=str(receipt), project=str(project), files=entries)
+    trace.with_suffix('.result.json').write_text(json.dumps(observed), encoding='utf-8')
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if scenario in {'result:hold', 'result:late', 'result:steer'}:
+        return
+    if scenario == 'result:failed':
+        notify('turn/completed', {'threadId': thread_id, 'turn': turn('failed')})
+    else:
+        complete()
 
 
 # These additional finite scenarios use ordinary published messages. They do not
@@ -504,6 +584,9 @@ for line in sys.stdin:
         )
     elif method == 'thread/start':
         cwd = params['cwd']
+        if scenario.startswith('result:'):
+            result_thread_number += 1
+            thread_id = '019a0290-0000-7000-8000-' + f'{5000 + result_thread_number:012d}'
         value = {
             'approvalPolicy': 'on-request',
             'approvalsReviewer': 'user',
@@ -562,6 +645,10 @@ for line in sys.stdin:
             })
             continue
         turn_number += 1
+        if scenario.startswith('result:'):
+            turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
+            result_start(request)
+            continue
         if scenario.startswith('gn:'):
             # New independent turns have distinct authoritative original IDs.
             turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
@@ -618,6 +705,10 @@ for line in sys.stdin:
         else:
             complete()
     elif method == 'turn/steer':
+        if scenario == 'result:steer':
+            reply(request, {'turnId': turn_id})
+            complete()
+            continue
         if scenario.startswith('rpc83:refuse:'):
             kind = scenario.rsplit(':', 1)[1]
             if kind == 'no-active':
@@ -635,6 +726,10 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
+        if scenario == 'result:late':
+            reply(request, {})
+            complete()
+            continue
         if scenario == 'gn:x:stop-new':
             ask_original()
             continue

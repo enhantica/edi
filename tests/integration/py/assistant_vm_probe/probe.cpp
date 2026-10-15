@@ -96,8 +96,30 @@ int main(int argc,char** argv) {
             }
             project={{"parameters",parameters},{"mode",QString::fromStdString(value.fitting_mode)},
                 {"objective",value.fit_result.objective_value}};
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+            if(codex_mode) {
+                Array experiments;
+                for(const auto& experiment:value.experiments) {
+                    Array axis,intensity,sigma,exclusions,phases;
+                    if(const auto values=experiment->data.two_theta.get())
+                        for(const auto item:*values)axis.push_back(item);
+                    for(const auto item:experiment->data.intensity_meas.get())intensity.push_back(item);
+                    for(const auto item:experiment->data.intensity_meas_su.get())sigma.push_back(item);
+                    for(const auto& region:experiment->excluded_regions)
+                        exclusions.push_back(Array{region->first.get(),region->second.get()});
+                    for(const auto& phase:experiment->linked_structures)
+                        phases.push_back(QString::fromStdString(phase->structure_id.value()));
+                    experiments.push_back(Object{{"name",QString::fromStdString(experiment->name)},
+                        {"axis",axis},{"intensity",intensity},{"sigma",sigma},
+                        {"exclusions",exclusions},{"phases",phases},{"weight",experiment->dataset_weight}});
+                }
+                project["host_snapshot"]=Object{{"name",session->project()->name()},
+                    {"path",session->project()->path()},{"modified",session->project()->modified()},
+                    {"experiments",experiments}};
+            }
+#endif
         }
-        return {{"alive",true},{"connected",vm->connected()},{"state",vm->state()},
+        Object result{{"alive",true},{"connected",vm->connected()},{"state",vm->state()},
 #ifdef EDI_TEST_SELECTED_FILES
             {"selected_files",rows(vm->selectedFiles())},{"retired_selections",retired_selections},
             {"project_present",session->project()!=nullptr},
@@ -124,6 +146,17 @@ int main(int argc,char** argv) {
             {"context_consent_required",vm->contextConsentRequired()},
             {"context",decode(vm->contextPreview().toUtf8())},{"project",project},
             {"model_count_changes",model_changes}};
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+        if(codex_mode)result["handoff"]=Object{
+            {"location",session->projectLocation()},{"needs_save_as",session->needsSaveAs()},
+            {"account_label",vm->connectionLabel()},
+            {"needs_fresh_save_as",QJsonValue::fromVariant(session->property("needsFreshSaveAs"))},
+            {"last_error",session->lastError()},
+            {"begin_method",session->metaObject()->indexOfMethod("beginSaveAs()")>=0},
+            {"complete_method",session->metaObject()->indexOfMethod("completeSaveAs(QString,QUrl,QString)")>=0},
+            {"cancel_method",session->metaObject()->indexOfMethod("cancelSaveAs(QString)")>=0}};
+#endif
+        return result;
     };
     auto callback=[&](const Object& value) {
         const auto name=value["op"].toString();
@@ -139,6 +172,21 @@ int main(int argc,char** argv) {
             if(op=="sign_in")session->assistant()->signIn();
             else if(op=="sign_out")session->assistant()->signOut();
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
+            else if(codex_mode && op=="save_as_begin") {
+                QString intent;
+                const bool invoked=QMetaObject::invokeMethod(session.get(),"beginSaveAs",Qt::DirectConnection,
+                    Q_RETURN_ARG(QString,intent));
+                result={{"invoked",invoked},{"intent",intent}};
+            } else if(codex_mode && op=="save_as_complete") {
+                bool accepted=false;
+                const bool invoked=QMetaObject::invokeMethod(session.get(),"completeSaveAs",Qt::DirectConnection,
+                    Q_RETURN_ARG(bool,accepted),Q_ARG(QString,input["intent"].toString()),
+                    Q_ARG(QUrl,QUrl::fromLocalFile(input["parent"].toString())),Q_ARG(QString,input["leaf"].toString()));
+                result={{"invoked",invoked},{"accepted",accepted}};
+            } else if(codex_mode && op=="save_as_cancel") {
+                result={{"invoked",QMetaObject::invokeMethod(session.get(),"cancelSaveAs",Qt::DirectConnection,
+                    Q_ARG(QString,input["intent"].toString()))}};
+            }
             else if(op=="select_skill") {
                 auto* vm=session->assistant();
                 const bool present=vm->metaObject()->indexOfMethod("selectSkill(QString)")>=0;
