@@ -20,6 +20,7 @@
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "fit_inputs.hpp"
+#include "publication.hpp"
 
 namespace edi {
 namespace {
@@ -142,16 +143,45 @@ struct FitJob::State {
         } else if (outcome.scan) {
             // The scan's results are the rows on disk; the template is left as it was.
             report.status = report.result->status;
-        } else if (!unchanged_since(self->live, outcome.stamps) ||
-                   inputs_of(self->live) != outcome.inputs ||
-                   !copy_parameter_states(self->live, *outcome.fitted)) {
-            report.status = FitStatus::SUPERSEDED;
         } else {
-            // The fitted copy's pattern is the fit's own last calculation, at the values just written: it
-            // is published under the stamps the live project has now. The fit's result record goes with it.
-            copy_fit_result(self->live, *outcome.fitted);
-            publish(self->live, stage_computed(*outcome.fitted, work_stamps(self->live)));
-            report.status = report.result->status;
+            try {
+                if (!unchanged_since(self->live, outcome.stamps) || inputs_of(self->live) != outcome.inputs)
+                    report.status = FitStatus::SUPERSEDED;
+                else {
+                    const auto targets = parameter_entries(self->live);
+                    const auto sources = parameter_entries(*outcome.fitted);
+                    bool same = targets.size() == sources.size();
+                    for (std::size_t i = 0; same && i < targets.size(); ++i)
+                        same = targets[i].path == sources[i].path && targets[i].parameter && sources[i].parameter;
+                    if (!same) report.status = FitStatus::SUPERSEDED;
+                    else {
+                        FitResultRecord record = outcome.fitted->fit_result;
+                        auto staged = stage_computed(*outcome.fitted, work_stamps(self->live));
+                        auto publication = detail::prepare_publication(self->live, std::move(staged));
+                        if (!publication) report.status = FitStatus::SUPERSEDED;
+                        else {
+                            // All owning copies, parameter joins and source buffers exist before the first write.
+                            for (std::size_t i = 0; i < targets.size(); ++i) {
+                                auto& to = *targets[i].parameter; const auto& from = *sources[i].parameter;
+                                if (to.value.get() != from.value.get()) { to.value = from.value.get(); to.epoch = detail::Epoch(); }
+                                if (to.uncertainty.get() != from.uncertainty.get()) to.uncertainty = from.uncertainty.get();
+                                if (to.start_value.get() != from.start_value.get()) to.start_value = from.start_value.get();
+                                if (to.start_uncertainty.get() != from.start_uncertainty.get()) to.start_uncertainty = from.start_uncertainty.get();
+                            }
+                            static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+                            self->live.fit_result = std::move(record);
+                            for (std::size_t i = 0; i < self->live.experiments.size(); ++i)
+                                copy_fit_share(*self->live.experiments[i], *outcome.fitted->experiments[i]);
+                            publication->commit(self->live);
+                            report.status = report.result->status;
+                        }
+                    }
+                }
+            } catch (...) {
+                report.status = FitStatus::ERROR;
+                try { report.refusal = "The fit result could not be prepared for publication; accepted state is unchanged"; }
+                catch (...) { report.refusal.clear(); }
+            }
         }
         if (self->hooks.finished) {
             self->hooks.finished(report);

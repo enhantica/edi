@@ -27,6 +27,7 @@
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
+#include "publication.hpp"
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
@@ -3720,85 +3721,83 @@ bool unchanged_since(const Project& live, const WorkStamps& stamps) {
     return true;
 }
 
-PublishOutcome publish(Project& live, CalculationResult&& result) {
+std::optional<detail::PreparedPublication> detail::prepare_publication(Project& live, CalculationResult&& result) {
     const WorkStamps& stamps = result.stamps;
     const std::size_t banks = live.experiments.size();
     const std::size_t structures = live.structures.size();
     // --- preflight: nothing the result depends on was written since the snapshot -----------------
     if (result.cancelled || !unchanged_since(live, stamps) || result.geometry.size() != structures) {
-        return PublishOutcome::Superseded;
+        return std::nullopt;
     }
     const bool refused = !result.refusal.empty();
     if (!refused && (result.data.size() != banks || result.refln.size() != banks)) {
-        return PublishOutcome::Superseded;
+        return std::nullopt;
     }
     for (std::size_t index = 0; index < banks; ++index) {
         if (!refused && !live.experiments[index]->data.has_value()) {
-            return PublishOutcome::Superseded;
+            return std::nullopt;
         }
     }
-    // --- the dependents the calculation completed (edi ADR-0024) --------------------------------
-    // A relation edited before the snapshot leaves the live dependents behind the copy the arrays were
-    // calculated from: they are written first, and the arrays are then current against them. The sources
-    // below read these values, so they follow the writes; should one of them fail, each value written is
-    // still the one its relation gives.
+    PreparedPublication ready;
     if (!result.completed.empty()) {
-        std::map<std::string, Parameter*> by_name;
-        for (const NamedSlot& slot : named_slots(live)) {
-            by_name.emplace(slot.unique_name, slot.parameter);
-        }
+        std::map<std::string, Parameter*> names;
+        for (const auto& slot : named_slots(live)) names.emplace(slot.unique_name, slot.parameter);
         for (const auto& [name, value] : result.completed) {
-            const auto found = by_name.find(name);
-            if (found != by_name.end() && found->second->value.get() != value) {
-                found->second->value = value;
-            }
+            if (const auto found = names.find(name); found != names.end()) ready.completed.emplace_back(found->second, value);
         }
     }
-    // --- the sources, encoded from the live project as the arrays describe it --------------------
-    std::vector<std::shared_ptr<const detail::ComputedSource>> sources(banks);
-    if (!refused) {
-        for (std::size_t index = 0; index < banks; ++index) {
-            sources[index] = std::make_shared<const detail::ComputedSource>(detail::ComputedSource{
-                detail::calculation_inputs(live.structures, *live.experiments[index]), stamps.experiments,
-                stamps.structures, stamps.edits, stamps.edits_at, live.link(), stamps.aliases,
-                stamps.constraints, stamps.relations});
-        }
+    ready.sources.resize(banks);
+    if (!refused) for (std::size_t i = 0; i < banks; ++i) {
+        ready.sources[i] = std::make_shared<ComputedSource>(ComputedSource{
+            calculation_inputs(live.structures, *live.experiments[i]), stamps.experiments,
+            stamps.structures, stamps.edits, stamps.edits_at, live.link(), stamps.aliases,
+            stamps.constraints, stamps.relations});
     }
-    std::vector<std::shared_ptr<const detail::GeometrySource>> geometry_sources(structures);
-    for (std::size_t index = 0; index < structures; ++index) {
-        if (result.geometry[index].has_value()) {
-            geometry_sources[index] = std::make_shared<const detail::GeometrySource>(
-                detail::GeometrySource{detail::geometry_inputs(*live.structures[index]), live.link(),
-                                       stamps.aliases, stamps.constraints, stamps.relations});
-        }
+    ready.geometry_sources.resize(structures);
+    for (std::size_t i = 0; i < structures; ++i) if (result.geometry[i]) {
+        ready.geometry_sources[i] = std::make_shared<GeometrySource>(GeometrySource{
+            geometry_inputs(*live.structures[i]), live.link(), stamps.aliases, stamps.constraints, stamps.relations});
     }
-    // --- the write pass: the state Project::calculate() on the live project would have left ------
-    for (std::size_t index = 0; index < structures; ++index) {
-        Structure& structure = *live.structures[index];
-        structure.geometry = result.geometry[index].has_value()
-                                 ? std::move(*result.geometry[index])
-                                 : StructureGeometry{};
-        structure.geometry_source = std::move(geometry_sources[index]);
+    ready.result = std::move(result);
+    return ready;
+}
+
+void detail::PreparedPublication::commit(Project& live) noexcept {
+    // Shape/text/data are unchanged between preparation and this synchronous owner-thread commit.
+    // Scalar values and write IDs are fixed-width encodings; existing buffers already hold that width.
+    for (const auto& [target, value] : completed) if (target->value.get() != value) target->value = value;
+    for (std::size_t i = 0; i < sources.size(); ++i) if (sources[i])
+        calculation_inputs_into(sources[i]->inputs, live.structures, *live.experiments[i]);
+    for (std::size_t i = 0; i < geometry_sources.size(); ++i) if (geometry_sources[i])
+        geometry_inputs_into(geometry_sources[i]->inputs, *live.structures[i]);
+    static_assert(std::is_nothrow_move_assignable_v<StructureGeometry>);
+    static_assert(std::is_nothrow_move_assignable_v<PowderReflnDataBase>);
+    const bool refused = !result.refusal.empty();
+    for (std::size_t i = 0; i < live.structures.size(); ++i) {
+        auto& structure = *live.structures[i];
+        structure.geometry = result.geometry[i] ? std::move(*result.geometry[i]) : StructureGeometry{};
+        structure.geometry_source = std::move(geometry_sources[i]);
     }
-    for (std::size_t index = 0; index < banks; ++index) {
-        BraggPdExperiment& bank = *live.experiments[index];
+    for (std::size_t i = 0; i < live.experiments.size(); ++i) {
+        auto& bank = *live.experiments[i];
         if (refused) {
-            if (bank.data.has_value()) {
-                bank.data->clear_computed();
-            }
-            bank.refln.clear();
-            bank.computed_source.reset();
-            continue;
+            if (bank.data) bank.data->clear_computed();
+            bank.refln.clear(); bank.computed_source.reset(); continue;
         }
-        PdDataBase& target = *bank.data;
-        target.d_spacing = std::move(result.data[index].d_spacing);
-        target.intensity_calc = std::move(result.data[index].intensity_calc);
-        target.intensity_bkg = std::move(result.data[index].intensity_bkg);
-        target.calc_status = std::move(result.data[index].calc_status);
-        target.residual = std::move(result.data[index].residual);
-        bank.refln = std::move(result.refln[index]);
-        bank.computed_source = std::move(sources[index]);
+        auto& target = *bank.data;
+        target.d_spacing = std::move(result.data[i].d_spacing);
+        target.intensity_calc = std::move(result.data[i].intensity_calc);
+        target.intensity_bkg = std::move(result.data[i].intensity_bkg);
+        target.calc_status = std::move(result.data[i].calc_status);
+        target.residual = std::move(result.data[i].residual);
+        bank.refln = std::move(result.refln[i]); bank.computed_source = std::move(sources[i]);
     }
+}
+
+PublishOutcome publish(Project& live, CalculationResult&& result) {
+    auto ready = detail::prepare_publication(live, std::move(result));
+    if (!ready) return PublishOutcome::Superseded;
+    ready->commit(live);
     return PublishOutcome::Published;
 }
 

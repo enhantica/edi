@@ -32,6 +32,12 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
 // which is the conservative direction.
 std::string geometry_inputs(const Structure& structure);
 
+// Refill an existing encoding buffer. Publication reserves its complete unchanged-shape width before
+// scalar writes; values and write identities have fixed encoded widths, so refilling cannot grow it.
+void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structures,
+                             const ExperimentBase& experiment);
+void geometry_inputs_into(std::string& out, const Structure& structure);
+
 // The declared relations (edi ADR-0024): every alias and constraint row with the identity of each
 // field's last write, and each collection's generation. A declaration sets dependents' values, so it
 // is an input of every computed category and of the geometry; equal encodings mean no declaration

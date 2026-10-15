@@ -141,34 +141,51 @@ attachment the model has or will have. No caller in the product needs it: each a
 - **The fit is the CLI's.** The job fits a snapshot of the project by its fitting mode, through the entry the CLI's fit
   takes (`edi.Analysis.fit`): `Project::fit` for `single`, `Project::fit_joint` for `joint`. The scan modes are not run
   here. So the app's fit of a project and the CLI's fit of the same project are the same computation.
+
 - **The stream is ordered and never dropped.** The preamble, each accepted iteration and the end are deliveries in the
   job's own stream (`work::Emit`), the end last. Nothing of the fit is delivered after its end, and a closed
   `FitJob` delivers nothing.
+
 - **Frames.** A streamed `IterationRecord` carries the step's parameter values by identity path, read from crysta's
   record. Between iterations, and only after the owner has shown the previous frame (`frame_shown`), the job writes
   those values onto a second copy, completes its symmetry, calculates it and delivers each experiment's pattern as a
   frame. A slow owner sees fewer frames; the fit's own copy is touched by the fit alone, so its numbers do not move.
+
 - **Cancel** sets the job's token, which the fit reads through crysta's `should_cancel` between iterations. A cancelled
   fit ends with its partial result, as crysta returns it.
+
 - **The end writes once.** On the owner thread, a fit that returned a result other than `ERROR` is taken only if
   nothing it depends on was written since the snapshot: the calculation stamps (`unchanged_since`, the comparison
   `publish` makes) and the fit's own inputs, which those stamps do not carry — every parameter's value, uncertainty,
   free flag and fit start write identities (an equal-value write included), the fitting mode, the minimizer settings
   and the banks' joint weights. Then
-  `copy_parameter_states` writes every parameter's value, uncertainty and fit start from the fitted copy, and
-  `publish` writes the pattern the fit's own last calculation left, staged under the stamps the live project now has
-  (`stage_computed`). The live project is then in the state a direct fit would have left. Otherwise nothing is
-  written: a refusal or a failed fit reports `ERROR` with its reason, a write during the fit `SUPERSEDED`.
+  the job prepares the complete parameter-row join, owning fit-result record and the fitted copy's computed
+  arrays before its first live write. The internal `PreparedPublication` (`core/src/publication.hpp`) also resolves
+  completed dependents and allocates every computed/geometry source and encoding buffer in that preparation.
+  Preparation failure reports `ERROR` through the ordinary finished callback with accepted state unchanged; stale
+  inputs report `SUPERSEDED`. Only a fully prepared bundle writes the conditional scalar states, moves its record
+  and bank shares, then publishes the fitted arrays without replacing identity-bearing model rows. The live
+  project is then in the state a direct fit would have left.
+
+  The first manual FitJob path and ordinary `publish`/LivePreview share this preparation/commit boundary. The
+  synchronous owner-thread commit changes no collection shape, text or measured data. Scalar values and write
+  identities have fixed-width canonical encodings, so source buffers prepared at their complete width can be
+  refilled without growth after scalar writes; no anisotropic-parameter temporary vector is built there. Array,
+  geometry and record moves are nonthrowing. An injected publication-preparation failure cannot publish a partial
+  fit or skip its finished callback. This boundary does not claim that every controller/native/UI terminal,
+  worker-start or continuation failure has been implemented or verified.
+
 - **The result is recorded** (the owner, 2026-10-02): `Project::fit` and `Project::fit_joint` record the fit's
   result on the project (`FitResultRecord`, diffraction-lib's `_fit_result` names plus the producing `descent`, so
   a reopened result names its own minimizer, with each bank's share of a joint fit on its experiment), the CLI's
   fit and the app's alike. Its `profile_function` and
   `background_function` name the peak profile and the background model (`_background.type`) the banks declared,
   each left out when the banks differ; a scan clears it, an undo clears it, and the job copies it onto the live
-  project with the parameters (`copy_fit_result`). A save hands it to crysta's writer, which writes `_fit_result`
+  project in the prepared parameter/result commit. A save hands it to crysta's writer, which writes `_fit_result`
   and `_fit_result_bank` in `analysis.edi` only while one is held; a load reads it back, so a reopened project
   shows its last fit. A file without it loads as before, and a project without one saves its old bytes, so
   `analysis.edi` takes no schema step.
+
 - **Undo** is an `Edit` (`Edit::undo_fit`): `restore_fit_start`, which is `undo_fit` without its calculation, runs on
   a copy, and the restored parameters are written onto the project; the door's calculation follows on the worker.
 
@@ -208,12 +225,12 @@ calculation in the process.
 
 ## Alternatives considered
 
-| Alternative | Verdict |
-|---|---|
-| Hold slider values outside the model while a calculation runs, and publish each result | Rejected in plan review: an older result would publish after a newer value was requested |
-| Build the presentation on the worker | Rejected: decimating one curve of 50 000 points takes about 0.2 ms, so the GUI thread builds it and a zoom needs no hand-over |
-| One mutex around every crysta call | Rejected: it would stall the GUI thread for the whole background calculation |
-| A Qt worker (`QThread`) in the app | Rejected: product logic lives in the core (ADR-0009), and the core tier is what CI runs |
+| Alternative                                                                                       | Verdict                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hold slider values outside the model while a calculation runs, and publish each result            | Rejected in plan review: an older result would publish after a newer value was requested                                                                                   |
+| Build the presentation on the worker                                                              | Rejected: decimating one curve of 50 000 points takes about 0.2 ms, so the GUI thread builds it and a zoom needs no hand-over                                              |
+| One mutex around every crysta call                                                                | Rejected: it would stall the GUI thread for the whole background calculation                                                                                               |
+| A Qt worker (`QThread`) in the app                                                                | Rejected: product logic lives in the core (ADR-0009), and the core tier is what CI runs                                                                                    |
 | The door takes any callable, and a copy of the project taken before it is restored when it throws | Withdrawn after three code reviews each found a route the restore missed (§8): the guard is over everything a change might do to the object graph, so the class stays open |
-| Stage a change on a copy and commit it back into the live objects by value | Rejected: the commit back is that same restore, now on every edit, and every change would have to address a project it is given instead of the objects it holds |
-| The door takes any callable, and every caller must validate before it writes | Rejected: a rule the type does not hold is kept until the first caller that breaks it |
+| Stage a change on a copy and commit it back into the live objects by value                        | Rejected: the commit back is that same restore, now on every edit, and every change would have to address a project it is given instead of the objects it holds            |
+| The door takes any callable, and every caller must validate before it writes                      | Rejected: a rule the type does not hold is kept until the first caller that breaks it                                                                                      |
