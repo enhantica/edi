@@ -87,5 +87,14 @@ supplies production Qt HTTP/browser/protected-record/clock services; the offline
 native-only and is not the preview launch. The production CMake executable target is `edi_app`, not the Python
 extension or an independent test host. Its current local build prerequisite is the diagnostic integrated SDK;
 the committed SDK pin and official CI qualification remain unresolved. Building this draft branch alone is
-not a promise of a verified preview: VM terminal retention/failure cards, actual production smoke and live
+not a promise of a verified preview: real VM terminal-retention/failure-card behavior, current production smoke and live
 subscription verification remain unfinished under ADR0041.
+
+Decoder failure status and cause are distinct. Native feed and finish preserve the decoder's bounded
+message/code; they describe an edi decoding failure rather than claiming a provider refusal. The VM
+snapshots existing native last_error_code at the matching terminal emission before queued delivery can
+replace it, then retains that category in the existing failure payload. The normalized core turn_finished
+envelope stays unchanged. Known event/stage and required-field diagnostics are app-owned labels; arbitrary
+exception strings, unknown event names and duplicate JSON member names are withheld. No raw SSE, headers,
+body, credentials or hidden reasoning is logged. This diagnostic checkpoint does not resolve the unknown
+live failure, HTTP admission metadata/recovery or partial-item semantics.

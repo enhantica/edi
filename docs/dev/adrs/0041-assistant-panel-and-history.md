@@ -55,3 +55,10 @@ Stop uses existing native sign-out/teardown to retire that attempt and its late 
 new provider endpoint or alternate dependency route is introduced. This source unit does not establish
 full S6 pre-growth/retaining-role closure, cost compliance, imports/refinement/Claude/browser completeness,
 actual subscription access, official SDK/task CI or readiness; no follow-up timer follows it.
+
+The connection consent dialog presents a readable summary of the exact current project, parameter/free
+counts and diagnostic count. Optional technical details retain the unchanged complete outgoing context.
+Sign in with ChatGPT and Approve context name the existing actions explicitly; untrusted project text
+remains PlainText. A typed local path is text, not file access: the chooser/drop handle/import unit remains
+unimplemented, so no decorative attachment control claims that capability. These QML changes need actual
+production visual/interaction verification; source syntax checks are not that evidence.
