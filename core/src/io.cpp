@@ -2438,11 +2438,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
             structure.geom.*field = value;
         }
     }
-    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
-        structure.space_group.name_h_m = *symbol;
-    } else {
-        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
-    }
+    structure.space_group.name_h_m = block.require("_space_group_name_H-M_alt", where);
     if (const auto* code = block.find("_space_group_IT_coordinate_system_code"))
         if (*code != "?" && *code != ".") structure.space_group.coord_system_code = *code;
     if (const auto* number = block.find("_space_group_IT_number"); number && *number != "?" && *number != ".") {
@@ -2653,7 +2649,9 @@ Block structure_cif_vocabulary(const Block& block, const std::string& where) {
         {"_space_group.name_H-M_alt", "_space_group_name_H-M_alt"},
         {"_space_group.IT_coordinate_system_code", "_space_group_IT_coordinate_system_code"},
         {"_space_group.IT_number", "_space_group_IT_number"},
-        {"_symmetry.space_group_name_H-M", "_symmetry_space_group_name_H-M"},
+        // The archived symmetry H-M name and its replacement denote one field.
+        {"_symmetry.space_group_name_H-M", "_space_group_name_H-M_alt"},
+        {"_symmetry_space_group_name_H-M", "_space_group_name_H-M_alt"},
         {"_symmetry.Int_Tables_number", "_space_group_IT_number"},
         {"_symmetry_Int_Tables_number", "_space_group_IT_number"},
         {"_atom_site.label", "_atom_site_label"},

@@ -151,3 +151,30 @@ This extends shared factory prior art. The Edi-only file loader remains Edi-only
 The structure-from-text CIF normalization also owns CIF data-name case: [IUCr CIF1.1 file syntax, section26](https://www.iucr.org/what-we-do/digital-standards/cif/cif1/file-syntax) specifies case-independent identifiers while requiring value case preservation. Supported classic and dotted names now share ASCII-folded lookup keys and return the existing reader's exact canonical spelling, including mixed-case H-M, Wyckoff and ADP columns. Existing optional geom aliases use the same path. Every declaration's folded canonical identity is checked across scalar/loop boundaries before selection; case or punctuation aliases cannot silently choose a value. Unknown names are not promoted to supported fields, though repeated case variants still refuse. Block name, raw values, labels, symbols, literals, row order and uncertainties are copied unchanged. Reconstructed immutable Loops still execute their one actual identity-validation constructor.
 
 Explicit native/schema-only markers are detected regardless of tag case and sent unchanged to the strict native builder, so alternate casing cannot downgrade a malformed native file to CIF. This does not make the native file/directory grammar case permissive, rewrite tokenizer/reserved words, broaden experiment import, or invent chemical metadata. Original owner bytes remain untouched; genuine original/native creation plus scalar/loop/ADP/geometry/duplicate/strict-schema siblings require independent qualification.
+
+
+### CIF alias identity includes supported legacy replacements (2026-10-16)
+
+The existing structure CIF vocabulary owns both punctuation variants and legacy
+replacement names. IUCr's [archived H-M definition](https://www.iucr.org/__data/iucr/cifdic_html/1/cif_core.dic/Isymmetry_space_group_name_H-M.html)
+identifies [the replacement H-M item](https://www.iucr.org/__data/iucr/cifdic_html/1/cif_core.dic/Ispace_group_name_H-M_alt.html).
+The dotted/classic legacy symmetry H-M names now normalize to the same canonical
+replacement field as dotted/classic space-group H-M. The classic builder reads
+that sole normalized field, rather than preferring the replacement over an
+independently retained legacy value. A second supported declaration refuses,
+even if its value matches or is unknown: duplicate refusal is the existing
+structure-import policy, not a new semantic comparison of space-group strings.
+
+This uses the existing case-folded scalar/loop-wide declaration set and immutable
+Loop reconstruction. The audit covers cell, geometry, H-M, IT-number, setting,
+site, isotropic ADP and anisotropic column spellings. IT-number legacy aliases
+already share one key; the others already share their supported punctuation/case
+key. U versus B values/tensors are distinct physical representations, not aliases
+to collapse; existing conversion/selection/validation remains unchanged. Native
+schema/native-only markers still dispatch unchanged to the strict native reader
+before CIF normalization. No value, label, case-sensitive literal, symmetry
+setting, uncertainty, coordinate, ADP or original source byte is rewritten.
+
+Qualification must retain genuine standalone legacy/replacement imports and
+exercise case/punctuation/scalar/loop alias collisions through the real reader.
+Private source-table inspection is not an actual importer runtime claim.
