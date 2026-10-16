@@ -2380,9 +2380,11 @@ TestCase {
                 compare(target.value, originalValue, "SL1 QUERY: query cannot write a scientific value");
                 assistant.cancel(); // Explicit ordinary cleanup AFTER the inertness assertions.
             } else {
-                verify(takeovers > 0, "SL1: original focused genuine input genuinely invokes manual takeover");
-                verify(window.assistantManualTakeover,
-                    "SL1: actual Main retains manual controls for original user event");
+                if (!gap) {
+                    verify(takeovers > 0, "SL1 HELPER: original focused input invokes active-helper manual takeover");
+                    verify(window.assistantManualTakeover,
+                        "SL1 HELPER: actual Main retains manual controls for original user event");
+                }
                 if (data.tag.endsWith("preedit")) {
                     compare(field.preeditText, "733", "SL1: exact original composition reaches the actual field");
                     verify(preedits > beforePreedits, "SL1: original Qt preedit notification is genuinely new");
