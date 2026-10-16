@@ -59,9 +59,13 @@ def turn(status):
 
 
 def complete():
-    item = {'type': 'agentMessage', 'id': turn_id + '-message' if scenario == 'fileauth'
-            else 'original-message', 'text': f'Original fileauth reply {turn_number}'
-            if scenario == 'fileauth' else 'Original offline reply'}
+    item = {
+        'type': 'agentMessage',
+        'id': turn_id + '-message' if scenario == 'fileauth' else 'original-message',
+        'text': f'Original fileauth reply {turn_number}'
+        if scenario == 'fileauth'
+        else 'Original offline reply',
+    }
     notify('item/started', {'threadId': thread_id, 'turnId': turn_id, 'item': item})
     notify(
         'item/completed',
@@ -85,42 +89,60 @@ def clear_completion(original, text, *, old=False):
     item = {'type': 'agentMessage', 'id': original['turnId'] + suffix, 'text': text}
     notify('item/started', {**binding, 'item': item})
     notify('item/completed', {**binding, 'item': item, 'completedAtMs': 1})
-    notify('turn/completed', {
-        'threadId': original['threadId'],
-        'turn': {'id': original['turnId'], 'items': [], 'status': 'completed'},
-    })
+    notify(
+        'turn/completed',
+        {
+            'threadId': original['threadId'],
+            'turn': {'id': original['turnId'], 'items': [], 'status': 'completed'},
+        },
+    )
 
 
 def clear_start(request):
     global clear_prior, turn_id  # noqa: PLW0603 -- ordinary peer protocol state
     # Real request trace survives a process replacement; never reuse a thread
     # identity or manufacture an old-channel emission in a replacement process.
-    starts = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()
-              if json.loads(line).get('method') == 'turn/start']
+    starts = [
+        json.loads(line)
+        for line in trace.read_text(encoding='utf-8').splitlines()
+        if json.loads(line).get('method') == 'turn/start'
+    ]
     turn_id = '019a0290-0000-7000-8000-' + f'{7000 + len(starts):012d}'
     if clear_prior is not None:
         clear_completion(clear_prior, 'Original late reply after Clear', old=True)
     original = {'threadId': thread_id, 'turnId': turn_id}
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
-    if len(starts) == 1 and (scenario == 'clear:active'
-                            or scenario.startswith('clear:ordered:')
-                            or scenario in {'clear:stop-ack', 'clear:pending-ack'}):
+    if len(starts) == 1 and (
+        scenario == 'clear:active'
+        or scenario.startswith('clear:ordered:')
+        or scenario in {'clear:stop-ack', 'clear:pending-ack'}
+    ):
         work = {
-            'id': 'clear-prior-work', 'type': 'commandExecution', 'status': 'inProgress',
-            'command': 'Original harmless held command, never executed', 'commandActions': [],
+            'id': 'clear-prior-work',
+            'type': 'commandExecution',
+            'status': 'inProgress',
+            'command': 'Original harmless held command, never executed',
+            'commandActions': [],
             'cwd': request['params']['sandboxPolicy']['writableRoots'][0],
         }
         original['work'] = work
-        notify('item/started', {
-            'threadId': original['threadId'], 'turnId': original['turnId'], 'item': work,
-        })
+        notify(
+            'item/started',
+            {
+                'threadId': original['threadId'],
+                'turnId': original['turnId'],
+                'item': work,
+            },
+        )
         clear_prior = original
         clear_observation('active', original)
         return
     clear_observation('start', original)
-    clear_completion(original, 'Original before Clear reply' if len(starts) == 1
-                     else 'Original fresh after Clear reply')
+    clear_completion(
+        original,
+        'Original before Clear reply' if len(starts) == 1 else 'Original fresh after Clear reply',
+    )
     if len(starts) == 1:
         clear_prior = original
 
@@ -252,11 +274,13 @@ def result_start(request):  # noqa: PLR0912, PLR0914, PLR0915 -- finite original
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
     if scenario == 'result:notice-storage':
+
         def completed_notice_control():
             clear_observation(
                 'notice-terminal-emission', {'threadId': thread_id, 'turnId': turn_id}
             )
             complete()
+
         timer = Timer(0.6, completed_notice_control)
         timer.daemon = True
         timer.start()
@@ -745,6 +769,308 @@ def gn_steer_notification(case):
         notify('original/unknown', {'threadId': thread_id, 'turnId': turn_id})
 
 
+# Actual native dynamic-tool bridge only; this peer never performs model edits or fits.
+native_pending = {}
+native_index = 0
+native_rpc_sequence = 0
+native_start_pending = None
+native_steers = []
+
+
+def native_emit_next():
+    global native_index, native_rpc_sequence  # noqa: PLW0603 -- owned wire request lifecycle
+    calls = config['native_calls']
+    if native_index == len(calls):
+        if not config.get('native_hold_after_calls'):
+            complete()
+        return
+    spec = calls[native_index]
+    native_index += 1
+    call_id = spec.get('call_id', 'original-native-call-' + str(native_index))
+    native_rpc_sequence += 1
+    rpc_id = 'original-native-envelope-' + str(native_rpc_sequence)
+    item = {
+        'type': 'dynamicToolCall',
+        'id': call_id,
+        'namespace': spec.get('item_namespace'),
+        'tool': spec['tool'],
+        'arguments': spec['arguments'],
+        'status': 'inProgress',
+        'contentItems': None,
+        'success': None,
+        'durationMs': None,
+    }
+    binding = {'threadId': thread_id, 'turnId': turn_id, 'item': item}
+    params = {
+        'threadId': spec.get('thread_id', thread_id),
+        'turnId': spec.get('turn_id', turn_id),
+        'callId': call_id,
+        'namespace': spec.get('rpc_namespace'),
+        'tool': spec['tool'],
+        'arguments': spec['arguments'],
+    }
+    native_pending[rpc_id] = {'id': rpc_id, 'params': params, 'item': item, 'binding': binding}
+    notify('item/started', binding)
+    with trace.with_suffix('.native-emitted.jsonl').open('a') as output:
+        output.write(json.dumps(native_pending[rpc_id]) + '\n')
+    clear_observation('native-call-emitted', {'rpc': rpc_id, 'call': call_id})
+    emit({'id': rpc_id, 'method': 'item/tool/call', 'params': params})
+    if config.get('native_foreign_resolve'):
+
+        def resolve_foreign():
+            clear_observation(
+                'native-foreign-resolve',
+                {'rpc': rpc_id, 'still_pending': rpc_id in native_pending},
+            )
+            notify(
+                'serverRequest/resolved',
+                {'threadId': '019a0290-0000-7000-8000-000000009999', 'requestId': rpc_id},
+            )
+
+        timer = Timer(0.2, resolve_foreign)
+        timer.daemon = True
+        timer.start()
+
+
+def native_start(request):
+    global native_start_pending  # noqa: PLW0603 -- original delayed RPC envelope
+    if config.get('native_ack_order') == 'start-late':
+        native_start_pending = request
+        notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+        return
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if config.get('native_capacity'):
+        extent = config['native_capacity_bytes']
+        original = {
+            'type': 'commandExecution',
+            'id': 'original-large-work',
+            'status': 'inProgress',
+            'command': 'Original nonexecuted command ' + 'x' * extent,
+            'commandActions': [],
+            'cwd': cwd,
+        }
+        companion = {
+            **original,
+            'id': 'original-large-companion',
+            'command': 'Original companion ' + 'x' * 16384,
+        }
+        publish_item(original)
+        completed = {
+            **original,
+            'id': 'original-retained-complete',
+            'status': 'completed',
+            'exitCode': 0,
+        }
+        publish_item(completed, completed=True)
+        sources = [original, completed, companion]
+        publish_item(companion)
+        clear_observation(
+            'native-shared-capacity',
+            {
+                'source_bytes': sum(
+                    len(json.dumps(value, separators=(',', ':')).encode()) for value in sources
+                ),
+                'max_source_bytes': max(
+                    len(json.dumps(value, separators=(',', ':')).encode()) for value in sources
+                ),
+            },
+        )
+    if config.get('native_exit_while_running'):
+
+        def original_eof():
+            clear_observation('native-original-eof', {'pending': list(native_pending)})
+            os._exit(0)
+
+        timer = Timer(0.2, original_eof)
+        timer.daemon = True
+        timer.start()
+    if config.get('native_delay'):
+        timer = Timer(0.6, native_emit_next)
+        timer.daemon = True
+        timer.start()
+    else:
+        native_emit_next()
+        if config.get('native_parallel'):
+            native_emit_next()
+
+
+def native_steer(request):
+    global native_start_pending, native_index  # noqa: PLW0603 -- genuine deferred ACK interleaving
+    native_steers.append(request)
+    clear_observation('native-steer-received', {'id': request['id'], 'params': request['params']})
+    count = config.get('native_steer_count', 2)
+    if len(native_steers) < count:
+        return
+    for original in reversed(native_steers):
+        reply(original, {'turnId': turn_id})
+        clear_observation('native-steer-ack', {'id': original['id']})
+    if native_start_pending is not None:
+        reply(native_start_pending, {'turn': turn('inProgress')})
+        clear_observation('native-old-start-ack', {'id': native_start_pending['id']})
+        native_start_pending = None
+    config['native_calls'] = config['native_after_steer']
+    native_index = 0
+    native_emit_next()
+
+
+def native_reply(request):
+    if request.get('id') not in native_pending:
+        with trace.with_suffix('.native-wrong-envelope.jsonl').open('a') as output:
+            output.write(json.dumps(request) + '\n')
+        return
+    result = request.get('result')
+    with trace.with_suffix('.native-replies.jsonl').open('a') as output:
+        output.write(
+            json.dumps({'original': native_pending[request['id']], 'response': request}) + '\n'
+        )
+    original = native_pending.pop(request['id'])
+    item = {
+        **original['item'],
+        'status': 'completed' if result and result.get('success') else 'failed',
+        'contentItems': result.get('contentItems') if result else [],
+        'success': bool(result and result.get('success')),
+        'durationMs': 1,
+    }
+    if config.get('native_conflicting_final'):
+        item = {
+            **item,
+            'tool': 'set_free',
+            'namespace': 'original-provider-foreign',
+            'arguments': {'purpose': 'Provider cannot rewrite admitted original'},
+            'success': False,
+            'contentItems': [
+                {'type': 'inputText', 'text': 'Original provider contradicts actual host outcome'}
+            ],
+        }
+    if config.get('native_conflicting_final') == 'snapshot':
+        notify(
+            'turn/completed',
+            {'threadId': thread_id, 'turn': {**turn('completed'), 'items': [item]}},
+        )
+    else:
+        notify('item/completed', {**original['binding'], 'item': item})
+        if not config.get('native_parallel'):
+            native_emit_next()
+        elif not native_pending:
+            complete()
+
+
+# Original protocol fixtures follow pinned092d3acd RateLimitSnapshot/Response.
+# Values are authored inputs, never normalized output from the subject.
+usage_requests = []
+usage_held_steers = []
+
+
+def usage_snapshot(percent=17, *, empty=False):
+    primary = {'usedPercent': percent, 'windowDurationMins': 300, 'resetsAt': 1800000000}
+    value = {
+        'limitId': 'original-codex',
+        'limitName': 'Original owned limit',
+        'normalModelSlug': None,
+        'primary': primary,
+        'secondary': {'usedPercent': 83, 'windowDurationMins': 10080, 'resetsAt': 1800000900},
+        'credits': {'hasCredits': True, 'unlimited': False, 'balance': '12.50'},
+        'individualLimit': None,
+        'spendControlReached': None,
+        'planType': 'plus',
+        'rateLimitReachedType': None,
+    }
+    if config.get('usage_many'):
+        value['limitName'] = 'Original usage long ordinary label ' * 4
+    buckets = {} if empty else {'original-codex': value}
+    if config.get('usage_many') and not empty:
+        buckets = {
+            f'original-{index}': {
+                **value,
+                'limitId': f'original-{index}',
+                'limitName': f'Original bucket {index} with a readable complete label',
+            }
+            for index in range(8)
+        }
+    return {
+        'rateLimits': value,
+        'rateLimitsByLimitId': buckets,
+        'accountId': config.get('usage_account', 'original-account'),
+        'ordinaryUsageAllowed': True,
+        'rateLimitResetCredits': None,
+        'rateLimitUpsell': None,
+    }
+
+
+def usage_read(request):
+    usage_requests.append(request)
+    number = len(usage_requests)
+    mode = config.get('usage_mode', 'normal')
+    clear_observation('usage-read', {'number': number, 'id': request['id']})
+    if mode in {'control-capacity', 'reverse-capacity'}:
+        return  # Genuine outstanding OPTIONAL response, not a producer clock/fault hook.
+    if number > 1 and mode == 'failure':
+        emit({
+            'id': request['id'],
+            'error': {'code': -32603, 'message': 'Original optional usage unavailable'},
+        })
+        clear_observation('usage-error-reply', {'number': number})
+        return
+    if number == 2 and mode == 'freshness':
+        changed = usage_snapshot(29)['rateLimits']
+        notify('account/rateLimits/updated', {'rateLimits': changed})
+        clear_observation('usage-sparse-update', {'number': number})
+
+        def older_reply():
+            reply(request, usage_snapshot(17))
+            clear_observation('usage-older-reply', {'number': number})
+
+        timer = Timer(0.3, older_reply)
+        timer.daemon = True
+        timer.start()
+        return
+    percent = (
+        43
+        if (mode == 'freshness' and number >= 3) or (mode == 'popup' and number > 1)
+        else 0
+        if mode == 'zero-empty'
+        else 137
+        if mode == 'over-hundred'
+        else 17
+    )
+    result = usage_snapshot(percent, empty=mode == 'zero-empty' and number == 2)
+
+    def finish():
+        clear_observation(
+            'usage-result-reply',
+            {'number': number, 'percent': percent, 'empty': not result['rateLimitsByLimitId']},
+        )
+        reply(request, result)
+
+    # Bootstrap must deliver the automatic result after the required catalogue/skills work.
+    # The peer delays a wire reply only; no subject event queue or priority is altered.
+    timer = Timer(0.3, finish)
+    timer.daemon = True
+    timer.start()
+
+
+def usage_start(request):
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if config.get('usage_mode') == 'eof':
+        clear_observation('usage-process-eof', {})
+        os._exit(0)
+    if config.get('usage_mode') == 'reverse-capacity':
+        ask_original()
+    elif config.get('usage_mode') not in {'control-capacity', 'eof'}:
+        # Genuine later public row supplies an ordered-channel delivery barrier.
+        complete()
+
+
+def usage_interrupt(request):
+    for original in usage_held_steers:
+        reply(original, {'turnId': turn_id})
+    usage_held_steers.clear()
+    reply(request, {})
+    notify('turn/completed', {'threadId': thread_id, 'turn': turn('interrupted')})
+
+
 for line in sys.stdin:
     request = json.loads(line)
     with trace.open('a', encoding='utf-8') as output:
@@ -752,7 +1078,12 @@ for line in sys.stdin:
     method = request.get('method')
     params = request.get('params') or {}
     if method is None:
-        if request.get('id') == server_id:
+        if scenario.startswith('native:'):
+            native_reply(request)
+        elif scenario.startswith('usage:') and request.get('id') == 'original-question-rpc':
+            clear_observation('usage-question-result', {'response': request})
+            complete()
+        elif request.get('id') == server_id:
             complete()
         elif request.get('id') == 'original-question-rpc' and scenario == 'gn:x:question-answer':
             publish_item(
@@ -800,13 +1131,15 @@ for line in sys.stdin:
         )
     elif method == 'initialized':
         pass
+    elif method == 'account/rateLimits/read':
+        usage_read(request)
     elif method == 'account/read':
         reply(
             request,
             {
                 'account': {
                     'type': 'chatgpt',
-                    'email': 'original@example.invalid',
+                    'email': config.get('account_email', 'original@example.invalid'),
                     'planType': 'plus',
                 },
                 'requiresOpenaiAuth': False,
@@ -899,10 +1232,11 @@ for line in sys.stdin:
         if scenario.startswith('result:'):
             result_thread_number += 1
             thread_id = '019a0290-0000-7000-8000-' + f'{5000 + result_thread_number:012d}'
-        elif (scenario.startswith(('clear:', 'report:', 'notice-race:'))
-              or scenario == 'fileauth'):
-            count = sum(json.loads(line).get('method') == 'thread/start'
-                        for line in trace.read_text(encoding='utf-8').splitlines())
+        elif scenario.startswith(('clear:', 'report:', 'notice-race:')) or scenario == 'fileauth':
+            count = sum(
+                json.loads(line).get('method') == 'thread/start'
+                for line in trace.read_text(encoding='utf-8').splitlines()
+            )
             thread_id = '019a0290-0000-7000-8000-' + f'{6000 + count:012d}'
         value = {
             'approvalPolicy': 'on-request',
@@ -962,6 +1296,12 @@ for line in sys.stdin:
             })
             continue
         turn_number += 1
+        if scenario.startswith('usage:'):
+            usage_start(request)
+            continue
+        if scenario.startswith('native:'):
+            native_start(request)
+            continue
         if scenario == 'fileauth':
             turn_id = '019a0290-0000-7000-8000-' + f'{8000 + turn_number:012d}'
         if scenario.startswith(('report:', 'notice-race:')):
@@ -1034,6 +1374,12 @@ for line in sys.stdin:
         else:
             complete()
     elif method == 'turn/steer':
+        if scenario.startswith('usage:'):
+            usage_held_steers.append(request)
+            continue
+        if scenario.startswith('native:'):
+            native_steer(request)
+            continue
         if scenario.startswith('notice-race:'):
             notice_pending_steer = request
             clear_observation('race-steer-received', {'threadId': thread_id, 'turnId': turn_id})
@@ -1059,11 +1405,15 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
+        if scenario.startswith('usage:'):
+            usage_interrupt(request)
+            continue
         if scenario.startswith('notice-race:'):
             notice_race_interrupt(request)
             continue
         if scenario.startswith('clear:ordered:') or scenario in {
-            'clear:stop-ack', 'clear:pending-ack'
+            'clear:stop-ack',
+            'clear:pending-ack',
         }:
             clear_ordered_interrupt(request)
             continue

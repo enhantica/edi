@@ -30,7 +30,20 @@ TestCase {
         return found;
     }
     function rendered() {
-        tryVerify(() => !Ui.moving(window.contentItem), 2000, "I16/popup: actual navigation finishes before geometry observations");
+        tryVerify(() => {
+            if (Ui.moving(window.contentItem) || !window.contentArea) return false;
+            const page = window.contentArea[AppState.Page.Project];
+            const view = page ? page.SwipeView.view : null;
+            const viewport = view ? view.contentItem : null;
+            if (!viewport || !viewport.currentItem
+                || viewport.currentIndex !== window.appBarCentralTabs.currentIndex) return false;
+            // Qt Basic SwipeView uses ListView's strict preferred-highlight anchor.
+            // Highlight auto-scroll can continue with Flickable.moving === false.
+            // This observes actual selected-item placement, independent of Assistant geometry.
+            const selected = viewport.currentItem.mapToItem(viewport, 0, 0);
+            const position = view.orientation === Qt.Horizontal ? selected.x : selected.y;
+            return Math.abs(position - viewport.preferredHighlightBegin) < 0.5;
+        }, 2000, "I16/popup: actual navigation finishes before geometry observations");
         verify(waitForPolish(window, 2000), "I16/popup: queued layout settles before geometry observations");
         window.update();
         verify(waitForRendering(window.contentItem), "I16/popup: actual window renders after interaction");

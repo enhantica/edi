@@ -4,6 +4,8 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include <QAccessible>
+#include <QCryptographicHash>
+#include <QWheelEvent>
 #include <QAbstractTextDocumentLayout>
 #include <QClipboard>
 #include <QColor>
@@ -43,7 +45,9 @@ class OwnedUrlRecorder final : public QObject {
     Q_OBJECT
 public:
     Array urls;
+    int usage_changes=0;
 public slots:
+    void changed() { ++usage_changes; }
     void record(const QUrl& url) { urls.push_back(url.toString(QUrl::FullyEncoded)); }
 };
 namespace {
@@ -123,8 +127,9 @@ void click(QQuickItem* item,QQuickWindow* window) {
 }
 }
 int main(int argc,char** argv) {
-    if(argc!=2 && !(argc==3 && (QByteArray(argv[2])=="--submit" || QByteArray(argv[2])=="--markdown")))return 96;
+    if(argc!=2 && !(argc==3 && (QByteArray(argv[2])=="--submit" || QByteArray(argv[2])=="--markdown" || QByteArray(argv[2])=="--usage")))return 96;
     const bool submit_mode=argc==3 && QByteArray(argv[2])=="--submit";
+    const bool usage_mode=argc==3 && QByteArray(argv[2])=="--usage";
     const bool markdown_mode=argc==3 && QByteArray(argv[2])=="--markdown";
     QTemporaryDir storage;if(!storage.isValid())return 97;
     qputenv("XDG_DATA_HOME",storage.path().toUtf8());
@@ -136,7 +141,8 @@ int main(int argc,char** argv) {
     edi_app::use_fresh_settings();edi_app::use_design_font();
     FixtureServices fixture;
     QQmlApplicationEngine engine;
-    auto owned=std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
+    auto owned=usage_mode ? std::make_unique<edi_app::Session>(nullptr)
+        : std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     auto* session=owned.get();
     edi_app::configure_engine(engine,std::move(owned));
     engine.load(QUrl::fromLocalFile(QString::fromLocal8Bit(argv[1])));
@@ -152,6 +158,8 @@ int main(int argc,char** argv) {
     const auto restore_urls=qScopeGuard([&] {
         if(markdown_mode)for(const auto& scheme:observed_schemes)QDesktopServices::unsetUrlHandler(scheme);
     });
+    if(usage_mode && session->assistant()->metaObject()->indexOfSignal("usageChanged()")>=0)
+        QObject::connect(session->assistant(),SIGNAL(usageChanged()),&report_urls,SLOT(changed()));
     bool activity_observation=false;
     const auto find=[&](const char* name) {
         auto* object=root->findChild<QObject*>(QString::fromUtf8(name));
@@ -175,6 +183,69 @@ int main(int argc,char** argv) {
         const auto value=object->property(name);
         return QJsonValue::fromVariant(value.metaType()==QMetaType::fromType<QJSValue>()
             ? value.value<QJSValue>().toVariant() : value);
+    };
+    const auto usage_button=[&]() -> QQuickItem* {
+        auto* button=root->findChild<QQuickItem*>("assistant.usage");
+        if(!button)throw std::runtime_error("actual usage control unavailable");
+        return button;
+    };
+    const auto usage_dialog=[&]() -> QObject* {
+        QObject* found=nullptr;
+        for(auto* object:root->findChildren<QObject*>())
+            if(object->property("title").toString()=="Usage" && object->property("contentItem").isValid()) {
+                if(found)throw std::runtime_error("actual usage dialog is not unique");
+                found=object;
+            }
+        if(!found)throw std::runtime_error("actual usage dialog unavailable");
+        return found;
+    };
+    const auto usage_ui=[&]() -> Object {
+        auto* button=usage_button(); QQuickItem* canvas=nullptr;
+        for(auto* item:button->findChildren<QQuickItem*>())
+            if(QString::fromLatin1(item->metaObject()->className()).contains("Canvas")) {
+                if(canvas)throw std::runtime_error("actual usage Canvas is not unique");canvas=item;
+            }
+        if(!canvas)throw std::runtime_error("actual usage Canvas unavailable");
+        window->update();drain();
+        const auto actual=window->grabWindow();
+        const auto region=scene_rect(canvas).toAlignedRect();
+        const auto pixels=actual.copy(region).convertToFormat(QImage::Format_RGBA8888);
+        if(actual.isNull() || pixels.isNull())throw std::runtime_error("actual usage framebuffer unavailable");
+        Object image{{"width",pixels.width()},{"height",pixels.height()},
+            {"sha256",QString::fromLatin1(QCryptographicHash::hash(
+                QByteArrayView(reinterpret_cast<const char*>(pixels.constBits()),pixels.sizeInBytes()),
+                QCryptographicHash::Sha256).toHex())}};
+        auto* dialog=usage_dialog();auto* content=dialog->property("contentItem").value<QQuickItem*>();
+        auto* outer=content?content->parentItem():nullptr;
+        if(!content || !outer)throw std::runtime_error("actual usage popup item unavailable");
+        Array labels,scrollables,bars;
+        for(auto* item:content->findChildren<QQuickItem*>()) {
+            if(item->property("text").isValid()) {
+                auto observed=geometry(item,window);
+                observed["pixel_size"]=item->property("font").value<QFont>().pixelSize();
+                labels.push_back(observed);
+            }
+            if(item->property("contentHeight").isValid() && item->property("contentY").isValid()) {
+                auto observed=geometry(item,window);
+                observed["content_height"]=item->property("contentHeight").toDouble();
+                observed["content_y"]=item->property("contentY").toDouble();
+                scrollables.push_back(observed);
+            }
+            if(QString::fromLatin1(item->metaObject()->className()).contains("ScrollBar")) {
+                auto observed=geometry(item,window);
+                auto* context=qmlContext(item);
+                observed["component_url"]=context?context->baseUrl().toString():QString();
+                observed["position"]=item->property("position").toDouble();
+                observed["size"]=item->property("size").toDouble();
+                bars.push_back(observed);
+            }
+        }
+        return {{"button",geometry(button,window)},
+            {"canvas",Object{{"geometry",geometry(canvas,window)},
+                {"window_available",json_value(canvas->property("windowAvailable"))},{"frame",image}}},
+            {"popup",Object{{"visible",dialog->property("visible").toBool()},
+                {"opened",dialog->property("opened").toBool()},{"geometry",geometry(outer,window)},
+                {"labels",labels},{"scrollables",scrollables},{"scrollbars",bars}}}};
     };
     const auto snapshot=[&] {
         if(markdown_mode && activity_observation) {
@@ -328,7 +399,7 @@ int main(int argc,char** argv) {
                 ui["cancel"]=geometry(action(root,false),window);
             }
         }
-        if(submit_mode) {
+        if(submit_mode || usage_mode) {
             ui["panel"]=json_value(invoke(root,"panelState"));
             auto* editor=find("assistant.composer");
             ui["composer"]=geometry(editor,window);
@@ -346,6 +417,15 @@ int main(int argc,char** argv) {
             vm["selected_model"]=session->assistant()->selectedModel();
             vm["selected_effort"]=session->assistant()->selectedEffort();
         }
+        if(usage_mode) {
+            auto* actual=session->assistant();
+            const auto present=actual->metaObject()->indexOfProperty("usage")>=0;
+            vm["usage_observer"]=Object{{"property_present",present},
+                {"refresh_present",actual->metaObject()->indexOfMethod("refreshUsage()")>=0},
+                {"changes",report_urls.usage_changes},
+                {"value",present?json_property(actual,"usage"):QJsonValue()}};
+            ui["usage"]=usage_ui();
+        }
         return Object{{"vm",vm},{"ui",ui}};
     };
     std::string line;
@@ -353,7 +433,27 @@ int main(int argc,char** argv) {
         try {
             const auto input=decode(QByteArray::fromStdString(line)).toObject();
             const auto op=input["op"].toString();Object result;
-            if(markdown_mode && op=="desktop_control") {
+            if(usage_mode && op=="refresh_usage") {
+                result={{"invoked",QMetaObject::invokeMethod(session->assistant(),"refreshUsage",Qt::DirectConnection)}};
+            } else if(usage_mode && op=="click_usage")click(usage_button(),window);
+            else if(usage_mode && op=="usage_scale") {
+                // Existing EA public sizing knob; observe actual changed fonts before claiming enlarged-font coverage.
+                auto* button=usage_button();
+                QQmlExpression expression(qmlContext(button),button,
+                    QString("EaStyle.Sizes.defaultScale = %1").arg(input["percent"].toInt()));
+                expression.evaluate();
+                if(expression.hasError())throw std::runtime_error("actual EA scale preference unavailable");
+                window->update();drain();
+            } else if(usage_mode && op=="usage_wheel") {
+                auto* dialog=usage_dialog();auto* content=dialog->property("contentItem").value<QQuickItem*>();
+                if(!dialog->property("visible").toBool() || !content)
+                    throw std::runtime_error("actual Usage dialog must be visibly open before wheel input");
+                const QPointF local=scene_rect(content).center();
+                QWheelEvent event(local,window->mapToGlobal(local.toPoint()),QPoint(),QPoint(0,-120),
+                    Qt::NoButton,Qt::NoModifier,Qt::ScrollUpdate,false);
+                QCoreApplication::sendEvent(window,&event);window->update();drain();
+            } else if(usage_mode && op=="clear_history")session->assistant()->clearHistory();
+            else if(markdown_mode && op=="desktop_control") {
                 const auto path=storage.path()+"/original-url-handler-control.txt";
                 QFile control(path);if(!control.open(QIODevice::WriteOnly)
                     || control.write("Original harmless Qt URL control")<0)

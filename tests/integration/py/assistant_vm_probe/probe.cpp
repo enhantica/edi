@@ -4,6 +4,8 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/calculation.hpp"
+#include "fit_view_model.hpp"
 #include <QCryptographicHash>
 #include <QDesktopServices>
 #include <QScopeGuard>
@@ -29,7 +31,9 @@ class OwnedUrlRecorder final : public QObject {
     Q_OBJECT
 public:
     Array urls;
+    int usage_changes=0;
 public slots:
+    void changed() { ++usage_changes; }
     void record(const QUrl& url) { urls.push_back(url.toString(QUrl::FullyEncoded)); }
 };
 namespace {
@@ -110,6 +114,8 @@ int main(int argc,char** argv) {
         QObject::connect(session->assistant(), &edi_app::AssistantViewModel::fileSelectionRetired,
             session.get(), [&](const QString& id){retired_selections.push_back(id);});
 #endif
+        if(codex_mode && session->assistant()->metaObject()->indexOfSignal("usageChanged()")>=0)
+            QObject::connect(session->assistant(),SIGNAL(usageChanged()),&report_urls,SLOT(changed()));
         QObject::connect(session->assistant()->messages(),&edi_app::RowTableModel::countChanged,
             session.get(),[&]{++model_changes;});
     };
@@ -138,12 +144,34 @@ int main(int argc,char** argv) {
             edi::Project captured(value);
             for(const auto& entry:edi::parameter_entries(captured)) {
                 const auto& parameter=*entry.parameter;
-                parameters.push_back(Object{{"path",QString::fromStdString(entry.path)},
+                Object observed{{"path",QString::fromStdString(entry.path)},
                     {"value",parameter.value.get()},{"free",parameter.free.get()},
-                    {"uncertainty",parameter.uncertainty?QJsonValue(*parameter.uncertainty):QJsonValue()}});
+                    {"uncertainty",parameter.uncertainty?QJsonValue(*parameter.uncertainty):QJsonValue()}};
+                if(codex_mode) {
+                    observed["independent"]=parameter.dependence==edi::Dependence::Independent;
+                    observed["refinable"]=entry.refinable;observed["fittable"]=entry.fittable;
+                    observed["used_by_profile"]=entry.used_by_profile;
+                }
+                parameters.push_back(observed);
             }
+            if(codex_mode) {
+                auto* fit=session->project()->fit();
+                project["native_observer"]=Object{
+                    {"can_undo",session->project()->canUndo()},
+                    {"edits_at",QString::number(edi::work_stamps(value).edits_at)},
+                    {"fit_running",fit->running()},{"fit_available",fit->available()},
+                    {"fit_unavailable_reason",fit->unavailableReason()},
+                    {"fit_outcome",fit->outcome()},{"fit_status",fit->status()},
+                    {"fit_can_undo",fit->canUndo()},{"fit_results",rows(fit->results())},
+                    {"record",Object{{"kind",QString::fromStdString(value.fit_result.result_kind)},
+                        {"exit_reason",QString::fromStdString(value.fit_result.exit_reason)},
+                        {"success",value.fit_result.success},{"iterations",value.fit_result.iterations},
+                        {"reduced_chi_square",value.fit_result.reduced_chi_square}}}};
+            }
+            const auto native_observer=project.value("native_observer");
             project={{"parameters",parameters},{"mode",QString::fromStdString(value.fitting_mode)},
                 {"objective",value.fit_result.objective_value}};
+            if(codex_mode)project["native_observer"]=native_observer;
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
             if(codex_mode) {
                 Array experiments;
@@ -208,6 +236,20 @@ int main(int argc,char** argv) {
             {"cancel_method",session->metaObject()->indexOfMethod("cancelSaveAs(QString)")>=0}};
 #endif
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
+        if(codex_mode) {
+            result["policy"]=Object{
+                {"record_bytes",static_cast<double>(edi::assistant::Limits::record_bytes)},
+                {"retained_record_bytes",static_cast<double>(edi::assistant::Limits::retained_record_bytes)},
+                {"context_bytes",static_cast<double>(edi::assistant::Limits::context_bytes)},
+                {"stream_calls",static_cast<double>(edi::assistant::Limits::stream_calls)},
+                {"http_operations",static_cast<double>(edi::assistant::Limits::http_operations)}};
+            result["native_context"]=vm->contextPreview();
+            const auto usage_index=vm->metaObject()->indexOfProperty("usage");
+            result["usage_observer"]=Object{{"property_present",usage_index>=0},
+                {"refresh_present",vm->metaObject()->indexOfMethod("refreshUsage()")>=0},
+                {"changes",report_urls.usage_changes},
+                {"value",usage_index>=0?QJsonValue::fromVariant(vm->property("usage")):QJsonValue()}};
+        }
         if(codex_mode)result["report_observer"]=Object{
             {"urls",report_urls.urls},
             {"method_present",vm->metaObject()->indexOfMethod("openReport(QString,QString)")>=0},
@@ -235,6 +277,9 @@ int main(int argc,char** argv) {
             if(op=="sign_in")session->assistant()->signIn();
             else if(op=="sign_out")session->assistant()->signOut();
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
+            else if(codex_mode && op=="refresh_usage") {
+                result={{"invoked",QMetaObject::invokeMethod(session->assistant(),"refreshUsage",Qt::DirectConnection)}};
+            }
             else if(codex_mode && op=="report_observer_reset")report_urls.urls=Array{};
             else if(codex_mode && op=="desktop_control") {
                 const auto path=storage.path()+"/original-url-handler-control.txt";
@@ -295,6 +340,11 @@ int main(int argc,char** argv) {
             else if(op=="select_model")session->assistant()->setSelectedModel(input["id"].toString());
             else if(op=="select_effort")session->assistant()->setSelectedEffort(input["id"].toString());
             else if(op=="open")result={{"opened",session->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
+            else if(codex_mode && op=="native_undo") {
+                if(!session->project())throw std::invalid_argument("Undo requires actual project");
+                const bool available=session->project()->canUndo();
+                session->project()->undo();result={{"was_available",available}};
+            }
             else if(op=="manual_value") {
                 if(!session->project())throw std::invalid_argument("manual edit requires the real open project");
                 auto* live=session->project()->assistantProject();

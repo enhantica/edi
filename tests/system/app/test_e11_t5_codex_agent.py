@@ -17,7 +17,6 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import pytest
-
 from tests.system.app import test_e11_t5_vm_retention as prior
 
 ROOT = prior.ROOT
@@ -25,9 +24,18 @@ PEER = ROOT / 'tests/integration/py/assistant_vm_probe/codex_stdio_peer.py'
 
 
 class Generic(prior.Component):
-    def __init__(self, binary):
+    def __init__(self, binary, *, ui=False):
+        argv = (
+            [
+                str(binary),
+                str(ROOT / 'tests/integration/py/assistant_consent_probe/SubmitHarness.qml'),
+                '--usage',
+            ]
+            if ui
+            else [str(binary), '--codex']
+        )
         self.process = subprocess.Popen(
-            [str(binary), '--codex'],
+            argv,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -43,7 +51,7 @@ class Generic(prior.Component):
 def generic(monkeypatch, tmp_path):
     actors = []
 
-    def create(scenario='complete', *, override='peer'):
+    def create(scenario='complete', *, override='peer', ui=False):
         owned = tmp_path / str(len(actors))
         owned.mkdir()
         trace = owned / 'original-client-lines.jsonl'
@@ -69,7 +77,14 @@ def generic(monkeypatch, tmp_path):
         monkeypatch.setenv('TMPDIR', str(owned))
         monkeypatch.setenv('QT_QPA_PLATFORM', 'offscreen')
         monkeypatch.setenv('QT_QUICK_BACKEND', 'software')
-        actor = Generic(Path(os.environ['EDI_ASSISTANT_WORKFLOW_VM_PROBE']))
+        actor = Generic(
+            Path(
+                os.environ[
+                    'EDI_ASSISTANT_CONSENT_PROBE' if ui else 'EDI_ASSISTANT_WORKFLOW_VM_PROBE'
+                ]
+            ),
+            ui=ui,
+        )
         actor.command('inspect')
         actor.peer_pid_file = config.with_suffix('.peer-pid')
         actors.append(actor)
@@ -171,15 +186,28 @@ def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two
     fresh_text = 'Original clear fresh input'
     actor.command('send_text', text=original_text)
     if scenario == 'active':
-        settle(actor, lambda value: value['can_cancel'] and any(
-            row.get('payload', {}).get('id') == 'clear-prior-work'
-            for row in value['messages']
-        ))
+        settle(
+            actor,
+            lambda value: (
+                value['can_cancel']
+                and any(
+                    row.get('payload', {}).get('id') == 'clear-prior-work'
+                    for row in value['messages']
+                )
+            ),
+        )
     else:
-        settle(actor, lambda value: not value['can_cancel'] and any(
-            row.get('kind') == 'assistant' and row.get('text') == 'Original before Clear reply'
-            for row in value['messages']
-        ))
+        settle(
+            actor,
+            lambda value: (
+                not value['can_cancel']
+                and any(
+                    row.get('kind') == 'assistant'
+                    and row.get('text') == 'Original before Clear reply'
+                    for row in value['messages']
+                )
+            ),
+        )
     assert len(users(actor, original_text)) == 1, (
         'CLEAR SETUP: actual original turn has one retained admitted user identity'
     )
@@ -198,45 +226,66 @@ def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two
         if not actor.last['vm']['can_cancel']:
             break
     cleared = actor.last['vm']
-    trace.with_suffix('.clear-public.json').write_text(json.dumps({
-        'before': before, 'cleared': cleared,
-        'original_peer_identity': identity,
-        'original_peer_still_live': original_peer_is_live(identity),
-        'requests': records(trace),
-    }, ensure_ascii=False, indent=2))
+    trace.with_suffix('.clear-public.json').write_text(
+        json.dumps(
+            {
+                'before': before,
+                'cleared': cleared,
+                'original_peer_identity': identity,
+                'original_peer_still_live': original_peer_is_live(identity),
+                'requests': records(trace),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     assert cleared['connected'] and cleared['handoff']['account_label'] == account, (
         'CLEAR: retiring a conversation preserves genuine managed authentication/account'
     )
-    assert cleared['models'] == models and (
-        cleared['selected_model'], cleared['selected_effort']
-    ) == choice, 'CLEAR: conversation retirement preserves the actual catalog and user choices'
+    assert (
+        cleared['models'] == models
+        and (cleared['selected_model'], cleared['selected_effort']) == choice
+    ), 'CLEAR: conversation retirement preserves the actual catalog and user choices'
     if cleared['context_consent_required']:
         actor.command('sign_in')
     actor.command('send_text', text=fresh_text)
     for _ in range(40):
         actor.command('inspect')
-        if any(row.get('text') == 'Original fresh after Clear reply'
-               for row in actor.last['vm']['messages']):
+        if any(
+            row.get('text') == 'Original fresh after Clear reply'
+            for row in actor.last['vm']['messages']
+        ):
             break
     after = actor.last['vm']
     sent = started_requests(trace)
     peer_events = trace.with_suffix('.clear-events.jsonl')
     observations = records(peer_events)
-    trace.with_suffix('.clear-public.json').write_text(json.dumps({
-        'before': before, 'cleared': cleared, 'after': after,
-        'original_peer_identity': identity,
-        'original_peer_still_live': original_peer_is_live(identity),
-        'peer_events': observations, 'requests': records(trace),
-    }, ensure_ascii=False, indent=2))
+    trace.with_suffix('.clear-public.json').write_text(
+        json.dumps(
+            {
+                'before': before,
+                'cleared': cleared,
+                'after': after,
+                'original_peer_identity': identity,
+                'original_peer_still_live': original_peer_is_live(identity),
+                'peer_events': observations,
+                'requests': records(trace),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     assert not any((cleared['messages'], cleared['pending_question'], cleared['pending_plan'])), (
         'CLEAR: original history and pending conversation controls are retired'
     )
     assert not cleared['can_cancel'], 'CLEAR: original operation settles after retirement'
     if scenario == 'active':
         interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
-        assert any(row['params']['threadId'] == original[0]['params']['threadId']
-                   and row['params']['turnId'] == observations[0]['turnId']
-                   for row in interrupts) or not original_peer_is_live(identity), (
+        assert any(
+            row['params']['threadId'] == original[0]['params']['threadId']
+            and row['params']['turnId'] == observations[0]['turnId']
+            for row in interrupts
+        ) or not original_peer_is_live(identity), (
             'CLEAR: actual original work is interrupted or its original process has ceased'
         )
     assert after['connected'] and len(sent) == 2, (
@@ -246,26 +295,33 @@ def clear_conversation_case(generic, scenario):  # noqa: PLR0914, PLR0915 -- two
         'CLEAR: new user input uses a genuine distinct fresh runtime thread'
     )
     fresh_rows = users(actor, fresh_text)
-    assert len(fresh_rows) == 1 and fresh_rows[0]['id'] != original_row and (
-        fresh_rows[0]['id'] == sent[1]['params']['clientUserMessageId']
+    assert (
+        len(fresh_rows) == 1
+        and fresh_rows[0]['id'] != original_row
+        and (fresh_rows[0]['id'] == sent[1]['params']['clientUserMessageId'])
     ), 'CLEAR: the fresh admitted prompt has its own once-only retained user identity'
     fresh_wire = json.dumps(sent[1]['params']['input'], ensure_ascii=False)
     assert fresh_wire.count(fresh_text) == 1 and original_text not in fresh_wire, (
         'CLEAR: fresh context contains the new input once and never replays the old prompt'
     )
-    assert sum(row.get('text') == 'Original fresh after Clear reply'
-               for row in after['messages']) == 1 and not after['can_cancel'], (
-        'CLEAR: genuine fresh turn completes once and settles its own operation'
-    )
-    assert not any(row.get('id') == original_row or row.get('text') in {
-        original_text, 'Original before Clear reply', 'Original late reply after Clear',
-    } for row in after['messages']), (
-        'CLEAR: old retained or delayed conversation events cannot revive retired history'
-    )
-    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
-                   for row in records(trace)), (
-        'CLEAR: context approval neither restarts login nor logs out the managed account'
-    )
+    assert (
+        sum(row.get('text') == 'Original fresh after Clear reply' for row in after['messages'])
+        == 1
+        and not after['can_cancel']
+    ), 'CLEAR: genuine fresh turn completes once and settles its own operation'
+    assert not any(
+        row.get('id') == original_row
+        or row.get('text')
+        in {
+            original_text,
+            'Original before Clear reply',
+            'Original late reply after Clear',
+        }
+        for row in after['messages']
+    ), 'CLEAR: old retained or delayed conversation events cannot revive retired history'
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    ), 'CLEAR: context approval neither restarts login nor logs out the managed account'
 
 
 def test_clear_settled_conversation_preserves_real_managed_account_and_fresh_send(generic):
@@ -285,9 +341,15 @@ def begin_clear_control_case(generic, scenario):
     connect(actor)
     before = actor.last['vm']
     actor.command('send_text', text='Original Clear ordering turn A')
-    settle(actor, lambda state: state['can_cancel'] and any(
-        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
-    ))
+    settle(
+        actor,
+        lambda state: (
+            state['can_cancel']
+            and any(
+                row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+            )
+        ),
+    )
     assert before['handoff']['account_label'] == 'original@example.invalid', (
         'CLR SETUP: managed account is genuinely admitted before work and retirement'
     )
@@ -299,15 +361,29 @@ def begin_clear_control_case(generic, scenario):
 
 
 def require_clear_settlement(actor, trace, before, original):
-    state = settle(actor, lambda value: not value['can_cancel'] and {
-        'interrupt-ack', 'control-terminal'
-    } <= {event['kind'] for event in clear_control_events(trace)})
-    trace.with_suffix('.clear-control-public.json').write_text(json.dumps({
-        'state': state, 'events': clear_control_events(trace), 'requests': records(trace),
-    }, ensure_ascii=False, indent=2))
-    assert state['connected'] and state['handoff']['account_label'] == before['handoff'][
-        'account_label'
-    ], 'CLR: both original terminal and control acknowledgement preserve the managed account'
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and {'interrupt-ack', 'control-terminal'}
+            <= {event['kind'] for event in clear_control_events(trace)}
+        ),
+    )
+    trace.with_suffix('.clear-control-public.json').write_text(
+        json.dumps(
+            {
+                'state': state,
+                'events': clear_control_events(trace),
+                'requests': records(trace),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    assert (
+        state['connected']
+        and state['handoff']['account_label'] == before['handoff']['account_label']
+    ), 'CLR: both original terminal and control acknowledgement preserve the managed account'
     assert state['models'] == before['models'], (
         'CLR: actual catalog survives settled conversation retirement'
     )
@@ -315,9 +391,10 @@ def require_clear_settlement(actor, trace, before, original):
         'CLR: no original or delayed conversation item revives after Clear'
     )
     interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
-    assert len(interrupts) == 1 and interrupts[0]['params']['threadId'] == original['params'][
-        'threadId'
-    ], 'CLR: original retirement issues one interrupt bound to its own thread'
+    assert (
+        len(interrupts) == 1
+        and interrupts[0]['params']['threadId'] == original['params']['threadId']
+    ), 'CLR: original retirement issues one interrupt bound to its own thread'
     active = next(event for event in clear_control_events(trace) if event['kind'] == 'active')
     assert interrupts[0]['params']['turnId'] == active['turnId'], (
         'CLR: acknowledgement cannot substitute a different original turn identity'
@@ -325,9 +402,12 @@ def require_clear_settlement(actor, trace, before, original):
     if state['context_consent_required']:
         actor.command('sign_in')  # Actual context approval only after retained-auth proof.
     actor.command('send_text', text='Original fresh Clear ordering turn B')
-    state = settle(actor, lambda value: any(
-        row.get('text') == 'Original fresh after Clear reply' for row in value['messages']
-    ))
+    state = settle(
+        actor,
+        lambda value: any(
+            row.get('text') == 'Original fresh after Clear reply' for row in value['messages']
+        ),
+    )
     sent = started_requests(trace)
     assert len(sent) == 2 and sent[1]['params']['threadId'] != original['params']['threadId'], (
         'CLR: settled Clear admits one genuinely fresh thread, not replay of the old owner'
@@ -339,10 +419,10 @@ def require_clear_settlement(actor, trace, before, original):
     assert state['connected'] and not state['can_cancel'], (
         'CLR: fresh actual turn completes without logout or stranded cancellation'
     )
-    assert not any(record.get('method') in {'account/login/start', 'account/logout'}
-                   for record in records(trace)), (
-        'CLR: context/thread renewal does not fabricate a fresh login or logout'
-    )
+    assert not any(
+        record.get('method') in {'account/login/start', 'account/logout'}
+        for record in records(trace)
+    ), 'CLR: context/thread renewal does not fabricate a fresh login or logout'
 
 
 @pytest.mark.parametrize('order', ['ack-first', 'terminal-first'])
@@ -359,9 +439,12 @@ def test_active_clear_settles_both_original_control_orderings(generic, order):
 def test_acknowledged_stop_then_clear_keeps_original_interrupt_once(generic):
     actor, trace, before, original = begin_clear_control_case(generic, 'clear:stop-ack')
     actor.command('cancel')
-    settle(actor, lambda _value: any(
-        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
-    ))
+    settle(
+        actor,
+        lambda _value: any(
+            event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
+        ),
+    )
     assert not any(event['kind'] == 'control-terminal' for event in clear_control_events(trace)), (
         'CLR SETUP: real Stop acknowledgement precedes Clear while original terminal is pending'
     )
@@ -372,9 +455,13 @@ def test_acknowledged_stop_then_clear_keeps_original_interrupt_once(generic):
 def test_original_terminal_cannot_release_input_before_its_control_ack(generic):
     actor, trace, before, original = begin_clear_control_case(generic, 'clear:pending-ack')
     actor.command('cancel')
-    state = settle(actor, lambda value: any(
-        event['kind'] == 'control-terminal' for event in clear_control_events(trace)
-    ) and any(row.get('kind') == 'assistant' for row in value['messages']))
+    state = settle(
+        actor,
+        lambda value: (
+            any(event['kind'] == 'control-terminal' for event in clear_control_events(trace))
+            and any(row.get('kind') == 'assistant' for row in value['messages'])
+        ),
+    )
     assert state['connected'] and not state['context_consent_required'], (
         'CLR SETUP: original terminal retains genuine approved context before new input'
     )
@@ -384,36 +471,49 @@ def test_original_terminal_cannot_release_input_before_its_control_ack(generic):
     actor.command('send_text', text='Original pending-control turn B')
     blocked = actor.last['vm']
     events = clear_control_events(trace)
-    trace.with_suffix('.pending-control-public.json').write_text(json.dumps({
-        'blocked': blocked, 'events': events, 'requests': records(trace),
-    }, ensure_ascii=False, indent=2))
+    trace.with_suffix('.pending-control-public.json').write_text(
+        json.dumps(
+            {
+                'blocked': blocked,
+                'events': events,
+                'requests': records(trace),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     assert not any(event['kind'] == 'interrupt-ack' for event in events), (
         'CLR SETUP: attempted input actually precedes ACK delivery, not a guessed timing interval'
     )
     assert len(started_requests(trace)) == 1 and not users(
         actor, 'Original pending-control turn B'
-    ), (
-        'CLR: pending original control refuses new admission without acknowledging editor clearing'
-    )
+    ), 'CLR: pending original control refuses new admission without acknowledging editor clearing'
     assert blocked['last_error'] and len(blocked['last_error'].encode()) <= 512, (
         'CLR: nonadmitted input has a truthful bounded visible refusal'
     )
-    settle(actor, lambda value: any(
-        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
-    ) and not value['can_cancel'])
+    settle(
+        actor,
+        lambda value: (
+            any(event['kind'] == 'interrupt-ack' for event in clear_control_events(trace))
+            and not value['can_cancel']
+        ),
+    )
     actor.command('send_text', text='Original pending-control turn B')
-    state = settle(actor, lambda value: any(
-        row.get('text') == 'Original fresh after Clear reply' for row in value['messages']
-    ))
+    state = settle(
+        actor,
+        lambda value: any(
+            row.get('text') == 'Original fresh after Clear reply' for row in value['messages']
+        ),
+    )
     sent = started_requests(trace)
     assert len(sent) == 2 and len(users(actor, 'Original pending-control turn B')) == 1, (
         'CLR: explicit retry after real original ACK admits the new input exactly once'
     )
-    assert state['connected'] and state['handoff']['account_label'] == before['handoff'][
-        'account_label'
-    ] and sent[0]['params']['threadId'] == original['params']['threadId'], (
-        'CLR: settling the owned original control preserves real account and original binding'
-    )
+    assert (
+        state['connected']
+        and state['handoff']['account_label'] == before['handoff']['account_label']
+        and sent[0]['params']['threadId'] == original['params']['threadId']
+    ), 'CLR: settling the owned original control preserves real account and original binding'
 
 
 @pytest.mark.parametrize(
@@ -1448,16 +1548,24 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     actor, trace = generic('fileauth')
     connect(actor)
     actor.command('send_text', text='Original retained conversation before file intake')
-    before = settle(actor, lambda value: not value['can_cancel'] and any(
-        row.get('text') == 'Original fileauth reply 1' for row in value['messages']
-    ))
+    before = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(row.get('text') == 'Original fileauth reply 1' for row in value['messages'])
+        ),
+    )
     identity = live_original_peer(actor)
     assert before['handoff']['account_label'] == 'original@example.invalid' and before['models'], (
         'FILEAUTH SETUP: actual managed account/catalog replies precede file intake'
     )
     retained = {row['id']: row for row in before['messages']}
     auth_methods = {
-        'initialize', 'account/read', 'model/list', 'account/login/start', 'account/logout',
+        'initialize',
+        'account/read',
+        'model/list',
+        'account/login/start',
+        'account/logout',
     }
     original_auth = [row for row in records(trace) if row.get('method') in auth_methods]
     original_project = before['project']
@@ -1465,9 +1573,11 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     for index, path in enumerate(paths):
         path.write_text(f'Original harmless selected bytes {index}\n')
     request = actor.command('selected_begin')['reply']['request_id']
-    admitted = actor.command('selected_add', request_id=request, urls=[
-        path.as_uri() for path in (paths if remove_one else paths[:1])
-    ])
+    admitted = actor.command(
+        'selected_add',
+        request_id=request,
+        urls=[path.as_uri() for path in (paths if remove_one else paths[:1])],
+    )
     assert admitted['reply']['accepted'], (
         'FILEAUTH SETUP: actual current file selection admits bytes'
     )
@@ -1478,11 +1588,13 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     )
 
     def preserved(state):
-        assert state['connected'] and state['handoff']['account_label'] == before['handoff'][
-            'account_label'
-        ], 'FILEAUTH: changing selected context preserves the genuine signed-in identity'
+        assert (
+            state['connected']
+            and state['handoff']['account_label'] == before['handoff']['account_label']
+        ), 'FILEAUTH: changing selected context preserves the genuine signed-in identity'
         assert state['models'] == before['models'] and (
-            state['selected_model'], state['selected_effort']
+            state['selected_model'],
+            state['selected_effort'],
         ) == (before['selected_model'], before['selected_effort']), (
             'FILEAUTH: original catalog and explicit choices survive selected-file retirement'
         )
@@ -1529,9 +1641,13 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     )
     text = 'Original fresh user input after file context change'
     actor.command('send_text', text=text)
-    after = settle(actor, lambda value: not value['can_cancel'] and any(
-        row.get('text') == 'Original fileauth reply 2' for row in value['messages']
-    ))
+    after = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(row.get('text') == 'Original fileauth reply 2' for row in value['messages'])
+        ),
+    )
     assert after['connected'] and original_peer_is_live(identity), (
         'FILEAUTH: the preserved managed connection completes genuine subsequent work'
     )
@@ -1557,6 +1673,7 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
 
 # Private append proposal only. Uses existing module helpers and no new peer mode.
 
+
 def test_fileauth_repeated_manual_context_keeps_one_original_pending_interrupt(generic):
     actor, trace = generic('clear:pending-ack')
     assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
@@ -1566,14 +1683,24 @@ def test_fileauth_repeated_manual_context_keeps_one_original_pending_interrupt(g
     before = actor.last['vm']
     identity = live_original_peer(actor)
     actor.command('send_text', text='Original active context retirement work')
-    settle(actor, lambda state: state['can_cancel'] and any(
-        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
-    ))
-    parameter = next(row for row in actor.last['vm']['project']['parameters']
-                     if row['path'] == 'structure.cell.length_a')
+    settle(
+        actor,
+        lambda state: (
+            state['can_cancel']
+            and any(
+                row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+            )
+        ),
+    )
+    parameter = next(
+        row
+        for row in actor.last['vm']['project']['parameters']
+        if row['path'] == 'structure.cell.length_a'
+    )
     for step in (1, 2):
-        edited = actor.command('manual_value', path=parameter['path'],
-                               value=parameter['value'] + step * 0.001)
+        edited = actor.command(
+            'manual_value', path=parameter['path'], value=parameter['value'] + step * 0.001
+        )
         assert not edited['reply']['error'], 'FILEAUTH: the real manual edit itself commits'
         events = clear_control_events(trace)
         assert any(event['kind'] == 'control-terminal' for event in events), (
@@ -1587,20 +1714,29 @@ def test_fileauth_repeated_manual_context_keeps_one_original_pending_interrupt(g
         )
         assert edited['vm']['handoff']['account_label'] == before['handoff']['account_label']
         assert edited['vm']['models'] == before['models']
-        current = next(row for row in edited['vm']['project']['parameters']
-                       if row['path'] == parameter['path'])
+        current = next(
+            row
+            for row in edited['vm']['project']['parameters']
+            if row['path'] == parameter['path']
+        )
         assert current['value'] == parameter['value'] + step * 0.001
     interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
     active = next(event for event in clear_control_events(trace) if event['kind'] == 'active')
     assert len(interrupts) == 1 and interrupts[0]['params'] == {
-        'threadId': active['threadId'], 'turnId': active['turnId'],
+        'threadId': active['threadId'],
+        'turnId': active['turnId'],
     }, 'FILEAUTH: two real context revisions cannot duplicate or rebind the original interrupt'
-    settled = settle(actor, lambda state: not state['can_cancel'] and any(
-        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
-    ))
+    settled = settle(
+        actor,
+        lambda state: (
+            not state['can_cancel']
+            and any(event['kind'] == 'interrupt-ack' for event in clear_control_events(trace))
+        ),
+    )
     assert settled['connected'] and original_peer_is_live(identity)
-    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
-                   for row in records(trace))
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    )
 
 
 def test_fileauth_archive_refusal_preserves_committed_selection_and_manual_revision(
@@ -1619,20 +1755,25 @@ def test_fileauth_archive_refusal_preserves_committed_selection_and_manual_revis
     if actor.last['vm']['context_consent_required']:
         actor.command('sign_in')
     actor.command('send_text', text='Original durable conversation before failed retirement')
-    before = settle(actor, lambda state: state['can_cancel'] and any(
-        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
-    ))
+    before = settle(
+        actor,
+        lambda state: (
+            state['can_cancel']
+            and any(
+                row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+            )
+        ),
+    )
     assert not before['last_error'], 'FILEAUTH SETUP: no earlier error can mask storage diagnostic'
     assert actor.last['archive']['is_file'] and actor.last['archive']['bytes'] > 0
     archived_hash = actor.last['archive']['sha256']
     barrier = actor.command('persistence_barrier')
     assert barrier['archive']['is_directory'] and (
         barrier['reply']['preserved_sha256'] == archived_hash
-    ), (
-        'FILEAUTH SETUP: actual QSaveFile target is blocked and original bytes preserved'
+    ), 'FILEAUTH SETUP: actual QSaveFile target is blocked and original bytes preserved'
+    parameter = next(
+        row for row in before['project']['parameters'] if row['path'] == 'structure.cell.length_a'
     )
-    parameter = next(row for row in before['project']['parameters']
-                     if row['path'] == 'structure.cell.length_a')
     edited = actor.command(
         'manual_value', path=parameter['path'], value=parameter['value'] + 0.001
     )
@@ -1642,15 +1783,25 @@ def test_fileauth_archive_refusal_preserves_committed_selection_and_manual_revis
     assert edited['vm']['selected_files'] == before['selected_files'], (
         'FILEAUTH: committed selected identities survive history-publication refusal'
     )
-    assert next(row for row in edited['vm']['project']['parameters']
-                if row['path'] == parameter['path'])['value'] == parameter['value'] + 0.001
+    assert (
+        next(
+            row
+            for row in edited['vm']['project']['parameters']
+            if row['path'] == parameter['path']
+        )['value']
+        == parameter['value'] + 0.001
+    )
     assert edited['vm']['last_error'] and len(edited['vm']['last_error'].encode()) <= 512, (
         'FILEAUTH: actual failed retirement remains publicly explained and bounded'
     )
     assert edited['vm']['connected'], 'FILEAUTH: storage refusal does not sign out managed auth'
-    settled = settle(actor, lambda state: not state['can_cancel'] and any(
-        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
-    ))
+    settled = settle(
+        actor,
+        lambda state: (
+            not state['can_cancel']
+            and any(event['kind'] == 'interrupt-ack' for event in clear_control_events(trace))
+        ),
+    )
     assert settled['last_error'], (
         'FILEAUTH: public storage failure survives actual original control settlement'
     )
@@ -1683,9 +1834,15 @@ def test_fileauth_repeated_session_replacement_keeps_original_pending_interrupt(
     before = actor.last['vm']
     identity = live_original_peer(actor)
     actor.command('send_text', text='Original active work before genuine Session replacement')
-    settle(actor, lambda state: state['can_cancel'] and any(
-        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
-    ))
+    settle(
+        actor,
+        lambda state: (
+            state['can_cancel']
+            and any(
+                row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+            )
+        ),
+    )
     original_start = started_requests(trace)[0]
     for replacement in replacements:
         changed = actor.command('open', path=str(replacement))
@@ -1710,17 +1867,23 @@ def test_fileauth_repeated_session_replacement_keeps_original_pending_interrupt(
         interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
         active = next(event for event in events if event['kind'] == 'active')
         assert len(interrupts) == 1 and interrupts[0]['params'] == {
-            'threadId': original_start['params']['threadId'], 'turnId': active['turnId'],
+            'threadId': original_start['params']['threadId'],
+            'turnId': active['turnId'],
         }, 'FA1: each bind keeps the single interrupt proof bound to its original operation'
-    state = settle(actor, lambda state: not state['can_cancel'] and any(
-        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
-    ))
+    state = settle(
+        actor,
+        lambda state: (
+            not state['can_cancel']
+            and any(event['kind'] == 'interrupt-ack' for event in clear_control_events(trace))
+        ),
+    )
     assert state['connected'] and original_peer_is_live(identity)
     assert len(started_requests(trace)) == 1, (
         'FA1: replacing context never silently replays user work'
     )
-    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
-                   for row in records(trace))
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    )
 
 
 # Actual report authority is supplied by genuine default Session rows, never seeded history.
@@ -1999,4 +2162,1498 @@ def test_healthy_retirement_keeps_pending_steer_rpc_until_known_refusal(
     assert not any(
         value.get('method') in {'account/login/start', 'account/logout'}
         for value in records(trace)
+    )
+
+
+# Native bridge acceptance: original fixture/prestate is the scientific oracle.
+def native_records(trace, suffix):
+    path = trace.with_suffix(suffix)
+    return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
+
+def native_case(generic, calls, *, project=None, hold=False, script=None, connect_now=True):
+    actor, trace = generic('native:original')
+    if project is not None:
+        owned_project = trace.parent / 'original-owned-project'
+        shutil.copytree(project, owned_project)
+        assert actor.command('open', path=str(owned_project))['reply']['opened'], (
+            'NATIVE SETUP: owned copy of genuine complete committed project opens '
+            'through actual Session'
+        )
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config.update(
+        native_calls=calls(actor.last['vm']) if callable(calls) else calls,
+        native_hold_after_calls=hold,
+    )
+    config.update(script or {})
+    config_path.write_text(json.dumps(config))
+    if connect_now:
+        connect(actor)
+        if actor.last['vm']['context_consent_required']:
+            assert not json.loads(actor.last['vm']['native_context']).get('error'), (
+                'NATIVE SETUP: outgoing approval applies to complete actual disclosure, '
+                'never error JSON'
+            )
+            actor.command(
+                'sign_in'
+            )  # Existing actual GUI outgoing approval while already authenticated.
+    return actor, trace
+
+
+def native_call(tool, **arguments):
+    return {
+        'tool': tool,
+        'arguments': {'purpose': 'Original bounded native operation', **arguments},
+    }
+
+
+def native_send(actor, trace, count):
+    actor.command('send_text', text='Inspect and perform the original bounded native project task')
+    state = settle(
+        actor,
+        lambda value: (
+            len(native_records(trace, '.native-replies.jsonl')) >= count
+            or bool(value['last_error'])
+            or not value['connected']
+        ),
+    )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(replies) == count, (
+        'NATIVE: each genuine reverse RPC settles on its original envelope'
+    )
+    assert not native_records(trace, '.native-wrong-envelope.jsonl'), (
+        'NATIVE: call identity is never substituted for original JSON-RPC response identity'
+    )
+    for index, reply in enumerate(replies, 1):
+        assert reply['response']['id'] == reply['original']['id'], 'NATIVE: native send'
+        assert reply['response']['id'] != reply['original']['params']['callId'], (
+            'NATIVE: native send'
+        )
+        result = reply['response'].get('result')
+        assert isinstance(result, dict) and type(result.get('success')) is bool, (
+            'NATIVE: native send'
+        )
+        contents = result.get('contentItems')
+        assert isinstance(contents, list) and len(contents) == 1, 'NATIVE: native send'
+        assert contents[0]['type'] == 'inputText' and isinstance(contents[0]['text'], str), (
+            'NATIVE: native send'
+        )
+        decoded = json.loads(contents[0]['text'])
+        reply['decoded'] = decoded
+        assert decoded is not None and index <= count, 'NATIVE: native send'
+    return state, replies
+
+
+def native_parameter(state, path='structure.cell.length_a'):
+    matches = [row for row in state['project']['parameters'] if row['path'] == path]
+    assert len(matches) == 1, 'NATIVE SETUP: independently named actual scalar is unambiguous'
+    return matches[0]
+
+
+def native_inputs(state):
+    return state['project']['host_snapshot']['experiments']
+
+
+def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generic):
+    calls = [native_call(name) for name in ('inspect_project', 'list_parameters', 'diagnostics')]
+    actor, trace = native_case(
+        generic, calls, project=ROOT / 'tests/fixtures/e04_t1/editable-project'
+    )
+    before = actor.last['vm']
+    state, replies = native_send(actor, trace, 3)
+    registered = next(
+        row['params'] for row in records(trace) if row.get('method') == 'thread/start'
+    )
+    tools = registered.get('dynamicTools')
+    assert isinstance(tools, list), 'NATIVE: actual thread declares supported dynamic native tools'
+    assert {tool['name'] for tool in tools} == {
+        'inspect_project',
+        'list_parameters',
+        'diagnostics',
+        'set_parameters',
+        'set_free',
+        'run_fit',
+    }, 'NATIVE: this increment advertises only the six genuinely wired capabilities'
+    initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
+    assert initialize['capabilities']['experimentalApi'] is True, (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert all(reply['response']['result']['success'] for reply in replies), (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert 'native_state' in replies[0]['decoded'], (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert isinstance(replies[0]['decoded']['native_state']['calculating'], bool), (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert isinstance(replies[0]['decoded']['native_state']['fitting'], bool), (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert isinstance(replies[1]['decoded']['parameters'], list), (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert 'diagnostics' in replies[2]['decoded'], (
+        'NATIVE: registered reads use original rpc and retained purpose'
+    )
+    assert state['project'] == before['project'], (
+        'NATIVE: read tools do not mutate scientific model'
+    )
+    assert (
+        state['connected'] and state['models'] == before['models'] and not state['pending_plan']
+    ), 'NATIVE: registered reads use original rpc and retained purpose'
+    for call in calls:
+        assert any(
+            row.get('payload', {}).get('arguments') == call['arguments']
+            for row in state['messages']
+        ), 'NATIVE: actual activity retains the original purpose and literal arguments'
+
+
+@pytest.mark.parametrize('tool', ['set_parameters', 'set_free'])
+def test_native125_actual_editor_batch_is_undoable_and_keeps_managed_account(generic, tool):
+    original = ROOT / 'tests/fixtures/e04_t1/editable-project'
+
+    def calls(before):
+        scalar = native_parameter(before)
+        assert scalar['independent'], (
+            'NATIVE SETUP: actual independent scalar, not dependent override'
+        )
+        arguments = (
+            {'values': [{'path': scalar['path'], 'value': scalar['value'] + 0.01}]}
+            if tool == 'set_parameters'
+            else {'flags': [{'path': scalar['path'], 'free': not scalar['free']}]}
+        )
+        return [native_call(tool, **arguments)]
+
+    actor, trace = native_case(generic, calls, project=original, hold=True)
+    scalar = native_parameter(actor.last['vm'])
+    before = actor.last['vm']
+    identity = live_original_peer(actor)
+    state, replies = native_send(actor, trace, 1)
+    assert replies[0]['response']['result']['success'], (
+        'NATIVE: admitted valid edit reaches actual editor'
+    )
+    assert native_parameter(state)[('value' if tool == 'set_parameters' else 'free')] == (
+        scalar['value'] + 0.01 if tool == 'set_parameters' else not scalar['free']
+    ), 'NATIVE: actual editor batch is undoable and keeps managed account'
+    assert state['project']['native_observer']['can_undo'], (
+        'NATIVE: actual editor batch is undoable and keeps managed account'
+    )
+    assert native_inputs(state) == native_inputs(before), (
+        'NATIVE: actual editor batch is undoable and keeps managed account'
+    )
+    restored = actor.command('native_undo')
+    assert restored['reply']['was_available'], (
+        'NATIVE: actual editor batch is undoable and keeps managed account'
+    )
+    assert restored['vm']['project']['parameters'] == before['project']['parameters'], (
+        'NATIVE: genuine normal project Undo restores original values and free flags'
+    )
+    assert restored['vm']['connected'] and original_peer_is_live(identity), (
+        'NATIVE: actual editor batch is undoable and keeps managed account'
+    )
+    assert restored['vm']['handoff']['account_label'] == before['handoff']['account_label'], (
+        'NATIVE: actual editor batch is undoable and keeps managed account'
+    )
+    assert restored['vm']['models'] == before['models'] and not restored['vm']['pending_plan'], (
+        'NATIVE: actual editor batch is undoable and keeps managed account'
+    )
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    ), 'NATIVE: actual editor batch is undoable and keeps managed account'
+
+
+@pytest.mark.parametrize(
+    'variant',
+    [
+        'missing-purpose',
+        'long-purpose',
+        'unknown-outer',
+        'duplicate-path',
+        'late-invalid',
+        'physical-domain',
+        'dependent',
+        'forged-receipt',
+    ],
+)
+def test_native125_refused_batch_never_partially_mutates_real_project(generic, variant):
+    path = 'structure.cell.length_a'
+    args = {'purpose': 'Original explicit bounded edit', 'values': [{'path': path, 'value': 3.89}]}
+    if variant == 'missing-purpose':
+        args.pop('purpose')
+    elif variant == 'long-purpose':
+        args['purpose'] = 'Original ' + 'x' * 121
+    elif variant == 'unknown-outer':
+        args['unexpected'] = 'Original unknown field'
+    elif variant == 'duplicate-path':
+        args['values'].append({'path': path, 'value': 3.90})
+    elif variant == 'late-invalid':
+        args['values'].append({'path': 'original.absent.parameter', 'value': 4.0})
+    elif variant == 'physical-domain':
+        args['values'].append({'path': 'structure.cell.angle_alpha', 'value': -90.0})
+    elif variant == 'dependent':
+        args['values'].append({'path': 'structure.cell.length_b', 'value': 4.0})
+    else:
+        args['request_receipt'] = {'objective': 'Provider invented unbounded authority'}
+    actor, trace = native_case(
+        generic,
+        [{'tool': 'set_parameters', 'arguments': args}],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+    )
+    before = actor.last['vm']
+    state, replies = native_send(actor, trace, 1)
+    assert not replies[0]['response']['result']['success'], (
+        'NATIVE: invalid whole batch is refused'
+    )
+    assert state['project'] == before['project'], (
+        'NATIVE: invalid later member, physical/dependent or scope error preserves the model'
+    )
+    assert state['connected'] and state['models'] == before['models'], (
+        'NATIVE: refused batch never partially mutates real project'
+    )
+
+
+@pytest.mark.parametrize('binding', ['thread_id', 'turn_id'])
+def test_native125_foreign_binding_never_uses_current_project_authority(generic, binding):
+    call = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.90}]
+    )
+    call[binding] = '019a0290-0000-7000-8000-000000000099'
+    actor, trace = native_case(
+        generic, [call], project=ROOT / 'tests/fixtures/e04_t1/editable-project'
+    )
+    before = actor.last['vm']['project']
+    actor.command('send_text', text='Original current owner, not a foreign native call')
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['last_error'])
+            or not value['connected']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert state['project'] == before, (
+        'NATIVE: foreign thread/turn cannot borrow current-project authority'
+    )
+    for reply in native_records(trace, '.native-replies.jsonl'):
+        assert not reply.get('response', {}).get('result', {}).get('success'), (
+            'NATIVE: foreign reverse RPC can never claim native edit success'
+        )
+
+
+def test_native125_reused_call_identity_cannot_change_second_argument_batch(generic):
+    first = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.89}]
+    )
+    second = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.90}]
+    )
+    first['call_id'] = second['call_id'] = 'original-reused-native-call'
+    actor, trace = native_case(
+        generic, [first, second], project=ROOT / 'tests/fixtures/e04_t1/editable-project'
+    )
+    before = actor.last['vm']
+    actor.command('send_text', text='Original one native edit; do not repeat it')
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['last_error'])
+            or not value['connected']
+            or len(native_records(trace, '.native-replies.jsonl')) == 2
+        ),
+    )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert replies and replies[0]['response']['result']['success'], (
+        'NATIVE: reused call identity cannot change second argument batch'
+    )
+    assert native_parameter(state)['value'] == 3.89, (
+        'NATIVE: reused immutable call identity cannot authorize changed second arguments'
+    )
+    assert native_inputs(state) == native_inputs(before), (
+        'NATIVE: reused call identity cannot change second argument batch'
+    )
+
+
+@pytest.mark.parametrize(
+    'project_path',
+    ['docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project', 'tests/fixtures/e04_t5/joint'],
+)
+def test_native125_real_worker_result_is_published_before_reverse_rpc_success(
+    generic, project_path
+):
+    calls = [native_call('run_fit')]
+    actor, trace = native_case(
+        generic, calls, project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    )
+    before = actor.last['vm']
+    if project_path.endswith('/joint'):
+        assert before['project']['mode'] == 'joint' and len(native_inputs(before)) == 2, (
+            'NATIVE FIT SETUP: genuine independent two-experiment joint input, not '
+            'cloned single-fit output'
+        )
+    assert before['project']['native_observer']['fit_available'], (
+        'NATIVE FIT SETUP: genuine linked backend is available, with no fake/no-step substitute'
+    )
+    state, replies = native_send(actor, trace, 1)
+    result = replies[0]['decoded']
+    assert result['status'] in {'done', 'max_iterations'}, (
+        'NATIVE FIT SETUP: genuine adopted moving fit, not unavailable/error/cancel/no-step'
+    )
+    assert result['adopted'] and type(result['converged']) is bool, (
+        'NATIVE: real worker result is published before reverse rpc success'
+    )
+    observer = state['project']['native_observer']
+    assert not observer['fit_running'] and observer['record']['kind'], (
+        'NATIVE: real worker result is published before reverse rpc success'
+    )
+    assert observer['record']['iterations'] == result['iterations'] > 0, (
+        'NATIVE: real worker result is published before reverse rpc success'
+    )
+    assert observer['record']['success'] == result['converged'], (
+        'NATIVE: real worker result is published before reverse rpc success'
+    )
+    assert observer['fit_results'] and observer['fit_can_undo'], (
+        'NATIVE FIT: actual record and normal fit Undo are published before answering the model'
+    )
+    assert state['project']['parameters'] != before['project']['parameters'], (
+        'NATIVE FIT SETUP: actual optimizer changes parameters, with no cached/no-step witness'
+    )
+    assert native_inputs(state) == native_inputs(before), (
+        'NATIVE: real worker result is published before reverse rpc success'
+    )
+    assert state['connected'] and not state['pending_plan'], (
+        'NATIVE: real worker result is published before reverse rpc success'
+    )
+
+
+@pytest.mark.parametrize('retirement', ['stop', 'manual', 'replace'])
+def test_native125_actual_running_fit_retirement_cannot_publish_into_obsolete_owner(
+    generic, retirement
+):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+    )
+    before = actor.last['vm']
+    actor.command(
+        'send_text', text='Run the original native fit with normal Stop and owner fences'
+    )
+    state = settle(
+        actor,
+        lambda value: (
+            value['project']['native_observer']['fit_running']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+            or bool(value['last_error'])
+        ),
+    )
+    assert state['project']['native_observer']['fit_running'], (
+        'NATIVE FIT SETUP: worker is still running at retirement, not already completed'
+    )
+    if retirement == 'replace':
+        replaced = actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))
+        assert replaced['reply']['opened'], (
+            'NATIVE FIT SETUP: real Session admits replacement while the old worker retires'
+        )
+        expected = replaced['vm']['project']['parameters']
+    elif retirement == 'manual':
+        target = native_parameter(state)
+        changed = actor.command('manual_value', path=target['path'], value=target['value'] + 0.01)
+        assert not changed['reply']['error'], (
+            'NATIVE FIT SETUP: actual manual editor admits the newer revision'
+        )
+        expected = changed['vm']['project']['parameters']
+    else:
+        actor.command('cancel')
+        expected = None
+    final = settle(
+        actor,
+        lambda value: (
+            not value['project']['native_observer']['fit_running'] and not value['can_cancel']
+        ),
+    )
+    if expected is not None:
+        assert final['project']['parameters'] == expected, (
+            'NATIVE FIT: old fit cannot overwrite the replacement or later manual revision'
+        )
+    else:
+        assert final['project']['native_observer']['fit_outcome'] in {'cancelled', 'stopped'}, (
+            'NATIVE FIT: real Stop cancels the actual fit, beyond model-turn cancellation'
+        )
+        # Same-owner CANCELLED may adopt a partial result under FitReport's public policy.
+        assert native_inputs(final) == native_inputs(before), (
+            'NATIVE: actual running fit retirement cannot publish into obsolete owner'
+        )
+    assert final['connected'] and final['models'] == before['models'], (
+        'NATIVE: actual running fit retirement cannot publish into obsolete owner'
+    )
+    assert len(started_requests(trace)) == 1, (
+        'NATIVE FIT: no automatic retry of retired fitting work'
+    )
+
+
+@pytest.mark.parametrize('tool', ['set_parameters', 'create_project'])
+def test_native125_no_current_project_or_unwired_capability_cannot_mint_authority(generic, tool):
+    args = (
+        {'values': [{'path': 'structure.cell.length_a', 'value': 3.90}]}
+        if tool == 'set_parameters'
+        else {}
+    )
+    actor, trace = native_case(generic, [native_call(tool, **args)])
+    assert not actor.last['vm']['project_present'], (
+        'NATIVE: no current project or unwired capability cannot mint authority'
+    )
+    actor.command('send_text', text='Original projectless input has no existing project to mutate')
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['last_error'])
+            or not value['connected']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert not state['project_present'], (
+        'NATIVE: provider cannot create project or borrow absent-project authority'
+    )
+    for reply in native_records(trace, '.native-replies.jsonl'):
+        assert not reply['response'].get('result', {}).get('success'), (
+            'NATIVE: unregistered or ownerless operation never claims native execution success'
+        )
+
+
+# Review144/146 siblings use ordinary published messages and actual owners.
+@pytest.mark.parametrize('order', ['start-late', 'steers-reversed'])
+def test_native129_reordered_real_admissions_keep_current_user_ids_and_native_actions(
+    generic, order
+):
+    call = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.91}]
+    )
+    actor, trace = native_case(
+        generic,
+        [],
+        hold=True,
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        script={'native_ack_order': order, 'native_after_steer': [call]},
+    )
+    actor.command('send_text', text='Original initial native objective')
+    settle(actor, itemgetter('can_cancel'))
+    objectives = ['Original intermediate bounded objective', 'Original LATEST bounded objective']
+    for text in objectives:
+        actor.command('send_text', text=text)
+    state = settle(
+        actor,
+        lambda value: (
+            bool(native_records(trace, '.native-replies.jsonl'))
+            or bool(value['last_error'])
+            or not value['connected']
+        ),
+    )
+    steers = [record for record in records(trace) if record.get('method') == 'turn/steer']
+    assert len(steers) == 2, 'N1 SETUP: both genuine inputs reach the published steer channel'
+    events = clear_control_events(trace)
+    ack = [event['id'] for event in events if event['kind'] == 'native-steer-ack']
+    assert ack == [steers[1]['id'], steers[0]['id']], (
+        'N1 SETUP: actual newer ACK precedes older ACK'
+    )
+    if order == 'start-late':
+        kinds = [event['kind'] for event in events]
+        assert kinds.index('native-old-start-ack') > kinds.index('native-steer-ack'), (
+            'NATIVE: reordered real admissions keep current user ids and native actions'
+        )
+    assert all(len(users(actor, text)) == 1 for text in objectives), (
+        'NATIVE: reordered real admissions keep current user ids and native actions'
+    )
+    assert all(
+        users(actor, text)[0]['status'] not in {'refused', 'interrupted'} for text in objectives
+    ), 'NATIVE: reordered real admissions keep current user ids and native actions'
+    assert native_parameter(state)['value'] == 3.91 and state['connected'], (
+        'NATIVE: reordered real admissions keep current user ids and native actions'
+    )
+    assert not state['pending_plan'], (
+        'N1: delegated native objective adds no fabricated second approval'
+    )
+    # No public tool result reveals the private cached objective bytes. Static monotonic-selection
+    # review complements these actual admission/currentness/action boundaries.
+
+
+def test_native129_once_identity_survives_genuine_steer_receipt_replacement(generic):
+    first = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.89}]
+    )
+    replay = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.90}]
+    )
+    first['call_id'] = replay['call_id'] = 'original-once-across-steer'
+    actor, trace = native_case(
+        generic,
+        [first],
+        hold=True,
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        script={'native_steer_count': 1, 'native_after_steer': [replay]},
+    )
+    state, _ = native_send(actor, trace, 1)
+    assert native_parameter(state)['value'] == 3.89, (
+        'NATIVE: once identity survives genuine steer receipt replacement'
+    )
+    actor.command('send_text', text='Original admitted follow-up, preserving prior call identity')
+    state = settle(
+        actor,
+        lambda value: (
+            len(native_records(trace, '.native-replies.jsonl')) >= 2
+            or bool(value['last_error'])
+            or not value['connected']
+        ),
+    )
+    assert any(row.get('method') == 'turn/steer' for row in records(trace)), (
+        'N1 SETUP: genuine steer occurred'
+    )
+    assert native_parameter(state)['value'] == 3.89, (
+        'N1: a new receipt never resurrects an executed call ID'
+    )
+
+
+@pytest.mark.parametrize('field', ['item_namespace', 'rpc_namespace'])
+def test_native129_original_and_reverse_rpc_namespaces_must_match(generic, field):
+    call = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.90}]
+    )
+    call[field] = 'original-foreign-namespace'
+    actor, trace = native_case(
+        generic, [call], project=ROOT / 'tests/fixtures/e04_t1/editable-project'
+    )
+    before = actor.last['vm']['project']
+    actor.command('send_text', text='Original namespace binding cannot be substituted')
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['last_error'])
+            or not value['connected']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert state['project'] == before, (
+        'N1: either namespace mismatch refuses BEFORE actual native writes'
+    )
+    for reply in native_records(trace, '.native-replies.jsonl'):
+        assert not reply['response'].get('result', {}).get('success'), (
+            'NATIVE: original and reverse rpc namespaces must match'
+        )
+
+
+@pytest.mark.parametrize('route', ['item', 'snapshot'])
+def test_native129_actual_host_outcome_and_canonical_call_survive_later_provider_claim(
+    generic, route
+):
+    call = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.89}]
+    )
+    actor, trace = native_case(
+        generic,
+        [call],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        script={'native_conflicting_final': route},
+    )
+    state, replies = native_send(actor, trace, 1)
+    assert (
+        replies[0]['response']['result']['success'] and native_parameter(state)['value'] == 3.89
+    ), 'NATIVE: actual host outcome and canonical call survive later provider claim'
+    state = settle(actor, lambda value: not value['can_cancel'] or bool(value['last_error']))
+    call_id = replies[0]['original']['params']['callId']
+    rows = [row for row in state['messages'] if row['id'] == call_id]
+    assert len(rows) == 1, (
+        'N2: actual committed native outcome remains retained once after provider traffic'
+    )
+    payload = rows[0]['payload']
+    assert payload['tool'] == call['tool'] and payload.get('namespace') is None, (
+        'NATIVE: actual host outcome and canonical call survive later provider claim'
+    )
+    assert payload['arguments'] == call['arguments'], (
+        'N2: provider final cannot rewrite canonical native call'
+    )
+    assert 'Original provider contradicts actual host outcome' not in json.dumps(rows[0]), (
+        'N2: provider snapshot text is never substituted for the actual host execution result'
+    )
+
+
+def test_native129_archive_outcome_admission_precedes_any_model_write(generic):
+    call = native_call(
+        'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.89}]
+    )
+    actor, trace = native_case(
+        generic,
+        [call],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        script={'native_delay': True},
+    )
+    before = actor.last['vm']['project']
+    actor.command(
+        'send_text', text='Original native edit must retain its own outcome before writing'
+    )
+    assert actor.last['archive']['is_file'] and actor.last['archive']['bytes'] > 0, (
+        'NATIVE: archive outcome admission precedes any model write'
+    )
+    barrier = actor.command('persistence_barrier')
+    assert barrier['archive']['is_directory'], (
+        'NATIVE: archive outcome admission precedes any model write'
+    )
+    assert not any(
+        event['kind'] == 'native-call-emitted' for event in clear_control_events(trace)
+    ), 'N2 SETUP: real archive barrier precedes the reverse request, after genuine user retention'
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['last_error']) or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert state['project'] == before, (
+        'N2: failed outcome admission cannot leave unreported native mutation'
+    )
+    assert state['last_error'], 'N2: actual retention refusal stays visible and bounded'
+    assert len(state['last_error'].encode()) <= 512, (
+        'NATIVE: archive outcome admission precedes any model write'
+    )
+
+
+def test_native129_foreign_resolved_event_cannot_cancel_actual_running_native_fit(generic):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+        script={'native_foreign_resolve': True},
+    )
+    actor.command(
+        'send_text', text='Original genuine fit cannot be resolved by foreign thread authority'
+    )
+    state = settle(
+        actor,
+        lambda value: (
+            value['project']['native_observer']['fit_running']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert state['project']['native_observer']['fit_running'], (
+        'N1 SETUP: actual native worker is visibly active'
+    )
+    state = settle(actor, lambda _value: bool(native_records(trace, '.native-replies.jsonl')))
+    emitted = [
+        event for event in clear_control_events(trace) if event['kind'] == 'native-foreign-resolve'
+    ]
+    assert emitted and emitted[0]['still_pending'], (
+        'N1 SETUP: actual foreign resolution precedes original native settlement'
+    )
+    reply = native_records(trace, '.native-replies.jsonl')[0]['response']['result']
+    outcome = json.loads(reply['contentItems'][0]['text'])
+    assert outcome['status'] in {'done', 'max_iterations'} and outcome['adopted'], (
+        'N1: a foreign-thread resolved notification cannot cancel the genuine current fit'
+    )
+    assert state['connected'], (
+        'NATIVE: foreign resolved event cannot cancel actual running native fit'
+    )
+
+
+@pytest.mark.parametrize('retirement', ['clear', 'context', 'signout'])
+def test_native129_retirement_cancels_real_worker_without_repopulating_retired_rows(
+    generic, tmp_path, retirement
+):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+    )
+    actor.command('send_text', text='Original real native worker with current-owner retirement')
+    running = settle(
+        actor,
+        lambda value: (
+            value['project']['native_observer']['fit_running']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert running['project']['native_observer']['fit_running'], (
+        'N3 SETUP: real native worker is running before Clear/context/signout, not a '
+        'finished stand-in'
+    )
+    if retirement == 'clear':
+        retired = actor.command('clear_history')['vm']
+        assert not retired['messages'], 'N3: actual Clear retires visible conversation immediately'
+    elif retirement == 'signout':
+        retired = actor.command('sign_out')['vm']
+        assert not retired['connected'], (
+            'N3: real account signout immediately revokes authentication'
+        )
+    else:
+        path = tmp_path / 'Original-native-new-context.txt'
+        path.write_text('Original new selected context')
+        request = actor.command('selected_begin')['reply']['request_id']
+        assert actor.command('selected_add', request_id=request, urls=[path.as_uri()])['reply'][
+            'accepted'
+        ], 'NATIVE: retirement cancels real worker without repopulating retired rows'
+        retired = actor.last['vm']
+    ids = {row['id'] for row in retired['messages']}
+    final = settle(
+        actor,
+        lambda value: (
+            not value['project']['native_observer']['fit_running'] and not value['can_cancel']
+        ),
+    )
+    assert {row['id'] for row in final['messages']} <= ids, (
+        'N3: late actual native report cannot append into discarded or retired conversation'
+    )
+    if retirement == 'clear':
+        assert not final['messages'] and actor.command('archive')['reply']['rows'] == [], (
+            'NATIVE: retirement cancels real worker without repopulating retired rows'
+        )
+    elif retirement == 'signout':
+        assert not final['connected'], (
+            'NATIVE: retirement cancels real worker without repopulating retired rows'
+        )
+    else:
+        assert final['connected'] and final['selected_files'] == retired['selected_files'], (
+            'NATIVE: retirement cancels real worker without repopulating retired rows'
+        )
+
+
+def test_native129_completed_context_overflow_cannot_approve_error_json_or_admit_work(
+    generic, tmp_path
+):
+    project = tmp_path / 'Original-native-large-context'
+    shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', project)
+    bank = project / 'experiments/hrpt.edi'
+    text = bank.read_text()
+    original = '_excluded_region.end\n1 0. 5.\n2 165. 180.'
+    assert text.count(original) == 1, 'N6 SETUP: original documented exclusion loop is unique'
+    entries = [{'id': 'owned-' + str(i), 'first': 1.25, 'second': 2.75} for i in range(23000)]
+    assert len(json.dumps(entries, separators=(',', ':')).encode()) > 1048576, (
+        'N6 SETUP: independent complete exclusion encoding alone exceeds public context_bytes'
+    )
+    bank.write_text(
+        text.replace(
+            original,
+            '_excluded_region.end\n' + '\n'.join(row['id'] + ' 1.25 2.75' for row in entries),
+        )
+    )
+    actor, trace = native_case(generic, [native_call('inspect_project')])
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'N6 SETUP: genuine manual attachment replaces current context under already real '
+        'managed account'
+    )
+    context = json.loads(actor.last['vm']['native_context'])
+    assert context.get('error'), 'N6 SETUP: actual complete context reached bounded refusal'
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    assert state['connected'], (
+        'N6: context refusal does not fabricate or lose genuine managed account'
+    )
+    before = state['project']
+    actor.command(
+        'sign_in'
+    )  # Actual outgoing disclosure approval method, while genuinely connected.
+    actor.command(
+        'send_text',
+        text='Original work cannot treat refusal JSON as complete approved project data',
+    )
+    assert not started_requests(trace) and not native_records(trace, '.native-emitted.jsonl'), (
+        'N6: context error JSON cannot be silently approved into new context-dependent '
+        'model/native work'
+    )
+    assert actor.last['vm']['project'] == before and actor.last['vm']['last_error'], (
+        'NATIVE: completed context overflow cannot approve error json or admit work'
+    )
+
+
+def test_native129_presubmit_busy_refusal_is_distinct_from_admitted_worker_cancellation(generic):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit'), native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+        script={'native_parallel': True},
+    )
+    actor.command(
+        'send_text', text='Original single native fit with one overlapping refused request'
+    )
+    state = settle(
+        actor,
+        lambda value: (
+            bool(native_records(trace, '.native-replies.jsonl')) or bool(value['last_error'])
+        ),
+    )
+    assert state['project']['native_observer']['fit_running'], (
+        'N3 SETUP: genuine first worker is still active when second reverse request settles'
+    )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(replies) == 1, 'N3: an admitted running fit cannot answer before its actual report'
+    refused = json.loads(replies[0]['response']['result']['contentItems'][0]['text'])
+    assert refused['status'] in {'busy', 'refused'} and not refused.get('adopted', False), (
+        'N3: pre-submit refusal is not represented as cancellation/adoption of the running worker'
+    )
+    actor.command('cancel')
+    state = settle(
+        actor,
+        lambda value: (
+            not value['project']['native_observer']['fit_running'] and not value['can_cancel']
+        ),
+    )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len({row['original']['id'] for row in replies}) == len(replies) <= 2, (
+        'N3: original busy and admitted-fit envelopes can never settle more than once'
+    )
+    assert state['project']['native_observer']['fit_outcome'] in {'cancelled', 'stopped'}, (
+        'N3: normal Stop reaches actual final worker outcome, beyond a running-false or '
+        'turn-only proxy'
+    )
+    if len(replies) == 2:
+        outcomes = [
+            json.loads(row['response']['result']['contentItems'][0]['text']) for row in replies
+        ]
+        assert any(row['status'] == 'cancelled' for row in outcomes), (
+            'N3: still-owned admitted-fit response truthfully reports actual cancellation'
+        )
+    else:
+        assert matching_interrupt(trace), (
+            'N3: intentionally retired RPC requires genuine turn retirement, never fake settlement'
+        )
+    assert state['connected'], 'N3: ordinary own cancellation preserves managed account'
+
+
+@pytest.mark.parametrize('channel', ['logout', 'eof'])
+def test_native129_retired_fit_handle_does_not_block_fresh_authenticated_native_work(
+    generic, channel
+):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+        script={'native_exit_while_running': channel == 'eof'},
+    )
+    actor.command('send_text', text='Original native worker whose process/account will retire')
+    state = settle(
+        actor,
+        lambda value: (
+            value['project']['native_observer']['fit_running']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+            or not value['connected']
+        ),
+    )
+    assert state['project']['native_observer']['fit_running'], (
+        'N3-R SETUP: genuine worker active before original logout/process EOF, not a '
+        'finished stand-in'
+    )
+    old = native_records(trace, '.native-emitted.jsonl')[0]
+    if channel == 'logout':
+        actor.command('sign_out')
+    state = settle(
+        actor,
+        lambda value: (
+            not value['connected'] and not value['project']['native_observer']['fit_running']
+        ),
+    )
+    assert not state['connected'], (
+        'N3-R: process/account retirement revokes old authenticated work'
+    )
+    assert not any(
+        row['response']['id'] == old['id']
+        for row in native_records(trace, '.native-replies.jsonl')
+    ), 'N3-R: retired reverse RPC never answers on original or a replacement process'
+    if channel == 'logout':
+        assert any(row.get('method') == 'account/logout' for row in records(trace)), (
+            'N3-R SETUP: real logout was actually sent to original owned peer'
+        )
+    else:
+        assert any(row['kind'] == 'native-original-eof' for row in clear_control_events(trace)), (
+            'N3-R SETUP: original process EOF occurred while its original RPC was pending'
+        )
+    config_path = trace.parent / 'peer-input.json'
+    configuration = json.loads(config_path.read_text())
+    configuration.update(
+        native_calls=[native_call('inspect_project')],
+        native_exit_while_running=False,
+        native_hold_after_calls=False,
+    )
+    config_path.write_text(json.dumps(configuration))
+    connect(actor)
+    if actor.last['vm']['context_consent_required']:
+        actor.command(
+            'sign_in'
+        )  # Genuine connected outgoing-context approval, not account repair.
+    previous = len(native_records(trace, '.native-replies.jsonl'))
+    actor.command('send_text', text='Original fresh native inspection after genuine reconnection')
+    final = settle(
+        actor,
+        lambda value: (
+            len(native_records(trace, '.native-replies.jsonl')) > previous
+            or bool(value['last_error'])
+        ),
+    )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(replies) == previous + 1 and replies[-1]['response']['result']['success'], (
+        'N3-R: a retired finished worker handle cannot block explicit fresh native inspection'
+    )
+    assert final['connected'], 'N3-R: fresh native work uses real reauthenticated managed account'
+
+
+def test_native129_real_postfit_storage_failure_settles_then_disconnected_clear_recovers(generic):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+    )
+    actor.command(
+        'send_text', text='Original native fit with actual final-publication archive refusal'
+    )
+    state = settle(
+        actor,
+        lambda value: (
+            value['project']['native_observer']['fit_running']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert state['project']['native_observer']['fit_running'], (
+        'N4 SETUP: genuine worker admitted before ordinary owned archive barrier'
+    )
+    assert actor.last['archive']['is_file'], (
+        'N4 SETUP: original user/active native rows durably retained'
+    )
+    actor.command('persistence_barrier')
+    assert actor.last['archive']['is_directory'], (
+        'N4 SETUP: actual storage refuses replacement now'
+    )
+    state = settle(
+        actor,
+        lambda value: (
+            not value['project']['native_observer']['fit_running'] and bool(value['last_error'])
+        ),
+    )
+    assert state['last_error'] and len(state['last_error'].encode()) <= 512, (
+        'N4: actual final-publication failure is contained and bounded, never exception through Qt'
+    )
+    actor.command('sign_out')
+    settle(actor, lambda value: not value['connected'])
+    actor.command('clear_history')
+    assert actor.last['vm']['last_error'], (
+        'N4-R: genuinely failed disconnected Clear retains honest warning'
+    )
+    actor.command('persistence_restore')
+    actor.command('clear_history')
+    assert not actor.last['vm']['messages'], (
+        'N4-R: successful real disconnected Clear releases held records'
+    )
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['native_calls'] = [native_call('inspect_project')]
+    config_path.write_text(json.dumps(config))
+    connect(actor)
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+    actor.command('send_text', text='Original new native read after explicit successful recovery')
+    final = settle(
+        actor,
+        lambda value: (
+            (bool(native_records(trace, '.native-replies.jsonl')) and not value['can_cancel'])
+            or bool(value['last_error'])
+        ),
+    )
+    assert final['connected'] and not final['last_error'], (
+        'N4-R: successful disconnected Clear releases sign-in/recovery fence without '
+        'hidden provider replay'
+    )
+    assert any(
+        row['original']['params']['tool'] == 'inspect_project'
+        and row['response'].get('result', {}).get('success')
+        for row in native_records(trace, '.native-replies.jsonl')
+    ), 'N4-R: actual newly admitted native work succeeds after explicit storage recovery'
+
+
+# Usage-v2 root-frozen public projection + pinned protocol; no actual quota/account witness.
+def usage_case(generic, *, mode='normal', ui=False, many=False):
+    actor, trace = generic('usage:original', ui=ui)
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config.update(usage_mode=mode, usage_many=many)
+    config_path.write_text(json.dumps(config))
+    observed = actor.last['vm']['usage_observer']
+    assert observed['property_present'] and observed['refresh_present'], (
+        'US SETUP: real default Session exposes accepted read-only usage/refresh surface'
+    )
+    assert observed['value'] == {'available': False, 'stale': False, 'buckets': []}, (
+        'US: no genuine current-account snapshot is honestly unavailable, not zero quota'
+    )
+    connect(actor)
+    return actor, trace
+
+
+def usage_value(state):
+    return state['usage_observer']['value']
+
+
+def usage_primary(state):
+    return [
+        window['usedPercent']
+        for bucket in usage_value(state)['buckets']
+        for window in bucket['windows']
+        if window['kind'] == 'primary'
+    ]
+
+
+def test_usage129_bootstrap_automatic_read_delivers_original_result_not_just_request(generic):
+    actor, trace = usage_case(generic)
+    state = settle(actor, lambda value: usage_value(value)['available'])
+    current = usage_value(state)
+    assert not current['stale'] and usage_primary(state) == [17], (
+        'US1R: automatic optional read actually reaches VM after complete required bootstrap'
+    )
+    assert (
+        len([row for row in records(trace) if row.get('method') == 'account/rateLimits/read']) == 1
+    ), 'US1R: genuine account/catalog bootstrap performs one optional read, without polling'
+    bucket = current['buckets'][0]
+    assert bucket['id'] == 'original-codex' and bucket['limitName'] == 'Original owned limit', (
+        'US: bootstrap automatic read delivers original result not just request'
+    )
+    assert bucket['credits'] == {'hasCredits': True, 'unlimited': False, 'balance': '12.50'}, (
+        'US: bootstrap automatic read delivers original result not just request'
+    )
+    assert [(row['kind'], row['usedPercent']) for row in bucket['windows']] == [
+        ('primary', 17),
+        ('secondary', 83),
+    ], 'US: independent original windows remain distinct'
+    assert current.get('observedAt'), 'US: delivered data includes actual observation time'
+    methods = {row.get('method') for row in records(trace)}
+    assert {'account/read', 'model/list', 'skills/list'} <= methods, (
+        'US1R SETUP: real managed bootstrap completed, not optional-read-only fake readiness'
+    )
+    identity = live_original_peer(actor)
+    for _ in range(4):
+        actor.command('inspect')
+    assert (
+        original_peer_is_live(identity)
+        and len([row for row in records(trace) if row.get('method') == 'account/rateLimits/read'])
+        == 1
+    ), 'US: ordinary idle deliveries do not start a usage polling loop'
+
+
+@pytest.mark.parametrize('channel', ['control-capacity', 'reverse-capacity'])
+def test_usage129_outstanding_optional_read_never_starves_real_required_channels(generic, channel):
+    actor, trace = usage_case(generic, mode=channel)
+    assert any(row.get('method') == 'account/rateLimits/read' for row in records(trace)), (
+        'US1 SETUP: genuine optional request is outstanding on original channel'
+    )
+    actor.command('send_text', text='Original work while optional usage read remains pending')
+    state = settle(actor, lambda value: value['can_cancel'] or bool(value['pending_question']))
+    if channel == 'control-capacity':
+        texts = ['Original pending steer ' + str(index) for index in range(3)]
+        for text in texts:
+            actor.command('send_text', text=text)
+        assert len([row for row in records(trace) if row.get('method') == 'turn/steer']) == 3, (
+            'US1: optional read does not consume three genuinely available required steer slots'
+        )
+        actor.command('cancel')
+        state = settle(actor, lambda value: not value['can_cancel'])
+        assert matching_interrupt(trace), 'US1: Stop still reaches real required interrupt channel'
+        assert all(len(users(actor, text)) == 1 for text in texts), (
+            'US1: genuine pending user identities are retained once, without false nonadmission'
+        )
+    else:
+        assert state['pending_question'], (
+            'US1 SETUP: genuine reverse input request is actually presented'
+        )
+        actor.command('answer', id=state['pending_question']['id'], answer='Original answer')
+        state = settle(actor, lambda value: not value['can_cancel'])
+        replies = [
+            event
+            for event in clear_control_events(trace)
+            if event['kind'] == 'usage-question-result'
+        ]
+        assert replies and replies[0]['response']['id'] == 'original-question-rpc', (
+            'US1: original incoming reverse request settles despite outstanding optional usage'
+        )
+    assert state['connected'], (
+        'US1: optional read never tears down managed account to free capacity'
+    )
+
+
+def test_usage129_repeated_refresh_coalesces_one_pending_optional_request(generic):
+    actor, trace = usage_case(generic, mode='popup')
+    settle(actor, lambda value: usage_value(value)['available'])
+    for _ in range(3):
+        assert actor.command('refresh_usage')['reply']['invoked'], (
+            'US: actual public refresh invoked'
+        )
+    pending = [row for row in records(trace) if row.get('method') == 'account/rateLimits/read']
+    assert len(pending) == 2, (
+        'US1: multiple refreshes while one read is pending coalesce into that read'
+    )
+    state = settle(
+        actor,
+        lambda value: usage_value(value)['available'] and usage_primary(value) == [43],
+    )
+    assert state['connected'] and usage_primary(state) == [43], (
+        'US: coalesced genuine result reaches actual usage projection, not request-only '
+        'bookkeeping'
+    )
+    for _ in range(4):
+        actor.command('inspect')
+    assert (
+        len([row for row in records(trace) if row.get('method') == 'account/rateLimits/read']) == 2
+    ), 'US1: completed coalesced refresh does not secretly poll or schedule redundant refresh'
+
+
+def test_usage129_sparse_update_prevents_older_read_becoming_fresh(generic):
+    actor, trace = usage_case(generic, mode='freshness')
+    settle(actor, lambda value: usage_value(value)['available'])
+    actor.command('refresh_usage')
+    settle(
+        actor,
+        lambda _value: any(
+            event['kind'] == 'usage-older-reply' for event in clear_control_events(trace)
+        ),
+    )
+    # Marker proves the older line was written, not parsed. An actual later
+    # retained completed reply on SAME ordered stdout supplies the client-side barrier.
+    barrier = 'Original user request establishing ordered usage delivery'
+    actor.command('send_text', text=barrier)
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(
+                row.get('kind') == 'assistant'
+                and row.get('status') == 'completed'
+                and row.get('text') == 'Original offline reply'
+                for row in value['messages']
+            )
+        ),
+    )
+    assert len(users(actor, barrier)) == 1, (
+        'US2 SETUP: real later message acknowledged once on original channel'
+    )
+    assert usage_value(state)['stale'] or usage_primary(state) != [17], (
+        'US2: old pending response after newer notification cannot be labelled fresh'
+    )
+    actor.command('refresh_usage')
+    state = settle(
+        actor,
+        lambda value: (
+            usage_primary(value) == [43]
+            and usage_value(value)['available']
+            and not usage_value(value)['stale']
+        ),
+    )
+    assert state['connected'], (
+        'US2: explicit later genuine read restores fresh same-account result'
+    )
+
+
+def test_usage129_optional_failure_retains_only_stale_same_account_data(generic):
+    actor, trace = usage_case(generic, mode='failure')
+    state = settle(actor, lambda value: usage_value(value)['available'])
+    original = usage_value(state)
+    actor.command('refresh_usage')
+    state = settle(actor, lambda value: usage_value(value)['stale'])
+    later = usage_value(state)
+    assert not later['available'] and later['buckets'] == original['buckets'], (
+        'US: optional same-account failure retains truthful stale data, never fictional '
+        'fresh quota'
+    )
+    assert later.get('observedAt') == original.get('observedAt') and state['connected'], (
+        'US: optional failure preserves original observation time and genuine managed account'
+    )
+    assert not any(row.get('method') == 'account/logout' for row in records(trace)), (
+        'US: usage failure does not become account retirement'
+    )
+
+
+def test_usage129_signout_hides_old_account_before_new_real_account_read(generic):
+    actor, trace = usage_case(generic)
+    settle(actor, lambda value: usage_value(value)['available'])
+    retired = actor.command('sign_out')['vm']
+    assert not retired['connected'] and usage_value(retired) == {
+        'available': False,
+        'stale': False,
+        'buckets': [],
+    }, 'US3: signout immediately hides original account usage before any replacement reply'
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config.update(
+        account_email='new-original@example.invalid',
+        usage_account='new-original-account',
+        usage_mode='over-hundred',
+    )
+    config_path.write_text(json.dumps(config))
+    connect(actor)
+    state = settle(actor, lambda value: usage_value(value)['available'])
+    assert state['handoff']['account_label'] == 'new-original@example.invalid', (
+        'US3 SETUP: actual account/read admits independently distinct replacement account'
+    )
+    assert usage_primary(state) == [137], (
+        'US3: new-account usage replaces old cache; >100 is retained honestly'
+    )
+
+
+@pytest.mark.parametrize('retirement', ['clear', 'context'])
+def test_usage129_normal_clear_preserves_account_owned_usage(generic, tmp_path, retirement):
+    actor, trace = usage_case(generic)
+    state = settle(actor, lambda value: usage_value(value)['available'])
+    original = usage_value(state)
+    if retirement == 'clear':
+        actor.command('clear_history')
+    else:
+        path = tmp_path / 'Original usage context.txt'
+        path.write_text('Original harmless selected context')
+        request = actor.command('selected_begin')['reply']['request_id']
+        assert actor.command('selected_add', request_id=request, urls=[path.as_uri()])['reply'][
+            'accepted'
+        ], 'US3 SETUP: actual selected bytes genuinely replace outgoing context'
+    assert actor.last['vm']['connected'] and usage_value(actor.last['vm']) == original, (
+        'US3: conversation Clear does not retire genuine same-account usage ownership'
+    )
+    assert not any(row.get('method') == 'account/logout' for row in records(trace)), (
+        'US3: account-owned usage preservation uses real session, not automatic re-login'
+    )
+
+
+def test_usage129_real_canvas_distinguishes_zero_missing_and_recovered_zero(generic):
+    actor, _trace = usage_case(generic, mode='zero-empty', ui=True)
+    state = settle(actor, lambda value: usage_value(value)['available'])
+    assert usage_primary(state) == [0], (
+        'US4 SETUP: genuine explicit zero, not missing provider window'
+    )
+    zero = actor.command('inspect')['ui']['usage']['canvas']
+    assert zero['window_available'] is True, 'US4: actual Canvas treats genuine zero as available'
+    actor.command('refresh_usage')
+    settle(
+        actor, lambda value: usage_value(value)['available'] and not usage_value(value)['buckets']
+    )
+    missing = actor.command('inspect')['ui']['usage']['canvas']
+    assert missing['window_available'] is False, (
+        'US4: actual missing window is distinct from genuine zero'
+    )
+    assert missing['frame']['sha256'] != zero['frame']['sha256'], (
+        'US4: real rendered Canvas invalidates zero-to-missing, beyond a correct '
+        'nonpainted property'
+    )
+    actor.command('refresh_usage')
+    settle(actor, lambda value: usage_primary(value) == [0])
+    recovered = actor.command('inspect')['ui']['usage']['canvas']
+    assert (
+        recovered['window_available'] is True
+        and recovered['frame']['sha256'] != missing['frame']['sha256']
+    ), 'US4: actual rendered Canvas also invalidates missing-to-zero without reopening the dialog'
+    assert all(
+        row['frame']['width'] > 0 and row['frame']['height'] > 0
+        for row in (zero, missing, recovered)
+    ), 'US4 SETUP: actual framebuffer regions are nonempty'
+
+
+def test_usage129_actual_small_enlarged_dialog_scrolls_with_shared_ea_component(generic):
+    actor, trace = usage_case(generic, mode='popup', ui=True, many=True)
+    settle(actor, lambda value: usage_value(value)['available'])
+    actor.command('click_usage')
+    settle(actor, lambda value: usage_primary(value) == [43] * 8)
+    assert (
+        len([row for row in records(trace) if row.get('method') == 'account/rateLimits/read']) == 2
+    ), (
+        'US1: actual popup requests and delivers one fresh result separately from '
+        'bootstrap, without polling'
+    )
+    before = actor.command('inspect')['ui']['usage']['popup']
+    assert before['visible'] and before['opened'], (
+        'US5 SETUP: physical usage button opens actual dialog'
+    )
+    fonts = [
+        row['pixel_size'] for row in before['labels'] if row['visible'] and row['text'].strip()
+    ]
+    assert fonts and min(fonts) > 0, 'US5 SETUP: actual rendered label font sizes are measurable'
+    actor.command('usage_scale', percent=150)
+    actor.command('viewport', width=480, height=420, font_pixels=21)
+    actual = actor.command('inspect')['ui']['usage']['popup']
+    changed = [
+        row['pixel_size'] for row in actual['labels'] if row['visible'] and row['text'].strip()
+    ]
+    assert changed and max(changed) > max(fonts), (
+        'US5 SETUP: existing actual EA scale knob genuinely enlarges rendered labels, '
+        'not just app font metadata'
+    )
+    assert actual['geometry']['whole_reachable'], (
+        'US5: actual dialog fits the real small viewport at genuinely enlarged font'
+    )
+    bars = [bar for bar in actual['scrollbars'] if bar['visible']]
+    assert bars and any(
+        'EasyApplication' in bar['component_url']
+        and bar['component_url'].endswith('/ScrollBar.qml')
+        for bar in bars
+    ), 'US5: real overflow uses the same loaded EA scrollbar component as ordinary manual sidebar'
+    initial = max((row['content_y'] for row in actual['scrollables']), default=0)
+    for _ in range(16):
+        actor.command('usage_wheel')  # Actual finite pointer wheel input, no contentY setter.
+    after = actor.command('inspect')['ui']['usage']['popup']
+    assert max((row['content_y'] for row in after['scrollables']), default=0) > initial, (
+        'US5: actual ordinary pointer scrolling reaches overflow, not merely an attached scrollbar'
+    )
+    context = [row for row in after['labels'] if 'context' in row['text'].lower()]
+    assert context and any(row['center_reachable'] and row['visible'] for row in context), (
+        'US5: actual final context-occupancy section becomes reachable through real scrolling'
+    )
+    text = '\n'.join(row['text'] for row in after['labels'])
+    assert 'unavailable' in text.lower(), (
+        'US5: independent context occupancy stays honestly unavailable; rate limits '
+        'never invent token occupancy'
+    )
+    assert actor.last['vm']['connected'], (
+        'US5: viewing real usage never changes genuine managed account'
+    )
+
+
+@pytest.mark.parametrize('replacement', ['close', 'replace'])
+def test_native129_disconnected_clear_then_owner_change_during_real_cancel_releases_recovery(
+    generic, replacement
+):
+    actor, trace = native_case(
+        generic,
+        [native_call('run_fit')],
+        project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
+    )
+    actor.command(
+        'send_text', text='Original native fit with real cancellation and owner retirement'
+    )
+    running = settle(
+        actor,
+        lambda value: (
+            value['project']['native_observer']['fit_running']
+            or bool(native_records(trace, '.native-replies.jsonl'))
+        ),
+    )
+    assert running['project']['native_observer']['fit_running'], (
+        'N4-R2 SETUP: genuine native worker is active before the ordinary publication fence'
+    )
+    actor.command('persistence_barrier')
+    actor.command(
+        'send_text', text='Original pending user input whose durable admission genuinely fails'
+    )
+    assert actor.last['vm']['last_error'], (
+        'N4-R2 SETUP: real archive refusal has produced a public fence'
+    )
+    actor.command('sign_out')
+    assert not actor.last['vm']['connected'], (
+        'N4-R2: actual account retirement revokes the old conversation'
+    )
+    actor.command('clear_history')
+    assert actor.last['vm']['last_error'], (
+        'N4-R2: failed Clear cannot silently release held records'
+    )
+    actor.command('persistence_restore')
+    actor.command('clear_history')
+    assert actor.command('archive')['reply']['rows'] == [], (
+        'N4-R2 SETUP: successful disconnected Clear has actually persisted the empty archive'
+    )
+    assert actor.last['vm']['project']['native_observer']['fit_running'], (
+        'N4-R2 SETUP: real old worker cancellation is still pending BEFORE owner replacement; '
+        'an already finished worker does not qualify this interval'
+    )
+    if replacement == 'close':
+        actor.command('close_project')
+        assert not actor.last['vm']['project_present'], (
+            'N4-R2 SETUP: genuine Session close admits the owner transition during retirement'
+        )
+    else:
+        assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+            'reply'
+        ]['opened'], (
+            'N4-R2 SETUP: genuine Session replacement admits the owner transition during '
+            'retirement'
+        )
+    if not actor.last['vm']['project_present']:
+        assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+            'reply'
+        ]['opened'], (
+            'N4-R2 SETUP: real fresh current project is available for a later native control'
+        )
+    expected = actor.last['vm']['project']['parameters']
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['native_calls'] = [native_call('inspect_project')]
+    config_path.write_text(json.dumps(config))
+    connect(actor)
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+    actor.command(
+        'send_text',
+        text='Original fresh bounded read after disconnected Clear and owner replacement',
+    )
+    state = settle(actor, lambda value: not value['can_cancel'] or bool(value['last_error']))
+    assert state['connected'] and not state['last_error'], (
+        'N4-R2: retired old worker cannot strand successful Clear recovery or future sign-in'
+    )
+    assert state['project']['parameters'] == expected, (
+        'N4-R2: late old report cannot mutate replacement owner'
+    )
+    assert any(
+        row['original']['params']['tool'] == 'inspect_project'
+        and row['response'].get('result', {}).get('success')
+        for row in native_records(trace, '.native-replies.jsonl')
+    ), 'N4-R2: genuine new native inspection works after recovery, without a stale worker fence'
+
+
+def test_native129_real_shared_transport_admission_refuses_before_later_native_write(generic):
+    actor, trace = native_case(
+        generic,
+        [
+            native_call(
+                'set_parameters', values=[{'path': 'structure.cell.length_a', 'value': 3.89}]
+            )
+        ],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        connect_now=False,
+    )
+    bounds = actor.last['vm']['policy']
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    # Finite original wire records, each below public record_bytes. Retaining the
+    # matching retained originals/active source exceed the shared cap.
+    config.update(
+        native_capacity='retained-item', native_capacity_bytes=bounds['record_bytes'] - 4096
+    )
+    config_path.write_text(json.dumps(config))
+    connect(actor)
+    before = actor.last['vm']['project']['parameters']
+    actor.command(
+        'send_text', text='Original bounded native write cannot bypass shared incoming ownership'
+    )
+    state = settle(actor, lambda value: bool(value['last_error']) or not value['connected'])
+    measurements = [
+        event for event in clear_control_events(trace) if event['kind'] == 'native-shared-capacity'
+    ]
+    assert measurements and measurements[0]['source_bytes'] > bounds['retained_record_bytes'], (
+        'N2-R SETUP: independently encoded retained originals exceed the public shared cap'
+    )
+    assert measurements[0]['max_source_bytes'] < bounds['record_bytes'], (
+        'N2-R SETUP: the escape is aggregate owned assembly, not a single oversized source record'
+    )
+    assert state['project']['parameters'] == before, (
+        'N2-R: actual shared-budget failure precedes any later genuine native mutation'
+    )
+    assert state['last_error'] and not state['can_cancel'], (
+        'N2-R: aggregate refusal remains bounded and visibly noncompleted, never silent authority'
+    )
+    assert not any(
+        row['response'].get('result', {}).get('success')
+        for row in native_records(trace, '.native-replies.jsonl')
+    ), 'N2-R: failed incoming admission cannot report successful physical native write'
+    # This externally reached aggregate control does not itself prove every internal
+    # canonical/active-row replacement allocation is charged BEFORE copying; static review does.
+
+
+def test_usage129_actual_process_retirement_hides_original_account_snapshot(generic):
+    actor, trace = usage_case(generic, mode='eof')
+    settle(actor, lambda value: usage_value(value)['available'])
+    actor.command('send_text', text='Original bounded work before genuine owned-process EOF')
+    final = settle(actor, lambda value: not value['connected'])
+    assert any(event['kind'] == 'usage-process-eof' for event in clear_control_events(trace)), (
+        'US3 SETUP: the original actual stdio process retired, not a fake disconnected property'
+    )
+    assert usage_value(final) == {'available': False, 'stale': False, 'buckets': []}, (
+        'US3: process retirement immediately hides original-account usage, independently '
+        'of later cache clearing'
+    )
+    assert len(started_requests(trace)) == 1, (
+        'US3: optional state retirement never automatically replays user work'
     )
