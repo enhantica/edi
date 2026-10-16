@@ -48,17 +48,8 @@ fi
     cmake --build "$2" --target crysta_core crysta_cli
     cmake --install "$2" --prefix "$3" >/dev/null' _ "$src" "$tree" "$prefix"
 
-# The default environment owns the binding-compatible nanobind toolchain. Its
-# CPython stable-ABI extension is consumed by the app Python, which has numpy/yaml.
-# Do not enable bindings in the Qt/app graph (a different nanobind environment).
-# app-with-crysta previously needed only the app environment; a first-time
-# caller may not have the declared default environment yet. Honor its lockfile
-# before the compatible binding build, just as the crysta step above does.
-"${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$PWD/pixi.toml" -e default
-"${clean[@]}" EDI_CRYSTA_PREFIX="$prefix" "$pixi_bin" run --as-is --manifest-path "$PWD/pixi.toml" -e default bash tools/ci/core-build.sh
-export EDI_EXTENSION_DIR="$PWD/build/app-python/python/edi"
-export EDI_AGENT_PYTHON="$CONDA_PREFIX/bin/python"
-export PYTHONPATH="$PWD/lib${PYTHONPATH:+:$PYTHONPATH}"
-"$EDI_AGENT_PYTHON" -c 'import edi; print("app-with-crysta: Edi Python bridge ready")'
+# The app's production assistant uses the native C++/QML tools. The Qt graph
+# already builds with EDI_BUILD_BINDINGS=OFF; a Python extension/default-env
+# bootstrap is a separate developer/test operation, never an app prerequisite.
 EDI_CRYSTA_PREFIX="$prefix" EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh
 exec bash tools/ci/app-run.sh "$@"

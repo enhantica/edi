@@ -630,3 +630,8 @@ A locally unavailable root before thread submission or Send is a definite refusa
 
 
 The new folder actions extend the existing explicit header/composer keyboard cycle rather than relying on default focusability. Forward order is Usage -> Choose working folder -> Use temporary folder when visible/enabled -> composer; reverse follows the same actual controls. Missing/disabled folder actions are skipped in both directions, preserving the existing app-bar/popup focus boundary and active-operation behavior. This owns the preceding Usage-to-composer route; no new focus framework or shortcut is introduced.
+
+
+### Retire the staged Python launch prerequisite (2026-10-16)
+
+ADR0009/0015 require a self-contained C++/QML production app. The historical staged-scripting bootstrap recorded above is superseded for normal app launch: actual app native DynamicToolSpec dispatch uses the existing C++ Session/ProjectVM/FitVM/core doors, and the current production launcher/runtime/skill guidance has no consumer of EDI_AGENT_PYTHON, EDI_EXTENSION_DIR or PYTHONPATH. The developer app-with-crysta launcher therefore no longer installs the default binding environment, builds/imports the edi extension, or injects those Python paths before launching. It retains the genuine local crysta native build, pinned/local SDK distinction, app bindings-OFF graph, CI refusal and forwarded app arguments. Explicit Python binding development/tests remain separate declared commands; build metadata tools may still use development Python. This is source dependency closure, not a claim of tested packaging/platform sign-in or complete assistant capability.
