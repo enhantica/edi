@@ -45,7 +45,9 @@ EaComponents.ApplicationWindow {
             return;
         const previous = activeFocusItem;
         const restoreChatFocus = containsAssistantItem(assistantPanel.contentItem, previous);
-        assistantPanel.parent = activeAssistantHost;
+        // The active page identifies focus/currentness; its SwipeView transform
+        // must not move the independent fixed sidebar sheet during navigation.
+        assistantPanel.parent = assistantFallbackHost;
         const epoch = assistantFocusEpoch;
         const host = activeAssistantHost;
         const project = Session.project;
@@ -164,11 +166,12 @@ EaComponents.ApplicationWindow {
             id: assistantToggle
             KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
-            fontIcon: "robot"
+            fontIcon: assistantPanel.shown ? "columns" : "robot"
             enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
-                : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages") : qsTr("Show or hide assistant")
-            Accessible.name: qsTr("Show or hide assistant")
+                : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages")
+                : assistantPanel.shown ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.name: assistantPanel.shown ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantUnavailableReason
             onClicked: {
                 if (!assistantToggle.enabled)
