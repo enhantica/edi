@@ -317,7 +317,6 @@ Popup {
                     spacing: AppSizes.unit * 0.25
                     Flow {
                         Layout.fillWidth: true
-                        implicitHeight: childrenRect.height
                         spacing: AppSizes.unit * 0.25
                         EaElements.Button {
                             id: chooseWorkingFolderButton

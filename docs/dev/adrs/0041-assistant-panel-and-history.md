@@ -635,3 +635,10 @@ The new folder actions extend the existing explicit header/composer keyboard cyc
 ### Retire the staged Python launch prerequisite (2026-10-16)
 
 ADR0009/0015 require a self-contained C++/QML production app. The historical staged-scripting bootstrap recorded above is superseded for normal app launch: actual app native DynamicToolSpec dispatch uses the existing C++ Session/ProjectVM/FitVM/core doors, and the current production launcher/runtime/skill guidance has no consumer of EDI_AGENT_PYTHON, EDI_EXTENSION_DIR or PYTHONPATH. The developer app-with-crysta launcher therefore no longer installs the default binding environment, builds/imports the edi extension, or injects those Python paths before launching. It retains the genuine local crysta native build, pinned/local SDK distinction, app bindings-OFF graph, CI refusal and forwarded app arguments. Explicit Python binding development/tests remain separate declared commands; build metadata tools may still use development Python. This is source dependency closure, not a claim of tested packaging/platform sign-in or complete assistant capability.
+
+
+### Native positioner intrinsic sizing at startup (2026-10-16)
+
+The working-folder controls use QtQuick Flow within the existing ColumnLayout. Flow inherits the native implicit-size positioner; its implicitHeight is read-only in the pinned Qt6.11.2 import and already follows its laid-out children. The invalid childrenRect-height assignment is removed. The existing Layout.fillWidth and spacing determine wrapping, and the native intrinsic height supplies the layout's preferred height; no extra height binding, feedback loop, component or sizing framework is introduced.
+
+The finite application-QML positioner audit covers direct Flow/Row/Column/Grid and locally derived root types, including nested objects: no other implicitWidth/implicitHeight property assignment on a positioner was found. Ordinary controls' writable implicit-size assignments remain. Actual Main instantiation, wrapping and affected controls still require the original runtime consumer; C++ compilation and syntax parsing alone do not prove QML startup.
