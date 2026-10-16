@@ -333,6 +333,9 @@ int main(int argc,char** argv) {
             }
             if(!terminal_selection_observer.isEmpty())result["terminal_selection_observer"]=terminal_selection_observer;
             if(!retirement_observer.isEmpty())result["retirement_observer"]=retirement_observer;
+            result["message_model"]=Object{{"count",vm->messages()->count()},
+                {"row_count",vm->messages()->rowCount()},
+                {"role_count",vm->messages()->roleNames().size()}};
             result["policy"]=Object{
                 {"record_bytes",static_cast<double>(edi::assistant::Limits::record_bytes)},
                 {"message_bytes",static_cast<double>(edi::assistant::Limits::message_bytes)},
@@ -472,6 +475,7 @@ int main(int argc,char** argv) {
                     retirement_observer["signal"]=signal;
                     retirement_observer["queued"]=queued;
                     retirement_observer["connected_at_entry"]=session->assistant()->connected();
+                    retirement_observer["message_count_at_entry"]=session->assistant()->messages()->count();
                     if(action=="close")session->closeProject();
                     else if(action=="clear")session->assistant()->clearHistory();
                     else if(action=="clear-archive-refusal") {
@@ -508,7 +512,13 @@ int main(int argc,char** argv) {
                     &edi_app::AssistantViewModel::conversationRetired,session.get(),callback,type);
                 else if(signal=="fileSelectionRetired")retirement_connection=QObject::connect(session->assistant(),
                     &edi_app::AssistantViewModel::fileSelectionRetired,session.get(),callback,type);
-                else throw std::invalid_argument("actual retirement signal required");
+                else if(signal=="rowsAboutToBeRemoved")retirement_connection=QObject::connect(session->assistant()->messages(),
+                    &QAbstractItemModel::rowsAboutToBeRemoved,session.get(),callback,type);
+                else if(signal=="rowsRemoved")retirement_connection=QObject::connect(session->assistant()->messages(),
+                    &QAbstractItemModel::rowsRemoved,session.get(),callback,type);
+                else if(signal=="countChanged")retirement_connection=QObject::connect(session->assistant()->messages(),
+                    &edi_app::RowTableModel::countChanged,session.get(),callback,type);
+                else throw std::invalid_argument("actual retirement or message notification signal required");
                 result={{"armed",true}};
             }
             else if(codex_mode && op=="publication_inspect")result=publication_values(session->project());

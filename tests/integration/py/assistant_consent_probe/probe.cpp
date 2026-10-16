@@ -236,10 +236,15 @@ int main(int argc,char** argv) {
         auto* outer=content?content->parentItem():nullptr;
         if(!content || !outer)throw std::runtime_error("actual usage popup item unavailable");
         Array labels,scrollables,bars;
-        for(auto* item:content->findChildren<QQuickItem*>()) {
+        QList<QQuickItem*> visual_items{content};
+        for(qsizetype index=0;index<visual_items.size();++index)
+            for(auto* child:visual_items.at(index)->childItems())
+                if(!visual_items.contains(child))visual_items.push_back(child);
+        for(auto* item:visual_items) {
             if(item->property("text").isValid()) {
                 auto observed=geometry(item,window);
-                observed["pixel_size"]=item->property("font").value<QFont>().pixelSize();
+                const auto font=item->property("font");
+                observed["pixel_size"]=font.canConvert<QFont>()?QFontInfo(font.value<QFont>()).pixelSize():-1;
                 labels.push_back(observed);
             }
             if(item->property("contentHeight").isValid() && item->property("contentY").isValid()) {

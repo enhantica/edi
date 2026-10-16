@@ -3356,7 +3356,9 @@ def test_usage129_outstanding_optional_read_never_starves_real_required_channels
         assert state['pending_question'], (
             'US1 SETUP: genuine reverse input request is actually presented'
         )
-        actor.command('answer', id=state['pending_question']['id'], answer='Original answer')
+        actor.command(
+            'answer', id=state['pending_question']['question_id'], answer='Original answer'
+        )
         state = settle(actor, lambda value: not value['can_cancel'])
         replies = [
             event
@@ -3512,7 +3514,7 @@ def test_usage129_normal_clear_preserves_account_owned_usage(generic, tmp_path, 
 
 
 def test_usage129_real_canvas_distinguishes_zero_missing_and_recovered_zero(generic):
-    actor, _trace = usage_case(generic, mode='zero-empty', ui=True)
+    actor, trace = usage_case(generic, mode='zero-empty', ui=True)
     state = settle(actor, lambda value: usage_value(value)['available'])
     assert usage_primary(state) == [0], (
         'US4 SETUP: genuine explicit zero, not missing provider window'
@@ -3521,7 +3523,19 @@ def test_usage129_real_canvas_distinguishes_zero_missing_and_recovered_zero(gene
     assert zero['window_available'] is True, 'US4: actual Canvas treats genuine zero as available'
     actor.command('refresh_usage')
     settle(
-        actor, lambda value: usage_value(value)['available'] and not usage_value(value)['buckets']
+        actor,
+        lambda value: (
+            not usage_value(value)['available']
+            and not usage_value(value)['stale']
+            and usage_value(value)['buckets'] == []
+            and bool(usage_value(value).get('observedAt'))
+            and any(
+                event['kind'] == 'usage-result-reply'
+                and event['number'] == 2
+                and event['empty']
+                for event in clear_control_events(trace)
+            )
+        ),
     )
     missing = actor.command('inspect')['ui']['usage']['canvas']
     assert missing['window_available'] is False, (
@@ -3714,7 +3728,7 @@ def test_native129_real_shared_transport_admission_refuses_before_later_native_w
     ).read_text()
     owned_source = trace.parent / 'original-capacity-measurement.edi'
     owned_source.write_text(source)
-    count = bounds['retained_record_bytes'] // len(source.encode()) + 1
+    count = bounds['stream_retained_bytes'] // len(source.encode()) + 1
     items = [
         {
             'type': 'reasoning',
@@ -3742,11 +3756,19 @@ def test_native129_real_shared_transport_admission_refuses_before_later_native_w
         for item in items
     ]
     source_bytes = sum(len(encoded(item)) for item in items)
-    assert source_bytes > bounds['retained_record_bytes'], (
-        'N2-R SETUP: independent simultaneous original sources exceed the shared capacity'
+    assert count * len(source.encode()) > bounds['stream_retained_bytes'], (
+        'N2-R SETUP: original content bytes ALONE exceed retained output, '
+        'independent of JSON overhead'
     )
-    assert count < bounds['stream_items'] and source_bytes < bounds['stream_retained_bytes'], (
-        'N2-R SETUP: this group fits independent item/count/output-retention roles'
+    assert source_bytes > bounds['stream_retained_bytes'], (
+        'N2-R SETUP: simultaneous unfinalized original output exceeds '
+        'its declared retained-output cap'
+    )
+    assert count < bounds['stream_items'], (
+        'N2-R SETUP: every original fits the separate item-count role'
+    )
+    assert max(len(encoded(item)) for item in items) < bounds['stream_retained_bytes'], (
+        'N2-R SETUP: each original alone fits retained output; this is genuine aggregate growth'
     )
     assert max(len(encoded(wire)) for wire in wires) + 1 <= bounds['record_bytes'], (
         'N2-R SETUP: EVERY complete original JSONL wire fits its individual source bound'
@@ -3771,7 +3793,7 @@ def test_native129_real_shared_transport_admission_refuses_before_later_native_w
     measurements = [
         event for event in clear_control_events(trace) if event['kind'] == 'native-shared-capacity'
     ]
-    assert measurements and measurements[0]['source_bytes'] > bounds['retained_record_bytes'], (
+    assert measurements and measurements[0]['source_bytes'] > bounds['stream_retained_bytes'], (
         'N2-R SETUP: independently encoded retained originals exceed the public shared cap'
     )
     assert measurements[0]['source_bytes'] == source_bytes and measurements[0]['count'] == count, (
@@ -4233,16 +4255,21 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
         assert state['handoff']['location'] == str(replacement)
         assert native_parameter(state)['value'] == 3.88
     elif not state['project_present']:
-        # Clear may revoke an uncommitted result intent. Refusal must be actual
-        # host state; provider prose can never establish adoption or rollback.
-        assert state['handoff']['last_error'] or state['last_error'], (
-            'R3-R6: genuine result abort is honestly explained'
+        # Successful user Clear may revoke an uncommitted intent without an error.
+        # Actual absence plus canonical durable discard establishes cancellation.
+        assert actor.command('archive')['reply']['rows'] == [], (
+            'R3-R6: successful Clear durably discards the original conversation'
         )
+        assert_clear_projection156(actor.last['vm'])
         assert actor.command('open', path=str(replacement))['reply']['opened']
     else:
         result_inputs.project_readback(state)
     assert not actor.last['vm']['messages'], (
         'R3-R6: Clear retires retained conversation, not the host project'
+    )
+    assert_clear_projection156(actor.last['vm'])
+    assert actor.command('archive')['reply']['rows'] == [], (
+        'R3-R6: settled public empty rows match the canonical cleared archive'
     )
     if not authenticated:
         connect(actor)
@@ -4343,7 +4370,10 @@ def test_native140_failed_clear_inside_actual_attachment_cannot_commit_aborted_c
     assert any(
         row.get('kind') == 'assistant' and row.get('status') == 'completed' for row in retained
     ), '165 SETUP: genuine successful terminal was durable BEFORE archive refusal'
-    assert observed['clear_error'], '165: failed Clear remains honestly refused'
+    state = settle(actor, lambda value: bool(value['last_error']) and not value['can_cancel'])
+    assert state['last_error'], (
+        '165: failed Clear remains honestly refused after deferred settlement'
+    )
     assert all(row in state['messages'] for row in retained), (
         '165: failed Clear cannot discard already retained history'
     )
@@ -4419,7 +4449,7 @@ def native145_recipe():
 
 
 def native145_selected(generic, tmp_path, *, project=None, bad_cif=False):
-    actor, trace = native_case(generic, [], project=project)
+    actor, trace = native_case(generic, [], project=project, connect_now=False)
     assert actor.command('native_science_enable')['reply']['enabled']
     sources = [
         ROOT / 'tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif',
@@ -4458,14 +4488,30 @@ def native145_selected(generic, tmp_path, *, project=None, bad_cif=False):
     return actor, trace, arguments, owned
 
 
-def native145_configure(actor, trace, calls):
+def native145_configure(actor, trace, turns):
+    # All genuine-turn calls, initial selected IDs and recipe are fixed BEFORE
+    # the ordinary dependency reads its config once. Later address references
+    # come only from an explicit earlier successful list_parameters response.
     path = trace.parent / 'peer-input.json'
+    assert not actor.peer_pid_file.exists(), 'CREATE SETUP: peer has not read prelaunch admission'
     config = json.loads(path.read_text())
-    first = len(native_records(trace, '.native-replies.jsonl')) + 1
-    for index, call in enumerate(calls, start=first):
-        call.setdefault('call_id', 'original-native145-call-' + str(index))
-    config['native_calls'] = calls
+    index = 0
+    for calls in turns:
+        for call in calls:
+            index += 1
+            call['call_id'] = 'original-native145-call-' + str(index)
+    config['native_turn_calls'] = turns
     path.write_text(json.dumps(config))
+    expected = hashlib.sha256(path.read_bytes()).hexdigest()
+    connect(actor)
+    loaded = json.loads(path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['sha256'] == expected and loaded['native_turn_calls'] == turns, (
+        'CREATE SETUP: genuine process consumed the complete original prelaunch script once'
+    )
+    native145_approve(actor)
+
+
+def native145_approve(actor):
     if actor.last['vm']['context_consent_required']:
         assert not json.loads(actor.last['vm']['native_context']).get('error'), (
             'NATIVE SETUP: complete actual disclosure, never error JSON, is approved'
@@ -4479,6 +4525,7 @@ def native145_science_settled(actor):
         actor,
         lambda value: (
             value['project_present']
+            and not value['can_cancel']
             and not value['project']['science_observer']['calculating']
             and all(
                 row['geometry_current']
@@ -4507,14 +4554,22 @@ def test_native145_real_selected_creation_preserves_structure_measured_inputs_an
     generic, tmp_path
 ):
     actor, trace, arguments, owned = native145_selected(generic, tmp_path)
-    before = actor.last['vm']
-    assert not before['project_present']
+    assert not actor.last['vm']['project_present']
     input_bytes = [path.read_bytes() for path in owned]
     native145_configure(
         actor,
         trace,
-        [native_call('create_cwl_project', **arguments), native_call('inspect_project')],
+        [
+            [native_call('create_cwl_project', **arguments), native_call('inspect_project')],
+            [
+                native_call('set_parameters', values=[{
+                    'path': 'structure.cell.length_a', 'value': 8.48 + 0.002,
+                }]),
+                native_call('set_free', flags=[{'path': 'structure.cell.length_a', 'free': True}]),
+            ],
+        ],
     )
+    before = actor.last['vm']
     state, replies = native_send(actor, trace, 2)
     assert all(row['response']['result']['success'] for row in replies)
     state = native145_science_settled(actor)
@@ -4586,17 +4641,7 @@ def test_native145_real_selected_creation_preserves_structure_measured_inputs_an
     changed = actor.command('manual_value', path=scalar['path'], value=scalar['value'] + 0.001)
     assert not changed['reply']['error'] and changed['vm']['context_consent_required']
     native145_science_settled(actor)
-    native145_configure(
-        actor,
-        trace,
-        [
-            native_call(
-                'set_parameters',
-                values=[{'path': scalar['path'], 'value': scalar['value'] + 0.002}],
-            ),
-            native_call('set_free', flags=[{'path': scalar['path'], 'free': True}]),
-        ],
-    )
+    native145_approve(actor)
     old_count = len(native_records(trace, '.native-replies.jsonl'))
     actor.command(
         'send_text', text='Make the original bounded cell edit and free it in this created owner'
@@ -4659,9 +4704,9 @@ def test_native145_creation_refusals_leave_owner_and_selected_originals_whole(
         })
     elif accident == 'unsupported-beam':
         arguments['recipe']['beam_mode'] = 'time of flight'
-    before = actor.last['vm']
     original_bytes = [path.read_bytes() for path in owned]
-    native145_configure(actor, trace, [native_call('create_cwl_project', **arguments)])
+    native145_configure(actor, trace, [[native_call('create_cwl_project', **arguments)]])
+    before = actor.last['vm']
     state, replies = native_send(actor, trace, 1)
     assert not replies[0]['response']['result']['success']
     assert state['project_present'] == before['project_present'] and state['connected']
@@ -4689,9 +4734,15 @@ def test_native145_creation_refusals_leave_owner_and_selected_originals_whole(
 
 def test_native145_created_project_runs_actual_fit_with_truthful_publication(generic, tmp_path):
     actor, trace, arguments, _owned = native145_selected(generic, tmp_path)
-    native145_configure(actor, trace, [native_call('create_cwl_project', **arguments)])
-    state, replies = native_send(actor, trace, 1)
-    assert replies[0]['response']['result']['success']
+    native145_configure(actor, trace, [
+        [native_call('create_cwl_project', **arguments), native_call('list_parameters')],
+        [native_call('set_free', flags=[{
+            'path': {'$original_parameter_suffix': '.scale'}, 'free': True,
+        }])],
+        [native_call('run_fit')],
+    ])
+    state, replies = native_send(actor, trace, 2)
+    assert all(row['response']['result']['success'] for row in replies)
     state = native145_science_settled(actor)
     before_inputs = native_inputs(state)
     scales = [
@@ -4699,10 +4750,11 @@ def test_native145_created_project_runs_actual_fit_with_truthful_publication(gen
         if row['path'].endswith('.scale') and row['independent'] and row['fittable']
     ]
     assert len(scales) == 1, 'CREATE/FIT SETUP: actual single phase has one independent scale'
-    native145_configure(actor, trace, [native_call(
-        'set_free', flags=[{'path': scales[0]['path'], 'free': True}]
-    )])
-    state, replies = native_send(actor, trace, 2)
+    native145_approve(actor)
+    state, replies = native_send(actor, trace, 3)
+    assert replies[-1]['original']['params']['arguments']['flags'] == [
+        {'path': scales[0]['path'], 'free': True}
+    ], 'CREATE/FIT: original script resolves only the genuinely disclosed current scale address'
     assert replies[-1]['response']['result']['success']
     state = native145_science_settled(actor)
     assert state['project']['native_observer']['fit_available'], (
@@ -4710,8 +4762,8 @@ def test_native145_created_project_runs_actual_fit_with_truthful_publication(gen
     )
     fitted_before = state
     assert not fitted_before['project']['native_observer']['record']['kind']
-    native145_configure(actor, trace, [native_call('run_fit')])
-    state, replies = native_send(actor, trace, 3)
+    native145_approve(actor)
+    state, replies = native_send(actor, trace, 4)
     outcome = replies[-1]['decoded']
     assert outcome['status'] in {
         'done', 'max_iterations', 'no_step', 'cancelled', 'error', 'superseded', 'unavailable'
@@ -4835,3 +4887,79 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
     assert (replies[0]['decoded']['project'] is not None) == loaded, (
         'BOOTSTRAP: native read reports the same real owner after bootstrap'
     )
+
+
+def assert_clear_projection156(state):
+    # Final public Qt topology, never an assertion halfway through begin/end rows.
+    assert state['messages'] == [], 'CLEAR: no role-null placeholder may survive durable discard'
+    model = state['message_model']
+    assert model['count'] == model['row_count'] == 0 and model['role_count'] > 0, (
+        'CLEAR: settled actual Qt model topology agrees with empty canonical history'
+    )
+
+
+@pytest.mark.parametrize('signal', ['rowsAboutToBeRemoved', 'rowsRemoved', 'countChanged'])
+def test_clear156_real_message_notification_reentry_preserves_final_topology_and_owner(
+    generic, signal
+):
+    actor, trace = native_case(
+        generic, [], project=ROOT / 'tests/fixtures/e04_t1/editable-project'
+    )
+    actor.command(
+        'send_text', text='Original complete history before notification reentrant Clear'
+    )
+    before = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(
+                row.get('kind') == 'assistant' and row.get('status') == 'completed'
+                for row in value['messages']
+            )
+        ),
+    )
+    retained = actor.command('archive')['reply']['rows']
+    assert any(row.get('kind') == 'assistant' for row in retained), (
+        'CLEAR SETUP: genuine completed original is durable before ordinary Qt notification'
+    )
+    original_owner = before['project']['host_snapshot']['path']
+    assert actor.command('retirement_arm', action='clear', signal=signal)['reply']['armed']
+    actor.command('clear_history')
+    state = settle(
+        actor,
+        lambda value: (
+            value.get('retirement_observer', {}).get('returned', False)
+            and not value['can_cancel']
+        ),
+    )
+    observed = state['retirement_observer']
+    assert observed['calls'] == 1 and observed['signal'] == signal, (
+        'CLEAR SETUP: genuine ordinary Qt notification receiver reentered Clear exactly once'
+    )
+    assert actor.command('archive')['reply']['rows'] == [], (
+        'CLEAR: successful explicit discard publishes canonical empty history'
+    )
+    state = actor.last['vm']
+    assert_clear_projection156(state)
+    assert state['connected'] and state['models'] == before['models'], (
+        'CLEAR: notification reentry preserves genuinely managed account and model catalog'
+    )
+    assert state['handoff']['account_label'] == before['handoff']['account_label']
+    assert state['project_present'] and state['project']['host_snapshot']['path'] == original_owner
+    assert state['project']['parameters'] == before['project']['parameters'], (
+        'CLEAR: ordinary model notification cannot edit or replace the actual owner'
+    )
+    native145_approve(actor)
+    approved = actor.last['vm']
+    scalar = native_parameter(approved)
+    changed = actor.command('manual_value', path=scalar['path'], value=scalar['value'] + 0.001)
+    assert not changed['reply']['error'], (
+        'CLEAR: preserved owner remains genuinely manually editable'
+    )
+    assert changed['vm']['connected'] and changed['vm']['context_consent_required']
+    assert changed['vm']['context'] != approved['context'], (
+        'CLEAR: actual same-owner manual edit still publishes fresh disclosure after reentry'
+    )
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    ), 'CLEAR: no fabricated authentication repair masks notification retirement'

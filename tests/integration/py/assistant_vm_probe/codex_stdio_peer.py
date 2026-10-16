@@ -17,6 +17,14 @@ from threading import Timer
 
 config = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
 trace = Path(config['trace'])
+Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).with_suffix('.peer-loaded.json').write_text(
+    json.dumps({
+        'sha256': hashlib.sha256(
+            Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_bytes()
+        ).hexdigest(),
+        'native_turn_calls': config.get('native_turn_calls'),
+    }), encoding='utf-8'
+)
 Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).with_suffix('.peer-pid').write_text(
     str(os.getpid()), encoding='utf-8'
 )
@@ -61,7 +69,11 @@ def turn(status):
 def complete():
     item = {
         'type': 'agentMessage',
-        'id': turn_id + '-message' if scenario == 'fileauth' else 'original-message',
+        'id': (
+            turn_id + '-message'
+            if scenario == 'fileauth' or config.get('native_turn_calls')
+            else 'original-message'
+        ),
         'text': f'Original fileauth reply {turn_number}'
         if scenario == 'fileauth'
         else 'Original offline reply',
@@ -775,6 +787,26 @@ native_index = 0
 native_rpc_sequence = 0
 native_start_pending = None
 native_steers = []
+native_disclosed_parameters = []
+
+
+def native_original_addresses(value):
+    # Only an explicitly predeclared address selector is resolved from an actual
+    # successful list_parameters reply. No value/uncertainty/scientific oracle
+    # is inferred, and unknown/ambiguous references never fabricate a path.
+    if isinstance(value, dict) and set(value) == {'$original_parameter_suffix'}:
+        matches = [
+            row['path'] for row in native_disclosed_parameters
+            if row['path'].endswith(value['$original_parameter_suffix'])
+            and row['dependence'] == 'independent'
+        ]
+        assert len(matches) == 1, 'CREATE SETUP: original current parameter address is unique'
+        return matches[0]
+    if isinstance(value, dict):
+        return {key: native_original_addresses(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [native_original_addresses(item) for item in value]
+    return value
 
 
 def native_emit_next():
@@ -785,6 +817,8 @@ def native_emit_next():
             complete()
         return
     spec = calls[native_index]
+    if config.get('native_turn_calls'):
+        spec = {**spec, 'arguments': native_original_addresses(spec['arguments'])}
     native_index += 1
     call_id = spec.get('call_id', 'original-native-call-' + str(native_index))
     native_rpc_sequence += 1
@@ -826,7 +860,18 @@ def native_emit_next():
 
 
 def native_start(request):
-    global native_start_pending  # noqa: PLW0603 -- original delayed RPC envelope
+    global native_start_pending, native_index, turn_id  # noqa: PLW0603 -- original delayed RPC envelope
+    if config.get('native_turn_calls'):
+        groups = config['native_turn_calls']
+        assert 0 < turn_number <= len(groups), 'CREATE SETUP: only original declared real turns'
+        assert not native_pending, 'CREATE SETUP: preceding original RPC group settled'
+        config['native_calls'] = groups[turn_number - 1]
+        turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
+        native_index = 0
+        clear_observation('native-original-turn-script', {
+            'turn': turn_number,
+            'calls': [call['call_id'] for call in config['native_calls']],
+        })
     if config.get('native_ack_order') == 'start-late':
         native_start_pending = request
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
@@ -922,6 +967,10 @@ def native_reply(request):
             json.dumps({'original': native_pending[request['id']], 'response': request}) + '\n'
         )
     original = native_pending.pop(request['id'])
+    if (config.get('native_turn_calls') and result and result.get('success')
+            and original['params']['tool'] == 'list_parameters'):
+        disclosed = json.loads(result['contentItems'][0]['text'])
+        native_disclosed_parameters[:] = disclosed['parameters']
     item = {
         **original['item'],
         'status': 'completed' if result and result.get('success') else 'failed',
