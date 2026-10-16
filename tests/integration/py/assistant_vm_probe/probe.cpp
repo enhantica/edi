@@ -132,6 +132,9 @@ int main(int argc,char** argv) {
             {"is_directory",QFileInfo(history).isDir()},{"bytes",static_cast<double>(bytes.size())},
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
     };
+    Object terminal_selection_observer;
+    bool terminal_selection_armed=false;
+    QMetaObject::Connection terminal_selection_connection;
     Object retirement_observer;
     bool retirement_armed=false;
     QMetaObject::Connection retirement_connection;
@@ -288,6 +291,7 @@ int main(int argc,char** argv) {
                 result["publication_owner_alive"]=!publication_owner.isNull();
                 result["publication_current"]=publication_values(session->project());
             }
+            if(!terminal_selection_observer.isEmpty())result["terminal_selection_observer"]=terminal_selection_observer;
             if(!retirement_observer.isEmpty())result["retirement_observer"]=retirement_observer;
             result["policy"]=Object{
                 {"record_bytes",static_cast<double>(edi::assistant::Limits::record_bytes)},
@@ -375,13 +379,49 @@ int main(int argc,char** argv) {
                 result={{"method_present",present},{"invoked",invoked}};
             }
 #endif
+            else if(codex_mode && op=="selected_after_terminal_arm") {
+                QObject::disconnect(terminal_selection_connection);
+                terminal_selection_armed=true;terminal_selection_observer={{"armed",true}};
+                const auto draft=input["text"].toString();
+                if(draft.isEmpty())throw std::invalid_argument("original admitted draft required");
+                terminal_selection_connection=QObject::connect(session->assistant(),
+                    &edi_app::AssistantViewModel::stateChanged,session.get(),[&,draft] {
+                    auto* vm=session->assistant();
+                    if(!terminal_selection_armed || !vm->connected() || vm->state()!="idle")return;
+                    QFile file(history);if(!file.open(QIODevice::ReadOnly))return;
+                    const auto bytes=file.readAll();file.close();
+                    const auto retained=decode(bytes).toArray();
+                    QString user_id;bool completed_reply=false;
+                    for(const auto& entry:retained) {
+                        const auto row=entry.toObject();
+                        if(row["kind"].toString()=="user" && row["text"].toString()==draft && row["status"].toString()=="completed")
+                            user_id=row["id"].toString();
+                        else if(!user_id.isEmpty() && row["kind"].toString()=="assistant" && row["status"].toString()=="completed")
+                            completed_reply=true;
+                    }
+                    if(user_id.isEmpty() || !completed_reply)return;
+                    // Actual successful terminal retention and idle notification, before queued adoption.
+                    // Disarm before the real public call's own notification; never synthesize an event.
+                    terminal_selection_armed=false;
+                    terminal_selection_observer={{"armed",true},{"entered",true},
+                        {"original_user_id",user_id},{"retained_rows",retained},
+                        {"retained_sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())},
+                        {"state_at_entry",vm->state()},{"connected_at_entry",vm->connected()},
+                        {"project_present_at_entry",session->hasProject()}};
+                    const auto request=vm->beginFileSelection();
+                    terminal_selection_observer["request_id"]=request;
+                    terminal_selection_observer["last_error"]=vm->lastError();
+                    terminal_selection_observer["returned"]=true;
+                },Qt::DirectConnection);
+                result={{"armed",true}};
+            }
             else if(codex_mode && op=="retirement_arm") {
                 QObject::disconnect(retirement_connection);
                 retirement_armed=true;retirement_observer={{"armed",true},{"calls",0}};
                 const auto action=input["action"].toString(),replacement=input["replacement"].toString();
                 const auto signal=input["signal"].toString("conversationRetired");
                 const bool queued=input["queued"].toBool();
-                if(action!="close" && action!="replace" && action!="clear")throw std::invalid_argument("finite retirement action required");
+                if(action!="close" && action!="replace" && action!="clear" && action!="clear-archive-refusal")throw std::invalid_argument("finite retirement action required");
                 auto callback=[&,action,replacement,signal,queued] {
                     if(!retirement_armed)return;retirement_armed=false;
                     QPointer<edi_app::ProjectViewModel> entering=session->project();
@@ -394,6 +434,28 @@ int main(int argc,char** argv) {
                     retirement_observer["connected_at_entry"]=session->assistant()->connected();
                     if(action=="close")session->closeProject();
                     else if(action=="clear")session->assistant()->clearHistory();
+                    else if(action=="clear-archive-refusal") {
+                        try {
+                            retirement_observer["host_published_before_clear"]=session->hasProject();
+                            retirement_observer["archive_before_clear"]=archive();
+                            QFile retained(history);
+                            if(!retained.open(QIODevice::ReadOnly))throw std::runtime_error("retained terminal archive unavailable");
+                            const auto bytes=retained.readAll();retained.close();
+                            retirement_observer["retained_rows"]=decode(bytes);
+                            const auto backup=history+".preserved";
+                            if(!QFile::rename(history,backup) || !QDir().mkpath(history))
+                                throw std::runtime_error("ordinary owned archive write barrier unavailable");
+                            QFile saved(backup);if(!saved.open(QIODevice::ReadOnly))throw std::runtime_error("preserved archive unavailable");
+                            retirement_observer["preserved_sha256"]=QString::fromLatin1(QCryptographicHash::hash(saved.readAll(),QCryptographicHash::Sha256).toHex());
+                            retirement_observer["archive_is_directory"]=QFileInfo(history).isDir();
+                            session->assistant()->clearHistory();
+                            retirement_observer["clear_called"]=true;
+                            retirement_observer["clear_error"]=session->assistant()->lastError();
+                        } catch(const std::exception& error) {
+                            retirement_observer["barrier_error"]=QString::fromUtf8(error.what());
+                        }
+                    }
+
                     else retirement_observer["replacement_opened"]=session->openProject(QUrl::fromLocalFile(replacement));
                     retirement_observer["entering_alive_after_callback"]=!entering.isNull();
                     retirement_observer["current_present_after_callback"]=session->project()!=nullptr;

@@ -4117,6 +4117,40 @@ def test_native135_real_conversation_retirement_callback_keeps_latest_session_ow
     )
 
 
+def managed_file_retirement_after_terminal(actor):
+    assert actor.command(
+        'selected_after_terminal_arm', text='Create the original measured LBCO result'
+    )['reply']['armed'], '143 SETUP: actual idle/retained-terminal observer armed before real Send'
+
+
+def assert_managed_file_retirement_after_terminal(actor, state):
+    observed = state.get('terminal_selection_observer', {})
+    assert observed.get('entered') and observed.get('returned'), (
+        '143 SETUP: real idle notification follows durable original terminal before adoption'
+    )
+    assert observed['state_at_entry'] == 'idle' and observed['connected_at_entry']
+    assert not observed['project_present_at_entry'], (
+        '143 SETUP: ordinary queued host attachment has not committed yet'
+    )
+    assert observed['original_user_id'] == actor.result_user_id, (
+        '143: actual terminal observation belongs to the once-only admitted original input'
+    )
+    retained = observed['retained_rows']
+    assert any(
+        row.get('id') == actor.result_user_id and row.get('kind') == 'user'
+        for row in retained
+    )
+    assert any(
+        row.get('kind') == 'assistant' and row.get('status') == 'completed' for row in retained
+    ), '143 SETUP: successful original assistant terminal was genuinely durable'
+    assert observed['retained_sha256'] and observed['request_id'] and not observed['last_error'], (
+        '143 SETUP: actual public chooser is admitted after successful terminal retention'
+    )
+    assert observed['request_id'] in state['retired_selections'], (
+        '143: genuine admitted request reaches the later real fileSelectionRetired signal'
+    )
+
+
 @pytest.mark.parametrize(
     ('attachment', 'signal', 'authenticated', 'queued'),
     [
@@ -4156,9 +4190,12 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
         connect(actor)
     before = actor.last['vm']
     if signal == 'fileSelectionRetired':
-        assert actor.command('selected_begin')['reply']['request_id'], (
-            'R3-R6 SETUP: genuine current native chooser request is pending'
-        )
+        if attachment == 'managed-result':
+            managed_file_retirement_after_terminal(actor)
+        else:
+            assert actor.command('selected_begin')['reply']['request_id'], (
+                'R3-R6 SETUP: genuine current native chooser request is pending'
+            )
     assert actor.command('retirement_arm', action='clear', signal=signal, queued=queued)['reply'][
         'armed'
     ]
@@ -4173,6 +4210,8 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
     state = settle(
         actor, lambda value: value.get('retirement_observer', {}).get('returned', False)
     )
+    if attachment == 'managed-result' and signal == 'fileSelectionRetired':
+        assert_managed_file_retirement_after_terminal(actor, state)
     observed = state['retirement_observer']
     assert observed['entered'] and observed['calls'] == 1, (
         'R3-R6 SETUP: one actual retirement receiver returned'
@@ -4228,3 +4267,114 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
     assert not any(
         row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
     )
+
+
+@pytest.mark.parametrize(
+    ('attachment', 'signal'),
+    [
+        ('managed-result', 'conversationRetired'),
+        ('managed-result', 'fileSelectionRetired'),
+        ('ordinary', 'conversationRetired'),
+    ],
+)
+def test_native140_failed_clear_inside_actual_attachment_cannot_commit_aborted_candidate(  # noqa: PLR0912, PLR0914, PLR0915 -- finite actual fault boundary
+    generic, tmp_path, attachment, signal
+):
+    actor, trace = generic('result:complete' if attachment == 'managed-result' else 'complete')
+    original = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    manual_owner = tmp_path / 'Original-manual-owner-after-failed-Clear'
+    shutil.copytree(original, manual_owner)
+    if attachment == 'ordinary':
+        prior_owner = tmp_path / 'Original-prior-disk-owner'
+        shutil.copytree(original, prior_owner)
+        assert actor.command('open', path=str(prior_owner))['reply']['opened']
+    else:
+        fixture = tmp_path / 'Original-measured-precommit-candidate'
+        source_root = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+        for source in source_root.rglob('*.edi'):
+            destination = fixture / source.relative_to(source_root)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+        config_path = trace.parent / 'peer-input.json'
+        config = json.loads(config_path.read_text())
+        config['result_fixture'] = str(fixture)
+        config_path.write_text(json.dumps(config))
+    connect(actor)
+    before = actor.last['vm']
+    if attachment == 'ordinary':
+        if before['context_consent_required']:
+            actor.command('sign_in')
+        actor.command('send_text', text='Original completed history before actual failed Clear')
+        settle(
+            actor,
+            lambda value: (
+                not value['can_cancel']
+                and any(row.get('kind') == 'assistant' for row in value['messages'])
+            ),
+        )
+    if signal == 'fileSelectionRetired':
+        managed_file_retirement_after_terminal(actor)
+    assert actor.command('retirement_arm', action='clear-archive-refusal', signal=signal)['reply'][
+        'armed'
+    ]
+    if attachment == 'ordinary':
+        actor.command('open', path=str(manual_owner))
+    else:
+        from tests.system.app import (  # noqa: PLC0415 -- existing circular vehicle
+            test_e11_t5_assistant_result as result_inputs,
+        )
+
+        observed_result = result_inputs.start(actor, trace)
+    state = settle(
+        actor, lambda value: value.get('retirement_observer', {}).get('returned', False)
+    )
+    if attachment == 'managed-result' and signal == 'fileSelectionRetired':
+        assert_managed_file_retirement_after_terminal(actor, state)
+    observed = state['retirement_observer']
+    assert observed['entered'] and observed['calls'] == 1
+    assert not observed.get('barrier_error'), (
+        '165 SETUP: real ordinary write refusal vehicle was installed successfully'
+    )
+    assert observed['clear_called'] and observed['archive_is_directory']
+    assert observed['archive_before_clear']['is_file']
+    assert observed['preserved_sha256'] == observed['archive_before_clear']['sha256']
+    retained = observed['retained_rows']
+    assert any(
+        row.get('kind') == 'assistant' and row.get('status') == 'completed' for row in retained
+    ), '165 SETUP: genuine successful terminal was durable BEFORE archive refusal'
+    assert observed['clear_error'], '165: failed Clear remains honestly refused'
+    assert all(row in state['messages'] for row in retained), (
+        '165: failed Clear cannot discard already retained history'
+    )
+    assert state['connected'] and state['models'] == before['models']
+    assert state['handoff']['account_label'] == before['handoff']['account_label']
+    if attachment == 'managed-result':
+        assert not observed['host_published_before_clear'], (
+            '165 SETUP: callback reached genuine precommit attachment'
+        )
+        assert not state['project_present'], (
+            '165: failed nested Clear cannot acknowledge or commit the obsolete candidate'
+        )
+        for entry in observed_result['files']:
+            path = fixture / entry['path']
+            assert path.stat().st_size == entry['bytes']
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == entry['sha256']
+    else:
+        assert observed['host_published_before_clear'] and state['project_present']
+        assert state['project']['host_snapshot']['path'] == str(manual_owner)
+    assert actor.last['archive']['is_directory']
+    actor.command('persistence_restore')
+    assert actor.last['archive']['is_file']
+    actor.command('clear_history')  # A genuine explicit retry after real storage recovery.
+    assert actor.last['vm']['connected']
+    if not actor.last['vm']['project_present']:
+        assert actor.command('open', path=str(manual_owner))['reply']['opened']
+    state = actor.last['vm']
+    if state['context_consent_required']:
+        actor.command('sign_in')
+    approved = actor.last['vm']
+    target = native_parameter(approved)
+    edited = actor.command('manual_value', path=target['path'], value=target['value'] + 0.001)
+    assert not edited['reply']['error']
+    assert edited['vm']['connected'] and edited['vm']['context'] != approved['context']
+    assert edited['vm']['context_consent_required']
