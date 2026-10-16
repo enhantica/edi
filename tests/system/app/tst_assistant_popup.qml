@@ -3025,17 +3025,92 @@ TestCase {
         visible185_type(String(text));
         compare(control.text, String(text), "IMPORT265: actual form retains exact original typed text");
     }
+    // Passive276: bounded public control/focus receipts; no Keys handler or event acceptance changes.
+    function import276_identity(object) {
+        if (!object) return null;
+        const properties = ["objectName", "visible", "enabled", "opacity", "clip", "x", "y",
+            "width", "height", "focus", "activeFocus", "visualFocus", "currentIndex",
+            "highlightedIndex", "currentText", "displayText", "textRole", "valueRole",
+            "count", "down", "pressed", "editable", "opened", "modal"];
+        const result = {identity: String(object).slice(0, 200)};
+        properties.forEach(property => {
+            try {
+                const value = object[property];
+                if (["string", "number", "boolean"].includes(typeof value))
+                    result[property] = typeof value === "string" ? value.slice(0, 200) : value;
+            } catch (error) { result[property] = "<unreadable>"; }
+        });
+        try {
+            const point = object.mapToItem(window.contentItem, 0, 0);
+            result.scene = {x: point.x, y: point.y};
+        } catch (error) { result.scene = null; }
+        return result;
+    }
+    function import276_ancestors(object) {
+        const result = [];
+        for (let current = object, count = 0; current && count < 12; current = current.parent, ++count)
+            result.push(import276_identity(current));
+        return result;
+    }
+    function import276_comboReceipt(stage, control, name, label, matches, detail) {
+        try {
+            const choices = [];
+            for (let i = 0; i < Math.min(control.count, 8); ++i)
+                choices.push({index: i, text: String(control.textAt(i)).slice(0, 200)});
+            const actualPopup = control.popup;
+            const content = actualPopup ? actualPopup.contentItem : null;
+            console.log("IMPORT276_COMBO", JSON.stringify({stage: stage, name: name,
+                requestedLabel: label, matchingIndices: matches, detail: detail || null,
+                page: window.appBarCentralTabs.currentIndex, pageItem: import276_identity(Ui.page(window)),
+                control: import276_identity(control), controlAncestors: import276_ancestors(control),
+                model: String(control.model).slice(0, 200), choices: choices, choicesTruncated: control.count > 8,
+                popup: import276_identity(actualPopup), popupParent: actualPopup ? import276_identity(actualPopup.parent) : null,
+                popupContent: import276_identity(content), popupCurrentItem: content ? import276_identity(content.currentItem) : null,
+                focusItem: import276_identity(window.activeFocusItem),
+                focusAncestors: import276_ancestors(window.activeFocusItem), window: String(window).slice(0, 200)}));
+        } catch (error) { console.log("IMPORT276_DIAGNOSTIC_ERROR", stage, String(error).slice(0, 240)); }
+    }
     function import265_combo(name, label) {
         const control = import265_control(name);
         const matches = [];
         for (let i = 0; i < control.count; ++i) if (control.textAt(i) === label) matches.push(i);
         compare(matches.length, 1, "IMPORT265 SETUP: exact displayed original choice is uniquely offered");
-        import265_click(name);
-        keyClick(Qt.Key_Home);
-        for (let i = 0; i < matches[0]; ++i) keyClick(Qt.Key_Down);
-        keyClick(Qt.Key_Return);
-        compare(control.currentIndex, matches[0], "IMPORT265: real ComboBox keyboard selects original choice");
-        compare(control.currentText, label, "IMPORT265: actual displayed source/profile matches original choice");
+        const observations = [];
+        let signalCount = 0;
+        function observe(object, signalName) {
+            if (!object || !object[signalName] || !object[signalName].connect) return;
+            const receive = function(value) {
+                if (signalCount++ < 48)
+                    import276_comboReceipt("signal:" + signalName, control, name, label, matches,
+                        {value: typeof value === "number" || typeof value === "boolean" ? value : null});
+            };
+            object[signalName].connect(receive);
+            observations.push({signal: object[signalName], receive: receive});
+        }
+        try {
+            ["activated", "highlighted", "currentIndexChanged", "highlightedIndexChanged", "activeFocusChanged"]
+                .forEach(signal => observe(control, signal));
+            ["opened", "closed", "visibleChanged"].forEach(signal => observe(control.popup, signal));
+            observe(window, "activeFocusItemChanged");
+            import276_comboReceipt("before-click", control, name, label, matches);
+            import265_click(name);
+            import276_comboReceipt("after-click/before-Home", control, name, label, matches);
+            keyClick(Qt.Key_Home);
+            import276_comboReceipt("after-Home", control, name, label, matches);
+            for (let i = 0; i < matches[0]; ++i) {
+                import276_comboReceipt("before-Down", control, name, label, matches, {ordinal: i});
+                keyClick(Qt.Key_Down);
+                import276_comboReceipt("after-Down", control, name, label, matches, {ordinal: i});
+            }
+            import276_comboReceipt("before-Return", control, name, label, matches);
+            keyClick(Qt.Key_Return);
+            import276_comboReceipt("after-Return", control, name, label, matches);
+            compare(control.currentIndex, matches[0], "IMPORT265: real ComboBox keyboard selects original choice");
+            compare(control.currentText, label, "IMPORT265: actual displayed source/profile matches original choice");
+        } finally {
+            import276_comboReceipt("finally", control, name, label, matches, {observedSignals: signalCount});
+            observations.forEach(observation => observation.signal.disconnect(observation.receive));
+        }
     }
     function import265_owner(project) {
         return project ? JSON.stringify({name: project.name, title: project.title,
