@@ -611,3 +611,37 @@ Prior art: create_cwl_project originally required a null Session owner, prepared
 The complete prepared scientific pair enters the same PVM applyEdit/preview/publication path with one dedicated preowned Undo, rather than membership-preserving applyRecordedEdit. Exact own-edit token suppression ends immediately on return/throw; ordinary unrelated edits and retirement retain their original semantics. The closed core commit latch owns actual applied outcome before observers, and original-only response cleanup cannot answer a newer call. Native finish advances only the same actual receipt through its complete-context/currentness/resource admission. Cancellation before commit leaves the owner empty; cancellation after an actual commit cannot manufacture a no-write result or roll back manual edits.
 
 The result can report completed_existing, adopted, presentation_complete, calculation_pending and saved=false. This unit does not save files: a named owned directory remains at its original path and modified=true. Fresh-child save_project is not same-directory Save and must not silently nest a new project or claim the existing folder saved. That native owned-path save is a separate required follow-up, alongside carried metadata preservation. Visible creation/completion/save stays unavailable until its genuine widget route is delivered. No new tool/capability identifier or bootstrap allowlist entry is added; actual recipe/profile/input declarations and skill1.5.11/index digest remain synchronized.
+
+
+### Temporary backend conversations
+
+Prior art: generic_start_thread creates the official runtime context with actual
+workspace roots, account/catalog/tools and effective-policy verification. Ordinary
+turns already reuse its admitted live thread, while genuine Clear/context or
+owner retirement settles original work before preparing another backend context.
+Edi's bounded local assistant archive is a separate user-visible display record.
+
+Every new thread/start now requests ephemeral: true, supported by the pinned
+[ThreadStartParams](https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/app-server-protocol/src/protocol/v2/thread.rs).
+Readiness additionally requires the effective response thread.ephemeral to be a
+boolean true. Missing, false, null, numeric or string values refuse through the
+existing app-owned [thread/start: THREAD_EPHEMERAL] diagnostic, before publishing
+ready/thread authority. All actual provider/account/root/policy/catalog checks
+remain; no fallback accepts a durable backend thread or expands permissions.
+
+The pinned runtime skips durable rollout/state-database thread persistence for
+ephemeral conversations. This addresses newly created backend-history clutter,
+not existing stored sessions, all runtime logs, telemetry or upstream retention.
+No persistent name/archive/delete operation, personal history scan, global
+configuration change or provider request is added by this lifecycle policy.
+Clear still commits Edi's empty archive and settles original worker/input/control
+owners before replacing model memory. Failed Clear preserves existing history
+and recovery obligations; ordinary subsequent turns use their same live thread.
+
+Backend restart does not resume ephemeral model memory. Edi's visible archive
+can survive independently and must not be represented as restored model history.
+Routine manual scientific edits currently retire the execution context and full
+context-byte changes can still require disclosure confirmation. Stable project
+conversation reuse and scope-based consent are separate required improvements;
+this flag neither delivers them nor proves the owner's desktop grouping/title
+behavior. Existing persistent clutter is not scanned or cleaned by this unit.
