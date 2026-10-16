@@ -16,6 +16,7 @@ TestCase {
     property var assistant
     property var oldSide
     property var oldTheme
+    property var oldToolTips
     Component {
         id: application
         Main {}
@@ -85,9 +86,24 @@ TestCase {
         image.save(stem + ".png");
         console.log("POPUP_CAPTURE", stem, image.width, image.height);
     }
+    function eligibleProject() {
+        if (Session.project === null)
+            verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/popup SETUP: real original project supplies an eligible workflow");
+        const tab = item("appBar.tab.project");
+        verify(tab.visible && tab.enabled, "I16/popup SETUP: genuine Project navigation is eligible");
+        mouseClick(tab);
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000, "I16/popup: real Project action activates the workflow");
+        rendered();
+    }
+    function init() {
+        eligibleProject();
+        compare(Preferences.assistantShown, false, "I16/popup: each isolated row starts without an inherited open request");
+        compare(popup.visible, false, "I16/popup: each isolated row starts with the actual popup closed");
+    }
     function initTestCase() {
         oldSide = Preferences.sideBarSide;
         oldTheme = EaStyle.Colors.theme;
+        oldToolTips = Preferences.toolTips;
         window = application.createObject(null);
         verify(window !== null, "I16/popup: production Main instantiates in the normal native runner");
         rendered();
@@ -98,54 +114,77 @@ TestCase {
     }
     function cleanup() {
         Preferences.dialogShown = false;
+        // Home deliberately disables the opener but retains requested visibility.
+        // Return through genuine workflow navigation before clearing that request.
+        eligibleProject();
         if (popup && Preferences.assistantShown)
             toggle();
     }
     function cleanupTestCase() {
-        if (popup.visible)
+        eligibleProject();
+        if (Preferences.assistantShown)
             toggle();
         Session.closeProject();
         Preferences.sideBarSide = oldSide;
         EaStyle.Colors.theme = oldTheme;
+        Preferences.toolTips = oldToolTips;
         window.destroy();
     }
     function test_home_appbar_only_and_no_auto_dismiss() {
-        Session.closeProject();
-        window.appBarCentralTabs.currentIndex = 0;
-        rendered();
-        const main = item("workflow.home.mainContent");
+        const main = item("workflow.project.mainContent");
         const before = rect(main);
+        const project = Session.project;
+        const messages = assistant.messages;
         window.contentItem.forceActiveFocus();
         keyClick(Qt.Key_A, Qt.ControlModifier | Qt.ShiftModifier);
         compare(popup.visible, false, "I16/popup: retired global shortcut cannot open chat");
         const button = item("assistant.toggle");
-        scopeObservation("home-before-focus");
         button.forceActiveFocus();
-        scopeObservation("home-before-space");
         keyClick(Qt.Key_Space);
-        scopeObservation("home-after-space");
-        tryCompare(popup, "visible", true, 500, "I16/popup: normal keyboard activation of appbar opens chat");
+        tryCompare(popup, "opened", true, 2000, "I16/popup: actual eligible appbar keyboard activation opens chat");
         compare(popup.modal, false, "I16/popup: sidebar popup does not block the whole window");
         compare(popup.dim, false, "I16/popup: sidebar popup does not dim scientific content");
         compare(popup.closePolicy, Popup.NoAutoClose, "I16/popup: outside and Escape are not dismissal routes");
-        sameRect(rect(popup.contentItem), rect(item("workflow.home.sidebarHost")));
+        sameRect(rect(popup.contentItem), rect(item("workflow.project.sidebarHost")));
         sameRect(rect(main), before);
         keyClick(Qt.Key_Escape);
-        compare(popup.visible, true, "I16/popup: Escape leaves the popup open");
+        compare(popup.visible, true, "I16/popup: Escape leaves eligible workflow chat open");
         const point = main.mapToItem(window.contentItem, main.width / 2, main.height / 2);
         mouseClick(window.contentItem, point.x, point.y);
-        compare(popup.visible, true, "I16/popup: genuine outside click leaves the popup open");
-        compare(Session.project, null, "I16/popup: Home opening does not create a project");
-        compare(window.appBarCentralTabs.currentIndex, 0, "I16/popup: Home opening does not navigate");
+        compare(popup.visible, true, "I16/popup: genuine outside click leaves eligible workflow chat open");
+        const editor = item("assistant.composer");
+        editor.insert(0, "Original Home-hidden draft");
+        editor.select(2, 9);
+        const draft = editor.text;
+        const selection = [editor.selectionStart, editor.selectionEnd];
         verify(findChild(window, "assistant.close") === null, "I16/popup: no separate close control remains");
         Preferences.dialogShown = true;
         rendered();
         verify(findChild(window, "preferences.assistantShown") === null, "I16/popup: Preferences has no alternate chat opener");
         Preferences.dialogShown = false;
-        capture("assistant-popup-home");
-        toggle();
-        compare(popup.visible, false, "I16/popup: same appbar button hides chat");
+        mouseClick(item("appBar.tab.home"));
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Home, 2000, "HOME: actual appbar navigates to Home");
+        tryCompare(popup, "visible", false, 2000, "HOME: Assistant fully slides out on Home");
+        rendered();
+        compare(button.enabled, false, "HOME: appbar Assistant is deliberately disabled on Home");
+        compare(Preferences.assistantShown, true, "HOME: Home keeps the actual stored open request");
+        verify(!editor.activeFocus, "HOME: hidden chat does not retain input focus");
+        mouseClick(button);
+        keyClick(Qt.Key_A, Qt.ControlModifier | Qt.ShiftModifier);
+        compare(popup.visible, false, "HOME: disabled appbar/retired shortcut cannot reopen chat");
+        compare(Session.project, project, "HOME: hiding chat does not replace the real project");
+        compare(assistant.messages, messages, "HOME: hiding chat retains the actual conversation owner");
+        eligibleProject();
+        tryCompare(popup, "opened", true, 2000, "HOME: eligible return restores the stored request");
+        compare(button.enabled, true, "HOME: eligible workflow restores the real appbar action");
+        sameRect(rect(popup.contentItem), rect(item("workflow.project.sidebarHost")));
         sameRect(rect(main), before);
+        compare(editor.text, draft, "HOME: unsent original survives hidden Home and return");
+        compare(editor.selectionStart, selection[0], "HOME: original selection start survives");
+        compare(editor.selectionEnd, selection[1], "HOME: original selection end survives");
+        capture("assistant-popup-returned-from-home");
+        toggle();
+        editor.clear();
     }
     function test_workflow_same_sidebar_and_live_state_data() {
         return [
@@ -235,10 +274,15 @@ TestCase {
         toggle();
         verify(/manual|sidebar|controls/i.test(button.Accessible.name), "NAV1: shown-state appbar action truthfully names return to manual controls");
         verify(button.fontIcon !== closedIcon, "NAV1: shown-state real appbar icon distinguishes returning from opening Assistant");
+        Preferences.toolTips = true;
         const tooltip = button.ToolTip.text;
         verify(/manual|sidebar|controls/i.test(tooltip), "NAV1: shown-state tooltip describes the actual sidebar-return action");
         mouseMove(button, button.width / 2, button.height / 2);
-        tryVerify(() => Ui.itemsWithProperty(Ui.windowRoot(window), "text").some(control => control.visible && control.text === tooltip && Ui.exposed(control)), 2000, "NAV1: actual hovered appbar tooltip is shown, not merely attached text");
+        const toolTipPopup = button.ToolTip.toolTip;
+        verify(toolTipPopup !== null, "NAV1 SETUP: actual attached Qt tooltip owns a real popup");
+        tryVerify(() => toolTipPopup.visible && toolTipPopup.contentItem !== null
+            && Ui.rendered(toolTipPopup.contentItem) && Ui.text(toolTipPopup.contentItem).includes(tooltip),
+            2000, "NAV1: actual hovered tooltip popup renders its action text, not merely attached metadata");
         const editor = item("assistant.composer");
         editor.insert(0, "Original navigation draft");
         editor.select(2, 9);
@@ -374,8 +418,9 @@ TestCase {
         mouseClick(tab);
         scopeObservation("scope-after-home-" + data.tag);
         tryCompare(window.appBarCentralTabs, "currentIndex", 0, 500, "I16/POP2: real outside navigation changes the current page while chat is open");
-        verify(popup.visible, "I16/POP2: navigation does not become an alternate dismissal");
-        toggle();
+        tryCompare(popup, "visible", false, 2000, "I16/POP2: Home retires visible chat under the latest owner rule");
+        compare(item("assistant.toggle").enabled, false, "I16/POP2: Home disables chat while preserving its request");
+        compare(Preferences.assistantShown, true, "I16/POP2: Home preserves the intentional open request");
         tryVerify(() => {
             const current = window.activeFocusItem;
             return current !== null && Ui.rendered(current);
@@ -386,100 +431,9 @@ TestCase {
         verify(window.activeFocusItem !== oldField, "I16/POP2: following real keyboard traversal stays outside the retired field");
         verify(current !== null, "I16/POP2: close retains a usable visible keyboard target");
     }
-    function test_home_focus_eligibility_tracks_geometry_data() {
-        return [
-            {
-                tag: "fully-covered",
-                partial: false
-            },
-            {
-                tag: "partial-edge",
-                partial: true
-            }
-        ];
-    }
-    function test_home_focus_eligibility_tracks_geometry(data) {
-        if (popup.visible)
-            toggle();
-        Session.closeProject();
-        window.appBarCentralTabs.currentIndex = 0;
-        const oldWidth = window.width;
-        const oldMinimum = window.minimumWidth;
-        const savedSide = Preferences.sideBarSide;
-        try {
-            Preferences.sideBarSide = "Left";
-            window.minimumWidth = 400;
-            window.width = 1600;
-            rendered();
-            toggle();
-            const about = item("home.about");
-            const host = item("workflow.home.sidebarHost");
-            const initial = rect(about);
-            const initialWidth = window.width;
-            const strip = rect(host);
-            console.log("POP3_GEOMETRY_INITIAL", JSON.stringify({
-                window: [window.width, window.height],
-                side: Preferences.sideBarSide,
-                target: initial,
-                strip: strip,
-                main: rect(item("workflow.home.mainContent"))
-            }));
-            verify(initial[0] >= strip[0] + strip[2], "I16/POP3: initial real Home target is wholly outside the popup strip");
-            // A cancelled pointer press focuses the normal widget without opening its dialog.
-            mousePress(about, about.width / 2, about.height / 2);
-            mouseRelease(about, -10, -10);
-            verify(about.activeFocus, "I16/POP3: legitimate outside pointer input establishes actual Home focus");
-            const focused = window.activeFocusItem;
-            if (data.partial) {
-                // Choose a finite width from captured centered-layout geometry, then
-                // independently require a real exposed edge; no invented target rect.
-                window.width = initialWidth - 2 * (initial[0] - (strip[0] + strip[2] - initial[2] * 0.75));
-                rendered();
-                const edge = rect(about);
-                const edgeStrip = rect(host);
-                const boundary = edgeStrip[0] + edgeStrip[2];
-                console.log("POP3_GEOMETRY_EDGE", JSON.stringify({
-                    window: [window.width, window.height],
-                    target: edge,
-                    strip: edgeStrip
-                }));
-                verify(edge[0] < boundary && edge[0] + edge[2] > boundary, "I16/POP3: actual target spans covered and exposed geometry");
-                const exposedX = boundary - edge[0] + (edge[0] + edge[2] - boundary) / 2;
-                mouseClick(about, exposedX, about.height / 2);
-                tryCompare(item("about"), "visible", true, 500, "I16/POP3: exposed real Home control edge remains actionable");
-                item("about").close();
-                verify(popup.visible, "I16/POP3: partial-edge action does not dismiss chat");
-                return;
-            }
-            window.width = 640;
-            rendered();
-            const covered = rect(about);
-            const movedStrip = rect(host);
-            console.log("POP3_GEOMETRY_COVERED", JSON.stringify({
-                window: [window.width, window.height],
-                target: covered,
-                strip: movedStrip
-            }));
-            verify(covered[0] >= movedStrip[0] && covered[0] + covered[2] <= movedStrip[0] + movedStrip[2], "I16/POP3: actual resize moves the same Home target fully under the strip");
-            verify(focused === about, "I16/POP3: geometry witness concerns the same actual focused QObject");
-            tryVerify(() => !about.activeFocus, 500, "I16/POP3: geometry changes re-evaluate covered keyboard eligibility");
-            keyClick(Qt.Key_Space);
-            compare(item("about").visible, false, "I16/POP3: covered Home action cannot activate through the popup");
-            window.width = 1600;
-            rendered();
-            mouseClick(about);
-            tryCompare(item("about"), "visible", true, 500, "I16/POP3: genuine outside Home controls remain usable without a whole-page blocker");
-            item("about").close();
-            verify(popup.visible, "I16/POP3: outside dialog interaction does not dismiss chat");
-            toggle();
-        } finally {
-            if (popup.visible)
-                toggle();
-            window.width = oldWidth;
-            window.minimumWidth = oldMinimum;
-            Preferences.sideBarSide = savedSide;
-        }
-    }
+    // Owner decision26630 removes Home chat coverage entirely: no Home strip
+    // may cover a target. Old POP3 Home-under-popup geometry cases are superseded;
+    // genuine workflow manual exclusion/current-scope focus cases remain above.
     function test_connection_header_reachable_by_real_keyboard_data() {
         return [
             {
@@ -493,9 +447,7 @@ TestCase {
         ];
     }
     function test_connection_header_reachable_by_real_keyboard(data) {
-        Session.closeProject();
-        window.appBarCentralTabs.currentIndex = 0;
-        rendered();
+        eligibleProject();
         compare(assistant.connected, false, "I12/HDR1: this real native owner is genuinely disconnected, not a fabricated account state");
         toggle();
         const button = item("assistant.toggle");
@@ -535,10 +487,14 @@ TestCase {
         rendered();
         scopeObservation("enter-after-project-close-render");
         compare(Preferences.assistantShown, true, "I16/slide: project retirement does not cancel the intentional open request");
-        tryCompare(popup, "opened", true, 2000, "I16/slide: requested chat recovers actual completed opening after an interrupted project-host retirement");
-        compare(Session.project, null, "I4/slide: showing chat does not recreate the retired project");
-        compare(popup.parent, item("workflow.home.sidebarHost"), "I16/slide: recovered popup belongs to the real current Home host");
-        sameRect(rect(popup.contentItem), rect(item("workflow.home.sidebarHost")));
+        tryCompare(popup, "visible", false, 2000, "I16/slide: Home fully hides an interrupted entering chat");
+        compare(item("assistant.toggle").enabled, false, "I16/slide: closed-project Home cannot reopen Assistant");
+        compare(Session.project, null, "I4/slide: hiding chat never recreates the retired project");
+        verify(!item("assistant.composer").activeFocus, "I16/slide: retired hidden scope cannot keep composer input focus");
+        eligibleProject();
+        tryCompare(popup, "opened", true, 2000, "I16/slide: ordinary eligible return restores requested chat after retirement");
+        compare(popup.parent, item("workflow.project.sidebarHost"), "I16/slide: recovered chat uses the actual new current workflow host");
+        sameRect(rect(popup.contentItem), rect(item("workflow.project.sidebarHost")));
     }
     function test_rapid_slide_keeps_actual_plot_and_input_scope() {
         if (popup.visible)

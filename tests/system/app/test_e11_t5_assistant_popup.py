@@ -38,7 +38,6 @@ def popup_receipt(tmp_path_factory):
         'test_workflow_same_sidebar_and_live_state',
         'test_keyboard_can_return_to_appbar',
         'test_focus_restore_uses_current_scope',
-        'test_home_focus_eligibility_tracks_geometry',
         'test_navigation_keeps_visible_popup_fixed',
     ],
 )

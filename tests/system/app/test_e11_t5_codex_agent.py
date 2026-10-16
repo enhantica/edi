@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from operator import itemgetter
@@ -1550,3 +1551,171 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     assert [row for row in records(trace) if row.get('method') in auth_methods] == original_auth, (
         'FILEAUTH: context approval/new work never repairs auth through another account flow'
     )
+
+
+# Private append proposal only. Uses existing module helpers and no new peer mode.
+
+def test_fileauth_repeated_manual_context_keeps_one_original_pending_interrupt(generic):
+    actor, trace = generic('clear:pending-ack')
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened'], 'FILEAUTH SETUP: actual original measured project opens'
+    connect(actor)
+    before = actor.last['vm']
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original active context retirement work')
+    settle(actor, lambda state: state['can_cancel'] and any(
+        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+    ))
+    parameter = next(row for row in actor.last['vm']['project']['parameters']
+                     if row['path'] == 'structure.cell.length_a')
+    for step in (1, 2):
+        edited = actor.command('manual_value', path=parameter['path'],
+                               value=parameter['value'] + step * 0.001)
+        assert not edited['reply']['error'], 'FILEAUTH: the real manual edit itself commits'
+        events = clear_control_events(trace)
+        assert any(event['kind'] == 'control-terminal' for event in events), (
+            'FILEAUTH SETUP: original terminal arrived while its control remains unsettled'
+        )
+        assert not any(event['kind'] == 'interrupt-ack' for event in events), (
+            'FILEAUTH SETUP: both real revisions occur before original ACK emission'
+        )
+        assert edited['vm']['connected'] and original_peer_is_live(identity), (
+            'FILEAUTH: repeated actual context revision preserves account and original process'
+        )
+        assert edited['vm']['handoff']['account_label'] == before['handoff']['account_label']
+        assert edited['vm']['models'] == before['models']
+        current = next(row for row in edited['vm']['project']['parameters']
+                       if row['path'] == parameter['path'])
+        assert current['value'] == parameter['value'] + step * 0.001
+    interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
+    active = next(event for event in clear_control_events(trace) if event['kind'] == 'active')
+    assert len(interrupts) == 1 and interrupts[0]['params'] == {
+        'threadId': active['threadId'], 'turnId': active['turnId'],
+    }, 'FILEAUTH: two real context revisions cannot duplicate or rebind the original interrupt'
+    settled = settle(actor, lambda state: not state['can_cancel'] and any(
+        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
+    ))
+    assert settled['connected'] and original_peer_is_live(identity)
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace))
+
+
+def test_fileauth_archive_refusal_preserves_committed_selection_and_manual_revision(
+    generic, tmp_path
+):
+    actor, trace = generic('clear:pending-ack')
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened']
+    path = tmp_path / 'Original-committed-selected.txt'
+    path.write_text('Original immutable selected bytes before storage failure\n')
+    token = actor.command('selected_begin')['reply']['request_id']
+    admission = actor.command('selected_add', request_id=token, urls=[path.as_uri()])
+    assert admission['reply']['accepted']
+    connect(actor)
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+    actor.command('send_text', text='Original durable conversation before failed retirement')
+    before = settle(actor, lambda state: state['can_cancel'] and any(
+        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+    ))
+    assert not before['last_error'], 'FILEAUTH SETUP: no earlier error can mask storage diagnostic'
+    assert actor.last['archive']['is_file'] and actor.last['archive']['bytes'] > 0
+    archived_hash = actor.last['archive']['sha256']
+    barrier = actor.command('persistence_barrier')
+    assert barrier['archive']['is_directory'] and (
+        barrier['reply']['preserved_sha256'] == archived_hash
+    ), (
+        'FILEAUTH SETUP: actual QSaveFile target is blocked and original bytes preserved'
+    )
+    parameter = next(row for row in before['project']['parameters']
+                     if row['path'] == 'structure.cell.length_a')
+    edited = actor.command(
+        'manual_value', path=parameter['path'], value=parameter['value'] + 0.001
+    )
+    assert not edited['reply']['error'], (
+        'FILEAUTH: archive refusal cannot undo a genuine manual action'
+    )
+    assert edited['vm']['selected_files'] == before['selected_files'], (
+        'FILEAUTH: committed selected identities survive history-publication refusal'
+    )
+    assert next(row for row in edited['vm']['project']['parameters']
+                if row['path'] == parameter['path'])['value'] == parameter['value'] + 0.001
+    assert edited['vm']['last_error'] and len(edited['vm']['last_error'].encode()) <= 512, (
+        'FILEAUTH: actual failed retirement remains publicly explained and bounded'
+    )
+    assert edited['vm']['connected'], 'FILEAUTH: storage refusal does not sign out managed auth'
+    settled = settle(actor, lambda state: not state['can_cancel'] and any(
+        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
+    ))
+    assert settled['last_error'], (
+        'FILEAUTH: public storage failure survives actual original control settlement'
+    )
+    if settled['context_consent_required']:
+        actor.command('sign_in')
+    attempted = 'Original input blocked by unresolved publication failure'
+    actor.command('send_text', text=attempted)
+    assert len(started_requests(trace)) == 1 and not users(actor, attempted), (
+        'FILEAUTH: unresolved publication failure cannot admit hidden or unsafe new work'
+    )
+    assert actor.last['vm']['selected_files'] == before['selected_files']
+    assert actor.last['vm']['last_error'], (
+        'FILEAUTH: another attempt cannot erase unresolved error'
+    )
+
+
+def test_fileauth_repeated_session_replacement_keeps_original_pending_interrupt(generic, tmp_path):
+    original = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    replacements = [tmp_path / 'Original-project-B', tmp_path / 'Original-project-C']
+    for replacement in replacements:
+        shutil.copytree(original, replacement)
+        for source in original.rglob('*'):
+            if source.is_file():
+                assert (
+                    replacement / source.relative_to(original)
+                ).read_bytes() == source.read_bytes()
+    actor, trace = generic('clear:pending-ack')
+    assert actor.command('open', path=str(original))['reply']['opened']
+    connect(actor)
+    before = actor.last['vm']
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original active work before genuine Session replacement')
+    settle(actor, lambda state: state['can_cancel'] and any(
+        row.get('payload', {}).get('id') == 'clear-prior-work' for row in state['messages']
+    ))
+    original_start = started_requests(trace)[0]
+    for replacement in replacements:
+        changed = actor.command('open', path=str(replacement))
+        assert changed['reply']['opened'], (
+            'FA1 SETUP: Session.openProject admits each distinct real project replacement; '
+            'a replacement guard refusal leaves the repeated-bind class unqualified'
+        )
+        current_path = Path(changed['vm']['project']['host_snapshot']['path']).resolve()
+        assert current_path == replacement.resolve(), (
+            'FA1 SETUP: actual replacement becomes current project, not a same-path no-op'
+        )
+        events = clear_control_events(trace)
+        assert any(event['kind'] == 'control-terminal' for event in events)
+        assert not any(event['kind'] == 'interrupt-ack' for event in events), (
+            'FA1 SETUP: both actual binds occur before original control ACK emission'
+        )
+        assert changed['vm']['connected'] and original_peer_is_live(identity), (
+            'FA1: genuine repeated Session bind retains managed account and original process'
+        )
+        assert changed['vm']['handoff']['account_label'] == before['handoff']['account_label']
+        assert changed['vm']['models'] == before['models']
+        interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
+        active = next(event for event in events if event['kind'] == 'active')
+        assert len(interrupts) == 1 and interrupts[0]['params'] == {
+            'threadId': original_start['params']['threadId'], 'turnId': active['turnId'],
+        }, 'FA1: each bind keeps the single interrupt proof bound to its original operation'
+    state = settle(actor, lambda state: not state['can_cancel'] and any(
+        event['kind'] == 'interrupt-ack' for event in clear_control_events(trace)
+    ))
+    assert state['connected'] and original_peer_is_live(identity)
+    assert len(started_requests(trace)) == 1, (
+        'FA1: replacing context never silently replays user work'
+    )
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace))
