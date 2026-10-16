@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtTest
 import edi.app
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EdiAcceptance 1.0
 import "../../unit/app/UiInteraction.js" as Ui
 
@@ -46,7 +47,28 @@ TestCase {
         verify(control.visible && control.enabled, "I16/popup: existing appbar button remains actionable");
         const requested = !Preferences.assistantShown;
         pointerObservation("before-toggle", control, requested);
-        mouseClick(control);
+        const receipts = [];
+        function receipt(name) {
+            receipts.push(name);
+            pointerObservation("button-" + name, control, requested);
+        }
+        function pressed() { receipt("pressed"); }
+        function released() { receipt("released"); }
+        function clicked() { receipt("clicked"); }
+        function canceled() { receipt("canceled"); }
+        control.pressed.connect(pressed);
+        control.released.connect(released);
+        control.clicked.connect(clicked);
+        control.canceled.connect(canceled);
+        try {
+            mouseClick(control);
+        } finally {
+            control.pressed.disconnect(pressed);
+            control.released.disconnect(released);
+            control.clicked.disconnect(clicked);
+            control.canceled.disconnect(canceled);
+            console.log("APPBAR_CONTROL_RECEIPTS", JSON.stringify(receipts));
+        }
         pointerObservation("after-toggle", control, requested);
         try {
             tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
@@ -70,6 +92,17 @@ TestCase {
             point = hit.mapFromItem(parent, point.x, point.y);
             parent = hit;
         }
+        const popups = Probe.objectsWithProperty(window, "closePolicy");
+        const visibleScopes = [];
+        for(let i=0;i<popups.length;++i) {
+            const candidate = popups[i];
+            if(!candidate.visible)continue;
+            visibleScopes.push({type: String(candidate), name: candidate.objectName,
+                parent: candidate.parent ? candidate.parent.objectName : null,
+                opened: candidate.opened, modal: candidate.modal, focus: candidate.focus,
+                closePolicy: candidate.closePolicy,
+                contentRect: candidate.contentItem ? rect(candidate.contentItem) : null});
+        }
         console.log("APPBAR_POINTER", stage, JSON.stringify({
             requested: requested, shown: Preferences.assistantShown, popupVisible: popup.visible,
             popupOpened: popup.opened, page: window.appBarCentralTabs.currentIndex,
@@ -77,7 +110,7 @@ TestCase {
             buttonVisible: control.visible, buttonEnabled: control.enabled,
             buttonFocus: control.activeFocus, buttonDown: control.down,
             buttonHovered: control.hovered, buttonRect: rect(control),
-            clickPoint: [center.x, center.y], visualHitPath: path
+            clickPoint: [center.x, center.y], visualHitPath: path, visiblePopupScopes: visibleScopes
         }));
         // childAt reports the actual visual stacking path, not a claim about
         // event acceptance by a handler or passive decorative item.
@@ -339,8 +372,12 @@ TestCase {
         const tooltip = button.ToolTip.text;
         verify(/manual|sidebar|controls/i.test(tooltip), "NAV1: shown-state tooltip describes the actual sidebar-return action");
         mouseMove(button, button.width / 2, button.height / 2);
-        const toolTipPopup = button.ToolTip.toolTip;
-        verify(toolTipPopup !== null, "NAV1 SETUP: actual attached Qt tooltip owns a real popup");
+        const candidates = Probe.objectsWithProperty(button, "closePolicy");
+        const ownedToolTips = [];
+        for(let i=0;i<candidates.length;++i)
+            if(candidates[i] instanceof EaElements.ToolTip)ownedToolTips.push(candidates[i]);
+        compare(ownedToolTips.length, 1, "NAV1 SETUP: actual Ea ToolButton owns one painted custom tooltip");
+        const toolTipPopup = ownedToolTips[0];
         tryVerify(() => toolTipPopup.visible && toolTipPopup.contentItem !== null
             && Ui.rendered(toolTipPopup.contentItem) && Ui.text(toolTipPopup.contentItem).includes(tooltip),
             2000, "NAV1: actual hovered tooltip popup renders its action text, not merely attached metadata");

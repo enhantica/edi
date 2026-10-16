@@ -471,20 +471,33 @@ def test_actual_queued_adoption_contains_notice_storage_failure_without_false_op
     observed = start(actor, trace)
     intent = observed['metadata']['intent']
     assert actor.last['archive']['is_file'] and actor.last['archive']['bytes'] > 0
-    prior_hash = actor.last['archive']['sha256']
-    barrier = actor.command('persistence_barrier')
-    assert (
-        barrier['archive']['is_directory'] and barrier['reply']['preserved_sha256'] == prior_hash
-    )
+    armed = actor.command('arm_post_adoption_barrier', intent=intent)
+    assert armed['reply']['armed'] and armed['reply']['archive_untouched']
     assert not any(
         event['kind'] == 'notice-terminal-emission' for event in old.clear_control_events(trace)
-    ), 'NOTICE SETUP: the real archive refusal precedes actual terminal and queued app result'
+    ), 'NOTICE SETUP: only the public project-publication observer is armed before terminal'
     state = old.settle(
         actor,
         lambda value: (
             value['project_present'] or bool(value['handoff']['last_error'] or value['last_error'])
         ),
     )
+    barrier = actor.last['notice_barrier']
+    assert barrier.get('project_present') and barrier.get('fresh_save_as'), (
+        'NOTICE SETUP: barrier actually fires after real managed project publication'
+    )
+    assert barrier.get('intent') == intent and not barrier.get('observer_error')
+    assert barrier.get('is_directory') and (
+        barrier['preserved_sha256'] == barrier['retained_sha256']
+    ), (
+        'NOTICE SETUP: retained terminal bytes stay preserved before notice storage refusal'
+    )
+    assert any(
+        row.get('kind') == 'assistant'
+        and row.get('status') == 'completed'
+        and row.get('text') == 'Original offline reply'
+        for row in barrier['retained_rows']
+    ), 'NOTICE SETUP: genuine successful original was durably retained before project publication'
     project_readback(state)
     assert state['connected'] and state['handoff']['account_label'] == 'original@example.invalid'
     outcome = actual_edi_result_outcome(state, intent)

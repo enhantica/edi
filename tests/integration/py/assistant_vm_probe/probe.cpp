@@ -78,7 +78,34 @@ int main(int argc,char** argv) {
 #ifdef EDI_TEST_SELECTED_FILES
     Array retired_selections;
 #endif
+    bool arm_notice_barrier=false;
+    QString notice_intent;
+    Object notice_barrier;
     auto observe=[&] {
+        QObject::connect(session.get(),&edi_app::Session::projectChanged,session.get(),[&] {
+            if(!arm_notice_barrier || !session || !session->hasProject())return;
+            arm_notice_barrier=false;
+            notice_barrier={{"intent",notice_intent},{"project_present",true},
+                {"fresh_save_as",session->needsFreshSaveAs()},
+                {"project_name",session->project()->name()}};
+            // Read only after real public project publication; never fault terminal retention.
+            try {
+                QFile retained(history);
+                if(!retained.open(QIODevice::ReadOnly))throw std::runtime_error("actual retained archive unreadable");
+                const auto bytes=retained.readAll();retained.close();
+                notice_barrier["retained_rows"]=decode(bytes);
+                notice_barrier["retained_sha256"]=QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
+                const auto backup=history+".post-adoption-preserved";
+                if(!QFile::rename(history,backup) || !QDir().mkpath(history))
+                    throw std::runtime_error("owned post-adoption archive barrier unavailable");
+                QFile saved(backup);if(!saved.open(QIODevice::ReadOnly))
+                    throw std::runtime_error("owned retained archive backup unreadable");
+                notice_barrier["preserved_sha256"]=QString::fromLatin1(QCryptographicHash::hash(saved.readAll(),QCryptographicHash::Sha256).toHex());
+                notice_barrier["is_directory"]=QFileInfo(history).isDir();
+            } catch(const std::exception& error) {
+                notice_barrier["observer_error"]=QString::fromUtf8(error.what());
+            }
+        });
 #ifdef EDI_TEST_SELECTED_FILES
         QObject::connect(session->assistant(), &edi_app::AssistantViewModel::fileSelectionRetired,
             session.get(), [&](const QString& id){retired_selections.push_back(id);});
@@ -294,6 +321,11 @@ int main(int argc,char** argv) {
             } else if(op=="archive") {
                 QFile file(history);if(!file.open(QIODevice::ReadOnly))throw std::runtime_error("isolated archive not readable");
                 result={{"rows",decode(file.readAll())}};
+            } else if(codex_mode && op=="arm_post_adoption_barrier") {
+                if(session->hasProject() || input["intent"].toString().isEmpty())
+                    throw std::invalid_argument("arm requires actual empty owner and original intent");
+                notice_intent=input["intent"].toString();notice_barrier=Object{};arm_notice_barrier=true;
+                result={{"armed",true},{"archive_untouched",true}};
             } else if(op=="persistence_barrier") {
                 // A real task-owned directory blocks QSaveFile replacement under every uid.
                 // Keep preexisting archive bytes at a separately observed task-owned backup.
@@ -335,7 +367,7 @@ int main(int argc,char** argv) {
                 else throw std::invalid_argument("unknown explicit real-owner retirement");
             } else result=fixture.dispatch(input);
             drain();
-            auto output=fixture.snapshot();output["reply"]=result;output["vm"]=snapshot();output["archive"]=archive();
+            auto output=fixture.snapshot();output["reply"]=result;output["vm"]=snapshot();output["archive"]=archive();output["notice_barrier"]=notice_barrier;
             std::cout<<encode(output).toStdString()<<'\n'<<std::flush;
         } catch(const std::exception& error) {
             std::cout<<encode(Object{{"host_error",QString::fromUtf8(error.what())}}).toStdString()<<'\n'<<std::flush;
