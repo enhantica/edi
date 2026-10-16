@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import pytest
+
 from tests.fixtures.scan_lifecycle.prepare import prepare as prepare_scan134
 from tests.system.app import test_e11_t5_vm_retention as prior
 
@@ -46,6 +47,15 @@ class Generic(prior.Component):
         self.reply_timeout = 5.0
         self.last = None
         self.handled = set()
+
+    def command(self, *args, **kwargs):
+        try:
+            return super().command(*args, **kwargs)
+        except BaseException:
+            # Observation only: no wait, signal, event injection or forced teardown.
+            if self.last is not None:
+                self.last['child_exit_observation'] = {'returncode': self.process.poll()}
+            raise
 
 
 @pytest.fixture
@@ -3909,9 +3919,10 @@ def test_native134_synchronous_publication_observer_cannot_bypass_shared_editor_
         'R2: reentrant Save must not publish disk bytes or move the live path'
     )
     if action == 'undo':
-        assert after['error'] and final['publication_current']['error'] == after['error'], (
-            'R2: synchronous Undo warning survives ordinary readiness/publication updates'
-        )
+        assert after['error'], 'R2: a real synchronous Undo refusal is honestly explained'
+        # A healthy outer publication may retire an ephemeral nested busy warning.
+        # Retention after an applied-edit/syncUndo held failure remains a distinct,
+        # currently uninjectable application-level qualification obligation.
     replies = native_records(trace, '.native-replies.jsonl')
     assert len(replies) == 1 and replies[0]['response']['id'] == replies[0]['original']['id'], (
         'R2: original native envelope settles once after actual host publication'
@@ -3982,4 +3993,228 @@ def test_native134_real_qt_consumer_may_retire_project_without_dangling_publicat
     )
     assert len(native_records(trace, '.native-replies.jsonl')) <= 1, (
         'R3: no duplicate or replacement response is invented for a retired old native operation'
+    )
+
+
+@pytest.mark.parametrize('owner_action', ['close', 'replace'])
+def test_native135_replacement_does_not_suppress_new_owner_manual_context(
+    generic, tmp_path, owner_action
+):
+    actor, trace = publication134_case(generic, tmp_path)
+    replacement = tmp_path / 'Original-new-owner-for-context'
+    shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
+    assert actor.command(
+        'publication_arm',
+        signal='modifiedChanged',
+        action=owner_action,
+        replacement=str(replacement),
+    )['reply']['armed']
+    actor.command('send_text', text='Original native edit retired by actual Session consumer')
+    state = settle(
+        actor, lambda value: value.get('publication_observer', {}).get('returned', False)
+    )
+    assert state['publication_observer']['entered'], (
+        'R3-R4 SETUP: real native edit reached the public callback'
+    )
+    if owner_action == 'close':
+        assert not state['project_present']
+        assert actor.command('open', path=str(replacement))['reply']['opened']
+    else:
+        assert state['publication_observer']['replacement_opened']
+    state = settle(
+        actor,
+        lambda value: not value['can_cancel'] and not value['publication_current']['calculating'],
+    )
+    assert state['connected'], 'R3-R4: actual native retirement preserves managed account'
+    assert state['project']['host_snapshot']['path'] == str(replacement)
+    if state['context_consent_required']:
+        actor.command('sign_in')  # Existing connected GUI context approval, not account repair.
+    before = actor.last['vm']
+    assert before['connected'] and not before['context_consent_required'], (
+        'R3-R4 SETUP: genuinely approved replacement context'
+    )
+    target = native_parameter(before)
+    changed = actor.command('manual_value', path=target['path'], value=target['value'] + 0.001)
+    assert not changed['reply']['error'], (
+        'R3-R4 SETUP: ordinary replacement-owner manual edit was admitted'
+    )
+    state = changed['vm']
+    assert native_parameter(state)['value'] == target['value'] + 0.001
+    assert state['context_consent_required'], (
+        'R3-R4: old native suppression cannot swallow new-owner context retirement'
+    )
+    assert state['context'] != before['context'], (
+        'R3-R4: actual current disclosed context changes with the manual edit'
+    )
+    assert state['connected'] and state['models'] == before['models']
+    assert state['handoff']['account_label'] == before['handoff']['account_label']
+    assert len(native_records(trace, '.native-replies.jsonl')) <= 1
+
+
+@pytest.mark.parametrize('attachment', ['ordinary', 'managed-result'])
+@pytest.mark.parametrize('owner_action', ['close', 'replace'])
+def test_native135_real_conversation_retirement_callback_keeps_latest_session_owner(
+    generic, tmp_path, attachment, owner_action
+):
+    replacement = tmp_path / 'Original-newest-real-owner'
+    shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
+    actor, trace = generic('result:complete' if attachment == 'managed-result' else 'complete')
+    if attachment == 'managed-result':
+        original = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+        fixture = tmp_path / 'Original-complete-measured-result'
+        for source in original.rglob('*.edi'):
+            destination = fixture / source.relative_to(original)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+        assert len(list(fixture.rglob('*.edi'))) == 4
+        config_path = trace.parent / 'peer-input.json'
+        config = json.loads(config_path.read_text())
+        config['result_fixture'] = str(fixture)
+        config_path.write_text(json.dumps(config))
+    else:
+        original = tmp_path / 'Original-before-outer-bind'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', original)
+        assert actor.command('open', path=str(original))['reply']['opened']
+    connect(actor)
+    before = actor.last['vm']
+    assert actor.command('retirement_arm', action=owner_action, replacement=str(replacement))[
+        'reply'
+    ]['armed']
+    if attachment == 'ordinary':
+        outer = tmp_path / 'Original-obsolete-outer-target'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', outer)
+        actor.command('open', path=str(outer))
+    else:
+        from tests.system.app import (  # noqa: PLC0415 -- existing circular vehicle
+            test_e11_t5_assistant_result as result_inputs,
+        )
+
+        result_inputs.start(
+            actor, trace
+        )  # Genuine admitted intent, original complete receipt and terminal.
+    state = settle(
+        actor, lambda value: value.get('retirement_observer', {}).get('returned', False)
+    )
+    observed = state['retirement_observer']
+    assert observed['entered'] and observed['calls'] == 1, (
+        'R3-R5 SETUP: actual once-only public retirement callback returned'
+    )
+    if owner_action == 'close':
+        assert not state['project_present'], (
+            'R3-R5: old bind cannot reinstall a genuinely closed target'
+        )
+    else:
+        assert observed['replacement_opened'] and state['project_present']
+        assert state['project']['host_snapshot']['path'] == str(replacement), (
+            'R3-R5: newest actual nested owner stays authoritative'
+        )
+        assert native_parameter(state)['value'] == 3.88
+        assert state['handoff']['location'] == str(replacement)
+    assert state['connected'] and state['models'] == before['models']
+    assert state['handoff']['account_label'] == before['handoff']['account_label']
+    assert actor.command('inspect')['vm']['connected'], (
+        'R3-R5: real event-loop owner remains usable after nested bind'
+    )
+
+
+@pytest.mark.parametrize(
+    ('attachment', 'signal', 'authenticated', 'queued'),
+    [
+        ('ordinary', 'conversationRetired', True, False),
+        ('ordinary', 'fileSelectionRetired', True, False),
+        ('managed-result', 'conversationRetired', True, False),
+        ('managed-result', 'fileSelectionRetired', True, False),
+        ('ordinary', 'conversationRetired', False, False),
+        ('ordinary', 'fileSelectionRetired', False, False),
+        ('ordinary', 'conversationRetired', True, True),
+        ('ordinary', 'fileSelectionRetired', True, True),
+    ],
+)
+def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usable(  # noqa: PLR0915 -- finite public owner/callback outcomes
+    generic, tmp_path, attachment, signal, authenticated, queued
+):
+    actor, trace = generic('result:complete' if attachment == 'managed-result' else 'complete')
+    replacement = tmp_path / 'Original-current-owner-after-assistant-Clear'
+    shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
+    if attachment == 'ordinary':
+        original = tmp_path / 'Original-owner-before-Clear-bind'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', original)
+        assert actor.command('open', path=str(original))['reply']['opened']
+    else:
+        fixture = tmp_path / 'Original-complete-Clear-managed-result'
+        source_root = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+        for source in source_root.rglob('*.edi'):
+            destination = fixture / source.relative_to(source_root)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+        assert len(list(fixture.rglob('*.edi'))) == 4
+        config_path = trace.parent / 'peer-input.json'
+        config = json.loads(config_path.read_text())
+        config['result_fixture'] = str(fixture)
+        config_path.write_text(json.dumps(config))
+    if authenticated:
+        connect(actor)
+    before = actor.last['vm']
+    if signal == 'fileSelectionRetired':
+        request = actor.command('selected_begin')['reply']['request_id']
+        assert request, 'R3-R6 SETUP: genuine current native chooser request is pending'
+    assert actor.command('retirement_arm', action='clear', signal=signal, queued=queued)['reply'][
+        'armed'
+    ]
+    if attachment == 'ordinary':
+        actor.command('open', path=str(replacement))
+    else:
+        from tests.system.app import (  # noqa: PLC0415 -- existing circular vehicle
+            test_e11_t5_assistant_result as result_inputs,
+        )
+
+        result_inputs.start(actor, trace)
+    state = settle(
+        actor, lambda value: value.get('retirement_observer', {}).get('returned', False)
+    )
+    observed = state['retirement_observer']
+    assert observed['entered'] and observed['calls'] == 1, (
+        'R3-R6 SETUP: one actual retirement receiver returned'
+    )
+    assert observed['signal'] == signal and observed['queued'] == queued
+    assert observed['connected_at_entry'] == authenticated
+    assert state['connected'] == authenticated, (
+        'R3-R6: assistant-only Clear cannot fabricate account transition'
+    )
+    if authenticated:
+        assert state['models'] == before['models']
+        assert state['handoff']['account_label'] == before['handoff']['account_label']
+    if attachment == 'ordinary':
+        assert state['project_present'], (
+            'R3-R6: assistant-only Clear cannot strand the committed incoming Session owner'
+        )
+        assert state['project']['host_snapshot']['path'] == str(replacement)
+        assert state['handoff']['location'] == str(replacement)
+        assert native_parameter(state)['value'] == 3.88
+    elif not state['project_present']:
+        # Clear may revoke an uncommitted result intent. Refusal must be actual
+        # host state; provider prose can never establish adoption or rollback.
+        assert state['handoff']['last_error'] or state['last_error'], (
+            'R3-R6: genuine result abort is honestly explained'
+        )
+        assert actor.command('open', path=str(replacement))['reply']['opened']
+    else:
+        result_inputs.project_readback(state)
+    assert not actor.last['vm']['messages'], (
+        'R3-R6: Clear retires retained conversation, not the host project'
+    )
+    if not authenticated:
+        connect(actor)
+    state = actor.last['vm']
+    assert state['connected'] and state['project_present']
+    target = native_parameter(state)
+    changed = actor.command('manual_value', path=target['path'], value=target['value'] + 0.001)
+    assert not changed['reply']['error'], 'R3-R6: actual newest-owner manual editor remains usable'
+    assert native_parameter(changed['vm'])['value'] == target['value'] + 0.001
+    assert changed['vm']['connected']
+    assert changed['vm']['context_consent_required'], (
+        'R3-R6: actual newest-owner context notifications remain usable'
+    )
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
     )

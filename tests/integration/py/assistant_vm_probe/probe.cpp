@@ -4,6 +4,7 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/selectors.hpp"
 #include "edi/calculation.hpp"
 #include "fit_view_model.hpp"
 #include "experiment_view_model.hpp"
@@ -131,6 +132,9 @@ int main(int argc,char** argv) {
             {"is_directory",QFileInfo(history).isDir()},{"bytes",static_cast<double>(bytes.size())},
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
     };
+    Object retirement_observer;
+    bool retirement_armed=false;
+    QMetaObject::Connection retirement_connection;
     Object publication_observer;
     QPointer<edi_app::ProjectViewModel> publication_owner;
     bool publication_armed=false;
@@ -284,6 +288,7 @@ int main(int argc,char** argv) {
                 result["publication_owner_alive"]=!publication_owner.isNull();
                 result["publication_current"]=publication_values(session->project());
             }
+            if(!retirement_observer.isEmpty())result["retirement_observer"]=retirement_observer;
             result["policy"]=Object{
                 {"record_bytes",static_cast<double>(edi::assistant::Limits::record_bytes)},
                 {"message_bytes",static_cast<double>(edi::assistant::Limits::message_bytes)},
@@ -370,6 +375,40 @@ int main(int argc,char** argv) {
                 result={{"method_present",present},{"invoked",invoked}};
             }
 #endif
+            else if(codex_mode && op=="retirement_arm") {
+                QObject::disconnect(retirement_connection);
+                retirement_armed=true;retirement_observer={{"armed",true},{"calls",0}};
+                const auto action=input["action"].toString(),replacement=input["replacement"].toString();
+                const auto signal=input["signal"].toString("conversationRetired");
+                const bool queued=input["queued"].toBool();
+                if(action!="close" && action!="replace" && action!="clear")throw std::invalid_argument("finite retirement action required");
+                auto callback=[&,action,replacement,signal,queued] {
+                    if(!retirement_armed)return;retirement_armed=false;
+                    QPointer<edi_app::ProjectViewModel> entering=session->project();
+                    retirement_observer["calls"]=retirement_observer["calls"].toInt()+1;
+                    retirement_observer["entered"]=true;
+                    retirement_observer["entering_present"]=!entering.isNull();
+                    retirement_observer["entering_path"]=entering?entering->path():QString{};
+                    retirement_observer["signal"]=signal;
+                    retirement_observer["queued"]=queued;
+                    retirement_observer["connected_at_entry"]=session->assistant()->connected();
+                    if(action=="close")session->closeProject();
+                    else if(action=="clear")session->assistant()->clearHistory();
+                    else retirement_observer["replacement_opened"]=session->openProject(QUrl::fromLocalFile(replacement));
+                    retirement_observer["entering_alive_after_callback"]=!entering.isNull();
+                    retirement_observer["current_present_after_callback"]=session->project()!=nullptr;
+                    retirement_observer["current_path_after_callback"]=session->project()?session->project()->path():QString{};
+                    retirement_observer["connected_after_callback"]=session->assistant()->connected();
+                    retirement_observer["returned"]=true;
+                };
+                const auto type=queued?Qt::QueuedConnection:Qt::DirectConnection;
+                if(signal=="conversationRetired")retirement_connection=QObject::connect(session->assistant(),
+                    &edi_app::AssistantViewModel::conversationRetired,session.get(),callback,type);
+                else if(signal=="fileSelectionRetired")retirement_connection=QObject::connect(session->assistant(),
+                    &edi_app::AssistantViewModel::fileSelectionRetired,session.get(),callback,type);
+                else throw std::invalid_argument("actual retirement signal required");
+                result={{"armed",true}};
+            }
             else if(codex_mode && op=="publication_inspect")result=publication_values(session->project());
             else if(codex_mode && op=="publication_seed_undo") {
                 auto* owner=session->project();if(!owner)throw std::runtime_error("real project required");
@@ -379,9 +418,13 @@ int main(int argc,char** argv) {
                 edi::Parameter* parameter=nullptr;
                 for(const auto& entry:edi::parameter_entries(*live))if(entry.path==path)parameter=entry.parameter;
                 if(!parameter)throw std::runtime_error("original independent cell parameter unavailable");
+                std::string unique_name;
+                for(const auto& slot:edi::named_slots(*live))
+                    if(slot.parameter==parameter)unique_name=slot.unique_name;
+                if(unique_name.empty())throw std::runtime_error("original parameter has no actual refinable unique name");
                 const bool before=parameter->free.get();
-                const auto change=edi::Edit::set_free(*live,{{path,!before}});
-                result={{"error",owner->applyRecordedFreeFlags(change,{{path,before}})}};
+                const auto change=edi::Edit::set_free(*live,{{unique_name,!before}});
+                result={{"error",owner->applyRecordedFreeFlags(change,{{unique_name,before}})}};
             }
             else if(codex_mode && op=="publication_scan_start") {
                 if(!session->project())throw std::runtime_error("real scan project required");
