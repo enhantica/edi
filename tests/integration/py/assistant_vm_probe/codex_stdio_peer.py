@@ -1124,6 +1124,127 @@ def usage_interrupt(request):
     notify('turn/completed', {'threadId': thread_id, 'turn': turn('interrupted')})
 
 
+# Opt-in offline protocol cases only; no accounts, browser or service is accessed.
+signin206_state = {'completed': False}
+SIGNIN206_CANARY = 'SIGNIN206_PRIVATE_REPLY_CANARY'
+SIGNIN206_AUTH_URL = 'https://auth.openai.com/oauth/authorize?state=SIGNIN206_URL_CANARY'
+SIGNIN206_LOGIN_ID = 'original-offline-chatgpt-login-206'
+
+
+def signin206_record(value):
+    with trace.with_suffix('.signin206-emissions.jsonl').open('a', encoding='utf-8') as output:
+        output.write(json.dumps(value, ensure_ascii=False) + '\n')
+
+
+def signin206_reply(request, result=None, *, error=None):
+    envelope = {'id': request['id'], 'error' if error is not None else 'result':
+                error if error is not None else result}
+    signin206_record({'method': request['method'], 'envelope': envelope})
+    emit(envelope)
+
+
+def signin206_dispatch(request):  # noqa: PLR0911, PLR0912, PLR0915 -- finite public bootstrap shapes
+    variant = config['signin206_variant']
+    method = request['method']
+    if method == 'account/read' and variant.startswith('account:'):
+        kind = variant.removeprefix('account:')
+        if signin206_state['completed']:
+            account = {'type': 'chatgpt', 'email': 'original@example.invalid', 'planType': 'plus'}
+        elif kind == 'api-key':
+            account = {'type': 'apiKey'}
+        elif kind == 'bedrock':
+            account = {'type': 'amazonBedrock', 'usesCodexManagedCredentials': False}
+        elif kind == 'none':
+            account = None
+        elif kind == 'unknown':
+            account = {'type': SIGNIN206_CANARY}
+        else:
+            account = {'type': 'chatgpt', 'email': {'private': SIGNIN206_CANARY},
+                       'planType': 'plus'}
+        signin206_reply(request, {'account': account, 'requiresOpenaiAuth': account is None})
+        return True
+    if method == 'account/login/start' and variant.startswith('account:'):
+        # A wrong method/variant is observed as a real RPC refusal, never faked success.
+        if request.get('params', {}).get('type') != 'chatgpt':
+            signin206_reply(request, error={'code': -32600, 'message': SIGNIN206_CANARY})
+            return True
+        signin206_reply(request, {'type': 'chatgpt', 'loginId': SIGNIN206_LOGIN_ID,
+                                 'authUrl': SIGNIN206_AUTH_URL})
+        signin206_state['completed'] = True
+        completed = {'loginId': SIGNIN206_LOGIN_ID, 'success': True, 'error': None}
+        signin206_record({'notification': 'account/login/completed', 'params': completed})
+        notify('account/login/completed', completed)
+        return True
+    if method != 'skills/list':
+        return False
+    if variant == 'stage:shape':
+        signin206_reply(request, SIGNIN206_CANARY)
+        return True
+    if variant == 'stage:rpc-refused':
+        signin206_reply(request, error={'code': -32603, 'message': SIGNIN206_CANARY,
+                                       'data': {'private': SIGNIN206_CANARY}})
+        return True
+    if not variant.startswith('skills:'):
+        return False
+    kind = variant.removeprefix('skills:')
+    entries = []
+    for cwd in request.get('params', {}).get('cwds', []):
+        skills = [
+            {'name': skill.parent.name, 'description': 'Original fixture ' + skill.parent.name,
+             'enabled': True, 'scope': 'repo', 'path': str(skill)}
+            for skill in sorted((Path(cwd) / '.agents/skills').glob('*/SKILL.md'))
+            if skill.is_file() and not skill.is_symlink()
+        ]
+        # All source paths come from genuine admitted workspace files, not invented IDs.
+        assert skills, 'SIGNIN206 SETUP: prepared real shipped skills exist before variant'
+        required_path = skills[0]['path']
+        errors = []
+        if kind == 'unrelated':
+            unrelated = Path(config['signin206_unrelated_path'])
+            assert unrelated.is_file() and not unrelated.is_relative_to(Path(cwd)), (
+                'SIGNIN206 SETUP: global discovery diagnostic is outside the staged workspace'
+            )
+            errors = [{'path': str(unrelated), 'message': SIGNIN206_CANARY}]
+        elif kind == 'required-error':
+            errors = [{'path': required_path, 'message': SIGNIN206_CANARY}]
+        elif kind == 'malformed-error':
+            errors = [{'path': required_path, 'message': {'private': SIGNIN206_CANARY}}]
+        elif kind == 'missing':
+            skills = skills[1:]
+        elif kind == 'disabled':
+            skills[0]['enabled'] = False
+        elif kind == 'duplicate':
+            skills.append(dict(skills[0]))
+        entries.append({'cwd': cwd, 'skills': skills, 'errors': errors})
+    signin206_reply(request, {'data': entries})
+    return True
+
+
+# Pinned092d3acd permissions/manager compatibility policy: cwd is implicit;
+# writableRoots are additional. This changes opt-in RESPONSE projection only.
+def roots207_response(request, value):
+    cwd = request['params']['cwd']
+    requested = request['params'].get('config', {}).get('sandbox_workspace_write', {}).get(
+        'writable_roots', [cwd]
+    )
+    additional = [root for root in requested if root != cwd]
+    variant = config['roots207_variant']
+    roots = list(additional)
+    if variant == 'extra':
+        roots.append(config['roots207_ungranted'])
+    elif variant == 'duplicate-cwd':
+        roots.extend([cwd, cwd])
+    elif variant == 'missing-chosen' and additional:
+        roots = []
+    elif variant == 'duplicate-chosen' and additional:
+        roots.append(additional[0])
+    value['sandbox']['writableRoots'] = roots
+    with trace.with_suffix('.roots207-responses.jsonl').open('a', encoding='utf-8') as output:
+        output.write(json.dumps({'request_id': request['id'], 'request_cwd': cwd,
+            'requested_roots': requested, 'response_cwd': value['cwd'],
+            'returned_roots': roots, 'sandbox': value['sandbox']}) + '\n')
+
+
 for line in sys.stdin:
     request = json.loads(line)
     with trace.open('a', encoding='utf-8') as output:
@@ -1180,6 +1301,8 @@ for line in sys.stdin:
                 },
             })
             continue
+    if config.get('signin206_variant') and signin206_dispatch(request):
+        continue
     if method == 'initialize':
         experimental_api = (params.get('capabilities') or {}).get('experimentalApi') is True
         reply(
@@ -1331,6 +1454,8 @@ for line in sys.stdin:
                 'turns': [],
             },
         }
+        if config.get('roots207_variant'):
+            roots207_response(request, value)
         if scenario == 'different-cwd':
             value['cwd'] = str(trace.parent / 'unadmitted-workspace')
         elif scenario == 'network-enabled':

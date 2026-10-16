@@ -5659,3 +5659,434 @@ def test_folder167_consumed_callback_is_once_only_and_temporary_retires_path_aut
     assert list(chosen.iterdir()) == list(unrelated.iterdir()) == [], (
         'FOLDER: callback replay and prose alone cannot create files in either external path'
     )
+
+
+SIGNIN206_CANARY = 'SIGNIN206_PRIVATE_REPLY_CANARY'
+SIGNIN206_AUTH_URL = 'https://auth.openai.com/oauth/authorize?state=SIGNIN206_URL_CANARY'
+
+
+def signin206_case(generic, variant):
+    # Existing fileauth IDs/terminal machinery stay intact across genuine context refresh.
+    actor, trace = generic('fileauth')
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['signin206_variant'] = variant
+    if variant == 'skills:unrelated':
+        global_skill = trace.parent / 'original-user-skills/unrelated-original/SKILL.md'
+        global_skill.parent.mkdir(parents=True)
+        global_skill.write_text('---\nname: [original malformed global metadata\n---\n')
+        config['signin206_unrelated_path'] = str(global_skill)
+    config_path.write_text(json.dumps(config))  # Before the peer's one-time process read.
+    return actor, trace
+
+
+def signin206_emissions(trace):
+    return native_records(trace, '.signin206-emissions.jsonl')
+
+
+def signin206_diagnostic(state, method, codes, *, canary=SIGNIN206_CANARY):
+    error = state['last_error']
+    assert error.startswith('ChatGPT sign-in could not continue while '), (
+        'SIGNIN206: original bootstrap failure has an app-authored human-readable stage'
+    )
+    assert any(error.endswith('[' + method + ': ' + code + '].') for code in codes), (
+        'SIGNIN206: diagnostic correlates the original app request method and fixed cause family'
+    )
+    assert canary not in json.dumps(state), (
+        'SIGNIN206: no public row/context/status field leaks the original private reply canary'
+    )
+    if method == 'skills/list':
+        assert 'checking bundled skills' in error, (
+            'SIGNIN206: skills reply is diagnosed at its original discovery stage'
+        )
+    assert len(error.encode()) <= 512 and not any(value in error for value in (
+        canary, 'SIGNIN206_URL_CANARY', 'original@example.invalid',
+        'https://auth.openai.com', '/.agents/skills/',
+    )), 'SIGNIN206: bounded public diagnostics contain no raw reply/credential/URL/path canary'
+
+
+def signin206_shipped(state, trace):
+    resource = ROOT / 'data/assistant/skills'
+    entries = json.loads((resource / 'index.json').read_text())['skills']
+    expected = {entry['id']: entry for entry in entries}
+    actual = {entry['id']: entry for entry in state['skills']}
+    assert len(state['skills']) == len(expected) and set(actual) == set(expected), (
+        'SIGNIN206: every real required shipped registration survives unrelated discovery errors'
+    )
+    thread = [row for row in records(trace) if row.get('method') == 'thread/start'][-1]
+    workspace = Path(thread['params']['cwd'])
+    for identifier, original in expected.items():
+        content = (resource / original['path']).read_bytes()
+        assert hashlib.sha256(content).hexdigest() == original['sha256'], (
+            'SIGNIN206 SETUP: independent shipped input matches original declared content bond'
+        )
+        staged = workspace / '.agents/skills' / original['path']
+        assert Path(actual[identifier]['path']) == staged and staged.read_bytes() == content, (
+            'SIGNIN206: actual registration is its genuine immutable admitted workspace file'
+        )
+        assert actual[identifier]['content'].encode() == content, (
+            'SIGNIN206: registering a healthy skill preserves its original complete guidance'
+        )
+    assert {tool['name'] for tool in thread['params']['dynamicTools']} == {
+        'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
+        'run_fit', 'create_cwl_project', 'add_relations',
+    }, 'SIGNIN206: discovery errors cannot silently expand or trim the real eight-tool stage'
+
+
+@pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
+def test_signin206_unrelated_discovery_error_preserves_shipped_bootstrap_and_context(
+    generic, tmp_path, loaded
+):
+    actor, trace = signin206_case(generic, 'skills:unrelated')
+    if loaded:
+        owned = trace.parent / 'original-owned-project'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', owned)
+        assert actor.command('open', path=str(owned))['reply']['opened'], (
+            'SIGNIN206 SETUP: actual owned original project opens before managed bootstrap'
+        )
+    original_project = actor.last['vm']['project']
+    connect(actor)
+    before = actor.last['vm']
+    assert before['models'] and not before['last_error'], (
+        'SIGNIN206: well-formed unrelated discovery failure cannot reject intact required skills'
+    )
+    signin206_shipped(before, trace)
+    assert before['project'] == original_project, (
+        'SIGNIN206: initial managed bootstrap preserves the actual empty/loaded original owner'
+    )
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original healthy discovery conversation')
+    before = settle(actor, lambda state: not state['can_cancel'] and any(
+        row.get('text') == 'Original fileauth reply 1' for row in state['messages']
+    ))
+    retained = {row['id']: row for row in before['messages']}
+    selected = tmp_path / 'original-context-refresh.txt'
+    selected.write_text('Original harmless independently supplied selected bytes\n')
+    intent = actor.command('selected_begin')['reply']['request_id']
+    assert intent and actor.command('selected_add', request_id=intent,
+                                    urls=[selected.as_uri()])['reply']['accepted'], (
+        'SIGNIN206 SETUP: genuine settled public file intake changes disclosed context'
+    )
+    changed = actor.last['vm']
+    assert changed['connected'] and changed['context_consent_required'], (
+        'SIGNIN206: context retirement preserves real authentication and requires fresh disclosure'
+    )
+    actor.command('sign_in')  # Existing actual GUI consent method, already-authenticated only.
+    assert not actor.last['vm']['context_consent_required'], (
+        'SIGNIN206: genuine connected context approval consumes only current disclosure'
+    )
+    actor.command('send_text', text='Original fresh input after discovery/context retirement')
+    after = settle(actor, lambda state: not state['can_cancel'] and any(
+        row.get('text') == 'Original fileauth reply 2' for row in state['messages']
+    ))
+    assert after['connected'] and original_peer_is_live(identity), (
+        'SIGNIN206: healthy refreshed context uses the preserved actual managed process'
+    )
+    assert after['models'] == before['models'] and (
+        after['handoff']['account_label'] == before['handoff']['account_label']
+    ), 'SIGNIN206: discovery/context refresh preserves original account and complete model catalog'
+    assert all(row in after['messages'] for row in retained.values()), (
+        'SIGNIN206: refreshing required skill context retains every original conversation row'
+    )
+    assert len(started_requests(trace)) == 2, (
+        'SIGNIN206: only the two explicit genuine inputs are admitted once; no automatic replay'
+    )
+    signin206_shipped(after, trace)
+    responses = [row for row in signin206_emissions(trace) if row.get('method') == 'skills/list']
+    assert responses and all(row['envelope']['result']['data'] for row in responses), (
+        'SIGNIN206 SETUP: original skills replies actually carry healthy registrations and errors'
+    )
+    for response in responses:
+        for entry in response['envelope']['result']['data']:
+            assert entry['errors'] and all(
+                Path(error['path']).is_file() and not Path(error['path']).is_relative_to(
+                    Path(entry['cwd'])
+                ) for error in entry['errors']
+            ), 'SIGNIN206 SETUP: actual unrelated global errors are outside every staged workspace'
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), (
+        'SIGNIN206: unrelated discovery errors never repair authentication through login/logout'
+    )
+
+
+@pytest.mark.parametrize(('variant', 'codes'), [
+    ('required-error', {'SKILL_DISCOVERY'}),
+    ('malformed-error', {'SKILL_SHAPE', 'SKILL_DISCOVERY'}),
+    ('missing', {'BUNDLED_SKILL_MISSING'}),
+    ('disabled', {'BUNDLED_SKILL_DISABLED'}),
+    ('duplicate', {'SKILL_SHAPE', 'BUNDLED_SKILL_CHANGED'}),
+])
+def test_signin206_relevant_malformed_or_incomplete_required_discovery_refuses(
+    generic, variant, codes
+):
+    actor, trace = signin206_case(generic, 'skills:' + variant)
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    assert not state['connected'] and state['last_error'], (
+        'SIGNIN206: relevant/malformed/missing/disabled/duplicate required skills fail closed'
+    )
+    signin206_diagnostic(state, 'skills/list', codes)
+    assert not any(
+        row.get('method') in {'thread/start', 'turn/start'} for row in records(trace)
+    ), (
+        'SIGNIN206: failed required registration cannot mint thread or inference authority'
+    )
+    assert signin206_emissions(trace)[-1]['method'] == 'skills/list', (
+        'SIGNIN206 SETUP: the original correlated discovery reply reached its real parser door'
+    )
+
+
+@pytest.mark.parametrize(
+    ('variant', 'code'), [('shape', 'RESULT_SHAPE'), ('rpc-refused', 'RPC_REFUSED')]
+)
+def test_signin206_original_bad_reply_reports_fixed_stage_without_raw_canary(
+    generic, variant, code
+):
+    actor, trace = signin206_case(generic, 'stage:' + variant)
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    assert not state['connected'], (
+        'SIGNIN206: original malformed/refused reply never becomes ready'
+    )
+    signin206_diagnostic(state, 'skills/list', {code})
+    original = signin206_emissions(trace)
+    assert len(original) == 1 and original[0]['method'] == 'skills/list', (
+        'SIGNIN206 SETUP: exact original bad reply and original request identity are retained'
+    )
+    request = next(row for row in records(trace) if row.get('method') == 'skills/list')
+    assert original[0]['envelope']['id'] == request['id'], (
+        'SIGNIN206: failure-stage attribution belongs to the original app-owned RPC envelope'
+    )
+    assert SIGNIN206_CANARY in json.dumps(original[0]['envelope']), (
+        'SIGNIN206 SETUP: the untrusted response actually contains the private leak canary'
+    )
+
+
+@pytest.mark.parametrize('kind', ['api-key', 'bedrock', 'none'])
+def test_signin206_explicit_chatgpt_selection_uses_real_public_login_response_and_url(
+    generic, kind
+):
+    actor, trace = signin206_case(generic, 'account:' + kind)
+    initial_messages = actor.last['vm']['messages']
+    control = actor.command('desktop_control')
+    assert control['reply']['ok'] and control['vm']['report_observer']['urls'] == [
+        control['reply']['control_url']
+    ], 'SIGNIN206 SETUP: genuine Qt URL handler is installed before any browser handoff'
+    actor.command('report_observer_reset')
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    assert state['connected'] and not state['last_error'] and state['models'], (
+        'SIGNIN206: explicit ChatGPT sign-in reaches real managed account/catalog readiness'
+    )
+    requests = records(trace)
+    logins = [row for row in requests if row.get('method') == 'account/login/start']
+    assert len(logins) == 1 and logins[0]['params']['type'] == 'chatgpt', (
+        'SIGNIN206: known nonmanaged/null account triggers one explicit ChatGPT route'
+    )
+    assert state['report_observer']['urls'] == [SIGNIN206_AUTH_URL], (
+        'SIGNIN206: original public login auth URL reaches Qt observer once, never a real browser'
+    )
+    assert state['handoff']['account_label'] == 'original@example.invalid', (
+        'SIGNIN206: readiness follows fresh authoritative managed account read'
+    )
+    emissions = signin206_emissions(trace)
+    completed = next(
+        row for row in emissions if row.get('notification') == 'account/login/completed'
+    )
+    login_reply = next(row for row in emissions if row.get('method') == 'account/login/start')
+    assert login_reply['envelope']['id'] == logins[0]['id'] and (
+        login_reply['envelope']['result']['loginId'] == completed['params']['loginId']
+    ), 'SIGNIN206: original login response and completed notification bind the same actual login'
+    account_reads = [row for row in requests if row.get('method') == 'account/read']
+    assert len(account_reads) >= 2 and (
+        requests.index(account_reads[0]) < requests.index(logins[0])
+        < requests.index(account_reads[-1])
+    ), 'SIGNIN206: authoritative account is re-read after the original explicit login request'
+    assert not any(row.get('method') in {'account/logout', 'turn/start'} for row in requests), (
+        'SIGNIN206: selecting ChatGPT neither logs out another account nor sends inference'
+    )
+    signin206_shipped(state, trace)
+    initial_ids = {row['id'] for row in initial_messages}
+    assert not any(row['id'] not in initial_ids and row.get('kind') in {'user', 'assistant'}
+                   for row in state['messages']), (
+        'SIGNIN206: login alone cannot invent user or assistant conversation'
+    )
+
+
+@pytest.mark.parametrize('kind', ['unknown', 'malformed'])
+def test_signin206_unknown_or_malformed_account_remains_closed_without_browser(generic, kind):
+    actor, trace = signin206_case(generic, 'account:' + kind)
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    assert not state['connected'], (
+        'SIGNIN206: unknown/malformed account cannot acquire managed authority'
+    )
+    signin206_diagnostic(state, 'account/read', {'ACCOUNT_KIND', 'RESULT_SHAPE'})
+    assert not state['report_observer']['urls'] and not any(
+        row.get('method') in {'account/login/start', 'thread/start', 'turn/start'}
+        for row in records(trace)
+    ), 'SIGNIN206: malformed/unknown kind cannot trigger browser or inference fallback'
+
+
+def roots207_case(generic, variant):
+    actor, trace = generic('fileauth')
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    ungranted = trace.parent / 'Original ungranted root'
+    ungranted.mkdir()
+    config.update(roots207_variant=variant, roots207_ungranted=str(ungranted))
+    config_path.write_text(json.dumps(config))  # Genuine one-time prelaunch peer input.
+    return actor, trace
+
+
+def roots207_responses(trace):
+    return native_records(trace, '.roots207-responses.jsonl')
+
+
+def roots207_policy(response):
+    policy = response['sandbox']
+    assert policy['type'] == 'workspaceWrite' and policy['networkAccess'] is False and (
+        policy['excludeSlashTmp'] is True and policy['excludeTmpdirEnvVar'] is True
+    ), 'ROOTS207: implicit workspace representation cannot loosen network/temporary policy'
+    assert response['response_cwd'] == response['request_cwd'], (
+        'ROOTS207: fixtures preserve exact original cwd identity while varying explicit root shape'
+    )
+
+
+@pytest.mark.parametrize('variant', ['implicit', 'extra', 'duplicate-cwd'])
+def test_roots207_implicit_workspace_connects_but_extra_or_duplicate_explicit_roots_refuse(
+    generic, variant
+):
+    actor, trace = roots207_case(generic, variant)
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    responses = roots207_responses(trace)
+    assert len(responses) == 1, 'ROOTS207 SETUP: one original effective thread reply is observed'
+    response = responses[0]
+    roots207_policy(response)
+    assert all(root == response['request_cwd'] for root in response['requested_roots']), (
+        'ROOTS207 SETUP: genuine temporary mode admits no separately chosen directory'
+    )
+    if variant == 'implicit':
+        assert response['returned_roots'] == [], (
+            'ROOTS207 SETUP: actual original reply omits implicit cwd from additional roots'
+        )
+        assert state['connected'] and state['models'] and not state['last_error'], (
+            'ROOTS207: validated implicit workspace access with zero additional roots connects'
+        )
+        signin206_shipped(state, trace)
+        after = folder167_send(actor, trace, 'Original input within implicit workspace')
+        assert after['connected'] and len(started_requests(trace)) == 1, (
+            'ROOTS207: real current input works once after implicit-root admission'
+        )
+        folder167_policy(trace, None)
+    else:
+        if variant == 'duplicate-cwd':
+            assert response['returned_roots'].count(response['request_cwd']) == 2, (
+                'ROOTS207 SETUP: actual explicit array repeats cwd twice despite implicit access'
+            )
+        else:
+            assert len(response['returned_roots']) == 1 and (
+                response['returned_roots'][0] not in response['requested_roots']
+            ), 'ROOTS207 SETUP: actual reply grants a real unrequested additional directory'
+        assert not state['connected'], (
+            'ROOTS207: implicit workspace does not forgive extra or duplicate explicit roots'
+        )
+        signin206_diagnostic(state, 'thread/start', {'THREAD_ROOTS'})
+        assert not started_requests(trace), (
+            'ROOTS207: invalid effective roots refuse before original inference admission'
+        )
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), (
+        'ROOTS207: root validation never repairs auth by login'
+    )
+
+
+@pytest.mark.parametrize('variant', ['chosen-only', 'missing-chosen', 'duplicate-chosen'])
+def test_roots207_real_chosen_grant_remains_required_with_implicit_workspace(
+    generic, tmp_path, variant
+):
+    actor, trace = roots207_case(generic, variant)
+    connect(actor)  # Initial response has implicit workspace and no chosen additional root.
+    assert roots207_responses(trace)[0]['returned_roots'] == [], (
+        'ROOTS207 SETUP: actual healthy implicit-root bootstrap precedes real picker grant'
+    )
+    before = folder167_send(actor, trace, 'Original conversation before current chosen grant')
+    identity = live_original_peer(actor)
+    chosen = tmp_path / 'Original explicitly chosen scope'
+    chosen.mkdir()
+    sentinel = chosen / 'Original user bytes.txt'
+    sentinel.write_bytes(b'Original bytes are not overwrite authorization\n')
+    intent = actor.command('working_folder_begin')['reply']
+    assert intent['invoked'] and intent['intent'], 'ROOTS207 SETUP: genuine current picker intent'
+    completed = actor.command(
+        'working_folder_complete', intent=intent['intent'], directory=str(chosen)
+    )
+    assert completed['reply']['invoked'] and completed['reply']['accepted'], (
+        'ROOTS207 SETUP: genuine local callback, not chat text, grants this selected path'
+    )
+    folder167_preserved(before, completed['vm'], trace)
+    native145_approve(actor)
+    text = 'Original current input requiring the actual selected grant'
+    actor.command('send_text', text=text)
+    state = settle(actor, lambda value: bool(value['last_error']) or (
+        not value['can_cancel'] and len(started_requests(trace)) == 2
+        and any(row.get('text') == 'Original fileauth reply 2' for row in value['messages'])
+    ))
+    responses = roots207_responses(trace)
+    selected = [response for response in responses if str(chosen.resolve()) in (
+        response['requested_roots']
+    )]
+    assert len(selected) == 1, (
+        'ROOTS207 SETUP: real selected scope reaches one new original thread policy reply'
+    )
+    response = selected[0]
+    roots207_policy(response)
+    assert str(chosen.resolve()) != response['request_cwd'], (
+        'ROOTS207 SETUP: chosen grant is genuinely additional to the current workspace'
+    )
+    if variant == 'chosen-only':
+        assert response['returned_roots'] == [str(chosen.resolve())], (
+            'ROOTS207 SETUP: effective reply retains only the genuine additional chosen grant'
+        )
+        assert state['connected'] and not state['last_error'] and (
+            len(started_requests(trace)) == 2
+        ), (
+            'ROOTS207: implicit workspace plus the actual chosen grant admits original work'
+        )
+        folder167_preserved(before, state, trace)
+        folder167_policy(trace, chosen.resolve())
+        signin206_shipped(state, trace)
+    else:
+        if variant == 'missing-chosen':
+            assert response['returned_roots'] == [], (
+                'ROOTS207 SETUP: actual reply omits the genuinely requested additional grant'
+            )
+        else:
+            assert response['returned_roots'] == [str(chosen.resolve())] * 2, (
+                'ROOTS207 SETUP: actual explicit array duplicates the genuinely selected grant'
+            )
+        signin206_diagnostic(state, 'thread/start', {'THREAD_ROOTS'})
+        assert len(started_requests(trace)) == 1, (
+            'ROOTS207: missing/duplicate chosen grant cannot admit the new original input'
+        )
+        assert all(row in state['messages'] for row in before['messages']), (
+            'ROOTS207: failed new admission retains the genuine original conversation'
+        )
+    assert state['folder_observer']['value'] == str(chosen.resolve()), (
+        'ROOTS207: effective-policy refusal cannot discard the actual selected capability'
+    )
+    assert state['project_present'] == before['project_present'], (
+        'ROOTS207: returning a root policy does not invent or replace the native project'
+    )
+    assert sentinel.read_bytes() == b'Original bytes are not overwrite authorization\n', (
+        'ROOTS207: no original file is written merely by granting/refusing filesystem scope'
+    )
+    if variant == 'chosen-only':
+        assert original_peer_is_live(identity), (
+            'ROOTS207: successful selected grant uses the same genuine managed process'
+        )
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), (
+        'ROOTS207: grant validation cannot add account/login/logout repair traffic'
+    )
