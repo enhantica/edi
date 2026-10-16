@@ -1073,9 +1073,40 @@ TestCase {
         let free = fitCase ? null : visible185_free(la);
         if (data.tag === "wavelength") {
             visible185_page("experiment");
-            field = Ui.control(Probe, window, "instrument.setup_wavelength");
-            verify(field !== null && field.item === wavelength[0] && Ui.exposed(field),
-                "VA SETUP: original supplied wavelength has its genuine current field");
+            function wavelength243(stage) {
+                try {
+                    const candidates = Ui.itemsWithProperty(Ui.page(window), "objectName")
+                        .filter(control => control.objectName === "instrument.setup_wavelength");
+                    console.log("WAVELENGTH243_PREMISE", stage, JSON.stringify({
+                        page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
+                        expectedItem: String(wavelength[0]),
+                        groups: Ui.itemsWithProperty(Ui.page(window), "objectName")
+                            .filter(control => control.objectName === "group.instrument")
+                            .map(group => ({identity: String(group), visible: group.visible,
+                                enabled: group.enabled, collapsed: group.collapsed})),
+                        candidates: candidates.map(control => {
+                            const point = control.mapToItem(window.contentItem, 0, 0);
+                            return {identity: String(control), item: String(control.item),
+                                exactItem: control.item === wavelength[0], visible: control.visible,
+                                enabled: control.enabled, inPane: Ui.inPane(control),
+                                rect: [point.x, point.y, control.width, control.height],
+                                clickPoint: Ui.clickPoint(control), exposed: Ui.exposed(control)};
+                        }), sameOwner: Session.project === project, connected: assistant.connected,
+                        lastError: assistant.lastError}));
+                } catch (error) { console.log("WAVELENGTH243_PREMISE_ERROR", stage, String(error)); }
+            }
+            wavelength243("before-reveal");
+            try {
+                Ui.click(this, Probe, window, "sideBar.tab.basic");
+                Ui.expandGroup(this, Probe, window, "group.instrument");
+                field = Ui.control(Probe, window, "instrument.setup_wavelength");
+                if (field !== null) {
+                    Ui.scrollIntoView(field);
+                    rendered();
+                }
+                verify(field !== null && field.item === wavelength[0] && Ui.exposed(field),
+                    "VA SETUP: original supplied wavelength has its genuine current field");
+            } finally { wavelength243("after-reveal-check"); }
             free = null;
         }
         const fitButton = fitCase ? Ui.control(Probe, window, "fitting.start") : null;
@@ -1516,6 +1547,7 @@ TestCase {
                     identity: String(field), name: field.objectName, candidates: candidates.length,
                     visible: field.visible, enabled: field.enabled, readOnly: field.readOnly,
                     text: field.text, activeFocus: field.activeFocus, inPane: Ui.inPane(field),
+                    focusIdentity: String(window.activeFocusItem), focusIsField: window.activeFocusItem === field,
                     rect: [origin.x, origin.y, field.width, field.height],
                     clickPoint: Ui.clickPoint(field), ancestry: ancestry,
                     page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
@@ -1536,18 +1568,27 @@ TestCase {
         } finally { premise237("after-viewport-check"); }
         const cleanControl = data.tag.endsWith("formatted");
         if (cleanControl) {
-            mouseClick(field);
+            Ui.click(this, Probe, window, name);
+            premise237("post-click-before-keys");
+            verify(field.activeFocus && window.activeFocusItem === field,
+                "DRAFT1 SETUP: real delayed click focuses the exact original common editor before keys");
             visible185_type("0.3333333333333333");
             keyClick(Qt.Key_Return);
             const actual = textFormatted ? Probe.rows(project.currentExperiment.background)[0].position
                 : project.analysis.chiSquareTolerance;
             compare(actual, 1 / 3,
                 "DRAFT1 SETUP: real typing/Return establishes the explicit full-precision control");
-            mouseClick(field);
+            Ui.click(this, Probe, window, name);
+            premise237("post-click-before-keys");
+            verify(field.activeFocus && window.activeFocusItem === field,
+                "DRAFT1 SETUP: real delayed click focuses the exact original common editor before keys");
             verify(field.text !== String(actual),
                 "DRAFT1 SETUP: unedited formatted spelling actually differs from the core number");
         } else {
-            mouseClick(field);
+            Ui.click(this, Probe, window, name);
+            premise237("post-click-before-keys");
+            verify(field.activeFocus && window.activeFocusItem === field,
+                "DRAFT1 SETUP: real delayed click focuses the exact original common editor before keys");
             const originalText = field.text;
             const draft = textCase ? "original_manual_site" : data.tag.endsWith("integer")
                 ? "19" : data.tag.endsWith("partial") ? "-" : "0.25";
@@ -2260,15 +2301,16 @@ TestCase {
                 : "Change original La isotropic ADP to 0.6 through its actual manual controls");
             if (gap) {
                 tryVerify(() => visible185_outcome(call, previousIds) !== null
-                    && assistant.canCancel && !pointer.visible, 10000,
+                    && assistant.canCancel && !assistant.showingActions && ownStarts === 0
+                    && pointer.opacity === 0, 10000,
                     "SL1 GAP SETUP: genuine original read reply is retained while the real request waits without helper pointer");
                 compare(ownStarts, 0, "SL1 GAP SETUP: no helper ran during this actual read-only request interval");
             } else {
                 tryVerify(() => assistant.canCancel && assistant.showingActions && field.activeFocus
                     && field.text !== field.editText && field.text !== field.value, visible237_observationMs([{path: target.path, text: "0.6"}]),
                     "SL1 HELPER SETUP: original actual paced partial input is active before the user event");
-                verify(pointer.visible && ownStarts > 0,
-                    "SL1 HELPER SETUP: actual pointer/helper interval is genuinely reached");
+                verify(assistant.showingActions && ownStarts > 0 && pointer.opacity > 0 && Ui.rendered(pointer),
+                    "SL1 HELPER SETUP: actual painted pointer/helper interval is genuinely reached");
             }
             verify(window.activeFocusItem === field && field.activeFocus,
                 "SL1 SETUP: sender addresses original focused Quick item, not its window substitute");
@@ -2336,6 +2378,8 @@ TestCase {
                 text: field.text, preedit: field.preeditText, value: target.value,
                 canCancel: assistant.canCancel, showingActions: assistant.showingActions,
                 takeovers: takeovers, userEdits: userEdits, preeditSignals: preedits, pointerStarts: ownStarts,
+                pointerOpacity: pointer.opacity, pointerVisible: pointer.visible,
+                pointerRendered: Ui.rendered(pointer), pointerSize: [pointer.width, pointer.height],
                 lastError: assistant.lastError, originalOutcome: visible185_outcome(call, previousIds)}));
             assistant.actionManualTakeover.disconnect(takeoverReceipt);
             assistant.actionPointerShown.disconnect(pointerReceipt);
