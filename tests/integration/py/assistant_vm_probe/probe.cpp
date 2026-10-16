@@ -355,6 +355,14 @@ int main(int argc,char** argv) {
                 cwl_profiles.push_back(QString::fromStdString(token));
             result["native_profile_catalog"]=Object{{"beam_mode","constant wavelength"},{"profiles",cwl_profiles}};
             const auto usage_index=vm->metaObject()->indexOfProperty("usage");
+            const auto folder_index=vm->metaObject()->indexOfProperty("workingFolder");
+            result["folder_observer"]=Object{
+                {"property_present",folder_index>=0},
+                {"value",folder_index>=0?QJsonValue::fromVariant(vm->property("workingFolder")):QJsonValue()},
+                {"begin_method",vm->metaObject()->indexOfMethod("beginWorkingFolderSelection()")>=0},
+                {"complete_method",vm->metaObject()->indexOfMethod("completeWorkingFolderSelection(QString,QUrl)")>=0},
+                {"cancel_method",vm->metaObject()->indexOfMethod("cancelWorkingFolderSelection(QString)")>=0},
+                {"temporary_method",vm->metaObject()->indexOfMethod("useTemporaryWorkingFolder()")>=0}};
             result["usage_observer"]=Object{{"property_present",usage_index>=0},
                 {"refresh_present",vm->metaObject()->indexOfMethod("refreshUsage()")>=0},
                 {"changes",report_urls.usage_changes},
@@ -405,6 +413,25 @@ int main(int argc,char** argv) {
                 result={{"method_present",present},{"invoked",present && QMetaObject::invokeMethod(vm,
                     "openReport",Qt::DirectConnection,Q_ARG(QString,input["row_id"].toString()),
                     Q_ARG(QString,input["href"].toString()))}};
+            } else if(codex_mode && op=="working_folder_begin") {
+                QString intent;
+                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"beginWorkingFolderSelection",
+                    Qt::DirectConnection,Q_RETURN_ARG(QString,intent));
+                result={{"invoked",invoked},{"intent",intent}};
+            } else if(codex_mode && op=="working_folder_complete") {
+                bool accepted=false;
+                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"completeWorkingFolderSelection",
+                    Qt::DirectConnection,Q_RETURN_ARG(bool,accepted),Q_ARG(QString,input["intent"].toString()),
+                    Q_ARG(QUrl,QUrl::fromLocalFile(input["directory"].toString())));
+                result={{"invoked",invoked},{"accepted",accepted}};
+            } else if(codex_mode && op=="working_folder_cancel") {
+                result={{"invoked",QMetaObject::invokeMethod(session->assistant(),"cancelWorkingFolderSelection",
+                    Qt::DirectConnection,Q_ARG(QString,input["intent"].toString()))}};
+            } else if(codex_mode && op=="working_folder_temporary") {
+                bool accepted=false;
+                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"useTemporaryWorkingFolder",
+                    Qt::DirectConnection,Q_RETURN_ARG(bool,accepted));
+                result={{"invoked",invoked},{"accepted",accepted}};
             } else if(codex_mode && op=="save_as_begin") {
                 QString intent;
                 const bool invoked=QMetaObject::invokeMethod(session.get(),"beginSaveAs",Qt::DirectConnection,
@@ -629,6 +656,12 @@ int main(int argc,char** argv) {
             else if(op=="open")result={{"opened",session->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
             else if(codex_mode && op=="native_science_enable") {
                 native_science_enabled=true;result={{"enabled",true}};
+            }
+            else if(codex_mode && op=="native_remove_structure") {
+                if(!session->project())throw std::invalid_argument("actual current project required");
+                session->project()->removeStructure(input["index"].toInt());
+                result={{"remaining",static_cast<int>(session->project()->project().structures.size())},
+                    {"error",session->project()->lastError()}};
             }
             else if(codex_mode && op=="native_undo") {
                 if(!session->project())throw std::invalid_argument("Undo requires actual project");

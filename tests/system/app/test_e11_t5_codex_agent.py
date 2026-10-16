@@ -2286,7 +2286,8 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'set_free',
         'run_fit',
         'create_cwl_project',
-    }, 'NATIVE: this declared creation increment advertises exactly seven wired capabilities'
+        'add_relations',
+    }, 'NATIVE: this declared affine increment advertises exactly eight wired capabilities'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
         'NATIVE: registered reads use original rpc and retained purpose'
@@ -4647,6 +4648,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'set_free',
         'run_fit',
         'create_cwl_project',
+        'add_relations',
     }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
@@ -5055,7 +5057,7 @@ def test_native145_created_project_runs_actual_fit_with_truthful_publication(gen
 def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_thread(
     generic, loaded
 ):
-    # Oracle: immutable package INPUT bytes plus the declared native seven-tool stage.
+    # Oracle: immutable package INPUT bytes plus the declared native eight-tool stage.
     # No generated Controller manifest or successful VM output supplies expectations.
     resource_root = ROOT / 'data/assistant/skills'
     entries = json.loads((resource_root / 'index.json').read_text())['skills']
@@ -5105,7 +5107,8 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'set_free',
         'run_fit',
         'create_cwl_project',
-    }, 'BOOTSTRAP: native creation stage truthfully advertises exactly seven implemented tools'
+        'add_relations',
+    }, 'BOOTSTRAP: native affine stage truthfully advertises exactly eight implemented tools'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
         'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
@@ -5240,3 +5243,410 @@ def test_clear156_real_message_notification_reentry_preserves_final_topology_and
     assert not any(
         row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
     ), 'CLEAR: no fabricated authentication repair masks notification retirement'
+
+
+# FUTURE AFFINE8: original nine affine oracles, rebased onto actual prelaunch admission.
+def native145_affine_owner(generic, tmp_path, *, with_declarations=True):
+    fixture = tmp_path / 'Original-chosen-mixed-site-model'
+    shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', fixture)
+    analysis = fixture / 'analysis/analysis.edi'
+    text = analysis.read_text().replace('_edi.schema_version 2', '_edi.schema_version 3')
+    if with_declarations:
+        # A deliberate disabled unrelated declaration must survive append/Undo exactly.
+        text += (
+            '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+            'original_co_biso lbco.atom_site.Co.adp_iso\nloop_\n'
+            '_constraint.id\n_constraint.expression\n_constraint.enabled\n'
+            'original_inactive_co "original_co_biso = 0.5" false\n'
+        )
+    analysis.write_text(text)
+    actor, trace = native_case(generic, [], project=fixture, connect_now=False)
+    assert actor.command('native_science_enable')['reply']['enabled']
+    params = actor.last['vm']['project']['parameters']
+    la = next(row for row in params if row['path'] == 'structure.atom_sites[La].adp_iso')
+    ba = next(row for row in params if row['path'] == 'structure.atom_sites[Ba].adp_iso')
+    assert la['value'] == ba['value'] == 0.5
+    changed = actor.command('manual_value', path=ba['path'], value=0.8)
+    assert not changed['reply']['error']
+    state = native145_science_settled(actor)
+    return actor, trace, la['path'], ba['path'], state
+
+
+def native145_relation_args(la, ba):
+    return {
+        'aliases': [
+            {'id': 'original_la_biso', 'path': la},
+            {'id': 'original_ba_biso', 'path': ba},
+        ],
+        'constraints': [
+            {
+                'id': 'original_chosen_shared_biso',
+                'expression': 'original_ba_biso = original_la_biso',
+                'enabled': True,
+            }
+        ],
+    }
+
+
+def test_native145_chosen_same_site_affine_append_and_one_complete_undo(generic, tmp_path):
+    actor, trace, la, ba, before = native145_affine_owner(generic, tmp_path)
+    args = native145_relation_args(la, ba)
+    native145_configure(actor, trace, [[native_call('add_relations', **args)]])
+    connected = native145_science_settled(actor)
+    assert connected['project']['parameters'] == before['project']['parameters'], (
+        'AFFINE SETUP: real managed bootstrap preserves the independently prepared model'
+    )
+    assert native_inputs(connected) == native_inputs(before), (
+        'AFFINE SETUP: bootstrap preserves every original observation/sigma/exclusion/link'
+    )
+    assert connected['project']['science_observer'] == before['project']['science_observer'], (
+        'AFFINE SETUP: bootstrap preserves all original declarations and refreshed geometry'
+    )
+    before = connected
+    state, replies = native_send(actor, trace, 1)
+    assert replies[0]['response']['result']['success']
+    state = native145_science_settled(actor)
+    science = state['project']['science_observer']
+    old = before['project']['science_observer']
+    assert native_parameter(state, ba)['value'] == native_parameter(state, la)['value'] == 0.5
+    assert (
+        len(science['aliases']) == len(old['aliases']) + 2
+        and len(science['constraints']) == len(old['constraints']) + 1
+    )
+    assert all(row in science['aliases'] for row in old['aliases']) and all(
+        row in science['constraints'] for row in old['constraints']
+    )
+    assert any(
+        row['id'] == 'original_chosen_shared_biso'
+        and row['expression'] == args['constraints'][0]['expression']
+        and row['enabled'] is True
+        for row in science['constraints']
+    )
+    assert native_inputs(state) == native_inputs(before) and state['connected']
+    assert state['project']['native_observer']['can_undo']
+    restored = actor.command('native_undo')
+    assert restored['reply']['was_available']
+    restored = native145_science_settled(actor)
+    after = restored['project']['science_observer']
+    assert restored['project']['parameters'] == before['project']['parameters'], (
+        'AFFINE: ONE normal Undo restores complete values/free/SU, not just declarations'
+    )
+    assert after['aliases'] == old['aliases'] and after['constraints'] == old['constraints']
+    assert after['structures'] == old['structures'], (
+        'AFFINE: actual refreshed geometry describes restored original model'
+    )
+    assert native_inputs(restored) == native_inputs(before)
+    assert (
+        restored['connected']
+        and restored['models'] == before['models']
+        and restored['handoff']['account_label'] == before['handoff']['account_label']
+    )
+
+
+@pytest.mark.parametrize(
+    'accident',
+    [
+        'late-invalid-path',
+        'duplicate-alias',
+        'duplicate-constraint',
+        'existing-id',
+        'cycle',
+        'symmetry-dependent',
+        'unphysical-follower',
+        'structureless',
+    ],
+)
+def test_native145_affine_refusal_is_atomic_for_declarations_and_parameter_state(
+    generic, tmp_path, accident
+):
+    actor, trace, la, ba, before = native145_affine_owner(
+        generic, tmp_path, with_declarations=accident != 'structureless'
+    )
+    args = native145_relation_args(la, ba)
+    if accident == 'late-invalid-path':
+        args['aliases'].append({'id': 'original_missing', 'path': 'original.absent.parameter'})
+    elif accident == 'duplicate-alias':
+        args['aliases'].append(dict(args['aliases'][0]))
+    elif accident == 'duplicate-constraint':
+        args['constraints'].append(dict(args['constraints'][0]))
+    elif accident == 'existing-id':
+        args['aliases'][0]['id'] = 'original_co_biso'
+    elif accident == 'cycle':
+        args['constraints'].append({
+            'id': 'original_cycle',
+            'expression': 'original_la_biso = original_ba_biso',
+            'enabled': True,
+        })
+    elif accident == 'symmetry-dependent':
+        args['aliases'][1]['path'] = 'structure.cell.length_b'
+    elif accident == 'unphysical-follower':
+        args['constraints'][0]['expression'] = 'original_ba_biso = -1'
+    else:
+        removed = actor.command('native_remove_structure', index=0)
+        assert removed['reply']['remaining'] == 0, (
+            'AFFINE SETUP: actual public structure removal reaches structureless owner'
+        )
+        before = removed['vm']
+    native145_configure(actor, trace, [[native_call('add_relations', **args)]])
+    connected = native145_science_settled(actor)
+    assert connected['project']['parameters'] == before['project']['parameters'], (
+        'AFFINE SETUP: real managed bootstrap preserves the independently prepared model'
+    )
+    assert native_inputs(connected) == native_inputs(before), (
+        'AFFINE SETUP: bootstrap preserves every original observation/sigma/exclusion/link'
+    )
+    assert connected['project']['science_observer'] == before['project']['science_observer'], (
+        'AFFINE SETUP: bootstrap preserves all original declarations and refreshed geometry'
+    )
+    before = connected
+    state, replies = native_send(actor, trace, 1)
+    assert not replies[0]['response']['result']['success']
+    assert state['project_present'] and state['connected']
+    assert state['project']['parameters'] == before['project']['parameters']
+    assert (
+        state['project']['science_observer']['aliases']
+        == before['project']['science_observer']['aliases']
+    )
+    assert (
+        state['project']['science_observer']['constraints']
+        == before['project']['science_observer']['constraints']
+    )
+    assert native_inputs(state) == native_inputs(before)
+    assert (
+        state['project']['native_observer']['can_undo']
+        == before['project']['native_observer']['can_undo']
+    )
+    assert (
+        state['models'] == before['models']
+        and state['handoff']['account_label'] == before['handoff']['account_label']
+    )
+
+
+# Working-folder callbacks are the real public picker route; no OS gesture or
+# official-runtime filesystem enforcement is claimed by this owned stdio peer.
+def folder167_owner(generic, *, loaded):
+    actor, trace = generic('fileauth')
+    if loaded:
+        project = trace.parent / 'Original-folder-owner'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', project)
+        assert actor.command('open', path=str(project))['reply']['opened'], (
+            'FOLDER SETUP: genuine original model opens through actual Session'
+        )
+    connect(actor)
+    state = folder167_send(actor, trace, 'Original conversation before folder selection')
+    surface = state['folder_observer']
+    assert surface['property_present'] and all(
+        surface[key]
+        for key in ('begin_method', 'complete_method', 'cancel_method', 'temporary_method')
+    ), 'FOLDER: the ordinary picker callback surface exists on the actual managed VM'
+    assert isinstance(surface['value'], str) and not surface['value'], (
+        'FOLDER: initial temporary mode discloses no chosen directory'
+    )
+    assert state['connected'] and state['models'] and state['handoff']['account_label'], (
+        'FOLDER SETUP: genuine account/catalog and completed original conversation'
+    )
+    return actor, trace, state
+
+
+def folder167_send(actor, trace, text):
+    old_count = len(started_requests(trace))
+    native145_approve(actor)  # Only actual connected approval of the current disclosure.
+    actor.command('send_text', text=text)
+    state = settle(
+        actor,
+        lambda value: (
+            len(started_requests(trace)) == old_count + 1
+            and not value['can_cancel']
+            and any(
+                row.get('kind') == 'assistant'
+                and row.get('text') == 'Original fileauth reply ' + str(old_count + 1)
+                and row.get('status') == 'completed'
+                for row in value['messages']
+            )
+        ),
+    )
+    assert len(users(actor, text)) == 1 and state['connected'], (
+        'FOLDER: original prompt is admitted once and completes without authentication repair'
+    )
+    return state
+
+
+def folder167_preserved(before, state, trace):
+    assert (
+        state['connected']
+        and state['handoff']['account_label'] == before['handoff']['account_label']
+    ), 'FOLDER: picker/context changes retain the genuine managed identity'
+    assert state['models'] == before['models'] and (
+        state['selected_model'],
+        state['selected_effort'],
+    ) == (before['selected_model'], before['selected_effort']), (
+        'FOLDER: catalog and explicit model/effort choices remain owned'
+    )
+    assert all(row in state['messages'] for row in before['messages']), (
+        'FOLDER: choosing a directory cannot discard or rewrite retained original history'
+    )
+    assert state['project_present'] == before['project_present'], (
+        'FOLDER: a filesystem grant cannot create or replace a native project'
+    )
+    if before['project_present']:
+        assert state['project']['parameters'] == before['project']['parameters'], (
+            'FOLDER: current project values/free/SU remain unchanged by directory selection'
+        )
+        assert native_inputs(state) == native_inputs(before), (
+            'FOLDER: every actual observation/sigma/exclusion/link remains unchanged'
+        )
+        assert (
+            state['project']['host_snapshot']['path'] == before['project']['host_snapshot']['path']
+        ), 'FOLDER: chosen write scope does not silently move or Save As the live project'
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    ), 'FOLDER: account preservation is not simulated by logging in or out again'
+
+
+def folder167_policy(trace, chosen):
+    request = started_requests(trace)[-1]['params']
+    policy = request['sandboxPolicy']
+    assert policy['type'] == 'workspaceWrite' and not policy['networkAccess'], (
+        'FOLDER: chosen local scope retains the admitted no-network write policy'
+    )
+    assert policy['excludeSlashTmp'] and policy['excludeTmpdirEnvVar'], (
+        'FOLDER: choosing one directory cannot grant global temporary roots'
+    )
+    cwd = Path(request['cwd']).resolve()
+    roots = [Path(value).resolve() for value in policy['writableRoots']]
+    owned = trace.parent.resolve()
+    assert roots and all(root in {chosen, cwd} for root in roots), (
+        'FOLDER: writable roots are only the chosen directory and actual owned runtime workspace'
+    )
+    assert cwd == chosen or cwd.is_relative_to(owned), (
+        'FOLDER: runtime cwd is the chosen directory or this isolated actor temporary workspace'
+    )
+    if chosen is None:
+        assert all(root.is_relative_to(owned) for root in roots), (
+            'FOLDER: temporary mode retires the external directory grant'
+        )
+    else:
+        assert chosen in roots and chosen.parent not in roots, (
+            'FOLDER: grant the user-selected directory without broadening to its parent'
+        )
+
+
+@pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
+def test_folder167_actual_picker_callback_grants_only_chosen_scope_and_keeps_owner(
+    generic, tmp_path, loaded
+):
+    actor, trace, before = folder167_owner(generic, loaded=loaded)
+    chosen = tmp_path / 'Original chosen working folder'
+    chosen.mkdir()
+    sentinel = chosen / 'Original existing user bytes.txt'
+    sentinel.write_bytes(b'Original file is not overwrite authorization\n')
+    intent = actor.command('working_folder_begin')['reply']
+    assert intent['invoked'] and intent['intent'], 'FOLDER: actual picker mints one live intent'
+    completed = actor.command(
+        'working_folder_complete', intent=intent['intent'], directory=str(chosen)
+    )
+    assert completed['reply']['invoked'] and completed['reply']['accepted'], (
+        'FOLDER: genuine local-directory callback grants its own current intent'
+    )
+    assert completed['vm']['folder_observer']['value'] == str(chosen.resolve()), (
+        'FOLDER: actual selected physical path is disclosed to the user'
+    )
+    folder167_preserved(before, completed['vm'], trace)
+    state = folder167_send(actor, trace, 'Original task within explicitly chosen folder')
+    folder167_policy(trace, chosen.resolve())
+    folder167_preserved(before, state, trace)
+    assert sentinel.read_bytes() == b'Original file is not overwrite authorization\n', (
+        'FOLDER: selecting a scope alone does not write an existing user file'
+    )
+
+
+@pytest.mark.parametrize('accident', ['cancelled', 'superseded', 'replaced-owner'])
+def test_folder167_stale_picker_callback_cannot_grant_a_different_current_owner(
+    generic, tmp_path, accident
+):
+    actor, trace, before = folder167_owner(generic, loaded=True)
+    rejected = tmp_path / 'Original ungranted stale destination'
+    rejected.mkdir()
+    intent = actor.command('working_folder_begin')['reply']
+    assert intent['invoked'] and intent['intent'], 'FOLDER SETUP: real current picker intent'
+    replacement_intent = None
+    if accident == 'cancelled':
+        assert actor.command('working_folder_cancel', intent=intent['intent'])['reply'][
+            'invoked'
+        ], 'FOLDER SETUP: actual native picker cancellation callback'
+    elif accident == 'superseded':
+        replacement_intent = actor.command('working_folder_begin')['reply']['intent']
+        assert replacement_intent and replacement_intent != intent['intent'], (
+            'FOLDER SETUP: a later genuine picker request owns a distinct one-shot intent'
+        )
+    else:
+        replacement = trace.parent / 'Original replacement native project'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
+        assert actor.command('open', path=str(replacement))['reply']['opened'], (
+            'FOLDER SETUP: ordinary Session replaces the actual owner before delayed callback'
+        )
+        # This legitimate explicit project replacement is the new comparison owner.
+        state = actor.last['vm']
+        assert state['connected'] and state['models'] == before['models'], (
+            'FOLDER SETUP: explicit owner replacement retains genuine managed account/catalog'
+        )
+        before = state
+    rejected_reply = actor.command(
+        'working_folder_complete', intent=intent['intent'], directory=str(rejected)
+    )
+    assert rejected_reply['reply']['invoked'] and not rejected_reply['reply']['accepted'], (
+        'FOLDER: cancelled/superseded/old-owner callback cannot grant new filesystem authority'
+    )
+    assert (
+        isinstance(rejected_reply['vm']['folder_observer']['value'], str)
+        and not rejected_reply['vm']['folder_observer']['value']
+    ), 'FOLDER: failed callback preserves temporary selection'
+    folder167_preserved(before, rejected_reply['vm'], trace)
+    if replacement_intent:
+        actor.command('working_folder_cancel', intent=replacement_intent)
+    state = folder167_send(actor, trace, 'Original task after refused stale folder callback')
+    folder167_policy(trace, None)
+    folder167_preserved(before, state, trace)
+    assert list(rejected.iterdir()) == [], 'FOLDER: refused destination remains untouched'
+
+
+def test_folder167_consumed_callback_is_once_only_and_temporary_retires_path_authority(
+    generic, tmp_path
+):
+    actor, trace, before = folder167_owner(generic, loaded=True)
+    chosen = tmp_path / 'Original grant'
+    unrelated = tmp_path / 'Original path only mentioned in chat'
+    chosen.mkdir()
+    unrelated.mkdir()
+    intent = actor.command('working_folder_begin')['reply']['intent']
+    assert intent, 'FOLDER SETUP: genuine nonempty picker intent'
+    reply = actor.command('working_folder_complete', intent=intent, directory=str(chosen))
+    assert reply['reply']['invoked'] and reply['reply']['accepted'], (
+        'FOLDER SETUP: genuine chosen scope is admitted before replay'
+    )
+    replayed = actor.command('working_folder_complete', intent=intent, directory=str(unrelated))
+    assert replayed['reply']['invoked'] and not replayed['reply']['accepted'], (
+        'FOLDER: consumed one-shot callback cannot move authority to a second directory'
+    )
+    assert replayed['vm']['folder_observer']['value'] == str(chosen.resolve()), (
+        'FOLDER: refused replay retains only the originally chosen physical path'
+    )
+    temporary = actor.command('working_folder_temporary')
+    assert temporary['reply']['invoked'] and temporary['reply']['accepted'], (
+        'FOLDER: ordinary temporary-mode action revokes the selected external scope'
+    )
+    assert (
+        isinstance(temporary['vm']['folder_observer']['value'], str)
+        and not temporary['vm']['folder_observer']['value']
+    ), 'FOLDER: temporary mode is disclosed by the declared empty selected-path value'
+    folder167_preserved(before, temporary['vm'], trace)
+    state = folder167_send(actor, trace, 'Please use this chat path: ' + str(unrelated))
+    assert (
+        isinstance(state['folder_observer']['value'], str)
+        and not state['folder_observer']['value']
+    ), 'FOLDER: a path in model/user prose cannot mint the native-picker capability'
+    folder167_policy(trace, None)
+    folder167_preserved(before, state, trace)
+    assert list(chosen.iterdir()) == list(unrelated.iterdir()) == [], (
+        'FOLDER: callback replay and prose alone cannot create files in either external path'
+    )
