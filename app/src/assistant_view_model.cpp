@@ -454,10 +454,29 @@ struct AssistantViewModel::State {
         }
         consented_context = call.receipt->approved_context;
     }
+    // A final report/response may reenter normal Session/input publication.
+    // Scope its remaining controls to the existing original call and ledger;
+    // explicit successful discard may legitimately empty that original ledger.
+    auto native_settlement_scope(const NativeCall& call) const {
+        const auto binding = generation;
+        const auto serial = native_serial;
+        const auto account = usage_epoch;
+        const auto thread = generic_thread;
+        const auto entries = native_records.size();
+        return [this, binding, serial, account, thread, entries, record = call.record, receipt = call.receipt, rpc = call.rpc] {
+            const bool ledger = (native_records.size() == entries && native_records.value(record->key) == record) ||
+                (native_records.isEmpty() && !native_discard_pending);
+            return publishing && generation == binding && native_serial == serial && usage_epoch == account && generic_thread == thread && ledger &&
+                (!native_call || (native_call->record == record && native_call->receipt == receipt && native_call->rpc == rpc));
+        };
+    }
     void native_finish(bool success, const Object& outcome) noexcept {
         if (!native_call) return;
         auto call = *native_call; // Stable owner across synchronous transport failure/reentrant retirement.
         auto record = call.record;
+        const auto original_call = [&] {
+            return native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc;
+        };
         bool retained = false;
         try {
             const bool visible = native_visible(call);
@@ -475,15 +494,19 @@ struct AssistantViewModel::State {
             // wire operation. The preprepared uncertainty roles remain a fallback.
             record->outcome = std::move(actual); record->response = std::move(response); record->terminal = std::move(row);
             native_charge();
-            try { native_refresh(call); } catch (...) { native_fence(); }
+            try { native_refresh(call); }
+            catch (...) { if (!original_call()) return; native_fence(); }
+            if (!original_call()) return;
             if (visible) retained = generic_present(record->terminal);
             else retained = true; // No append into a discarded conversation; no durability claim.
             record->reserved = !retained;
             if (!retained) native_fence();
+            if (!original_call()) return;
             if (!call.resolved && !record->answered) {
                 record->answered = true; // Transfer the original ID at most once, including write failure.
                 if (!agent->answer(call.rpc, record->response)) throw std::runtime_error("Native response delivery is uncertain");
             }
+            if (!original_call()) return;
             record->completed = true;
             if (retained) { record->maximum_row = {}; record->maximum_response = {}; }
             if (native_call && native_call->record == record) native_call.reset();
@@ -493,7 +516,9 @@ struct AssistantViewModel::State {
             // The prepared outcome/response/row and original ID remain owned.
             // A failed post-write allocation is uncertainty, not account loss or
             // a fabricated durable success. Clear can explicitly discard it.
+            if (!original_call()) return;
             native_fence();
+            if (!original_call()) return;
             if (!native_fit) {
                 try {
                     if (native_visible(call)) (void)generic_present(record->terminal);
@@ -504,13 +529,13 @@ struct AssistantViewModel::State {
             }
         }
     }
-    void native_fit_finished(const edi::FitReport& report, bool presented) noexcept {
-        native_fit.clear(); // The actual completed report, not running=false.
-        if (!native_call || native_call->record->tool != "run_fit") {
-            try { generic_settle_revoke(); generic_advance_clear(); } catch (...) { native_fence(); }
-            return;
-        }
-        try {
+    void native_fit_finished(const edi::FitReport& report, bool presented, const NativeCall& original) noexcept {
+        const auto completion_scope = native_settlement_scope(original);
+        native_fit.clear(); // The exact actual completed report, not running=false.
+        const auto original_call = [&] {
+            return native_call && native_call->record == original.record && native_call->receipt == original.receipt && native_call->rpc == original.rpc;
+        };
+        if (original_call()) try {
             const char* status = "unavailable";
             switch (report.status) {
                 case edi::FitStatus::DONE: status = "done"; break;
@@ -530,8 +555,16 @@ struct AssistantViewModel::State {
             }
             if (!report.refusal.empty()) result["message"] = bounded_error(QString::fromStdString(report.refusal));
             native_finish(presented && report.adopted() && report.status != edi::FitStatus::CANCELLED, result);
-        } catch (...) { native_finish(false, native_call->record->outcome); native_fence(); }
-        try { generic_settle_revoke(); generic_advance_clear(); } catch (...) { native_fence(); }
+        } catch (...) {
+            if (original_call()) native_finish(false, original.record->outcome);
+            if (completion_scope()) native_fence();
+        }
+        if (!completion_scope()) return;
+        try {
+            generic_settle_revoke();
+            if (!completion_scope()) return;
+            generic_advance_clear();
+        } catch (...) { if (completion_scope()) native_fence(); }
     }
     void native_prepare(const QJsonValue& rpc, const QString& id, const QString& name, const QString& purpose,
                         const Object& original, const Object& read_result = {}) {
@@ -629,33 +662,49 @@ struct AssistantViewModel::State {
             auto* handle = project->fit();
             QPointer<FitViewModel> captured = handle;
             native_fit = handle;
-            const auto receipt = native_call->receipt;
+            const auto original_call = *native_call;
+            const auto receipt = original_call.receipt;
+            const auto original_scope = native_settlement_scope(original_call);
             const QPointer<AssistantViewModel> receiver(&owner);
             native_call->may_have_written = true;
             try {
-                handle->startNative([this, receiver, captured, receipt](const edi::FitReport& report, bool presented) noexcept {
+                handle->startNative([this, receiver, captured, original_call](const edi::FitReport& report, bool presented) noexcept {
                     // Reentrant replacement may already have retired this exact
                     // worker/call. It cannot settle a later owner's native call.
                     if (!receiver || !captured || native_fit != captured) return;
-                    if (!native_call || native_call->receipt != receipt) {
-                        native_fit.clear(); // Exact worker completed even though its old RPC/account retired.
+                    const auto completion_scope = native_settlement_scope(original_call);
+                    if (!native_call || native_call->record != original_call.record || native_call->receipt != original_call.receipt || native_call->rpc != original_call.rpc) {
+                        native_fit.clear(); // This exact worker finished even when its old RPC/account retired.
+                        if (!completion_scope()) return;
                         native_complete_discard();
-                        try { generic_settle_revoke(); generic_advance_clear(); notify(); } catch (...) { native_fence(); }
+                        if (!completion_scope()) return;
+                        try {
+                            generic_settle_revoke();
+                            if (!completion_scope()) return;
+                            generic_advance_clear();
+                            if (!completion_scope()) return;
+                            notify();
+                        } catch (...) { if (completion_scope()) native_fence(); }
                         return; // Never answer or settle a replacement native call.
                     }
-                    native_fit_finished(report, presented);
-                    native_complete_discard();
+                    native_fit_finished(report, presented, original_call);
+                    if (completion_scope()) native_complete_discard();
                 });
             } catch (...) {
                 if (captured && captured->nativeRunning()) {
-                    if (native_call && native_call->receipt == receipt) native_call->may_have_written = true;
-                    captured->cancel(); native_fence(); return;
+                    if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
+                        native_call->may_have_written = true;
+                    captured->cancel();
+                    if (original_scope()) native_fence();
+                    return;
                 }
-                native_fit.clear();
-                if (native_call && native_call->receipt == receipt) native_call->may_have_written = false;
+                if (native_fit == captured) native_fit.clear();
+                if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
+                    native_call->may_have_written = false;
                 throw; // Preparation failed before actual submission; no future report is owed.
             }
-            if (!captured || !native_call || native_call->receipt != receipt) return;
+            if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
+                native_call->receipt != receipt || native_call->rpc != original_call.rpc) return;
             if (!captured->nativeRunning()) {
                 native_fit.clear(); native_call->may_have_written = false;
                 native_finish(false, {{"status", "refused"}, {"message", "The native fit did not start."}});
@@ -1690,13 +1739,28 @@ struct AssistantViewModel::State {
     void generic_server_request(const QJsonValue& id, const QString& method, const Object& params) {
         if (!generic_bound(params) || generic_revoke_pending) { agent->reject(id); return; }
         if (method == "item/tool/call") {
+            const auto binding = generation;
+            const auto serial = native_serial;
+            const auto account = usage_epoch;
+            const auto thread = generic_thread, turn = generic_turn;
+            const auto request_scope = [&] { return publishing && generation == binding && native_serial == serial &&
+                usage_epoch == account && generic_thread == thread && generic_turn == turn; };
             try { native_dispatch(id, params); }
             catch (const std::exception&) {
+                if (!request_scope()) return;
                 if (native_call) {
-                    if (native_fit && native_fit->nativeRunning()) { native_fit->cancel(); native_fence(); return; }
+                    if (native_call->rpc != id || native_call->record->thread != thread || native_call->record->turn != turn) return;
+                    const auto original_call = *native_call;
+                    const auto original_scope = native_settlement_scope(original_call);
+                    if (native_fit && native_fit->nativeRunning()) {
+                        const auto cancelling_fit = native_fit;
+                        cancelling_fit->cancel();
+                        if (original_scope()) native_fence();
+                        return;
+                    }
                     const bool uncertain = native_call->may_have_written;
                     native_finish(false, {{"status", uncertain ? "unconfirmed" : "refused"}, {"message", uncertain ? "Native publication failed; inspect the actual displayed project before continuing." : "The native action was refused by Edi validation."}});
-                    if (uncertain) native_fence();
+                    if (uncertain && original_scope()) native_fence();
                 }
                 else native_reply(id, false, {{"status", "refused"}, {"message", "Native arguments are invalid or exceed scope/capacity."}});
             }
