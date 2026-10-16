@@ -36,6 +36,7 @@
 #include <string>
 #include <utility>
 #include <type_traits>
+#include <tuple>
 #include <vector>
 
 #include "edi/edits.hpp"
@@ -176,8 +177,84 @@ inline ReportSettingsState report_settings_state(const Project& project) {
             project.report_excluded, project.correlation_threshold, project.pattern_x_axis};
 }
 
+// Same-owner completion is deliberately not a general merge/replacement. These
+// borrowed checks allocate no scientific copy and preserve all metadata/settings/path.
+inline bool empty_population_fit(const FitResultRecord& fit) {
+    const FitResultRecord pristine;
+    static_assert(std::tuple_size_v<decltype(FitResultCategory::columns)> > 0);
+    return std::apply([&](auto... field) { return ((fit.*field == pristine.*field) && ...); },
+        FitResultCategory::columns) && fit.correlations.empty() && fit.scan_results.empty();
+}
+inline bool empty_for_population(const Project& project) {
+    const auto& scan = project.sequential_fit;
+    return project.structures.empty() && project.experiments.empty() && project.aliases.empty() &&
+        project.constraints.empty() && project.report_files.empty() && project.scan_data_root.empty() &&
+        (project.fitting_mode.empty() || project.fitting_mode == "single" || project.fitting_mode == "joint") &&
+        scan.data_dir.empty() && scan.file_pattern == "*" && !scan.reverse && scan.template_file.empty() && scan.extract.empty() &&
+        empty_population_fit(project.fit_result);
+}
+
+// Owned complete scientific addition prepared before either live collection is
+// touched. No metadata, project assignment or observer runs in the dual commit.
+class EmptyProjectPopulation {
+ public:
+    static std::shared_ptr<EmptyProjectPopulation> prepare(Project candidate) {
+        if (candidate.structures.size() != 1 || candidate.experiments.size() != 1 ||
+            !candidate.aliases.empty() || !candidate.constraints.empty())
+            throw std::invalid_argument("empty-project completion requires one validated phase and measured bank");
+        auto result = std::make_shared<EmptyProjectPopulation>();
+        result->structures_ = std::move(candidate.structures);
+        result->experiments_ = std::move(candidate.experiments);
+        result->structure_ = result->structures_.front();
+        result->experiment_ = result->experiments_.front();
+        return result;
+    }
+    bool committed() const noexcept { return committed_; }
+ private:
+    friend class Edit;
+    ItemVec<Structure> structures_;
+    ItemVec<BraggPdExperiment> experiments_;
+    std::shared_ptr<Structure> structure_;
+    std::shared_ptr<BraggPdExperiment> experiment_;
+    bool committed_ = false, undone_ = false;
+};
+
 class Edit {
    public:
+    /// Add one prepared scientific graph to the SAME empty project. Collection
+    /// moves are nonthrowing and keep target host linkage. All other fields stay.
+    static Edit populate_empty_project(Project& project, std::shared_ptr<EmptyProjectPopulation> prepared) {
+        return Edit([&project, prepared = std::move(prepared)] {
+            if (!prepared || prepared->committed_ || !empty_for_population(project) ||
+                prepared->structures_.size() != 1 || prepared->experiments_.size() != 1)
+                throw std::invalid_argument("the original current project is no longer empty");
+            static_assert(std::is_nothrow_move_assignable_v<ItemVec<Structure>>);
+            static_assert(std::is_nothrow_move_assignable_v<ItemVec<BraggPdExperiment>>);
+            project.structures = std::move(prepared->structures_);
+            project.experiments = std::move(prepared->experiments_);
+            project.adopt_experiments();
+            prepared->committed_ = true; // adjacent actual latch, before any preview/UI callback
+        });
+    }
+    /// Undo only this addition, with exact row identity; never restore a whole
+    /// old Project over unrelated metadata/settings or a later scientific owner.
+    static Edit undo_empty_population(Project& project, std::shared_ptr<EmptyProjectPopulation> prepared) {
+        return Edit([&project, prepared = std::move(prepared)] {
+            if (!prepared || !prepared->committed_ || prepared->undone_ ||
+                project.structures.size() != 1 || project.experiments.size() != 1 ||
+                project.structures.front() != prepared->structure_ || project.experiments.front() != prepared->experiment_ ||
+                !project.aliases.empty() || !project.constraints.empty() || !project.report_files.empty() ||
+                !empty_population_fit(project.fit_result))
+                throw std::invalid_argument("undo: the added scientific graph has been replaced or has dependent results/relations");
+            ItemVec<Structure> structures;
+            ItemVec<BraggPdExperiment> experiments;
+            project.structures = std::move(structures);
+            project.experiments = std::move(experiments);
+            project.adopt_experiments();
+            prepared->undone_ = true;
+        });
+    }
+
     // Runs the operation: its refusal, with nothing written, or the whole write.
     void operator()() const { operation_(); }
 

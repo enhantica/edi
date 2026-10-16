@@ -303,6 +303,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Native batches and the existing manual relation/free editor share the same
     // preowned Undo and actual applied/publication boundary. No QML entry point.
     EditOutcome applyRecordedEdit(const edi::Edit& change, bool structural);
+    // Same-owner empty completion, sharing the normal structural editor/Undo.
+    EditOutcome populateEmptyProject(const std::shared_ptr<edi::EmptyProjectPopulation>& prepared);
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
@@ -540,8 +542,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_before;
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
+    struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState>;
+                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState, EmptyPopulationUndo>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.

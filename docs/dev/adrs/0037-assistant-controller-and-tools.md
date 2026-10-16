@@ -602,3 +602,12 @@ desktop-only assistant_native_edit/codex_encoded_size symbols. Native and manual
 validation/recorded Undo semantics remain equal. The globally registered native
 catalog is unchanged at nine names (including save_project); prior private
 notes saying eight were stale counts, not a registration change.
+
+
+### Complete the same named empty project
+
+Prior art: create_cwl_project originally required a null Session owner, prepared a new PVM/Controller and adopted it via Session replacement. That branch remains. A distinct normal-mode branch now captures the actual current empty PVM, original receipt/WorkStamps, selected immutable bytes and Session epoch. Native recipe/readers/Worker remain the same. It refuses scientific membership/relations/results/scan/report assets, changed owner and unfinished manual draft at admission and final apply. Existing project metadata/name/path/settings, source files, Controller/account/conversation/grants and prior Undo remain; recipe project metadata never replaces them.
+
+The complete prepared scientific pair enters the same PVM applyEdit/preview/publication path with one dedicated preowned Undo, rather than membership-preserving applyRecordedEdit. Exact own-edit token suppression ends immediately on return/throw; ordinary unrelated edits and retirement retain their original semantics. The closed core commit latch owns actual applied outcome before observers, and original-only response cleanup cannot answer a newer call. Native finish advances only the same actual receipt through its complete-context/currentness/resource admission. Cancellation before commit leaves the owner empty; cancellation after an actual commit cannot manufacture a no-write result or roll back manual edits.
+
+The result can report completed_existing, adopted, presentation_complete, calculation_pending and saved=false. This unit does not save files: a named owned directory remains at its original path and modified=true. Fresh-child save_project is not same-directory Save and must not silently nest a new project or claim the existing folder saved. That native owned-path save is a separate required follow-up, alongside carried metadata preservation. Visible creation/completion/save stays unavailable until its genuine widget route is delivered. No new tool/capability identifier or bootstrap allowlist entry is added; actual recipe/profile/input declarations and skill1.5.11/index digest remain synchronized.

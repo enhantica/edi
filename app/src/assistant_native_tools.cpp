@@ -40,7 +40,7 @@ QJsonArray assistant_native_tool_specs() {
         {{"flags", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"free", Object{{"type", "boolean"}}}}, {"path", "free"})}}}}, {"flags"});
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
-    add("create_cwl_project", "Create and display a NEW native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe; never replaces an existing project. No fit or save is implied.",
+    add("create_cwl_project", "Create a native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe, or populate the SAME scientifically empty current project with one Undo while preserving its identity/metadata/settings/path. Never replaces a nonempty project. recipe project_name/description apply only when no project is open. No fit or save is implied; existing-directory saving is not this operation.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
     add("save_project", "Save the actual settled current fitted single/joint native project into a fresh child of the genuinely chosen working folder, verify reopen and make it the active saved project. Normal mode only; no overwrite, scan or external report assets.",
         {{"name", Object{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(edi::assistant::SelectedFileLimits::name_bytes)},

@@ -2379,6 +2379,38 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyRecordedEdit(const edi::Edi
     return result;
 }
 
+ProjectViewModel::EditOutcome ProjectViewModel::populateEmptyProject(const std::shared_ptr<edi::EmptyProjectPopulation>& prepared) {
+    const PublicationScope publication(*this);
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) return {false, false, pending};
+    if (!edi::empty_for_population(*project_)) return {false, false, tr("The current project is no longer empty")};
+    const auto edit = edi::Edit::populate_empty_project(*project_, prepared);
+    const QPointer<ProjectViewModel> self(this);
+    const QString warning = tr("The scientific graph was added and Undo retained, but its presentation was incomplete");
+    undo_history_.reserve(undo_history_.size() + 1);
+    undo_history_.emplace_back(EmptyPopulationUndo{prepared}); // before the first live write
+    EditOutcome result;
+    try { result = applyEdit(edit, true); }
+    catch (...) { if (self && !prepared->committed()) undo_history_.pop_back(); throw; }
+    if (!self || retired_) return result;
+    if (!prepared->committed()) undo_history_.pop_back();
+    try {
+        if (prepared->committed()) {
+            // Same explicit selection as the ordinary separate block imports.
+            setCurrentStructureIndex(0);
+            if (retired_) return result;
+            setCurrentExperimentIndex(0);
+            if (retired_) return result;
+        }
+        syncUndo();
+    }
+    catch (...) {
+        if (!prepared->committed()) throw;
+        result.applied = true; result.published = false; result.message = warning;
+        edit_publication_failed_ = true; holdPublicationFailure(warning);
+    }
+    return result;
+}
+
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
     const PublicationScope publication(*this);
     const EditOutcome result = applyRecordedEdit(change, true);
@@ -2429,6 +2461,8 @@ void ProjectViewModel::undo() {
     };
     if (const auto* relations = std::get_if<edi::RelationsUndo>(&undo_history_.back())) {
         undone = restore(edi::Edit::restore_relations(*project_, *relations), true);
+    } else if (const auto* population = std::get_if<EmptyPopulationUndo>(&undo_history_.back())) {
+        undone = restore(edi::Edit::undo_empty_population(*project_, population->prepared), true);
     } else if (const auto* added = std::get_if<AddedExperiments>(&undo_history_.back())) {
         undone = restore(edi::Edit::erase_experiments(*project_, added->experiments), true);
     } else if (const auto* run = std::get_if<ScanRun>(&undo_history_.back())) {
