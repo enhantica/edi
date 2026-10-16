@@ -8,6 +8,9 @@
 #include <QClipboard>
 #include <QColor>
 #include <QDir>
+#include <QFile>
+#include <QDesktopServices>
+#include <QStringList>
 #include <QGuiApplication>
 #include <QFont>
 #include <QFontInfo>
@@ -36,6 +39,13 @@
 #include <algorithm>
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
+class OwnedUrlRecorder final : public QObject {
+    Q_OBJECT
+public:
+    Array urls;
+public slots:
+    void record(const QUrl& url) { urls.push_back(url.toString(QUrl::FullyEncoded)); }
+};
 namespace {
 class ProviderControlDocument final : public QTextDocument {
 protected:
@@ -134,6 +144,15 @@ int main(int argc,char** argv) {
     auto* root=engine.rootObjects().front();auto* window=qobject_cast<QQuickWindow*>(root);
     if(!window)return 94;
     drain();
+    OwnedUrlRecorder report_urls;
+    const QStringList observed_schemes{QStringLiteral("file"),QStringLiteral("http"),
+        QStringLiteral("https"),QStringLiteral("javascript"),QStringLiteral("data"),
+        QStringLiteral("report-invalid")};
+    if(markdown_mode)for(const auto& scheme:observed_schemes)QDesktopServices::setUrlHandler(scheme,&report_urls,"record");
+    const auto restore_urls=qScopeGuard([&] {
+        if(markdown_mode)for(const auto& scheme:observed_schemes)QDesktopServices::unsetUrlHandler(scheme);
+    });
+    bool activity_observation=false;
     const auto find=[&](const char* name) {
         auto* object=root->findChild<QObject*>(QString::fromUtf8(name));
         auto* item=qobject_cast<QQuickItem*>(object);
@@ -152,7 +171,25 @@ int main(int argc,char** argv) {
         if(!wrapper || !wrapper->textDocument())throw std::runtime_error("actual Qt text document missing");
         return wrapper->textDocument();
     };
+    const auto json_property=[](QObject* object,const char* name) {
+        const auto value=object->property(name);
+        return QJsonValue::fromVariant(value.metaType()==QMetaType::fromType<QJSValue>()
+            ? value.value<QJSValue>().toVariant() : value);
+    };
     const auto snapshot=[&] {
+        if(markdown_mode && activity_observation) {
+            auto* row=root->findChild<QQuickItem*>("markdown.row");
+            QString visible_text;
+            const auto collect=[&](auto&& self,QQuickItem* item)->void {
+                if(!item || !item->isVisible())return;
+                if(item->property("text").isValid())visible_text+=item->property("text").toString()+"\n";
+                for(auto* child:item->childItems())self(self,child);
+            };
+            collect(collect,row);
+            return Object{{"ui",Object{{"visible_text",visible_text},
+                {"payload",json_property(row,"payload")},
+                {"desktop_urls",report_urls.urls}}}};
+        }
         if(markdown_mode) {
             auto* body=markdown_body();auto* document=markdown_document();
             if(!window->screen())throw std::runtime_error("actual Markdown display DPI unavailable");
@@ -261,7 +298,14 @@ int main(int argc,char** argv) {
                     {"mono_source",qml_value("EaStyle.Fonts.ptMono.source").toString()}}},
                 {"tables",tables},{"qt_reference_tables",reference_tables},
                 {"logical_dpi_y",window->screen()->logicalDotsPerInchY()},
-                {"theme_background",window->color().name(QColor::HexArgb)}}}};
+                {"theme_background",window->color().name(QColor::HexArgb)},
+                {"report_signal_present",root->findChild<QObject*>("markdown.row")->metaObject()
+                    ->indexOfSignal("reportRequested(QString,QString)")>=0},
+                {"report_events",json_property(root,"reportEvents")},
+                {"desktop_urls",report_urls.urls},
+                {"cursor_shape",static_cast<int>(window->cursor().shape())},
+                {"pointing_hand",window->cursor().shape()==Qt::PointingHandCursor}}}};
+
         }
 
         Object vm{{"connected",session->assistant()->connected()},{"state",session->assistant()->state()},
@@ -309,7 +353,37 @@ int main(int argc,char** argv) {
         try {
             const auto input=decode(QByteArray::fromStdString(line)).toObject();
             const auto op=input["op"].toString();Object result;
-            if(markdown_mode && op=="markdown_row") {
+            if(markdown_mode && op=="desktop_control") {
+                const auto path=storage.path()+"/original-url-handler-control.txt";
+                QFile control(path);if(!control.open(QIODevice::WriteOnly)
+                    || control.write("Original harmless Qt URL control")<0)
+                    throw std::runtime_error("owned URL control unavailable");
+                control.close();const auto url=QUrl::fromLocalFile(path);
+                const bool ok=QDesktopServices::openUrl(url);
+                result={{"ok",ok},{"control_url",url.toString(QUrl::FullyEncoded)}};
+            } else if(markdown_mode && op=="report_observer_reset")report_urls.urls=Array{};
+            else if(markdown_mode && op=="markdown_activity") {
+                activity_observation=true;
+                if(!QMetaObject::invokeMethod(root,"setActivityRow",
+                    Q_ARG(QVariant,input["row"].toObject().toVariantMap())))
+                    throw std::runtime_error("actual activity presentation action missing");
+                window->update();drain();
+            } else if(markdown_mode && op=="markdown_report_row") {
+                activity_observation=false;
+                if(!QMetaObject::invokeMethod(root,"setReportRow",
+                    Q_ARG(QVariant,input["row_id"].toString()),Q_ARG(QVariant,input["text"].toString())))
+                    throw std::runtime_error("actual report row presentation action missing");
+                window->update();drain();
+            } else if(markdown_mode && (op=="markdown_hover_link" || op=="markdown_click_link")) {
+                auto* body=markdown_body();QRectF caret;
+                if(!QMetaObject::invokeMethod(body,"positionToRectangle",Q_RETURN_ARG(QRectF,caret),
+                    Q_ARG(int,input["position"].toInt())))
+                    throw std::runtime_error("actual Qt character position unavailable");
+                const QPointF point=body->mapToScene(QPointF(caret.x()+1,caret.y()+caret.height()/2));
+                QTest::mouseMove(window,point.toPoint());window->update();drain();
+                if(op=="markdown_click_link")QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,point.toPoint());
+            } else if(markdown_mode && op=="markdown_row") {
+                activity_observation=false;
                 if(!QMetaObject::invokeMethod(root,"setRow",Q_ARG(QVariant,input["kind"].toString()),
                     Q_ARG(QVariant,input["text"].toString()),Q_ARG(QVariant,input["dark"].toBool())))
                     throw std::runtime_error("actual message harness action missing");
@@ -428,3 +502,5 @@ int main(int argc,char** argv) {
         }
     }
 }
+
+#include "probe.moc"

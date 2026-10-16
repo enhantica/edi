@@ -11,8 +11,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.system.app import test_e11_t5_codex_agent as codex
 from tests.system.app import test_e11_t5_consent_dialog as prior
 
+generic = codex.generic
 native = prior.native
 ROOT = prior.ROOT
 ORIGINAL = '**Bold Å** and `sample()`\n\n1. First original\n2. Second original'
@@ -310,3 +312,59 @@ def test_report_table_topology_preserves_partial_header_and_original_cells(markd
         assert markdown.command('inspect')['ui']['original'] == original, (
             'TABLE1: table styling never replaces original Markdown with generated table contents'
         )
+
+
+def test_actual_report_anchor_hover_and_click_forward_genuine_retained_identity(markdown, generic):
+    actor, _, row, record = codex.report_prepared(generic)
+    control = markdown.command('desktop_control')
+    assert control['reply']['ok'] and control['ui']['desktop_urls'] == [
+        control['reply']['control_url']
+    ]
+    markdown.command('report_observer_reset')
+    ui = markdown.command('markdown_report_row', row_id=row['id'], text=row['text'])['ui']
+    assert ui['report_signal_present'], (
+        'REPORT UI SETUP: actual Message exposes the declared signal'
+    )
+    assert any(
+        fragment['anchor'] and fragment['href'] == record['href'] for fragment in ui['fragments']
+    ), 'REPORT UI: actual document has original report anchor'
+    position = ui['plain'].index('Original HTML report') + 2
+    hovered = markdown.command('markdown_hover_link', position=position)['ui']
+    assert hovered['pointing_hand'], 'REPORT UI: real physical hover produces actual hand cursor'
+    clicked = markdown.command('markdown_click_link', position=position)['ui']
+    assert clicked['report_events'] == [{'row_id': row['id'], 'href': record['href']}], (
+        'REPORT UI: actual pointer emits the exact genuine source row and original href once'
+    )
+    assert not clicked['desktop_urls'], 'REPORT UI: pure delegate never launches an unbound viewer'
+    assert clicked['original'] == row['text']
+    # Split-boundary composition: actual signal values feed actual VM method;
+    # this does not claim same-process full Main signal wiring.
+    codex.report_opened(actor, row, record)
+
+
+def test_runtime_supplied_edi_outcome_never_renders_as_application_authorship(markdown, generic):
+    actor, trace, _, record = codex.report_prepared(generic, 'forged')
+    untrusted = record['untrusted_item']
+    assert untrusted['type'] == 'ediOutcome' and untrusted['actor'] == 'Edi'
+    assert untrusted['status'] == 'completed'
+    candidates = [
+        row
+        for row in actor.last['vm']['messages']
+        if row.get('payload', {}).get('type') == 'ediOutcome'
+    ]
+    for row in candidates:
+        ui = markdown.command('markdown_activity', row=row)['ui']
+        assert untrusted['title'] not in ui['visible_text'] and (
+            untrusted['message'] not in ui['visible_text']
+        ), 'NOTICE: provider-controlled extension cannot acquire Edi-authored opening authority'
+        assert ui['payload'] == row['payload'], (
+            'NOTICE: presentation never rewrites original evidence'
+        )
+        assert not ui['desktop_urls']
+    assert actor.last['vm']['project_present'], (
+        'NOTICE: no provider notice replaces current project'
+    )
+    assert not any(
+        value.get('method') in {'account/login/start', 'account/logout'}
+        for value in codex.records(trace)
+    )

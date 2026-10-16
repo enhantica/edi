@@ -11,6 +11,14 @@ ApplicationWindow {
     visible: true
     // Actual AssistantPanel assistantSheet is opaque in this sidebar role.
     color: EaStyle.Colors.appBarBackground
+    property var reportEvents: []
+    Connections {
+        target: row
+        ignoreUnknownSignals: true
+        function onReportRequested(sourceRowId, link) {
+            window.reportEvents = window.reportEvents.concat([{row_id: sourceRowId, href: link}]);
+        }
+    }
     AssistantMessage {
         id: row
         objectName: "markdown.row"
@@ -18,6 +26,20 @@ ApplicationWindow {
         height: implicitHeight
         kind: "assistant"
         text: "Initial original row"
+    }
+    function setReportRow(sourceRowId, original) {
+        reportEvents = [];
+        row.rowId = sourceRowId;
+        row.kind = "assistant";
+        row.status = "completed";
+        row.text = original;
+    }
+    function setActivityRow(original) {
+        row.rowId = original.id;
+        row.kind = original.kind;
+        row.status = original.status;
+        row.payload = original.payload;
+        row.text = original.text;
     }
     function setRow(kind, original, dark) {
         EaStyle.Colors.theme = dark ? EaStyle.Colors.DarkTheme : EaStyle.Colors.LightTheme;

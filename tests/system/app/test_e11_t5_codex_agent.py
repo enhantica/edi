@@ -6,6 +6,7 @@ Original protocol facts are codex0.162.1 schemas plus committed7f7332ead GR1/GR2
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -13,6 +14,7 @@ import subprocess
 import sys
 from operator import itemgetter
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import pytest
 
@@ -1719,3 +1721,282 @@ def test_fileauth_repeated_session_replacement_keeps_original_pending_interrupt(
     )
     assert not any(row.get('method') in {'account/login/start', 'account/logout'}
                    for row in records(trace))
+
+
+# Actual report authority is supplied by genuine default Session rows, never seeded history.
+def report_prepared(generic, variant='complete'):
+    actor, trace = generic('report:' + variant)
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened'], 'REPORT SETUP: original complete project is the real current owner'
+    observer = actor.last['vm']['report_observer']
+    assert observer['method_present'], 'REPORT SETUP: actual openReport public method exists'
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['report_limits'] = observer['limits']
+    config_path.write_text(json.dumps(config))
+    control = actor.command('desktop_control')
+    assert control['reply']['ok'] and control['vm']['report_observer']['urls'] == [
+        control['reply']['control_url']
+    ], 'REPORT SETUP: unrelated actual Qt URL dispatch reaches the no-browser observer'
+    actor.command('report_observer_reset')
+    connect(actor)
+    actor.command('send_text', text='Original report-producing user input')
+    settle(
+        actor,
+        lambda value: (
+            (variant == 'forged' and (value['last_error'] or not value['connected']))
+            or any(
+                (
+                    row.get('kind') == 'assistant'
+                    and '[Original HTML report]' in row.get('text', '')
+                    and (variant == 'unfinished' or row.get('status') == 'completed')
+                )
+                for row in value['messages']
+            )
+        ),
+    )
+    record = json.loads(trace.with_suffix('.report.json').read_text())
+    row = next(
+        (
+            row
+            for row in actor.last['vm']['messages']
+            if row.get('kind') == 'assistant' and '[Original HTML report]' in row.get('text', '')
+        ),
+        None,
+    )
+    assert (variant == 'forged' or (row and row['id'])) and record['cwd']
+    assert len(started_requests(trace)) == 1
+    assert not actor.last['vm']['report_observer']['urls'], 'REPORT: no automatic viewer dispatch'
+    return actor, trace, row, record
+
+
+def report_opened(actor, row, record, which='href'):
+    before = actor.last['vm']
+    opened = actor.command('open_report', row_id=row['id'], href=record[which])
+    assert opened['reply']['method_present'] and opened['reply']['invoked']
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['report_observer']['urls'])
+            or bool(value['last_error'] or value['handoff']['last_error'])
+        ),
+    )
+    urls = state['report_observer']['urls']
+    assert len(urls) == 1, 'REPORT: actual completed-row capability dispatches exactly one viewer'
+    parsed = urlparse(urls[0])
+    assert parsed.scheme == 'file' and not parsed.netloc
+    copied = Path(unquote(parsed.path))
+    assert copied.is_file() and not copied.is_symlink()
+    assert not copied.resolve().is_relative_to(Path(record['cwd']).resolve()), (
+        'REPORT: actual opened artifact is a host snapshot outside mutable runtime workspace'
+    )
+    assert (
+        hashlib.sha256(copied.read_bytes()).hexdigest() == record['files'][record[which]]['sha256']
+    ), 'REPORT: original report bytes are exact even if later workspace was retired'
+    assert state['connected'] and state['models'] == before['models']
+    assert state['messages'] == before['messages'], 'REPORT: opening never rewrites conversation'
+    return copied
+
+
+@pytest.mark.parametrize('which', ['href', 'pdf_href'], ids=['html-assets', 'pdf'])
+def test_report_completed_original_dispatches_bounded_snapshot(generic, which):
+    actor, _, row, record = report_prepared(generic)
+    copied = report_opened(actor, row, record, which)
+    if which == 'href':
+        for name in ('style.css', 'pixel.png'):
+            assert (copied.parent / name).read_bytes() == (
+                Path(record['cwd']) / Path(record['href']).parent / name
+            ).read_bytes(), 'REPORT: safe original relative assets stay complete in the snapshot'
+    preserved = copied.read_bytes()
+    (Path(record['cwd']) / record[which]).write_text('Late original workspace mutation')
+    assert copied.read_bytes() == preserved, (
+        'REPORT: later workspace writes cannot change snapshot'
+    )
+
+
+@pytest.mark.parametrize(
+    'variant',
+    [
+        'unknown-row',
+        'unfinished',
+        'missing',
+        'traversal',
+        'symlink',
+        'asset-symlink',
+        'external',
+        'absolute',
+        'scheme',
+    ],
+)
+def test_report_untrusted_or_incomplete_target_refuses_without_viewer(generic, variant):
+    actor, trace, row, record = report_prepared(
+        generic, 'complete' if variant == 'unknown-row' else variant
+    )
+    before = actor.last['vm']
+    original = live_original_peer(actor)
+    target_row = 'original-unknown-row' if variant == 'unknown-row' else row['id']
+    actor.command('open_report', row_id=target_row, href=record['href'])
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['report_observer']['urls'])
+            or bool(value['last_error'] or value['handoff']['last_error'])
+        ),
+    )
+    assert not state['report_observer']['urls'], 'REPORT: rejected target never reaches any viewer'
+    explanation = state['last_error'] or state['handoff']['last_error']
+    assert explanation and len(explanation.encode()) <= 512
+    assert state['connected'] and original_peer_is_live(original)
+    assert state['messages'] == before['messages'] and state['project'] == before['project']
+    assert state['models'] == before['models']
+    assert not any(
+        value.get('method') in {'account/login/start', 'account/logout'}
+        for value in records(trace)
+    ), 'REPORT: refusing a target never repairs auth'
+
+
+@pytest.mark.parametrize(
+    'variant', ['file-bytes', 'asset-count', 'collection-bytes', 'name-bytes']
+)
+def test_report_existing_public_resource_limits_refuse_before_viewer(generic, variant):
+    actor, _, row, record = report_prepared(generic, variant)
+    limits = actor.last['vm']['report_observer']['limits']
+    original = Path(record['cwd']) / record['href']
+    if variant == 'file-bytes':
+        assert original.stat().st_size == limits['file_bytes'] + 1
+    elif variant == 'name-bytes':
+        assert len(record['href'].encode()) > limits['name_bytes']
+    else:
+        referenced = [original] + sorted(original.parent.glob('original-*.css'))
+        if variant == 'asset-count':
+            assert len(referenced) > limits['files']
+        else:
+            assert all(path.stat().st_size <= limits['file_bytes'] for path in referenced)
+            assert sum(path.stat().st_size for path in referenced) > limits['collection_bytes']
+    before = actor.last['vm']
+    actor.command('open_report', row_id=row['id'], href=record['href'])
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['report_observer']['urls'])
+            or bool(value['last_error'] or value['handoff']['last_error'])
+        ),
+    )
+    assert not state['report_observer']['urls'], 'REPORT: actual over-budget snapshot never opens'
+    assert state['last_error'] or state['handoff']['last_error']
+    assert state['messages'] == before['messages'] and state['project'] == before['project']
+    assert state['connected'], 'REPORT: local quota refusal never signs out managed account'
+
+
+def test_report_historical_original_provenance_survives_context_but_clear_revokes(
+    generic, tmp_path
+):
+    actor, trace, row, record = report_prepared(generic)
+    copied = report_opened(actor, row, record)
+    original_bytes = copied.read_bytes()
+    actor.command('report_observer_reset')
+    selected = tmp_path / 'Original-new-context.txt'
+    selected.write_text('Original new selected context, not original report bytes')
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert actor.command('selected_add', request_id=token, urls=[selected.as_uri()])['reply'][
+        'accepted'
+    ]
+    assert actor.last['vm']['connected'] and row in actor.last['vm']['messages']
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+    actor.command('send_text', text='Original user in the new selected scope')
+    settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(
+                item.get('kind') == 'assistant' and item['id'] != row['id']
+                for item in value['messages']
+            )
+        ),
+    )
+    latest = json.loads(trace.with_suffix('.report.json').read_text())
+    assert latest['cwd'] != record['cwd'], 'REPORT SETUP: later work has a genuinely new workspace'
+    again = report_opened(actor, row, record)
+    assert again.read_bytes() == original_bytes, 'REPORT: old row uses ORIGINAL trusted provenance'
+    actor.command('report_observer_reset')
+    actor.command('clear_history')
+    settle(actor, lambda value: not value['can_cancel'] and not value['messages'])
+    actor.command('open_report', row_id=row['id'], href=record['href'])
+    state = settle(
+        actor,
+        lambda value: (
+            bool(value['report_observer']['urls'])
+            or bool(value['last_error'] or value['handoff']['last_error'])
+        ),
+    )
+    assert not state['report_observer']['urls'] and not state['messages'], (
+        'REPORT: actual Clear revokes original report capability and cannot revive old rows'
+    )
+    assert state['connected']
+
+
+@pytest.mark.parametrize('retirement', ['clear', 'context'])
+@pytest.mark.parametrize('order', ['ack-first', 'terminal-first'])
+def test_healthy_retirement_keeps_pending_steer_rpc_until_known_refusal(
+    generic, retirement, order
+):
+    actor, trace = generic('notice-race:' + retirement + ':' + order)
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened']
+    connect(actor)
+    before = actor.last['vm']
+    identity = live_original_peer(actor)
+    actor.command('send_text', text='Original admitted turn without durable output')
+    settle(actor, itemgetter('can_cancel'))
+    actor.command('send_text', text='Original pending steer before healthy retirement')
+    settle(
+        actor,
+        lambda _value: any(
+            event['kind'] == 'race-steer-received' for event in clear_control_events(trace)
+        ),
+    )
+    assert not any(row.get('kind') == 'assistant' for row in actor.last['vm']['messages']), (
+        'NOTICE SETUP: no durable assistant output can substitute for actual control authority'
+    )
+    if retirement == 'clear':
+        actor.command('clear_history')
+    else:
+        parameter = next(
+            p for p in before['project']['parameters'] if p['path'] == 'structure.cell.length_a'
+        )
+        assert not actor.command(
+            'manual_value', path=parameter['path'], value=parameter['value'] + 0.001
+        )['reply']['error']
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(event['kind'] == 'race-refusal' for event in clear_control_events(trace))
+        ),
+    )
+    sequence = [event['kind'] for event in clear_control_events(trace)]
+    assert (sequence.index('race-ack') < sequence.index('race-terminal')) == (order == 'ack-first')
+    assert sequence.index('race-terminal') < sequence.index('race-refusal')
+    assert state['connected'] and original_peer_is_live(identity)
+    assert state['handoff']['account_label'] == before['handoff']['account_label']
+    assert state['models'] == before['models'] and len(started_requests(trace)) == 1
+    if state['context_consent_required']:
+        actor.command('sign_in')
+    actor.command('send_text', text='Original explicit fresh work after healthy retirement')
+    state = settle(
+        actor,
+        lambda value: (
+            not value['can_cancel']
+            and any(row.get('text') == 'Original offline reply' for row in value['messages'])
+        ),
+    )
+    assert state['connected'] and len(started_requests(trace)) == 2, (
+        'NOTICE: exact known nonadmission settles owned RPCs without logout or automatic replay'
+    )
+    assert not any(
+        value.get('method') in {'account/login/start', 'account/logout'}
+        for value in records(trace)
+    )

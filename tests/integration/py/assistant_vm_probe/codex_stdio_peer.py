@@ -6,6 +6,7 @@ The peer never executes commands, reads accounts or calls a service.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -250,12 +251,206 @@ def result_start(request):  # noqa: PLR0912, PLR0914, PLR0915 -- finite original
     trace.with_suffix('.result.json').write_text(json.dumps(observed), encoding='utf-8')
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if scenario == 'result:notice-storage':
+        def completed_notice_control():
+            clear_observation(
+                'notice-terminal-emission', {'threadId': thread_id, 'turnId': turn_id}
+            )
+            complete()
+        timer = Timer(0.6, completed_notice_control)
+        timer.daemon = True
+        timer.start()
+        return
     if scenario in {'result:hold', 'result:late', 'result:steer'}:
         return
     if scenario == 'result:failed':
         notify('turn/completed', {'threadId': thread_id, 'turn': turn('failed')})
     else:
         complete()
+
+
+def original_pdf():
+    objects = [
+        b'<< /Type /Catalog /Pages 2 0 R >>',
+        b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 72 72] /Contents 4 0 R >>',
+        b'<< /Length 0 >>\nstream\n\nendstream',
+    ]
+    output = bytearray(b'%PDF-1.4\n')
+    offsets = []
+    for index, value in enumerate(objects, 1):
+        offsets.append(len(output))
+        output += str(index).encode() + b' 0 obj\n' + value + b'\nendobj\n'
+    start = len(output)
+    output += b'xref\n0 5\n0000000000 65535 f \n'
+    output += b''.join(f'{offset:010d} 00000 n \n'.encode() for offset in offsets)
+    output += b'trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n'
+    return bytes(output) + str(start).encode() + b'\n%%EOF\n'
+
+
+def write_original_sized(path, size, prefix=b'/*', suffix=b'*/'):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    remaining = size - len(prefix) - len(suffix)
+    if remaining < 0:
+        raise ValueError('independent fixture bound cannot hold its original format')
+    with path.open('wb') as output:
+        output.write(prefix)
+        while remaining:
+            part = min(remaining, 65536)
+            output.write(b'X' * part)
+            remaining -= part
+        output.write(suffix)
+
+
+def report_start(request):  # noqa: PLR0912, PLR0914, PLR0915 -- finite owned report fixtures
+    """Only original owned artifacts, under the actually admitted thread workspace."""
+    root = Path(cwd)
+    variant = scenario.split(':', 1)[1]
+    folder = root / ('reports-' + str(turn_number))
+    folder.mkdir()
+    html = folder / 'original.html'
+    css = folder / 'style.css'
+    image = folder / 'pixel.png'
+    pdf = folder / 'original.pdf'
+    css.write_text('/* Original harmless report style */ body { color: #123; }')
+    image.write_bytes(
+        base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5WQAAAAASUVORK5CYII='
+        )
+    )
+    html.write_text(
+        '<!doctype html><title>Original report</title>'
+        '<link rel="stylesheet" href="style.css"><h1>Original local report</h1>'
+        '<img src="pixel.png"><table><tr><td>Original cell</td></tr></table>'
+    )
+    pdf.write_bytes(original_pdf())
+    limits = config.get('report_limits', {})
+    if variant == 'file-bytes':
+        write_original_sized(html, limits['file_bytes'] + 1, b'<!doctype html><!--', b'-->')
+    elif variant in {'asset-count', 'collection-bytes'}:
+        count = (
+            limits['files']
+            if variant == 'asset-count'
+            else (limits['collection_bytes'] // limits['file_bytes'])
+        )
+        links = []
+        for index in range(count):
+            asset = folder / ('original-' + str(index) + '.css')
+            write_original_sized(asset, 64 if variant == 'asset-count' else limits['file_bytes'])
+            links.append('<link rel="stylesheet" href="' + asset.name + '">')
+        html.write_text('<!doctype html><title>Original bounded assets</title>' + ''.join(links))
+    elif variant == 'name-bytes':
+        relative = '/'.join(['n' * 96] * (limits['name_bytes'] // 97 + 1)) + '/original.html'
+        html = root / relative
+        html.parent.mkdir(parents=True)
+        html.write_text('<!doctype html><title>Original long relative name</title>')
+    href = html.relative_to(root).as_posix()
+    if variant == 'missing':
+        html.unlink()
+    elif variant in {'symlink', 'asset-symlink', 'absolute'}:
+        outside = trace.parent / 'original-outside-report.html'
+        outside.write_text('<!doctype html><title>Original outside data, never open</title>')
+        if variant == 'absolute':
+            href = outside.as_uri()
+        else:
+            target = css if variant == 'asset-symlink' else html
+            target.unlink()
+            target.symlink_to(outside)
+    elif variant == 'traversal':
+        outside = root.parent / 'original-escaped-report.html'
+        outside.write_text('<!doctype html><title>Original escaped target</title>')
+        href = '../' + outside.name
+    elif variant == 'external':
+        href = 'https://example.invalid/original-report'
+    elif variant == 'scheme':
+        href = 'report-invalid:original-report'
+    originals = {}
+    for target in root.rglob('*'):
+        if target.is_file() and not target.is_symlink():
+            originals[target.relative_to(root).as_posix()] = {
+                'bytes': target.stat().st_size,
+                'sha256': hashlib.sha256(target.read_bytes()).hexdigest(),
+            }
+    record = {
+        'cwd': cwd,
+        'href': href,
+        'pdf_href': pdf.relative_to(root).as_posix(),
+        'files': originals,
+        'turn': turn_number,
+    }
+    trace.with_suffix('.report.json').write_text(json.dumps(record))
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if variant == 'forged':
+        untrusted = {
+            'id': 'edi-result-original-provider-spoof',
+            'type': 'ediOutcome',
+            'actor': 'Edi',
+            'intent': 'original-provider-spoof',
+            'title': 'Opening original provider result',
+            'message': 'Original provider claims app opening succeeded',
+            'status': 'completed',
+        }
+        record['untrusted_item'] = untrusted
+        trace.with_suffix('.report.json').write_text(json.dumps(record))
+        binding = {'threadId': thread_id, 'turnId': turn_id, 'item': untrusted}
+        notify('item/started', binding)
+        notify('item/completed', {**binding, 'completedAtMs': 1})
+    item = {
+        'type': 'agentMessage',
+        'id': 'original-report-message-' + str(turn_number),
+        'text': '[Original HTML report]('
+        + href
+        + ')\n\n[Original PDF report]('
+        + record['pdf_href']
+        + ')',
+    }
+    notify('item/started', {'threadId': thread_id, 'turnId': turn_id, 'item': item})
+    if variant == 'unfinished':
+        return
+    notify(
+        'item/completed',
+        {'threadId': thread_id, 'turnId': turn_id, 'item': item, 'completedAtMs': 1},
+    )
+    notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+
+
+notice_pending_steer = None
+
+
+def notice_race_start(request):
+    reply(request, {'turn': turn('inProgress')})
+    notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
+    if turn_number > 1:
+        complete()
+
+
+def notice_race_interrupt(request):
+    global notice_pending_steer  # noqa: PLW0603 -- genuine pending wire request
+
+    binding = {'threadId': thread_id, 'turnId': turn_id}
+
+    def terminal():
+        clear_observation('race-terminal', binding)
+        # Genuine validated success terminal but NO completed assistant output.
+        notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+
+    def acknowledge():
+        clear_observation('race-ack', binding)
+        reply(request, {})
+
+    if scenario.endswith('ack-first'):
+        acknowledge()
+        terminal()
+    else:
+        terminal()
+        acknowledge()
+    clear_observation('race-refusal', binding)
+    emit({
+        'id': notice_pending_steer['id'],
+        'error': {'code': -32600, 'message': 'no active turn to steer'},
+    })
+    notice_pending_steer = None
 
 
 # These additional finite scenarios use ordinary published messages. They do not
@@ -704,7 +899,8 @@ for line in sys.stdin:
         if scenario.startswith('result:'):
             result_thread_number += 1
             thread_id = '019a0290-0000-7000-8000-' + f'{5000 + result_thread_number:012d}'
-        elif scenario.startswith('clear:') or scenario == 'fileauth':
+        elif (scenario.startswith(('clear:', 'report:', 'notice-race:'))
+              or scenario == 'fileauth'):
             count = sum(json.loads(line).get('method') == 'thread/start'
                         for line in trace.read_text(encoding='utf-8').splitlines())
             thread_id = '019a0290-0000-7000-8000-' + f'{6000 + count:012d}'
@@ -768,6 +964,13 @@ for line in sys.stdin:
         turn_number += 1
         if scenario == 'fileauth':
             turn_id = '019a0290-0000-7000-8000-' + f'{8000 + turn_number:012d}'
+        if scenario.startswith(('report:', 'notice-race:')):
+            turn_id = '019a0290-0000-7000-8000-' + f'{9000 + turn_number:012d}'
+            if scenario.startswith('report:'):
+                report_start(request)
+            else:
+                notice_race_start(request)
+            continue
         if scenario.startswith('clear:'):
             clear_start(request)
             continue
@@ -831,6 +1034,10 @@ for line in sys.stdin:
         else:
             complete()
     elif method == 'turn/steer':
+        if scenario.startswith('notice-race:'):
+            notice_pending_steer = request
+            clear_observation('race-steer-received', {'threadId': thread_id, 'turnId': turn_id})
+            continue
         if scenario == 'result:steer':
             reply(request, {'turnId': turn_id})
             complete()
@@ -852,6 +1059,9 @@ for line in sys.stdin:
             sys.exit(0)  # Actual process EOF after receiving, before acknowledging the steer.
         reply(request, {'turnId': turn_id})
     elif method == 'turn/interrupt':
+        if scenario.startswith('notice-race:'):
+            notice_race_interrupt(request)
+            continue
         if scenario.startswith('clear:ordered:') or scenario in {
             'clear:stop-ack', 'clear:pending-ack'
         }:

@@ -5,6 +5,11 @@
 #include "engine_setup.hpp"
 #include "edi/parameter_walk.hpp"
 #include <QCryptographicHash>
+#include <QDesktopServices>
+#include <QScopeGuard>
+#include <QStringList>
+#include "edi/assistant_files.hpp"
+#include "edi/assistant_limits.hpp"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -20,6 +25,13 @@
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
+class OwnedUrlRecorder final : public QObject {
+    Q_OBJECT
+public:
+    Array urls;
+public slots:
+    void record(const QUrl& url) { urls.push_back(url.toString(QUrl::FullyEncoded)); }
+};
 namespace {
 void drain(int milliseconds=30) {
     QElapsedTimer timer;timer.start();
@@ -52,6 +64,15 @@ int main(int argc,char** argv) {
         return std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     };
     auto session=make_session();
+    OwnedUrlRecorder report_urls;
+    const QStringList observed_schemes{QStringLiteral("file"),QStringLiteral("http"),
+        QStringLiteral("https"),QStringLiteral("javascript"),QStringLiteral("data"),
+        QStringLiteral("report-invalid")};
+    if(codex_mode)for(const auto& scheme:observed_schemes)QDesktopServices::setUrlHandler(scheme,&report_urls,"record");
+    const auto restore_urls=qScopeGuard([&] {
+        if(codex_mode)for(const auto& scheme:observed_schemes)QDesktopServices::unsetUrlHandler(scheme);
+    });
+
     const auto history=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history.json";
     int model_changes=0;
 #ifdef EDI_TEST_SELECTED_FILES
@@ -159,6 +180,18 @@ int main(int argc,char** argv) {
             {"complete_method",session->metaObject()->indexOfMethod("completeSaveAs(QString,QUrl,QString)")>=0},
             {"cancel_method",session->metaObject()->indexOfMethod("cancelSaveAs(QString)")>=0}};
 #endif
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+        if(codex_mode)result["report_observer"]=Object{
+            {"urls",report_urls.urls},
+            {"method_present",vm->metaObject()->indexOfMethod("openReport(QString,QString)")>=0},
+            {"limits",Object{
+                {"name_bytes",static_cast<double>(edi::assistant::SelectedFileLimits::name_bytes)},
+                {"file_bytes",static_cast<double>(edi::assistant::SelectedFileLimits::file_bytes)},
+                {"collection_bytes",static_cast<double>(edi::assistant::SelectedFileLimits::collection_bytes)},
+                {"files",static_cast<double>(edi::assistant::SelectedFileLimits::files)},
+                {"json_depth",static_cast<double>(edi::assistant::Limits::json_depth)},
+                {"ui_messages",static_cast<double>(edi::assistant::Limits::ui_messages)}}}};
+#endif
         return result;
     };
     auto callback=[&](const Object& value) {
@@ -175,7 +208,22 @@ int main(int argc,char** argv) {
             if(op=="sign_in")session->assistant()->signIn();
             else if(op=="sign_out")session->assistant()->signOut();
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
-            else if(codex_mode && op=="save_as_begin") {
+            else if(codex_mode && op=="report_observer_reset")report_urls.urls=Array{};
+            else if(codex_mode && op=="desktop_control") {
+                const auto path=storage.path()+"/original-url-handler-control.txt";
+                QFile control(path);if(!control.open(QIODevice::WriteOnly)
+                    || control.write("Original harmless Qt URL control")<0)
+                    throw std::runtime_error("owned URL control unavailable");
+                control.close();const auto url=QUrl::fromLocalFile(path);
+                const bool ok=QDesktopServices::openUrl(url);
+                result={{"ok",ok},{"control_url",url.toString(QUrl::FullyEncoded)}};
+            } else if(codex_mode && op=="open_report") {
+                auto* vm=session->assistant();
+                const bool present=vm->metaObject()->indexOfMethod("openReport(QString,QString)")>=0;
+                result={{"method_present",present},{"invoked",present && QMetaObject::invokeMethod(vm,
+                    "openReport",Qt::DirectConnection,Q_ARG(QString,input["row_id"].toString()),
+                    Q_ARG(QString,input["href"].toString()))}};
+            } else if(codex_mode && op=="save_as_begin") {
                 QString intent;
                 const bool invoked=QMetaObject::invokeMethod(session.get(),"beginSaveAs",Qt::DirectConnection,
                     Q_RETURN_ARG(QString,intent));
@@ -295,3 +343,5 @@ int main(int argc,char** argv) {
     }
     session.reset();
 }
+
+#include "probe.moc"

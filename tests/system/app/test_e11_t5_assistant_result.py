@@ -222,6 +222,21 @@ def test_receipt_without_successful_retained_completion_cannot_adopt(result_fact
         assert actor.last['vm']['can_cancel'], 'H2: real active work remains stoppable'
 
 
+def actual_edi_result_outcome(state, intent):
+    return next(
+        (
+            row
+            for row in state['messages']
+            if row.get('id') == 'edi-result-' + intent
+            and row.get('kind') == 'activity'
+            and row.get('payload', {}).get('type') == 'ediOutcome'
+            and row['payload'].get('actor') == 'Edi'
+            and row['payload'].get('intent') == intent
+        ),
+        None,
+    )
+
+
 @pytest.mark.parametrize(
     'variant',
     [
@@ -241,19 +256,39 @@ def test_receipt_without_successful_retained_completion_cannot_adopt(result_fact
 )
 def test_invalid_or_unclosed_result_never_replaces_empty_owner(result_factory, variant):
     actor, trace = result_factory(variant)
-    start(actor, trace)
-    state = old.settle(actor, lambda value: value['project_present'] or bool(
-        value['handoff']['last_error'] or value['last_error']
-    ))
-    assert any(row.get('kind') == 'assistant' and row.get('status') == 'completed'
-               and row.get('text') == 'Original offline reply' for row in state['messages']), (
-        'H2 SETUP: retained successful original precedes the actual app adoption/refusal outcome'
+    observed = start(actor, trace)
+    intent = observed['metadata']['intent']
+    state = old.settle(
+        actor,
+        lambda value: (
+            value['project_present']
+            or bool(
+                value['handoff']['last_error']
+                or value['last_error']
+                or actual_edi_result_outcome(value, intent)
+            )
+        ),
     )
+    assert any(
+        row.get('kind') == 'assistant'
+        and row.get('status') == 'completed'
+        and row.get('text') == 'Original offline reply'
+        for row in state['messages']
+    ), 'H2 SETUP: retained successful original precedes the actual app adoption/refusal outcome'
     assert not state['project_present'], (
         'H2: identity/hash/closure/link/represented-entry refusal preserves the empty Session'
     )
-    assert state['handoff']['last_error'] or state['last_error'], (
-        'H2: rejected saved result has an honest visible bounded explanation'
+    outcome = actual_edi_result_outcome(state, intent)
+    if outcome is not None:
+        assert outcome['status'] == 'failed', 'H2: actual refusal cannot claim successful adoption'
+        assert all(
+            isinstance(outcome['payload'].get(key), str)
+            and outcome['payload'][key]
+            and len(outcome['payload'][key].encode()) <= 512
+            for key in ('title', 'message')
+        )
+    assert state['handoff']['last_error'] or state['last_error'] or outcome is not None, (
+        'H2: actual refusal has a bounded error or genuine same-intent chronological Edi failure'
     )
     assert all(
         len(value.encode()) <= 512
@@ -427,3 +462,41 @@ def test_export_leaf_is_one_component_not_arbitrary_typed_path(result_factory, t
     assert not result['reply']['accepted'] and not (tmp_path / 'escape').exists(), (
         'H2: native fresh-leaf callback cannot grant arbitrary outside path access'
     )
+
+
+def test_actual_queued_adoption_contains_notice_storage_failure_without_false_opening_failure(
+    result_factory,
+):
+    actor, trace = result_factory('notice-storage')
+    observed = start(actor, trace)
+    intent = observed['metadata']['intent']
+    assert actor.last['archive']['is_file'] and actor.last['archive']['bytes'] > 0
+    prior_hash = actor.last['archive']['sha256']
+    barrier = actor.command('persistence_barrier')
+    assert (
+        barrier['archive']['is_directory'] and barrier['reply']['preserved_sha256'] == prior_hash
+    )
+    assert not any(
+        event['kind'] == 'notice-terminal-emission' for event in old.clear_control_events(trace)
+    ), 'NOTICE SETUP: the real archive refusal precedes actual terminal and queued app result'
+    state = old.settle(
+        actor,
+        lambda value: (
+            value['project_present'] or bool(value['handoff']['last_error'] or value['last_error'])
+        ),
+    )
+    project_readback(state)
+    assert state['connected'] and state['handoff']['account_label'] == 'original@example.invalid'
+    outcome = actual_edi_result_outcome(state, intent)
+    if outcome is not None:
+        assert outcome['status'] == 'completed', (
+            'NOTICE: committed adoption cannot claim opening failed after storage error'
+        )
+    assert state['last_error'] or state['handoff']['last_error'] or outcome is not None, (
+        'NOTICE: storage failure is contained and reconciled without an exception through Qt'
+    )
+    alive = actor.command('inspect')
+    assert alive['vm']['project_present'], (
+        'NOTICE: the actual owner still responds after queued failure'
+    )
+    project_readback(alive['vm'])
