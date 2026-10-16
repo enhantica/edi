@@ -741,7 +741,7 @@ void FitViewModel::settleScanCounts() {
     setScanCounts(counts, QString());
 }
 
-void FitViewModel::scanEnded(const edi::FitReport& report) {
+void FitViewModel::scanEnded(const edi::FitReport& report, bool automatic_results) {
     setScanning(false);
     if (owner_.retired_) return;
     const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
@@ -754,6 +754,7 @@ void FitViewModel::scanEnded(const edi::FitReport& report) {
     }
     emit scanFinished();
     if (owner_.retired_) return;
+    if (automatic_results) emit automaticResultsRequested();
 }
 
 void FitViewModel::ended(const edi::FitReport& report) {
@@ -761,16 +762,18 @@ void FitViewModel::ended(const edi::FitReport& report) {
     // Take the callback before any presentation/receiver can throw or replace the
     // model. FitJob owns this report through the entire completion invocation.
     auto completion = std::move(native_completion_);
+    // This completed fit owns its origin even if presentation starts another fit.
+    const bool automatic_results = !completion;
     std::exception_ptr failure;
     const bool visible = !owner_.retired_;
-    try { if (visible) presentEnded(report); } catch (...) { failure = std::current_exception(); }
+    try { if (visible) presentEnded(report, automatic_results); } catch (...) { failure = std::current_exception(); }
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
     if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
     if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
 }
 
-void FitViewModel::presentEnded(const edi::FitReport& report) {
+void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_results) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
     follow_timer_.stop();
@@ -790,7 +793,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report) {
         if (owner_.retired_) return;
         setRunning(false);
         if (owner_.retired_) return;
-        scanEnded(report);
+        scanEnded(report, automatic_results);
         if (owner_.retired_) return;
         return;
     }
@@ -812,6 +815,8 @@ void FitViewModel::presentEnded(const edi::FitReport& report) {
         sync();
         if (owner_.retired_) return;
         emit finished();
+        if (owner_.retired_) return;
+        if (automatic_results) emit automaticResultsRequested();
         if (owner_.retired_) return;
         return;
     }

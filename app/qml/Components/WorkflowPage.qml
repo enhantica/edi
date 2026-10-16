@@ -56,6 +56,13 @@ EaComponents.ContentPage {
     property bool blockCurrentTemplate: false
     signal blockActivated(int index)
 
+    // Normal assistant page following selects the existing manual tab, not a second editor.
+    function showSidebarTab(extra) {
+        const index = extra ? 1 : 0;
+        if (index < sideBar.tabs.length && sideBar.tabs[index].enabled)
+            sideBar.tabs[index].checked = true;
+    }
+
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
     function showMainTab(index) {
         mainContent.children[0].currentIndex = index;

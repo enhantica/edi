@@ -112,6 +112,7 @@ class AssistantViewModel : public QObject {
     void actionPointerPressed();
     void actionPointerHidden();
     void actionManualTakeover(); // Manual controls stay exposed for the original user event.
+    void actionPageRequested(const QString& page, bool extra); // Normal-mode UI following; no scientific write.
     void fileSelectionRetired(const QString& requestId);
     /// Revokes deferred UI intent even when replacement context bytes are identical.
     void conversationRetired();

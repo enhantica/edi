@@ -680,8 +680,11 @@ Popup {
             title: qsTr("Report page unavailable")
             width: Math.min(AppSizes.unit * 28, Math.max(0, parent.width - AppSizes.unit * 2))
             standardButtons: Dialog.Close
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: reportPageUnavailableText.implicitHeight
             EaElements.Label {
-                width: reportPageUnavailable.availableWidth
+                id: reportPageUnavailableText
+                width: reportPageUnavailable.contentWidth
                 text: qsTr("The current project's Report page is unavailable. Open a project with a structure and an experiment to use its report preview and export controls.")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap

@@ -485,3 +485,36 @@ existing computed columns to reserve those measured-row roles. Resource caps
 are unchanged. Original post-context, artifact, factual outcome, generic and
 live transport owners keep their own admission and may still refuse genuine
 capacity exhaustion. No successful save is inferred from accounting alone.
+
+
+### Normal native actions follow the existing editor page
+
+Normal-mode current-project value/free/relations/fit actions request the owning
+existing QML workflow page before their ordinary native edit/worker path. Cell
+and wavelength singleton values follow Structure/Experiment; other parameter
+values, free flags and fitting follow Analysis Main, relations follow Analysis
+Extra. Inspection and saving preserve the current page. This is explicit normal
+mode presentation, not visible-mode pointer input or a second scientific door.
+
+An actual manual numeric draft blocks navigation before blur. The host maps only
+fixed page ids, and QML uses actual enabled AppState pages and retained loaders.
+After real page/focus notification the original receiver/project/call/receipt
+and native currentness must still match before any scientific action. A newer
+owner is never resumed by the old continuation. This does not yet implement
+visible sidebar/filter/scroll exposure, background insertion or visible save.
+
+
+### Genuine visible Main sidebar navigation
+
+After the actual app-bar pointer click, the visible native adapter clicks the
+current enabled workflow's existing sideBar.tab.basic through the same real
+input sequencer before locating the scientific field or fitting.start. The
+request/current target gates apply to both events and every later timer; numeric
+draft preflight remains before navigation. Both navigation callback preparation
+and delivery are contained so a failed scheduling operation settles/refuses its
+original call rather than leaving it active.
+
+This closes Main versus Extra/Text/Settings exposure for the current editor and
+fit button. It does not yet clear parameter filters or reveal undelegated rows;
+those need the existing actual filter/list controls, not a longer arbitrary
+delay, hidden model write or weakened clipping/parameter identity predicate.

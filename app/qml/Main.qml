@@ -107,6 +107,7 @@ EaComponents.ApplicationWindow {
         return rectangle.width > 0 && rectangle.height > 0 && rectangle.x >= 0 && rectangle.y >= 0 && rectangle.x + rectangle.width <= assistantPanel.contentItem.width && rectangle.y + rectangle.height <= assistantPanel.contentItem.height;
     }
     function enforceAssistantHomeFocus() {
+        if (assistantManualTakeover) return;
         if (assistantHomeFocusCovered) {
             if (assistantPanel.shown)
                 assistantPanel.focusComposer();
@@ -114,7 +115,7 @@ EaComponents.ApplicationWindow {
                 focusAssistantOpener();
         }
     }
-    onAssistantHomeFocusCoveredChanged: enforceAssistantHomeFocus()
+    onAssistantHomeFocusCoveredChanged: Qt.callLater(enforceAssistantHomeFocus)
     onActiveAssistantHostChanged: rehostAssistant()
     onActiveFocusItemChanged: Qt.callLater(enforceAssistantHomeFocus)
 
@@ -368,6 +369,23 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: Session.assistant
+        function onActionPageRequested(page, extra) {
+            const project = Session.project;
+            if (!project) return;
+            let target = null;
+            let destination = -1;
+            if (page === "analysis" && AppState.analysisPageEnabled) {
+                target = analysisLoader.item; destination = AppState.Page.Analysis;
+            } else if (page === "experiment" && AppState.experimentPageEnabled) {
+                target = experimentLoader.item; destination = AppState.Page.Experiment;
+            } else if (page === "structure" && AppState.structurePageEnabled) {
+                target = structureLoader.item; destination = AppState.Page.Structure;
+            }
+            if (!target || destination < 0) return;
+            AppState.open(destination);
+            if (Session.project === project && target === window.assistantWorkflowPage)
+                target.showSidebarTab(extra);
+        }
         function onActionPointerShown() { assistantPointer.show(); }
         function onActionPointerMoved(position) { assistantPointer.move(position.x, position.y); }
         function onActionPointerPressed() { assistantPointer.click(); }
@@ -637,10 +655,7 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: Session.project ? Session.project.fit : null
-        function onFinished() {
-            fitResults.open();
-        }
-        function onScanFinished() {
+        function onAutomaticResultsRequested() {
             fitResults.open();
         }
         function onRefused(message) {

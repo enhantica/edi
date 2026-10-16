@@ -725,3 +725,38 @@ no-overwrite publication. A destination introduced after preparation still
 refuses at the final no-replace rename. Existing bounded unpublished recovery
 retention remains for such later failures; no mutable-path recursive deletion
 or false inode-conditional cleanup guarantee is introduced.
+
+
+### Visible presentation belongs to the running request
+
+The first genuine visible action exposes manual controls through the existing
+showingActions property. Finishing its widget input releases only that tool's
+parameter/edit/fit-preparation state; the still-running authenticated request
+keeps the sidebar exposed across subsequent actions and read-only gaps. Actual
+terminal/retirement, failure, question or Stop releases presentation through the
+existing notification/retirement seams, independently of genuine Worker/report
+settlement. No widget, scientific edit lock or original RPC is retained merely
+to keep the sidebar closed.
+
+Real manual input between tools is owned by that same current native receipt.
+It marks the existing manual-takeover policy before cancellation and returns
+false so the original event/target continues unchanged. The marker prevents
+reopening over that event; helper/window/toggle/retirement still cancel normally.
+Old cleanup checks the captured receipt and replacement widget before changing
+presentation. This does not implement missing widget navigation or background
+insertion, and does not treat animated pointer movement as user input.
+
+
+### Deferred covered-focus enforcement and explicit report-message sizing
+
+The existing covered-input focus guard schedules coverage-change enforcement
+through the same Qt.callLater function used for focus changes. It rereads the
+current coverage and respects genuine manual takeover, instead of synchronously
+changing a dependency while its coverage binding is notifying. The guard remains
+active for current covered controls; no old-page focus is captured.
+
+The current-project Report-unavailable message uses the same explicit
+contentWidth/contentHeight convention as the existing assistant connection
+dialog: fixed available width constrains its plain wrapping text, whose
+implicitHeight determines content height independently of popup availableHeight.
+No report generator, URI permission or historical artifact authority changes.

@@ -219,10 +219,12 @@ class FitViewModel : public QObject {
     void scanTextChanged();
     void etaChanged();
     void outOfDateChanged();
-    // A scan ended with its rows on disk (finished or stopped): the pop-up.
+    // A scan ended with its rows on disk (finished or stopped).
     void scanFinished();
-    // A fit ended with a result the project now holds (finished, cancelled or stopped early): the pop-up.
+    // A fit ended with a result the project now holds (finished, cancelled or stopped early).
     void finished();
+    // Only a manual fit requests automatic results presentation; explicit opening is separate.
+    void automaticResultsRequested();
     // A fit was refused or failed; the project is unchanged.
     void refused(const QString& message);
 
@@ -232,7 +234,7 @@ class FitViewModel : public QObject {
     void frame(const edi::FitFrame& frame);
     void showFrame();
     void ended(const edi::FitReport& report);
-    void presentEnded(const edi::FitReport& report);
+    void presentEnded(const edi::FitReport& report, bool automatic_results);
     void startImpl();
     friend class AssistantViewModel;
     std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion);
@@ -248,7 +250,7 @@ class FitViewModel : public QObject {
     void followLatest();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
-    void scanEnded(const edi::FitReport& report);
+    void scanEnded(const edi::FitReport& report, bool automatic_results);
     void setScanning(bool scanning);
     void setScanRefused(bool refused);
     void setContinuable(bool continuable);
