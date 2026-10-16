@@ -252,6 +252,7 @@ struct AssistantViewModel::State {
     QString generic_interrupt_rpc, generic_interrupt_thread, generic_interrupt_turn;
     std::unique_ptr<CodexAgent> agent;
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
+    bool generic_login_attempted = false;
     std::shared_ptr<AssistantWorkingFolder> working_folder;
     bool working_folder_transition = false;
     struct WorkingFolderSelection {
@@ -1989,6 +1990,27 @@ struct AssistantViewModel::State {
         }
         generic_advance_clear(); sync(); notify();
     }
+    static const char* generic_bootstrap_stage(const QString& method) noexcept {
+        if (method == "initialize") return "starting the official agent";
+        if (method == "account/read") return "checking the account";
+        if (method == "account/login/start") return "opening ChatGPT sign-in";
+        if (method == "model/list") return "loading available models";
+        if (method == "skills/list") return "checking bundled skills";
+        if (method == "thread/start") return "checking the working context";
+        return nullptr;
+    }
+    void generic_response_failure(const QString& method, const char* reason) noexcept {
+        try {
+            if (const auto* stage = generic_bootstrap_stage(method)) {
+                generic_fail(QObject::tr("ChatGPT sign-in could not continue while %1 [%2: %3].")
+                    .arg(QString::fromLatin1(stage), method, QString::fromLatin1(reason)));
+                return;
+            }
+            generic_fail(QObject::tr("The official agent reply is invalid or exceeds its limits."));
+            return;
+        } catch (...) {}
+        generic_fail(QStringLiteral("The official agent reply could not be processed [UNEXPECTED_PROCESSING]."));
+    }
     void generic_initialize() {
         agent = std::make_unique<CodexAgent>(&owner);
         QObject::connect(agent.get(), &CodexAgent::started, &owner, [this] {
@@ -2002,8 +2024,9 @@ struct AssistantViewModel::State {
         QObject::connect(agent.get(), &CodexAgent::failed, &owner, [this](const QString& message) { generic_fail(message); });
         QObject::connect(agent.get(), &CodexAgent::response, &owner,
             [this](const QString& id, const QString& method, const Object& reply) {
-                try { generic_response(id, method, reply); }
-                catch (...) { generic_fail(QObject::tr("The official agent reply is invalid or exceeds its limits.")); }
+                const char* reason = "UNEXPECTED_PROCESSING";
+                try { generic_response(id, method, reply, reason); }
+                catch (...) { generic_response_failure(method, reason); }
             });
         QObject::connect(agent.get(), &CodexAgent::event, &owner, [this](const QString& method, const Object& params) {
             try { generic_event(method, params); }
@@ -2018,7 +2041,7 @@ struct AssistantViewModel::State {
     void generic_sign_in() {
         if (project && project->fit()->running()) throw std::runtime_error("Finish the active manual fit first");
         if (generic_busy || generic_connecting || generic_held_row) throw std::runtime_error("Finish or clear the active agent operation first");
-        generic_blocked = false; error.clear();
+        generic_blocked = false; error.clear(); generic_login_attempted = false;
         generic_revoke_workspace(); // Never relabel a modified recovery directory as a fresh snapshot.
         generic_prepare_workspace();
         generic_catalog_bytes = 2;
@@ -2075,15 +2098,17 @@ struct AssistantViewModel::State {
         if (!model.isEmpty()) params["model"] = model;
         generic_request("thread/start", params);
     }
-    void generic_response(const QString& id, const QString& method, const Object& reply) {
+    void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
         if (reply.contains("error")) {
+            reason_code = "RESULT_SHAPE";
             const auto failure = reply.value("error").toObject();
             const auto code = failure.value("code"); const auto message = failure.value("message");
             if (!reply.value("error").isObject() || !code.isDouble() || !std::isfinite(code.toDouble()) ||
                 std::floor(code.toDouble()) != code.toDouble() || code.toDouble() < -2147483648.0 || code.toDouble() > 2147483647.0 || !message.isString())
                 throw std::runtime_error("Agent request refusal has an invalid shape");
+            if (generic_bootstrap_stage(method)) { generic_response_failure(method, "RPC_REFUSED"); return; }
             const auto number = static_cast<qint32>(code.toDouble());
             const auto reason = message.toString();
             result_pending.remove(id); native_pending.remove(id);
@@ -2137,29 +2162,48 @@ struct AssistantViewModel::State {
             // existing revocation fence. This is not proof of lost credentials.
             generic_fail(diagnostic); return;
         }
+        reason_code = "RESULT_SHAPE";
         if (!reply.value("result").isObject()) throw std::runtime_error("Agent reply result is invalid");
         const auto result = reply.value("result").toObject();
         if (method == "initialize") {
+            reason_code = "INITIALIZED_NOTIFICATION";
             if (!agent->notification("initialized")) throw std::runtime_error("Agent handshake failed");
             agent->settleOperation(); agent->beginOperation(Limits::sign_in_ms, 0);
+            reason_code = "REQUEST_ADMISSION";
             generic_request("account/read", {{"refreshToken", false}});
         } else if (method == "account/read") {
-            const auto account = result.value("account").toObject();
+            reason_code = "ACCOUNT_KIND";
+            const auto account_value = result.value("account");
+            const auto account = account_value.toObject();
             if (account.value("type") == "chatgpt") {
                 usage_read_epoch = usage_epoch;
                 generic_native["label"] = account.value("email").isString() ? account.value("email") : QJsonValue("ChatGPT");
                 generic_native["models"] = QJsonArray{};
+                reason_code = "REQUEST_ADMISSION";
                 generic_request("model/list", {{"includeHidden", true}});
-            } else if (result.value("account").isNull()) generic_request("account/login/start", {{"type", "chatgpt"}});
-            else throw std::runtime_error("Managed ChatGPT login is required");
+            } else if (account_value.isNull() || (account_value.isObject() &&
+                (account.value("type") == "apiKey" || (account.value("type") == "amazonBedrock" && account.value("usesCodexManagedCredentials").isBool())))) {
+                // The user selected managed ChatGPT sign-in. Never infer/use
+                // API billing or remove another credential to make it succeed.
+                if (generic_login_attempted) throw std::runtime_error("Managed ChatGPT login was not established");
+                generic_login_attempted = true;
+                reason_code = "REQUEST_ADMISSION";
+                generic_request("account/login/start", {{"type", "chatgpt"}});
+            } else throw std::runtime_error("Managed ChatGPT login is required");
         } else if (method == "account/login/start") {
+            reason_code = "LOGIN_KIND";
             if (result.value("type") != "chatgpt") throw std::runtime_error("Managed ChatGPT login is required");
+            reason_code = "LOGIN_ID";
             generic_login = generic_id(result.value("loginId"));
+            reason_code = "LOGIN_URL";
             const QUrl url(result.value("authUrl").toString());
             if (!url.isValid() || url.scheme() != "https" || !url.userInfo().isEmpty() || (url.host() != "auth.openai.com" && url.host() != "chatgpt.com")) throw std::runtime_error("Agent login URL is unavailable");
+            reason_code = "BROWSER_OPEN";
             if (!QDesktopServices::openUrl(url)) throw std::runtime_error("The sign-in browser could not be opened");
         } else if (method == "model/list") {
+            reason_code = "MODEL_SHAPE";
             if (!result.value("data").isArray()) throw std::runtime_error("Agent model catalog is unavailable");
+            reason_code = "MODEL_CAPACITY";
             const auto rawBytes = generic_size(result, Limits::http_json_bytes);
             const quint64 separator = generic_catalog_bytes == 2 ? 0 : 1;
             if (separator > Limits::http_json_bytes - generic_catalog_bytes || rawBytes > Limits::http_json_bytes - generic_catalog_bytes - separator)
@@ -2169,6 +2213,7 @@ struct AssistantViewModel::State {
             const auto incoming = result.value("data").toArray();
             if (incoming.size() > static_cast<qsizetype>(Limits::models) - choices.size()) throw std::length_error("Agent model catalog exceeds limit");
             for (const auto& entry : incoming) {
+                reason_code = "MODEL_METADATA";
                 const auto item = entry.toObject();
                 const auto slug = generic_id(item.value("model"));
                 const auto options = item.value("supportedReasoningEfforts").toArray();
@@ -2177,11 +2222,14 @@ struct AssistantViewModel::State {
                 for (const auto& option : options) efforts.append(generic_id(option.toObject().value("reasoningEffort")));
                 if (!item.value("displayName").isString() || !item.value("hidden").isBool()) throw std::runtime_error("Agent model has invalid metadata");
                 const auto defaultEffort = generic_id(item.value("defaultReasoningEffort"));
+                reason_code = "MODEL_DEFAULT_EFFORT";
                 if (!efforts.contains(defaultEffort)) throw std::runtime_error("Agent default effort is not supported by its catalog");
                 choices.append(Object{{"default_effort", defaultEffort}, {"id", slug}, {"display_name", item.value("displayName")}, {"efforts", efforts},
                     {"available", !item.value("hidden").toBool()}, {"attachment_types", QJsonArray{}}});
             }
+            reason_code = "MODEL_CAPACITY";
             generic_size(choices, Limits::http_json_bytes); generic_native["models"] = choices;
+            reason_code = "REQUEST_ADMISSION";
             if (result.value("nextCursor").isString() && !result.value("nextCursor").toString().isEmpty())
                 generic_request("model/list", {{"includeHidden", true}, {"cursor", result.value("nextCursor")}});
             else {
@@ -2190,38 +2238,79 @@ struct AssistantViewModel::State {
                 generic_request("skills/list", {{"cwds", QJsonArray{generic_workspace}}, {"forceReload", true}});
             }
         } else if (method == "skills/list") {
+            reason_code = "SKILL_SHAPE";
             if (!result.value("data").isArray()) throw std::runtime_error("Agent skill catalog is unavailable");
+            reason_code = "BUNDLED_SKILL_READ";
+            QFile index(":/edi/assistant/skills/index.json");
+            if (!index.open(QIODevice::ReadOnly) || index.size() < 0 || index.size() > static_cast<qint64>(Limits::context_bytes))
+                throw std::runtime_error("Bundled skill manifest is unavailable");
+            const auto declarations = QJsonDocument::fromJson(index.read(Limits::context_bytes + 1)).object().value("skills").toArray();
             QStringList found; QJsonArray catalog;
             for (const auto& entry : result.value("data").toArray()) {
                 const auto group = entry.toObject();
                 if (group.value("cwd") != generic_workspace) continue;
-                if (!group.value("errors").isArray() || !group.value("errors").toArray().isEmpty()) throw std::runtime_error("Agent skill discovery reported an error");
+                reason_code = "SKILL_DISCOVERY";
+                if (!group.value("errors").isArray()) throw std::runtime_error("Agent skill discovery reported an error");
+                const auto ownedRoot = QDir::cleanPath(generic_workspace);
+                for (const auto& value : group.value("errors").toArray()) {
+                    const auto failure = value.toObject();
+                    const auto path_value = failure.value("path");
+                    if (!value.isObject() || !path_value.isString() || path_value.toString().isEmpty() ||
+                        !QDir::isAbsolutePath(path_value.toString()) || !failure.value("message").isString())
+                        throw std::runtime_error("Agent skill discovery error is malformed");
+                    const auto failedPath = QDir::cleanPath(path_value.toString());
+                    if (failedPath == ownedRoot || failedPath.startsWith(ownedRoot + '/'))
+                        throw std::runtime_error("Bundled skill discovery reported an error");
+                    // A valid error for an unrelated global/plugin skill is
+                    // not the registration/contents of any required Edi skill.
+                }
+                reason_code = "SKILL_SHAPE";
+                if (!group.value("skills").isArray()) throw std::runtime_error("Agent skill catalog is unavailable");
                 for (const auto& value : group.value("skills").toArray()) {
                     const auto skill = value.toObject(); const auto path = skill.value("path").toString();
                     if (!generic_skill_paths.contains(path)) continue;
+                    reason_code = "BUNDLED_SKILL_DISABLED";
                     if (!skill.value("enabled").isBool() || !skill.value("enabled").toBool()) throw std::runtime_error("A bundled skill is disabled");
+                    reason_code = "BUNDLED_SKILL_CHANGED";
                     const auto name = generic_id(skill.value("name"));
                     if (found.contains(path)) throw std::runtime_error("A bundled skill registration is ambiguous");
+                    const auto relative = QDir(generic_workspace + "/.agents/skills").relativeFilePath(path);
+                    Object declaration;
+                    for (const auto& item : declarations) if (item.toObject().value("path") == relative) { declaration = item.toObject(); break; }
+                    if (declaration.value("id") != name || !declaration.value("sha256").isString())
+                        throw std::runtime_error("A bundled skill registration changed");
+                    reason_code = "BUNDLED_SKILL_READ";
+                    QFile file(path); if (!file.open(QIODevice::ReadOnly) || file.size() < 0 || file.size() > static_cast<qint64>(Limits::context_bytes)) throw std::runtime_error("Bundled skill is unavailable");
+                    const auto content = file.read(Limits::context_bytes + 1);
+                    reason_code = "BUNDLED_SKILL_CHANGED";
+                    if (content.size() > static_cast<qsizetype>(Limits::context_bytes) ||
+                        QCryptographicHash::hash(content, QCryptographicHash::Sha256).toHex() != declaration.value("sha256").toString().toLatin1())
+                        throw std::runtime_error("Bundled skill content changed");
                     found.append(path);
-                    QFile file(path); if (!file.open(QIODevice::ReadOnly) || file.size() > static_cast<qint64>(Limits::context_bytes)) throw std::runtime_error("Bundled skill is unavailable");
                     catalog.append(Object{{"id", name}, {"title", name}, {"version", "See content"}, {"summary", skill.value("description")},
-                        {"path", path}, {"content", QString::fromUtf8(file.read(Limits::context_bytes + 1))}, {"available", true}, {"blocked_reason", ""}, {"references", QJsonArray{}}});
+                        {"path", path}, {"content", QString::fromUtf8(content)}, {"available", true}, {"blocked_reason", ""}, {"references", QJsonArray{}}});
                 }
             }
+            reason_code = "BUNDLED_SKILL_MISSING";
             if (found.size() != generic_skill_paths.size()) throw std::runtime_error("Not all bundled skills are registered");
+            reason_code = "SKILL_CAPACITY";
             generic_size(catalog, Limits::context_bytes); skills.assign(catalog); selected_skill.clear();
+            reason_code = "REQUEST_ADMISSION";
             generic_start_thread();
         } else if (method == "thread/start") {
+            reason_code = "THREAD_POLICY_SHAPE";
             const auto sandbox = result.value("sandbox").toObject();
             const auto roots = sandbox.value("writableRoots").toArray();
             if (!sandbox.value("writableRoots").isArray() || !sandbox.value("networkAccess").isBool() ||
                 !sandbox.value("excludeSlashTmp").isBool() || !sandbox.value("excludeTmpdirEnvVar").isBool())
                 throw std::runtime_error("Agent effective sandbox metadata is unavailable");
+            reason_code = "THREAD_POLICY";
             if (result.value("cwd") != generic_workspace || result.value("modelProvider") != "openai" ||
                 result.value("approvalPolicy") != "on-request" || result.value("approvalsReviewer") != "user" ||
                 sandbox.value("type") != "workspaceWrite" || sandbox.value("networkAccess").toBool(true) ||
                 !sandbox.value("excludeSlashTmp").toBool() || !sandbox.value("excludeTmpdirEnvVar").toBool())
                 throw std::runtime_error("Agent effective policy differs from the admitted workspace boundary");
+            reason_code = "THREAD_ROOTS";
             const auto expected = generic_writable_roots(false); // Verify the declared grant even if its physical root vanished in flight.
             QSet<QString> admitted, actual;
             for (const auto& root : expected) admitted.insert(QDir::cleanPath(root.toString()));
@@ -2261,6 +2350,7 @@ struct AssistantViewModel::State {
         else if (method == "account/logout") {
             generic_revoke_workspace(); generic_blocked = false; error.clear();
         }
+        reason_code = "BOOTSTRAP_PUBLICATION";
         generic_settle_revoke(); generic_advance_clear(); sync(); notify();
     }
     void generic_acknowledge(const QString& id, const QString& turn) {
