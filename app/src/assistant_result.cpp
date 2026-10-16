@@ -473,6 +473,12 @@ struct AssistantResultExport::State {
           stageIdentity(parentFd.n) {
         validate_assistant_result_leaf(leaf);
         if (leaf.toCaseFolded() == stage.toCaseFolded()) refuse();
+        // Refuse an already occupied destination before creating any staging
+        // object. NOFOLLOW includes dangling symlinks; every other lookup error
+        // also refuses. The final atomic no-replace publication remains required.
+        const auto leafBytes = leaf.toUtf8();
+        struct stat existing{};
+        if (::fstatat(parentFd.n, leafBytes.constData(), &existing, AT_SYMLINK_NOFOLLOW) == 0 || errno != ENOENT) refuse();
         if (::mkdirat(parentFd.n, stage.toUtf8().constData(), 0700)) refuse();
         stageFd = below(parentFd.n, stage, true); stageIdentity = Identity(stageFd.n);
     }

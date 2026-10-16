@@ -709,3 +709,19 @@ native row, without a new report/artifact UI or floating success banner. Ordinar
 working-folder/file actions do not log out or destroy selected snapshots/history.
 The saved root remains user-owned; protected captured inputs/reopen leases stay
 within existing bounded file/collection/count and lifetime checks.
+
+
+### Occupied export destinations refuse before staging
+
+The shared AssistantResultExport state checks the fresh leaf through its pinned
+parent descriptor with fstatat/AT_SYMLINK_NOFOLLOW before mkdirat. An existing
+directory, regular file, symlink (including dangling) or other occupied object,
+and lookup errors other than absence, refuse without creating an export staging
+directory. Both ordinary fresh-result Save As and native current-project saving
+use this same admission. User destination bytes and link targets are untouched.
+
+This is an early side-effect admission, not a replacement for Linux/Mac atomic
+no-overwrite publication. A destination introduced after preparation still
+refuses at the final no-replace rename. Existing bounded unpublished recovery
+retention remains for such later failures; no mutable-path recursive deletion
+or false inode-conditional cleanup guarantee is introduced.
