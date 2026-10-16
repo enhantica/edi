@@ -2312,14 +2312,17 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("Agent effective policy differs from the admitted workspace boundary");
             reason_code = "THREAD_ROOTS";
             const auto expected = generic_writable_roots(false); // Verify the declared grant even if its physical root vanished in flight.
-            QSet<QString> admitted, actual;
+            // WorkspaceWrite includes the already validated cwd implicitly;
+            // the official compatibility projection may omit it from this list.
+            QSet<QString> admitted, actual{QDir::cleanPath(generic_workspace)}, explicitSeen;
             for (const auto& root : expected) admitted.insert(QDir::cleanPath(root.toString()));
             for (const auto& root : roots) {
                 if (!root.isString() || root.toString().isEmpty() || !QDir::isAbsolutePath(root.toString()))
                     throw std::runtime_error("Agent effective writable roots are unavailable");
                 const auto path = QDir::cleanPath(root.toString());
-                if (!admitted.contains(path) || actual.contains(path))
+                if (!admitted.contains(path) || explicitSeen.contains(path))
                     throw std::runtime_error("Agent effective writable roots exceed the admitted folders");
+                explicitSeen.insert(path);
                 actual.insert(path);
             }
             if (actual != admitted) throw std::runtime_error("Agent did not admit the exact chosen working scope");
