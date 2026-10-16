@@ -73,3 +73,8 @@ The reached regression was earlier than launch/auth: `Controller::context` alway
 
 
 A genuine Sign in attempt also owns a bounded app-local failure dialog, using the existing AppDialog/scrollbar/plain-label presentation. A synchronous prelaunch refusal or an actually failed connecting transition displays the already bounded public error, rather than disappearing when the consent dialog accepts. A successful connection emits no failure; an unrelated error without an initiated attempt cannot open it. Actual conversation/owner retirement cancels that presentation attempt. This is failure feedback, not another scientific-plan/context approval or a provider reply. The original consent, launcher, auth and restricted Controller permission paths are unchanged.
+
+
+### Native recipe profile choices are actual core tokens (2026-10-16)
+
+The native creation recipe previously described peak_profile as arbitrary short text while the actual selector accepts canonical core IDs. A delegated agent could therefore invent plausible display spellings and fail before project creation. The recipe schema now derives its enum from supported_peak_profiles(CONSTANT_WAVELENGTH), the same existing core catalog used by normal selectors, and parses only those exact choices. No parallel profile list, synonym guessing, new scientific model or host-selected profile default is introduced. User-supplied wavelength/recipe intent remains authoritative; the agent chooses justified offered options only within delegation. A fresh actual thread/catalog is needed for updated tool metadata; old instructions are not retroactively changed. Source preparation is not an observed explanation for any unexpanded owner error beyond the confirmed metadata omission.

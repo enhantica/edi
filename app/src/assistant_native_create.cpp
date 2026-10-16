@@ -5,6 +5,7 @@
 #include "edi/assistant_limits.hpp"
 #include "edi/selectors.hpp"
 #include <cmath>
+#include <algorithm>
 #include <QJsonArray>
 #include <QSet>
 #include <stdexcept>
@@ -43,6 +44,13 @@ Array array(const Object& value, const char* key, int minimum) {
 QJsonObject native_cwl_recipe_schema() {
     const Object shortText{{"type", "string"}, {"minLength", 1}, {"maxLength", static_cast<int>(Limits::id_bytes)}};
     const Object num{{"type", "number"}};
+    Array profiles;
+    for (const auto& token : edi::supported_peak_profiles(edi::BeamModeEnum::CONSTANT_WAVELENGTH))
+        profiles.append(QString::fromStdString(token));
+    Object profile = shortText;
+    profile["enum"] = profiles;
+    profile["description"] = "Use one exact supported CW profile token from this enum, not a prose label or guessed spelling";
+
     const auto pairs = [&](const char* first, const char* second, int minimum) {
         return Object{{"type", "array"}, {"minItems", minimum}, {"maxItems", static_cast<int>(Limits::stream_items)},
             {"items", shape({{first, num}, {second, num}}, {first, second})}};
@@ -52,7 +60,7 @@ QJsonObject native_cwl_recipe_schema() {
         {"beam_mode", Object{{"type", "string"}, {"enum", Array{"constant wavelength"}}}},
         {"radiation_probe", Object{{"type", "string"}, {"enum", Array{"neutron"}}}},
         {"scattering_type", Object{{"type", "string"}, {"enum", Array{"bragg"}}}},
-        {"peak_profile", shortText}, {"wavelength", num}, {"zero_offset", num}, {"phase_scale", num},
+        {"peak_profile", profile}, {"wavelength", num}, {"zero_offset", num}, {"phase_scale", num},
         {"background", pairs("position", "intensity", 2)}, {"exclusions", pairs("first", "second", 0)},
         {"initial_parameters", Object{{"type", "array"}, {"minItems", 0}, {"maxItems", static_cast<int>(Limits::stream_items)},
             {"items", shape({{"path", shortText}, {"value", num}}, {"path", "value"})}}}},
@@ -71,6 +79,10 @@ NativeCwlRecipe parse_native_cwl_recipe(const Object& recipe) {
     result.type.radiation_probe = text(recipe, "radiation_probe", Limits::id_bytes);
     result.type.scattering_type = text(recipe, "scattering_type", Limits::id_bytes);
     result.peak_profile = text(recipe, "peak_profile", Limits::id_bytes);
+    const auto profiles = edi::supported_peak_profiles(edi::BeamModeEnum::CONSTANT_WAVELENGTH);
+    if (std::find(profiles.begin(), profiles.end(), result.peak_profile) == profiles.end())
+        throw edi::IoError("Unsupported native CW peak_profile: use one exact token offered by the creation recipe enum");
+
     result.wavelength = number(recipe, "wavelength"); result.zero_offset = number(recipe, "zero_offset"); result.phase_scale = number(recipe, "phase_scale");
     for (const auto& entry : array(recipe, "background", 2)) {
         if (!entry.isObject()) throw edi::IoError("Invalid background anchor");
