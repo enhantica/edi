@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaObject>
+#include <QLoggingCategory>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QDir>
@@ -62,6 +63,7 @@
 
 namespace edi_app {
 namespace {
+Q_LOGGING_CATEGORY(lcAssistantWidgetLookup, "edi.assistant.widget.lookup", QtWarningMsg)
 using Object = QJsonObject;
 std::string json(const Object& object) { return QJsonDocument(object).toJson(QJsonDocument::Compact).toStdString(); }
 Object object(const std::string& text) { return QJsonDocument::fromJson(QByteArray::fromStdString(text)).object(); }
@@ -557,23 +559,126 @@ struct AssistantViewModel::State {
     }
     void widget_reach_parameter(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_current(run)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        // One existing once-scheduled lookup per original call. No new entry,
+        // retry, or NativeWidget/accounting size change. Diagnose only the
+        // requested tool/tab, retaining conversion before detailed ancestry.
+        unsigned log_records = 0;
+        bool log_omitted = false;
+        auto diagnostic = [&](auto&& write) noexcept {
+            try {
+                if (!lcAssistantWidgetLookup().isDebugEnabled()) return;
+                if (log_records == 256) {
+                    if (!log_omitted) {
+                        log_omitted = true;
+                        qCDebug(lcAssistantWidgetLookup) << "lookup records omitted after limit" << 256
+                            << "original" << static_cast<const void*>(run.get());
+                    }
+                    return;
+                }
+                ++log_records;
+                write();
+            } catch (...) {} // Diagnostic failure is never input/scientific authority.
+        };
+        diagnostic( [&] {
+            qCDebug(lcAssistantWidgetLookup) << "lookup expected" << "original" << static_cast<const void*>(run.get())
+                << "parameter" << static_cast<const void*>(run->parameter.data())
+                << "path" << (run->parameter ? run->parameter->path() : QString{})
+                << "window" << static_cast<const void*>(run->window.data())
+                << "actionWindow" << static_cast<const void*>(action_window.data());
+        });
+        auto observe = [&](QQuickItem* item, bool usable, const QVariant* original_property,
+                           QObject* converted, ParameterItem* parameter, QObject* property_owner) noexcept {
+            try {
+                if (!lcAssistantWidgetLookup().isDebugEnabled()) return;
+                const auto name = item->objectName();
+                const bool relevant = run->tool == "set_free" ? name.startsWith("parameters.free.")
+                    : run->tab == "appBar.tab.analysis" ? name.startsWith("parameters.value.")
+                    : run->tab == "appBar.tab.structure" ? name.startsWith("cell.") : name.startsWith("instrument.");
+                if (!relevant) return;
+                QVariant diagnostic_property;
+                if (!original_property) {
+                    // The real loop intentionally skips this property when
+                    // unusable. Label this enabled-only extra observation.
+                    property_owner = item;
+                    if (run->tool == "set_free") {
+                        property_owner = nullptr;
+                        for (auto* row = item->parentItem(); row; row = row->parentItem())
+                            if (row->objectName().startsWith("parameters.row.")) { property_owner = row; break; }
+                    }
+                    if (property_owner) diagnostic_property = property_owner->property(run->tool == "set_free" ? "parameter" : "item");
+                    converted = diagnostic_property.value<QObject*>();
+                    parameter = qobject_cast<ParameterItem*>(converted);
+                }
+                const auto& property = original_property ? *original_property : diagnostic_property;
+                const bool expected = parameter && parameter == run->parameter;
+                diagnostic( [&] {
+                    const auto type = property.metaType();
+                    qCDebug(lcAssistantWidgetLookup) << "lookup conversion" << "original" << static_cast<const void*>(run.get())
+                        << "item" << static_cast<const void*>(item) << "name" << name << "usable" << usable
+                        << "originalPropertyRead" << bool(original_property) << "propertyOwner" << static_cast<const void*>(property_owner)
+                        << "valid" << property.isValid() << "metaTypeId" << type.id() << "metaTypeName" << type.name()
+                        << "pointerToQObject" << type.flags().testFlag(QMetaType::PointerToQObject)
+                        << "canConvertQObject" << property.canConvert<QObject*>()
+                        << "convertedQObject" << static_cast<const void*>(converted)
+                        << "parameterCast" << static_cast<const void*>(parameter)
+                        << "expectedParameter" << static_cast<const void*>(run->parameter.data()) << "matches" << expected;
+                });
+                // Include exposure even when conversion/cast/identity failed:
+                // that failure is the observation, not a logging prerequisite.
+                QPointF center;
+                diagnostic( [&] {
+                    center = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
+                    qCDebug(lcAssistantWidgetLookup) << "lookup exposure" << "original" << static_cast<const void*>(run.get())
+                        << "item" << static_cast<const void*>(item) << "helperPresent" << bool(widget_input)
+                        << "itemWindow" << static_cast<const void*>(item->window())
+                        << "actionWindow" << static_cast<const void*>(action_window.data())
+                        << "windowVisible" << (action_window && action_window->isVisible())
+                        << "size" << item->size() << "center" << center
+                        << "finiteCenter" << (std::isfinite(center.x()) && std::isfinite(center.y()))
+                        << "windowContainsCenter" << (action_window && QRectF(0, 0, action_window->width(), action_window->height()).contains(center));
+                });
+                for (auto* ancestor = item; ancestor && log_records < 256; ancestor = ancestor->parentItem()) {
+                    diagnostic( [&] {
+                        const auto local = ancestor->mapFromScene(center);
+                        qCDebug(lcAssistantWidgetLookup) << "lookup ancestor" << "original" << static_cast<const void*>(run.get())
+                            << "item" << static_cast<const void*>(item) << "ancestor" << static_cast<const void*>(ancestor)
+                            << "visible" << ancestor->isVisible() << "enabled" << ancestor->isEnabled()
+                            << "opacity" << ancestor->opacity() << "clip" << ancestor->clip()
+                            << "localCenter" << local << "bounds" << ancestor->boundingRect()
+                            << "boundsContainCenter" << ancestor->boundingRect().contains(local);
+                    });
+                }
+                if (log_records == 256) diagnostic( [] {});
+            } catch (...) {}
+        };
         QQuickItem* target = nullptr;
         if (run->tool == "run_fit") target = widget_named("fitting.start");
         else if (action_window && action_window->contentItem()) {
             for (auto* item : widget_items()) {
-                if (!widget_input || !widget_input->usableTarget(*item)) continue;
+                const bool usable = widget_input && widget_input->usableTarget(*item);
+                if (!usable) { observe(item, false, nullptr, nullptr, nullptr, nullptr); continue; }
                 ParameterItem* parameter = nullptr;
+                QVariant parameter_property;
+                QObject* converted_parameter = nullptr;
+                QObject* property_owner = nullptr;
                 if (run->tool == "set_free") {
                     if (!item->objectName().startsWith("parameters.free.")) continue;
                     for (auto* row = item->parentItem(); row; row = row->parentItem()) {
                         if (row->objectName().startsWith("parameters.row.")) {
-                            parameter = qobject_cast<ParameterItem*>(row->property("parameter").value<QObject*>()); break;
+                            property_owner = row;
+                            parameter_property = row->property("parameter");
+                            converted_parameter = parameter_property.value<QObject*>();
+                            parameter = qobject_cast<ParameterItem*>(converted_parameter); break;
                         }
                     }
                 } else {
                     if (!item->objectName().startsWith("instrument.") && !item->objectName().startsWith("cell.") && !item->objectName().startsWith("parameters.value.")) continue;
-                    parameter = qobject_cast<ParameterItem*>(item->property("item").value<QObject*>());
+                    property_owner = item;
+                    parameter_property = item->property("item");
+                    converted_parameter = parameter_property.value<QObject*>();
+                    parameter = qobject_cast<ParameterItem*>(converted_parameter);
                 }
+                observe(item, true, &parameter_property, converted_parameter, parameter, property_owner);
                 if (parameter == run->parameter) { target = item; break; }
             }
         }
