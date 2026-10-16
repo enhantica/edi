@@ -186,6 +186,33 @@ TestCase {
         toggle();
         editor.clear();
     }
+    function focusWithinManual(manual) {
+        for (let current = window.activeFocusItem; current; current = current.parent)
+            if (current === manual) return true;
+        return false;
+    }
+    function coveredManualInput(manual, target) {
+        verify(target !== null && target.visible && typeof target.checked === "boolean" && !target.checked,
+            "I16/popup SETUP: original covered target is a genuine unchecked visible manual tab");
+        const point = target.mapToItem(window.contentItem, target.width / 2, target.height / 2);
+        const connection = item("assistant.connection");
+        if (connection.visible) {
+            const accountRect = rect(connection);
+            verify(!(point.x >= accountRect[0] && point.x <= accountRect[0] + accountRect[2]
+                && point.y >= accountRect[1] && point.y <= accountRect[1] + accountRect[3]),
+                "I12/popup SETUP: covered manual click never targets the genuine Sign in action");
+        }
+        mouseClick(window.contentItem, point.x, point.y);
+        compare(target.checked, false, "I16/popup: covered real pointer input cannot change the manual tab");
+        verify(!focusWithinManual(manual), "I16/popup: covered pointer cannot acquire manual focus");
+        for (const backwards of [false, true]) {
+            for (let step = 0; step < 32; ++step) {
+                keyClick(Qt.Key_Tab, backwards ? Qt.ShiftModifier : Qt.NoModifier);
+                verify(!focusWithinManual(manual), "I16/popup: actual Tab/Backtab traversal excludes covered manual input");
+            }
+        }
+        compare(target.checked, false, "I16/popup: keyboard traversal never activates the covered manual tab");
+    }
     function test_workflow_same_sidebar_and_live_state_data() {
         return [
             {
@@ -218,20 +245,18 @@ TestCase {
         mouseClick(tab);
         const tabIndex = manual.currentIndex;
         compare(tab.checked, true, "I16/popup: manual tab state is established by real input");
-        const continued = findChild(manual, "sideBar.continue");
-        verify(continued !== null, "I16/popup: covered action belongs to the active real manual sidebar");
-        const covered = continued.mapToItem(window.contentItem, continued.width / 2, continued.height / 2);
+        const coveredTab = findChild(manual, "sideBar.tab.basic");
+        verify(coveredTab !== null && !coveredTab.checked, "I16/popup SETUP: actual opposite tab can expose click-through");
+        const painted = {visible: manual.visible, opacity: manual.opacity};
         toggle();
         compare(popup.visible, true, "I16/popup: existing toolbar opens workflow overlay");
         compare(popup.assistant, assistant, "I16/popup: same real Session VM owns the single popup");
         sameRect(rect(popup.contentItem), sidebarBefore);
         sameRect(rect(main), before);
-        compare(manual.visible, false, "I16/popup: covered manual subtree cannot receive pointer input");
-        compare(manual.enabled, false, "I16/popup: covered manual subtree cannot receive keyboard input");
-        continued.forceActiveFocus();
-        verify(!continued.activeFocus, "I16/popup: covered real manual action refuses focus");
-        mouseClick(window.contentItem, covered.x, covered.y);
-        compare(window.appBarCentralTabs.currentIndex, 1, "I16/popup: covered Continue action cannot navigate");
+        compare(manual.visible, painted.visible, "I16/popup: covered manual stays painted rather than disappearing");
+        compare(manual.opacity, painted.opacity, "I16/popup: covering never fades the ordinary manual colors");
+        coveredManualInput(manual, coveredTab);
+        compare(window.appBarCentralTabs.currentIndex, 1, "I16/popup: covered input never navigates the workflow");
         const composer = item("assistant.composer");
         composer.forceActiveFocus();
         composer.insert(0, "PbSO4 — unsent\ncell 5.43");
@@ -242,9 +267,13 @@ TestCase {
         const messages = assistant.messages;
         capture("assistant-popup-" + data.tag);
         toggle();
-        compare(manual.visible, true, "I16/popup: hiding reveals the existing manual controls");
-        compare(manual.enabled, true, "I16/popup: hiding restores manual interaction");
+        compare(manual.visible, painted.visible, "I16/popup: original painted manual survives hiding");
+        compare(manual.opacity, painted.opacity, "I16/popup: hiding preserves the ordinary manual opacity");
         compare(manual.currentIndex, tabIndex, "I16/popup: actual manual tab survives covering");
+        mouseClick(coveredTab);
+        tryCompare(coveredTab, "checked", true, 500, "I16/popup: the same real manual action works after full close");
+        mouseClick(tab);
+        tryCompare(tab, "checked", true, 500, "I16/popup: normal manual input restores its original selected tab");
         sameRect(rect(main), before);
         toggle();
         compare(item("assistant.popup"), popup, "I16/popup: hide/show retains the same popup instance");
@@ -510,6 +539,10 @@ TestCase {
         const hostBefore = rect(host);
         const projectBefore = Session.project;
         const cancelBefore = assistant.canCancel;
+        const manualPaint = {visible: manual.visible, opacity: manual.opacity};
+        const basicBefore = findChild(manual, "sideBar.tab.basic");
+        verify(basicBefore !== null && typeof basicBefore.checked === "boolean", "I16/slide SETUP: real manual tab has checked state");
+        const coveredTab = findChild(manual, basicBefore.checked ? "sideBar.tab.extras" : "sideBar.tab.basic");
         const button = item("assistant.toggle");
         // Raw appbar input deliberately does not wait for the new transition to finish.
         mouseClick(button);
@@ -522,7 +555,8 @@ TestCase {
             sameRect(rect(main), plotBefore);
             sameRect(rect(host), hostBefore);
             if (popup.visible) {
-                compare(manual.enabled, false, "I16/slide: a visibly entering/exiting popup still excludes underlying manual input");
+                compare(manual.visible, manualPaint.visible, "I16/slide: entering/exiting preserves the painted manual subtree");
+                compare(manual.opacity, manualPaint.opacity, "I16/slide: every observed transition frame preserves manual opacity");
                 if (!Preferences.assistantShown)
                     visibleExit = true;
             }
@@ -539,6 +573,8 @@ TestCase {
         for (let frame = 0; frame < 12; ++frame)
             sample();
         verify(positions.length >= 3, "I16/slide: actual rendered content visits distinct intermediate moving positions, not an instantaneous/fade-only toggle");
+        tryCompare(popup, "opened", true, 2000, "I16/slide: after real moving frames, enter settles before covered input proof");
+        coveredManualInput(manual, coveredTab);
         editor.insert(0, "Unsent slide — Å cell 5.43");
         editor.select(2, 9);
         const draft = editor.text;
@@ -550,7 +586,8 @@ TestCase {
         }
         verify(visibleExit, "I16/slide: interrupted/reversed actions genuinely exercise a still-visible exit frame");
         tryCompare(popup, "visible", false, 2000, "I16/slide: final hide fully exits before manual controls become actionable");
-        tryCompare(manual, "enabled", true, 2000, "I16/slide: fully exited popup releases the actual manual subtree");
+        compare(manual.visible, manualPaint.visible, "I16/slide: fully exited popup retains the actual painted manual");
+        compare(manual.opacity, manualPaint.opacity, "I16/slide: fully exited popup preserves manual opacity");
         sameRect(rect(main), plotBefore);
         sameRect(rect(host), hostBefore);
         compare(editor.text, draft, "I16/slide: reversing/hiding retains the actual unsent draft");

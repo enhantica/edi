@@ -9,7 +9,8 @@ ApplicationWindow {
     width: 720
     height: 600
     visible: true
-    color: EaStyle.Colors.contentBackground
+    // Actual AssistantPanel assistantSheet is opaque in this sidebar role.
+    color: EaStyle.Colors.appBarBackground
     AssistantMessage {
         id: row
         objectName: "markdown.row"

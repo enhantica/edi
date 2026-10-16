@@ -261,7 +261,7 @@ int main(int argc,char** argv) {
                     {"mono_source",qml_value("EaStyle.Fonts.ptMono.source").toString()}}},
                 {"tables",tables},{"qt_reference_tables",reference_tables},
                 {"logical_dpi_y",window->screen()->logicalDotsPerInchY()},
-                {"theme_background",qml_value("EaStyle.Colors.contentBackground").value<QColor>().name(QColor::HexArgb)}}}};
+                {"theme_background",window->color().name(QColor::HexArgb)}}}};
         }
 
         Object vm{{"connected",session->assistant()->connected()},{"state",session->assistant()->state()},
