@@ -1100,6 +1100,79 @@ TestCase {
         project.fit.finished.connect(finishedReceipt);
         let draftField = null, draft = "", draftFocus = null, draftSelection = null, draftPage = -1;
         const call = "visible185-action-" + data.tag;
+        const timelineEnabled = data.tag === "analysis-value-free";
+        const timelinePriorIds = timelineEnabled ? new Set(Probe.rows(assistant.messages).map(row => row.id)) : null;
+        let timelineCount = 0;
+        const timelineLimit = 64; // Observer-only record budget; never a behavior assertion or runtime bound.
+        function timelineControl(control) {
+            if (!control) return null;
+            try {
+                const ancestry = [];
+                let belongsToMain = control === window.contentItem;
+                for (let parent = control.parent; parent; parent = parent.parent) {
+                    if (parent === window.contentItem) belongsToMain = true;
+                    ancestry.push({identity: String(parent), name: parent.objectName,
+                        visible: parent.visible, enabled: parent.enabled, opacity: parent.opacity,
+                        clip: parent.clip, rect: rect(parent)});
+                }
+                return {identity: String(control), name: control.objectName, belongsToMain: belongsToMain,
+                    visible: control.visible, enabled: control.enabled, opacity: control.opacity,
+                    activeFocus: control.activeFocus, clip: control.clip, rect: rect(control),
+                    clickPoint: Ui.clickPoint(control), rendered: Ui.rendered(control),
+                    text: typeof control.text === "string" ? control.text : null,
+                    checked: typeof control.checked === "boolean" ? control.checked : null,
+                    ancestry: ancestry};
+            } catch (error) { return {observationError: String(error)}; }
+        }
+        function timeline(event, argument) {
+            if (!timelineEnabled) return;
+            const sequence = ++timelineCount;
+            if (sequence > timelineLimit) return;
+            try {
+                const table = Ui.control(Probe, window, "parameters.list");
+                const filter = table ? table.sourceModel : null;
+                const rows = Probe.rows(assistant.messages).filter(row => !timelinePriorIds.has(row.id)
+                    && row.payload && [call, "visible185-value-" + data.tag, "visible185-read-" + data.tag].includes(row.payload.id));
+                console.log("VISIBLE199_TIMELINE", data.tag, JSON.stringify({
+                    sequence: sequence, epochMs: Date.now(), event: event, argument: argument || null,
+                    page: window.appBarCentralTabs.currentIndex, pageIdentity: String(Ui.page(window)),
+                    windowIdentity: String(window), windowVisible: window.visible, windowActive: window.active,
+                    actionWindow: String(assistant.actionWindow), actionWindowIsMain: assistant.actionWindow === window,
+                    showingActions: assistant.showingActions, manualTakeover: window.assistantManualTakeover,
+                    canCancel: assistant.canCancel, state: assistant.state, lastError: assistant.lastError,
+                    requested: Preferences.assistantShown, shown: popup.shown, opened: popup.opened,
+                    filter: filter ? {name: filter.nameFilter, category: filter.categoryFilter,
+                        variability: filter.variability, targetRow: filter.rowOf(la), targetShown: filter.shows(la)} : null,
+                    focus: timelineControl(window.activeFocusItem), field: timelineControl(field), free: timelineControl(free),
+                    pointer: timelineControl(findChild(window, "assistant.actionPointer")),
+                    target: {identity: String(la), path: la.path, value: la.value, free: la.free},
+                    typed: typed, toggled: toggled, currentOwner: Session.project === project,
+                    connected: assistant.connected, connectionLabel: assistant.connectionLabel,
+                    models: Probe.rows(assistant.models).map(row => row.id), outcome: visible185_outcome(call),
+                    newNativeRows: rows.map(row => ({id: row.id, kind: row.kind, status: row.status,
+                        payload: {id: row.payload.id, tool: row.payload.tool, namespace: row.payload.namespace,
+                            arguments: row.payload.arguments, status: row.payload.status,
+                            success: row.payload.success, error: row.payload.error,
+                            nativeOutcome: row.payload.nativeOutcome}}))
+                }));
+            } catch (error) { console.log("VISIBLE199_TIMELINE_ERROR", sequence, event, String(error)); }
+        }
+        const timelineSlots = timelineEnabled ? [
+            [assistant.actionPointerShown, () => timeline("pointer-shown")],
+            [assistant.actionPointerMoved, position => timeline("pointer-moved", {x: position.x, y: position.y})],
+            [assistant.actionPointerPressed, () => timeline("pointer-pressed")],
+            [assistant.actionPointerHidden, () => timeline("pointer-hidden")],
+            [assistant.showingActionsChanged, () => timeline("showing-actions")],
+            [assistant.actionManualTakeover, () => timeline("manual-takeover")],
+            [window.activeFocusItemChanged, () => timeline("focus")],
+            [window.appBarCentralTabs.currentIndexChanged, () => timeline("page")],
+            [assistant.messages.rowsInserted, () => timeline("rows-inserted")],
+            [assistant.messages.rowsRemoved, () => timeline("rows-removed")],
+            [assistant.messages.dataChanged, () => timeline("rows-data")],
+            [assistant.messages.modelReset, () => timeline("rows-reset")]
+        ] : [];
+        for (const slot of timelineSlots) slot[0].connect(slot[1]);
+        timeline("armed-before-original-events");
         try {
             if (data.tag === "analysis-value-free") {
                 verify(!Probe.objectsWithProperty(window, "item").includes(field),
@@ -1331,6 +1404,10 @@ TestCase {
                 if (Session.project === project && project.fit.running) project.fit.cancel();
             }
             if (assistant.canCancel) assistant.cancel();
+            for (const slot of timelineSlots) slot[0].disconnect(slot[1]);
+            if (timelineEnabled) console.log("VISIBLE199_TIMELINE_SUMMARY", JSON.stringify({
+                observedSignalsAndSamples: timelineCount, emittedBudget: timelineLimit,
+                omitted: Math.max(0, timelineCount - timelineLimit)}));
         }
     }
 
