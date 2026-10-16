@@ -563,3 +563,42 @@ Fit keeps its genuine fixed-open Start control and real final report.
 This is a narrow exposure increment, not generic computer use or full visible
 create/background/relation/batch/save support. Source197 own-event/clipRect
 prerequisite remains separately reviewed/applied before runtime qualification.
+
+
+### Native relation mode parity through the shared staged form (E11-T5, 2026-10-16)
+
+The existing globally advertised native add_relations tool/schema is unchanged.
+Show actions now stages its complete admitted arrays through ordinary Analysis
+Extra controls, including zero aliases, varied enabled flags and row counts up
+to the same Limits::stream_items cap. This replaces the private interim fixed
+six-field experiment, which was never shipped. Exact scientific text/arrays and
+original call/account/project/window/receipt own each continuation; no direct
+native fallback is labelled visible. Currentness, real manual drafts and Stop
+refuse/interrupt before the final one-shot shared editor. Existing native
+structural Undo/publication owns applied versus uncertain results. Already
+applied results are never described as an untouched refusal after readback
+failure. Staging/model/editor/helper text and prepared-array roles are charged
+before presentation; final validation uses the same bounded native input door.
+
+Compiled instructions and project-assistance version 1.5.10 describe only this
+actual supported addition. The restricted capability index remains unchanged:
+app-only native registration is composed at its existing app boundary, never
+injected into the strict core compatibility allowlist. Loaded-project free
+flags/absent relations are initial state, not implicit user prohibitions;
+explicit keep-fixed/no-sharing/composition instructions remain authoritative.
+This is live editing with Undo, not an isolated accepted-best trial/checkpoint.
+Create/import, visible saving, value/free batches and other unmapped workflows
+remain unsupported here and are not silently executed in normal mode.
+
+
+### Original relation input authority and shared preparation (E11-T5, 2026-10-16)
+
+Every staged relation click/type/row/Apply predicate includes widget_current in
+addition to actual page/form/key/selected-row conditions. Resolved/retiring
+server requests cannot continue UI input merely because their retained owner
+still exists for settlement. Once/outcome authority is not renewed. Manual
+shared-GUI preparation directly reuses the existing core relation helper, not
+desktop-only assistant_native_edit/codex_encoded_size symbols. Native and manual
+validation/recorded Undo semantics remain equal. The globally registered native
+catalog is unchanged at nine names (including save_project); prior private
+notes saying eight were stale counts, not a registration change.

@@ -3,6 +3,9 @@
 #define EDI_APP_PROJECT_VIEW_MODEL_HPP
 
 #include <QHash>
+#include <QVariantList>
+#include <QVariantMap>
+#include <QJsonObject>
 #include <QList>
 #include <QStringList>
 #include <QObject>
@@ -303,6 +306,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
+    // The ordinary staged Analysis form appends the complete bounded native
+    // alias/constraint batch as one validated, recorded edit; never on blur.
+    Q_INVOKABLE QVariantMap appendRelationForm(const QVariantList& aliases, const QVariantList& constraints);
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -451,6 +457,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         bool free = false, consumed = false;
         EditOutcome outcome;
     };
+    struct WidgetRelationInput {
+        QJsonObject arguments;
+        bool consumed = false, verified = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetRelationInput> widget_relation_input_;
+    std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const QJsonObject& arguments);
+    void finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept;
     std::shared_ptr<WidgetParameterInput> widget_input_;
     bool widget_input_executing_ = false;
     std::shared_ptr<WidgetParameterInput> prepareWidgetValue(const edi::Parameter& parameter, double value);

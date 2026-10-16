@@ -20,7 +20,7 @@ namespace edi_app {
 class AssistantWidgetInput final : public QObject {
     Q_OBJECT
  public:
-    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter };
+    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter, StagedText };
     struct Request {
         Kind kind;
         QPointer<QQuickItem> target;

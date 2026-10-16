@@ -2,6 +2,7 @@
 #include "project_view_model.hpp"
 
 #include <QCoreApplication>
+#include <QJsonArray>
 #include <QHash>
 #include <QMetaObject>
 #include <QPointer>
@@ -21,6 +22,10 @@
 #include <filesystem>
 
 #include "background.hpp"
+#include "../../core/src/assistant_relation_edits.hpp"
+#include "edi/assistant_limits.hpp"
+#include "edi/parameter_walk.hpp"
+#include "edi/categories.hpp"
 #include "engine_setup.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
@@ -1257,7 +1262,7 @@ QString ProjectViewModel::pendingRefusal() const { return editReadinessRefusal(f
 QString ProjectViewModel::criticalEditRefusal(bool restoring) const {
     if (retired_) return tr("This project owner has been replaced or closed");
     if (editing_) return tr("The current project edit is still being published");
-    if (widget_input_ && !widget_input_executing_)
+    if ((widget_input_ || widget_relation_input_) && !widget_input_executing_)
         return tr("The current visible native input is still being completed");
     if (edit_publication_failed_ && !restoring)
         return tr("An edit was applied but its presentation failed: Undo or reopen the project before further changes");
@@ -1981,6 +1986,120 @@ void ProjectViewModel::pinTimestamps(const QString& timestamp) {
     edi::Project& project = *project_;
     apply(edi::Edit::timestamps(project, timestamp.toStdString()), false);
     setModified(modified);
+}
+
+std::shared_ptr<ProjectViewModel::WidgetRelationInput> ProjectViewModel::prepareWidgetRelations(const QJsonObject& arguments) {
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetRelationInput>();
+    input->arguments = arguments; input->arguments.remove("purpose");
+    input->outcome.message = tr("The staged relation form was not applied");
+    widget_relation_input_ = input;
+    return input;
+}
+void ProjectViewModel::finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept {
+    if (widget_relation_input_ == input) widget_relation_input_.reset();
+}
+QVariantMap ProjectViewModel::appendRelationForm(const QVariantList& aliasRows, const QVariantList& constraintRows) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_relation_input_;
+    EditOutcome result;
+    try {
+        using Limits = edi::assistant::Limits;
+        if (aliasRows.size() > static_cast<qsizetype>(Limits::stream_items) || constraintRows.isEmpty() ||
+            constraintRows.size() > static_cast<qsizetype>(Limits::stream_items))
+            throw std::invalid_argument("Invalid relation form row count");
+        if (!input) if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty())
+            throw std::runtime_error(refusal.toStdString());
+        // Borrow Qt-shared strings, bound aggregate content BEFORE JSON/core
+        // preparation. The existing encoded-size walker owns exact UTF8/escape.
+        quint64 units = 0;
+        const auto text = [&](const QVariantMap& row, const QString& key, quint64 limit) {
+            const auto value = row.value(key);
+            if (value.metaType().id() != QMetaType::QString) throw std::invalid_argument("Invalid relation form text");
+            const auto s = value.toString();
+            if (s.isEmpty() || static_cast<quint64>(s.size()) > limit ||
+                static_cast<quint64>(s.size()) > Limits::context_bytes - units || s.contains(QChar(0)))
+                throw std::length_error("Relation form text exceeds capacity");
+            units += static_cast<quint64>(s.size());
+        };
+        for (const auto& value : aliasRows) {
+            const auto row = value.toMap();
+            if (row.size() != 2 || !row.contains("id") || !row.contains("path")) throw std::invalid_argument("Invalid alias fields");
+            text(row, "id", Limits::id_bytes); text(row, "path", Limits::id_bytes);
+        }
+        for (const auto& value : constraintRows) {
+            const auto row = value.toMap();
+            if (row.size() != 3 || !row.contains("id") || !row.contains("expression") ||
+                row.value("enabled").metaType().id() != QMetaType::Bool) throw std::invalid_argument("Invalid constraint fields");
+            text(row, "id", Limits::id_bytes); text(row, "expression", Limits::context_bytes);
+        }
+        // Same transport-independent preparation as the native/controller
+        // path. Row/UTF16 preflight above bounds conversion BEFORE allocation;
+        // the existing core helper owns exact UTF8/encoded/grammar admission.
+        std::vector<edi::assistant::detail::NativeAliasInput> aliases;
+        std::vector<edi::assistant::detail::NativeConstraintInput> constraints;
+        aliases.reserve(static_cast<std::size_t>(aliasRows.size()));
+        constraints.reserve(static_cast<std::size_t>(constraintRows.size()));
+        for (const auto& value : aliasRows) {
+            const auto row = value.toMap();
+            aliases.push_back({row.value("id").toString().toStdString(), row.value("path").toString().toStdString()});
+        }
+        for (const auto& value : constraintRows) {
+            const auto row = value.toMap();
+            constraints.push_back({row.value("id").toString().toStdString(), row.value("expression").toString().toStdString(), row.value("enabled").toBool()});
+        }
+        if (input) {
+            const QJsonObject actual{{"aliases", QJsonArray::fromVariantList(aliasRows)}, {"constraints", QJsonArray::fromVariantList(constraintRows)}};
+            if (input->consumed || input->arguments != actual)
+                throw std::invalid_argument("The relation form differs from its original prepared input");
+            input->consumed = true;
+        }
+        const auto edit = edi::assistant::detail::prepare_relation_append(*project_, aliases, constraints);
+        // Prepare exact native path -> unique-name readback before the live
+        // write, using the same existing public walk as relation validation.
+        std::vector<std::pair<std::string, std::string>> expectedAliases;
+        expectedAliases.reserve(static_cast<std::size_t>(aliasRows.size()));
+        if (!aliasRows.isEmpty()) {
+            const auto entries = edi::parameter_entries(*project_);
+            const auto namedSlots = edi::named_slots(*project_);
+            for (const auto& row : aliases) {
+                const auto found = std::find_if(entries.begin(), entries.end(), [&](const auto& entry) { return entry.path == row.path; });
+                if (found == entries.end()) throw std::invalid_argument("Unknown relation parameter path");
+                const auto named = std::find_if(namedSlots.begin(), namedSlots.end(), [&](const auto& slot) { return slot.parameter == found->parameter; });
+                if (named == namedSlots.end()) throw std::invalid_argument("Unnamed relation parameter");
+                expectedAliases.emplace_back(row.id, named->unique_name);
+            }
+        }
+        const bool previous = widget_input_executing_; widget_input_executing_ = true;
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        result = applyRecordedEdit(edit, true);
+        if (input) input->outcome = result; // Actual applied latch before fallible readback.
+        if (self && !retired_ && result.applied && result.published && input) {
+            bool verified = true;
+            for (const auto& [id, unique] : expectedAliases) {
+                const auto found = std::find_if(project_->aliases.begin(), project_->aliases.end(), [&](const auto& a) {
+                    return a->id.value() == id && a->parameter_unique_name.value() == unique;
+                });
+                verified = verified && found != project_->aliases.end();
+            }
+            for (const auto& row : constraints) {
+                const auto found = std::find_if(project_->constraints.begin(), project_->constraints.end(), [&](const auto& a) {
+                    return a->id.value() == row.id && a->expression.value() == row.expression && a->enabled.get() == row.enabled;
+                });
+                verified = verified && found != project_->constraints.end();
+            }
+            input->verified = verified;
+        }
+    } catch (...) {
+        if (input && input->outcome.applied) result = input->outcome;
+        result.published = false;
+        result.message = result.applied ? tr("The relation batch was applied; its final presentation could not be confirmed")
+            : tr("The relation batch was refused; check explicit alias IDs, parameter paths and affine expressions");
+        if (input) input->outcome = result;
+    }
+    try { return {{"applied", result.applied}, {"published", result.published}, {"message", result.message}}; }
+    catch (...) { return {}; } // Actual prearmed outcome survives presentation allocation failure.
 }
 
 std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetValue(const edi::Parameter& parameter, double value) {
