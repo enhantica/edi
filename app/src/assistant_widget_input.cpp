@@ -50,9 +50,12 @@ bool AssistantWidgetInput::usableTarget(QQuickItem& item) const {
 }
 bool AssistantWidgetInput::manualDraftPresent() const {
     if (!window_) return false;
-    // TextInput may be a visual child of the actual field. Check its real
-    // ParameterField/ParameterCell ancestor, not just the requested target.
+    // TextInput may be a visual child of an app-owned editor. The common
+    // value/text editors expose their exact pre-commit display comparison;
+    // parameter editors retain their existing assistant-owned draft rules.
     for (auto* item = window_->activeFocusItem(); item; item = item->parentItem()) {
+        const auto manual = item->property("assistantManualDraft");
+        if (manual.isValid()) return manual.toBool();
         if (!item->property("assistantEditing").isValid()) continue;
         if (draft_ && request_ && request_->target == item && item->property("assistantEditing").toBool()) return false;
         const auto text = item->property("text").toString();

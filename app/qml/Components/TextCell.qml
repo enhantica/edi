@@ -19,6 +19,9 @@ EaComponents.ListViewTextInput {
     property var value: ""
     // A number by the app's one rule for numbers in cells (NumberText).
     readonly property string shown: accepts === "number" && typeof value === "number" && isFinite(value) ? NumberText.plain(value, 8) : String(value)
+    // Compare the actual formatted display, not the full-precision model value.
+    // All text/id/integer/numeric variants keep their own unfinished draft.
+    readonly property bool assistantManualDraft: text !== shown
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.

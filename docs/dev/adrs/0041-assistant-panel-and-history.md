@@ -760,3 +760,24 @@ contentWidth/contentHeight convention as the existing assistant connection
 dialog: fixed available width constrains its plain wrapping text, whose
 implicitHeight determines content height independently of popup availableHeight.
 No report generator, URI permission or historical artifact authority changes.
+
+
+### Common editor drafts block assistant navigation before blur
+
+The existing AssistantWidgetInput manualDraftPresent preflight covers the common
+ValueField and TextCell editors as well as ParameterField/ParameterCell. The
+common editors expose a readonly dirty predicate using their OWN commit rule:
+ValueField compares text with its inherited displayed value while editable;
+TextCell compares text with shown, including the numeric display formatting.
+Comparing against raw full precision would mark an unedited numeric cell dirty.
+The same text/id/integer/numeric and clearable/invalid/partial editor variants
+are covered; validation success is not a condition for protecting a draft.
+
+Quick operation-page/Main/Extra following and every existing real visible
+Navigation/Value/Free/Fit click consult that same helper BEFORE a focus change.
+An unrelated manual draft refuses the assistant action without changing focus,
+text, editor/core state or Undo. The helper does not commit, clear, discard,
+validate or restore a manual draft. Existing parameter assistant-owned draft
+exclusion and cancellation/commit rules remain unchanged. Read-only tools and
+non-navigating saving acquire no new restriction or permission. This closes a
+prior-art common-editor gap, not a general property/navigation executor.
