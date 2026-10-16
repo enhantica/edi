@@ -2998,8 +2998,8 @@ struct AssistantViewModel::State {
             {"message", "This form no longer owns an import request. Reopen import to start a new request."}};
         const auto count = recipe.value("background").toArray().size() + recipe.value("exclusions").toArray().size() + recipe.value("initial_parameters").toArray().size();
         if (count > 3 * static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Visible form row count exceeds capacity");
-        const quint64 slots = static_cast<quint64>(19 + 3 * count);
-        const quint64 fixed = sizeof(NativeCreateWidget) + sizeof(AssistantWidgetInput::Request) + slots * sizeof(NativeCreateWidget::Input) +
+        const quint64 inputSlots = static_cast<quint64>(19 + 3 * count);
+        const quint64 fixed = sizeof(NativeCreateWidget) + sizeof(AssistantWidgetInput::Request) + inputSlots * sizeof(NativeCreateWidget::Input) +
             static_cast<quint64>(count) * (sizeof(QVariantMap) + 2 * sizeof(QVariant) + 2 * sizeof(QString)) + 2 * Limits::error_bytes * sizeof(QChar);
         const auto current = native_bytes();
         if (current > Limits::stream_retained_bytes || generic_item_bytes > Limits::stream_retained_bytes - current ||
@@ -3008,7 +3008,7 @@ struct AssistantViewModel::State {
             throw std::length_error("Visible import staging exceeds retained capacity");
         const auto available = Limits::stream_retained_bytes - current - generic_item_bytes - generic_progress_bytes;
         quint64 owned = fixed;
-        run->inputs.reserve(static_cast<qsizetype>(slots));
+        run->inputs.reserve(static_cast<qsizetype>(inputSlots));
         const auto add = [&](AssistantWidgetInput::Kind kind, const QString& target, const QString& text = {}, int option = -1, int section = -1, int row = -1) {
             const auto bytes = static_cast<quint64>(target.size() + 4 * text.size()) * sizeof(QChar);
             if (owned > available || bytes > available - owned) throw std::length_error("Visible form ownership exceeds capacity");
