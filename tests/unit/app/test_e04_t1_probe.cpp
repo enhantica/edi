@@ -2,6 +2,10 @@
 // Link this TU into the Qt Quick Test runner alongside the production edi.app module.
 #include <QAbstractItemModel>
 #include <QCoreApplication>
+#include <QInputMethodEvent>
+#include <QInputMethodQueryEvent>
+#include <QKeyEvent>
+#include <QPointer>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -46,6 +50,66 @@ class AcceptanceProbe final : public QObject {
     }
 public:
     using QObject::QObject;
+    // Actual platform IME/forwarded-key delivery addresses the original focused Quick input.
+    // Narrow typed events only: no generic event/property/model executor.
+    Q_INVOKABLE QVariantMap focusedInputMethod233(QQuickWindow* window, QQuickItem* target,
+                                                  const QString& preedit, const QString& commit) const {
+        if (!window || !window->isVisible() || !target || target->window() != window ||
+            window->activeFocusItem() != target || QGuiApplication::focusObject() != target ||
+            !target->isVisible() || !target->isEnabled() || !target->flags().testFlag(QQuickItem::ItemAcceptsInputMethod) ||
+            preedit.size() > 64 || commit.size() > 64 || (preedit.isEmpty() && commit.isEmpty()))
+            return {{"delivered", false}, {"cause", "actual focused input and bounded IME text required"},
+                    {"applicationFocusMatches", QGuiApplication::focusObject() == target}};
+        const QPointer<QQuickItem> original(target);
+        const QPointer<QQuickWindow> original_window(window);
+        QInputMethodEvent event(preedit, {});
+        event.setCommitString(commit);
+        const bool returned = QCoreApplication::sendEvent(target, &event);
+        return {{"delivered", true}, {"dispatchReturned", returned}, {"accepted", event.isAccepted()},
+                {"eventKind", "InputMethod"}, {"preedit", preedit}, {"commit", commit},
+                {"targetAlive", !original.isNull()},
+                {"focusMatchesAfter", original_window && original && original_window->activeFocusItem() == original},
+                {"textAfter", original ? original->property("text") : QVariant{}},
+                {"preeditAfter", original ? original->property("preeditText") : QVariant{}}};
+    }
+    Q_INVOKABLE QVariantMap focusedForwardedDigit233(QQuickWindow* window, QQuickItem* target,
+                                                    const QString& text) const {
+        if (!window || !window->isVisible() || !target || target->window() != window ||
+            window->activeFocusItem() != target || QGuiApplication::focusObject() != target ||
+            !target->isVisible() || !target->isEnabled() || !target->flags().testFlag(QQuickItem::ItemAcceptsInputMethod) ||
+            text.size() != 1 ||
+            text.at(0) < QLatin1Char('0') || text.at(0) > QLatin1Char('9'))
+            return {{"delivered", false}, {"cause", "actual focused input and one original digit required"},
+                    {"applicationFocusMatches", QGuiApplication::focusObject() == target}};
+        const QPointer<QQuickItem> original(target);
+        const QPointer<QQuickWindow> original_window(window);
+        const int key = Qt::Key_0 + text.at(0).unicode() - QLatin1Char('0').unicode();
+        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, text);
+        QCoreApplication::sendEvent(target, &press);
+        bool released = false;
+        if (original) {
+            QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
+            QCoreApplication::sendEvent(original, &release);
+            released = true;
+        }
+        return {{"delivered", true}, {"releasedToOriginal", released}, {"eventKind", "ForwardedKey"},
+                {"text", text}, {"targetAlive", !original.isNull()},
+                {"focusMatchesAfter", original_window && original && original_window->activeFocusItem() == original},
+                {"textAfter", original ? original->property("text") : QVariant{}}};
+    }
+    Q_INVOKABLE QVariantMap focusedInputMethodQuery233(QQuickWindow* window, QQuickItem* target) const {
+        if (!window || !window->isVisible() || !target || target->window() != window ||
+            window->activeFocusItem() != target || QGuiApplication::focusObject() != target ||
+            !target->isVisible() || !target->isEnabled() || !target->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
+            return {{"delivered", false}, {"cause", "actual focused Quick input required"},
+                    {"applicationFocusMatches", QGuiApplication::focusObject() == target}};
+        const QPointer<QQuickItem> original(target);
+        QInputMethodQueryEvent event(Qt::ImEnabled | Qt::ImCursorPosition | Qt::ImSurroundingText);
+        const bool returned = QCoreApplication::sendEvent(target, &event);
+        return {{"delivered", true}, {"eventKind", "InputMethodQuery"}, {"dispatchReturned", returned},
+                {"inputEnabled", event.value(Qt::ImEnabled)}, {"cursorPosition", event.value(Qt::ImCursorPosition)},
+                {"surroundingText", event.value(Qt::ImSurroundingText)}, {"targetAlive", !original.isNull()}};
+    }
     Q_INVOKABLE bool softwareOffscreenWithoutGl() const {
         if (QGuiApplication::platformName() != "offscreen" ||
             qEnvironmentVariable("QT_QUICK_BACKEND") != "software") return false;

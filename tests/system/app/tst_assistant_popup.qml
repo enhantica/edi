@@ -2091,4 +2091,156 @@ TestCase {
             }
         } finally { field.textEdited.disconnect(draftReceipt); }
     }
+    function test_sl1_233_focus_targeted_input_retires_original_work_data() {
+        return ["helper-preedit", "helper-commit", "helper-key", "helper-query",
+            "gap-preedit", "gap-commit", "gap-key", "gap-query"].map(tag => ({tag: tag}));
+    }
+    function test_sl1_233_focus_targeted_input_retires_original_work(data) {
+        const gap = data.tag.startsWith("gap-");
+        const query = data.tag.endsWith("query");
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")),
+            "SL1 SETUP: original complete measured native project opens");
+        const project = Session.project;
+        const lengths = project.currentStructure.scatteringLengths;
+        const custom = Probe.rows(lengths);
+        compare(custom.length, 1, "SL1 SETUP: original fixture retains its literal custom table");
+        compare(custom[0].typeSymbol, "La", "SL1 SETUP: original custom replacement is the La entry");
+        compare(custom[0].lengthFm, 8.24, "SL1 SETUP: independent fixture literal is unchanged");
+        for (let index = custom.length - 1; index >= 0; --index) lengths.remove(index);
+        compare(lengths.count, 0, "SL1 SETUP: genuine public empty custom map selects full built-in data");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "SL1 SETUP: actual original native calculation settles");
+        const target = visible185_parameter(project, "La", "adp_iso");
+        const originalValue = target.value;
+        verify(originalValue !== 0.6, "SL1 SETUP: delegated original value would cause a distinct real edit");
+        const inputs = visible185_inputs(project);
+        const values = visible185_values(project);
+        const declarations = JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]);
+        toggle();
+        assistant.signIn();
+        visible185_ready("sl1-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("sl1-disclosed");
+        verify(!assistant.contextConsentRequired, "SL1 SETUP: genuine current disclosed context is approved");
+        const show = item("assistant.showActions");
+        verify(show.visible && show.enabled, "SL1 SETUP: actual Show actions checkbox receives input");
+        mouseClick(show);
+        compare(assistant.showActions, true, "SL1 SETUP: genuine visible mode is enabled");
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        const name = Ui.control(Probe, window, "parameters.nameFilter");
+        verify(name !== null && Ui.exposed(name), "SL1 SETUP: original manual name input is exposed");
+        mouseClick(name);
+        visible185_type("adp_iso");
+        rendered();
+        const field = visible185_field(target);
+        mouseClick(field);
+        verify(field.activeFocus && window.activeFocusItem === field,
+            "SL1 SETUP: actual original Quick input has genuine current Main focus");
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        const call = "sl1-233-original-" + data.tag;
+        const pointer = item("assistant.actionPointer");
+        let takeovers = 0, userEdits = 0, preedits = 0, ownStarts = 0;
+        function takeoverReceipt() { ++takeovers; }
+        function editedReceipt() { ++userEdits; }
+        function preeditReceipt() { ++preedits; }
+        function pointerReceipt() { ++ownStarts; }
+        assistant.actionManualTakeover.connect(takeoverReceipt);
+        assistant.actionPointerShown.connect(pointerReceipt);
+        field.textEdited.connect(editedReceipt);
+        field.preeditTextChanged.connect(preeditReceipt);
+        let receipt = null, retainedText = null, retainedPreedit = null;
+        try {
+            visible185_ready("sl1-before-send");
+            assistant.send(gap ? "Inspect original current parameters, then wait for my next instruction"
+                : "Change original La isotropic ADP to 0.6 through its actual manual controls");
+            if (gap) {
+                tryVerify(() => visible185_outcome(call, previousIds) !== null
+                    && assistant.canCancel && !pointer.visible, 10000,
+                    "SL1 GAP SETUP: genuine original read reply is retained while the real request waits without helper pointer");
+                compare(ownStarts, 0, "SL1 GAP SETUP: no helper ran during this actual read-only request interval");
+            } else {
+                tryVerify(() => assistant.canCancel && assistant.showingActions && field.activeFocus
+                    && field.text !== field.editText && field.text !== field.value, 10000,
+                    "SL1 HELPER SETUP: original actual paced partial input is active before the user event");
+                verify(pointer.visible && ownStarts > 0,
+                    "SL1 HELPER SETUP: actual pointer/helper interval is genuinely reached");
+            }
+            verify(window.activeFocusItem === field && field.activeFocus,
+                "SL1 SETUP: sender addresses original focused Quick item, not its window substitute");
+            compare(target.value, originalValue, "SL1 SETUP: helper final Return has not written before intervention");
+            const beforeText = field.text;
+            const beforePreedit = field.preeditText;
+            const beforeEdits = userEdits;
+            const beforePreedits = preedits;
+            const gapOutcome = gap ? JSON.stringify(visible185_outcome(call, previousIds)) : null;
+            if (query) receipt = Probe.focusedInputMethodQuery233(window, field);
+            else if (data.tag.endsWith("preedit")) receipt = Probe.focusedInputMethod233(window, field, "733", "");
+            else if (data.tag.endsWith("commit")) receipt = Probe.focusedInputMethod233(window, field, "", "7");
+            else receipt = Probe.focusedForwardedDigit233(window, field, "8");
+            verify(receipt.delivered && receipt.targetAlive,
+                "SL1 SETUP: actual bounded Qt event was delivered to original live focused input");
+            if (query) {
+                compare(takeovers, 0, "SL1 QUERY: nonediting query cannot become manual takeover");
+                verify(assistant.canCancel, "SL1 QUERY: actual original request remains active after inert query");
+                compare(field.text, beforeText, "SL1 QUERY: original text is untouched");
+                compare(field.preeditText, beforePreedit, "SL1 QUERY: query neither starts nor clears composition");
+                compare(target.value, originalValue, "SL1 QUERY: query cannot write a scientific value");
+                assistant.cancel(); // Explicit ordinary cleanup AFTER the inertness assertions.
+            } else {
+                verify(takeovers > 0, "SL1: original focused genuine input genuinely invokes manual takeover");
+                verify(window.assistantManualTakeover,
+                    "SL1: actual Main retains manual controls for original user event");
+                if (data.tag.endsWith("preedit")) {
+                    compare(field.preeditText, "733", "SL1: exact original composition reaches the actual field");
+                    verify(preedits > beforePreedits, "SL1: original Qt preedit notification is genuinely new");
+                } else verify(field.text.includes(data.tag.endsWith("commit") ? "7" : "8") && userEdits > beforeEdits,
+                    "SL1: exact original commit/forwarded key reaches genuine user text signal");
+                retainedText = field.text;
+                retainedPreedit = field.preeditText;
+            }
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
+                "SL1: actual original request/helper retires before final observation");
+            rendered();
+            if (!query) {
+                compare(field.text, retainedText, "SL1: no later helper cleanup/typing overwrites genuine user text");
+                compare(field.preeditText, retainedPreedit, "SL1: original composition survives retirement/rendering");
+                verify(field.activeFocus && window.activeFocusItem === field,
+                    "SL1: original event keeps its original focused target after cancellation/restore");
+                if (!gap) {
+                    const outcome = visible185_outcome(call, previousIds);
+                    verify(outcome !== null && outcome.status !== "edited",
+                        "SL1: cancelled helper never claims its scientific edit completed");
+                }
+            }
+            if (gap) compare(JSON.stringify(visible185_outcome(call, previousIds)), gapOutcome,
+                "SL1 GAP: already completed original read stays truthful through request retirement");
+            compare(visible185_values(project), values,
+                "SL1: focused user input without Return and cancelled original work make no scientific mutation");
+            compare(visible185_inputs(project), inputs, "SL1: original observations/sigmas/masks/weights/links survive");
+            compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                declarations, "SL1: original scientific declarations remain intact");
+            verify(Session.project === project && assistant.connected,
+                "SL1: original current owner and genuine account survive input takeover/query");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "SL1: genuine catalog survives without login repair");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "SL1: retained conversation is not discarded during input retirement");
+        } finally {
+            console.log("SL1_233_STATE", data.tag, JSON.stringify({receipt: receipt,
+                currentOwner: Session.project === project, connected: assistant.connected,
+                focusIsOriginal: window.activeFocusItem === field, activeFocus: field.activeFocus,
+                text: field.text, preedit: field.preeditText, value: target.value,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                takeovers: takeovers, userEdits: userEdits, preeditSignals: preedits, pointerStarts: ownStarts,
+                lastError: assistant.lastError, originalOutcome: visible185_outcome(call, previousIds)}));
+            assistant.actionManualTakeover.disconnect(takeoverReceipt);
+            assistant.actionPointerShown.disconnect(pointerReceipt);
+            field.textEdited.disconnect(editedReceipt);
+            field.preeditTextChanged.disconnect(preeditReceipt);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
 }

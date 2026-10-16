@@ -583,3 +583,109 @@ def test_slider231_real_manual_value_display_chart_and_undo(case, tmp_path):  # 
     assert not native.exists() or not native.read_text(encoding='utf-8').strip(), (
         'SLIDER: no native response or hidden agent write substitutes for original slider events'
     )
+
+
+SL1_233_CASES = [
+    'helper-preedit', 'helper-commit', 'helper-key', 'helper-query',
+    'gap-preedit', 'gap-commit', 'gap-key', 'gap-query',
+]
+
+
+@pytest.mark.parametrize('case', SL1_233_CASES)
+def test_sl1_233_original_focused_input_and_request_retirement(case, tmp_path):  # noqa: PLR0914, PLR0915 -- finite existing Main/RPC/Qt-event evidence
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'SL1 SETUP: fresh matching Main with typed Qt-event fixture required'
+    environment = popup171_owned_environment(tmp_path)
+    environment['QT_QUICK_CONTROLS_HOVER_ENABLED'] = '1'
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text(encoding='utf-8'))
+    config.pop('report_page_reply')
+    gap = case.startswith('gap-')
+    call = {
+        'tool': 'list_parameters' if gap else 'set_parameters',
+        'call_id': 'sl1-233-original-' + case,
+        'arguments': {'purpose': 'Preserve original focused user input during ' + case},
+    }
+    if not gap:
+        call['arguments']['values'] = [{'path': 'structure.atom_sites[La].adp_iso', 'value': 0.6}]
+    config.update(scenario='native:script', native_turn_calls=[[call]],
+                  native_hold_after_calls=gap)
+    config_path.write_text(json.dumps(config), encoding='utf-8')
+    original_config = config_path.read_bytes()
+    fixture = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_sl1_233_focus_targeted_input_retires_original_work:' + case,
+            '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            received = getattr(error, stream) or b''
+            raw = received if isinstance(received, bytes) else received.encode()
+            destination = tmp_path / ('sl1-233-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'sl1-233.stdout.log').write_text(result.stdout, encoding='utf-8')
+    (tmp_path / 'sl1-233.stderr.log').write_text(result.stderr, encoding='utf-8')
+    (tmp_path / 'sl1-233-process.json').write_text(json.dumps({
+        'argv': argv, 'returncode': result.returncode,
+        'config_unchanged': config_path.read_bytes() == original_config,
+    }, indent=2), encoding='utf-8')
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::'
+        'test_sl1_233_focus_targeted_input_retires_original_work('
+        + case + ')' in output
+    ), 'SL1: actual original focus-event/Main/retirement case must execute\n' + output
+    assert config_path.read_bytes() == original_config, (
+        'SL1: prelaunch original script is immutable'
+    )
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'SL1: original independent scientific fixture bytes remain unchanged'
+    )
+    requests = [json.loads(line) for line in Path(config['trace']).read_text(
+        encoding='utf-8').splitlines()]
+    starts = [request for request in requests if request.get('method') == 'turn/start']
+    assert len(starts) == 1 and starts[0]['params'].get('clientUserMessageId'), (
+        'SL1: one actual original admitted user objective, never fabricated pending work'
+    )
+    assert not any(request.get('method') in {'account/login/start', 'account/logout'}
+                   for request in requests), (
+        'SL1: original input retirement cannot repair/reset auth'
+    )
+    interrupts = [request for request in requests if request.get('method') == 'turn/interrupt']
+    assert len(interrupts) == 1 if gap else len(interrupts) <= 1, (
+        'SL1: held request needs one interrupt; helper must not duplicate control after terminal'
+    )
+    replies = [json.loads(line) for line in Path(config['trace']).with_suffix(
+        '.native-replies.jsonl').read_text(encoding='utf-8').splitlines()]
+    assert len(replies) == 1, 'SL1: exact original reverse RPC settles once'
+    original, response = replies[0]['original'], replies[0]['response']
+    assert original['params']['tool'] == call['tool']
+    assert original['params']['callId'] == call['call_id']
+    assert original['params']['arguments'] == call['arguments']
+    assert response['id'] == original['id'] != call['call_id'], (
+        'SL1: original response envelope identity is distinct from model-provided call ID'
+    )
+    returned = response['result']
+    assert len(returned['contentItems']) == 1
+    assert returned['contentItems'][0]['type'] == 'inputText'
+    decoded = json.loads(returned['contentItems'][0]['text'])
+    if gap:
+        assert returned['success'] is True and isinstance(decoded.get('parameters'), list) and (
+            len(decoded['parameters']) > 0
+        ), (
+            'SL1 GAP: completed original read remains truthful during request retirement'
+        )
+    else:
+        assert returned['success'] is False and isinstance(decoded.get('status'), str) and (
+            decoded['status'] != 'edited' and isinstance(decoded.get('message'), str)
+            and decoded['message']
+        ), (
+            'SL1 HELPER: original retirement cannot claim a cancelled scientific edit'
+        )
