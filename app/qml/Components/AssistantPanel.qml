@@ -136,6 +136,9 @@ Popup {
                             elide: Text.ElideRight
                         }
                         EaElements.ToolTip {
+                            // This header sits below the app bar: an above-button
+                            // focus tooltip must not cover its genuine toggle.
+                            y: parent.height + EaStyle.Sizes.fontPixelSize * 0.5
                             text: connectionButton.text
                             visible: (connectionButton.hovered || connectionButton.activeFocus) && EaGlobals.Vars.showToolTips
                         }
@@ -161,6 +164,9 @@ Popup {
                         ToolTip.text: qsTr("Clear conversation")
                         Accessible.name: ToolTip.text
                         EaElements.ToolTip {
+                            // This header sits below the app bar: an above-button
+                            // focus tooltip must not cover its genuine toggle.
+                            y: parent.height + EaStyle.Sizes.fontPixelSize * 0.5
                             text: clearButton.ToolTip.text
                             visible: (clearButton.hovered || clearButton.activeFocus) && EaGlobals.Vars.showToolTips
                         }
