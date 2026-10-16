@@ -4898,12 +4898,16 @@ def assert_clear_projection156(state):
     )
 
 
-@pytest.mark.parametrize('signal', ['rowsAboutToBeRemoved', 'rowsRemoved', 'countChanged'])
+@pytest.mark.parametrize('signal', [
+    'rowsAboutToBeRemoved', 'rowsRemoved', 'countChanged',
+    'rowsAboutToBeInserted', 'rowsInserted', 'dataChanged',
+])
 def test_clear156_real_message_notification_reentry_preserves_final_topology_and_owner(
     generic, signal
 ):
     actor, trace = native_case(
-        generic, [], project=ROOT / 'tests/fixtures/e04_t1/editable-project'
+        generic, [], project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        script={'scenario': 'fileauth'},  # Genuine distinct successive turn/item identities.
     )
     actor.command(
         'send_text', text='Original complete history before notification reentrant Clear'
@@ -4924,7 +4928,12 @@ def test_clear156_real_message_notification_reentry_preserves_final_topology_and
     )
     original_owner = before['project']['host_snapshot']['path']
     assert actor.command('retirement_arm', action='clear', signal=signal)['reply']['armed']
-    actor.command('clear_history')
+    if signal in {'rowsAboutToBeInserted', 'rowsInserted', 'dataChanged'}:
+        # A genuine later Send changes the real message projection. Its ordinary
+        # Qt receiver calls actual Clear; no rows/signals are manufactured.
+        actor.command('send_text', text='Original next input interrupted by notification Clear')
+    else:
+        actor.command('clear_history')
     state = settle(
         actor,
         lambda value: (

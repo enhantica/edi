@@ -518,6 +518,12 @@ int main(int argc,char** argv) {
                     &QAbstractItemModel::rowsRemoved,session.get(),callback,type);
                 else if(signal=="countChanged")retirement_connection=QObject::connect(session->assistant()->messages(),
                     &edi_app::RowTableModel::countChanged,session.get(),callback,type);
+                else if(signal=="rowsAboutToBeInserted")retirement_connection=QObject::connect(session->assistant()->messages(),
+                    &QAbstractItemModel::rowsAboutToBeInserted,session.get(),callback,type);
+                else if(signal=="rowsInserted")retirement_connection=QObject::connect(session->assistant()->messages(),
+                    &QAbstractItemModel::rowsInserted,session.get(),callback,type);
+                else if(signal=="dataChanged")retirement_connection=QObject::connect(session->assistant()->messages(),
+                    &QAbstractItemModel::dataChanged,session.get(),callback,type);
                 else throw std::invalid_argument("actual retirement or message notification signal required");
                 result={{"armed",true}};
             }
