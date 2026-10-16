@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import pytest
+from tests.fixtures.scan_lifecycle.prepare import prepare as prepare_scan134
 from tests.system.app import test_e11_t5_vm_retention as prior
 
 ROOT = prior.ROOT
@@ -3803,4 +3804,182 @@ def test_usage129_actual_process_retirement_hides_original_account_snapshot(gene
     )
     assert len(started_requests(trace)) == 1, (
         'US3: optional state retirement never automatically replays user work'
+    )
+
+
+# R2/R3 use real synchronous Qt observers and existing public operations, not
+# a replacement engine/worker or production fault flag.
+def publication134_case(generic, tmp_path, *, scan=False, seed_undo=False):
+    source = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    if scan:
+        source = tmp_path / 'Original-two-measured-file-scan'
+        original_names = prepare_scan134(source, 2)
+        assert len(original_names) == 2, 'R2 SETUP: actual independent two-file scan prior art'
+    actor, trace = native_case(generic, [], project=source, hold=True, connect_now=False)
+    if scan:
+        actor.command('publication_scan_start')
+        actual = settle(
+            actor,
+            lambda value: (
+                value['publication_current']['scan_processed'] == 2
+                and not value['project']['native_observer']['fit_running']
+            ),
+        )
+        facts = actor.command('publication_inspect')['reply']
+        assert facts['scan'] and facts['scan_processed'] == 2 and facts['can_reset'], (
+            'R2 SETUP: actual normal scan completed its two measured files and exposes Reset'
+        )
+        assert not actual['project']['native_observer']['fit_running'], (
+            'R2 SETUP: no forced running state or fabricated scan result'
+        )
+    if seed_undo:
+        assert not actor.command('publication_seed_undo')['reply']['error'], (
+            'R2 SETUP: older normal free-flag edit creates a real recorded Undo'
+        )
+        settle(actor, lambda value: not value['publication_current']['calculating'])
+        assert actor.last['vm']['project']['native_observer']['can_undo'], (
+            'R2 SETUP: callback Undo must have real prior work to consume'
+        )
+    before = actor.last['vm']
+    scalar = native_parameter(before)
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['native_calls'] = [
+        native_call(
+            'set_parameters', values=[{'path': scalar['path'], 'value': scalar['value'] + 0.01}]
+        )
+    ]
+    config_path.write_text(json.dumps(config))
+    connect(actor)
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+    return actor, trace
+
+
+@pytest.mark.parametrize(
+    'action',
+    [
+        'report-setting',
+        'save',
+        'undo',
+        'fit-start',
+        'fit-reset',
+        'restore-patterns',
+        'scan-prepare',
+        'scan-reset',
+    ],
+)
+def test_native134_synchronous_publication_observer_cannot_bypass_shared_editor_fence(
+    generic, tmp_path, action
+):
+    scan = action in {'fit-reset', 'scan-prepare', 'scan-reset'}
+    actor, trace = publication134_case(generic, tmp_path, scan=scan, seed_undo=True)
+    before = actor.last['vm']
+    destination = tmp_path / 'Original-reentrant-save-must-not-exist'
+    assert not destination.exists(), 'R2 SETUP: callback Save has a genuine fresh destination'
+    assert actor.command(
+        'publication_arm', signal='projectEdited', action=action, destination=str(destination)
+    )['reply']['armed'], 'R2 SETUP: genuine synchronous public signal observer is armed'
+    actor.command('send_text', text='Original native value edit with independent Qt consumer')
+    final = settle(actor, lambda _value: len(native_records(trace, '.native-replies.jsonl')) == 1)
+    observed = final['publication_observer']
+    assert observed['entered'] and observed['same_owner_at_entry'] and observed['returned'], (
+        'R2 SETUP: actual callback completed inside the original publication, not after it'
+    )
+    previous, after = observed['before'], observed['after']
+    assert previous['can_undo'], 'R2 SETUP: synchronous Undo has an actual older record'
+    # Error text may honestly become a refusal. Every actual scientific/view/persistence
+    # field observed on the same synchronous stack must stay unchanged.
+    for field in (
+        'parameters',
+        'patterns',
+        'path',
+        'report_pdf',
+        'report_html_offline',
+        'can_undo',
+        'fit_running',
+        'can_reset',
+        'scan_processed',
+        'scan_fitted',
+    ):
+        assert after[field] == previous[field], (
+            'R2: callback alternative cannot bypass shared editor publication authority: ' + field
+        )
+    assert not observed['destination_exists'] and not destination.exists(), (
+        'R2: reentrant Save must not publish disk bytes or move the live path'
+    )
+    if action == 'undo':
+        assert after['error'] and final['publication_current']['error'] == after['error'], (
+            'R2: synchronous Undo warning survives ordinary readiness/publication updates'
+        )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(replies) == 1 and replies[0]['response']['id'] == replies[0]['original']['id'], (
+        'R2: original native envelope settles once after actual host publication'
+    )
+    assert replies[0]['response']['result']['success'], (
+        'R2: refused nested mutation cannot destroy the valid original value edit'
+    )
+    assert final['connected'] and final['models'] == before['models'], (
+        'R2: real publication observer cannot fabricate signout or lose the current catalog'
+    )
+    recovered = actor.command('native_undo')
+    assert recovered['reply']['was_available'], (
+        'R2: normal outside-callback Undo remains available'
+    )
+    assert recovered['vm']['project']['parameters'] == before['project']['parameters'], (
+        'R2: one genuine recovery Undo restores the original committed pre-batch state'
+    )
+
+
+@pytest.mark.parametrize('signal', ['modifiedChanged', 'rowsInserted'])
+@pytest.mark.parametrize('owner_action', ['close', 'replace'])
+def test_native134_real_qt_consumer_may_retire_project_without_dangling_publication(
+    generic, tmp_path, signal, owner_action
+):
+    actor, trace = publication134_case(generic, tmp_path)
+    before = actor.last['vm']
+    replacement = tmp_path / 'Original-replacement-project'
+    shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
+    assert actor.command(
+        'publication_arm', signal=signal, action=owner_action, replacement=str(replacement)
+    )['reply']['armed'], 'R3 SETUP: actual lifetime callback armed before real model publication'
+    if signal == 'modifiedChanged':
+        actor.command(
+            'send_text', text='Original native edit while a real consumer changes page owner'
+        )
+    else:
+        actor.command('publication_create_structure')
+    final = settle(
+        actor, lambda value: bool(value.get('publication_observer', {}).get('returned'))
+    )
+    observed = final['publication_observer']
+    assert observed['entered'] and observed['same_owner_at_entry'] and observed['returned'], (
+        'R3 SETUP: real Qt model/registry consumer reached actual Session operation'
+    )
+    if owner_action == 'close':
+        assert not final['project_present'], 'R3: real Session close is honored safely'
+    else:
+        assert observed['replacement_opened'] and final['project_present'], (
+            'R3: real Session replacement is honored safely'
+        )
+        assert final['project']['host_snapshot']['path'] == str(replacement), (
+            'R3: current owner is the independently copied replacement, not the old object'
+        )
+        assert native_parameter(final)['value'] == 3.88, (
+            'R3: old publication cannot write the replacement model'
+        )
+    actor.command('publication_flush_retired')
+    final = settle(actor, lambda value: not value['publication_owner_alive'])
+    assert not final['publication_owner_alive'], (
+        'R3: old QObject is actually released after safe publication, '
+        'not leaked to hide lifetime errors'
+    )
+    assert final['connected'] and final['models'] == before['models'], (
+        'R3: normal manual Session ownership change preserves genuine managed account'
+    )
+    assert actor.command('inspect')['vm']['connected'], (
+        'R3: real owner and event loop remain usable after callback retirement'
+    )
+    assert len(native_records(trace, '.native-replies.jsonl')) <= 1, (
+        'R3: no duplicate or replacement response is invented for a retired old native operation'
     )

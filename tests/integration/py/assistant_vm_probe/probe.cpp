@@ -6,7 +6,11 @@
 #include "edi/parameter_walk.hpp"
 #include "edi/calculation.hpp"
 #include "fit_view_model.hpp"
+#include "experiment_view_model.hpp"
+#include "pattern_model.hpp"
 #include <QCryptographicHash>
+#include <QAbstractItemModel>
+#include <QEvent>
 #include <QDesktopServices>
 #include <QScopeGuard>
 #include <QStringList>
@@ -127,6 +131,44 @@ int main(int argc,char** argv) {
             {"is_directory",QFileInfo(history).isDir()},{"bytes",static_cast<double>(bytes.size())},
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
     };
+    Object publication_observer;
+    QPointer<edi_app::ProjectViewModel> publication_owner;
+    bool publication_armed=false;
+    QMetaObject::Connection publication_connection;
+    const auto publication_values=[](edi_app::ProjectViewModel* owner) {
+        Object facts;if(!owner)return facts;
+        const auto& project=owner->project();Array parameters,patterns;
+        edi::Project captured(project);
+        for(const auto& entry:edi::parameter_entries(captured)) {
+            const auto& parameter=*entry.parameter;
+            parameters.push_back(Object{{"path",QString::fromStdString(entry.path)},
+                {"value",parameter.value.get()},{"free",parameter.free.get()},
+                {"uncertainty",parameter.uncertainty?QJsonValue(*parameter.uncertainty):QJsonValue()}});
+        }
+        for(auto* experiment:owner->experimentModels()) {
+            auto* pattern=experiment->pattern();Array actual;
+            for(int row=0;row<pattern->rowCount();++row) {
+                const auto index=pattern->index(row);
+                actual.push_back(Array{QJsonValue::fromVariant(pattern->data(index,edi_app::PatternModel::IntensityCalcRole)),
+                    QJsonValue::fromVariant(pattern->data(index,edi_app::PatternModel::IntensityBkgRole)),
+                    QJsonValue::fromVariant(pattern->data(index,edi_app::PatternModel::ResidualRole))});
+            }
+            patterns.push_back(Object{{"rows",pattern->rowCount()},{"stale",pattern->stale()},
+                {"sha256",QString::fromLatin1(QCryptographicHash::hash(encode(actual),QCryptographicHash::Sha256).toHex())}});
+        }
+        const auto optional_bool=[](const std::optional<bool>& value) {
+            return value?QJsonValue(*value):QJsonValue(QJsonValue::Null);
+        };
+        facts={{"parameters",parameters},{"patterns",patterns},{"path",QString::fromStdString(project.path)},
+            {"report_pdf",optional_bool(project.report_pdf)},
+            {"report_html_offline",optional_bool(project.report_html_offline)},
+            {"can_undo",owner->canUndo()},{"calculating",owner->calculating()},
+            {"error",owner->lastError()},{"scan",owner->scan()},
+            {"selected_experiment",owner->currentExperimentIndex()},
+            {"fit_running",owner->fit()->running()},{"can_reset",owner->fit()->canReset()},
+            {"scan_processed",owner->fit()->scanProcessed()},{"scan_fitted",owner->fit()->scanFitted()}};
+        return facts;
+    };
     auto snapshot=[&]()->Object {
         if(!session)return {{"alive",false}};
         auto* vm=session->assistant();Object project;
@@ -237,6 +279,11 @@ int main(int argc,char** argv) {
 #endif
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
         if(codex_mode) {
+            if(publication_owner || !publication_observer.isEmpty()) {
+                result["publication_observer"]=publication_observer;
+                result["publication_owner_alive"]=!publication_owner.isNull();
+                result["publication_current"]=publication_values(session->project());
+            }
             result["policy"]=Object{
                 {"record_bytes",static_cast<double>(edi::assistant::Limits::record_bytes)},
                 {"message_bytes",static_cast<double>(edi::assistant::Limits::message_bytes)},
@@ -323,6 +370,73 @@ int main(int argc,char** argv) {
                 result={{"method_present",present},{"invoked",invoked}};
             }
 #endif
+            else if(codex_mode && op=="publication_inspect")result=publication_values(session->project());
+            else if(codex_mode && op=="publication_seed_undo") {
+                auto* owner=session->project();if(!owner)throw std::runtime_error("real project required");
+                publication_owner=owner;
+                auto* live=owner->assistantProject();
+                const auto path=std::string("structure.cell.length_a");
+                edi::Parameter* parameter=nullptr;
+                for(const auto& entry:edi::parameter_entries(*live))if(entry.path==path)parameter=entry.parameter;
+                if(!parameter)throw std::runtime_error("original independent cell parameter unavailable");
+                const bool before=parameter->free.get();
+                const auto change=edi::Edit::set_free(*live,{{path,!before}});
+                result={{"error",owner->applyRecordedFreeFlags(change,{{path,before}})}};
+            }
+            else if(codex_mode && op=="publication_scan_start") {
+                if(!session->project())throw std::runtime_error("real scan project required");
+                publication_owner=session->project();
+                // Ordinary Follow checkbox policy: no fabricated renderer receipt.
+                session->project()->fit()->setFollowing(false);
+                session->project()->fit()->start();
+            }
+            else if(codex_mode && op=="publication_arm") {
+                auto* owner=session->project();if(!owner)throw std::runtime_error("real project required");
+                QObject::disconnect(publication_connection);
+                publication_owner=owner;publication_observer=Object{};publication_armed=true;
+                const auto action=input["action"].toString(),signal=input["signal"].toString();
+                const auto destination=input["destination"].toString();
+                const auto replacement=input["replacement"].toString();
+                auto callback=[&,owner=QPointer<edi_app::ProjectViewModel>(owner),action,signal,destination,replacement] {
+                    if(!publication_armed)return;publication_armed=false;
+                    publication_observer={{"entered",true},{"action",action},{"signal",signal},
+                        {"same_owner_at_entry",owner && session->project()==owner},
+                        {"before",publication_values(owner)}};
+                    if(!owner)throw std::runtime_error("actual publication owner vanished before callback");
+                    QString refusal;
+                    if(action=="report-setting")owner->setReportFormat("pdf",!owner->project().report_pdf.value_or(false));
+                    else if(action=="save")refusal=owner->saveTo(destination);
+                    else if(action=="undo")owner->undo();
+                    else if(action=="fit-start")owner->fit()->start();
+                    else if(action=="fit-reset")owner->fit()->reset();
+                    else if(action=="restore-patterns")owner->restorePatterns();
+                    else if(action=="scan-prepare")refusal=owner->prepareScan(true);
+                    else if(action=="scan-reset")refusal=owner->resetScan();
+                    else if(action=="close")session->closeProject();
+                    else if(action=="replace")publication_observer["replacement_opened"]=session->openProject(QUrl::fromLocalFile(replacement));
+                    else throw std::invalid_argument("undeclared finite publication action");
+                    publication_observer["method_refusal"]=refusal;
+                    publication_observer["after"]=publication_values(owner);
+                    publication_observer["owner_alive_after_callback"]=!owner.isNull();
+                    publication_observer["current_owner_is_original"]=owner && session->project()==owner;
+                    publication_observer["destination_exists"]=QFileInfo::exists(destination);
+                    publication_observer["returned"]=true;
+                };
+                if(signal=="projectEdited")publication_connection=QObject::connect(owner,&edi_app::ProjectViewModel::projectEdited,session.get(),callback);
+                else if(signal=="modifiedChanged")publication_connection=QObject::connect(owner,&edi_app::ProjectViewModel::modifiedChanged,session.get(),callback);
+                else if(signal=="rowsInserted")publication_connection=QObject::connect(owner->structures(),&QAbstractItemModel::rowsInserted,session.get(),callback);
+                else throw std::invalid_argument("undeclared finite publication signal");
+                result={{"armed",true}};
+            }
+            else if(codex_mode && op=="publication_flush_retired") {
+                // This manual command loop has no top-level exec(). Process the
+                // ordinary DeferredDelete event only AFTER the public call returned.
+                QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+            }
+            else if(codex_mode && op=="publication_create_structure") {
+                if(!session->project())throw std::runtime_error("real project required");
+                result={{"created",session->project()->createStructure()}};
+            }
             else if(op=="send_text")session->assistant()->send(input["text"].toString());
             else if(op=="answer")session->assistant()->answerQuestion(input["id"].toString(),input["answer"].toString());
             else if(op=="approve")session->assistant()->approvePlan(input["id"].toString());
