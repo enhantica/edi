@@ -133,6 +133,9 @@ int main(int argc,char** argv) {
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
     };
     bool native_science_enabled=false;
+    bool named_empty_observation=false;
+    QPointer<edi_app::ProjectViewModel> named_empty_owner;
+    const void* named_empty_core=nullptr;
     Object terminal_selection_observer;
     bool terminal_selection_armed=false;
     QMetaObject::Connection terminal_selection_connection;
@@ -263,6 +266,32 @@ int main(int argc,char** argv) {
             project={{"parameters",parameters},{"mode",QString::fromStdString(value.fitting_mode)},
                 {"objective",value.fit_result.objective_value}};
             if(codex_mode)project["native_observer"]=native_observer;
+            if(codex_mode && named_empty_observation) {
+                const auto text=[](const std::optional<std::string>& v) {
+                    return v?QJsonValue(QString::fromStdString(*v)):QJsonValue(QJsonValue::Null);
+                };
+                const auto boolean=[](const std::optional<bool>& v) {
+                    return v?QJsonValue(*v):QJsonValue(QJsonValue::Null);
+                };
+                project["empty_completion_observer"]=Object{
+                    {"owner_identity",QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(session->project())),16)},
+                    {"core_identity",QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(&value)),16)},
+                    {"same_owner",named_empty_owner && session->project()==named_empty_owner},
+                    {"same_core",named_empty_owner && session->project()==named_empty_owner && &value==named_empty_core},
+                    {"structures",static_cast<int>(value.structures.size())},
+                    {"experiments",static_cast<int>(value.experiments.size())},
+                    {"metadata",Object{{"name",QString::fromStdString(value.metadata.name)},
+                        {"title",session->project()->title()},{"description",session->project()->description()},
+                        {"authors",session->project()->authors()},
+                        {"created",QString::fromStdString(value.metadata.created)}}},
+                    {"settings",Object{{"su_rule",session->project()->suRule()},
+                        {"html",boolean(value.report_html)},{"pdf",boolean(value.report_pdf)},
+                        {"cif",boolean(value.report_cif)},{"html_offline",boolean(value.report_html_offline)},
+                        {"excluded",text(value.report_excluded)},{"x_axis",text(value.pattern_x_axis)},
+                        {"correlation_threshold",value.correlation_threshold?QJsonValue(*value.correlation_threshold):QJsonValue(QJsonValue::Null)}}},
+                    {"path",session->project()->path()},
+                    {"metadata_path",QString::fromStdString(value.metadata.path)}};
+            }
             if(codex_mode && native_science_enabled)project["science_observer"]=science;
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
             if(codex_mode) {
@@ -654,6 +683,16 @@ int main(int argc,char** argv) {
             else if(op=="select_model")session->assistant()->setSelectedModel(input["id"].toString());
             else if(op=="select_effort")session->assistant()->setSelectedEffort(input["id"].toString());
             else if(op=="open")result={{"opened",session->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
+            else if(codex_mode && op=="named_empty_create") {
+                if(session->hasProject())throw std::invalid_argument("new empty setup requires no prior owner");
+                const bool created=session->createProject(input["name"].toString(),input["description"].toString(),
+                    input["location"].toString(),input["su_rule"].toString(),input["title"].toString(),
+                    input["authors"].toString(),input["report_libraries"].toBool());
+                named_empty_observation=true;
+                named_empty_owner=session->project();
+                named_empty_core=named_empty_owner?static_cast<const void*>(&named_empty_owner->project()):nullptr;
+                result={{"created",created},{"error",session->lastError()}};
+            }
             else if(codex_mode && op=="native_science_enable") {
                 native_science_enabled=true;result={{"enabled",true}};
             }

@@ -6663,3 +6663,206 @@ def test_save217_undeclared_single_keeps_real_fit_and_native_roundtrip(  # noqa:
                    for row in records(trace)), (
         'SAVE217: saving never repairs auth through login/logout'
     )
+
+
+@pytest.mark.parametrize('case', ['unsaved', 'saved', 'invalid-recipe', 'structure-residue'])
+def test_completion254_real_named_empty_owner_and_native_creation(generic, tmp_path, case):  # noqa: PLR0914, PLR0915 -- independent source science and actual owner/Undo witnesses
+    """Complete the genuine named empty owner, never substitute a new project."""
+    saved = case == 'saved'
+    requested = {
+        'name': 'Original named empty owner',
+        'title': 'Original owner title',
+        'description': 'Original owner description, distinct from the supplied recipe',
+        'authors': 'Original independent author',
+        'su_rule': 'iucr_99',
+        'report_libraries': True,
+        'location': str(tmp_path / 'original-empty-owner') if saved else '',
+    }
+
+    def make_original_owner(scenario):
+        # Same real generic Session/stdio fixture: create the real owner BEFORE
+        # the ordinary selected-file helper mints its actual current IDs.
+        actor, trace = generic(scenario)
+        created = actor.command('named_empty_create', **requested)
+        assert created['reply']['created'] and created['vm']['project_present'], (
+            'COMPLETE: actual public Session creates a genuine named empty owner'
+        )
+        return actor, trace
+
+    actor, trace, arguments, owned = native145_selected(make_original_owner, tmp_path)
+    if case == 'structure-residue':
+        assert actor.command('publication_create_structure')['reply']['created'], (
+            'COMPLETE: real ordinary structure creation supplies genuine nonempty residue'
+        )
+        settle(actor, lambda value: not value['project']['science_observer']['calculating'])
+    if case == 'invalid-recipe':
+        arguments['recipe'].pop('wavelength')
+    native145_configure(actor, trace, [[native_call('create_cwl_project', **arguments),
+                                       native_call('inspect_project')]])
+    before = actor.last['vm']
+    original = before['project']['empty_completion_observer']
+    assert original['same_owner'] and original['same_core'], (
+        'COMPLETE: original live PVM and embedded core identities are actually observed'
+    )
+    assert original['metadata']['name'] == requested['name'] and (
+        original['metadata']['title'] == requested['title']
+        and original['metadata']['description'] == requested['description']
+        and original['metadata']['authors'] == requested['authors']
+        and original['metadata']['created']
+    ), 'COMPLETE: original user metadata is independent of supplied recipe defaults'
+    assert original['settings']['su_rule'] == 'iucr_99' and (
+        original['settings']['html_offline'] is True
+    ), 'COMPLETE: explicit original project settings exist before native admission'
+    assert original['experiments'] == 0 and original['structures'] == (
+        1 if case == 'structure-residue' else 0
+    ), 'COMPLETE: empty or genuine residue premise is observed, never fabricated'
+    source_directory = Path(original['path']) if saved else None
+    source_files = None
+    if saved:
+        assert source_directory.is_dir() and source_directory.resolve() == (
+            Path(requested['location']).resolve()
+        ) and source_directory.resolve().is_relative_to(tmp_path.resolve()) and (
+            source_directory / 'project.edi'
+        ).is_file(), (
+            'COMPLETE: saved named empty setup really owns a normally written native project'
+        )
+        source_files = save211_files(source_directory)
+    else:
+        assert not original['path'], 'COMPLETE: actual unsaved owner has no saved directory'
+    original_bytes = [path.read_bytes() for path in owned]
+    state, replies = native_send(actor, trace, 2)
+    actual = state['project']['empty_completion_observer']
+    assert actual['same_owner'] and actual['same_core'] and (
+        actual['owner_identity'] == original['owner_identity']
+        and actual['core_identity'] == original['core_identity']
+    ), 'COMPLETE: original Session PVM/core identity survives success or before-write refusal'
+    assert actual['metadata'] == original['metadata'] and (
+        actual['settings'] == original['settings']
+        and actual['path'] == original['path']
+        and actual['metadata_path'] == original['metadata_path']
+    ), 'COMPLETE: user metadata/settings/location survive independently of recipe project naming'
+    assert state['selected_files'] == before['selected_files'] and (
+        [path.read_bytes() for path in owned] == original_bytes
+    ), 'COMPLETE: genuine selected IDs and every immutable original input byte remain owned'
+    assert state['connected'] and state['models'] == before['models'] and (
+        state['handoff']['account_label'] == before['handoff']['account_label']
+        and state['handoff']['needs_save_as'] == before['handoff']['needs_save_as']
+    ), 'COMPLETE: same owner keeps genuine account/catalog and ordinary save lifecycle'
+    assert not state['pending_plan'] and not state['pending_question'], (
+        'COMPLETE: delegated original objective does not invent a second approval flow'
+    )
+    assert all(row in state['messages'] for row in before['messages']), (
+        'COMPLETE: original retained history remains after native completion or refusal'
+    )
+    if saved:
+        assert save211_files(source_directory) == source_files, (
+            'COMPLETE: completion does not silently overwrite the saved empty source'
+        )
+    if case in {'invalid-recipe', 'structure-residue'}:
+        assert not replies[0]['response']['result']['success'], (
+            'COMPLETE: malformed recipe or actual populated residue refuses before mutation'
+        )
+        assert state['project']['parameters'] == before['project']['parameters'] and (
+            native_inputs(state) == native_inputs(before)
+            and state['project']['science_observer'] == before['project']['science_observer']
+            and actual == original
+            and state['project']['native_observer']['can_undo']
+            == before['project']['native_observer']['can_undo']
+        ), 'COMPLETE: refused original owner remains wholly unchanged with prior Undo intact'
+        return
+    assert all(row['response']['result']['success'] for row in replies), (
+        'COMPLETE: genuine create and inspect settle on their original once-only envelopes'
+    )
+    state = native145_science_settled(actor)
+    actual = state['project']['empty_completion_observer']
+    assert actual['structures'] == actual['experiments'] == 1 and actual['same_owner'] and (
+        actual['same_core'] and state['project']['host_snapshot']['modified']
+    ), 'COMPLETE: real completion populates and dirties this same owner without claiming saved'
+    expected_columns = [
+        list(map(float, line.split())) for line in owned[1].read_text().splitlines()
+        if line.strip() and not line.lstrip().startswith('#')
+    ]
+    experiments = native_inputs(state)
+    assert len(experiments) == 1 and experiments[0]['weight'] == 1.0, (
+        'COMPLETE: original single measured experiment and unit dataset weight are preserved'
+    )
+    for key, column in [('axis', 0), ('intensity', 1), ('sigma', 2)]:
+        assert experiments[0][key] == [row[column] for row in expected_columns], (
+            'COMPLETE: every literal independent coordinate/intensity/sigma is preserved'
+        )
+    assert experiments[0]['exclusions'] == [
+        [row['first'], row['second']] for row in arguments['recipe']['exclusions']
+    ], 'COMPLETE: explicitly supplied measurement masks survive same-owner population'
+    science = state['project']['science_observer']
+    assert len(science['structures']) == 1 and all(
+        row['current'] for row in science['calculations']
+    ), 'COMPLETE: actual real worker publishes current geometry/calculation after creation'
+    structure = science['structures'][0]
+    original_sites = {
+        'Pb': ('Pb', [0.1882, 0.25, 0.167], 4),
+        'S': ('S', [0.063, 0.25, 0.686], 4),
+        'O1': ('O', [-0.095, 0.25, 0.6], 4),
+        'O2': ('O', [0.181, 0.25, 0.543], 4),
+        'O3': ('O', [0.085, 0.026, 0.806], 8),
+    }
+    assert structure['space_group'] == 'P n m a' and (
+        {row['id'] for row in structure['sites']} == set(original_sites)
+    ), 'COMPLETE: original classic-CIF space group and all literal atom sites remain'
+    for row in structure['sites']:
+        symbol, coordinates, multiplicity = original_sites[row['id']]
+        assert row['type_symbol'] == symbol and row['occupancy'] == 1.0 and (
+            row['adp_type'] == 'Uiso' and row['adp_iso'] == 0.01
+        ), 'COMPLETE: original species/occupancy/ADP convention and value are independent literals'
+        expected_orbit = native145_original_orbits(*coordinates)
+        images = [atom for atom in structure['expanded'] if atom['site_id'] == row['id']]
+        actual_orbit = sorted({tuple(round(x % 1.0, 12) for x in atom['fractional'])
+                               for atom in images})
+        assert len(actual_orbit) == len(expected_orbit) == multiplicity, (
+            'COMPLETE: original site multiplicity survives modulo lattice translations'
+        )
+        for position, expected in zip(actual_orbit, expected_orbit, strict=True):
+            assert position == pytest.approx(expected, abs=1e-12), (
+                'COMPLETE: every canonical physical position follows original CIF symmetry'
+            )
+        assert all(
+            atom['occupancy'] == 1.0 and atom['u_iso'] == pytest.approx(0.01, abs=1e-12)
+            for atom in images
+        ), 'COMPLETE: every image keeps original occupancy/ADP'
+    assert experiments[0]['phases'] == [structure['id']], (
+        'COMPLETE: actual measured pattern is linked to the original single imported phase'
+    )
+    for path, value in [('structure.cell.length_a', 8.48), ('structure.cell.length_b', 5.398),
+                        ('structure.cell.length_c', 6.958)]:
+        parameter = native_parameter(state, path)
+        assert parameter['value'] == value and not parameter['free'] and (
+            parameter['uncertainty'] is None
+        ), 'COMPLETE: independent original unfitted cell value/fixed flag/missing SU remain exact'
+    assert state['project']['native_observer']['can_undo'], (
+        'COMPLETE: real same-owner population installs its ordinary complete Undo record'
+    )
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'COMPLETE: exactly one actual ordinary Undo is consumed for complete population'
+    )
+    undone = settle(actor, lambda value: (
+        value['project']['empty_completion_observer']['structures'] == 0
+        and value['project']['empty_completion_observer']['experiments'] == 0
+        and not value['project']['science_observer']['calculating']
+    ))
+    empty = undone['project']['empty_completion_observer']
+    assert empty == original and (
+        undone['project']['parameters'] == before['project']['parameters']
+        and undone['project']['science_observer'] == before['project']['science_observer']
+        and undone['project']['mode'] == before['project']['mode']
+        and undone['project']['native_observer']['record']
+        == before['project']['native_observer']['record']
+        and undone['project']['native_observer']['can_undo']
+        == before['project']['native_observer']['can_undo']
+    ), 'COMPLETE: one Undo restores original empty science/settings/identity and prior history'
+    assert undone['connected'] and undone['models'] == before['models'] and (
+        undone['selected_files'] == before['selected_files']
+        and undone['handoff']['account_label'] == before['handoff']['account_label']
+    ), 'COMPLETE: actual account/catalog/source ownership survive complete native Undo'
+    if saved:
+        assert save211_files(source_directory) == source_files, (
+            'COMPLETE: one model Undo does not overwrite the independent saved empty tree'
+        )
