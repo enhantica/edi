@@ -383,6 +383,7 @@ int main(int argc,char** argv) {
             for(const auto& token:edi::supported_peak_profiles(edi::BeamModeEnum::CONSTANT_WAVELENGTH))
                 cwl_profiles.push_back(QString::fromStdString(token));
             result["native_profile_catalog"]=Object{{"beam_mode","constant wavelength"},{"profiles",cwl_profiles}};
+            result["native_import_observer"]=QJsonValue::fromVariant(vm->property("nativeImport"));
             const auto usage_index=vm->metaObject()->indexOfProperty("usage");
             const auto folder_index=vm->metaObject()->indexOfProperty("workingFolder");
             result["folder_observer"]=Object{
@@ -692,6 +693,16 @@ int main(int argc,char** argv) {
                 named_empty_owner=session->project();
                 named_empty_core=named_empty_owner?static_cast<const void*>(&named_empty_owner->project()):nullptr;
                 result={{"created",created},{"error",session->lastError()}};
+            }
+            else if(codex_mode && op=="import265_begin") {
+                result={{"intent",session->assistant()->beginNativeImport(nullptr)}};
+            }
+            else if(codex_mode && op=="import265_apply") {
+                result={{"admitted",session->assistant()->applyNativeImport(input["intent"].toString(),
+                    input["cif_id"].toString(),input["data_id"].toString(),input["recipe_json"].toString())}};
+            }
+            else if(codex_mode && op=="import265_cancel") {
+                session->assistant()->cancelNativeImport(input["intent"].toString());
             }
             else if(codex_mode && op=="native_science_enable") {
                 native_science_enabled=true;result={{"enabled",true}};

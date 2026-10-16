@@ -6973,3 +6973,187 @@ def test_ephemeral257_actual_thread_admission_and_live_turn_clear_ownership(  # 
             for path in fixture.rglob('*') if path.is_file()} == original_files, (
         'EPHEMERAL: original committed scientific input bytes remain unchanged'
     )
+
+
+@pytest.mark.parametrize('case', [
+    'ascii-below', 'ascii-equal', 'ascii-above', 'cjk-equal', 'escaped-equal',
+    'pair-equal', 'row-over', 'cancelled-intent', 'replayed-intent',
+])
+def test_import265_public_manual_recipe_admission_and_same_owner(generic, tmp_path, case):
+    """Public ordinary Apply boundary; this is not million-character pointer typing."""
+    def original_empty(scenario):
+        actor, trace = generic(scenario)
+        assert actor.command('named_empty_create', name='Original manual owner',
+                             title='Original title', authors='Original author',
+                             description='Original metadata distinct from recipe',
+                             su_rule='iucr_99', report_libraries=True)['reply']['created'], (
+            'IMPORT265 SETUP: actual public Session creates the original empty owner'
+        )
+        return actor, trace
+
+    actor, trace, arguments, owned = native145_selected(original_empty, tmp_path)
+    assert not actor.last['vm']['connected'] and not actor.peer_pid_file.exists(), (
+        'IMPORT265: ordinary offline import does not require or launch a provider'
+    )
+    original_bytes = [path.read_bytes() for path in owned]
+    before = actor.last['vm']
+    original = before['project']['empty_completion_observer']
+    recipe = arguments['recipe']
+    # Public NI-RES1 contract: inclusive1MiB COMPLETE recipe JSON UTF8 spelling,
+    # not just description length. All valid values remain independent fixture facts.
+    cap = 1048576
+    target = cap + (1 if case == 'ascii-above' else -1 if case == 'ascii-below' else 0)
+    if case in {'ascii-below', 'ascii-equal', 'ascii-above', 'cjk-equal', 'escaped-equal', 'pair-equal'}:
+        recipe['description'] = ''
+        empty = json.dumps(recipe, ensure_ascii=False, separators=(',', ':'))
+        remaining = target - len(empty.encode('utf-8'))
+        unit = {'cjk-equal': '中', 'escaped-equal': '\x01', 'pair-equal': '😀'}.get(case, 'x')
+        contribution = len(json.dumps(unit, ensure_ascii=False).encode('utf-8')) - 2
+        recipe['description'] = unit * (remaining // contribution) + 'x' * (remaining % contribution)
+        encoded = json.dumps(recipe, ensure_ascii=False, separators=(',', ':'))
+        assert len(encoded.encode('utf-8')) == target, (
+            'IMPORT265 SETUP: independently serialized complete valid recipe has exact declared boundary size'
+        )
+    else:
+        if case == 'row-over':
+            recipe['background'] = [{'position': float(i), 'intensity': 200.0} for i in range(257)]
+        encoded = json.dumps(recipe, ensure_ascii=False, separators=(',', ':'))
+    intent = actor.command('import265_begin')['reply']['intent']
+    assert intent and actor.last['vm']['native_import_observer']['state'] == 'draft', (
+        'IMPORT265 SETUP: actual public ordinary intent is a fresh offline draft'
+    )
+    if case == 'cancelled-intent':
+        actor.command('import265_cancel', intent=intent)
+    applied = actor.command('import265_apply', intent=intent,
+                            cif_id=arguments['cif_file_id'], data_id=arguments['data_file_id'],
+                            recipe_json=encoded)
+    if case in {'ascii-above', 'row-over', 'cancelled-intent'}:
+        assert not applied['reply']['admitted'], (
+            'IMPORT265: over-cap/over-row/cancelled ordinary request refuses before worker admission'
+        )
+        state = applied['vm']
+        projection = state['native_import_observer']
+        assert not state['can_cancel'] and projection['state'] != 'preparing', (
+            'IMPORT265: a false admission cannot hide a genuinely pending native worker'
+        )
+        if case == 'cancelled-intent':
+            assert projection['state'] == 'retired' and projection['retryable'] is False, (
+                'IMPORT265: the cancelled original intent stays retired without retry authority'
+            )
+        else:
+            assert projection['state'] == 'refused' and projection['retryable'] is True, (
+                'IMPORT265: a current invalid recipe is a quiescent before-write refusal, not preparation'
+            )
+        assert state['project'] == before['project'] and state['selected_files'] == before['selected_files'], (
+            'IMPORT265: refused boundary cannot partially alter original science/metadata/owner/Undo or source grants'
+        )
+    else:
+        assert applied['reply']['admitted'], (
+            'IMPORT265: complete valid inclusive-cap recipe enters the real native worker'
+        )
+        state = settle(actor, lambda value: value['native_import_observer'].get('state') == 'created')
+        state = native145_science_settled(actor)
+        presentation = state['native_import_observer']
+        assert presentation['retryable'] is False and presentation['outcome']['adopted'] is True, (
+            'IMPORT265: real ordinary worker adoption is truthful and never retry authority'
+        )
+        assert presentation['outcome']['completed_existing'] is True and presentation['outcome']['saved'] is False, (
+            'IMPORT265: same-owner completion is modified science, never a fabricated saved result'
+        )
+        actual = state['project']['empty_completion_observer']
+        assert actual['same_owner'] and actual['same_core'] and (
+            actual['owner_identity'] == original['owner_identity']
+            and actual['core_identity'] == original['core_identity']
+            and actual['metadata'] == original['metadata']
+            and actual['settings'] == original['settings']
+            and actual['path'] == original['path']
+        ), 'IMPORT265: the real original empty owner retains all metadata/settings/path identities'
+        expected = [list(map(float, line.split())) for line in owned[1].read_text().splitlines()
+                    if line.strip() and not line.lstrip().startswith('#')]
+        inputs = native_inputs(state)
+        assert len(inputs) == 1 and inputs[0]['weight'] == 1.0, (
+            'IMPORT265: one actual original measured dataset keeps its independent unit weight'
+        )
+        for name, column in [('axis', 0), ('intensity', 1), ('sigma', 2)]:
+            assert inputs[0][name] == [row[column] for row in expected], (
+                'IMPORT265: every literal original coordinate/intensity/sigma survives real import'
+            )
+        assert inputs[0]['exclusions'] == [[row['first'], row['second']] for row in recipe['exclusions']], (
+            'IMPORT265: actual native import preserves the explicit original exclusion intervals'
+        )
+        structure = state['project']['science_observer']['structures'][0]
+        assert structure['space_group'] == 'P n m a' and {
+            row['id']: (row['type_symbol'], row['occupancy'], row['adp_type'], row['adp_iso'])
+            for row in structure['sites']
+        } == {label: (symbol, 1.0, 'Uiso', 0.01)
+              for label, symbol in [('Pb', 'Pb'), ('S', 'S'), ('O1', 'O'), ('O2', 'O'), ('O3', 'O')]}, (
+            'IMPORT265: original independent PbSO4 species/site occupancy/ADP convention survive'
+        )
+        coordinates = {'Pb': [0.1882, 0.25, 0.167], 'S': [0.063, 0.25, 0.686],
+                       'O1': [-0.095, 0.25, 0.6], 'O2': [0.181, 0.25, 0.543],
+                       'O3': [0.085, 0.026, 0.806]}
+        for site in structure['sites']:
+            assert site['fractional'] == coordinates[site['id']], (
+                'IMPORT265: literal original five-site fractional geometry survives import'
+            )
+            expected_orbit = native145_original_orbits(*coordinates[site['id']])
+            images = [atom for atom in structure['expanded'] if atom['site_id'] == site['id']]
+            actual_orbit = sorted({tuple(round(x % 1.0, 12) for x in atom['fractional']) for atom in images})
+            assert len(actual_orbit) == len(expected_orbit), (
+                'IMPORT265: physical site multiplicity survives inclusive-view lattice images'
+            )
+            for position, expected_position in zip(actual_orbit, expected_orbit, strict=True):
+                assert position == pytest.approx(expected_position, abs=1e-12), (
+                    'IMPORT265: actual canonical orbit follows independently derived original CIF symmetry'
+                )
+        assert inputs[0]['phases'] == [structure['id']], (
+            'IMPORT265: real measured dataset is linked to the one original imported phase'
+        )
+        assert all(atom['occupancy'] == 1.0 and atom['u_iso'] == pytest.approx(0.01, abs=1e-12)
+                   for atom in structure['expanded']), (
+            'IMPORT265: every actual visual image retains original occupancy and isotropic ADP'
+        )
+        for name, value in [('length_a', 8.48), ('length_b', 5.398), ('length_c', 6.958)]:
+            parameter = native_parameter(state, 'structure.cell.' + name)
+            assert parameter['value'] == value and parameter['free'] is False and parameter['uncertainty'] == 0, (
+                'IMPORT265: original bare fixed cell literals and exact numeric-zero SU survive'
+            )
+        assert state['project']['native_observer']['can_undo'] and (
+            actor.command('native_undo')['reply']['was_available']
+        ), 'IMPORT265: complete same-owner import has one real ordinary Undo'
+        undone = settle(actor, lambda value: value['project']['empty_completion_observer']['structures'] == 0
+                        and not value['project']['science_observer']['calculating'])
+        assert undone['project']['empty_completion_observer'] == original and (
+            undone['project']['parameters'] == before['project']['parameters']
+            and undone['project']['native_observer']['record'] == before['project']['native_observer']['record']
+            and undone['project']['native_observer']['can_undo'] == before['project']['native_observer']['can_undo']
+        ), 'IMPORT265: one Undo restores the complete original empty owner and prior recorded history'
+        if case == 'replayed-intent':
+            again = actor.command('import265_apply', intent=intent, cif_id=arguments['cif_file_id'],
+                                  data_id=arguments['data_file_id'], recipe_json=encoded)
+            assert not again['reply']['admitted'] and again['vm']['project'] == undone['project'], (
+                'IMPORT265: already adopted original intent never grants a second write after Undo'
+            )
+            projection = again['vm']['native_import_observer']
+            previous_projection = undone['native_import_observer']
+            assert not again['vm']['can_cancel'] and projection['state'] != 'preparing', (
+                'IMPORT265: refused replay owns no genuinely pending worker or preparing projection'
+            )
+            assert projection['retryable'] is False and projection['state'] == previous_projection['state'], (
+                'IMPORT265: replay neither reopens authority nor erases the prior committed/retired presentation'
+            )
+            if previous_projection['state'] == 'created':
+                assert projection.get('outcome') == previous_projection.get('outcome') and (
+                    projection.get('adopted') == previous_projection.get('adopted')
+                    and projection.get('saved') == previous_projection.get('saved')
+                    and projection.get('presentation_complete') == previous_projection.get('presentation_complete')
+                ), 'IMPORT265: refused replay preserves the truthful historical committed outcome'
+            assert again['vm']['selected_files'] == undone['selected_files'], (
+                'IMPORT265: rejected replay preserves actual current source grants as well as science'
+            )
+    assert [path.read_bytes() for path in owned] == original_bytes, (
+        'IMPORT265: original complete selected-source bytes are unchanged by admission/refusal/Undo'
+    )
+    assert not actor.last['vm']['connected'] and not actor.peer_pid_file.exists() and not trace.exists(), (
+        'IMPORT265: ordinary offline form API cannot silently bootstrap a provider/account'
+    )
