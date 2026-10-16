@@ -17,7 +17,6 @@
 #include <QJsonObject>
 #include <QMetaObject>
 #include <QLoggingCategory>
-#include <QMouseEvent>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QDir>
@@ -66,8 +65,8 @@
 #endif
 
 namespace edi_app {
-Q_LOGGING_CATEGORY(lcAssistantWidgetLookup, "edi.assistant.widget.lookup", QtWarningMsg)
 namespace {
+Q_LOGGING_CATEGORY(lcAssistantWidgetLookup, "edi.assistant.widget.lookup", QtWarningMsg)
 using Object = QJsonObject;
 std::string json(const Object& object) { return QJsonDocument(object).toJson(QJsonDocument::Compact).toStdString(); }
 Object object(const std::string& text) { return QJsonDocument::fromJson(QByteArray::fromStdString(text)).object(); }
@@ -439,8 +438,6 @@ struct AssistantViewModel::State {
         double value = 0;
         bool free = false;
         std::uint64_t edit_scope = 0, fit_token = 0;
-        unsigned navigation_records = 0;
-        bool navigation_omitted = false;
         std::shared_ptr<ProjectViewModel::WidgetParameterInput> input;
     };
     std::shared_ptr<NativeWidget> native_widget;
@@ -760,56 +757,6 @@ struct AssistantViewModel::State {
         };
         widget_input->start(std::move(request));
     }
-    void widget_navigation_log(const std::shared_ptr<NativeWidget>& run, const QPointer<QQuickItem>& target,
-                               const char* phase, const QMouseEvent* event = nullptr, const char* disposition = "state") noexcept {
-        try {
-            if (!lcAssistantWidgetLookup().isDebugEnabled() || !run) return;
-            const auto receiver = run->receiver;
-            const auto record = [&](auto&& write) {
-                if (!receiver) return false;
-                if (run->navigation_records >= 256) {
-                    if (!run->navigation_omitted) {
-                        run->navigation_omitted = true;
-                        qCDebug(lcAssistantWidgetLookup) << "navigation records omitted after limit" << 256 << "original" << static_cast<const void*>(run.get());
-                    }
-                    return false;
-                }
-                ++run->navigation_records; write(); return bool(receiver);
-            };
-            if (!target) { record([&] { qCDebug(lcAssistantWidgetLookup) << "navigation null target" << phase << "original" << static_cast<const void*>(run.get()); }); return; }
-            const auto window = run->window;
-            const auto center = target->mapToScene(QPointF(target->width() / 2, target->height() / 2));
-            if (!record([&] {
-                auto* grabber = window ? window->mouseGrabberItem() : nullptr;
-                auto* actualPage = window ? window->property("assistantWorkflowPage").value<QQuickItem*>() : nullptr;
-                qCDebug(lcAssistantWidgetLookup) << "navigation" << phase << "original" << static_cast<const void*>(run.get())
-                    << "expectedPage" << run->tab << "actualPage" << static_cast<const void*>(actualPage)
-                    << "actualPageName" << (actualPage ? actualPage->property("pageName") : QVariant{})
-                    << "actualPageCurrent" << (actualPage ? actualPage->property("current") : QVariant{}) << "target" << static_cast<const void*>(target.data()) << "name" << target->objectName()
-                    << "checked" << target->property("checked") << "down" << target->property("down") << "pressed" << target->property("pressed")
-                    << "window" << static_cast<const void*>(window.data()) << "itemWindow" << static_cast<const void*>(target->window())
-                    << "size" << target->size() << "sceneCenter" << center
-                    << "grabber" << static_cast<const void*>(grabber) << "disposition" << disposition
-                    << "eventType" << (event ? int(event->type()) : -1) << "timestamp" << (event ? event->timestamp() : 0)
-                    << "device" << (event ? static_cast<const void*>(event->pointingDevice()) : nullptr)
-                    << "eventScene" << (event ? event->scenePosition() : QPointF());
-            }) || !target) return;
-            // Each navigation target's exposure chain is recorded once, not on
-            // every clone. No scientific text/properties/account payloads.
-            if (qstrcmp(phase, "selected") != 0 && qstrcmp(phase, "click") != 0) return;
-            for (QPointer<QQuickItem> ancestor = target; ancestor; ) {
-                if (!record([&] {
-                    const auto local = ancestor->mapFromScene(center);
-                    qCDebug(lcAssistantWidgetLookup) << "navigation ancestor" << "original" << static_cast<const void*>(run.get())
-                        << "target" << static_cast<const void*>(target.data()) << "ancestor" << static_cast<const void*>(ancestor.data())
-                        << "visible" << ancestor->isVisible() << "enabled" << ancestor->isEnabled() << "opacity" << ancestor->opacity()
-                        << "clip" << ancestor->clip() << "clipRect" << ancestor->clipRect() << "localCenter" << local
-                        << "clipContainsCenter" << ancestor->clipRect().contains(local);
-                })) return;
-                ancestor = ancestor ? ancestor->parentItem() : nullptr;
-            }
-        } catch (...) {} // Debug failure is never permission to navigate/mutate.
-    }
     QQuickItem* widget_sidebar_tab(const std::shared_ptr<NativeWidget>& run, const QString& suffix) const {
         if (!run || !run->tab.startsWith("appBar.tab.")) return nullptr;
         const QString sidebar = QStringLiteral("workflow.") + run->tab.mid(11) + QStringLiteral(".manualSidebar");
@@ -826,8 +773,6 @@ struct AssistantViewModel::State {
     }
     void widget_main_ready(const std::shared_ptr<NativeWidget>& run, const QPointer<QQuickItem>& target) {
         if (!widget_current(run) || !widget_input) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-        widget_navigation_log(run, target, "main-postcondition");
-        if (!run->receiver || !widget_current(run)) return;
         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "basic") != target || !target->property("checked").toBool()) {
             widget_refuse(run, QObject::tr("The genuine Main sidebar click did not select the expected tab; no parameter input was sent")); return;
         }
@@ -838,14 +783,9 @@ struct AssistantViewModel::State {
         if (!widget_page_selected(run)) { widget_refuse(run, QObject::tr("The expected workflow page is not selected")); return; }
         const QPointer<QQuickItem> target(widget_sidebar_tab(run, "basic"));
         if (!target) { widget_refuse(run, QObject::tr("The current workflow's Main sidebar tab is unavailable")); return; }
-        widget_navigation_log(run, target, target->property("checked").toBool() ? "selected" : "click");
-        if (!run->receiver || !widget_current(run)) return;
         if (target->property("checked").toBool()) { widget_main_ready(run, target); return; }
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
-        request.navigationTrace = [this, run, target](const char* phase, const QMouseEvent* event, const char* disposition) {
-            widget_navigation_log(run, target, phase, event, disposition);
-        };
         request.current = [this, run] { return widget_current(run); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
         request.completed = [this, run, target](bool delivered, const QString& message) noexcept {
@@ -864,14 +804,9 @@ struct AssistantViewModel::State {
         if (!widget_current(run) || !widget_input) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         const QPointer<QQuickItem> target(widget_named(run->tab));
         if (!target) { widget_refuse(run, QObject::tr("The actual workflow tab is unavailable")); return; }
-        widget_navigation_log(run, target, target->property("checked").toBool() ? "selected" : "click");
-        if (!run->receiver || !widget_current(run)) return;
         if (target->property("checked").toBool()) { widget_click_main(run); return; }
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
-        request.navigationTrace = [this, run, target](const char* phase, const QMouseEvent* event, const char* disposition) {
-            widget_navigation_log(run, target, phase, event, disposition);
-        };
         request.current = [this, run] { return widget_current(run); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
         request.completed = [this, run, target](bool delivered, const QString& message) noexcept {
@@ -881,8 +816,6 @@ struct AssistantViewModel::State {
                 QTimer::singleShot(500, &owner, [this, run, target] {
                     try {
                         if (!widget_current(run)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-                        widget_navigation_log(run, target, "page-postcondition");
-                        if (!run->receiver || !widget_current(run)) return;
                         if (!target || widget_named(run->tab) != target || !target->property("checked").toBool()) {
                             widget_refuse(run, QObject::tr("The genuine workflow click did not select the expected page; no parameter input was sent")); return;
                         }
@@ -1103,9 +1036,6 @@ struct AssistantViewModel::State {
             // One finite real-input task, its original response identity and
             // exact editor receipt are admitted before visibility or input.
             raw(sizeof(NativeWidget) + sizeof(ProjectViewModel::WidgetParameterInput) + sizeof(AssistantWidgetInput::Request));
-            // One navigation sink closure captures State pointer, original run
-            // and original Qt target; reserve it before constructing a Request.
-            raw(sizeof(void*) + sizeof(std::shared_ptr<NativeWidget>) + sizeof(QPointer<QQuickItem>));
             receipt(native_widget->call.receipt); value(native_widget->call.rpc);
             value(native_widget->tool); value(native_widget->tab); value(native_widget->valueText); value(native_widget->parameterFilter);
             // Bounded numeric request/original-draft roles (helper refuses
