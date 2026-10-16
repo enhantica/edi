@@ -4765,32 +4765,17 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'BOOTSTRAP: genuine empty and loaded owners expose complete context, '
         'not an invalid-metadata envelope mislabeled as capacity exhaustion'
     )
-    assert isinstance(initial['skills'], list), (
-        'BOOTSTRAP: the actual read-only skill model exists before account launch'
+    assert initial['context']['skills'] == [
+        {
+            key: originals['project-assistance'][key]
+            for key in ['id', 'version', 'sha256', 'content']
+        }
+    ], 'BOOTSTRAP: initial disclosure preserves the complete original default guidance bond'
+    assert (initial['context']['project'] is not None) == loaded, (
+        'BOOTSTRAP: initial context preserves genuine projectless versus loaded ownership'
     )
-    actual = {entry['id']: entry for entry in initial['skills']}
-    assert set(actual) == set(originals), (
-        'BOOTSTRAP: every shipped resource is admitted, never a trimmed passing subset'
-    )
-    for identity, original in originals.items():
-        assert {key: actual[identity][key] for key in original} == original, (
-            'BOOTSTRAP: actual skill rows preserve every shipped metadata and full-content field'
-        )
-        invoked = actor.command('select_skill', id=identity)
-        state = invoked['vm']
-        assert invoked['reply']['method_present'] and invoked['reply']['invoked'], (
-            'BOOTSTRAP: skill selection reaches the existing actual public Qt method'
-        )
-        assert state['selected_skill'] == identity and 'error' not in state['context'], (
-            'BOOTSTRAP: every genuine shipped selection has a usable complete owner context'
-        )
-        assert state['context']['skills'] == [
-            {key: original[key] for key in ['id', 'version', 'sha256', 'content']}
-        ], 'BOOTSTRAP: disclosure carries the selected original content, not only its URL'
-        assert (state['context']['project'] is not None) == loaded, (
-            'BOOTSTRAP: selection preserves genuine projectless versus loaded ownership'
-        )
-    actor.command('select_skill', id='project-assistance')
+    # OWNER7972 supersedes restricted4507 manual selection for this generic path.
+    # The real runtime discovers all prepared resources during account/bootstrap.
     connect(actor)  # Explicit ordinary public Sign in; only the absolute owned stdio peer.
     state = actor.last['vm']
     assert state['connected'] and state['models'] and not state['last_error'], (
@@ -4809,6 +4794,33 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'run_fit',
         'create_cwl_project',
     }, 'BOOTSTRAP: native creation stage truthfully advertises exactly seven implemented tools'
+    actual = {entry['id']: entry for entry in state['skills']}
+    assert set(actual) == set(originals), (
+        'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
+        'never a trimmed passing subset'
+    )
+    workspace = Path(thread['cwd'])
+    discoveries = [row['params'] for row in records(trace) if row.get('method') == 'skills/list']
+    assert any(str(workspace) in request['cwds'] for request in discoveries), (
+        'BOOTSTRAP: actual skill discovery and admitted thread use the same owned workspace'
+    )
+    for identity, original in originals.items():
+        staged = workspace / '.agents/skills' / original['path']
+        assert Path(actual[identity]['path']) == staged and staged.is_file(), (
+            'BOOTSTRAP: each actual registration refers to its prepared original workspace file'
+        )
+        assert staged.read_bytes() == original['content'].encode(), (
+            'BOOTSTRAP: prepared skills preserve exact original bytes/version/provenance'
+        )
+        assert actual[identity]['content'] == original['content'], (
+            'BOOTSTRAP: optional catalogue exposes full registered original content, not a URL'
+        )
+        assert hashlib.sha256(staged.read_bytes()).hexdigest() == original['sha256'], (
+            'BOOTSTRAP: every discovered original retains its independently declared content hash'
+        )
+        assert json.loads((resource_root / 'index.json').read_text())['skills'] == entries, (
+            'BOOTSTRAP: automatic registration preserves all original packaged metadata'
+        )
     methods = [row.get('method') for row in records(trace)]
     assert {'initialize', 'account/read', 'model/list', 'skills/list', 'thread/start'} <= set(
         methods
