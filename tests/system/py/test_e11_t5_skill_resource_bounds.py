@@ -182,3 +182,22 @@ def test_ordinary_three_resource_catalog_retains_all_distinct_originals(loader):
     ), (
         'S1: ordinary multi-resource inputs retain complete metadata/content without a lower cap'
     )
+
+
+def test_bootstrap149_unknown_capability_remains_typed_refusal_with_valid_originals(loader):
+    # Existing generated-resource input seam; the unknown name has no handler or grant.
+    contents = ['Original bounded shipped-style guidance Å']
+    for operation in ['context', 'catalog']:
+        positive = observe(loader, contents, operation)
+        assert positive['observation'] == 'returned', (
+            'BOOTSTRAP: ordinary supported capability remains legal through the actual loader'
+        )
+
+        def unknown(entries, _resources):
+            entries[0]['capabilities'].append('original_unregistered_capability')
+
+        negative = observe(loader, contents, operation, patch=unknown)
+        assert negative == {'observation': 'threw_refusal', 'code': 'invalid_argument'}, (
+            'BOOTSTRAP: unknown bundled capabilities fail closed with identity refusal, '
+            'not fabricated handlers, capacity errors, or a partial selected payload'
+        )

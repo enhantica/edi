@@ -4737,3 +4737,89 @@ def test_native145_created_project_runs_actual_fit_with_truthful_publication(gen
     assert report['record']['success'] == outcome['converged']
     assert native_inputs(state) == before_inputs and state['connected']
     # MAX_ITER/NO_STEP are accepted explicit statuses, never declared convergence or adequacy here.
+
+
+@pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
+def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_thread(
+    generic, loaded
+):
+    # Oracle: immutable package INPUT bytes plus the declared native seven-tool stage.
+    # No generated Controller manifest or successful VM output supplies expectations.
+    resource_root = ROOT / 'data/assistant/skills'
+    entries = json.loads((resource_root / 'index.json').read_text())['skills']
+    originals = {}
+    for entry in entries:
+        content = (resource_root / entry['path']).read_text()
+        assert hashlib.sha256(content.encode()).hexdigest() == entry['sha256'], (
+            'BOOTSTRAP: each independently read shipped skill retains its declared content bond'
+        )
+        originals[entry['id']] = {**entry, 'content': content}
+    actor, trace = native_case(
+        generic,
+        [native_call('inspect_project')],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project' if loaded else None,
+        connect_now=False,
+    )
+    initial = actor.last['vm']
+    assert 'error' not in initial['context'], (
+        'BOOTSTRAP: genuine empty and loaded owners expose complete context, '
+        'not an invalid-metadata envelope mislabeled as capacity exhaustion'
+    )
+    assert isinstance(initial['skills'], list), (
+        'BOOTSTRAP: the actual read-only skill model exists before account launch'
+    )
+    actual = {entry['id']: entry for entry in initial['skills']}
+    assert set(actual) == set(originals), (
+        'BOOTSTRAP: every shipped resource is admitted, never a trimmed passing subset'
+    )
+    for identity, original in originals.items():
+        assert {key: actual[identity][key] for key in original} == original, (
+            'BOOTSTRAP: actual skill rows preserve every shipped metadata and full-content field'
+        )
+        invoked = actor.command('select_skill', id=identity)
+        state = invoked['vm']
+        assert invoked['reply']['method_present'] and invoked['reply']['invoked'], (
+            'BOOTSTRAP: skill selection reaches the existing actual public Qt method'
+        )
+        assert state['selected_skill'] == identity and 'error' not in state['context'], (
+            'BOOTSTRAP: every genuine shipped selection has a usable complete owner context'
+        )
+        assert state['context']['skills'] == [
+            {key: original[key] for key in ['id', 'version', 'sha256', 'content']}
+        ], 'BOOTSTRAP: disclosure carries the selected original content, not only its URL'
+        assert (state['context']['project'] is not None) == loaded, (
+            'BOOTSTRAP: selection preserves genuine projectless versus loaded ownership'
+        )
+    actor.command('select_skill', id='project-assistance')
+    connect(actor)  # Explicit ordinary public Sign in; only the absolute owned stdio peer.
+    state = actor.last['vm']
+    assert state['connected'] and state['models'] and not state['last_error'], (
+        'BOOTSTRAP: healthy shipped context permits real managed account/catalog readiness'
+    )
+    assert not state['context_consent_required'], (
+        'BOOTSTRAP: genuine Sign in acknowledges exactly the disclosed current context'
+    )
+    thread = next(row['params'] for row in records(trace) if row.get('method') == 'thread/start')
+    assert {tool['name'] for tool in thread['dynamicTools']} == {
+        'inspect_project',
+        'list_parameters',
+        'diagnostics',
+        'set_parameters',
+        'set_free',
+        'run_fit',
+        'create_cwl_project',
+    }, 'BOOTSTRAP: native creation stage truthfully advertises exactly seven implemented tools'
+    methods = [row.get('method') for row in records(trace)]
+    assert {'initialize', 'account/read', 'model/list', 'skills/list', 'thread/start'} <= set(
+        methods
+    ), 'BOOTSTRAP: readiness follows real account/catalog/workspace responses, never fake auth'
+    assert not {'account/login/start', 'account/logout'} & set(methods), (
+        'BOOTSTRAP: healthy managed bootstrap does not invent login or logout to repair context'
+    )
+    state, replies = native_send(actor, trace, 1)
+    assert replies[0]['response']['result']['success'] and state['connected'], (
+        'BOOTSTRAP: original reverse RPC native read works after actual context preparation'
+    )
+    assert (replies[0]['decoded']['project'] is not None) == loaded, (
+        'BOOTSTRAP: native read reports the same real owner after bootstrap'
+    )
