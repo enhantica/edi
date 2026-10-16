@@ -132,6 +132,7 @@ int main(int argc,char** argv) {
             {"is_directory",QFileInfo(history).isDir()},{"bytes",static_cast<double>(bytes.size())},
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
     };
+    bool native_science_enabled=false;
     Object terminal_selection_observer;
     bool terminal_selection_armed=false;
     QMetaObject::Connection terminal_selection_connection;
@@ -217,10 +218,49 @@ int main(int argc,char** argv) {
                         {"success",value.fit_result.success},{"iterations",value.fit_result.iterations},
                         {"reduced_chi_square",value.fit_result.reduced_chi_square}}}};
             }
+            Object science;
+            if(codex_mode && native_science_enabled) {
+                Array structures,aliases,constraints,calculations;
+                for(const auto& structure:value.structures) {
+                    Array sites,expanded;
+                    for(const auto& site:structure->atom_sites)sites.push_back(Object{
+                        {"id",QString::fromStdString(site->id.value())},
+                        {"type_symbol",QString::fromStdString(site->type_symbol.value())},
+                        {"wyckoff",QString::fromStdString(site->wyckoff_letter.value())},
+                        {"adp_type",QString::fromStdString(site->adp_type.value())},
+                        {"fractional",Array{site->fract_x.value.get(),site->fract_y.value.get(),site->fract_z.value.get()}},
+                        {"occupancy",site->occupancy.value.get()},{"adp_iso",site->adp_iso.value.get()}});
+                    const bool current=structure->geometry_current();
+                    if(current) {
+                        const auto& atoms=structure->geometry.expanded_atom_sites;
+                        for(std::size_t i=0;i<atoms.size();++i)expanded.push_back(Object{
+                            {"site_id",QString::fromStdString(atoms.atom_site_id[i])},
+                            {"fractional",Array{atoms.fract_x[i],atoms.fract_y[i],atoms.fract_z[i]}},
+                            {"occupancy",atoms.occupancy[i]},{"u_iso",atoms.u_iso[i]}});
+                    }
+                    structures.push_back(Object{{"id",QString::fromStdString(structure->name.value())},
+                        {"space_group",QString::fromStdString(structure->space_group.name_h_m.value())},
+                        {"sites",sites},{"geometry_current",current},{"expanded",expanded}});
+                }
+                for(const auto& alias:value.aliases)aliases.push_back(Object{
+                    {"id",QString::fromStdString(alias->id.value())},
+                    {"parameter_unique_name",QString::fromStdString(alias->parameter_unique_name.value())}});
+                for(const auto& constraint:value.constraints)constraints.push_back(Object{
+                    {"id",QString::fromStdString(constraint->id.value())},
+                    {"expression",QString::fromStdString(constraint->expression.value())},
+                    {"enabled",constraint->enabled.get()}});
+                for(const auto& experiment:value.experiments)calculations.push_back(Object{
+                    {"name",QString::fromStdString(experiment->name.value())},
+                    {"current",experiment->computed_current()},
+                    {"calculation_only",experiment->calculation_only}});
+                science={{"structures",structures},{"aliases",aliases},{"constraints",constraints},
+                    {"calculations",calculations},{"calculating",session->project()->calculating()}};
+            }
             const auto native_observer=project.value("native_observer");
             project={{"parameters",parameters},{"mode",QString::fromStdString(value.fitting_mode)},
                 {"objective",value.fit_result.objective_value}};
             if(codex_mode)project["native_observer"]=native_observer;
+            if(codex_mode && native_science_enabled)project["science_observer"]=science;
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
             if(codex_mode) {
                 Array experiments;
@@ -564,6 +604,9 @@ int main(int argc,char** argv) {
             else if(op=="select_model")session->assistant()->setSelectedModel(input["id"].toString());
             else if(op=="select_effort")session->assistant()->setSelectedEffort(input["id"].toString());
             else if(op=="open")result={{"opened",session->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
+            else if(codex_mode && op=="native_science_enable") {
+                native_science_enabled=true;result={{"enabled",true}};
+            }
             else if(codex_mode && op=="native_undo") {
                 if(!session->project())throw std::invalid_argument("Undo requires actual project");
                 const bool available=session->project()->canUndo();
