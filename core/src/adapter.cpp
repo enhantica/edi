@@ -2960,10 +2960,23 @@ CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& o
     auto calculated = calculate(work, cancel); // The ordinary native calculator.
     if (calculated.cancelled || cancel.cancelled())throw std::invalid_argument("Saved-state calculation was cancelled");
     if (!calculated.refusal.empty())throw std::invalid_argument("The rounded saved model could not be calculated");
-    // Staged arrays share immutable calculated buffers. Check all retained
-    // source/column/name roles before transferring them to the task/delivery.
-    held.bytes(admit_persistence(work.project, limits, true));
-    for (const auto& value : calculated.completed)held.value(value);
+    // Charge exactly the staged result's owning roles, not a second full
+    // Project which is destroyed on this worker. Its immutable column buffers
+    // and completed names must fit the task's already reserved allowance.
+    held.rows(calculated.data.size(),sizeof(PdDataBase));
+    for(const auto& data:calculated.data) {
+        held.category<DataCategory>(data);held.value(data.residual);
+    }
+    held.rows(calculated.refln.size(),sizeof(PowderReflnDataBase));
+    for(const auto& refln:calculated.refln)held.category<ReflnCategory>(refln);
+    held.rows(calculated.geometry.size(),sizeof(std::optional<StructureGeometry>));
+    for(const auto& geometry:calculated.geometry)if(geometry) {
+        held.category<SpaceGroupSymopCategory>(geometry->space_group_symop);
+        held.category<ExpandedAtomSiteCategory>(geometry->expanded_atom_sites);
+        held.category<GeomBondCategory>(geometry->geom_bond);
+        held.category<CartnTransformCategory>(geometry->atom_sites_cartn_transform);
+    }
+    held.value(calculated.completed);
     return calculated;
 }
 

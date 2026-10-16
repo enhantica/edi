@@ -1707,11 +1707,13 @@ struct AssistantViewModel::State {
         }
         task->committed=false;task->reopened=false;task->active=false;
         try {
-            native_save=task;native_charge();
-            const auto occupied=native_bytes()+generic_item_bytes+generic_progress_bytes;
-            if(occupied>=Limits::stream_retained_bytes)throw std::length_error("No retained role remains for the saved calculation");
-            task->calculation_reservation=Limits::stream_retained_bytes-occupied;
-            native_charge(); // Preown the entire bounded late-delivery role.
+            native_save=task;
+            // A concrete staged-result allowance, not all transport headroom.
+            // The original complete model's admitted retained role bounds this
+            // task's late calculation; a larger result refuses before transfer.
+            // retainOutput still accounts for its real pending transport owners.
+            task->calculation_reservation=task->snapshot.retained_bytes;
+            native_charge();
             if(!native_save_current(task))throw std::runtime_error("Save retired before worker admission");
             task->ticket=idle_worker->submit("assistant-native-save",std::move(job));
             if(!receiver)return;

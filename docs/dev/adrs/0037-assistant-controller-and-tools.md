@@ -409,3 +409,15 @@ raw-State scope destructor previously reachable after receiver deletion.
 Saved disk/active facts latch before observers and survive interrupted or
 retired presentation; no manual edit is rolled back or absorbed into an old
 approved request.
+
+
+### Saved-calculation reservation preserves transport admission
+
+The late saved calculation reserves the original snapshot's fully admitted
+retained-model allowance before Worker submission. It does not claim all
+remaining shared transport capacity: pending original RPC/frame owners retain
+their ordinary admission. The worker checks actual staged data/reflection/
+geometry buffers, completed-name/value rows and copied original stamps against
+that preowned allowance before transfer. The temporary calculated Project is
+not a second retained delivery model. A larger result refuses before disk
+publication; no cap is raised and no successful archive/write is invented.
