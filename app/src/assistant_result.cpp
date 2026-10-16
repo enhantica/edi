@@ -11,6 +11,7 @@
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QJsonObject>
+#include <QJsonDocument>
 #include <QStandardPaths>
 #include <QUuid>
 #include <algorithm>
@@ -262,6 +263,33 @@ struct AssistantResultDirectory {
 #endif
 };
 
+namespace {
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+std::shared_ptr<ImmutableAssistantResult> owned_result_snapshot() {
+    auto result = std::make_shared<ImmutableAssistantResult>();
+    const auto cache = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/results";
+    if (!QDir().mkpath(cache)) refuse();
+    result->lease = std::make_shared<QTemporaryDir>(cache + "/result-XXXXXX");
+    if (!result->lease->isValid()) refuse();
+    result->lease->setAutoRemove(false); // Descriptor cleanup only, no mutable-path recursive delete.
+    result->recovery_directory = result->lease->path();
+    const auto physicalCopy = QFileInfo(result->recovery_directory).canonicalFilePath();
+    const auto physicalAgent = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/agent").canonicalFilePath();
+    if (physicalCopy.isEmpty() || (!physicalAgent.isEmpty() && (physicalCopy == physicalAgent || physicalCopy.startsWith(physicalAgent + '/')))) refuse();
+    result->handle = std::make_shared<AssistantResultDirectory>(directory(physicalCopy));
+    result->directory = physicalCopy;
+    return result;
+}
+void own_receipt(ImmutableAssistantResult& result, const std::vector<Entry>& entries) {
+    result.intent = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    result.files = receipt_files(entries);
+    result.receipt = QJsonDocument(QJsonObject{{"schema", "edi.assistant.result/1"}, {"intent", result.intent},
+        {"project", "project"}, {"files", result.files}}).toJson(QJsonDocument::Compact);
+    if (result.receipt.size() > static_cast<qsizetype>(Limits::context_bytes)) refuse();
+}
+#endif
+} // namespace
+
 void check_assistant_result_mode(const edi::Project& project) {
     if (project.sequential_fit.declared() || edi::is_scan_fitting_mode(project.fitting_mode) || !project.report_files.empty())
         throw std::runtime_error("This result requires external scan/report files; automatic opening currently supports self-contained native projects only");
@@ -277,21 +305,10 @@ std::shared_ptr<ImmutableAssistantResult> capture_assistant_result(const QString
     const auto entries = manifest(original, intent);
     auto project = below(root.n, ".edi-result/" + intent + "/project", true);
     const Identity projectIdentity(project.n);
-    auto result = std::make_shared<ImmutableAssistantResult>();
-    const auto cache = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/results";
-    if (!QDir().mkpath(cache)) refuse();
-    result->lease = std::make_shared<QTemporaryDir>(cache + "/result-XXXXXX");
-    if (!result->lease->isValid()) refuse();
-    result->lease->setAutoRemove(false);
-    result->recovery_directory = result->lease->path();
-    const auto physicalAgentRoot = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/agent").canonicalFilePath();
+    auto result = owned_result_snapshot();
     const auto physicalWorkspace = QFileInfo(workspace).canonicalFilePath();
-    const auto physicalCopy = QFileInfo(result->recovery_directory).canonicalFilePath();
-    if (physicalWorkspace.isEmpty() || physicalCopy.isEmpty() || physicalCopy == physicalWorkspace || physicalCopy.startsWith(physicalWorkspace + '/') ||
-        (!physicalAgentRoot.isEmpty() && (physicalCopy == physicalAgentRoot || physicalCopy.startsWith(physicalAgentRoot + '/')))) refuse();
-    auto copy = std::make_shared<AssistantResultDirectory>(directory(result->recovery_directory));
-    result->handle = copy;
-    result->directory = physicalCopy;
+    if (physicalWorkspace.isEmpty() || result->directory == physicalWorkspace || result->directory.startsWith(physicalWorkspace + '/')) refuse();
+    auto copy = result->handle;
     verify(project.n, entries, copy->descriptor.n);
     // Reopen source paths as well: a rename/replacement cannot substitute a different receipt/tree.
     auto receiptAgain = below(root.n, receiptName);
@@ -318,6 +335,43 @@ edi::Project load_captured_assistant_result(const ImmutableAssistantResult& resu
     return loaded;
 #else
     Q_UNUSED(result); refuse();
+#endif
+}
+
+std::shared_ptr<ImmutableAssistantResult> capture_prepared_native_documents(
+    const std::vector<std::pair<std::string, std::string>>& documents) {
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+    if (documents.empty() || documents.size() > Bounds::files) refuse();
+    std::vector<Entry> entries;
+    entries.reserve(documents.size());
+    std::set<QString> aliases, directories;
+    quint64 bytes = 0;
+    bool project = false;
+    // Every input cardinality/path/byte role is checked before any output
+    // directory, owning text copy or staged file. The upstream writer MUST
+    // independently bound preparation; this function does not bless a scratch save.
+    for (const auto& [name, text] : documents) {
+        if (text.size() > Bounds::file_bytes || text.size() > Bounds::collection_bytes - bytes) refuse();
+        bytes += text.size();
+        const auto path = relative_name(name);
+        if (!aliases.insert(path.normalized(QString::NormalizationForm_C).toCaseFolded()).second) refuse();
+        const auto slash = path.indexOf('/');
+        if (slash >= 0) directories.insert(path.left(slash));
+        if (documents.size() + directories.size() > Bounds::files) refuse();
+        project |= path == "project.edi";
+        const auto view = QByteArray::fromRawData(text.data(), static_cast<qsizetype>(text.size()));
+        entries.push_back({path, static_cast<quint64>(text.size()), QCryptographicHash::hash(view, QCryptographicHash::Sha256).toHex()});
+    }
+    if (!project) refuse();
+    auto result = owned_result_snapshot();
+    own_receipt(*result, entries);
+    for (std::size_t i = 0; i < entries.size(); ++i) write_staged(result->handle->descriptor.n, entries[i].path, documents[i].second);
+    verify(result->handle->descriptor.n, entries);
+    auto loaded = load_owned_project(result->handle->descriptor.n, result->directory, entries);
+    check_assistant_result_mode(loaded);
+    return result;
+#else
+    Q_UNUSED(documents); refuse();
 #endif
 }
 
@@ -396,6 +450,9 @@ struct AssistantResultExport::State {
     QString parent, stage, leaf, destination;
     QJsonArray files;
     bool committed = false;
+    std::shared_ptr<const AssistantWorkingFolder> grant;
+    std::shared_ptr<ImmutableAssistantResult> reopenCopy;
+    bool reopenCopied = false;
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     std::vector<Entry> entries;
 #endif
@@ -407,9 +464,9 @@ struct AssistantResultExport::State {
         if (physical.isEmpty()) refuse();
         return directory(physical);
     }
-    State(const QString& parentPath, const QString& leafName)
+    State(const QString& parentPath, const QString& leafName, Fd pinnedParent)
         : parent(parentPath), stage(".edi-export-" + QUuid::createUuid().toString(QUuid::WithoutBraces)), leaf(leafName),
-          destination(QDir(parentPath).filePath(leafName)), parentFd(selectedParent(parentPath)), parentIdentity(parentFd.n),
+          destination(QDir(parentPath).filePath(leafName)), parentFd(std::move(pinnedParent)), parentIdentity(parentFd.n),
           stageIdentity(parentFd.n) {
         leaf_name(leaf);
         if (leaf.toCaseFolded() == stage.toCaseFolded()) refuse();
@@ -419,8 +476,17 @@ struct AssistantResultExport::State {
 #endif
 };
 AssistantResultExport::AssistantResultExport(const ImmutableAssistantResult& source, const QString& parent, const QString& leaf) {
+    prepare(source, parent, leaf, nullptr);
+}
+AssistantResultExport::AssistantResultExport(const ImmutableAssistantResult& source, std::shared_ptr<const AssistantWorkingFolder> folder, const QString& leaf) {
+    if (!folder) refuse();
+    const auto parent = folder->path();
+    prepare(source, parent, leaf, std::move(folder));
+}
+void AssistantResultExport::prepare(const ImmutableAssistantResult& source, const QString& parent, const QString& leaf,
+                                    std::shared_ptr<const AssistantWorkingFolder> folder) {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
-    if (!source.handle) refuse();
+    if (!source.handle || (folder && !folder->current())) refuse();
     const auto physicalParent = QFileInfo(parent).canonicalFilePath();
     const auto appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     for (const auto& reserved : {appData + "/assistant/agent", appData + "/assistant/results"}) {
@@ -431,13 +497,21 @@ AssistantResultExport::AssistantResultExport(const ImmutableAssistantResult& sou
     // Session refuses any intervening model edit; no unbounded serializer is invoked.
     const auto entries = manifest(source.receipt, source.intent);
     verify(source.handle->descriptor.n, entries);
-    auto state = std::make_unique<State>(parent, leaf);
+    (void)load_captured_assistant_result(source);
+    auto pinned = folder ? Fd(::dup(folder->state_->descriptor.n)) : State::selectedParent(parent);
+    auto state = std::make_unique<State>(parent, leaf, std::move(pinned));
+    if (folder && (!folder->current() || !folder->state_->identity.object(state->parentFd.n))) refuse();
+    // Pre-own one protected actual-published-byte validation slot before commit.
+    // Never pass a runtime-writable chosen-root tree to the path-based loader.
+    state->grant = std::move(folder);
+    state->reopenCopy = owned_result_snapshot();
+    own_receipt(*state->reopenCopy, entries);
     try {
         // Pinning both objects prevents a substituted parent path from redirecting writes.
         verify(source.handle->descriptor.n, entries, state->stageFd.n);
         verify(state->stageFd.n, entries);
-        auto loaded = load_owned_project(state->stageFd.n, QDir(state->parent).filePath(state->stage), entries);
-        check_assistant_result_mode(loaded);
+        // The source was really loaded from protected bytes; the written stage
+        // must exactly match that admitted closure before publication.
         state->files = receipt_files(entries); state->entries = entries;
     } catch (...) {
         // Deliberately leave the bounded unpublished directory for recovery.
@@ -447,7 +521,7 @@ AssistantResultExport::AssistantResultExport(const ImmutableAssistantResult& sou
     }
     state_ = std::move(state);
 #else
-    Q_UNUSED(source); Q_UNUSED(parent); Q_UNUSED(leaf); refuse();
+    Q_UNUSED(source); Q_UNUSED(parent); Q_UNUSED(leaf); Q_UNUSED(folder); refuse();
 #endif
 }
 AssistantResultExport::~AssistantResultExport() = default; // Descriptor cleanup only; never delete by a mutable path.
@@ -458,11 +532,11 @@ void AssistantResultExport::publish(const std::function<bool()>& current) {
     const auto stageName = s.stage.toUtf8();
     const auto leafName = s.leaf.toUtf8();
     verify(s.stageFd.n, s.entries);
-    if (!current()) refuse();
+    if (!current() || (s.grant && !s.grant->current())) refuse();
     // Hashing and host-currentness can be lengthy. Only now revalidate the
     // actual selected parent and named source that rename will consume.
     auto parent = State::selectedParent(s.parent);
-    if (!s.parentIdentity.object(parent.n)) refuse();
+    if (!s.parentIdentity.object(parent.n) || (s.grant && !s.grant->state_->identity.object(parent.n))) refuse();
     auto stage = below(parent.n, s.stage, true);
     if (!s.stageIdentity.object(stage.n)) refuse();
     int outcome = -1;
@@ -479,12 +553,18 @@ void AssistantResultExport::publish(const std::function<bool()>& current) {
 }
 edi::Project AssistantResultExport::reopen() const {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
-    const auto& s = *state_;
+    auto& s = *state_;
     if (!s.committed) refuse();
     auto parent = State::selectedParent(s.parent); auto final = below(parent.n, s.leaf, true);
     if (!s.parentIdentity.object(parent.n) || !s.stageIdentity.object(final.n)) refuse();
     verify(s.stageFd.n, s.entries);
-    auto result = load_owned_project(s.stageFd.n, s.destination, s.entries);
+    if (!s.reopenCopy || !s.reopenCopy->handle) refuse();
+    if (!s.reopenCopied) {
+        verify(s.stageFd.n, s.entries, s.reopenCopy->handle->descriptor.n);
+        verify(s.reopenCopy->handle->descriptor.n, s.entries);
+        s.reopenCopied = true;
+    }
+    auto result = load_captured_assistant_result(*s.reopenCopy);
     verify(s.stageFd.n, s.entries);
     check_assistant_result_mode(result);
     auto again = below(parent.n, s.leaf, true);

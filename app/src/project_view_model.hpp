@@ -259,6 +259,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     /// Native assistant access to the same model and worker used by manual controls.
     edi::Project* assistantProject() { return project_.get(); }
     edi::work::Worker& assistantWorker() { return *worker_; }
+    struct NativeSavedState;
+    // Same current PVM, its registry/Undo and Session attachment remain owned.
+    // All rounding/row/path/source preparation precedes destination publication.
+    std::shared_ptr<NativeSavedState> prepareNativeSaved(const edi::Project& reopened,
+        const edi::WorkStamps& original, const QString& destination);
+    bool commitNativeSaved(NativeSavedState&) noexcept;
+    bool presentNativeSaved(NativeSavedState&);
+
     // The demo's seam: the project's created and last-modified times, which a loaded example takes
     // from the clock, set to a fixed value so its saved Text is reproducible.
     void pinTimestamps(const QString& timestamp);

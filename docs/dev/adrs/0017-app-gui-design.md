@@ -985,3 +985,27 @@ projects (the owner, 2026-10-13).
 | Keep singular loop titles (easydiffractionbeta's *Background*) | Rejected by the owner (idea 19): a loop names its rows, and the title carries their count. |
 | Leave unimplemented actions out until they work | Rejected (ideas 13, 17): the owner wants the final layout visible now. |
 | Fix `last` in gui-components | Deferred: the base is consumed unmodified (ADR-0015 §1); reported upstream as gui-components#55. |
+
+
+### Prepared native current-project save landing (E11-T5)
+
+`Session.saveAs` / `ProjectViewModel.saveTo` remain the manual prior art. Native
+chosen-root saving uses their same native writer and ordinary reopen rounding
+contract, with preparation separated from commit. `PreparedSavedValues` resolves
+all original parameter/value/SU and correlation targets, preowns the existing
+computed publication/source state and saved path/timestamp before disk publication.
+After committed bytes are verified, its same-owner landing performs no allocation
+or callbacks. The displayed PVM/registry/parameter identities, fit result, Undo
+history, Session account/controller and conversation are retained. No replacement
+project is installed and no empty-session creation seam is misused.
+
+Session's exact original project/epoch guards clear fresh-result/example/read-only
+save-as flags only with that actual saved-state landing. Ordinary location and
+needsSaveAs notifications follow, with exact owner checks between synchronous
+observers. PVM saved-state/metadata/chart/text/report presentation follows the
+existing hooks, guarded after every observer; a user edit/replacement wins. The
+actual modified=false state is installed before notification, never reset after
+a later user edit. Native own-edit scope prevents this known persistence update
+from cancelling its own original call; unrelated ownership changes still retire
+currentness. A disk commit survives a failed or interrupted presentation as an
+explicit saved-but-unconfirmed outcome, without altering the replacement owner.

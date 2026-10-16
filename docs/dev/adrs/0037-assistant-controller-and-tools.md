@@ -286,3 +286,56 @@ Actual submitted FitReport/creation finalDelivery remains awaited; discard/conte
 The ordinary Qt category `edi.assistant.widget.lookup` is debug-disabled by default. Explicit `QT_LOGGING_RULES=edi.assistant.widget.lookup.debug=true` observes the original captured ParameterItem address/path, actual candidate typed QVariant conversion and QObject/ParameterItem result, plus the existing usableTarget result and immediately adjacent window/ancestor/clip operands. Exposure getters are observations after the original predicate, not a repeated predicate or a claim of instrumented helper-local values. Actual usable candidate property reads/conversions are retained once at their original point; enabled-only extra property inspection for unusable candidates is labelled originalPropertyRead=false. No account identifiers, request text, typed values or file contents are logged.
 
 Only original tool/tab candidate names are diagnosed, so hidden instrument/cell controls do not consume the Analysis field trace. Each candidate conversion is emitted before its detailed exposure/ancestor trace, including failed conversion/cast/identity. The original once-scheduled lookup has a cap of 256 records with one explicit omission record. The cap is a diagnostic limit, not an acceptance bound; omissions remain visible. No new lookup entry/retry or NativeWidget size/resource admission change is added. Diagnostic-only getters/formatting run only while enabled and failures are contained; the functional lookup order, short-circuit exposure calls, identity comparison, input/timers/currentness and refusal/worker/once semantics remain. This is source diagnosis, not a visibility/replay fix or acceptance API. The independently retained host-outcome contract above is unchanged.
+
+
+## Current native saving (E11-T5)
+
+The offered catalog adds `save_project({purpose,name})` in normal mode. The name
+is a fresh ASCII single directory basename under the current genuine native
+working-folder picker grant, never a provider/chat path or arbitrary write grant.
+An explicit creation/refinement objective with that chosen folder delegates saving
+before the final result, unless the user said not to save; no second scientific
+plan or permission prompt is introduced. The app-only native operation is not
+added to the restricted core-index prerequisite list. Bundled skill 1.5.5 and its
+actual digest describe only the registered route. Visible mode refuses honestly.
+
+The original RPC/turn/call record owns one save task, immutable admitted source,
+actual Worker ticket and prepared final delivery. Source currentness is recorded
+before copying; no copied model is falsely queried as current. Cancellation,
+Clear, sign-out and owner/context changes revoke publication immediately while
+retaining actual worker settlement. Every shared cancellation/clear/retirement
+hold now accounts for both creation and save workers; an old final delivery only
+releases its exact task/record and never answers a replacement call. Submitted
+trace reentry cancels the original returned ticket, not a newer task.
+
+The existing Edi-to-crysta save conversion is shared by ordinary directory saving
+and the new admitted prepared-document finish. The latter passes exact settled
+current columns and uses the same native scalar/loop writer; no recalculation,
+second serializer, source-directory seeding or physics is introduced. Original
+source/container/canonical-currentness/name-join roles are admitted before copy
+and conversion; output uses the SDK's checked sink. Single/joint measured projects
+without external report/scan assets are supported. Unsupported or absent current
+calculation refuses before destination publication; raw selected inputs remain
+unchanged and retained, while native observations/data-source metadata are saved
+self-contained. No external raw assets are silently promised as copied.
+
+The exact existing no-follow exporter receives the genuine pinned folder handle,
+not a provider root string. Complete native documents are captured/hash-closed
+and independently loaded in protected storage before export preparation. All
+actual refusal/committed/reopened/active response and row roles are prepared and
+charged before worker admission. The original record's factual state swaps at
+each actual disk/reopen/active commit, so allocation or presentation failure cannot
+turn an actual commit into a false no-write/refusal or a fabricated success.
+Actual committed bytes are reverified/reopened through retained descriptors; only
+then may prepared saved values land in the same live PVM/Session.
+
+Success is `status:succeeded`, `committed:true`, `reopened:true`, `active:true`
+with actual destination. `committed_unconfirmed` keeps independently true facts
+if verification/adoption/presentation fails, never blindly retrying an existing
+destination. A later user edit remains an edit; no post-save rollback overwrites
+it. Original shared native outcome/history/once/canonical/currentness fences apply.
+
+This code requires the paired crysta prepared-persistence API/packages, not the
+old installed SDK. Source-only Edi publication or a locally replaced archive is
+not a consumable save fix. Actual SDK package identities and Edi pin must follow
+the existing paired PR/package process (ADR-0017); no digest is guessed here.

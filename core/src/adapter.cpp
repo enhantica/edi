@@ -25,6 +25,10 @@
 #include "edi/fit_job.hpp"
 #include "edi/calculation.hpp"
 #include "edi/presentation.hpp"
+#include "edi/persistence.hpp"
+#include "edi/parameter_walk.hpp"
+#include <type_traits>
+#include "crysta/persistence.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "publication.hpp"
@@ -2371,7 +2375,9 @@ std::string report_settings_text(const Project& model) {
 #endif
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
+namespace {
+template<class Finish>
+auto converted_save(const Project& model, bool recalculate, Finish&& finish) {
     // Edi does not write — it asks crysta to. Build the full engine project from the model
     // through the one conversion choke point (completed cell, start-carrying parameters),
     // fill the persistence-only fields the calculation conversion never needed, stamp the
@@ -2550,6 +2556,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     // every bank together, so when any bank is current the engine project is recalculated, and each
     // bank edi reads as stale is then marked stale in it by an equal-value write to one of its inputs
     // (any input write stales the unit); crysta's writer leaves that bank's computed loops out.
+    if (recalculate) {
     std::vector<bool> current;
     current.reserve(model.experiments.size());
     for (const auto& item : model.experiments) {
@@ -2587,12 +2594,396 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
         }
     }
+    }
+    return finish(cproject);
+}
+} // namespace
+
+void save_project_via_crysta(const Project& model, const std::string& directory) {
     try {
-        crysta::save_project(cproject, directory);
+        converted_save(model, true, [&](const crysta::Project& prepared) { crysta::save_project(prepared, directory); });
     } catch (const std::exception& error) {
         raise_coded(error);
         throw;
     }
+}
+
+
+namespace {
+// Payload/container admission, not an allocator RSS promise. Exact category and
+// RowSchema declarations own the source walk; a new source type fails to compile
+// until its bounded contribution is explicitly handled.
+class PersistenceAdmission {
+ public:
+    explicit PersistenceAdmission(std::size_t limit,bool payload=false) : limit_(limit),remaining_(limit),factor_(payload?1:8),scalar_cost_(payload?0:scalar_role) {}
+    std::size_t used() const noexcept {return limit_-remaining_;}
+    void bytes(std::size_t n) { if(n > remaining_) throw std::length_error("Save construction exceeds capacity"); remaining_-=n; }
+    void rows(std::size_t n,std::size_t width) { if(width && n>remaining_/width) throw std::length_error("Save rows exceed capacity"); bytes(n*width); }
+    void text(std::string_view s,std::size_t copies=1) { rows(s.size(),copies); }
+    template<class T> void value(const T& v) {
+        if constexpr(std::is_same_v<T,std::string>) {text(v,factor_); bytes(factor_*sizeof(std::string));}
+        else if constexpr(std::is_same_v<T,Parameter>) {bytes(factor_*sizeof(Parameter)+factor_*scalar_cost_);}
+        else if constexpr(std::is_same_v<T,ItemKey> || std::is_same_v<T,detail::WrittenText>) value(v.value());
+        else if constexpr(requires {v.get();}) value(v.get());
+        else if constexpr(requires {v.values();}) value(v.values());
+        else if constexpr(std::is_arithmetic_v<T> || std::is_enum_v<T>) bytes(factor_*sizeof(T)+scalar_cost_);
+        else if constexpr(requires {v.has_value();*v;}) {bytes(factor_*sizeof(T)); if(v)value(*v);}
+        else if constexpr(requires {v.first;v.second;}) {value(v.first);value(v.second);}
+        else if constexpr(requires {crysta::RowSchema<T>::fields;}) {
+            bytes(factor_*sizeof(T));std::apply([&](auto... m){(value(v.*m),...);},crysta::RowSchema<T>::fields);
+        } else if constexpr(requires {v.size();v.begin();v.end();}) {
+            rows(v.size(),factor_*sizeof(*v.begin())+factor_*sizeof(std::string));
+            for(const auto& row:v) {
+                if constexpr(requires {row.get();*row;}) {if(!row)throw std::invalid_argument("Save has an empty row");value(*row);}
+                else value(row);
+            }
+        } else static_assert(sizeof(T)==0,"Native save source requires explicit admission");
+    }
+    template<class C,class T> void category(const T& obj) {std::apply([&](auto... m){(value(obj.*m),...);},C::columns);}
+ private:
+    static constexpr std::size_t scalar_role = std::numeric_limits<double>::max_exponent10 -
+        std::numeric_limits<double>::min_exponent10 + std::numeric_limits<double>::max_digits10 + 128 + 8*sizeof(std::string);
+    std::size_t limit_,remaining_,factor_,scalar_cost_;
+};
+void admit_currentness_inputs(const Project& project, PersistenceAdmission& budget) {
+    constexpr std::uint64_t word = 16;
+    const auto text = [&](std::string_view value) { budget.bytes(word + 1); budget.text(value); };
+    const auto written_text = [&](std::string_view value) { text(value); budget.bytes(word); };
+    const auto named = [&](std::string_view block, std::string_view row, std::string_view leaf,
+                           std::uint64_t count = 1) {
+        // Longest literal separators/category prefix used by parameter_slots;
+        // joined names cannot exceed these borrowed parts plus this literal.
+        constexpr std::string_view grammar = "structures[].atom_site_aniso..preferred_orientation..";
+        budget.rows(count, sizeof(NamedParameter) + sizeof(ParameterEntry) +
+            sizeof(std::pair<const std::string, const Parameter*>) + 5 * sizeof(void*));
+        // Slot id, unique name, returned NamedParameter and relation map key.
+        budget.rows(count, 4 * grammar.size());
+        for (unsigned copy = 0; copy < 4; ++copy) {
+            budget.rows(count, block.size()); budget.rows(count, row.size()); budget.rows(count, leaf.size());
+        }
+    };
+    // Both encoders' minimum initial reserve belongs to this temporary role.
+    // Charging both is conservative even when a source is stale or absent.
+    budget.bytes(1024 + 4096);
+    budget.bytes(2 * word); // structure count + relation collection generations
+    for (const auto& held : project.structures) {
+        const Structure& structure = *held;
+        const auto* owner = static_cast<const detail::KeyedBase&>(structure.atom_sites).host();
+        if (owner && owner != &project)
+            throw std::invalid_argument("Save structure currentness has a foreign project owner");
+        text(structure.name.value()); text(structure.space_group.name_h_m.value());
+        text(structure.space_group.coord_system_code.value());
+        written_text(structure.space_group.name_h_m.value());
+        written_text(structure.space_group.coord_system_code.value());
+        budget.bytes(1 + word); // optional International Tables number
+        budget.rows(6, 4 * word); // six cells in calculation + geometry
+        budget.bytes(3 * word); // structure/cell/space-group epochs
+        budget.bytes(7 * word); // calculation site/tensor/scattering counts + geometry site/tensor counts/generations
+        named(structure.name.value(), {}, "length_a", 6);
+        for (const auto& site : structure.atom_sites) {
+            // Both geometry and calculation encode all four identity/type texts.
+            for (const auto* value : {&site->id.value(), &site->type_symbol.value(),
+                    &site->wyckoff_letter.value(), &site->adp_type.value()}) {
+                text(*value); written_text(*value);
+            }
+            budget.rows(5, 4 * word); // value+write/epoch for five scalar fields, both encoders
+            budget.bytes(word); // calculation object epoch
+            named(structure.name.value(), site->id.value(), "occupancy", 5);
+        }
+        for (const auto& tensor : structure.atom_site_aniso) {
+            text(tensor->id.value()); written_text(tensor->id.value());
+            budget.rows(6, 4 * word); budget.bytes(word);
+            named(structure.name.value(), tensor->id.value(), "adp_11", 6);
+        }
+        for (const auto& [kind, value] : structure.scattering_lengths_fm.get()) {
+            text(kind); budget.bytes(word);
+        }
+        budget.rows(2, 1 + 2 * word); // optional geometry constants + their write IDs
+    }
+    for (const auto& held : project.experiments) {
+        const ExperimentBase& experiment = *held;
+        const auto* rows = experiment.name.owner();
+        if (rows && rows->host() && rows->host() != &project)
+            throw std::invalid_argument("Save experiment currentness has a foreign project owner");
+        // All fixed slot names named_parameters can emit, independent of beam
+        // mode/presence. This over-admits absent slots, without allocating them.
+        constexpr std::string_view slots[] = {
+            "rise_alpha_0", "rise_alpha_1", "decay_beta_0", "decay_beta_1",
+            "broad_gauss_sigma_0", "broad_gauss_sigma_1", "broad_gauss_sigma_2",
+            "broad_gauss_size", "broad_gauss_strain", "broad_lorentz_gamma_0",
+            "broad_lorentz_gamma_1", "broad_lorentz_gamma_2", "broad_lorentz_size",
+            "broad_lorentz_strain", "calib_d_to_tof_offset", "calib_d_to_tof_linear",
+            "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal",
+            "broad_gauss_u", "broad_gauss_v", "broad_gauss_w", "broad_lorentz_x",
+            "broad_lorentz_y", "mixing_eta_0", "mixing_eta_1", "asym_fcj_1",
+            "asym_fcj_2", "asym_beba_a0", "asym_beba_b0", "asym_beba_a1",
+            "asym_beba_b1", "asym_beba_limit", "setup_wavelength", "calib_twotheta_offset",
+            "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient",
+            "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio",
+            "abscor1", "abscor2", "mu_r"};
+        for (const auto leaf : slots) named(experiment.name.value(), {}, leaf);
+        // Encoder peak[] label text is emitted for the fourteen fixed TOF slots.
+        for (const auto& slot : detail::kPeakSlots) { text(slot.first); budget.bytes(2 * word); }
+        budget.rows(4, 2 * word); // TOF instrument calibration
+        budget.bytes(2 * word + word); // bank angle + cutoff
+        const OptionalParameter* optional[] = {
+            &experiment.absorption.abscor1, &experiment.absorption.abscor2, &experiment.absorption.mu_r,
+            &experiment.peak.broad_gauss_u, &experiment.peak.broad_gauss_v, &experiment.peak.broad_gauss_w,
+            &experiment.peak.broad_lorentz_x, &experiment.peak.broad_lorentz_y,
+            &experiment.peak.mixing_eta_0, &experiment.peak.mixing_eta_1,
+            &experiment.peak.asym_fcj_1, &experiment.peak.asym_fcj_2,
+            &experiment.peak.asym_beba_a0, &experiment.peak.asym_beba_b0,
+            &experiment.peak.asym_beba_a1, &experiment.peak.asym_beba_b1, &experiment.peak.asym_beba_limit,
+            &experiment.instrument.setup_wavelength, &experiment.instrument.calib_twotheta_offset,
+            &experiment.instrument.calib_sample_displacement, &experiment.instrument.calib_sample_transparency,
+            &experiment.instrument.setup_polarization_coefficient, &experiment.instrument.setup_monochromator_twotheta,
+            &experiment.instrument.setup_wavelength_2, &experiment.instrument.setup_wavelength_2_to_1_ratio};
+        for (const auto* field : optional) budget.bytes(1 + (*field ? 2 * word : 0));
+        text(experiment.name.value()); text(experiment.background_type);
+        for (const auto* value : {&experiment.absorption.type, &experiment.xray_form_factor,
+                &experiment.xray_dispersion, &experiment.neutron_scattering_length, &experiment.peak.type}) {
+            budget.bytes(1); if (*value) text(**value);
+        }
+        // Four typed selector spellings are fixed enum tokens, not source text.
+        // Longest declared spelling is constant-wavelength (model.hpp).
+        budget.rows(4, 1 + word + sizeof("constant-wavelength"));
+        budget.rows(3, 1 + word); // optional background domain constants
+        budget.bytes(5 * word + 2); // collection counts, calculation-only and data presence
+        budget.bytes(5 * word); // experiment/type/peak/instrument/absorption epochs
+        for (const auto& link : experiment.linked_structures) {
+            budget.bytes(3 * word); text(link->structure_id.value()); text("disabled");
+            const auto& actual = link->structure_id.value().empty() && !project.structures.empty()
+                ? project.structures.front()->name.value() : link->structure_id.value();
+            named(experiment.name.value(), actual, "linked_structure.scale");
+        }
+        for (const auto& row : experiment.background) {
+            text(row->id.value()); budget.bytes(4 * word);
+            named(experiment.name.value(), row->id.value(), "background.intensity");
+        }
+        for (const auto& row : experiment.background_terms) {
+            budget.bytes(4 * word); named(experiment.name.value(), row->id.value(), "background.coef");
+        }
+        for (const auto& row : experiment.preferred_orientation) {
+            text(row->structure_id.value()); budget.bytes(8 * word);
+            named(experiment.name.value(), row->structure_id.value(), "march_random_fract", 2);
+        }
+        for (const auto& row : experiment.excluded_regions) { text(row->id.value()); budget.bytes(2 * word); }
+        if (experiment.data) {
+            // Both engaged axes are encoded even if axis() chooses just one.
+            // Hidden chart/data/reflection groups do not bypass this admission.
+            for (const auto* axis : {&experiment.data->two_theta, &experiment.data->time_of_flight}) {
+                budget.bytes(1 + word);
+                if (*axis) budget.rows((*axis)->size(), sizeof(double));
+            }
+            for (const auto* values : {&experiment.data->intensity_meas, &experiment.data->intensity_meas_su}) {
+                budget.bytes(word); budget.rows(values->size(), sizeof(double));
+            }
+            budget.bytes(2 * word); // actual data epoch/write stamp
+        }
+    }
+    budget.bytes(4 * word); // alias/constraint generations and counts
+    for (const auto& alias : project.aliases) {
+        text(alias->id.value()); written_text(alias->parameter_unique_name.value());
+        budget.bytes(3 * word); // resolution presence + possible aliased value/write
+    }
+    for (const auto& constraint : project.constraints) {
+        text(constraint->id.value()); written_text(constraint->expression.value());
+        budget.bytes(2 * word); // enabled VALUE and write, disabled drafts included
+    }
+}
+
+void persistence_owner_graph(const Project& project) {
+    for (const auto& bank : project.experiments) {
+        const auto& source = bank->computed_source;
+        if (!source) continue;
+        if (source->owner && source->owner->project && source->owner->project != &project)
+            throw std::invalid_argument("Save calculation has a foreign project owner");
+        if (source->structures && source->structures->owner &&
+            (source->structures->owner != static_cast<const detail::KeyedBase*>(&project.structures) ||
+             source->structures != project.structures.record()))
+            throw std::invalid_argument("Save calculation has a foreign structure collection");
+        if (source->experiments && source->experiments->owner &&
+            (source->experiments->owner != static_cast<const detail::KeyedBase*>(&project.experiments) ||
+             source->experiments != project.experiments.record()))
+            throw std::invalid_argument("Save calculation has a foreign experiment collection");
+    }
+    for (const auto& structure : project.structures)
+        if (structure->geometry_source && structure->geometry_source->owner &&
+            structure->geometry_source->owner->project && structure->geometry_source->owner->project != &project)
+            throw std::invalid_argument("Save geometry has a foreign project owner");
+}
+
+std::size_t admit_persistence(const Project& p,const PersistenceLimits& limits,bool payload=false) {
+    if(!limits.construction_bytes || !limits.file_bytes || !limits.collection_bytes || limits.files<4 ||
+       p.structures.empty() || p.experiments.empty() || p.structures.size()>limits.files-4 ||
+       p.experiments.size()>limits.files-4-p.structures.size())
+        throw std::invalid_argument("Save input/document capacity is unavailable");
+    if((p.fitting_mode!="single" && p.fitting_mode!="joint") || !p.report_files.empty() || !p.fit_result.scan_results.empty())
+        throw std::invalid_argument("Native saving currently supports embedded single/joint projects without external report/scan assets");
+    PersistenceAdmission a(limits.construction_bytes,payload);
+    persistence_owner_graph(p); if(!payload)admit_currentness_inputs(p,a);
+    a.bytes((payload?1:8)*sizeof(Project));
+    a.category<MetadataCategory>(p.metadata);a.category<SuFormatCategory>(p);a.category<ReportSettingsCategory>(p);
+    a.category<CorrelationChartCategory>(p);a.category<PatternChartCategory>(p);a.category<FittingModeCategory>(p);
+    a.category<MinimizerCategory>(p);a.category<ProjectStateCategory>(p);a.category<SequentialFitCategory>(p.sequential_fit);
+    a.category<FitResultCategory>(p.fit_result);a.value(p.fit_result.correlations);a.value(p.aliases);a.value(p.constraints);
+    for(const auto& s:p.structures) {
+        a.value(s->name);a.category<SpaceGroupCategory>(s->space_group);a.category<CellCategory>(s->cell);
+        a.category<GeomCategory>(s->geom);a.value(s->atom_sites);a.value(s->atom_site_aniso);a.value(s->scattering_lengths_fm);
+        a.category<SpaceGroupSymopCategory>(s->geometry.space_group_symop);
+        a.category<ExpandedAtomSiteCategory>(s->geometry.expanded_atom_sites);
+        a.category<GeomBondCategory>(s->geometry.geom_bond);a.category<CartnTransformCategory>(s->geometry.atom_sites_cartn_transform);
+    }
+    for(const auto& e:p.experiments) {
+        if(!e->data || e->calculation_only) throw std::invalid_argument("Native saving requires embedded measured data");
+        a.value(e->name);a.category<ExperimentTypeCategory>(e->experiment_type);a.category<ScatteringSourceCategory>(*e);
+        a.category<PeakCategory>(e->peak);a.category<InstrumentCategory>(e->instrument);a.category<AbsorptionCategory>(e->absorption);
+        a.category<BackgroundCategory>(*e);a.category<DataSourceCategory>(*e);a.category<JointFitCategory>(*e);a.category<FitResultBankCategory>(*e);
+        a.value(e->linked_structures);a.value(e->preferred_orientation);a.value(e->background);a.value(e->background_terms);a.value(e->excluded_regions);
+        for(const auto& link:e->linked_structures)a.category<FitResultPhaseCategory>(*link);
+        a.category<DataCategory>(*e->data);a.category<ReflnCategory>(e->refln);
+        if(e->carried_reflections)a.category<CarriedReflnCategory>(*e->carried_reflections);
+    }
+    return a.used();
+}
+
+template<class T> crysta::Column<T> persistence_column(const ComputedColumn<T>& v) {return std::vector<T>(v.begin(),v.end());}
+crysta::StructureGeometry persistence_geometry(const StructureGeometry& g) {
+    crysta::StructureGeometry out;out.window.min=g.window.min;out.window.max=g.window.max;
+    out.space_group_symop.operation_xyz=persistence_column(g.space_group_symop.operation_xyz);
+    out.expanded_atom_sites.atom_site_id=persistence_column(g.expanded_atom_sites.atom_site_id);
+    out.expanded_atom_sites.site_symmetry=persistence_column(g.expanded_atom_sites.site_symmetry);
+    out.expanded_atom_sites.fract_x=persistence_column(g.expanded_atom_sites.fract_x);
+    out.expanded_atom_sites.fract_y=persistence_column(g.expanded_atom_sites.fract_y);
+    out.expanded_atom_sites.fract_z=persistence_column(g.expanded_atom_sites.fract_z);
+    out.expanded_atom_sites.cartn_x=persistence_column(g.expanded_atom_sites.cartn_x);
+    out.expanded_atom_sites.cartn_y=persistence_column(g.expanded_atom_sites.cartn_y);
+    out.expanded_atom_sites.cartn_z=persistence_column(g.expanded_atom_sites.cartn_z);
+    out.expanded_atom_sites.occupancy=persistence_column(g.expanded_atom_sites.occupancy);
+    out.expanded_atom_sites.u_iso=persistence_column(g.expanded_atom_sites.u_iso);
+    out.expanded_atom_sites.cluster_id=persistence_column(g.expanded_atom_sites.cluster_id);
+    out.geom_bond.expanded_atom_site_id_1=persistence_column(g.geom_bond.expanded_atom_site_id_1);
+    out.geom_bond.expanded_atom_site_id_2=persistence_column(g.geom_bond.expanded_atom_site_id_2);
+    out.geom_bond.atom_site_label_1=persistence_column(g.geom_bond.atom_site_label_1);
+    out.geom_bond.atom_site_label_2=persistence_column(g.geom_bond.atom_site_label_2);
+    out.geom_bond.site_symmetry_1=persistence_column(g.geom_bond.site_symmetry_1);
+    out.geom_bond.site_symmetry_2=persistence_column(g.geom_bond.site_symmetry_2);
+    out.geom_bond.distance=persistence_column(g.geom_bond.distance);
+    out.atom_sites_cartn_transform.matrix=g.atom_sites_cartn_transform.matrix;
+    out.atom_sites_cartn_transform.axes=g.atom_sites_cartn_transform.axes;return out;
+}
+crysta::ComputedCategories persistence_computed(const ExperimentBase& e) {
+    const auto& d=*e.data;crysta::ComputedCategories out;
+    out.data.d_spacing=persistence_column(d.d_spacing);
+    out.data.intensity_calc=persistence_column(d.intensity_calc);
+    out.data.intensity_bkg=persistence_column(d.intensity_bkg);
+    std::vector<crysta::CalcStatus> statuses;statuses.reserve(d.calc_status.size());
+    for(const auto& s:d.calc_status) {if(s!="incl"&&s!="excl")throw std::invalid_argument("Saved calculation status is invalid");statuses.push_back(s=="excl"?crysta::CalcStatus::Excluded:crysta::CalcStatus::Included);}
+    out.data.calc_status=std::move(statuses);
+    out.refln.axis=e.effective_beam_mode()==BeamModeEnum::CONSTANT_WAVELENGTH?crysta::BeamModeEnum::ConstantWavelength:crysta::BeamModeEnum::TimeOfFlight;
+    out.refln.structure_id=persistence_column(e.refln.structure_id);
+    out.refln.d_spacing=persistence_column(e.refln.d_spacing);
+    out.refln.sin_theta_over_lambda=persistence_column(e.refln.sin_theta_over_lambda);
+    out.refln.index_h=persistence_column(e.refln.index_h);
+    out.refln.index_k=persistence_column(e.refln.index_k);
+    out.refln.index_l=persistence_column(e.refln.index_l);
+    out.refln.f_calc=persistence_column(e.refln.f_calc);
+    out.refln.f_squared_calc=persistence_column(e.refln.f_squared_calc);
+    out.refln.position=persistence_column(e.refln.position);
+    return out;
+}
+} // namespace
+PersistenceSnapshot snapshot_for_persistence(const Project& live,const PersistenceLimits& limits) {
+    (void)admit_persistence(live,limits);
+    PersistenceSnapshot out;out.construction_bytes=limits.construction_bytes;
+    out.retained_bytes=admit_persistence(live,limits,true);
+    out.stamps=work_stamps(live);
+    out.geometry_current.reserve(live.structures.size());out.computed_current.reserve(live.experiments.size());
+    for(const auto& s:live.structures)out.geometry_current.push_back(s->geometry_current());
+    for(const auto& e:live.experiments)out.computed_current.push_back(e->computed_current());
+    out.model=std::make_unique<Project>(live);out.model->metadata.update_last_modified();return out;
+}
+std::vector<std::pair<std::string,std::string>> prepare_project_documents(const PersistenceSnapshot& source,const PersistenceLimits& limits) {
+    if(!source.model || source.construction_bytes!=limits.construction_bytes ||
+       source.geometry_current.size()!=source.model->structures.size() || source.computed_current.size()!=source.model->experiments.size())
+        throw std::invalid_argument("Save snapshot is incomplete");
+    return converted_save(*source.model,false,[&](const crysta::Project& converted) {
+        crysta::PersistenceColumns columns;columns.structures.resize(source.geometry_current.size());columns.experiments.resize(source.computed_current.size());
+        for(std::size_t i=0;i<columns.structures.size();++i)if(source.geometry_current[i])columns.structures[i]=persistence_geometry(source.model->structures[i]->geometry);
+        for(std::size_t i=0;i<columns.experiments.size();++i)if(source.computed_current[i])columns.experiments[i]=persistence_computed(*source.model->experiments[i]);
+        return crysta::prepare_project_documents(converted,columns,{limits.construction_bytes,limits.file_bytes,limits.collection_bytes,limits.files});
+    });
+}
+
+struct PreparedSavedValues::State {
+    Project* owner=nullptr;
+    bool committed=false;
+    struct ParameterValue {Parameter* target; double value;std::optional<double> uncertainty;};
+    std::vector<ParameterValue> parameters;
+    ItemVec<FitParameterCorrelation> correlations;
+    bool correlations_changed=false;
+    std::optional<detail::PreparedPublication> publication;
+    std::string destination,metadata_path,last_modified;
+};
+PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,WorkStamps stamps,std::string destination)
+    :state_(std::make_unique<State>()) {
+    state_->owner=&live;
+    if(!unchanged_since(live,stamps) || live.structures.size()!=saved.structures.size() ||
+       live.experiments.size()!=saved.experiments.size())
+        throw std::invalid_argument("Saved project no longer matches the current owner");
+    std::map<std::string,const Parameter*> written;
+    for(const auto& slot:parameter_slots(saved))
+        if(!written.emplace(slot.unique_name,slot.parameter).second)throw std::invalid_argument("Saved parameter identity repeats");
+    const auto slots=parameter_slots(live);
+    if(slots.size()!=written.size())throw std::invalid_argument("Saved parameter set differs from the displayed project");
+    state_->parameters.reserve(slots.size());
+    for(const auto& slot:slots) {
+        const auto found=written.find(slot.unique_name);
+        if(found==written.end())throw std::invalid_argument("Saved parameter is missing from the displayed project");
+        const Parameter& source=*found->second;
+        // Saving rounds value and SU; it does not change the selected free set.
+        if(slot.parameter->free.get()!=source.free.get())throw std::invalid_argument("Saved free state differs from the displayed project");
+        state_->parameters.push_back({slot.parameter,source.value.get(),source.uncertainty.get()});
+    }
+    using Key=std::tuple<std::string,std::string,std::string>;
+    const auto key=[](const FitParameterCorrelation& r){return Key{r.parameter_unique_name_i.value(),r.parameter_unique_name_j.value(),r.file_path.value()};};
+    std::map<Key,std::string> coefficients;
+    for(const auto& row:saved.fit_result.correlations)coefficients.emplace(key(*row),row->correlation.value());
+    std::vector<std::shared_ptr<FitParameterCorrelation>> rows;rows.reserve(live.fit_result.correlations.size());
+    for(const auto& row:live.fit_result.correlations) {
+        auto next=std::make_shared<FitParameterCorrelation>(*row);
+        const auto found=coefficients.find(key(*row));
+        if(found!=coefficients.end() && next->correlation.value()!=found->second) {
+            next->correlation=found->second;state_->correlations_changed=true;
+        }
+        rows.push_back(std::move(next));
+    }
+    state_->correlations.assign(std::move(rows));
+    // A full fitted current project is the first supported saved-state path.
+    // Loaded columns are the native writer's admitted/reopened units; no second
+    // calculation or replacement Project is installed behind the user's model.
+    auto calculated=stage_computed(saved,std::move(stamps));
+    if(!calculated.refusal.empty())throw std::invalid_argument("The saved project does not retain its complete current calculation");
+    // Dependents land through the same exact named-parameter join above, not a
+    // competing late completion that could overwrite the rounded value.
+    calculated.completed.clear();
+    state_->publication=detail::prepare_publication(live,std::move(calculated));
+    if(!state_->publication)throw std::invalid_argument("The project changed while saved state was prepared");
+    state_->destination=std::move(destination);state_->metadata_path=state_->destination;
+    state_->last_modified=saved.metadata.last_modified;
+}
+PreparedSavedValues::~PreparedSavedValues()=default;
+bool PreparedSavedValues::commit(Project& live) noexcept {
+    if(state_->owner!=&live || state_->committed)return false;
+    for(const auto& value:state_->parameters) {
+        if(value.target->value.get()!=value.value)value.target->value=value.value;
+        if(value.target->uncertainty.get()!=value.uncertainty)value.target->uncertainty=value.uncertainty;
+    }
+    if(state_->correlations_changed)live.fit_result.correlations=std::move(state_->correlations);
+    state_->publication->commit(live);
+    live.path.swap(state_->destination);live.metadata.path.swap(state_->metadata_path);
+    live.metadata.last_modified.swap(state_->last_modified);live.scan_data_root.clear();
+    state_->committed=true;return true;
 }
 
 namespace detail {

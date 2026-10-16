@@ -676,3 +676,36 @@ Bootstrap failure reports only a fixed app-owned stage/method/reason through exi
 ### Implicit workspace in official root readback (2026-10-16)
 
 The pinned official WorkspaceWrite compatibility projection represents the exact current working directory implicitly and may omit it from additional writableRoots. After the existing exact cwd/policy check, Edi therefore includes that workspace once in its effective returned set. A separate explicit-entry set still rejects duplicates, including repeated explicit cwd. Every explicit root must be an admitted root and the complete effective set must exactly equal the requested workspace plus genuine chosen folder. A missing chosen folder, extra root, changed cwd, malformed root or changed network/tmp/provider/reviewer policy still refuses. Requests and permissions are unchanged; no canonicalization, alias acceptance or extra filesystem grant is introduced. This corrects the owner-reached thread/start THREAD_ROOTS representation failure, without claiming live Mac sign-in qualification.
+
+
+### Prepared native document export foundation (2026-10-16)
+
+The native save implementation reuses AssistantResultExport, not a second directory publisher. Its new app-private input captures an ALREADY bounded real-writer document set into the same protected immutable result snapshot/receipt/no-follow/real-loader boundary. It admits all path aliases, complete fixed native closure, byte/count/directory roles and SHA-256 metadata before any destination file/copy; it does not make an unbounded upstream scratch save safe. Existing selected-result capture now shares the protected snapshot constructor.
+
+Native automated export accepts the genuine shared pinned AssistantWorkingFolder capability, not a provider parent string. Writes duplicate its actual directory descriptor, retain that grant and recheck current physical identity after original host currentness and immediately before the existing no-overwrite rename. The ordinary picker Save As constructor remains. Both routes independently load protected source bytes and verify the destination-local stage against that exact closure, then keep the existing immediate committed latch. There is no overwrite/copy/remove fallback or unsafe mutable-path cleanup.
+
+A chosen runtime root is writable by the official agent. The actual parser therefore never reads its mutable children directly: before commit the exporter preowns one bounded protected validation slot; after commit it verifies/copies actual published bytes by retained descriptors into that slot and uses the same real loader there. Repeated reopen validates/reuses the same slot. The final published namespace/closure is checked again, and a postcommit failure remains committed rather than claimed rolled back. The displayed model/path/modified/Undo are untouched by this foundation.
+
+This private foundation is not registered as a save tool. The actual native writer still requires pre-growth bounded preparation before conversion/currentness/derived work/serialization; the pinned SDK save_project alone provides no such admission. Original request/account/current project/stamps/Stop ownership, complete outcome and artifact budget reservation and worker settlement must be wired before any native save registration. No app-owned scratch output, posthoc byte check, copied model losing computed provenance, Python fallback, arbitrary root or accepted-best/trial claim closes that dependency. No runtime/platform/packaging or genuine save success is claimed by source inspection.
+
+
+### Complete current native saving integration (E11-T5)
+
+The prepared-document exporter foundation above is now consumed by the actual
+normal-mode `save_project` original-RPC operation. The native picker pins the
+physical parent; the model supplies only a fresh basename. Before real work the
+host jointly admits original record/row/response, immutable source/container and
+prepared factual-outcome roles. Actual worker completion remains owned through
+Stop/Clear/sign-out/context retirement; the shared worker hold includes saves.
+Successful explicit Clear still immediately removes UI authority and does not
+repopulate discarded rows when the real worker later settles. Failed Clear keeps
+its retained archive, actual warning and existing execution fence.
+
+Real no-overwrite commit, actual-byte reopen verification and active same-PVM
+saved-state landing are distinct facts. Their exact original record receives
+preowned truthful state at each latch before fallible presentation. The final
+conversation outcome reports these facts chronologically through the existing
+native row, without a new report/artifact UI or floating success banner. Ordinary
+working-folder/file actions do not log out or destroy selected snapshots/history.
+The saved root remains user-owned; protected captured inputs/reopen leases stay
+within existing bounded file/collection/count and lifetime checks.

@@ -41,6 +41,9 @@ QJsonArray assistant_native_tool_specs() {
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
     add("create_cwl_project", "Create and display a NEW native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe; never replaces an existing project. No fit or save is implied.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
+    add("save_project", "Save the actual settled current fitted single/joint native project into a fresh child of the genuinely chosen working folder, verify reopen and make it the active saved project. Normal mode only; no overwrite, scan or external report assets.",
+        {{"name", Object{{"type","string"},{"minLength",1},{"maxLength",120},{"pattern","^[A-Za-z0-9_-]+$"},
+            {"description","Fresh child directory basename under the actual chosen working folder. A chat path never grants access."}}}}, {"name"});
     add("add_relations", "Append a complete validated affine alias/constraint batch to the displayed project through the native relation editor and Undo. Existing relations/composition are preserved; this edit is not a trial or fit.",
         {{"aliases", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"path", text}}, {"id", "path"})}}},
@@ -51,7 +54,7 @@ QJsonArray assistant_native_tool_specs() {
 }
 bool assistant_native_tool(const QString& name) {
     return name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
-        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations";
+        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project";
 }
 QString assistant_native_purpose(const Object& args) {
     const auto value = args.value("purpose");
@@ -67,6 +70,7 @@ void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
     if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
     else if (name == "add_relations") shape(args, {"purpose", "aliases", "constraints"});
+    else if(name=="save_project") shape(args,{"purpose","name"});
     else if (name == "set_parameters") shape(args, {"purpose", "values"});
     else if (name == "set_free") shape(args, {"purpose", "flags"});
     else if (assistant_native_tool(name)) shape(args, {"purpose"});

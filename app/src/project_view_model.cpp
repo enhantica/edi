@@ -25,6 +25,7 @@
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/presentation.hpp"
+#include "edi/persistence.hpp"
 #include "edi/report_model.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
@@ -2455,6 +2456,67 @@ void ProjectViewModel::setModified(bool modified) {
         modified_ = modified;
         emit modifiedChanged();
     }
+}
+
+// Prepared landing of a verified native save, matching saveTo's rounding and
+// saved-state contract without re-entering its writer/projectEdited boundary.
+struct ProjectViewModel::NativeSavedState {
+    edi::Project* owner=nullptr;
+    edi::WorkStamps original;
+    std::unique_ptr<edi::PreparedSavedValues> values;
+    bool committed=false;
+    bool modified_changed=false;
+};
+std::shared_ptr<ProjectViewModel::NativeSavedState> ProjectViewModel::prepareNativeSaved(
+    const edi::Project& reopened,const edi::WorkStamps& original,const QString& destination) {
+    const PublicationScope publication(*this);
+    if(retired_ || editing_ || edit_publication_failed_ || scan_template_ || calculating_ ||
+       (fit_ && fit_->running()) || !edi::unchanged_since(*project_,original))
+        throw std::invalid_argument("The project is not a settled current save owner");
+    auto ready=std::make_shared<NativeSavedState>();ready->owner=project_.get();ready->original=original;
+    ready->values=std::make_unique<edi::PreparedSavedValues>(*project_,reopened,original,destination.toStdString());
+    return ready;
+}
+bool ProjectViewModel::commitNativeSaved(NativeSavedState& ready) noexcept {
+    // Caller has rechecked the prepared stamps immediately before its actual
+    // no-overwrite publication/reopen. No signal/callback occurs in this landing.
+    if(retired_ || ready.owner!=project_.get() || ready.committed || !ready.values ||
+       editing_ || edit_publication_failed_ || scan_template_ || calculating_ || (fit_ && fit_->running()))return false;
+    if(!ready.values->commit(*project_))return false;ready.committed=true;
+    ready.modified_changed=modified_;modified_=false;
+    saved_files_.reset();return true;
+}
+bool ProjectViewModel::presentNativeSaved(NativeSavedState& ready) {
+    const PublicationScope publication(*this);
+    if(retired_ || !ready.committed || ready.owner!=project_.get())return false;
+    // Notify after the real state has landed. A reentrant user edit/replacement
+    // wins: never reset modified/path or publish an obsolete owner's state later.
+    const auto saved_stamps=edi::work_stamps(*project_);
+    if(ready.modified_changed)emit modifiedChanged();
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    emit projectEdited();
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    emit pathChanged();
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    publish(false);
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    for(ExperimentViewModel* experiment:experiment_models_) {
+        experiment->pattern()->calculated({});
+        if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+        experiment->capturePattern();
+        if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    }
+    for(StructureViewModel* structure:structure_models_) {
+        structure->captureScene();
+        if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    }
+    publishMetadata();
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    invalidateTexts();
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    report_->refresh();
+    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    setLastError({});return !retired_;
 }
 
 QString ProjectViewModel::saveTo(const QString& directory) {

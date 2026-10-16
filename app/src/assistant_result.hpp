@@ -6,6 +6,9 @@
 #include <QTemporaryDir>
 #include <functional>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 #include "edi/model.hpp"
 
 namespace edi_app {
@@ -23,6 +26,11 @@ struct ImmutableAssistantResult {
 std::shared_ptr<ImmutableAssistantResult> capture_assistant_result(const QString& workspace, const QString& intent);
 // The same checked real-loader door is used again by Session adoption.
 edi::Project load_captured_assistant_result(const ImmutableAssistantResult& result);
+// App-private downstream boundary for ALREADY bounded real-writer documents.
+// This checks before host copies/files grow; it does not bound the writer that
+// produced the input and cannot itself authorize/register a save operation.
+std::shared_ptr<ImmutableAssistantResult> capture_prepared_native_documents(
+    const std::vector<std::pair<std::string, std::string>>& documents);
 // Rechecks the real loader's declared mode before any ProjectViewModel/cache construction.
 void check_assistant_result_mode(const edi::Project& project);
 
@@ -38,6 +46,7 @@ class AssistantWorkingFolder {
     const QString& path() const noexcept;
     bool current() const noexcept;
  private:
+    friend class AssistantResultExport;
     struct State;
     std::unique_ptr<State> state_;
 };
@@ -54,6 +63,9 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
 class AssistantResultExport {
  public:
     AssistantResultExport(const ImmutableAssistantResult& source, const QString& parent, const QString& leaf);
+    // Native automation must use the actual pinned picker capability, never a
+    // provider-supplied parent string. The existing raw-parent form is Save As.
+    AssistantResultExport(const ImmutableAssistantResult& source, std::shared_ptr<const AssistantWorkingFolder> folder, const QString& leaf);
     ~AssistantResultExport();
     AssistantResultExport(const AssistantResultExport&) = delete;
     AssistantResultExport& operator=(const AssistantResultExport&) = delete;
@@ -65,6 +77,8 @@ class AssistantResultExport {
     const QJsonArray& files() const noexcept;
     edi::Project reopen() const;
  private:
+    void prepare(const ImmutableAssistantResult& source, const QString& parent, const QString& leaf,
+                 std::shared_ptr<const AssistantWorkingFolder> folder);
     struct State;
     std::unique_ptr<State> state_;
 };

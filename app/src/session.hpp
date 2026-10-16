@@ -179,6 +179,9 @@ class Session : public QObject {
     std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project project, quint64 epoch, const std::function<bool()>& current);
     bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model, quint64 epoch,
                                     const std::function<bool()>& current, bool& presentationComplete);
+    bool commitAssistantCurrentSave(ProjectViewModel* original, quint64 epoch,
+        ProjectViewModel::NativeSavedState& prepared) noexcept;
+    bool presentAssistantCurrentSave(ProjectViewModel* original, quint64 epoch);
     struct SaveIntent;
     bool saveIntentCurrent(const SaveIntent& intent) const;
     std::unique_ptr<SaveIntent> save_intent_;

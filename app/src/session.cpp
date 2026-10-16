@@ -545,6 +545,27 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     return current() && project_ == target;
 }
 
+bool Session::commitAssistantCurrentSave(ProjectViewModel* original,quint64 epoch,
+    ProjectViewModel::NativeSavedState& prepared) noexcept {
+    if(assistant_epoch_exhausted_ || assistant_epoch_!=epoch || !original || project_!=original)return false;
+    if(!original->commitNativeSaved(prepared))return false;
+    // Same owner, verified new saved directory. Keep the original protected
+    // input lease/provenance alive; it no longer requires fresh-result Save As.
+    read_only_copy_=false;fresh_result_=false;result_edited_=false;
+    result_saved_stamps_.reset();save_intent_.reset();opened_example_.clear();
+    return true;
+}
+bool Session::presentAssistantCurrentSave(ProjectViewModel* original,quint64 epoch) {
+    const auto token=replacement_generation_;
+    const auto current=[&]{return !assistant_epoch_exhausted_ && assistant_epoch_==epoch && project_==original && replacement_generation_==token;};
+    if(!current())return false;
+    setLastError({});if(!current())return false;
+    emit openedExampleChanged();if(!current())return false;
+    emit projectLocationChanged();if(!current())return false;
+    emit needsSaveAsChanged();if(!current())return false;
+    emit projectDirectoryUsed(original->path());return current();
+}
+
 void Session::retireExportIntent() noexcept { save_intent_.reset(); }
 void Session::retireAssistantIntent() noexcept {
     if (assistant_epoch_ == UINT64_MAX) assistant_epoch_exhausted_ = true;
