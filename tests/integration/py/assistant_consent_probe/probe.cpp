@@ -216,7 +216,8 @@ int main(int argc,char** argv) {
             const auto tables=table_facts(document); Array reference_tables;
             if(!tables.empty()) {
                 NoResourceReferenceDocument reference;
-                reference.setMarkdown(original,QTextDocument::MarkdownDialectGitHub|QTextDocument::MarkdownNoHTML);
+                reference.setMarkdown(original,QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub)
+                    |QTextDocument::MarkdownNoHTML);
                 reference_tables=table_facts(&reference);
             }
             Array fragments,blocks,lines;

@@ -399,18 +399,23 @@ TestCase {
     }
     function test_activity_description_uses_original_structured_source_data() {
         // Pinned0.162.1 CommandAction: read has name/path; list/search metadata
-        // may be absent/null; unknown supplies only command, not semantic intent.
+        // may be absent/null; none supplies semantic intent. Owner115 rejects action/object
+        // repetition as invented purpose: only explicit original goal metadata supplies a suffix.
         return [
             {tag: "read-name", action: {type: "read", name: "original.cif", path: "/owned/original.cif"}, evidence: "original.cif", category: /read/i},
             {tag: "list-path", action: {type: "listFiles", path: "/owned/original-series"}, evidence: "original-series", category: /list/i},
             {tag: "search-query", action: {type: "search", query: "peak position", path: null}, evidence: "peak position", category: /search/i},
-            {tag: "opaque-command", action: {type: "unknown"}, evidence: "", category: /command|ran/i}
+            {tag: "opaque-command", action: {type: "unknown"}, evidence: "", category: /command|ran/i},
+            {tag: "explicit-purpose", action: {type: "read", name: "original.cif", path: "/owned/original.cif"}, purpose: "Inspect profile inputs", evidence: "Inspect profile inputs", category: /read/i},
+            {tag: "explicit-description", action: {type: "search", query: "peak position", path: null}, description: "Locate lattice setting", evidence: "Locate lattice setting", category: /search/i}
         ];
     }
     function test_activity_description_uses_original_structured_source(data) {
         const original = commandItem("completed", 0);
         original.command = "printf 'read files search web scientific fit succeeded'";
         original.commandActions = [Object.assign({command: original.command}, data.action)];
+        if (data.purpose !== undefined) original.purpose = data.purpose;
+        if (data.description !== undefined) original.description = data.description;
         const row = createTemporaryObject(message, window.contentItem, {
             kind: "activity", text: original.command, status: "completed", payload: original
         });
@@ -419,16 +424,20 @@ TestCase {
         const control = commandDisclosure(row);
         const summary = control.text;
         const dot = summary.indexOf("·");
-        verify(dot > 0 && summary.slice(dot + 1).trim().length > 0,
-            "DESC1: real compact activity adds a nonempty short description after the category dot");
-        verify(data.category.test(summary.slice(0, dot)),
-            "DESC1: description preserves the truthful original structured activity category");
-        const description = summary.slice(dot + 1).trim();
-        if (data.evidence.length > 0)
-            verify(description.includes(data.evidence), "DESC1: step description uses its independently supplied original name, path or query");
+        const hasPurpose = data.purpose !== undefined || data.description !== undefined;
+        if (hasPurpose) {
+            verify(dot > 0 && summary.slice(dot + 1).trim().length > 0,
+                "DESC1: explicit original semantic goal supplies a short description after the dot");
+            verify(summary.slice(dot + 1).trim().includes(data.evidence),
+                "DESC1: the visible goal is independently supplied purpose, not an action/object echo");
+        } else {
+            compare(dot, -1, "DESC1: absent semantic purpose shows category/status alone without fabricated suffix");
+        }
+        verify(data.category.test(dot < 0 ? summary : summary.slice(0, dot)),
+            "DESC1: optional purpose never replaces the truthful original activity category");
         verify(!summary.includes("scientific fit succeeded"),
             "DESC1: opaque shell words cannot manufacture a scientific-success description");
-        if (data.evidence.length === 0)
+        if (data.tag === "opaque-command")
             verify(!/read.*file|search.*web|web.*search/i.test(summary),
                 "DESC1: missing purpose metadata cannot turn opaque shell text into a different action");
         verify(!Ui.text(row).includes(original.aggregatedOutput),
@@ -467,6 +476,9 @@ TestCase {
             : {id: "unicode-tool", type: "mcpToolCall", server: "owned", tool: value, arguments: {}, status: "completed"};
         if (data.kind === "commandExecution")
             original.commandActions = [{type: "read", command: original.command, name: value, path: "/owned/" + value}];
+        // Explicit purpose keeps this an actual excerpt boundary after owner115
+        // removes tool/name/object fallback descriptions.
+        original.purpose = value;
         original.diagnosticMarker = "CAP1_COMPLETE_ORIGINAL";
         const row = createTemporaryObject(message, window.contentItem, {
             kind: "activity", text: "Original Unicode activity", status: "completed", payload: original
