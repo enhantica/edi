@@ -2932,9 +2932,12 @@ PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,Work
        live.experiments.size()!=saved.experiments.size())
         throw std::invalid_argument("Saved project no longer matches the current owner");
     std::map<std::string,const Parameter*> written;
-    for(const auto& slot:parameter_slots(saved))
+    const auto retain_saved_parameter=[&](const NamedParameter& slot) {
         if(!written.emplace(slot.unique_name,slot.parameter).second)throw std::invalid_argument("Saved parameter identity repeats");
-    const auto slots=parameter_slots(live);
+    };
+    for(const auto& slot:named_parameters(saved))retain_saved_parameter(slot);
+    for(const auto& slot:named_dependents(saved))retain_saved_parameter(slot);
+    const auto slots=named_slots(live);
     if(slots.size()!=written.size())throw std::invalid_argument("Saved parameter set differs from the displayed project");
     state_->parameters.reserve(slots.size());
     for(const auto& slot:slots) {

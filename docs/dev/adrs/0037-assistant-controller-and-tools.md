@@ -339,3 +339,13 @@ This code requires the paired crysta prepared-persistence API/packages, not the
 old installed SDK. Source-only Edi publication or a locally replaced archive is
 not a consumable save fix. Actual SDK package identities and Edi pin must follow
 the existing paired PR/package process (ADR-0017); no digest is guessed here.
+
+
+### Saved-value parameter walk uses the public common views
+
+Saved-state preparation joins both `named_parameters(const Project&)` and
+`named_dependents(const Project&)` against `named_slots(Project&)`. These public
+views partition and expose the existing native writer's complete parameter walk;
+the adapter does not call its namespace-private `parameter_slots` helper or
+duplicate parameter-name grammar. Independent and dependent values retain the
+same exact identity, uncertainty and free-state checks before publication.
