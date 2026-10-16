@@ -905,7 +905,8 @@ struct AssistantViewModel::State {
             // The worker destroys snapshot.model after formatting and BEFORE it
             // creates/stages the rounded calculation. These two payloads never
             // overlap; the reservation remains constant across worker phases.
-            raw(std::max(native_save->snapshot.retained_bytes,native_save->calculation_reservation));
+            static_assert(std::numeric_limits<std::size_t>::max() <= std::numeric_limits<quint64>::max());
+            raw(std::max<quint64>(native_save->snapshot.retained_bytes,native_save->calculation_reservation));
             raw(native_save->snapshot.stamps.relations.size());
             for(const auto& stamp:native_save->snapshot.stamps.experiment_inputs)raw(sizeof(std::string)+stamp.size());
             for(const auto& stamp:native_save->snapshot.stamps.structure_inputs)raw(sizeof(std::string)+stamp.size());
