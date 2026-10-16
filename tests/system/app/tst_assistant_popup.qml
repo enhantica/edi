@@ -968,6 +968,15 @@ TestCase {
             }
         } catch (error) { console.log("VISIBLE185_FRAME_UNAVAILABLE", stage, String(error)); }
     }
+    function visible237_observationMs(actions) {
+        // Public de82 helper: move500/press100/relax-or-stage500; character100.
+        // A complete parameter action has at most page/Main/reset/filter/target,
+        // two select/delete pairs and literal path/value Unicode scalar spelling.
+        // Keep the original10000 observation allowance and add the actual finite
+        // serialized presentation workload; do not accelerate input or relax outcomes.
+        return 10000 + actions.reduce((total, action) => total + 5 * (500 + 100 + 500)
+            + 100 * (4 + [...action.path].length + [...action.text].length) + 2 * 500, 0);
+    }
     function test_visible185_actual_native_manual_interaction_data() {
         return ["default-off", "analysis-value-free", "wavelength", "manual-override",
             "dirty-valid-value", "dirty-invalid-value", "dirty-valid-free", "dirty-invalid-free",
@@ -1075,6 +1084,10 @@ TestCase {
         let capturedTyping = false;
         let spellings = [], writes = [], fitClicks = 0;
         const editedParameter = data.tag === "wavelength" ? wavelength[0] : la;
+        const pacedObservation = assistant.showActions ? visible237_observationMs(
+            data.tag === "analysis-value-free"
+                ? [{path: la.path, text: "0.6"}, {path: la.path, text: ""}]
+                : [{path: editedParameter.path, text: data.tag === "wavelength" ? "1.49" : "0.6"}]) : 10000;
         function valueReceipt() { writes.push(editedParameter.value); }
         function fitClickReceipt() { ++fitClicks; }
         function typedReceipt() {
@@ -1209,7 +1222,7 @@ TestCase {
             assistant.send("Original delegated visible operation " + data.tag);
             if (["manual-override", "close-owner"].includes(data.tag)) {
                 tryVerify(() => assistant.showingActions && field.activeFocus && field.text !== field.editText,
-                    10000, "VA2/VA4 SETUP: genuine paced original draft is active before intervention");
+                    pacedObservation, "VA2/VA4 SETUP: genuine paced original draft is active before intervention");
                 const pointer = item("assistant.actionPointer");
                 verify(Ui.rendered(pointer), "VA SETUP: actual accent pointer is rendered during real input");
                 if (data.tag === "manual-override") {
@@ -1240,7 +1253,7 @@ TestCase {
                 }
             }
             if (data.tag === "fit-stop") {
-                tryVerify(() => project.fit.running && assistant.showingActions, 10000,
+                tryVerify(() => project.fit.running && assistant.showingActions, pacedObservation,
                     "VA FIT SETUP: actual worker is running before real Stop, never a fake pending interval");
                 const stop = item("assistant.stopVisibleAction");
                 verify(stop.visible && stop.enabled && Ui.exposed(stop), "VA FIT SETUP: real appbar Stop is available");
@@ -1249,7 +1262,7 @@ TestCase {
             if (data.tag !== "close-owner") {
                 try {
                     tryVerify(() => visible185_outcome(call, requestPreviousIds) !== null && !assistant.canCancel && !assistant.showingActions,
-                        10000, "VA: actual original native outcome settles after its own input/worker owner");
+                        pacedObservation, "VA: actual original native outcome settles after its own input/worker owner");
                 } finally {
                     try {
                         function controlFact(control) {
@@ -1462,6 +1475,10 @@ TestCase {
         toggle();
         const textCase = data.tag.endsWith("text-id");
         visible185_page(textCase ? "structure" : textFormatted ? "experiment" : "analysis");
+        if (textCase) {
+            Ui.click(this, Probe, window, "sideBar.tab.basic");
+            Ui.expandGroup(this, Probe, window, "group.atom_site");
+        }
         if (!textCase && !textFormatted) {
             Ui.click(this, Probe, window, "sideBar.tab.extras");
             rendered();
@@ -1484,10 +1501,39 @@ TestCase {
                 && control.committed !== undefined);
         compare(candidates.length, 1, "DRAFT1 SETUP: genuine visual common editor identity is unique");
         const field = candidates[0];
-        Ui.scrollIntoView(field);
-        rendered();
-        verify(field.visible && field.enabled && !field.readOnly && Ui.exposed(field),
-            "DRAFT1 SETUP: actual common editor is actionable inside the real viewport");
+        function premise237(stage) {
+            try {
+                const origin = field.mapToItem(window.contentItem, 0, 0);
+                const ancestry = [];
+                for (let parent = field.parent; parent; parent = parent.parent) {
+                    const point = parent.mapToItem(window.contentItem, 0, 0);
+                    ancestry.push({identity: String(parent), name: parent.objectName,
+                        visible: parent.visible, enabled: parent.enabled, clip: parent.clip,
+                        rect: [point.x, point.y, parent.width, parent.height],
+                        collapsed: parent.collapsed === undefined ? null : parent.collapsed});
+                }
+                console.log("DRAFT237_PREMISE", data.tag, stage, JSON.stringify({
+                    identity: String(field), name: field.objectName, candidates: candidates.length,
+                    visible: field.visible, enabled: field.enabled, readOnly: field.readOnly,
+                    text: field.text, activeFocus: field.activeFocus, inPane: Ui.inPane(field),
+                    rect: [origin.x, origin.y, field.width, field.height],
+                    clickPoint: Ui.clickPoint(field), ancestry: ancestry,
+                    page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
+                    tabs: Ui.itemsWithProperty(Ui.page(window), "objectName")
+                        .filter(control => control.objectName.startsWith("sideBar.tab."))
+                        .map(control => ({name: control.objectName, checked: control.checked,
+                            visible: control.visible, enabled: control.enabled})),
+                    sameOwner: Session.project === project, connected: assistant.connected,
+                    lastError: assistant.lastError}));
+            } catch (error) { console.log("DRAFT237_PREMISE_ERROR", stage, String(error)); }
+        }
+        premise237("before-scroll");
+        try {
+            Ui.scrollIntoView(field);
+            rendered();
+            verify(field.visible && field.enabled && !field.readOnly && Ui.exposed(field),
+                "DRAFT1 SETUP: actual common editor is actionable inside the real viewport");
+        } finally { premise237("after-viewport-check"); }
         const cleanControl = data.tag.endsWith("formatted");
         if (cleanControl) {
             mouseClick(field);
@@ -1548,7 +1594,9 @@ TestCase {
             assistant.send("Change " + (textFormatted ? "cell a" : "wavelength") + " to "
                 + requestedValue + " while preserving my unrelated manual editor, " + data.tag);
             tryVerify(() => visible185_outcome("draft226-action-" + data.tag, requestPreviousIds) !== null
-                && !assistant.canCancel && !assistant.showingActions, 10000,
+                && !assistant.canCancel && !assistant.showingActions,
+                cleanControl && assistant.showActions
+                    ? visible237_observationMs([{path: target.path, text: String(requestedValue)}]) : 10000,
                 "DRAFT1: genuine original native request publishes and settles its own outcome");
             const outcome = visible185_outcome("draft226-action-" + data.tag, requestPreviousIds);
             if (cleanControl) {
@@ -2164,7 +2212,7 @@ TestCase {
                 compare(ownStarts, 0, "SL1 GAP SETUP: no helper ran during this actual read-only request interval");
             } else {
                 tryVerify(() => assistant.canCancel && assistant.showingActions && field.activeFocus
-                    && field.text !== field.editText && field.text !== field.value, 10000,
+                    && field.text !== field.editText && field.text !== field.value, visible237_observationMs([{path: target.path, text: "0.6"}]),
                     "SL1 HELPER SETUP: original actual paced partial input is active before the user event");
                 verify(pointer.visible && ownStarts > 0,
                     "SL1 HELPER SETUP: actual pointer/helper interval is genuinely reached");
