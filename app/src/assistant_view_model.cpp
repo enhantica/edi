@@ -2,6 +2,7 @@
 #include "assistant_view_model.hpp"
 
 #include <QFile>
+#include <QDateTime>
 #include <QSettings>
 #include <QThread>
 #include <array>
@@ -626,6 +627,121 @@ struct AssistantViewModel::State {
         throw std::runtime_error("Unimplemented native tool");
     }
 
+    Object usage_cache{{"available", false}, {"stale", false}, {"buckets", QJsonArray{}}};
+    QString usage_rpc;
+    quint64 usage_epoch = 0, usage_pending_epoch = 0, usage_read_epoch = 0;
+    quint64 usage_snapshot_epoch = UINT64_MAX, usage_update_serial = 0, usage_pending_update_serial = 0;
+    bool usage_account_ready = false, usage_epoch_exhausted = false;
+    bool usage_snapshot_valid = false, usage_fresh = false, usage_observation_available = false;
+    void usage_retire() noexcept {
+        // Account authority/visibility retire without allocating; old JSON is
+        // never sufficient evidence that it belongs to a later ready account.
+        usage_account_ready = false; usage_snapshot_valid = false; usage_fresh = false; usage_observation_available = false;
+        usage_update_serial = 0; usage_rpc.clear();
+        if (usage_epoch == UINT64_MAX) usage_epoch_exhausted = true;
+        else ++usage_epoch;
+        try { usage_cache = {{"available", false}, {"stale", false}, {"buckets", QJsonArray{}}}; emit owner.usageChanged(); } catch (...) {}
+    }
+    void usage_unavailable() noexcept {
+        usage_fresh = false; usage_observation_available = false;
+        usage_rpc.clear();
+        try { usage_cache["stale"] = true; usage_cache["available"] = false; emit owner.usageChanged(); } catch (...) {}
+    }
+    void usage_refresh() noexcept {
+        if (!publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted || generic_retiring || !usage_rpc.isEmpty()) return;
+        try {
+            usage_pending_epoch = usage_epoch; usage_pending_update_serial = usage_update_serial;
+            usage_fresh = false;
+            usage_rpc = agent->request("account/rateLimits/read", {});
+            if (usage_rpc.isEmpty()) { usage_unavailable(); return; }
+            usage_cache["stale"] = true; emit owner.usageChanged();
+        } catch (...) { usage_unavailable(); }
+    }
+    void usage_updated() noexcept {
+        // Sparse notification data is not a complete replacement snapshot. A
+        // newer observation cannot disappear behind an already-outstanding read.
+        usage_fresh = false;
+        if (usage_update_serial == UINT64_MAX) { usage_snapshot_valid = false; return; }
+        ++usage_update_serial;
+        try { emit owner.usageChanged(); } catch (...) {}
+        usage_refresh(); // Coalesced; no completion-triggered polling/retry loop.
+    }
+    static bool usage_integer(const QJsonValue& value, double minimum, double maximum) {
+        return value.isDouble() && std::isfinite(value.toDouble()) && std::floor(value.toDouble()) == value.toDouble() &&
+            value.toDouble() >= minimum && value.toDouble() <= maximum;
+    }
+    static QString usage_text(const QJsonValue& value) {
+        if (!value.isString()) throw std::invalid_argument("Usage text is unavailable");
+        const auto text = value.toString();
+        if (text.toUtf8().size() > static_cast<qsizetype>(Limits::id_bytes)) throw std::length_error("Usage text exceeds capacity");
+        for (const auto c : text) if (c.unicode() < 32 || c.unicode() == 127) throw std::invalid_argument("Usage text is invalid");
+        return text;
+    }
+    void usage_response(const QString& id, const Object& envelope) noexcept {
+        if (id != usage_rpc || !usage_account_ready || usage_pending_epoch != usage_epoch || usage_epoch_exhausted || generic_retiring) return;
+        usage_rpc.clear();
+        try {
+            if (envelope.contains("error") || !envelope.value("result").isObject()) { usage_unavailable(); return; }
+            const auto result = envelope.value("result").toObject();
+            generic_size(result, Limits::http_json_bytes);
+            if (!result.value("rateLimits").isObject()) throw std::invalid_argument("Usage snapshot is unavailable");
+            QJsonArray buckets;
+            const auto addBucket = [&](const Object& snapshot, const QString& key) {
+                Object bucket{{"id", key}, {"windows", QJsonArray{}}};
+                for (const auto& field : {QString("limitId"), QString("limitName"), QString("planType")})
+                    if (!snapshot.value(field).isNull() && !snapshot.value(field).isUndefined()) bucket[field] = usage_text(snapshot.value(field));
+                if (!key.isEmpty() && bucket.contains("limitId") && bucket.value("limitId") != key) throw std::invalid_argument("Usage bucket identity changed");
+                QJsonArray windows;
+                for (const auto& kind : {QString("primary"), QString("secondary")}) {
+                    const auto field = snapshot.value(kind);
+                    if (field.isNull() || field.isUndefined()) continue;
+                    if (!field.isObject()) throw std::invalid_argument("Usage window is unavailable");
+                    const auto value = field.toObject();
+                    if (!usage_integer(value.value("usedPercent"), 0, 2147483647.0)) throw std::invalid_argument("Usage percentage is invalid");
+                    Object window{{"kind", kind}, {"usedPercent", value.value("usedPercent")}};
+                    if (!value.value("windowDurationMins").isNull() && !value.value("windowDurationMins").isUndefined()) {
+                        if (!usage_integer(value.value("windowDurationMins"), 1, 9007199254740991.0)) throw std::invalid_argument("Usage duration is invalid");
+                        window["windowDurationMins"] = value.value("windowDurationMins");
+                    }
+                    if (!value.value("resetsAt").isNull() && !value.value("resetsAt").isUndefined()) {
+                        if (!usage_integer(value.value("resetsAt"), 0, 9007199254740991.0)) throw std::invalid_argument("Usage reset is invalid");
+                        window["resetsAt"] = value.value("resetsAt");
+                    }
+                    windows.append(window);
+                }
+                bucket["windows"] = windows;
+                const auto credits = snapshot.value("credits");
+                if (!credits.isNull() && !credits.isUndefined()) {
+                    if (!credits.isObject() || !credits.toObject().value("hasCredits").isBool() || !credits.toObject().value("unlimited").isBool()) throw std::invalid_argument("Usage credits are invalid");
+                    Object value{{"hasCredits", credits.toObject().value("hasCredits")}, {"unlimited", credits.toObject().value("unlimited")}};
+                    const auto balance = credits.toObject().value("balance");
+                    if (!balance.isNull() && !balance.isUndefined()) value["balance"] = usage_text(balance);
+                    bucket["credits"] = value;
+                }
+                // Admit the full retained array wrapper before its append.
+                auto prospective = buckets; prospective.append(bucket); generic_size(prospective, Limits::http_json_bytes);
+                buckets = std::move(prospective);
+            };
+            const auto multi = result.value("rateLimitsByLimitId");
+            if (!multi.isNull() && !multi.isUndefined()) {
+                if (!multi.isObject() || multi.toObject().size() > static_cast<qsizetype>(Limits::models)) throw std::length_error("Usage bucket count exceeds capacity");
+                const auto values = multi.toObject();
+                for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+                    if (!it.value().isObject()) throw std::invalid_argument("Usage bucket is unavailable");
+                    addBucket(it.value().toObject(), usage_text(it.key()));
+                }
+            } else addBucket(result.value("rateLimits").toObject(), {});
+            bool available = false;
+            for (const auto& value : buckets) if (!value.toObject().value("windows").toArray().isEmpty() || value.toObject().contains("credits")) available = true;
+            const bool fresh = usage_update_serial != UINT64_MAX && usage_pending_update_serial == usage_update_serial;
+            Object snapshot{{"available", available}, {"stale", !fresh}, {"buckets", buckets}, {"observedAt", QDateTime::currentDateTimeUtc().toString(Qt::ISODate)}};
+            generic_size(snapshot, Limits::http_json_bytes);
+            usage_cache = std::move(snapshot); usage_snapshot_epoch = usage_epoch;
+            usage_snapshot_valid = true; usage_fresh = fresh; usage_observation_available = available;
+            emit owner.usageChanged();
+        } catch (...) { usage_unavailable(); }
+    }
+
     struct ResultInput {
         QString intent, thread, turn;
         quint64 serial = 0, generation = 0, epoch = 0;
@@ -788,6 +904,7 @@ struct AssistantViewModel::State {
         } catch (...) { error = storage_error; return false; }
     }
     void generic_fail(const QString& explanation) noexcept {
+        usage_retire();
         try { native_retire(false); } catch (...) {}
         generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
         retire_result();
@@ -879,6 +996,7 @@ struct AssistantViewModel::State {
         generic_skill_paths = std::move(skills); generic_workspace = workspace;
     }
     void generic_revoke_workspace() noexcept {
+        usage_retire();
         try { native_retire(false); } catch (...) {}
         generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
         retire_result();
@@ -1009,6 +1127,9 @@ struct AssistantViewModel::State {
                 generic_request("initialize", {{"clientInfo", Object{{"name", "edi"}, {"title", "Edi"}, {"version", "1"}}}, {"capabilities", Object{{"experimentalApi", true}}}});
             } catch (...) { generic_fail(QObject::tr("The official agent could not be initialized.")); }
         });
+        QObject::connect(agent.get(), &CodexAgent::optionalUsageUnavailable, &owner, [this](const QString& id) {
+            if (id == usage_rpc) usage_unavailable();
+        });
         QObject::connect(agent.get(), &CodexAgent::failed, &owner, [this](const QString& message) { generic_fail(message); });
         QObject::connect(agent.get(), &CodexAgent::response, &owner,
             [this](const QString& id, const QString& method, const Object& reply) {
@@ -1054,6 +1175,7 @@ struct AssistantViewModel::State {
     }
     void generic_response(const QString& id, const QString& method, const Object& reply) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
+        if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
         if (reply.contains("error")) {
             const auto failure = reply.value("error").toObject();
             const auto code = failure.value("code"); const auto message = failure.value("message");
@@ -1122,6 +1244,7 @@ struct AssistantViewModel::State {
         } else if (method == "account/read") {
             const auto account = result.value("account").toObject();
             if (account.value("type") == "chatgpt") {
+                usage_read_epoch = usage_epoch;
                 generic_native["label"] = account.value("email").isString() ? account.value("email") : QJsonValue("ChatGPT");
                 generic_native["models"] = QJsonArray{};
                 generic_request("model/list", {{"includeHidden", true}});
@@ -1161,6 +1284,7 @@ struct AssistantViewModel::State {
                 generic_request("model/list", {{"includeHidden", true}, {"cursor", result.value("nextCursor")}});
             else {
                 native = generic_native; sync();
+                if (!usage_epoch_exhausted && usage_read_epoch == usage_epoch) usage_account_ready = true;
                 generic_request("skills/list", {{"cwds", QJsonArray{generic_workspace}}, {"forceReload", true}});
             }
         } else if (method == "skills/list") {
@@ -1202,6 +1326,9 @@ struct AssistantViewModel::State {
             generic_thread = generic_id(result.value("thread").toObject().value("id"));
             generic_native["connection_id"] = generic_thread; generic_native["status"] = "ready";
             generic_connecting = false; generic_authenticated = true; generic_retiring = false; agent->settleOperation(); error.clear();
+            // Required skills/thread bootstrap has finished. A same-callback
+            // required write can no longer preempt this initial observation.
+            usage_refresh();
         } else if (method == "turn/start") {
             const auto turn = result.value("turn").toObject();
             const auto turnId = generic_id(turn.value("id"));
@@ -1340,12 +1467,17 @@ struct AssistantViewModel::State {
     }
     void generic_event(const QString& method, const Object& params) {
         if (!publishing) return;
+        if (method == "account/rateLimits/updated") {
+            if (usage_account_ready && !generic_retiring) usage_updated();
+            return;
+        }
         if (method == "account/login/completed") {
             if (params.value("loginId") != generic_login) return;
             if (!params.value("success").toBool()) throw std::runtime_error("Agent sign-in was not completed");
             generic_login.clear(); generic_request("account/read", {{"refreshToken", false}}); return;
         }
         if (method == "account/updated") {
+            usage_retire();
             if (params.value("authMode") != "chatgpt" || generic_authenticated || !generic_thread.isEmpty())
                 generic_fail(QObject::tr("The agent account changed. Reconnect to approve the current account and a fresh working copy."));
             return;
@@ -2614,6 +2746,23 @@ bool AssistantViewModel::canCancel() const {
 #endif
     return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
 QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : state_->preference_error; }
+QVariantMap AssistantViewModel::usage() const {
+#ifndef __EMSCRIPTEN__
+    if (state_->generic_mode && state_->usage_account_ready && !state_->generic_retiring && !state_->usage_epoch_exhausted &&
+        state_->usage_snapshot_valid && state_->usage_snapshot_epoch == state_->usage_epoch) {
+        auto result = state_->usage_cache.toVariantMap();
+        result["stale"] = !state_->usage_fresh; result["available"] = state_->usage_observation_available;
+        return result;
+    }
+#endif
+    return {{"available", false}, {"stale", false}, {"buckets", QVariantList{}}};
+}
+void AssistantViewModel::refreshUsage() {
+#ifndef __EMSCRIPTEN__
+    if (state_->generic_mode) state_->usage_refresh();
+#endif
+}
+
 QString AssistantViewModel::contextPreview() const {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) return QString::fromUtf8(QJsonDocument(state_->outgoing_context()).toJson(QJsonDocument::Compact));
@@ -2886,6 +3035,7 @@ void AssistantViewModel::signOut() {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         if (state_->generic_retiring) return;
+        state_->usage_retire();
         try { state_->native_retire(true); }
         catch (...) { state_->generic_fail(tr("The native action could not be retired during sign-out.")); return; }
         state_->generic_clear_pending = false; state_->generic_context_pending = false; state_->generic_clear_interrupt_sent = false;

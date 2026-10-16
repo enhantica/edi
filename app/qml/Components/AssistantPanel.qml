@@ -13,6 +13,48 @@ Popup {
     id: panel
     objectName: "assistant.popup"
     required property AssistantViewModel assistant
+    // One bounded JSON-domain presentation copy handles Qt QVariant lists.
+    readonly property var usageData: {
+        try { return JSON.parse(JSON.stringify(assistant.usage)); }
+        catch (error) { return { available: false, stale: false, buckets: [] }; }
+    }
+    readonly property var usageWindow: {
+        let selected = null;
+        const buckets = usageData.buckets || [];
+        for (const bucket of buckets) for (const window of bucket.windows || [])
+            if (!selected || window.usedPercent > selected.usedPercent)
+                selected = { usedPercent: window.usedPercent, label: usageWindowLabel(bucket, window) };
+        return selected;
+    }
+    function usageWindowLabel(bucket, window) {
+        const name = bucket.limitName || bucket.limitId || bucket.id || qsTr("Allowance");
+        const kind = window.kind === "primary" ? qsTr("Primary window") : qsTr("Secondary window");
+        const duration = typeof window.windowDurationMins === "number" ? qsTr(" · %1 minutes").arg(window.windowDurationMins) : "";
+        return name + " · " + kind + duration;
+    }
+    function usageCaption() {
+        const prefix = usageData.stale ? qsTr("Last observed: ") : "";
+        if (usageWindow) return prefix + qsTr("%1 · %2% remaining").arg(usageWindow.label).arg(Math.max(0, 100 - usageWindow.usedPercent));
+        return usageData.available ? prefix + qsTr("Usage details available") : qsTr("Usage data unavailable");
+    }
+    function usageBucketText(bucket) {
+        let lines = [];
+        for (const window of bucket.windows || []) {
+            let line = usageWindowLabel(bucket, window) + "\n" + qsTr("%1% used · %2% remaining").arg(window.usedPercent).arg(Math.max(0, 100 - window.usedPercent));
+            if (typeof window.resetsAt === "number") {
+                const reset = new Date(window.resetsAt * 1000);
+                line += "\n" + (isNaN(reset.getTime()) ? qsTr("Reset timestamp: %1").arg(window.resetsAt) : qsTr("Resets: %1").arg(reset.toISOString()));
+            }
+            lines.push(line);
+        }
+        if (bucket.credits) {
+            const name = bucket.limitName || bucket.limitId || bucket.id || qsTr("Allowance");
+            let credits = name + " · " + (bucket.credits.unlimited ? qsTr("Credits: unlimited") : bucket.credits.hasCredits ? qsTr("Credits available") : qsTr("No credits available"));
+            if (typeof bucket.credits.balance === "string") credits += "\n" + qsTr("Balance: %1").arg(bucket.credits.balance);
+            lines.push(credits);
+        }
+        return lines.join("\n\n");
+    }
     property bool sendAfterConsent: false
     property string consentDraft: ""
     property string consentContext: ""
@@ -189,9 +231,9 @@ Popup {
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: skillsButton
                         KeyNavigation.tab: composer.firstFocusItem
-                        ToolTip.text: qsTr("Usage data unavailable")
-                        Accessible.name: qsTr("Usage data unavailable")
-                        Accessible.description: qsTr("This connection does not provide context or subscription usage metrics.")
+                        ToolTip.text: panel.usageCaption()
+                        Accessible.name: panel.usageCaption()
+                        Accessible.description: qsTr("Actual account allowance windows and supplied credits. Context occupancy is independently unavailable.")
                         contentItem: Item {
                             implicitWidth: AppSizes.unit * 0.85 * 1.5
                             implicitHeight: AppSizes.unit * 0.85 * 1.5
@@ -203,6 +245,30 @@ Popup {
                                 color: "transparent"
                                 border.width: 2
                                 border.color: EaStyle.Colors.themeForegroundDisabled
+                            }
+                            Canvas {
+                                anchors.fill: parent
+                                readonly property bool windowAvailable: panel.usageWindow !== null && panel.usageWindow !== undefined
+                                readonly property real used: windowAvailable ? Math.max(0, Math.min(100, panel.usageWindow.usedPercent)) / 100 : 0
+                                readonly property color arcColor: EaStyle.Colors.themeAccent
+                                onWindowAvailableChanged: requestPaint()
+                                onVisibleChanged: requestPaint()
+                                onAvailableChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+                                onUsedChanged: requestPaint()
+                                onArcColorChanged: requestPaint()
+                                onWidthChanged: requestPaint()
+                                onHeightChanged: requestPaint()
+                                onPaint: {
+                                    const context = getContext("2d");
+                                    context.reset();
+                                    if (!windowAvailable) return;
+                                    context.lineWidth = 2;
+                                    context.strokeStyle = arcColor;
+                                    context.beginPath();
+                                    context.arc(width / 2, height / 2, Math.max(0, width / 2 - 1), -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - used));
+                                    context.stroke();
+                                }
                             }
                         }
                         onClicked: usageDialog.open()
@@ -482,27 +548,53 @@ Popup {
             id: usageDialog
             title: qsTr("Usage")
             standardButtons: Dialog.Close
-            width: Math.min(AppSizes.unit * 27, Math.max(0, parent.width - AppSizes.unit * 2))
-            Column {
-                width: parent.width
-                spacing: AppSizes.unit
-                EaElements.Label {
-                    width: parent.width
-                    text: qsTr("Context window: unavailable")
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                }
-                EaElements.Label {
-                    width: parent.width
-                    text: qsTr("Subscription session and weekly limits: unavailable")
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                }
-                EaElements.Label {
-                    width: parent.width
-                    text: qsTr("This connection does not supply these metrics. No usage percentage is inferred from conversation length or elapsed time.")
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
+            readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+            width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
+            height: Math.min(implicitHeight, viewportHeight)
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(usageContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding
+                - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
+                - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+            onOpened: panel.assistant.refreshUsage()
+            ScrollView {
+                id: usageScroll
+                width: usageDialog.contentWidth
+                height: usageDialog.contentHeight
+                clip: true
+                ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+                Column {
+                    id: usageContent
+                    width: usageScroll.availableWidth
+                    spacing: AppSizes.unit
+                    EaElements.Label {
+                        width: parent.width
+                        text: panel.usageCaption()
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
+                    EaElements.Label {
+                        width: parent.width
+                        text: qsTr("Context window occupancy: unavailable")
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
+                    Repeater {
+                        model: panel.usageData.buckets || []
+                        EaElements.Label {
+                            required property var modelData
+                            width: usageContent.width
+                            text: panel.usageBucketText(modelData)
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                    EaElements.Label {
+                        width: parent.width
+                        text: panel.usageData.observedAt ? qsTr("Read at %1. Different allowance windows are listed separately; the ring shows the most constrained supplied window.").arg(panel.usageData.observedAt)
+                            : qsTr("No account usage snapshot is available. No quota or context percentage is inferred from conversation length or time.")
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
                 }
             }
         }

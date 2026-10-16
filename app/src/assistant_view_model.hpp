@@ -39,6 +39,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
     Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
 
@@ -64,6 +65,8 @@ class AssistantViewModel : public QObject {
     QString activeJobId() const;
     bool canCancel() const;
     QString lastError() const;
+    QVariantMap usage() const;
+    Q_INVOKABLE void refreshUsage();
     QString contextPreview() const;
     bool contextConsentRequired() const;
     void setSelectedModel(const QString& model);
@@ -100,6 +103,7 @@ class AssistantViewModel : public QObject {
     void activeJobIdChanged();
     void canCancelChanged();
     void lastErrorChanged();
+    void usageChanged();
     void contextPreviewChanged();
 
    private:

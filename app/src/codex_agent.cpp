@@ -102,11 +102,53 @@ void CodexAgent::activity() { last_activity_ = clock_.elapsed(); }
 void CodexAgent::settleOperation() {
     operation_start_ = -1; total_ms_ = 0; idle_ms_ = 0;
 }
+void CodexAgent::retireOptionalUsage(const QString& id) {
+    if (pending_.value(id) != "account/rateLimits/read" || !optional_usage_ids_.contains(id)) return;
+    pending_.remove(id); pending_deadlines_.remove(id); pending_bytes_ -= pending_sizes_.take(id);
+    emit optionalUsageUnavailable(id); // No activity/operation/deadline role transition.
+}
+void CodexAgent::preemptOptionalUsage() {
+    for (;;) {
+        QString id;
+        for (auto i = pending_.constBegin(); i != pending_.constEnd(); ++i)
+            if (i.value() == "account/rateLimits/read" && optional_usage_ids_.contains(i.key())) { id = i.key(); break; }
+        if (id.isEmpty()) return;
+        retireOptionalUsage(id); // Exact issued late-ID ownership remains.
+        if (failed_) return;
+    }
+}
+void CodexAgent::flushRequired() noexcept {
+    if (deferred_required_.isEmpty() || !process_ || failed_) return;
+    try {
+        checkDeadline();
+        if (failed_ || !process_ || process_->state() != QProcess::Running) return;
+        const auto queued = static_cast<quint64>(process_->bytesToWrite());
+        if (queued > Limits::request_bytes || static_cast<quint64>(deferred_required_.size()) > Limits::request_bytes - queued) return;
+        auto line = std::move(deferred_required_); deferred_required_.clear(); deferred_deadline_ = -1;
+        // Transfer this exact prepared original once. Any partial write is a
+        // fatal uncertain delivery; never replay or rebuild it from current UI.
+        if (process_->write(line) != line.size()) fail("The official agent request could not be delivered.");
+    } catch (...) { fail("The official agent queued control could not be delivered."); }
+}
 void CodexAgent::checkDeadline() {
     if (failed_) return;
     const auto now = clock_.elapsed();
-    for (auto it = pending_deadlines_.constBegin(); it != pending_deadlines_.constEnd(); ++it)
-        if (now >= it.value()) { fail("The official agent did not acknowledge a control request in time."); return; }
+    if (deferred_deadline_ >= 0 && now >= deferred_deadline_) {
+        fail("The official agent did not drain a required control request in time."); return;
+    }
+    for (;;) {
+        QString optional;
+        for (auto it = pending_deadlines_.constBegin(); it != pending_deadlines_.constEnd(); ++it) {
+            if (now < it.value()) continue;
+            if (pending_.value(it.key()) != "account/rateLimits/read" || !optional_usage_ids_.contains(it.key())) {
+                fail("The official agent did not acknowledge a control request in time."); return;
+            }
+            optional = it.key(); break;
+        }
+        if (optional.isEmpty()) break;
+        retireOptionalUsage(optional);
+        if (failed_) return;
+    }
     if (operation_start_ < 0) return;
     if (now < operation_start_ || now < last_activity_ ||
         (total_ms_ && static_cast<quint64>(now - operation_start_) >= total_ms_) ||
@@ -158,7 +200,8 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
     try {
         if (generation_ == std::numeric_limits<quint64>::max()) return false;
         const auto scope = ++generation_;
-        failed_ = false; incoming_.clear(); pending_.clear(); server_requests_.clear();
+        failed_ = false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
+        pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
         pending_bytes_ = 0; output_bytes_ = 0; record_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
         auto* process = new QProcess(this);
@@ -176,6 +219,13 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         // HOME/home/CODEX_HOME, open config/auth files, or copy provider tokens.
         connect(process, &QProcess::started, this, [this, process, scope] {
             try { if (process_ == process && generation_ == scope && !failed_) emit started(); } catch (...) { fail("The official agent handshake could not be prepared."); }
+        });
+        connect(process, &QProcess::bytesWritten, this, [this, process, scope](qint64 count) {
+            if (process_ != process || generation_ != scope || failed_ || count <= 0) return;
+            // Optional writes are admitted only at an empty physical queue, so
+            // these bytes are its FIFO head even after required writes arrive.
+            optional_queued_bytes_ -= qMin(optional_queued_bytes_, static_cast<quint64>(count));
+            flushRequired();
         });
         connect(process, &QProcess::readyReadStandardOutput, this, [this, process, scope] { read(process, scope); });
         connect(process, &QProcess::readyReadStandardError, this, [this, process, scope] {
@@ -214,23 +264,55 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
     }
 }
 
-bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare, bool nonfatalPreflight) {
+bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare, bool nonfatalPreflight, bool optionalUsage) {
     if (!process_ || failed_ || process_->state() != QProcess::Running) return false;
     checkDeadline(); if (failed_) return false;
     quint64 encoded = 0;
-    if (!encodedSize(envelope, Limits::request_bytes, encoded)) {
+    if (!encodedSize(envelope, Limits::request_bytes, encoded) || encoded >= Limits::request_bytes) {
         if (!nonfatalPreflight) fail("The official agent request exceeds the transport capacity."); return false;
     }
-    if (encoded >= Limits::request_bytes || static_cast<quint64>(process_->bytesToWrite()) > Limits::request_bytes - encoded - 1) {
+    const auto initialQueued = static_cast<quint64>(process_->bytesToWrite());
+    const auto lineSize = encoded + 1;
+    if (optionalUsage && (initialQueued != 0 || optional_queued_bytes_ != 0 || !deferred_required_.isEmpty() ||
+        lineSize > Limits::request_bytes - Limits::retained_record_bytes)) return false;
+    if (!optionalUsage) preemptOptionalUsage();
+    if (failed_ || !process_) return false;
+    const auto queued = static_cast<quint64>(process_->bytesToWrite());
+    if (queued > Limits::request_bytes) {
         if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity."); return false;
+    }
+    const auto held = static_cast<quint64>(deferred_required_.size());
+    // Logical required bytes never exceed the existing hard write capacity.
+    // Optional queued bytes can neither consume that required ownership nor be
+    // retracted from QProcess. Hold the exact required record until they drain.
+    const auto optionalHead = qMin(queued, optional_queued_bytes_);
+    const auto requiredQueued = queued - optionalHead;
+    if (requiredQueued > Limits::request_bytes || held > Limits::request_bytes - requiredQueued ||
+        lineSize > Limits::request_bytes - requiredQueued - held) {
+        if (!nonfatalPreflight) fail("The official agent write queue exceeds the transport capacity."); return false;
+    }
+    const bool deferred = held != 0 || lineSize > Limits::request_bytes - queued;
+    if (deferred && (optionalUsage || held > Limits::retained_record_bytes || lineSize > Limits::retained_record_bytes - held)) {
+        if (!nonfatalPreflight) fail("The official agent queued control exceeds retained capacity."); return false;
     }
     const auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
     if (static_cast<quint64>(wire.size()) != encoded) {
         if (!nonfatalPreflight) fail("The official agent request could not be encoded consistently."); return false;
     }
     const auto line = wire + '\n';
+    auto heldWire = deferred_required_;
+    if (deferred) heldWire.append(line); // All holding-slot allocation precedes admission/publication.
+    auto* process = process_; const auto epoch = generation_;
+    const auto priorHeld = deferred_required_.size();
     if (prepare && !prepare()) return false;
-    if (process_->write(line) != line.size()) {
+    if (failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
+    if (deferred) {
+        deferred_required_.swap(heldWire); // Nonallocating ownership commit; original deadline stays armed.
+        if (deferred_deadline_ < 0) deferred_deadline_ = clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms);
+        flushRequired(); return !failed_;
+    }
+    if (optionalUsage) optional_queued_bytes_ = lineSize;
+    if (process->write(line) != line.size()) {
         fail("The official agent request could not be delivered."); return false;
     }
     return true;
@@ -239,19 +321,29 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
 QString CodexAgent::request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare) {
     QString id; bool charged = false;
     const auto discard = [&] {
-        pending_.remove(id); pending_deadlines_.remove(id);
+        pending_.remove(id); pending_deadlines_.remove(id); optional_usage_ids_.remove(id);
         if (charged) pending_bytes_ -= pending_sizes_.take(id); else pending_sizes_.remove(id);
     };
     try {
-        if (failed_ || method.isEmpty() || pending_.size() >= pendingLimit || next_id_ == std::numeric_limits<quint64>::max()) return {};
+        const bool optional = method == "account/rateLimits/read";
+        if (failed_ || method.isEmpty() || next_id_ == std::numeric_limits<quint64>::max()) return {};
+        if (optional && (pending_.size() >= pendingLimit - 1 || optional_usage_ids_.size() >= static_cast<qsizetype>(Limits::completed_calls) ||
+            !deferred_required_.isEmpty() || optional_queued_bytes_ != 0 || !process_ || process_->bytesToWrite() != 0)) return {};
+        if (optional) for (auto i = pending_.constBegin(); i != pending_.constEnd(); ++i)
+            if (i.value() == "account/rateLimits/read") return {};
         id = QStringLiteral("edi-%1-%2").arg(generation_).arg(++next_id_);
         quint64 bytes = 0;
         const QJsonObject envelope{{"id", id}, {"method", method}, {"params", params}};
-        if (!encodedSize(envelope, Limits::record_bytes, bytes) || bytes > Limits::retained_record_bytes - pending_bytes_) return {};
+        if (!encodedSize(envelope, Limits::record_bytes, bytes)) return {};
+        if (!optional && (pending_.size() >= pendingLimit - 1 || bytes > Limits::retained_record_bytes - pending_bytes_)) preemptOptionalUsage();
+        if (optional && (pending_bytes_ > Limits::retained_record_bytes - Limits::record_bytes ||
+            bytes > Limits::retained_record_bytes - Limits::record_bytes - pending_bytes_)) return {};
+        if (pending_.size() >= pendingLimit || bytes > Limits::retained_record_bytes - pending_bytes_) return {};
+        if (optional) optional_usage_ids_.insert(id);
         pending_.insert(id, method); pending_sizes_.insert(id, bytes);
         pending_deadlines_.insert(id, clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms));
         pending_bytes_ += bytes; charged = true;
-        if (!write(envelope, [&] { return !prepare || prepare(id); }, static_cast<bool>(prepare))) { discard(); return {}; }
+        if (!write(envelope, [&] { return !prepare || prepare(id); }, optional || static_cast<bool>(prepare), optional)) { discard(); return {}; }
         return id;
     } catch (...) { discard(); return {}; }
 }
@@ -340,7 +432,12 @@ void CodexAgent::receive(const QByteArray& record) {
                 fail("The official agent request identity is invalid or exceeds capacity."); return;
             }
             quint64 bytes = 0;
-            if (!encodedSize(envelope, Limits::record_bytes, bytes) || bytes > Limits::retained_record_bytes - pending_bytes_) {
+            if (!encodedSize(envelope, Limits::record_bytes, bytes)) {
+                fail("The official agent pending approvals exceed capacity."); return;
+            }
+            if (bytes > Limits::retained_record_bytes - pending_bytes_) preemptOptionalUsage();
+            if (failed_) return;
+            if (bytes > Limits::retained_record_bytes - pending_bytes_) {
                 fail("The official agent pending approvals exceed capacity."); return;
             }
             server_requests_.insert(key, id); server_sizes_.insert(key, bytes); pending_bytes_ += bytes;
@@ -349,24 +446,30 @@ void CodexAgent::receive(const QByteArray& record) {
         return;
     }
     const auto idValue = envelope.value(QStringLiteral("id"));
+    if (idValue.isString() && optional_usage_ids_.contains(idValue.toString()) && !pending_.contains(idValue.toString())) {
+        if (envelope.contains("result") == envelope.contains("error")) { fail("The official agent late optional reply is malformed."); return; }
+        optional_usage_ids_.remove(idValue.toString()); return; // Exact late optional reply, no inference effect.
+    }
     if (!idValue.isString() || !pending_.contains(idValue.toString()) ||
         (envelope.contains(QStringLiteral("result")) == envelope.contains(QStringLiteral("error")))) {
         fail("The official agent reply does not match an outstanding request."); return;
     }
     const auto id = idValue.toString(); const auto method = pending_.take(id);
     pending_deadlines_.remove(id); pending_bytes_ -= pending_sizes_.take(id);
+    optional_usage_ids_.remove(id);
     emit response(id, method, envelope);
 }
 void CodexAgent::fail(const char* explanation) noexcept {
     if (failed_) return;
     failed_ = true; // Nonallocating revocation precedes diagnostics or observers.
-    pending_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
+    deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
+    pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
     try { if (process_ && process_->state() != QProcess::NotRunning) process_->terminate(); } catch (...) {}
     try { emit failed(tr(explanation)); } catch (...) {}
 }
 void CodexAgent::retire() {
     if (generation_ != std::numeric_limits<quint64>::max()) ++generation_;
-    failed_ = true; pending_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
+    failed_ = true; deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1; pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
     auto* process = process_; process_ = nullptr;
     if (!process) return;
     process->disconnect(this);
