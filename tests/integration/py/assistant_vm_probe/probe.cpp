@@ -252,7 +252,10 @@ int main(int argc,char** argv) {
                 for(const auto& experiment:value.experiments)calculations.push_back(Object{
                     {"name",QString::fromStdString(experiment->name.value())},
                     {"current",experiment->computed_current()},
-                    {"calculation_only",experiment->calculation_only}});
+                    {"calculation_only",experiment->calculation_only},
+                    {"peak_profile",QString::fromStdString(edi::effective_peak_type(*experiment))},
+                    {"wavelength",experiment->instrument.setup_wavelength
+                        ?QJsonValue(experiment->instrument.setup_wavelength->value.get()):QJsonValue()}});
                 science={{"structures",structures},{"aliases",aliases},{"constraints",constraints},
                     {"calculations",calculations},{"calculating",session->project()->calculating()}};
             }
@@ -347,6 +350,10 @@ int main(int argc,char** argv) {
                 {"stream_calls",static_cast<double>(edi::assistant::Limits::stream_calls)},
                 {"http_operations",static_cast<double>(edi::assistant::Limits::http_operations)}};
             result["native_context"]=vm->contextPreview();
+            Array cwl_profiles;
+            for(const auto& token:edi::supported_peak_profiles(edi::BeamModeEnum::CONSTANT_WAVELENGTH))
+                cwl_profiles.push_back(QString::fromStdString(token));
+            result["native_profile_catalog"]=Object{{"beam_mode","constant wavelength"},{"profiles",cwl_profiles}};
             const auto usage_index=vm->metaObject()->indexOfProperty("usage");
             result["usage_observer"]=Object{{"property_present",usage_index>=0},
                 {"refresh_present",vm->metaObject()->indexOfMethod("refreshUsage()")>=0},

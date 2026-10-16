@@ -3530,9 +3530,7 @@ def test_usage129_real_canvas_distinguishes_zero_missing_and_recovered_zero(gene
             and usage_value(value)['buckets'] == []
             and bool(usage_value(value).get('observedAt'))
             and any(
-                event['kind'] == 'usage-result-reply'
-                and event['number'] == 2
-                and event['empty']
+                event['kind'] == 'usage-result-reply' and event['number'] == 2 and event['empty']
                 for event in clear_control_events(trace)
             )
         ),
@@ -4161,8 +4159,7 @@ def assert_managed_file_retirement_after_terminal(actor, state):
     )
     retained = observed['retained_rows']
     assert any(
-        row.get('id') == actor.result_user_id and row.get('kind') == 'user'
-        for row in retained
+        row.get('id') == actor.result_user_id and row.get('kind') == 'user' for row in retained
     )
     assert any(
         row.get('kind') == 'assistant' and row.get('status') == 'completed' for row in retained
@@ -4452,6 +4449,235 @@ def native145_recipe():
     }
 
 
+@pytest.mark.parametrize('extension', ['.cif', '.edi'])
+def test_native159_genuine_dotted_cif_selected_creation_preserves_original_inputs(  # noqa: PLR0914, PLR0915 -- literal input, recipe and independent preservation witnesses
+    generic, tmp_path, extension
+):
+    original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
+    provenance = json.loads((original / 'provenance.json').read_text())
+    actor, trace = native_case(generic, [], connect_now=False)
+    assert actor.command('native_science_enable')['reply']['enabled'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    owned = []
+    for entry in provenance['inputs']:
+        data = (original / entry['path']).read_bytes()
+        assert len(data) == entry['bytes'], (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+        assert hashlib.sha256(data).hexdigest() == entry['sha256'], (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+        destination = tmp_path / (
+            'original-lbco' + extension if entry['path'] == 'lbco.cif' else entry['path']
+        )
+        destination.write_bytes(data)
+        owned.append(destination)
+    original_bytes = [path.read_bytes() for path in owned]
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert token, (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert actor.command('selected_add', request_id=token, urls=[p.as_uri() for p in owned])[
+        'reply'
+    ]['accepted'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    selected_state = settle(
+        actor, lambda value: len(value['selected_files']) == 2 and not value['can_cancel']
+    )
+    selected = {row['name']: row['id'] for row in selected_state['selected_files']}
+    metadata = provenance['experiment_metadata']
+    recipe = {
+        'project_name': 'Original LBCO HRPT inputs',
+        'description': 'Original DDLm and measured XYE; owner-specified wavelength, no fit claim',
+        'experiment_name': 'NPD',
+        'sample_form': 'powder',
+        'beam_mode': 'constant wavelength',
+        'radiation_probe': 'neutron',
+        'scattering_type': 'bragg',
+        'peak_profile': 'cwl-tch-pseudo-voigt',
+        'wavelength': 1.49,
+        'zero_offset': metadata['zero_offset_degrees'],
+        'phase_scale': metadata['phase_scale'],
+        'background': [
+            dict(zip(('position', 'intensity'), pair, strict=True))
+            for pair in metadata['background']
+        ],
+        'exclusions': [],
+        'initial_parameters': [
+            {'path': 'experiment.peak.' + key, 'value': value}
+            for key, value in metadata['profile_parameters'].items()
+        ],
+    }
+    native145_configure(
+        actor,
+        trace,
+        [
+            [
+                native_call(
+                    'create_cwl_project',
+                    cif_file_id=selected[owned[0].name],
+                    data_file_id=selected[owned[1].name],
+                    recipe=recipe,
+                )
+            ]
+        ],
+    )
+    before = actor.last['vm']
+    state, replies = native_send(actor, trace, 1)
+    assert replies[0]['response']['result']['success'], replies[0]['decoded']
+    state = settle(actor, lambda value: value['project_present'] and not value['can_cancel'])
+    assert state['connected'] and state['models'] == before['models'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert state['handoff']['account_label'] == before['handoff']['account_label'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert state['messages'] and not state['pending_plan'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    experiments = native_inputs(state)
+    assert len(experiments) == 1, (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    expected = [
+        [float(item) for item in line.split()]
+        for line in owned[1].read_text().splitlines()
+        if line.strip() and not line.startswith('#')
+    ]
+    assert len(expected) == provenance['measurement_rows'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    for key, index in [('axis', 0), ('intensity', 1), ('sigma', 2)]:
+        assert experiments[0][key] == [row[index] for row in expected], (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+    assert experiments[0]['weight'] == 1.0 and experiments[0]['exclusions'] == [], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    science = state['project']['science_observer']
+    assert len(science['structures']) == 1, (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    structure = science['structures'][0]
+    assert structure['space_group'] == 'P m -3 m', (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert experiments[0]['phases'] == [structure['id']], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    sites = {row['id']: row for row in structure['sites']}
+    assert set(sites) == {'La', 'Ba', 'Co', 'O'}, (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    for label, coordinates, occupancy in [
+        ('La', [0, 0, 0], 0.5),
+        ('Ba', [0, 0, 0], 0.5),
+        ('Co', [0.5, 0.5, 0.5], 1),
+        ('O', [0, 0.5, 0.5], 1),
+    ]:
+        assert sites[label]['type_symbol'] == label, (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+        assert sites[label]['fractional'] == coordinates, (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+        assert sites[label]['occupancy'] == occupancy, (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+        assert sites[label]['adp_type'] == 'Biso' and sites[label]['adp_iso'] == 0, (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+    for axis in 'abc':
+        assert native_parameter(state, 'structure.cell.length_' + axis)['value'] == 3.88, (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+    for angle in ('alpha', 'beta', 'gamma'):
+        assert native_parameter(state, 'structure.cell.angle_' + angle)['value'] == 90, (
+            'CIF159: preserve original input science, bytes and authenticated owner'
+        )
+    calculation = science['calculations']
+    assert len(calculation) == 1 and calculation[0]['peak_profile'] == recipe['peak_profile'], (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert calculation[0]['wavelength'] == 1.49, (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert [path.read_bytes() for path in owned] == original_bytes, (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+    assert not any(
+        row.get('method') in {'account/login/start', 'account/logout'} for row in records(trace)
+    ), (
+        'CIF159: preserve original input science, bytes and authenticated owner'
+    )
+
+
+def test_native159_advertised_profile_recipe_is_constructible_from_public_catalog(
+    generic, tmp_path
+):
+    actor, trace, arguments, owned = native145_selected(generic, tmp_path)
+    catalog = actor.last['vm']['native_profile_catalog']
+    assert catalog['beam_mode'] == 'constant wavelength', (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    profiles = catalog['profiles']
+    assert profiles and len(profiles) == len(set(profiles)), (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    assert all(isinstance(value, str) and value for value in profiles), (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    assert 'cwl-tch-pseudo-voigt' in profiles, (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    arguments['recipe']['peak_profile'] = next(
+        value for value in profiles if value == 'cwl-tch-pseudo-voigt'
+    )
+    original_bytes = [path.read_bytes() for path in owned]
+    native145_configure(actor, trace, [[native_call('create_cwl_project', **arguments)]])
+    thread = next(row['params'] for row in records(trace) if row.get('method') == 'thread/start')
+    tools = {tool['name']: tool for tool in thread['dynamicTools']}
+    assert set(tools) == {
+        'inspect_project',
+        'list_parameters',
+        'diagnostics',
+        'set_parameters',
+        'set_free',
+        'run_fit',
+        'create_cwl_project',
+    }, (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    recipe_schema = tools['create_cwl_project']['inputSchema']['properties']['recipe']
+    advertised = recipe_schema['properties']['peak_profile'].get('enum')
+    assert isinstance(advertised, list) and advertised, (
+        'PROFILE159: the actual advertised recipe exposes accepted canonical choices'
+    )
+    assert all(isinstance(value, str) and value for value in advertised), (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    assert len(advertised) == len(set(advertised)) and set(advertised) == set(profiles), (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    state, replies = native_send(actor, trace, 1)
+    assert replies[0]['response']['result']['success'], replies[0]['decoded']
+    state = native145_science_settled(actor)
+    assert state['connected'] and state['project_present'], (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    assert (
+        state['project']['science_observer']['calculations'][0]['peak_profile']
+        == (arguments['recipe']['peak_profile'])
+    ), (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+    assert [path.read_bytes() for path in owned] == original_bytes, (
+        'PROFILE159: expose the public CW catalog and construct its canonical recipe'
+    )
+
+
 def native145_selected(generic, tmp_path, *, project=None, bad_cif=False):
     actor, trace = native_case(generic, [], project=project, connect_now=False)
     assert actor.command('native_science_enable')['reply']['enabled']
@@ -4566,9 +4792,15 @@ def test_native145_real_selected_creation_preserves_structure_measured_inputs_an
         [
             [native_call('create_cwl_project', **arguments), native_call('inspect_project')],
             [
-                native_call('set_parameters', values=[{
-                    'path': 'structure.cell.length_a', 'value': 8.48 + 0.002,
-                }]),
+                native_call(
+                    'set_parameters',
+                    values=[
+                        {
+                            'path': 'structure.cell.length_a',
+                            'value': 8.48 + 0.002,
+                        }
+                    ],
+                ),
                 native_call('set_free', flags=[{'path': 'structure.cell.length_a', 'free': True}]),
             ],
         ],
@@ -4619,7 +4851,8 @@ def test_native145_real_selected_creation_preserves_structure_measured_inputs_an
         expected = native145_original_orbits(*coordinates)
         assert all(
             atom['occupancy'] == 1.0 and atom['u_iso'] == pytest.approx(0.01, abs=1e-12)
-            for atom in structure['expanded'] if atom['site_id'] == row['id']
+            for atom in structure['expanded']
+            if atom['site_id'] == row['id']
         )
         assert len(actual) == len(expected) == multiplicity
         for actual_position, expected_position in zip(actual, expected, strict=True):
@@ -4738,19 +4971,32 @@ def test_native145_creation_refusals_leave_owner_and_selected_originals_whole(
 
 def test_native145_created_project_runs_actual_fit_with_truthful_publication(generic, tmp_path):
     actor, trace, arguments, _owned = native145_selected(generic, tmp_path)
-    native145_configure(actor, trace, [
-        [native_call('create_cwl_project', **arguments), native_call('list_parameters')],
-        [native_call('set_free', flags=[{
-            'path': {'$original_parameter_suffix': '.scale'}, 'free': True,
-        }])],
-        [native_call('run_fit')],
-    ])
+    native145_configure(
+        actor,
+        trace,
+        [
+            [native_call('create_cwl_project', **arguments), native_call('list_parameters')],
+            [
+                native_call(
+                    'set_free',
+                    flags=[
+                        {
+                            'path': {'$original_parameter_suffix': '.scale'},
+                            'free': True,
+                        }
+                    ],
+                )
+            ],
+            [native_call('run_fit')],
+        ],
+    )
     state, replies = native_send(actor, trace, 2)
     assert all(row['response']['result']['success'] for row in replies)
     state = native145_science_settled(actor)
     before_inputs = native_inputs(state)
     scales = [
-        row for row in state['project']['parameters']
+        row
+        for row in state['project']['parameters']
         if row['path'].endswith('.scale') and row['independent'] and row['fittable']
     ]
     assert len(scales) == 1, 'CREATE/FIT SETUP: actual single phase has one independent scale'
@@ -4770,7 +5016,13 @@ def test_native145_created_project_runs_actual_fit_with_truthful_publication(gen
     state, replies = native_send(actor, trace, 4)
     outcome = replies[-1]['decoded']
     assert outcome['status'] in {
-        'done', 'max_iterations', 'no_step', 'cancelled', 'error', 'superseded', 'unavailable'
+        'done',
+        'max_iterations',
+        'no_step',
+        'cancelled',
+        'error',
+        'superseded',
+        'unavailable',
     }, 'CREATE/FIT: actual final worker report, not running=false, establishes outcome'
     report = state['project']['native_observer']
     assert not report['fit_running'] and report['record']['kind']
@@ -4785,8 +5037,12 @@ def test_native145_created_project_runs_actual_fit_with_truthful_publication(gen
     assert outcome['iterations'] == report['record']['iterations']
     # Existing public FitVM presentation keys differ from native wire status tokens.
     presentation = {
-        'done': 'success', 'max_iterations': 'maxIterations', 'no_step': 'noStep',
-        'cancelled': 'stopped', 'error': 'failed', 'superseded': 'superseded',
+        'done': 'success',
+        'max_iterations': 'maxIterations',
+        'no_step': 'noStep',
+        'cancelled': 'stopped',
+        'error': 'failed',
+        'superseded': 'superseded',
         'unavailable': 'failed',
     }
     assert report['fit_outcome'] == presentation[outcome['status']]
@@ -4902,15 +5158,24 @@ def assert_clear_projection156(state):
     )
 
 
-@pytest.mark.parametrize('signal', [
-    'rowsAboutToBeRemoved', 'rowsRemoved', 'countChanged',
-    'rowsAboutToBeInserted', 'rowsInserted', 'dataChanged',
-])
+@pytest.mark.parametrize(
+    'signal',
+    [
+        'rowsAboutToBeRemoved',
+        'rowsRemoved',
+        'countChanged',
+        'rowsAboutToBeInserted',
+        'rowsInserted',
+        'dataChanged',
+    ],
+)
 def test_clear156_real_message_notification_reentry_preserves_final_topology_and_owner(
     generic, signal
 ):
     actor, trace = native_case(
-        generic, [], project=ROOT / 'tests/fixtures/e04_t1/editable-project',
+        generic,
+        [],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project',
         script={'scenario': 'fileauth'},  # Genuine distinct successive turn/item identities.
     )
     actor.command(
@@ -4941,8 +5206,7 @@ def test_clear156_real_message_notification_reentry_preserves_final_topology_and
     state = settle(
         actor,
         lambda value: (
-            value.get('retirement_observer', {}).get('returned', False)
-            and not value['can_cancel']
+            value.get('retirement_observer', {}).get('returned', False) and not value['can_cancel']
         ),
     )
     observed = state['retirement_observer']

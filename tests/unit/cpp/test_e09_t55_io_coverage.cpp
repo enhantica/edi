@@ -1,5 +1,10 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <numbers>
+#include <sstream>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -914,5 +919,154 @@ TEST_CASE("GUI table readers generate legacy IDs and retain quoteable literal ID
         CHECK_MESSAGE((edi::excluded_region_ranges(literal.excluded_regions) ==
                        std::vector<std::pair<double, double>>{{25, 30}}),
                       "GUI table readers generate legacy IDs and retain quoteable literal IDs");
+    }
+}
+
+namespace {
+std::string ddlm159_original() {
+    return read_text(repo_root() / "tests/fixtures/assistant/reference/easydiffraction-ddlm/lbco.cif");
+}
+void replace159(std::string& text, const std::string& before, const std::string& after) {
+    const auto offset = text.find(before);
+    REQUIRE_MESSAGE(offset != std::string::npos, "CIF159 input: declared original token is present");
+    REQUIRE_MESSAGE(text.find(before, offset + before.size()) == std::string::npos,
+                    "CIF159 input: a derived control changes one original token only");
+    text.replace(offset, before.size(), after);
+}
+void lbco159_model(const edi::Structure& structure, double la_b) {
+    CHECK_MESSAGE(structure.name == "lbco", "CIF159: original data-block identity survives import");
+    CHECK_MESSAGE(structure.space_group.name_h_m == "P m -3 m",
+                  "CIF159: the original cubic symmetry setting is retained");
+    CHECK_MESSAGE(structure.space_group.coord_system_code == "1",
+                  "CIF159: the explicit original coordinate-system code survives");
+    const std::vector<double> lengths{structure.cell.length_a.value.get(),
+                                      structure.cell.length_b.value.get(),
+                                      structure.cell.length_c.value.get()};
+    for (const auto value : lengths)
+        CHECK_MESSAGE(value == doctest::Approx(3.88), "CIF159: literal cubic3.88A is not retuned");
+    CHECK_MESSAGE(structure.cell.angle_alpha.value.get() == 90.0 &&
+                  structure.cell.angle_beta.value.get() == 90.0 &&
+                  structure.cell.angle_gamma.value.get() == 90.0,
+                  "CIF159: all original right angles are retained");
+    const std::vector<std::string> labels{"La", "Ba", "Co", "O"};
+    const std::vector<std::array<double, 3>> positions{{0., 0., 0.}, {0., 0., 0.},
+                                                     {.5, .5, .5}, {0., .5, .5}};
+    const std::vector<double> populations{.5, .5, 1., 1.};
+    REQUIRE_MESSAGE(structure.atom_sites.size() == labels.size(),
+                    "CIF159: distinct partially occupied La/Ba rows are never merged or dropped");
+    for (std::size_t i = 0; i < labels.size(); ++i) {
+        const auto& site = *structure.atom_sites[i];
+        CHECK_MESSAGE(site.id == labels[i] && site.type_symbol == labels[i],
+                      "CIF159: original label, order and scattering species survive");
+        CHECK_MESSAGE(site.fract_x.value.get() == positions[i][0] &&
+                      site.fract_y.value.get() == positions[i][1] &&
+                      site.fract_z.value.get() == positions[i][2],
+                      "CIF159: actual original site geometry is preserved");
+        CHECK_MESSAGE(site.occupancy.value.get() == populations[i],
+                      "CIF159: original La/Ba half populations and full Co/O survive");
+        CHECK_MESSAGE(site.adp_type == "Biso" &&
+                      site.adp_iso.value.get() == doctest::Approx(i == 0 ? la_b : 0.0),
+                      "CIF159: declared Biso units and literal/derived values survive");
+    }
+    const auto geometry = edi::structure_geometry(structure);
+    const auto& atoms = geometry.expanded_atom_sites;
+    REQUIRE_MESSAGE(atoms.size() == 6,
+                    "CIF159: Pm-3m gives La1/Ba1/Co1/O3 species contributions before occupancy");
+    std::vector<std::array<double, 3>> oxygen;
+    for (std::size_t i = 0; i < atoms.size(); ++i) {
+        const auto found = std::find(labels.begin(), labels.end(), atoms.atom_site_id[i]);
+        REQUIRE_MESSAGE(found != labels.end(), "CIF159: every physical atom belongs to an original row");
+        const auto index = static_cast<std::size_t>(found - labels.begin());
+        CHECK_MESSAGE(atoms.occupancy[i] == populations[index],
+                      "CIF159: expansion preserves mixed-species occupancy, not an averaged species");
+        const double b = index == 0 ? la_b : 0.0;
+        CHECK_MESSAGE(atoms.u_iso[i] == doctest::Approx(b / (8.0 * std::numbers::pi * std::numbers::pi)),
+                      "CIF159: independent B=8*pi^2*U conversion is nontrivial for the derived La control");
+        if (index == 3) oxygen.push_back({atoms.fract_x[i], atoms.fract_y[i], atoms.fract_z[i]});
+        else {
+            CHECK_MESSAGE(atoms.fract_x[i] == doctest::Approx(positions[index][0]) &&
+                          atoms.fract_y[i] == doctest::Approx(positions[index][1]) &&
+                          atoms.fract_z[i] == doctest::Approx(positions[index][2]),
+                          "CIF159: cubic origin/body-centre orbits are physically unchanged");
+        }
+    }
+    std::sort(oxygen.begin(), oxygen.end());
+    const std::vector<std::array<double, 3>> faces{{0., .5, .5}, {.5, 0., .5}, {.5, .5, 0.}};
+    REQUIRE_MESSAGE(oxygen.size() == faces.size(), "CIF159: oxygen's face-centre orbit has multiplicity3");
+    for (std::size_t i = 0; i < faces.size(); ++i)
+        for (std::size_t axis = 0; axis < 3; ++axis)
+            CHECK_MESSAGE(oxygen[i][axis] == doctest::Approx(faces[i][axis]),
+                          "CIF159: oxygen positions are the closed-form cubic face centres");
+}
+}  // namespace
+
+TEST_CASE("E11-T5 CIF159 genuine DDLm aliases preserve the original mixed-occupancy crystal") {
+    auto text = ddlm159_original();
+    double la_b = 0.0;
+    SUBCASE("original487-byte DDLm input") {}
+    SUBCASE("classic dictionary aliases of the same original input") {
+        for (const auto& [dot, classic] : std::vector<std::pair<std::string, std::string>>{
+                 {"_cell.", "_cell_"}, {"_space_group.", "_space_group_"},
+                 {"_atom_site.", "_atom_site_"}}) {
+            std::size_t offset = 0;
+            while ((offset = text.find(dot, offset)) != std::string::npos) {
+                text.replace(offset, dot.size(), classic); offset += classic.size();
+            }
+        }
+    }
+    SUBCASE("CIF data names are case insensitive, values are untouched") {
+        std::istringstream lines(text); std::string line; text.clear();
+        while (std::getline(lines, line)) {
+            const auto first = line.find_first_not_of(" \t");
+            if (first != std::string::npos && line[first] == '_')
+                for (auto i = first; i < line.size() && !std::isspace(static_cast<unsigned char>(line[i])); ++i)
+                    line[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(line[i])));
+            text += line + '\n';
+        }
+    }
+    SUBCASE("dictionary aliases can coexist across different items") {
+        replace159(text, "_cell.length_a", "_cell_length_a");
+        replace159(text, "_atom_site.fract_y", "_atom_site_fract_y");
+    }
+    SUBCASE("comments and quoted values do not declare an Edi schema") {
+        text = "# _edi.schema_version 999 is a comment\n" + text +
+               "\n_chemical_name_common '_edi.schema_version is ordinary data'\n";
+    }
+    SUBCASE("derived nonzero Biso exercises its actual unit conversion") {
+        replace159(text, "La La 0 0 0 0.5 Biso 0.0", "La La 0 0 0 0.5 Biso 1.25");
+        la_b = 1.25;
+    }
+    lbco159_model(edi::structure_from_edi_text(text), la_b);
+}
+
+TEST_CASE("E11-T5 CIF159 contradictory aliases and malformed raw structures fail closed") {
+    auto text = ddlm159_original();
+    SUBCASE("conflicting classic cell alias") { text += "\n_cell_length_a 4.12\n"; }
+    SUBCASE("conflicting classic space-group alias") { text += "\n_symmetry_space_group_name_H-M 'P 1'\n"; }
+    SUBCASE("case-folded duplicate data name") { text += "\n_CELL.LENGTH_A 4.12\n"; }
+    SUBCASE("missing required coordinate column") { replace159(text, "_atom_site.fract_z", "_atom_site.original_unknown_z"); }
+    SUBCASE("nonfinite cell input") { replace159(text, "_cell.length_a 3.88", "_cell.length_a nan"); }
+    bool refused = false;
+    try { (void)edi::structure_from_edi_text(text); }
+    catch (const edi::IoError&) { refused = true; }
+    CHECK_MESSAGE(refused, "CIF159: ambiguity or invalid required physics cannot silently choose a vocabulary/value");
+}
+
+TEST_CASE("E11-T5 CIF159 standard native Edi remains schema strict and cannot fall back to raw CIF") {
+    auto native = read_text(repo_root() / "tests/fixtures/c11_t4_cw_selection/structure.edi");
+    SUBCASE("original schema-native positive control") {
+        const auto structure = edi::structure_from_edi_text(native);
+        CHECK_MESSAGE(structure.name == "ncaf" && structure.atom_sites.size() == 6,
+                      "CIF159: existing schema-native structure remains a real positive control");
+    }
+    SUBCASE("missing native schema is not accepted as a raw dotted CIF") {
+        replace159(native, "_edi.schema_version 2", "# deliberately absent native schema");
+        check_io_error([&] { (void)edi::structure_from_edi_text(native); }, "_edi.schema_version",
+                       "CIF159: native-only fields keep the established version requirement");
+    }
+    SUBCASE("explicit unsupported schema forbids raw-input downgrade") {
+        const auto text = ddlm159_original() + "\n_edi.schema_version 999\n";
+        check_io_error([&] { (void)edi::structure_from_edi_text(text); }, "_edi.schema_version",
+                       "CIF159: an explicit native schema declaration is authoritative even on shared cell names");
     }
 }
