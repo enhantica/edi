@@ -486,7 +486,8 @@ int main(int argc,char** argv) {
                 if(unique_name.empty())throw std::runtime_error("original parameter has no actual refinable unique name");
                 const bool before=parameter->free.get();
                 const auto change=edi::Edit::set_free(*live,{{unique_name,!before}});
-                result={{"error",owner->applyRecordedFreeFlags(change,{{unique_name,before}})}};
+                const auto outcome=owner->applyRecordedEdit(change,false);
+                result={{"error",outcome.message}};
             }
             else if(codex_mode && op=="publication_scan_start") {
                 if(!session->project())throw std::runtime_error("real scan project required");
