@@ -17,18 +17,31 @@ def popup_receipt(tmp_path_factory):
         os.environ.get('EDI_ASSISTANT_POPUP_CAPTURE_DIR', tmp_path_factory.mktemp('popup'))
     )
     captures.mkdir(parents=True, exist_ok=True)
-    return subprocess.run(
-        [
-            str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
-            '-o', '-,txt',
-        ],
-        cwd=captures,
-        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
-        capture_output=True,
-        text=True,
-        timeout=90,  # Prior whole-actor operational allowance; Qt assertions stay bounded.
-        check=False,
-    )
+    try:
+        return subprocess.run(
+            [
+                str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+                '-o', '-,txt',
+            ],
+            cwd=captures,
+            env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
+            capture_output=True,
+            text=True,
+            timeout=90,  # Prior whole-actor operational allowance; Qt assertions stay bounded.
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        # subprocess may retain bytes even with text=True. Keep raw evidence and
+        # expose it in the unchanged timeout failure; never turn timeout into pass.
+        for stream in ('stdout', 'stderr'):
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            destination = captures / ('popup-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(
+                str(destination) + '\n' + raw.decode('utf-8', errors='backslashreplace')
+            )
+        raise
 
 
 @pytest.mark.parametrize(

@@ -242,9 +242,14 @@ def test_receipt_without_successful_retained_completion_cannot_adopt(result_fact
 def test_invalid_or_unclosed_result_never_replaces_empty_owner(result_factory, variant):
     actor, trace = result_factory(variant)
     start(actor, trace)
-    state = old.settle(actor, lambda value: not value['can_cancel'])
-    actor.command('inspect')
-    assert not actor.last['vm']['project_present'], (
+    state = old.settle(actor, lambda value: value['project_present'] or bool(
+        value['handoff']['last_error'] or value['last_error']
+    ))
+    assert any(row.get('kind') == 'assistant' and row.get('status') == 'completed'
+               and row.get('text') == 'Original offline reply' for row in state['messages']), (
+        'H2 SETUP: retained successful original precedes the actual app adoption/refusal outcome'
+    )
+    assert not state['project_present'], (
         'H2: identity/hash/closure/link/represented-entry refusal preserves the empty Session'
     )
     assert state['handoff']['last_error'] or state['last_error'], (
