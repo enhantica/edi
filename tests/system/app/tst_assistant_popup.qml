@@ -1170,8 +1170,66 @@ TestCase {
                 mouseClick(stop);
             }
             if (data.tag !== "close-owner") {
-                tryVerify(() => visible185_outcome(call) !== null && !assistant.canCancel && !assistant.showingActions,
-                    10000, "VA: actual original native outcome settles after its own input/worker owner");
+                try {
+                    tryVerify(() => visible185_outcome(call) !== null && !assistant.canCancel && !assistant.showingActions,
+                        10000, "VA: actual original native outcome settles after its own input/worker owner");
+                } finally {
+                    try {
+                        function controlFact(control) {
+                            if (!control) return null;
+                            try {
+                                const ancestors = [];
+                                for (let parent = control.parent; parent; parent = parent.parent)
+                                    ancestors.push({identity: String(parent), name: parent.objectName,
+                                        visible: parent.visible, enabled: parent.enabled, clip: parent.clip, rect: rect(parent)});
+                                return {identity: String(control), name: control.objectName,
+                                    visible: control.visible, enabled: control.enabled,
+                                    activeFocus: control.activeFocus, clip: control.clip, rect: rect(control),
+                                    clickPoint: Ui.clickPoint(control), rendered: Ui.rendered(control),
+                                    text: typeof control.text === "string" ? control.text : null,
+                                    checked: typeof control.checked === "boolean" ? control.checked : null,
+                                    targetItem: control.item === la, ancestors: ancestors};
+                            } catch (error) { return {observationError: String(error)}; }
+                        }
+                        const page = Ui.page(window);
+                        const table = Ui.control(Probe, window, "parameters.list");
+                        const group = Ui.control(Probe, window, "group.parameters");
+                        const filter = table ? table.sourceModel : null;
+                        const outcome = visible185_outcome(call);
+                        const visual = Ui.itemsWithProperty(page, "item").filter(control => control.item === la);
+                        const owned = Probe.objectsWithProperty(window, "item").filter(control => control.item === la);
+                        const nativeRows = Probe.rows(assistant.messages).filter(row => row.payload
+                            && [call, "visible185-value-" + data.tag, "visible185-read-" + data.tag].includes(row.payload.id));
+                        console.log("VISIBLE197_OUTCOME", data.tag, JSON.stringify({
+                            outcome: outcome, outcomePresent: outcome !== null,
+                            canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                            state: assistant.state, lastError: assistant.lastError,
+                            pageIndex: window.appBarCentralTabs.currentIndex, pageIdentity: String(page),
+                            showActions: assistant.showActions, manualTakeover: window.assistantManualTakeover,
+                            requested: Preferences.assistantShown, popupShown: popup.shown,
+                            popupVisible: popup.visible, popupOpened: popup.opened,
+                            focus: controlFact(window.activeFocusItem), field: controlFact(field), free: controlFact(free),
+                            nameFilter: controlFact(Ui.control(Probe, window, "parameters.nameFilter")),
+                            category: controlFact(Ui.control(Probe, window, "parameters.category")),
+                            variability: controlFact(Ui.control(Probe, window, "parameters.variability")),
+                            modelFilters: filter ? {name: filter.nameFilter, category: filter.categoryFilter,
+                                variability: filter.variability, targetRow: filter.rowOf(la), targetShown: filter.shows(la)} : null,
+                            selected: group ? {row: group.selectedRow,
+                                path: group.selected ? group.selected.path : null, target: group.selected === la} : null,
+                            visualMatches: visual.map(controlFact), ownedMatches: owned.map(controlFact),
+                            target: {path: la.path, value: la.value, free: la.free},
+                            typed: typed, toggled: toggled, spellings: spellings, writes: writes,
+                            currentOwner: Session.project === project, projectPresent: Session.hasProject,
+                            connected: assistant.connected, connectionLabel: assistant.connectionLabel,
+                            models: Probe.rows(assistant.models).map(row => row.id),
+                            nativeRows: nativeRows.map(row => ({id: row.id, status: row.status, text: row.text,
+                                payload: {id: row.payload.id, type: row.payload.type, tool: row.payload.tool,
+                                    namespace: row.payload.namespace, arguments: row.payload.arguments,
+                                    status: row.payload.status, success: row.payload.success,
+                                    error: row.payload.error, nativeOutcome: row.payload.nativeOutcome}}))
+                        }));
+                    } catch (error) { console.log("VISIBLE197_OUTCOME_DIAGNOSTIC_ERROR", data.tag, String(error)); }
+                }
                 const outcome = visible185_outcome(call);
                 if (data.tag.startsWith("dirty-")) {
                     verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
