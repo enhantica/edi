@@ -9,9 +9,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+from datetime import UTC, datetime
 from operator import itemgetter
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -2287,7 +2289,8 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'run_fit',
         'create_cwl_project',
         'add_relations',
-    }, 'NATIVE: this declared affine increment advertises exactly eight wired capabilities'
+        'save_project',
+    }, 'NATIVE: this declared save increment advertises exactly nine wired capabilities'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
         'NATIVE: registered reads use original rpc and retained purpose'
@@ -4649,6 +4652,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'run_fit',
         'create_cwl_project',
         'add_relations',
+        'save_project',
     }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
@@ -5108,7 +5112,8 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'run_fit',
         'create_cwl_project',
         'add_relations',
-    }, 'BOOTSTRAP: native affine stage truthfully advertises exactly eight implemented tools'
+        'save_project',
+    }, 'BOOTSTRAP: native save stage truthfully advertises exactly nine implemented tools'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
         'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
@@ -5730,7 +5735,8 @@ def signin206_shipped(state, trace):
     assert {tool['name'] for tool in thread['params']['dynamicTools']} == {
         'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
         'run_fit', 'create_cwl_project', 'add_relations',
-    }, 'SIGNIN206: discovery errors cannot silently expand or trim the real eight-tool stage'
+        'save_project',
+    }, 'SIGNIN206: discovery errors cannot silently expand or trim the real nine-tool save stage'
 
 
 @pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
@@ -6025,10 +6031,11 @@ def test_roots207_real_chosen_grant_remains_required_with_implicit_workspace(
     assert completed['reply']['invoked'] and completed['reply']['accepted'], (
         'ROOTS207 SETUP: genuine local callback, not chat text, grants this selected path'
     )
-    folder167_preserved(before, completed['vm'], trace)
-    native145_approve(actor)
-    text = 'Original current input requiring the actual selected grant'
-    actor.command('send_text', text=text)
+    if variant == 'chosen-only':
+        folder167_preserved(before, completed['vm'], trace)
+        native145_approve(actor)
+        text = 'Original current input requiring the actual selected grant'
+        actor.command('send_text', text=text)
     state = settle(actor, lambda value: bool(value['last_error']) or (
         not value['can_cancel'] and len(started_requests(trace)) == 2
         and any(row.get('text') == 'Original fileauth reply 2' for row in value['messages'])
@@ -6090,3 +6097,419 @@ def test_roots207_real_chosen_grant_remains_required_with_implicit_workspace(
                    for row in records(trace)), (
         'ROOTS207: grant validation cannot add account/login/logout repair traffic'
     )
+
+
+# SAVE211: existing native RPC + real Session loader/writer only. Expected numeric
+# persistence follows the ordinary Save As control, including its IUCr rounding;
+# no fitted optimum, candidate-generated golden or private save helper is used.
+def save211_files(directory):
+    assert directory.is_dir() and not directory.is_symlink(), (
+        'SAVE: original scientific tree is a real owned directory'
+    )
+    paths = sorted(path for path in directory.rglob('*') if path.is_file())
+    assert not any(path.is_symlink() for path in directory.rglob('*')), (
+        'SAVE: native output cannot conceal an untrusted linked descendant'
+    )
+    return {str(path.relative_to(directory)): path.read_bytes() for path in paths}
+
+
+def save211_owner(generic, tmp_path, turns):
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    fixture = tmp_path / 'Original scientific input'
+    shutil.copytree(source, fixture)
+    analysis = fixture / 'analysis/analysis.edi'
+    # Derived input: explicit user-declared occupancy and a disabled unrelated
+    # declaration, consistent with original Co2SiO4 O1 occupancy=1/Biso=.5.
+    analysis.write_text(analysis.read_text().replace('_edi.schema_version 2',
+                                                  '_edi.schema_version 3') + (
+        '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+        'original_o1_occupancy cosio.atom_site.O1.occupancy\n'
+        'original_co1_biso cosio.atom_site.Co1.adp_iso\n'
+        'loop_\n_constraint.id\n_constraint.expression\n_constraint.enabled\n'
+        'original_oxygen_full "original_o1_occupancy = 1" true\n'
+        'original_inactive_co "original_co1_biso = 0.5" false\n'
+    ))
+    actor, trace = native_case(generic, [], project=fixture, connect_now=False)
+    assert actor.command('native_science_enable')['reply']['enabled'], (
+        'SAVE SETUP: existing actual model/relations observer is enabled'
+    )
+    native145_configure(actor, trace, turns)
+    state = native145_science_settled(actor)
+    science = state['project']['science_observer']
+    assert {row['id'] for row in science['constraints']} == {
+        'original_oxygen_full', 'original_inactive_co',
+    }, 'SAVE SETUP: real loader admits both original enabled/disabled declarations'
+    owned = Path(state['project']['host_snapshot']['path'])
+    return actor, trace, owned
+
+
+def save211_grant(actor, trace, parent):
+    parent.mkdir()
+    sentinel = parent / 'Original user bytes.txt'
+    sentinel.write_bytes(b'Original data is never overwrite authorization\n')
+    before = actor.last['vm']
+    intent = actor.command('working_folder_begin')['reply']
+    assert intent['invoked'] and intent['intent'], (
+        'SAVE SETUP: actual current native folder picker mints its own intent'
+    )
+    completed = actor.command('working_folder_complete', intent=intent['intent'],
+                              directory=str(parent))
+    assert completed['reply']['invoked'] and completed['reply']['accepted'], (
+        'SAVE SETUP: actual local callback grants the selected physical parent'
+    )
+    state = settle(actor, lambda value: value['connected'] and not value['can_cancel'])
+    folder167_preserved(before, state, trace)
+    assert state['folder_observer']['value'] == str(parent.resolve()), (
+        'SAVE SETUP: genuine selected directory, never a model-supplied path grant'
+    )
+    native145_approve(actor)
+    return sentinel
+
+
+def save211_send(actor, trace, count, name):
+    actor.command('send_text', text=(
+        'Save my current displayed project under the working folder I selected. '
+        'Use this fresh child-directory name: ' + name
+    ))
+    state = settle(actor, lambda value: (
+        len(native_records(trace, '.native-replies.jsonl')) >= count
+        or bool(value['last_error']) or not value['connected']
+    ))
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(replies) == count and not native_records(trace, '.native-wrong-envelope.jsonl'), (
+        'SAVE: each explicitly requested native operation answers its original RPC exactly once'
+    )
+    for reply in replies:
+        assert reply['response']['id'] == reply['original']['id'] and (
+            reply['response']['id'] != reply['original']['params']['callId']
+        ), 'SAVE: original JSON-RPC identity is preserved, never replaced by a call ID'
+        result = reply['response'].get('result')
+        assert isinstance(result, dict) and type(result.get('success')) is bool, (
+            'SAVE: original reverse response retains its real success/failure type'
+        )
+        contents = result.get('contentItems')
+        assert isinstance(contents, list) and len(contents) == 1 and (
+            contents[0]['type'] == 'inputText' and isinstance(contents[0]['text'], str)
+        ), 'SAVE: original native outcome uses the existing official text-content envelope'
+        reply['decoded'] = json.loads(contents[0]['text'])
+    return state, replies
+
+
+def save211_settled(actor):
+    state = native145_science_settled(actor)
+    assert state['connected'] and not state['can_cancel'], (
+        'SAVE: genuine account and original operation have settled'
+    )
+    return state
+
+
+def save211_compare_model(expected, actual):
+    assert actual['project']['parameters'] == expected['project']['parameters'], (
+        'SAVE: every value/free/SU follows ordinary native save/readback rounding'
+    )
+    assert native_inputs(actual) == native_inputs(expected), (
+        'SAVE: all measured coordinates/intensities/sigmas/exclusions/weights/phase links survive'
+    )
+    assert actual['project']['mode'] == expected['project']['mode'], (
+        'SAVE: actual single/joint objective mode is preserved'
+    )
+    old, new = (value['project']['science_observer'] for value in (expected, actual))
+    assert new['aliases'] == old['aliases'] and new['constraints'] == old['constraints'], (
+        'SAVE: complete alias/expression/enabled declarations survive native readback'
+    )
+    assert new['structures'] == old['structures'] and new['calculations'] == old['calculations'], (
+        'SAVE: physical sites/occupancy/geometry and applicable calculated model survive'
+    )
+    assert actual['project']['native_observer']['record'] == (
+        expected['project']['native_observer']['record']
+    ), 'SAVE: real final fit status/iterations/success/statistics survive normal serialization'
+    assert actual['project']['native_observer']['fit_can_undo'] == (
+        expected['project']['native_observer']['fit_can_undo']
+    ), 'SAVE: persisted normal fit recovery availability is not discarded'
+
+
+def test_save211_fitted_current_project_uses_native_writer_and_real_reopen(  # noqa: PLR0914, PLR0915 -- finite real fit/writer/reopen facts
+    generic, tmp_path
+):
+    leaf = 'Original fitted project'
+    actor, trace, source = save211_owner(generic, tmp_path, [
+        [native_call('run_fit')], [native_call('save_project', name=leaf)],
+    ])
+    parent = tmp_path / 'Original selected save parent'
+    sentinel = save211_grant(actor, trace, parent)
+    before_fit = actor.last['vm']
+    assert before_fit['project']['native_observer']['fit_available'], (
+        'SAVE SETUP: actual linked fit backend, never a replayed/fake worker'
+    )
+    _state, replies = native_send(actor, trace, 1)
+    outcome = replies[0]['decoded']
+    fitted = save211_settled(actor)
+    assert outcome['status'] in {'done', 'max_iterations'} and outcome['adopted'], (
+        'SAVE SETUP: a genuine adopted worker result precedes saving'
+    )
+    assert outcome['iterations'] > 0 and fitted['project']['parameters'] != (
+        before_fit['project']['parameters']
+    ), 'SAVE SETUP: actual moving fit, not no-step/unavailable/cached state'
+    assert any(row['uncertainty'] is not None and row['uncertainty'] > 0
+               for row in fitted['project']['parameters']), (
+        'SAVE SETUP: actual nonzero fitted SUs must exercise native persistence'
+    )
+    assert fitted['project']['native_observer']['record']['kind'] and (
+        fitted['project']['native_observer']['fit_results']
+    ), 'SAVE SETUP: real fit report/results are published before saving'
+    assert native_inputs(fitted) == native_inputs(before_fit), (
+        'SAVE: fitting cannot replace original measured observations or objective weights'
+    )
+    chi_square = fitted['project']['native_observer']['record']['reduced_chi_square']
+    assert type(chi_square) in {int, float} and (
+        float('-inf') < chi_square < float('inf')
+    ), 'SAVE SETUP: actual published fit statistic is finite, never invented success'
+    # Existing ordinary native Save As supplies the pre-existing serialization
+    # contract, not an unrounded-bit oracle for fitted values/SUs.
+    control = tmp_path / 'Original ordinary Save As control'
+    control.mkdir()
+    intent = actor.command('save_as_begin')['reply']
+    assert intent['invoked'] and intent['intent'], (
+        'SAVE SETUP: existing ordinary Session Save As captures the settled fitted model'
+    )
+    manual = actor.command('save_as_complete', intent=intent['intent'],
+                           parent=str(control), leaf='')
+    assert manual['reply']['invoked'] and manual['reply']['accepted'], (
+        'SAVE SETUP: genuine ordinary native writer establishes its SU-rounding control'
+    )
+    ordinary = save211_settled(actor)
+    assert native_inputs(ordinary) == native_inputs(fitted), (
+        'SAVE CONTROL: ordinary serialization preserves original measured columns and weights'
+    )
+    for key in ('kind', 'exit_reason', 'success', 'iterations'):
+        assert ordinary['project']['native_observer']['record'][key] == (
+            fitted['project']['native_observer']['record'][key]
+        ), 'SAVE CONTROL: ordinary saving retains the genuine final fit identity'
+    input_files, control_files = save211_files(source), save211_files(control)
+    native145_approve(actor)
+    _state, replies = save211_send(actor, trace, 2, leaf)
+    saved = save211_settled(actor)
+    result = replies[-1]['decoded']
+    destination = parent / leaf
+    assert replies[-1]['response']['result']['success'] and result['status'] == 'succeeded', (
+        'SAVE: successful original native RPC truthfully reports the completed save'
+    )
+    assert all(result.get(key) is True for key in ('committed', 'reopened', 'active')), (
+        'SAVE: success requires actual disk commit, verified reopen and displayed active adoption'
+    )
+    assert Path(result['destination']).resolve() == destination.resolve(), (
+        'SAVE: destination is exactly the fresh basename under the genuine chosen grant'
+    )
+    assert Path(saved['project']['host_snapshot']['path']).resolve() == destination.resolve(), (
+        'SAVE: displayed project acquires the verified saved path, not a copy-only claim'
+    )
+    assert not saved['project']['host_snapshot']['modified'] and not (
+        saved['handoff']['needs_save_as']
+    ), 'SAVE: displayed current project becomes normally saved/unmodified'
+    assert saved['connected'] and saved['handoff']['account_label'] == (
+        fitted['handoff']['account_label']
+    ), 'SAVE: native saving preserves genuine managed authentication'
+    assert saved['models'] == fitted['models'] and (
+        saved['selected_model'], saved['selected_effort']
+    ) == (fitted['selected_model'], fitted['selected_effort']), (
+        'SAVE: native saving retains original model catalog and explicit choices'
+    )
+    assert all(row in saved['messages'] for row in fitted['messages']), (
+        'SAVE: real fitted-project saving cannot discard the originating retained conversation'
+    )
+    assert save211_files(source) == input_files and save211_files(control) == control_files, (
+        'SAVE: native save never rewrites original source or the ordinary control'
+    )
+    assert sentinel.read_bytes() == b'Original data is never overwrite authorization\n', (
+        'SAVE: unrelated user bytes remain exact after native publication'
+    )
+    assert sorted(path.name for path in parent.iterdir()) == [leaf, sentinel.name], (
+        'SAVE: fresh publication leaves only the requested child and original user file'
+    )
+    saved_files = save211_files(destination)
+    assert save212_ordinary_bytes({
+        name: data for name, data in saved_files.items() if name.endswith('.edi')
+    }) == save212_ordinary_bytes({
+        name: data for name, data in control_files.items() if name.endswith('.edi')
+    }), 'SAVE: same ordinary native science/fit bytes differ only by valid last-modified timestamp'
+    loader, _ = generic('fileauth')
+    assert loader.command('native_science_enable')['reply']['enabled'], (
+        'SAVE: second real Session exposes existing structural readback'
+    )
+    assert loader.command('open', path=str(control))['reply']['opened'], (
+        'SAVE CONTROL: independent real Session loader reads the ordinary native tree'
+    )
+    expected = native145_science_settled(loader)
+    assert loader.command('open', path=str(destination))['reply']['opened'], (
+        'SAVE: a second genuine Session independently reopens committed native files'
+    )
+    reopened = native145_science_settled(loader)
+    save211_compare_model(expected, reopened)
+    save211_compare_model(expected, saved)
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), 'SAVE: saving never repairs account by login/logout'
+
+
+@pytest.mark.parametrize('accident', [
+    'no-grant', 'existing-directory', 'existing-file', 'existing-symlink',
+    'parent-traversal', 'nested-path', 'absolute-path',
+])
+def test_save211_refusal_preserves_current_owner_original_inputs_and_user_bytes(  # noqa: PLR0914 -- finite original refusal state
+    generic, tmp_path, accident
+):
+    parent = tmp_path / 'Original selected save parent'
+    outside = tmp_path / 'Original outside scope'
+    outside.mkdir()
+    outside_file = outside / 'Original owner bytes'
+    outside_file.write_bytes(b'Independent original outside bytes\n')
+    leaf = 'Original save target'
+    names = {'parent-traversal': '../Original outside scope/escaped',
+             'nested-path': 'nested/child', 'absolute-path': str(outside / 'escaped')}
+    requested = names.get(accident, leaf)
+    actor, trace, source = save211_owner(generic, tmp_path, [
+        [native_call('save_project', name=requested)],
+    ])
+    if accident != 'no-grant':
+        save211_grant(actor, trace, parent)
+    else:
+        parent.mkdir()
+        assert isinstance(actor.last['vm']['folder_observer']['value'], str) and not (
+            actor.last['vm']['folder_observer']['value']
+        ), (
+            'SAVE SETUP: chat name/input cannot substitute for a real selected grant'
+        )
+    target = parent / leaf
+    if accident == 'existing-directory':
+        target.mkdir()
+        (target / 'Original collision bytes').write_bytes(b'Original directory collision\n')
+    elif accident == 'existing-file':
+        target.write_bytes(b'Original file collision\n')
+    elif accident == 'existing-symlink':
+        target.symlink_to(outside, target_is_directory=True)
+    original_files = save211_files(source)
+    outside_bytes = save211_files(outside)
+    parent_entries = sorted(path.name for path in parent.iterdir())
+    before = actor.last['vm']
+    native145_approve(actor)
+    state, replies = save211_send(actor, trace, 1, requested)
+    result = replies[0]['decoded']
+    assert not replies[0]['response']['result']['success'] and (
+        isinstance(result.get('status'), str) and result['status']
+        and result['status'] != 'succeeded'
+    ), (
+        'SAVE: absent grant/collision/path escape refuses on the original RPC before success'
+    )
+    assert not any(result.get(key) for key in ('committed', 'reopened', 'active')), (
+        'SAVE: before-commit refusal cannot manufacture disk/reopen/adoption facts'
+    )
+    assert isinstance(result.get('message'), str) and result['message'], (
+        'SAVE: refused original request retains an honest human-readable outcome'
+    )
+    assert state['project'] == before['project'], (
+        'SAVE: rejected save preserves actual current values/free/SUs/relations/fit/path/modified'
+    )
+    assert state['connected'] and state['handoff']['account_label'] == (
+        before['handoff']['account_label']
+    ), 'SAVE: before-write save refusal preserves genuine account ownership'
+    assert state['models'] == before['models'], (
+        'SAVE: refused native save retains the original real model catalog'
+    )
+    assert all(row in state['messages'] for row in before['messages']), (
+        'SAVE: before-write refusal retains the original conversation'
+    )
+    assert save211_files(source) == original_files and save211_files(outside) == outside_bytes, (
+        'SAVE: failed native save cannot rewrite original input or external user bytes'
+    )
+    assert sorted(path.name for path in parent.iterdir()) == parent_entries, (
+        'SAVE: refused publication leaves no additional staged or partially saved child'
+    )
+    if accident == 'existing-directory':
+        assert (target / 'Original collision bytes').read_bytes() == (
+            b'Original directory collision\n'
+        ), 'SAVE: occupied directory bytes remain exact on refusal'
+    elif accident == 'existing-file':
+        assert target.read_bytes() == b'Original file collision\n', (
+            'SAVE: occupied file bytes remain exact on refusal'
+        )
+    elif accident == 'existing-symlink':
+        assert target.is_symlink() and target.resolve() == outside.resolve(), (
+            'SAVE: collision with an existing link neither follows nor replaces the user entry'
+        )
+    else:
+        assert not target.exists() and not (outside / 'escaped').exists(), (
+            'SAVE: absent grant or invalid basename cannot publish inside or outside scope'
+        )
+
+
+def test_save211_first_native_save_clears_real_current_modified_state(
+    generic, tmp_path
+):
+    leaf = 'Original first native save'
+    actor, trace, source = save211_owner(generic, tmp_path, [
+        [native_call('save_project', name=leaf)],
+    ])
+    parent = tmp_path / 'Original first-save chosen parent'
+    save211_grant(actor, trace, parent)
+    original = native_parameter(actor.last['vm'])
+    requested = original['value'] + 0.01  # Explicit finite test edit, no fit/optimum oracle.
+    changed = actor.command('manual_value', path=original['path'], value=requested)
+    assert not changed['reply']['error'], (
+        'SAVE SETUP: real ordinary edit changes the current model'
+    )
+    before = save211_settled(actor)
+    assert before['project']['host_snapshot']['modified'] and (
+        native_parameter(before)['value'] == requested
+    ), 'SAVE SETUP: actual dirty displayed model, never a fabricated modified flag'
+    original_files = save211_files(source)
+    native145_approve(actor)
+    state, replies = save211_send(actor, trace, 1, leaf)
+    saved = save211_settled(actor)
+    result = replies[0]['decoded']
+    assert replies[0]['response']['result']['success'] and result['status'] == 'succeeded', (
+        'SAVE: first native save of the dirty current model actually succeeds'
+    )
+    assert all(result.get(key) is True for key in ('committed', 'reopened', 'active')), (
+        'SAVE: first-save success includes real native commit/reopen/active ownership'
+    )
+    assert Path(saved['project']['host_snapshot']['path']).resolve() == (
+        parent / leaf
+    ).resolve(), (
+        'SAVE: first native save changes the displayed active path to its verified child'
+    )
+    assert not saved['project']['host_snapshot']['modified'] and not (
+        saved['handoff']['needs_save_as']
+    ), 'SAVE: real dirty displayed model becomes normally saved/unmodified'
+    assert native_parameter(saved)['value'] == requested and (
+        native_parameter(saved)['free'] == original['free']
+    ), 'SAVE: the actual current edited value/free state is saved, never the older disk model'
+    assert native_inputs(saved) == native_inputs(before), (
+        'SAVE: first active save retains original observations/sigmas/exclusions/weights'
+    )
+    assert save211_files(source) == original_files and saved['connected'], (
+        'SAVE: first active save preserves source inputs and genuine account'
+    )
+    assert state['project_present'], (
+        'SAVE: truthful native result keeps a displayed current project'
+    )
+
+
+def save212_ordinary_bytes(files):
+    normalized = dict(files)
+    assert 'project.edi' in files, 'SAVE: native closure retains its complete project document'
+    lines = files['project.edi'].splitlines(keepends=True)
+    matched = []
+    tag = b'_metadata.last_modified'
+    for index, line in enumerate(lines):
+        if not line.startswith(tag) or line[len(tag):len(tag) + 1] not in {b' ', b'\t'}:
+            continue
+        scalar = line[len(tag):].strip()
+        words = shlex.split(scalar.decode('utf-8'))
+        assert len(words) == 1, 'SAVE: only one well-formed last-modified timestamp is volatile'
+        datetime.strptime(words[0], '%d %b %Y %H:%M:%S').replace(tzinfo=UTC)
+        matched.append(index)
+        lines[index] = line.replace(scalar, b"'ordinary native save timestamp'", 1)
+    assert len(matched) == 1, (
+        'SAVE: only the named last-modified scalar may differ between legitimate saves'
+    )
+    normalized['project.edi'] = b''.join(lines)
+    return normalized
