@@ -752,3 +752,64 @@ notifications retire that draft. The existing cancellation helper marks explicit
 abandonment before any callback; an old form ID cannot cancel a different new
 draft, creation or visible request. This closes the public-caller path as well
 as the helper path without treating ordinary notification retirement as Close.
+
+
+### Same-project native conversation and disclosure scope
+
+The native runtime separates an original action's scientific work stamps from
+permission to disclose project inputs and from the backend conversation's
+memory. The prior full-context equality remains the restricted/browser
+compatibility rule. Native scope instead binds the actual PVM/core owner,
+account epoch, immutable selected source ID/content identities, bounded raw
+measurement content and topology, bundled skill/registered tool identity and
+pinned physical folder capability. Metadata names or array summary counts alone
+do not prove unchanged inputs. Raw written/membership identities cache exact
+content hashes; equal rewrites can retain scope without walking arrays on every
+unchanged UI getter. Inputs beyond the existing selected-input collection bound
+refuse instead of falling back to weak summaries.
+
+Routine same-owner scientific edits and ordinary fit completion still retire
+old calls and await their original input/control/Worker obligations. If scope
+is unchanged, settlement retains the real thread and workspace while clearing
+per-turn presentation. A genuine project/input/root/capability/account change
+upgrades retirement to fresh memory; a later ordinary edit cannot downgrade that
+pending revocation. Original pre-ACK interruption, deadlines, archive failure,
+account and final-delivery fences stay authoritative. Each admitted next turn
+captures complete fresh GUI context into its exact native receipt rather than
+copying an earlier consent snapshot.
+
+Native scope approval is preowned across actual account bootstrap. A no-owner
+native creation lands its prepared new-owner proof beside the existing adjacent
+Controller/Session commit; same-owner edit/save refresh only their original
+receipt after exact actual scope checks. Ordinary Save alone is not proof of
+content identity. Manual imports never implicitly disclose their new project.
+Clear commits real archive discard independently, then waits for settlement and
+binds fresh model/UI memory. Only a preowned proof of the actual remaining input
+subset, unchanged project/account/capability/folder scope may retain consent.
+Failed discard or a newer owner cannot restore an old approval.
+
+Proof/cache and simultaneously held metadata/encoding roles use the existing
+combined native/item/progress budget. Scoped temporary-role charges survive
+notification retirement and are released only by their own stack, with receiver
+lifetime protection; they cannot release a newer operation's reservation. No cap
+is raised and no raw model copy, second scientific serializer, new permission
+system, provider history API or global setting is introduced. Generic scope
+approval no longer retains an unused full-JSON consent copy; exact fresh context
+still belongs to each admitted native receipt. Restricted compatibility keeps
+its existing exact-context approval path.
+
+Existing staging is never rewritten during reuse: it may contain provider
+changes. It is not authoritative GUI state or an automatic import source. Fresh
+per-turn GUI context, retained conversation and recoverable staged artifacts
+remain separate. Sent attachment chip presentation is also separate from
+immutable source authority: future acknowledgement UI must not revoke active
+inputs merely to hide chips, nor reuse genuinely revoked content.
+
+The capability proof fingerprints the embedded index and the actual registered
+native names already admitted in context. Their typed schemas are immutable for
+this process; changing the binary cannot reuse a live in-process proof. Scope
+preparation does not rebuild tool-schema arrays. Proofs held locally across
+Clear rebinding remain charged until that stack releases them. If this optional
+remaining-scope proof cannot be admitted, Clear still clears memory and requires
+fresh approval. Original owner/account/input fences surround settlement and
+failure continuations, so an old callback cannot approve or retire a newer owner.

@@ -5,11 +5,13 @@ description: Inspect and edit the displayed native Edi project with actual param
 
 # Work with the displayed Edi project
 
-Version: 1.5.12. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
+Version: 1.5.13. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
 
 Use `inspect_project`, `list_parameters` and `diagnostics` to inspect the actual project, measurement, weighting, exclusions, phase links and independent/dependent parameters. A missing project or scientific prerequisite is not permission to invent data. Report unsupported formats/conversions honestly. Files or paths mentioned in chat do not expand selected-file or filesystem permission.
 
 The current explicit user objective and earlier unchanged constraints take priority over skill defaults or prior plans. Delegated refinement authorizes justified routine groups within that objective: state a bounded plan and proceed without another plan confirmation. Ask about genuinely missing/conflicting inputs, a changed objective or new chemical assumption. Mere inspection does not authorize mutation. Each action's `purpose` is a concise goal, not a claim of success.
+
+Use the current `EDI_APPROVED_CONTEXT_DATA_V1` input as the authoritative GUI state for each turn. Same-project parameter, free-flag, relation, background and fit updates can keep the conversation while supplying fresh context. Earlier turns and staged project files may be older; do not overwrite provider-modified staging or treat it as an implicit live-project update. A real project, account, input-content or access-scope change retires the old execution scope. Clear starts fresh model memory; it does not revive revoked input grants. App consent and scientific action authority are separate from the user's delegated objective.
 
 When offered, `set_parameters` changes a complete validated batch of actual independent parameter paths/values, and `set_free` sets actual independent fittable flags through the same native editor/Undo used by manual controls. Keep fixed composition, relations, uncertainty, observations, weights and exclusions authoritative. Native edits request asynchronous calculation; inspect the actual settled state before starting a fit.
 

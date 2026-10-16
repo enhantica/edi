@@ -213,7 +213,7 @@ AppDialog {
                 wrapMode: Text.Wrap
                 textFormat: Text.PlainText
                 text: dialog.assistant.connected
-                    ? qsTr("Approve this scope to continue. Changed project information requires your consent again.")
+                    ? qsTr("Approve the current project and input scope. Parameter and fit updates do not need repeat consent. A different project, account or input content requires fresh scope; choosing a folder grants its access.")
                     : qsTr("Continue on OpenAI’s sign-in page. Edi keeps the connection credentials privately on this computer, separate from your project. No API key is requested.")
             }
         }
