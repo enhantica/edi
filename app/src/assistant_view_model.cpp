@@ -4231,6 +4231,8 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
 }
 bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
 #ifndef __EMSCRIPTEN__
+    if (watched == state_->action_window && state_->widget_input && state_->widget_input->ownMouseEvent(event))
+        return false; // Exact device replay; the retained input owner checks currentness or consumes it.
     if (watched == state_->action_window && state_->showing_actions && (!state_->widget_input || !state_->widget_input->injecting())) {
         switch (event->type()) {
         case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:

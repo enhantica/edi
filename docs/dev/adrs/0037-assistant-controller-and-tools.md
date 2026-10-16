@@ -518,3 +518,21 @@ This closes Main versus Extra/Text/Settings exposure for the current editor and
 fit button. It does not yet clear parameter filters or reveal undelegated rows;
 those need the existing actual filter/list controls, not a longer arbitrary
 delay, hidden model write or weakened clipping/parameter identity predicate.
+
+
+### Original mouse ownership survives Qt delayed press replay (2026-10-16)
+
+Qt6.11.2 Flickable clones a captured mouse press and later sends it through the same window; actual reached replay occurs after the original synchronous injection flag ends. Real widget input therefore uses an exact public QPointingDevice plus monotonic event timestamp identity bound to its original request. Three fixed slots retain the current move/press/release stamps; public monotonic-clock milliseconds preserve Qt elapsed-time meaning, with strict uniqueness on equal ticks rather than treating request ordinals as time. One small application-owned ordinary Qt event filter/device survives helper and window replacement. It examines only exact own-device QQuickWindow mouse events, checks original window/helper/request/serial and actual authority, and consumes retired or other-window events before widget dispatch. Child-item forwarding and every unrelated device/event retain normal Qt delivery. A clone from a canceled request cannot become a later request's scientific click. No time grace period, spontaneous/synthetic blanket, shorter press, global pressDelay change or direct model write is introduced. Existing pointer/click/typing timing and native prepareCommit/recorded edit/Undo/FitReport remain.
+
+Ordinary user/QTest mouse devices and key/wheel/touch still cancel immediately with their original event/target preserved. Retirement is published before the existing outside balancing release; that exact synchronous cleanup release is allowed, but any nested delayed press remains rejected. On held-helper teardown the same retained owner queues only an outside release on the exact old device/stamp, rejects nested old presses and blocks new assistant admission until this real cleanup returns. If its original window has gone, public QPointerEvent device-point ungrab clears the old exclusive/passive grabs without sending to a newer window. Failed queue or cleanup retains the admission fence. No callback into the destructing helper is retained. Application ownership keeps the device and stale-event filter alive across a Flickable reparent/old-window teardown until normal application shutdown; no unbounded event map or retired-device list grows. The timestamp counter refuses exhaustion. Default-off input and existing diagnostics/outcome retention remain separate. This closes actual reached own replay misclassification, not the still-unobserved value lookup failure.
+
+
+### Visible input tests the actual clip rectangle
+
+The public QQuickItem clipRect, not painted glyph boundingRect, determines
+whether an ancestor clips a real input point. QQuickTextInput may paint a
+right-aligned number in a small glyph rectangle while accepting input across
+its full control. The helper still requires finite window coordinates, positive
+size, actual visible/enabled ancestors and current native ownership; only the
+matching public clipping geometry is used. This follows the reached204 operands
+and pinned Qt6.11.2 public TextInput clipRect contract, not a visibility bypass.

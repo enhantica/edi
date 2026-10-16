@@ -38,6 +38,8 @@ class AssistantWidgetInput final : public QObject {
     std::uint64_t start(Request request); // Not exposed to QML/provider tools.
     void cancel();
     bool injecting() const noexcept { return injecting_; }
+    // Exact private mouse device, including Qt clones; not a synthetic-event heuristic.
+    bool ownMouseEvent(const QEvent* event) const noexcept;
     bool active() const noexcept { return static_cast<bool>(request_); }
     bool usableTarget(QQuickItem& item) const; // Same actual window/clip check used immediately before input.
     bool manualDraftPresent() const; // App-private current-focus preflight, never a provider selector.
@@ -51,6 +53,7 @@ class AssistantWidgetInput final : public QObject {
  protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
  private:
+    struct MouseOwnership;
     enum class Step { Move, Press, Release, Select, Delete, Type, Commit };
     void advance() noexcept;
     bool current(std::uint64_t id) const;
@@ -61,6 +64,8 @@ class AssistantWidgetInput final : public QObject {
     void stop(bool delivered, const QString& diagnostic, bool restoreDraft) noexcept;
     void restoreDraft() noexcept;
     QPointer<QQuickWindow> window_;
+    QPointer<MouseOwnership> mouse_owner_; // Application-owned: rejects old replays across helper/window teardown.
+    quint64 mouse_stamp_ = 0;
     QTimer timer_;
     std::shared_ptr<Request> request_;
     std::uint64_t serial_ = 0;
@@ -70,6 +75,7 @@ class AssistantWidgetInput final : public QObject {
     const QString failed_ = QStringLiteral("The visible action could not be completed; inspect the current project");
     const QString interrupted_ = QStringLiteral("Visible action interrupted");
     QPointF center_;
+    bool cleanup_release_ = false;
     bool injecting_ = false, draft_ = false, commit_prepared_ = false, pressed_ = false;
 };
 }
