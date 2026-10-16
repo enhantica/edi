@@ -421,3 +421,14 @@ geometry buffers, completed-name/value rows and copied original stamps against
 that preowned allowance before transfer. The temporary calculated Project is
 not a second retained delivery model. A larger result refuses before disk
 publication; no cap is raised and no successful archive/write is invented.
+
+
+### Undeclared fitting mode in native persistence
+
+Persistence admission uses the existing effective fitting-mode contract: an
+empty declaration means single fitting, alongside explicit single and joint.
+The check borrows the declaration before resource admission and does not copy
+or rewrite it. The ordinary native analysis writer continues to serialize the
+effective single mode. Unknown explicit modes, scan configuration and external
+asset restrictions remain refusals; resource, currentness and saved-value
+rounding checks are unchanged.

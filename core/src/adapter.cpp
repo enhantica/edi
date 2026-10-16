@@ -2839,7 +2839,7 @@ std::size_t admit_persistence(const Project& p,const PersistenceLimits& limits,b
     if(p.report_html || p.report_pdf || p.report_cif || p.report_html_offline || p.report_excluded)add_documents(1);
     const auto& scan=p.sequential_fit;
     if(!scan.data_dir.empty() || scan.file_pattern!="*" || scan.reverse || !scan.template_file.empty() || !scan.extract.empty() ||
-       (p.fitting_mode!="single" && p.fitting_mode!="joint") || !p.report_files.empty() || !p.fit_result.scan_results.empty())
+       (!p.fitting_mode.empty() && p.fitting_mode!="single" && p.fitting_mode!="joint") || !p.report_files.empty() || !p.fit_result.scan_results.empty())
         throw std::invalid_argument("Native saving currently supports embedded single/joint projects without external report/scan assets");
     PersistenceAdmission a(limits.construction_bytes,payload);
     persistence_owner_graph(p); if(!payload)admit_currentness_inputs(p,a);
