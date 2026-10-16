@@ -420,31 +420,6 @@ struct AssistantViewModel::State {
     std::shared_ptr<NativeReceipt> native_receipt;
     QMap<QString, std::shared_ptr<NativeRecord>> native_records;
     std::optional<NativeCall> native_call;
-    std::function<void(const edi::FitReport&, bool)> native_fit_callback(QPointer<FitViewModel> captured, NativeCall original_call) {
-        const QPointer<AssistantViewModel> receiver(&owner);
-        return [this, receiver, captured, original_call](const edi::FitReport& report, bool presented) noexcept {
-                    // Reentrant replacement may already have retired this exact
-                    // worker/call. It cannot settle a later owner's native call.
-                    if (!receiver || !captured || native_fit != captured) return;
-                    const auto completion_scope = native_settlement_scope(original_call);
-                    if (!native_call || native_call->record != original_call.record || native_call->receipt != original_call.receipt || native_call->rpc != original_call.rpc) {
-                        native_fit.clear(); // This exact worker finished even when its old RPC/account retired.
-                        if (!completion_scope()) return;
-                        native_complete_discard();
-                        if (!completion_scope()) return;
-                        try {
-                            generic_settle_revoke();
-                            if (!completion_scope()) return;
-                            generic_advance_clear();
-                            if (!completion_scope()) return;
-                            notify();
-                        } catch (...) { if (completion_scope()) native_fence(); }
-                        return; // Never answer or settle a replacement native call.
-                    }
-                    native_fit_finished(report, presented, original_call);
-                    if (completion_scope()) native_complete_discard();
-                };
-    }
     QPointer<FitViewModel> native_fit;
     struct NativeWidget {
         NativeCall call;
@@ -924,6 +899,31 @@ struct AssistantViewModel::State {
             return publishing && generation == binding && native_serial == serial && usage_epoch == account && generic_thread == thread && ledger &&
                 (!native_call || (native_call->record == record && native_call->receipt == receipt && native_call->rpc == rpc));
         };
+    }
+    std::function<void(const edi::FitReport&, bool)> native_fit_callback(QPointer<FitViewModel> captured, NativeCall original_call) {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        return [this, receiver, captured, original_call](const edi::FitReport& report, bool presented) noexcept {
+                    // Reentrant replacement may already have retired this exact
+                    // worker/call. It cannot settle a later owner's native call.
+                    if (!receiver || !captured || native_fit != captured) return;
+                    const auto completion_scope = native_settlement_scope(original_call);
+                    if (!native_call || native_call->record != original_call.record || native_call->receipt != original_call.receipt || native_call->rpc != original_call.rpc) {
+                        native_fit.clear(); // This exact worker finished even when its old RPC/account retired.
+                        if (!completion_scope()) return;
+                        native_complete_discard();
+                        if (!completion_scope()) return;
+                        try {
+                            generic_settle_revoke();
+                            if (!completion_scope()) return;
+                            generic_advance_clear();
+                            if (!completion_scope()) return;
+                            notify();
+                        } catch (...) { if (completion_scope()) native_fence(); }
+                        return; // Never answer or settle a replacement native call.
+                    }
+                    native_fit_finished(report, presented, original_call);
+                    if (completion_scope()) native_complete_discard();
+                };
     }
     void native_finish(bool success, const Object& outcome) noexcept {
         if (!native_call) return;
