@@ -189,7 +189,9 @@ struct AssistantViewModel::State {
     // NativeDependencies constructor is solely the old adapter's compatibility door.
     bool generic_mode = false, generic_connecting = false, generic_busy = false, generic_blocked = false;
     bool generic_authenticated = false, generic_retiring = false, generic_writing_input = false, generic_revoke_pending = false;
-    bool generic_clear_pending = false, generic_clear_interrupt_sent = false;
+    bool generic_clear_pending = false, generic_clear_interrupt_sent = false, generic_context_pending = false;
+    bool generic_context_retention_pending = false;
+    QString generic_context_retention_error;
     QString generic_interrupt_rpc, generic_interrupt_thread, generic_interrupt_turn;
     std::unique_ptr<CodexAgent> agent;
     QString generic_workspace, generic_thread, generic_turn, generic_login, generic_terminal_turn;
@@ -286,7 +288,7 @@ struct AssistantViewModel::State {
         return bytes;
     }
     bool generic_present(Object row) {
-        if (generic_clear_pending) return true; // Explicit Clear discarded this old conversation, not its cancellation proof.
+        if (generic_clear_pending || generic_context_pending) return true; // Retired UI context never republishes old work; protocol proof still settles.
         const auto id = row.value("id").toString();
         quint64 bytes = 2;
         bool existing = false;
@@ -329,7 +331,7 @@ struct AssistantViewModel::State {
         return publishing && generation == epoch && generic_thread == thread &&
             generic_authenticated == authenticated && generic_retiring == retiring;
     }
-    void generic_interrupt_rows() noexcept {
+    bool generic_interrupt_rows() noexcept {
         try {
             auto next = history;
             for (qsizetype i = 0; i < next.size(); ++i) {
@@ -338,11 +340,12 @@ struct AssistantViewModel::State {
                     row["status"] = "interrupted"; next[i] = row;
                 }
             }
-            (void)publish(std::move(next));
-        } catch (...) {} // Execution authority is fenced independently of diagnostics/storage.
+            if (!publish(std::move(next))) return false;
+            return true;
+        } catch (...) { error = storage_error; return false; }
     }
     void generic_fail(const QString& explanation) noexcept {
-        generic_clear_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
+        generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
         retire_result();
         generic_authenticated = false; generic_retiring = false; generic_revoke_pending = false;
         generic_busy = false; generic_connecting = false; generic_blocked = true;
@@ -432,7 +435,7 @@ struct AssistantViewModel::State {
         generic_skill_paths = std::move(skills); generic_workspace = workspace;
     }
     void generic_revoke_workspace() noexcept {
-        generic_clear_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
+        generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
         retire_result();
         generic_authenticated = false; generic_retiring = false; generic_revoke_pending = false;
         if (agent) try { agent->retire(); } catch (...) {}
@@ -447,13 +450,13 @@ struct AssistantViewModel::State {
         try { generic_native["status"] = "disconnected"; } catch (...) {}
     }
     void generic_settle_revoke() {
-        if (!generic_revoke_pending || generic_clear_pending || generic_busy || generic_connecting ||
+        if (!generic_revoke_pending || generic_clear_pending || generic_context_pending || generic_busy || generic_connecting ||
             !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) return;
         agent->settleOperation();
         generic_revoke_pending = false;
     }
     void generic_advance_clear() {
-        if (!generic_clear_pending) return;
+        if (!generic_clear_pending && !generic_context_pending) return;
         if (!generic_authenticated || generic_retiring) return; // Real account/failure retirement remains authoritative.
         if (generic_busy && !generic_turn.isEmpty() && !generic_clear_interrupt_sent && generic_interrupt_rpc.isEmpty()) {
             generic_clear_interrupt_sent = true;
@@ -464,18 +467,76 @@ struct AssistantViewModel::State {
         // interrupt replies. Keep their actual IDs and the first revoke deadline.
         if (generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) return;
         agent->settleOperation(); // Terminal plus every owned input/control reply has now settled.
-        generic_clear_pending = false; generic_clear_interrupt_sent = false; generic_revoke_pending = false;
-        generic_blocked = false; generic_held_row.reset();
-        bind(project, true); // Existing settled-only managed rebind, no authentication assignment.
+        const bool clear = generic_clear_pending;
+        generic_clear_pending = false; generic_context_pending = false;
+        generic_clear_interrupt_sent = false; generic_revoke_pending = false;
+        if (clear) {
+            generic_blocked = false; generic_held_row.reset();
+            bind(project, true); // Existing settled-only managed rebind, no authentication assignment.
+        } else generic_retire_context();
+    }
+    void generic_retire_context() {
+        // Only execution context is obsolete. The real process/account/catalog,
+        // historical rows and host-owned selected snapshots are different owners.
+        if (generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() ||
+            !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty())
+            throw std::runtime_error("Agent context cancellation is not settled");
+        if (!generic_retire_question()) throw std::runtime_error("Agent question retirement failed");
+        retire_result(); consented_context.clear();
+        generic_thread.clear(); generic_turn.clear(); generic_terminal_turn.clear();
+        generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear();
+        generic_item_bytes = 0; generic_progress_bytes = 2;
+        generic_plan_progress = {}; generic_summary_parts.clear();
+        generic_workspace.clear(); generic_skill_paths.clear();
+        // Retired workspace files remain recoverable; no new thread may reuse it.
+    }
+    bool generic_context_changed() noexcept {
+        try {
+            retire_result(); consented_context.clear();
+            if (!generic_authenticated || generic_retiring) {
+                generic_revoke_workspace(); return true;
+            }
+            if (generic_context_pending || generic_clear_pending) return !generic_blocked;
+            generic_context_pending = true;
+            const bool retained = generic_interrupt_rows();
+            if (!retained) {
+                // The original bounded archive is still owned. Block fresh
+                // execution until explicit Clear; do not erase or relabel it.
+                generic_blocked = true;
+                if (!generic_context_retention_pending) {
+                    generic_context_retention_error = bounded_error((error.isEmpty() ? storage_error : error) +
+                        QObject::tr(" Clear the conversation before starting new work."));
+                    generic_context_retention_pending = true;
+                }
+                error = generic_context_retention_error;
+            }
+            if (!generic_retire_question()) return false;
+            generic_clear_interrupt_sent = generic_interrupt_thread == generic_thread &&
+                !generic_turn.isEmpty() && generic_interrupt_turn == generic_turn;
+            if (generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() ||
+                !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) {
+                generic_revoke_pending = true;
+                agent->beginOperation(Limits::revoke_ms, 0);
+            }
+            generic_advance_clear();
+            return retained && generic_authenticated && !generic_retiring && !generic_blocked;
+        } catch (...) {
+            // Ordinary edit/fit signals are emitted after their model commit.
+            // Failed cancellation fences execution, never throws through Qt or
+            // claims that the already committed edit/result was rolled back.
+            generic_fail(error.isEmpty() ? QStringLiteral("The agent context could not be cancelled safely. Project changes and retained work are preserved.") : error);
+            return false;
+        }
     }
     void generic_clear() {
         if (generic_clear_pending) return; // Repeated Clear never refreshes cancellation deadlines.
         const bool was_refused = archive_refused;
         archive_refused = false;
         if (!publish({})) { archive_refused = was_refused; error = storage_error; notify(); return; }
+        generic_context_retention_pending = false; generic_context_retention_error.clear();
         emit owner.conversationRetired();
         retire_result(); retire_file_selection(); consented_context.clear(); ++generation;
-        generic_clear_pending = true;
+        generic_clear_pending = true; generic_context_pending = false;
         generic_clear_interrupt_sent = generic_interrupt_thread == generic_thread &&
             !generic_turn.isEmpty() && generic_interrupt_turn == generic_turn;
         generic_held_row.reset(); if (!generic_retire_question()) return; plan = {};
@@ -568,7 +629,7 @@ struct AssistantViewModel::State {
                 }
             }
             const bool nonadmitted = number == -32600 && (contextGate || steerReason || turnMismatch);
-            const bool currentInput = generic_authenticated && !generic_retiring && (!generic_revoke_pending || generic_clear_pending || method == "turn/steer") &&
+            const bool currentInput = generic_authenticated && !generic_retiring && (!generic_revoke_pending || generic_clear_pending || generic_context_pending || method == "turn/steer") &&
                 ((method == "turn/start" && generic_busy && generic_turn.isEmpty()) ||
                  (method == "turn/steer" && !expectedTurn.isEmpty() && origin.thread == generic_thread &&
                   ((generic_busy && expectedTurn == generic_turn) || origin.terminal_retained)));
@@ -582,7 +643,7 @@ struct AssistantViewModel::State {
                 .arg(method).arg(number).arg(safeReason));
             if (generic_rpc_rows.contains(id)) {
                 const auto rowId = generic_rpc_rows.take(id);
-                bool retained = generic_clear_pending; // Its exact pending row was deliberately cleared.
+                bool retained = generic_clear_pending || generic_context_pending; // Its exact old input UI is retired; protocol proof remains.
                 for (const auto& value : history) if (value.toObject().value("id") == rowId) {
                     auto row = value.toObject(); row["status"] = retainSession ? "refused" : "interrupted";
                     retained = generic_present(row); break;
@@ -1054,6 +1115,9 @@ struct AssistantViewModel::State {
 #endif
     }
     bool file_current(const FileSelection& scope) const {
+#ifndef __EMSCRIPTEN__
+        if (generic_mode && generic_context_retention_pending) return false;
+#endif
         if (!publishing || file_authority_exhausted || scope.epoch != file_epoch ||
             scope.owner_generation != generation || scope.controller != controller.get() || scope.project != project ||
             scope.connection_epoch != file_connection_epoch || !controller) return false;
@@ -1320,6 +1384,12 @@ struct AssistantViewModel::State {
     }
 
     void notify() {
+#ifndef __EMSCRIPTEN__
+        // Pending protocol/UI continuations cannot acknowledge a failed archive
+        // write. Genuine account/failure retirement still exposes its own cause.
+        if (generic_mode && generic_authenticated && generic_context_retention_pending)
+            error = generic_context_retention_error;
+#endif
         auto property = [this](const QString& name, const auto& value, auto signal) {
             const QVariant next = QVariant::fromValue(value);
             if (!observed.contains(name) || observed.value(name) != next) { observed[name] = next; (owner.*signal)(); }
@@ -1783,7 +1853,9 @@ struct AssistantViewModel::State {
     }
     void bind(ProjectViewModel* next, bool managedResult = false) {
 #ifndef __EMSCRIPTEN__
-        generic_clear_pending = false; generic_clear_interrupt_sent = false;
+        generic_clear_pending = false;
+        // The old context's issued interrupt belongs to its retained turn,
+        // including after acknowledgement. Rebinding cannot erase that proof.
 #endif
         emit owner.conversationRetired(); // Before any fallible replacement preparation.
 #ifndef __EMSCRIPTEN__
@@ -1797,9 +1869,9 @@ struct AssistantViewModel::State {
                 generic_workspace.clear(); generic_skill_paths.clear();
                 generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear();
                 // Keep only the actual managed process/account/catalog. No old thread/call/context authority survives.
-            } else generic_revoke_workspace();
+            } else (void)generic_context_changed(); // Session may already have committed its new owner; always finish attachment.
             generic_input_paths.clear(); generic_input_cache.reset();
-            generic_held_row.reset(); generic_blocked = false;
+            if (!generic_context_retention_pending) { generic_held_row.reset(); generic_blocked = false; }
         }
 #endif
         retire_file_selection();
@@ -1867,16 +1939,24 @@ struct AssistantViewModel::State {
             QObject::connect(project, &ProjectViewModel::projectEdited, &owner, [this] {
                 if (controller && !own_edit) {
 #ifndef __EMSCRIPTEN__
-                    if (generic_mode) { generic_revoke_workspace(); consented_context.clear(); }
+                    if (generic_mode) retire_result();
 #endif
-                    retire_file_selection(); controller->notify_changed(); plan = {}; question = {}; sync();
+                    retire_file_selection(); controller->notify_changed(); plan = {}; question = {};
+#ifndef __EMSCRIPTEN__
+                    if (generic_mode) (void)generic_context_changed();
+#endif
+                    sync();
                 }
             });
             QObject::connect(project->fit(), &FitViewModel::finished, &owner, [this] {
 #ifndef __EMSCRIPTEN__
-                if (generic_mode) { generic_revoke_workspace(); consented_context.clear(); }
+                if (generic_mode) retire_result();
 #endif
-                retire_file_selection(); if (controller) controller->notify_changed(); sync();
+                retire_file_selection(); if (controller) controller->notify_changed();
+#ifndef __EMSCRIPTEN__
+                if (generic_mode) (void)generic_context_changed();
+#endif
+                sync();
             });
         }
 #ifndef __EMSCRIPTEN__
@@ -1901,7 +1981,7 @@ AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencie
 AssistantViewModel::~AssistantViewModel() = default;
 QString AssistantViewModel::state() const {
 #ifndef __EMSCRIPTEN__
-    if (state_->generic_mode) return state_->generic_connecting ? "connecting" : (state_->generic_busy || state_->generic_clear_pending) ? "agent_active" : state_->generic_blocked ? "interrupted" : connected() ? "idle" : "disconnected";
+    if (state_->generic_mode) return state_->generic_connecting ? "connecting" : (state_->generic_busy || state_->generic_clear_pending || state_->generic_context_pending) ? "agent_active" : state_->generic_blocked ? "interrupted" : connected() ? "idle" : "disconnected";
 #endif
     return state_->auth_pending ? QString("connecting") : state_->core.value("state").toString();
 }
@@ -1931,7 +2011,7 @@ QVariantMap AssistantViewModel::pendingQuestion() const { return state_->questio
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
 bool AssistantViewModel::canCancel() const {
 #ifndef __EMSCRIPTEN__
-    if (state_->generic_mode) return state_->generic_retiring || state_->generic_connecting || state_->generic_busy || state_->generic_clear_pending || state_->file_selection.has_value() || state_->file_staging;
+    if (state_->generic_mode) return state_->generic_retiring || state_->generic_connecting || state_->generic_busy || state_->generic_clear_pending || state_->generic_context_pending || state_->file_selection.has_value() || state_->file_staging;
 #endif
     return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
 QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : state_->preference_error; }
@@ -1989,6 +2069,9 @@ void AssistantViewModel::send(const QString& text) {
     try {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
+            if (state_->generic_context_retention_pending) {
+                state_->error = state_->generic_context_retention_error; state_->notify(); return;
+            }
             state_->generic_writing_input = false;
             if (static_cast<quint64>(text.size()) > State::Limits::message_bytes || static_cast<quint64>(text.toUtf8().size()) > State::Limits::message_bytes)
                 throw std::length_error("Agent message exceeds limit");
@@ -2036,7 +2119,7 @@ void AssistantViewModel::send(const QString& text) {
     } catch (...) {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
-            if (state_->generic_writing_input || state_->generic_blocked) state_->generic_fail(tr("Agent input delivery is uncertain. Inspect the retained message before retrying."));
+            if (state_->generic_writing_input) state_->generic_fail(tr("Agent input delivery is uncertain. Inspect the retained message before retrying."));
             else { state_->error = tr("The new input was not admitted. The existing operation and draft are preserved."); try { state_->notify(); } catch (...) {} }
             state_->generic_writing_input = false; return;
         }
@@ -2102,6 +2185,13 @@ void AssistantViewModel::cancel() {
 }
 void AssistantViewModel::signIn() {
     if (!state_->controller) return;
+#ifndef __EMSCRIPTEN__
+    // A retained-history failure is not repaired by opening another thread or
+    // clearing its diagnostic. Explicit Clear owns discarding that old outcome.
+    if (state_->generic_mode && state_->generic_context_retention_pending) {
+        state_->notify(); return;
+    }
+#endif
     if (canCancel()) { state_->error = tr("Stop the active operation before connecting."); state_->notify(); return; }
     const auto context = object(state_->controller->context());
     if (context.contains("error")) { state_->error = tr("Project context exceeds the assistant limit; nothing was sent."); state_->notify(); return; }
@@ -2141,7 +2231,7 @@ void AssistantViewModel::signOut() {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         if (state_->generic_retiring) return;
-        state_->generic_clear_pending = false; state_->generic_clear_interrupt_sent = false;
+        state_->generic_clear_pending = false; state_->generic_context_pending = false; state_->generic_clear_interrupt_sent = false;
         state_->generic_interrupt_thread.clear(); state_->generic_interrupt_turn.clear();
         state_->generic_authenticated = false; state_->generic_retiring = true; state_->generic_revoke_pending = true;
         state_->generic_busy = false; state_->generic_connecting = false;
@@ -2175,7 +2265,12 @@ void AssistantViewModel::clearHistory() {
         state_->archive_refused = false;
         if (!state_->publish({})) {
             state_->archive_refused = was_refused; state_->error = state_->storage_error;
-        } else state_->error.clear();
+        } else {
+#ifndef __EMSCRIPTEN__
+            state_->generic_context_retention_pending = false; state_->generic_context_retention_error.clear();
+#endif
+            state_->error.clear();
+        }
         state_->sync();
     } catch (...) { state_->error = state_->storage_error; (void)state_->queue_render(); }
 }
@@ -2188,7 +2283,7 @@ QString AssistantViewModel::beginFileSelection() {
     try {
         if (!state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
             throw std::runtime_error("The selected-file owner is unavailable");
-        if (state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_clear_pending)) || (state_->project && state_->project->fit()->running()))
+        if (state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()))
             throw std::runtime_error("Finish the active operation before selecting files");
         if (!state_->flush_selected_rows()) { state_->notify(); return {}; }
         const auto descriptor = state_->file_context();
@@ -2219,6 +2314,7 @@ QString AssistantViewModel::beginFileSelection() {
 bool AssistantViewModel::addSelectedFiles(const QString& requestId, const QList<QUrl>& urls) {
     if (QThread::currentThread() != thread() || !state_->file_selection || state_->file_selection->id != requestId) return false;
     bool admitted = false;
+    bool context_preserved = true;
     const auto owner_at_entry = state_->generation, epoch_at_entry = state_->file_epoch;
     try {
         if (!state_->file_current(*state_->file_selection)) { state_->retire_file_selection(); return false; }
@@ -2237,15 +2333,15 @@ bool AssistantViewModel::addSelectedFiles(const QString& requestId, const QList<
             if (admitted) {
 #ifndef __EMSCRIPTEN__
                 if (generic_stage) {
-                    state_->generic_revoke_workspace();
                     state_->generic_input_paths.swap(generic_stage->paths);
                     generic_stage->fresh.clear();
+                    context_preserved = state_->generic_context_changed();
                     state_->native = state_->generic_native;
                 }
 #endif
                 state_->selected_reply = std::move(result.value); // noexcept transfer of the core-prepared descriptor
                 state_->selected_rows_dirty = true;
-                state_->consented_context.clear(); state_->error.clear();
+                state_->consented_context.clear(); if (context_preserved) state_->error.clear();
                 (void)state_->flush_selected_rows();
             } else state_->error = State::bounded_error(object(result.value).value("message").toString());
         } catch (const std::exception& error) { state_->error = State::bounded_error(QString::fromUtf8(error.what())); }
@@ -2272,10 +2368,11 @@ void AssistantViewModel::cancelFileSelection(const QString& requestId) {
 bool AssistantViewModel::removeSelectedFile(const QString& id) {
     if (QThread::currentThread() != thread() || !state_->publishing) return false;
     bool admitted = false;
+    bool context_preserved = true;
     try {
         if (state_->file_selection || state_->file_staging || state_->auth_pending ||
 #ifndef __EMSCRIPTEN__
-            (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_clear_pending)) ||
+            (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) ||
 #endif
             (state_->project && state_->project->fit()->running())) throw std::runtime_error("Finish the active operation before changing files");
         if (!state_->flush_selected_rows()) { state_->notify(); return false; }
@@ -2289,13 +2386,14 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
         if (admitted) {
 #ifndef __EMSCRIPTEN__
             if (state_->generic_mode) {
-                state_->generic_revoke_workspace(); state_->generic_input_paths.swap(generic_paths);
+                state_->generic_input_paths.swap(generic_paths);
                 if (!generic_removed.isEmpty()) QFile::remove(generic_removed);
+                context_preserved = state_->generic_context_changed();
                 state_->native = state_->generic_native;
             }
 #endif
             state_->selected_reply = std::move(result.value); state_->selected_rows_dirty = true;
-            state_->consented_context.clear(); state_->error.clear(); (void)state_->flush_selected_rows();
+            state_->consented_context.clear(); if (context_preserved) state_->error.clear(); (void)state_->flush_selected_rows();
         } else state_->error = State::bounded_error(object(result.value).value("message").toString());
         state_->notify();
     } catch (...) { state_->error = tr("Selected file could not be removed. Inspect the retained file list before retrying."); try { state_->notify(); } catch (...) {} }
