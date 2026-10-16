@@ -779,7 +779,7 @@ TestCase {
         const retained = Probe.rows(assistant.messages).find(row => !previousIds.has(row.id) && row.kind === "assistant"
             && row.status === "completed" && row.text === original);
         verify(retained.id.length > 0, "REPORT171: actual immutable source row has a real identity");
-        compare(Probe.rows(assistant.messages).filter(row => row.kind === "user" && row.text === draft).length,
+        compare(Probe.rows(assistant.messages).filter(row => !previousIds.has(row.id) && row.kind === "user" && row.text === draft).length,
             1, "REPORT171: ordinary original input is admitted once");
         if (data.tag === "replacement") {
             verify(Session.openProject(Probe.repoUrl("tests/fixtures/report_options/pairs")),
@@ -792,11 +792,38 @@ TestCase {
         }
         // Home hides Assistant by policy; use the real eligible workflow action,
         // never force a page/enable property to make the anchor reachable.
-        mouseClick(item("appBar.tab.project"));
-        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000,
-            "REPORT171 SETUP: genuine Project action exposes the retained chat");
-        rendered();
-        tryCompare(popup, "opened", true, 2000, "REPORT171 SETUP: retained Assistant is actually visible");
+        function observeMissingOpener(stage) {
+            if (data.tag !== "missing") return;
+            try {
+                const opener = findChild(window, "assistant.toggle");
+                const projectTab = findChild(window, "appBar.tab.project");
+                console.log("REPORT193_OPENER", stage, JSON.stringify({
+                    page: window.appBarCentralTabs.currentIndex,
+                    requested: Preferences.assistantShown, shown: popup.shown,
+                    visible: popup.visible, opened: popup.opened,
+                    showingActions: assistant.showingActions,
+                    manualTakeover: window.assistantManualTakeover,
+                    popupParent: popup.parent ? popup.parent.objectName : null,
+                    projectPresent: Session.project !== null, hasProject: Session.hasProject,
+                    projectPageEnabled: AppState.projectPageEnabled,
+                    workflowPagePresent: window.assistantWorkflowPage != null,
+                    activeHostPresent: window.activeAssistantHost != null,
+                    activeHostName: window.activeAssistantHost ? window.activeAssistantHost.objectName : null,
+                    projectTab: projectTab ? {visible: projectTab.visible, enabled: projectTab.enabled} : null,
+                    toggle: opener ? {visible: opener.visible, enabled: opener.enabled} : null,
+                    connected: assistant.connected, state: assistant.state,
+                    canCancel: assistant.canCancel, sessionLastError: Session.lastError
+                }));
+            } catch (error) { console.log("REPORT193_OPENER_DIAGNOSTIC_ERROR", stage, String(error)); }
+        }
+        observeMissingOpener("before-original-project-click");
+        try {
+            mouseClick(item("appBar.tab.project"));
+            tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000,
+                "REPORT171 SETUP: genuine Project action exposes the retained chat");
+            rendered();
+            tryCompare(popup, "opened", true, 2000, "REPORT171 SETUP: retained Assistant is actually visible");
+        } finally { observeMissingOpener("after-original-opener-wait"); }
         const current = Session.project;
         const history = JSON.stringify(Probe.rows(assistant.messages));
         const parameters = current ? JSON.stringify(Probe.rows(current.parameters)) : "";
@@ -964,8 +991,28 @@ TestCase {
             la.free = false;
             ba.free = false;
         }
-        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
-            10000, "VA SETUP: real original calculation and ordinary free-subset edits settle");
+        try {
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+                10000, "VA SETUP: real original calculation and ordinary free-subset edits settle");
+        } finally {
+            try {
+                const experiment = project ? project.currentExperiment : null;
+                const pattern = experiment ? experiment.pattern : null;
+                console.log("VISIBLE193_SETUP", data.tag, JSON.stringify({
+                    currentOwner: Session.project === project, projectPresent: Session.hasProject,
+                    calculating: project ? project.calculating : null,
+                    computedCurrent: experiment ? Probe.computedCurrent(experiment) : null,
+                    patternCalculationError: pattern ? pattern.calculationError : null,
+                    patternStale: pattern ? pattern.stale : null,
+                    patternCount: pattern ? pattern.count : null,
+                    projectLastError: project ? project.lastError : null,
+                    sessionLastError: Session.lastError,
+                    sessionMessagesModel: "Session.loadWarnings",
+                    sessionMessages: Probe.rows(Session.loadWarnings),
+                    page: window.appBarCentralTabs.currentIndex
+                }));
+            } catch (error) { console.log("VISIBLE193_SETUP_DIAGNOSTIC_ERROR", String(error)); }
+        }
         if (fitCase) verify(project.fit.available, "VA SETUP: actual installed native backend admits this real single fit");
         const inputs = visible185_inputs(project);
         const originalValues = visible185_values(project);
