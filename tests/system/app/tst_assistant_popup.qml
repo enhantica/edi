@@ -61,6 +61,9 @@ TestCase {
         control.clicked.connect(clicked);
         control.canceled.connect(canceled);
         try {
+            pointerObservation("before-pointer-move", control, requested);
+            mouseMove(control, control.width / 2, control.height / 2);
+            pointerObservation("after-pointer-move", control, requested);
             mouseClick(control);
         } finally {
             control.pressedChanged.disconnect(pressedChanged);
@@ -101,7 +104,16 @@ TestCase {
                 parent: candidate.parent ? candidate.parent.objectName : null,
                 opened: candidate.opened, modal: candidate.modal, focus: candidate.focus,
                 closePolicy: candidate.closePolicy,
-                contentRect: candidate.contentItem ? rect(candidate.contentItem) : null});
+                popupWidth: candidate.width, popupHeight: candidate.height,
+                leftPadding: candidate.leftPadding, rightPadding: candidate.rightPadding,
+                topPadding: candidate.topPadding, bottomPadding: candidate.bottomPadding,
+                contentRect: candidate.contentItem ? rect(candidate.contentItem) : null,
+                actualPopupItemRect: candidate.contentItem && candidate.contentItem.parent
+                    ? rect(candidate.contentItem.parent) : null,
+                actualPopupItemWidth: candidate.contentItem && candidate.contentItem.parent
+                    ? candidate.contentItem.parent.width : null,
+                actualPopupItemHeight: candidate.contentItem && candidate.contentItem.parent
+                    ? candidate.contentItem.parent.height : null});
         }
         console.log("APPBAR_POINTER", stage, JSON.stringify({
             requested: requested, shown: Preferences.assistantShown, popupVisible: popup.visible,
