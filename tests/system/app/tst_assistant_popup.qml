@@ -2968,4 +2968,389 @@ TestCase {
         }
     }
 
+
+    // Public226/231 actual import form; no producer-private counter or expected fit output.
+    function import265_recipe() {
+        return {project_name: "Original measured PbSO4", description: "Original typed independent import",
+            experiment_name: "d1a", sample_form: "powder", beam_mode: "constant wavelength",
+            radiation_probe: "neutron", scattering_type: "bragg", peak_profile: "cwl-tch-pseudo-voigt",
+            wavelength: 1.909, zero_offset: -0.001, phase_scale: 1,
+            background: [{position: 10, intensity: 200}, {position: 155.85, intensity: 200}],
+            exclusions: [{first: 10, second: 11}, {first: 155, second: 155.85}],
+            initial_parameters: [{path: "experiment.peak.broad_gauss_u", value: 0.1},
+                {path: "experiment.peak.broad_gauss_v", value: 0},
+                {path: "experiment.peak.broad_gauss_w", value: 0.1},
+                {path: "experiment.peak.broad_lorentz_x", value: 0},
+                {path: "experiment.peak.broad_lorentz_y", value: 0.1}]};
+    }
+    function import265_observationMs(recipe) {
+        // Existing public237 pacing model: move500/press100/relax500, scalar100.
+        // Count this complete original recipe's actual form fields/rows, never a producer counter.
+        let texts = [recipe.project_name, recipe.experiment_name, recipe.description,
+            String(recipe.wavelength), String(recipe.zero_offset), String(recipe.phase_scale)];
+        recipe.background.forEach(row => texts.push(String(row.position), String(row.intensity)));
+        recipe.exclusions.forEach(row => texts.push(String(row.first), String(row.second)));
+        recipe.initial_parameters.forEach(row => texts.push(row.path, String(row.value)));
+        const rows = recipe.background.length + recipe.exclusions.length + recipe.initial_parameters.length;
+        const clicks = 3 + 1 + 3 + 3 + texts.length + rows + 1;
+        const scalarKeys = texts.reduce((count, text) => count + [...text].length + 2, 0);
+        const comboKeys = (2 + 1) + (2 + 1) + (2 + 5); // two sources, six public profiles maximum.
+        return 10000 + clicks * (500 + 100 + 500) + 100 * (scalarKeys + comboKeys);
+    }
+    function import265_control(name) {
+        const found = Ui.itemsWithProperty(Ui.windowRoot(window), "objectName")
+            .filter(control => control.objectName === name && control.visible);
+        compare(found.length, 1, "IMPORT265 SETUP: one real visible import control owns " + name);
+        Ui.scrollIntoView(found[0]);
+        verify(Ui.exposed(found[0]) && found[0].enabled,
+            "IMPORT265 SETUP: the genuine import input is exposed and enabled: " + name);
+        return found[0];
+    }
+    function import265_click(name) {
+        const control = import265_control(name);
+        let delay = 0;
+        for (let parent = control.parent; parent; parent = parent.parent)
+            if (typeof parent.pressDelay === "number") delay = Math.max(delay, parent.pressDelay + 1);
+        const point = Ui.clickPoint(control);
+        mouseClick(control, point.x, point.y, Qt.LeftButton, Qt.NoModifier, delay);
+        window.update();
+        verify(waitForRendering(window.contentItem), "IMPORT265: actual form input has a real rendered receipt");
+        return control;
+    }
+    function import265_text(name, text) {
+        const control = import265_click(name);
+        tryVerify(() => control.activeFocus || (window.activeFocusItem &&
+            Probe.objectsWithProperty(control, "activeFocus").includes(window.activeFocusItem)),
+            2000, "IMPORT265 SETUP: real pointer focuses the actual form editor before typing");
+        visible185_type(String(text));
+        compare(control.text, String(text), "IMPORT265: actual form retains exact original typed text");
+    }
+    function import265_combo(name, label) {
+        const control = import265_control(name);
+        const matches = [];
+        for (let i = 0; i < control.count; ++i) if (control.textAt(i) === label) matches.push(i);
+        compare(matches.length, 1, "IMPORT265 SETUP: exact displayed original choice is uniquely offered");
+        import265_click(name);
+        keyClick(Qt.Key_Home);
+        for (let i = 0; i < matches[0]; ++i) keyClick(Qt.Key_Down);
+        keyClick(Qt.Key_Return);
+        compare(control.currentIndex, matches[0], "IMPORT265: real ComboBox keyboard selects original choice");
+        compare(control.currentText, label, "IMPORT265: actual displayed source/profile matches original choice");
+    }
+    function import265_owner(project) {
+        return project ? JSON.stringify({name: project.name, title: project.title,
+            description: project.description, authors: project.authors, path: project.path,
+            suRule: project.suRule, embedLibraries: project.report.embedLibraries}) : null;
+    }
+    function import265_science(project) {
+        compare(project.structures.count, 1, "IMPORT265: actual import creates one original phase");
+        compare(project.experiments.count, 1, "IMPORT265: actual import creates one measured experiment");
+        compare(project.currentStructure.spaceGroup.nameHM, "P n m a", "IMPORT265: original CIF symmetry is retained");
+        compare(project.currentExperiment.name, "d1a", "IMPORT267: explicit original experiment name is retained");
+        compare(project.currentExperiment.sampleFormToken, "powder", "IMPORT267: actual imported model has original powder type");
+        compare(project.currentExperiment.beamModeToken, "constant wavelength", "IMPORT267: actual imported model has original CW geometry");
+        compare(project.currentExperiment.radiationProbeToken, "neutron", "IMPORT267: actual imported model has original neutron probe");
+        compare(project.currentExperiment.scatteringTypeToken, "bragg", "IMPORT267: actual imported model has original Bragg scattering");
+        compare(project.currentExperiment.peakType, "cwl-tch-pseudo-voigt", "IMPORT267: actual selected canonical peak profile survives");
+        compare(project.fit.running, false, "IMPORT267: creation alone never claims or launches refinement");
+        compare(JSON.stringify(Probe.rows(project.currentExperiment.background).map(row => [row.position, row.intensity.value])),
+            JSON.stringify([[10, 200], [155.85, 200]]), "IMPORT267: every original supplied background point survives");
+        for (const pair of [["length_a", 8.48], ["length_b", 5.398], ["length_c", 6.958]]) {
+            const parameters = visible185_parameters(project).filter(parameter => parameter.name === pair[0]);
+            compare(parameters.length, 1, "IMPORT267 SETUP: original cell scalar is unique");
+            compare(parameters[0].value, pair[1], "IMPORT267: bare original cell value survives import");
+            compare(parameters[0].free, false, "IMPORT267: original fixed cell does not become free");
+            compare(parameters[0].uncertainty, 0, "IMPORT267: public cell uncertainty view retains numeric zero");
+        }
+        const sites = Probe.rows(project.currentStructure.atomSites).map(row => [row.label, row.typeSymbol])
+            .sort((a, b) => a[0].localeCompare(b[0]));
+        compare(JSON.stringify(sites), JSON.stringify([["O1", "O"], ["O2", "O"], ["O3", "O"], ["Pb", "Pb"], ["S", "S"]]),
+            "IMPORT265: every original independent site/species is retained");
+        const positions = {Pb: [0.1882, 0.25, 0.167], S: [0.063, 0.25, 0.686],
+            O1: [-0.095, 0.25, 0.6], O2: [0.181, 0.25, 0.543], O3: [0.085, 0.026, 0.806]};
+        for (const label of Object.keys(positions)) {
+            for (let index = 0; index < 3; ++index)
+                compare(visible185_parameter(project, label, ["fract_x", "fract_y", "fract_z"][index]).value,
+                    positions[label][index], "IMPORT265: original fractional coordinates retain literal source values");
+            compare(visible185_parameter(project, label, "occupancy").value, 1,
+                "IMPORT265: original occupancies are unchanged");
+            compare(visible185_parameter(project, label, "adp_iso").value, 0.01,
+                "IMPORT265: original isotropic ADP retains source Uiso convention/value");
+        }
+        const wavelengths = visible185_parameters(project).filter(parameter => parameter.name === "setup_wavelength");
+        compare(wavelengths.length, 1, "IMPORT265 SETUP: original wavelength parameter is unique");
+        compare(wavelengths[0].value, 1.909, "IMPORT265: explicit supplied original wavelength is retained");
+        const offsets = visible185_parameters(project).filter(parameter => parameter.name === "calib_twotheta_offset");
+        compare(offsets.length, 1, "IMPORT267 SETUP: public two-theta offset scalar is unique");
+        compare(offsets[0].value, -0.001, "IMPORT267: original explicit zero offset survives typed form input");
+        compare(project.currentExperiment.scale.value, 1, "IMPORT267: original explicit single-phase scale survives");
+        for (const requested of import265_recipe().initial_parameters) {
+            const name = requested.path.split(".").slice(-1)[0];
+            const parameters = visible185_parameters(project).filter(parameter => parameter.name === name);
+            compare(parameters.length, 1, "IMPORT267 SETUP: original requested physical parameter is unique");
+            compare(parameters[0].value, requested.value, "IMPORT267: every explicit initial physical value survives real form reconstruction");
+        }
+        compare(JSON.stringify(Probe.rows(project.currentExperiment.excludedRegions).map(row => [row.start, row.end])),
+            JSON.stringify([[10, 11], [155, 155.85]]), "IMPORT267: original explicit exclusion intervals survive");
+        console.log("IMPORT265_INPUT", visible185_inputs(project));
+    }
+    function test_import265_actual_manual_and_visible_creation_data() {
+        return ["manual-no-owner", "manual-saved-empty", "visible-no-owner", "visible-saved-empty",
+            "visible-stop", "visible-manual-input", "visible-close", "visible-new-owner",
+            "visible-source-refusal-close"].map(tag => ({tag: tag}));
+    }
+    function test_import265_actual_manual_and_visible_creation(data) {
+        const manual = data.tag.startsWith("manual-");
+        const same = data.tag.endsWith("saved-empty");
+        const cancelled = !manual && !["visible-no-owner", "visible-saved-empty"].includes(data.tag);
+        const recipe = import265_recipe();
+        Session.closeProject();
+        compare(Session.project, null, "IMPORT265 SETUP: genuine normal Session closes the initial fixture");
+        if (same) {
+            const url = String(Probe.scratchProjectUrl());
+            verify(url.startsWith("file:///"), "IMPORT265 SETUP: actual scratch project URL is local");
+            const directory = decodeURIComponent(url.slice(7));
+            verify(Session.createProject("Original saved empty owner", "Original preserved description", directory,
+                "iucr_99", "Original preserved title", "Original preserved author", true),
+                "IMPORT265 SETUP: actual Session normally saves the real named empty owner");
+        }
+        const original = Session.project;
+        const metadata = import265_owner(original);
+        const originalUndo = original ? original.canUndo : null;
+        const originalSavedText = original ? Probe.readFile(original.path + "/project.edi") : null;
+        const token = assistant.beginFileSelection();
+        verify(token.length > 0 && assistant.addSelectedFiles(token, [
+            Probe.repoUrl("tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif"),
+            Probe.repoUrl("/tmp/relay-e11-t5-tests/seq85-private/inputs/observed.xye")]),
+            "IMPORT265 SETUP: genuine existing chooser admission owns both original immutable sources");
+        tryCompare(assistant.selectedFiles, "count", 2, 2000, "IMPORT265 SETUP: source rows finish admission");
+        const selected = Probe.rows(assistant.selectedFiles);
+        if (Session.project === null) {
+            visible185_page("home");
+            compare(window.appBarCentralTabs.currentIndex, AppState.Page.Home,
+                "IMPORT270 SETUP: genuine Home page is selected before exposed Start");
+            Ui.click(this, Probe, window, "home.start");
+            compare(window.appBarCentralTabs.currentIndex, AppState.Page.Project,
+                "IMPORT270 SETUP: actual Home Start selects the normal Project workflow");
+        } else visible185_page("project");
+        rendered();
+        const cif = selected.filter(row => row.name === "PbSO4-Wyckoff.cif");
+        const measurement = selected.filter(row => row.name === "observed.xye");
+        compare(cif.length, 1, "IMPORT265 SETUP: actual original CIF ID is unique");
+        compare(measurement.length, 1, "IMPORT265 SETUP: actual original measurement ID is unique");
+        verify(cif[0].id !== measurement[0].id, "IMPORT265 SETUP: actual source IDs are distinct");
+        let ownStarts = 0, edits = 0, applyClicks = 0, field = null, form = null, retained = null, applyTarget = null;
+        function pointerReceipt() { ++ownStarts; }
+        function editReceipt() { ++edits; }
+        function applyReceipt() { ++applyClicks; }
+        assistant.actionPointerShown.connect(pointerReceipt);
+        let previous = new Set(), models = null, accountWasConnected = false, replacement = null;
+        const callId = "import265-create-" + data.tag;
+        try {
+            if (manual) {
+                compare(assistant.connected, false, "IMPORT265: ordinary import works offline without provider setup");
+                Ui.click(this, Probe, window, "sideBar.tab.basic");
+                Ui.click(this, Probe, window, "project.importNativeCwl");
+                form = item("nativeImport.dialog");
+                tryCompare(form, "opened", true, 2000, "IMPORT265: actual ordinary Import button opens its form");
+                compare(assistant.nativeImport.state, "draft", "IMPORT265: manual form owns an actual fresh draft");
+                compare(import265_control("nativeImport.cif").currentIndex, -1,
+                    "IMPORT267 SETUP: fresh source choices contain no invented default selection");
+                compare(import265_control("nativeImport.measurement").currentIndex, -1,
+                    "IMPORT267 SETUP: measurement starts genuinely unselected");
+                for (const name of ["projectName", "experimentName", "description"])
+                    compare(import265_control("nativeImport." + name).text, "",
+                        "IMPORT267 SETUP: original manual text fields begin empty");
+                import265_combo("nativeImport.cif", "PbSO4-Wyckoff.cif");
+                import265_combo("nativeImport.measurement", "observed.xye");
+                compare(assistant.selectedFiles.text(import265_control("nativeImport.cif").currentIndex, "id"), cif[0].id,
+                    "IMPORT265: actual source row index grants its original CIF ID, not currentValue");
+                compare(assistant.selectedFiles.text(import265_control("nativeImport.measurement").currentIndex, "id"), measurement[0].id,
+                    "IMPORT265: actual measurement row index grants its original source ID");
+                import265_text("nativeImport.projectName", recipe.project_name);
+                import265_text("nativeImport.experimentName", recipe.experiment_name);
+                import265_text("nativeImport.description", recipe.description);
+                import265_click("nativeImport.tab.instrument");
+                import265_combo("nativeImport.profile", recipe.peak_profile);
+                import265_text("nativeImport.wavelength", recipe.wavelength);
+                import265_text("nativeImport.zero", recipe.zero_offset);
+                import265_text("nativeImport.scale", recipe.phase_scale);
+                for (const section of ["background", "exclusions", "parameters"]) {
+                    import265_click("nativeImport.tab." + section);
+                    const rows = section === "background" ? recipe.background : section === "exclusions"
+                        ? recipe.exclusions : recipe.initial_parameters;
+                    for (const row of rows) {
+                        import265_click("nativeImport.row.add");
+                        import265_text("nativeImport.row.first", section === "background" ? row.position
+                            : section === "exclusions" ? row.first : row.path);
+                        import265_text("nativeImport.row.second", section === "background" ? row.intensity
+                            : section === "exclusions" ? row.second : row.value);
+                    }
+                }
+                applyTarget = import265_control("nativeImport.apply");
+                applyTarget.clicked.connect(applyReceipt);
+                import265_click("nativeImport.apply");
+                compare(applyClicks, 1, "IMPORT265: ordinary real Apply is clicked exactly once");
+                tryVerify(() => assistant.nativeImport.state === "created", 10000,
+                    "IMPORT265: ordinary real Worker completes genuine adoption before success is observed");
+                verify(assistant.nativeImport.outcome && assistant.nativeImport.outcome.adopted === true
+                    && (same ? assistant.nativeImport.outcome.presentation_complete
+                        : assistant.nativeImport.presentation_complete) === true,
+                    "IMPORT267: ordinary success requires complete actual adoption, not partial committed presentation");
+            } else {
+                toggle(); assistant.signIn(); visible185_ready("import265-bootstrap");
+                if (assistant.contextConsentRequired) assistant.signIn();
+                visible185_ready("import265-disclosed");
+                verify(!assistant.contextConsentRequired, "IMPORT265 SETUP: original exact disclosed context is approved");
+                const show = item("assistant.showActions");
+                verify(show.visible && show.enabled, "IMPORT265 SETUP: actual Show actions checkbox is available");
+                mouseClick(show); compare(assistant.showActions, true, "IMPORT265: actual mode checkbox enables visible creation");
+                accountWasConnected = assistant.connected; models = JSON.stringify(Probe.rows(assistant.models));
+                previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+                assistant.send("Import the actual selected PbSO4 CIF and measured XYE with the original explicit recipe");
+                tryVerify(() => {
+                        form = findChild(window, "nativeImport.dialog");
+                        if (!form || !form.opened) return false;
+                        const fields = Ui.itemsWithProperty(form.contentItem, "objectName")
+                            .filter(control => control.objectName === "nativeImport.projectName");
+                        field = fields.length === 1 ? fields[0] : null;
+                        return assistant.showingActions && ownStarts > 0 && field && field.activeFocus
+                            && field.text.length > 0 && field.text !== recipe.project_name;
+                }, import265_observationMs(recipe), "IMPORT265 SETUP: actual original paced form text is partially typed before intervention");
+                compare(Session.project, original, "IMPORT265 SETUP: real form staging has made no scientific owner commit");
+                const applyCandidates = Ui.itemsWithProperty(form.contentItem, "objectName")
+                    .filter(control => control.objectName === "nativeImport.apply");
+                compare(applyCandidates.length, 1, "IMPORT267 SETUP: one real actual form Apply owns the native stage");
+                applyTarget = applyCandidates[0];
+                applyTarget.clicked.connect(applyReceipt);
+                if (cancelled) {
+                    if (data.tag === "visible-stop") {
+                        const stop = item("assistant.stopVisibleAction");
+                        verify(stop.visible && stop.enabled && Ui.exposed(stop), "IMPORT265 SETUP: real Stop is exposed");
+                        let stopped = 0;
+                        function stopReceipt() { ++stopped; }
+                        stop.clicked.connect(stopReceipt);
+                        try {
+                            mouseClick(stop);
+                            compare(stopped, 1, "IMPORT267 SETUP: original genuine Stop click reaches its actual receiver");
+                        } finally { stop.clicked.disconnect(stopReceipt); }
+                    } else if (data.tag === "visible-manual-input") {
+                        field.textEdited.connect(editReceipt);
+                        keyClick(Qt.Key_Z);
+                        compare(edits, 1, "IMPORT265: original genuine user key reaches its actual focused form receiver once");
+                        verify(field.text.includes("z") || field.text.includes("Z"), "IMPORT265: the original user's key text is retained");
+                        retained = field.text;
+                    } else if (data.tag === "visible-close") {
+                        // Actual Qt close/hide lifecycle, no invented inherited Escape policy.
+                        let hides = 0;
+                        function hideReceipt() { ++hides; }
+                        form.aboutToHide.connect(hideReceipt);
+                        try {
+                            form.close();
+                            tryCompare(form, "opened", false, 2000, "IMPORT267: actual original Qt form closes");
+                            compare(hides, 1, "IMPORT267: the genuine original form hide boundary is reached once");
+                        } finally { form.aboutToHide.disconnect(hideReceipt); }
+                    } else if (data.tag === "visible-source-refusal-close") {
+                        verify(!assistant.removeSelectedFile(cif[0].id),
+                            "IMPORT270: active original staging honestly refuses a busy source removal");
+                        compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), JSON.stringify(selected),
+                            "IMPORT270: refused active removal preserves every original source grant");
+                        compare(Session.project, original,
+                            "IMPORT270: refused source maintenance cannot change the original owner");
+                        compare(applyClicks, 0,
+                            "IMPORT270: active source refusal precedes any scientific Apply");
+                        form.close();
+                        tryCompare(form, "opened", false, 2000,
+                            "IMPORT270: actual supported Qt form close then cancels the original stage");
+                    } else {
+                        Session.closeProject();
+                        verify(Session.createProject("Original replacement owner", "Original replacement metadata"),
+                            "IMPORT265: genuine Session action installs the independent replacement owner");
+                        replacement = Session.project;
+                    }
+                    tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                        && (data.tag === "visible-new-owner"
+                            || visible185_outcome(callId, previous) !== null), 10000,
+                        "IMPORT265: original staged request actually retires after real user/owner/source action");
+                    rendered();
+                    if (retained !== null) compare(field.text, retained, "IMPORT265: no later stage cleanup overwrites original manual text");
+                    compare(Session.project, replacement || original, "IMPORT265: retired original staging cannot install a late owner");
+                    if (original) compare(import265_owner(original), metadata, "IMPORT265: cancelled stage preserves original metadata/settings/path");
+                    const outcome = visible185_outcome(callId, previous);
+                    verify((data.tag === "visible-new-owner" && outcome === null)
+                        || (outcome !== null && !outcome.adopted
+                            && !["completed", "created"].includes(outcome.status)),
+                        "IMPORT265: retired before-Apply work cannot claim real scientific adoption");
+                    compare(applyClicks, 0, "IMPORT267: real staged retirement precedes any Apply click");
+                    verify(assistant.connected && JSON.stringify(Probe.rows(assistant.models)) === models,
+                        "IMPORT267: real staging retirement preserves the original genuine account/catalog");
+                    if (data.tag === "visible-new-owner") {
+                        compare(Probe.rows(assistant.selectedFiles).length, 0,
+                            "IMPORT270: genuine replacement owner has fresh scope without old source grants");
+                        compare(replacement.structures.count, 0,
+                            "IMPORT270: cancelled original cannot populate the new empty owner's structures");
+                        compare(replacement.experiments.count, 0,
+                            "IMPORT270: cancelled original cannot populate the new empty owner's experiments");
+                    } else compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), JSON.stringify(selected),
+                        "IMPORT267: same-owner retirement actions preserve original source grants");
+                    return;
+                }
+                tryVerify(() => {
+                    const outcome = visible185_outcome(callId, previous);
+                    return outcome !== null && outcome.adopted === true && outcome.presentation_complete === true
+                        && outcome.status === (same ? "completed" : "created")
+                        && !assistant.canCancel && !assistant.showingActions;
+                }, import265_observationMs(recipe), "IMPORT265: original once-only native result confirms real visible adoption and complete presentation");
+                compare(applyClicks, 1, "IMPORT267: visible helper clicks the same actual Apply exactly once");
+                verify(ownStarts > 0, "IMPORT267: supported visible import has an actual pointer presentation");
+                form = item("nativeImport.dialog");
+            }
+            if (form.opened) {
+                form.close();
+                tryCompare(form, "opened", false, 2000, "IMPORT267: actual postcommit form hides before ordinary Undo");
+            }
+            const project = Session.project;
+            verify(project !== null, "IMPORT265: successful real import supplies an actual project");
+            if (original) {
+                compare(project, original, "IMPORT265: saved scientifically empty PVM owner is populated in place");
+                compare(import265_owner(project), metadata, "IMPORT265: original user metadata/settings/saved path survive recipe defaults");
+                verify(project.modified, "IMPORT265: same-owner scientific completion is modified, never silently saved");
+            } else {
+                compare(project.name, recipe.project_name, "IMPORT265: no-owner adoption uses the original supplied name");
+                compare(project.description, recipe.description, "IMPORT265: no-owner adoption retains exact original description");
+                compare(project.path, "", "IMPORT265: creation alone never invents a saved destination");
+            }
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                "IMPORT265: the actual same native calculation finishes and is genuinely current");
+            import265_science(project);
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), JSON.stringify(selected),
+                "IMPORT267: genuine selected IDs/source grants survive actual creation");
+            if (original) compare(Probe.readFile(original.path + "/project.edi"), originalSavedText,
+                "IMPORT267: model completion does not silently overwrite the independent saved empty source");
+            if (original) {
+                verify(project.canUndo, "IMPORT265: actual same-owner completion owns one recorded science Undo");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                tryVerify(() => project.structures.count === 0 && project.experiments.count === 0 && !project.calculating,
+                    10000, "IMPORT265: one real appbar Undo restores original empty science");
+                compare(Session.project, original, "IMPORT265: one Undo retains original owner");
+                compare(import265_owner(original), metadata, "IMPORT265: complete Undo retains original metadata/settings/path");
+                compare(original.canUndo, originalUndo, "IMPORT265: one Undo restores original recorded-history availability");
+                compare(Probe.readFile(original.path + "/project.edi"), originalSavedText,
+                    "IMPORT267: genuine model Undo never rewrites the original saved empty file");
+            }
+            if (manual) compare(assistant.connected, false, "IMPORT265: manual form success never silently signs in");
+            else verify(accountWasConnected && assistant.connected && JSON.stringify(Probe.rows(assistant.models)) === models,
+                "IMPORT265: original managed account/catalog survive actual visible import and Undo");
+        } finally {
+            console.log("IMPORT265_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
+                originalOwner: String(original), replacementOwner: String(replacement),
+                connected: assistant.connected, canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                nativeImport: assistant.nativeImport, pointerStarts: ownStarts, userEdits: edits,
+                applyClicks: applyClicks, originalOutcome: visible185_outcome(callId, previous)}));
+            if (field && retained !== null) field.textEdited.disconnect(editReceipt);
+            if (applyTarget && applyTarget.clicked) applyTarget.clicked.disconnect(applyReceipt);
+            assistant.actionPointerShown.disconnect(pointerReceipt);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
 }

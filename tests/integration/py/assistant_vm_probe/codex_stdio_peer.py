@@ -796,6 +796,7 @@ native_rpc_sequence = 0
 native_start_pending = None
 native_steers = []
 native_disclosed_parameters = []
+native_disclosed_sources = []
 
 
 def native_original_addresses(value):
@@ -809,6 +810,11 @@ def native_original_addresses(value):
             and row['dependence'] == 'independent'
         ]
         assert len(matches) == 1, 'CREATE SETUP: original current parameter address is unique'
+        return matches[0]
+    if isinstance(value, dict) and set(value) == {'$original_selected_name'}:
+        matches = [row['id'] for row in native_disclosed_sources
+                   if row['name'] == value['$original_selected_name'] and row['text_readable']]
+        assert len(matches) == 1, 'IMPORT267 SETUP: actual original disclosed selected source ID is unique'
         return matches[0]
     if isinstance(value, dict):
         return {key: native_original_addresses(item) for key, item in value.items()}
@@ -979,6 +985,15 @@ def native_reply(request):
             and original['params']['tool'] == 'list_parameters'):
         disclosed = json.loads(result['contentItems'][0]['text'])
         native_disclosed_parameters[:] = disclosed['parameters']
+    if (config.get('native_import267') and result and result.get('success')
+            and original['params']['tool'] == 'inspect_project'):
+        disclosed = json.loads(result['contentItems'][0]['text'])
+        native_disclosed_sources[:] = disclosed['selected_files']['files']
+        clear_observation('import267-original-source-addresses', {
+            'request_id': request['id'],
+            'sources': [{'name': row['name'], 'id': row['id'], 'text_readable': row['text_readable']}
+                        for row in native_disclosed_sources],
+        })
     item = {
         **original['item'],
         'status': 'completed' if result and result.get('success') else 'failed',

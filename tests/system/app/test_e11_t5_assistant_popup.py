@@ -998,3 +998,180 @@ def test_relation246_original_native_gui_science_and_retirement(case, tmp_path):
                    for release, ready in zip(releases, observed_ready, strict=True)), (
             'REL OWNER SETUP: earlier automatic reads cannot impersonate readiness release'
         )
+
+
+IMPORT267_CASES = [
+    'manual-no-owner', 'manual-saved-empty', 'visible-no-owner', 'visible-saved-empty',
+    'visible-stop', 'visible-manual-input', 'visible-close', 'visible-new-owner',
+    'visible-source-refusal-close',
+]
+
+
+def import267_recipe():
+    """Independent original PbSO4/CW recipe, same explicit14 fields as the Qt actor."""
+    return {
+        'project_name': 'Original measured PbSO4', 'description': 'Original typed independent import',
+        'experiment_name': 'd1a', 'sample_form': 'powder', 'beam_mode': 'constant wavelength',
+        'radiation_probe': 'neutron', 'scattering_type': 'bragg',
+        'peak_profile': 'cwl-tch-pseudo-voigt', 'wavelength': 1.909, 'zero_offset': -0.001,
+        'phase_scale': 1, 'background': [{'position': 10, 'intensity': 200},
+                                      {'position': 155.85, 'intensity': 200}],
+        'exclusions': [{'first': 10, 'second': 11}, {'first': 155, 'second': 155.85}],
+        'initial_parameters': [{'path': path, 'value': value} for path, value in [
+            ('experiment.peak.broad_gauss_u', 0.1), ('experiment.peak.broad_gauss_v', 0),
+            ('experiment.peak.broad_gauss_w', 0.1), ('experiment.peak.broad_lorentz_x', 0),
+            ('experiment.peak.broad_lorentz_y', 0.1)]],
+    }
+
+
+def import267_process_budget(recipe):
+    """Existing90s Main envelope plus this finite original public paced workload."""
+    def spelling(value):
+        return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
+    texts = [recipe[key] for key in ['project_name', 'experiment_name', 'description']]
+    texts += [spelling(recipe[key]) for key in ['wavelength', 'zero_offset', 'phase_scale']]
+    for row in recipe['background']:
+        texts += [spelling(row['position']), spelling(row['intensity'])]
+    for row in recipe['exclusions']:
+        texts += [spelling(row['first']), spelling(row['second'])]
+    for row in recipe['initial_parameters']:
+        texts += [row['path'], spelling(row['value'])]
+    rows = sum(len(recipe[key]) for key in ['background', 'exclusions', 'initial_parameters'])
+    clicks = 3 + 1 + 3 + 3 + len(texts) + rows + 1
+    scalar_keys = sum(len(text) + 2 for text in texts)
+    combo_keys = (2 + 1) + (2 + 1) + (2 + 5)
+    paced = clicks * (500 + 100 + 500) + 100 * (scalar_keys + combo_keys)
+    return {'ordinary_process_ms': 90000, 'paced_clicks': clicks, 'scalar_keys': scalar_keys,
+            'combo_keys': combo_keys, 'public_paced_workload_ms': paced,
+            'process_ms': 90000 + paced,
+            'provenance': 'Existing Main wrapper90s; public237 helper move500/press100/relax500/scalar100; complete literal recipe/controls. No production deadline or Qt assertion bound changed.'}
+
+
+@pytest.mark.parametrize('case', IMPORT267_CASES)
+def test_import267_real_main_manual_visible_creation_and_retirement(case, tmp_path):
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'IMPORT267 SETUP: genuinely matching actual Main Qt consumer required'
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    manual = case.startswith('manual-')
+    cancelled = not manual and case not in {'visible-no-owner', 'visible-saved-empty'}
+    recipe = import267_recipe()
+    calls = [
+        {'tool': 'inspect_project', 'call_id': 'import265-before-' + case,
+         'arguments': {'purpose': 'Inspect original genuinely selected import source addresses'}},
+        {'tool': 'create_cwl_project', 'call_id': 'import265-create-' + case,
+         'arguments': {'purpose': 'Import the original selected PbSO4 and measured XYE through actual controls',
+                       'cif_file_id': {'$original_selected_name': 'PbSO4-Wyckoff.cif'},
+                       'data_file_id': {'$original_selected_name': 'observed.xye'}, 'recipe': recipe}},
+    ]
+    if not manual:
+        config.update(scenario='native:script', native_turn_calls=[calls], native_import267=True)
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    originals = [ROOT / 'tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif',
+                 Path('/tmp/relay-e11-t5-tests/seq85-private/inputs/observed.xye')]
+    original_bytes = [path.read_bytes() for path in originals]
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_import265_actual_manual_and_visible_creation:' + case,
+            '-o', '-,txt']
+    budget = import267_process_budget(recipe)
+    (tmp_path / 'import267-budget.json').write_text(json.dumps(budget, indent=2))
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90 if manual else budget['process_ms'] / 1000,
+                                check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ['stdout', 'stderr']:
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            destination = tmp_path / ('import267-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'import267.stdout.log').write_text(result.stdout)
+    (tmp_path / 'import267.stderr.log').write_text(result.stderr)
+    (tmp_path / 'import267-process.json').write_text(json.dumps({'argv': argv,
+        'returncode': result.returncode, 'case': case, 'budget': budget}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_import265_actual_manual_and_visible_creation('
+        + case + ')' in output
+    ), 'IMPORT267: genuine Main form/native/retirement/science/Undo premises must execute\n' + output
+    assert config_path.read_bytes() == original_config and (
+        [path.read_bytes() for path in originals] == original_bytes
+    ), 'IMPORT267: complete original prelaunch objective and immutable input bytes are unchanged'
+    trace = Path(config['trace'])
+    if manual:
+        assert not trace.exists() and not config_path.with_suffix('.peer-pid').exists(), (
+            'IMPORT267: genuine offline manual form never silently starts a provider peer'
+        )
+    else:
+        loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+        assert loaded['native_turn_calls'] == [calls], (
+            'IMPORT267: actual process consumes the complete original script before any RPC'
+        )
+        requests = [json.loads(line) for line in trace.read_text().splitlines()]
+        assert len([x for x in requests if x.get('method') == 'turn/start']) == 1, (
+            'IMPORT267: one original admitted user objective owns this actual creation attempt'
+        )
+        assert not any(x.get('method') in {'account/login/start', 'account/logout'} for x in requests), (
+            'IMPORT267: scientific staging never repairs/replaces the original managed account'
+        )
+        replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+        assert len(replies) == 2 and len({x['response']['id'] for x in replies}) == 2, (
+            'IMPORT270: settled preserved-process staging answers BOTH original reverse RPCs exactly once'
+        )
+        first = replies[0]
+        assert first['original']['params']['callId'] == calls[0]['call_id'] and first['response']['result']['success'], (
+            'IMPORT267 SETUP: original public inspect discloses actual selected IDs before creation'
+        )
+        disclosed = json.loads(first['response']['result']['contentItems'][0]['text'])['selected_files']['files']
+        selected = {name: [x['id'] for x in disclosed if x['name'] == name and x['text_readable']]
+                    for name in ['PbSO4-Wyckoff.cif', 'observed.xye']}
+        assert all(len(value) == 1 for value in selected.values()), (
+            'IMPORT267 SETUP: original disclosed source addresses are unique and readable'
+        )
+        emitted = [json.loads(line) for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+        assert len(emitted) == 2 and len({row['id'] for row in emitted}) == 2 and [
+            row['params']['callId'] for row in emitted
+        ] == [row['call_id'] for row in calls], (
+            'IMPORT267: exactly the two actual original RPCs were genuinely emitted before response/adoption checks'
+        )
+        assert emitted[1]['params']['tool'] == 'create_cwl_project' and (
+            emitted[1]['params']['arguments'] == {**calls[1]['arguments'],
+                'cif_file_id': selected['PbSO4-Wyckoff.cif'][0],
+                'data_file_id': selected['observed.xye'][0]}
+        ), 'IMPORT267: staged creation carries original complete recipe and genuine disclosed current IDs'
+        if len(replies) == 2:
+            original, response = replies[1]['original'], replies[1]['response']
+            assert original['params']['callId'] == calls[1]['call_id'] and (
+                original['params']['tool'] == 'create_cwl_project'
+                and original['params']['arguments'] == {**calls[1]['arguments'],
+                    'cif_file_id': selected['PbSO4-Wyckoff.cif'][0],
+                    'data_file_id': selected['observed.xye'][0]}
+                and response['id'] == original['id']
+            ), 'IMPORT267: original opaque addresses/complete recipe/purpose and RPC envelope remain canonical'
+            outcome = json.loads(response['result']['contentItems'][0]['text'])
+            if cancelled:
+                assert not response['result']['success'] and not outcome.get('adopted'), (
+                    'IMPORT267: genuinely retired pre-Apply stage never claims scientific success'
+                )
+            else:
+                assert response['result']['success'] and outcome['adopted'] and outcome['presentation_complete'] and (
+                    outcome['status'] == ('completed' if case.endswith('saved-empty') else 'created')
+                ), (
+                    'IMPORT267: actual original host result proves adoption and complete presentation'
+                )
+    if not cancelled:
+        observations = [json.loads(line.split('qml: IMPORT265_INPUT ', 1)[1])
+                        for line in result.stdout.splitlines() if 'qml: IMPORT265_INPUT ' in line]
+        expected = [list(map(float, line.split())) for line in original_bytes[1].decode().splitlines()
+                    if line.strip() and not line.lstrip().startswith('#')]
+        assert len(observations) == 1 and observations[0]['observations'] == expected, (
+            'IMPORT267: every actual measured coordinate/intensity/original supplied sigma matches immutable source'
+        )
+        assert observations[0]['weight'] == 1 and len(observations[0]['links']) == 1, (
+            'IMPORT267: real imported measured dataset keeps its single phase and unit weight'
+        )
