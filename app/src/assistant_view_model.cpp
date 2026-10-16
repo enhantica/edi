@@ -2,6 +2,7 @@
 #include "assistant_view_model.hpp"
 
 #include <QFile>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QSettings>
 #include <QThread>
@@ -4250,7 +4251,10 @@ AssistantViewModel::AssistantViewModel(QObject* parent) : QObject(parent), state
 AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent)
     : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies))) { state_->bind(nullptr); }
 #endif
-AssistantViewModel::~AssistantViewModel() = default;
+AssistantViewModel::~AssistantViewModel() {
+    // Stop observation before State/helper destruction can publish Qt events.
+    if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
+}
 bool AssistantViewModel::showActions() const { return state_->show_actions; }
 bool AssistantViewModel::showingActions() const { return state_->showing_actions; }
 QQuickWindow* AssistantViewModel::actionWindow() const { return state_->action_window; }
@@ -4266,7 +4270,7 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
     const QPointer<AssistantViewModel> self(this);
     if (state_->showing_actions) cancel();
     if (!self) return;
-    if (state_->action_window) state_->action_window->removeEventFilter(this);
+    if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
     state_->widget_input.reset(); state_->action_window = window;
     if (window) {
         state_->widget_input = std::make_unique<AssistantWidgetInput>(*window);
@@ -4275,7 +4279,9 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerPressed, this, &AssistantViewModel::actionPointerPressed);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerHidden, this, &AssistantViewModel::actionPointerHidden);
         connect(state_->widget_input.get(), &AssistantWidgetInput::manualInput, this, &AssistantViewModel::actionManualTakeover);
-        window->installEventFilter(this);
+        // This request-wide filter is installed after the helper, preserving
+        // original cancellation order and covering its inter-action gaps too.
+        if (auto* application = QCoreApplication::instance()) application->installEventFilter(this);
     }
     emit actionWindowChanged();
 }
@@ -4283,10 +4289,15 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
 #ifndef __EMSCRIPTEN__
     if (watched == state_->action_window && state_->widget_input && state_->widget_input->ownMouseEvent(event))
         return false; // Exact device replay; the retained input owner checks currentness or consumes it.
-    if (watched == state_->action_window && state_->showing_actions && (!state_->widget_input || !state_->widget_input->injecting())) {
+    const bool owned_window = watched == state_->action_window;
+    const bool focus_text = state_->action_window && watched == state_->action_window->focusObject() &&
+        (event->type() == QEvent::InputMethod || event->type() == QEvent::KeyPress ||
+         event->type() == QEvent::KeyRelease || event->type() == QEvent::ShortcutOverride);
+    if ((owned_window || focus_text) && state_->showing_actions && (!state_->widget_input || !state_->widget_input->injecting())) {
         switch (event->type()) {
         case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:
-        case QEvent::KeyPress: case QEvent::ShortcutOverride: case QEvent::Wheel: case QEvent::TouchBegin: {
+        case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride: case QEvent::Wheel: case QEvent::TouchBegin: case QEvent::InputMethod: {
+            const QPointer<QObject> original_target(watched);
             const QPointer<AssistantViewModel> self(this);
             const auto original = state_->native_widget;
             const auto receipt = state_->native_receipt;
@@ -4296,10 +4307,13 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
             try { emit actionManualTakeover(); } catch (...) {}
             if (self && state_->native_receipt == receipt && state_->native_widget == original)
                 try { cancel(); } catch (...) {}
-            break;
+            return !original_target; // Same genuine event/receiver, after original retirement.
         }
-        case QEvent::WindowDeactivate: case QEvent::Hide: case QEvent::Close:
-            try { cancel(); } catch (...) {} break;
+        case QEvent::WindowDeactivate: case QEvent::Hide: case QEvent::Close: {
+            const QPointer<QObject> original_target(watched);
+            try { cancel(); } catch (...) {}
+            return !original_target;
+        }
         default: break;
         }
     }

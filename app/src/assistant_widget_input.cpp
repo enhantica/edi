@@ -148,15 +148,18 @@ AssistantWidgetInput::AssistantWidgetInput(QQuickWindow& window, QObject* parent
     if (!mouse_owner_) mouse_owner_ = new MouseOwnership(*application);
     timer_.setSingleShot(true);
     connect(&timer_, &QTimer::timeout, this, &AssistantWidgetInput::advance);
-    window.installEventFilter(this);
+    // Cocoa/IBus can send text events straight to the current focus object.
+    // The existing filter observes application delivery, scoped below to this
+    // exact owned window or its actual current text-event receiver.
+    application->installEventFilter(this);
 }
 AssistantWidgetInput::~AssistantWidgetInput() {
+    if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
     timer_.stop();
     if (mouse_owner_) {
         mouse_owner_->retire(*this, mouse_stamp_);
         if (pressed_ || mouse_owner_->heldBy(*this, mouse_stamp_)) mouse_owner_->deferHeldCleanup(mouse_stamp_);
     }
-    if (window_) window_->removeEventFilter(this);
     // Owning native adapter retires its original call/worker independently;
     // destruction never invokes callbacks into a partially destroyed owner.
 }
@@ -402,19 +405,28 @@ bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     // The retained application filter separately consumes stale own events, even
     // when this helper is inactive/replaced. Genuine devices remain manual.
     if (watched == window_ && ownMouseEvent(event)) return false;
-    if (watched == window_ && request_ && !injecting_) {
+    const bool owned_window = watched == window_;
+    const bool focus_text = window_ && watched == window_->focusObject() &&
+        (event->type() == QEvent::InputMethod || event->type() == QEvent::KeyPress ||
+         event->type() == QEvent::KeyRelease || event->type() == QEvent::ShortcutOverride);
+    if ((owned_window || focus_text) && request_ && !injecting_) {
         switch (event->type()) {
         case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:
-        case QEvent::Wheel: case QEvent::KeyPress: case QEvent::ShortcutOverride: case QEvent::TouchBegin: case QEvent::InputMethod: {
+        case QEvent::Wheel: case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride: case QEvent::TouchBegin: case QEvent::InputMethod: {
+            const QPointer<QObject> original_target(watched);
             const QPointer<AssistantWidgetInput> self(this);
             const auto original = request_; const auto id = serial_;
             try { emit manualInput(); } catch (...) {}
             // A synchronous observer may have retired/replaced the old input.
             if (self && request_ == original && serial_ == id) cancel();
-            break; // Keep manual controls exposed and yield the very same event.
+            // Never redeliver to a deleted receiver. A surviving original
+            // receiver receives this same event only after exact cleanup.
+            return !original_target;
         }
-        case QEvent::WindowDeactivate: case QEvent::Hide: case QEvent::Close:
-            cancel(); break;
+        case QEvent::WindowDeactivate: case QEvent::Hide: case QEvent::Close: {
+            const QPointer<QObject> original_target(watched);
+            cancel(); return !original_target;
+        }
         default: break;
         }
     }
