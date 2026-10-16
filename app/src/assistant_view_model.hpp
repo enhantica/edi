@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QQuickWindow>
 #include <QPointF>
+#include <QEventPoint>
 #include <QUrl>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
@@ -94,6 +95,11 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void selectSkill(const QString& id);
     Q_INVOKABLE void approvePlan(const QString& id);
     Q_INVOKABLE void answerQuestion(const QString& id, const QString& answer);
+    // Actual grab owns this opaque proof until its sole tap, cancel or ungrab.
+    // Final delivery only validates the original owner; it never cancels anew.
+    Q_INVOKABLE QVariant beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner);
+    Q_INVOKABLE bool completeManualControlInput(QQuickItem* control, const QEventPoint& point,
+                                              QObject* actionOwner, const QVariant& proof);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE void signIn();
     Q_INVOKABLE void signOut();

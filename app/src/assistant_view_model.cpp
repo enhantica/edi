@@ -7,6 +7,8 @@
 #include <QSettings>
 #include <QThread>
 #include <QPointer>
+#include <QPointingDevice>
+#include <QVariant>
 #include <QScopeGuard>
 #include <array>
 #include <cmath>
@@ -16,6 +18,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaObject>
+#include <QMouseEvent>
 #include <QLoggingCategory>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -63,6 +66,29 @@
 #include <QCryptographicHash>
 #include "connection_services.hpp"
 #endif
+
+namespace edi_app {
+// One opaque value per actual handler gesture. No model/Worker/payload is kept
+// alive: QObject targets and the original native record are weak identities.
+struct ManualControlGesture {
+    QPointer<AssistantViewModel> receiver;
+    QPointer<QQuickItem> control;
+    QPointer<QObject> action_owner, structure, experiment;
+    QPointer<ProjectViewModel> project;
+    QPointer<QQuickWindow> window, observed_window;
+    QPointer<AssistantWidgetInput> helper;
+    QPointer<const QPointingDevice> device;
+    std::weak_ptr<void> record, widget;
+    QString thread;
+    quint64 generation = 0, serial = 0, account = 0, press = 0;
+    qsizetype records = 0;
+    int point = -1;
+    bool has_action_owner = false, has_structure = false, has_experiment = false;
+    bool allowed = false, consumed = false;
+};
+using ManualControlProof = std::shared_ptr<ManualControlGesture>;
+}
+Q_DECLARE_METATYPE(edi_app::ManualControlProof)
 
 namespace edi_app {
 namespace {
@@ -226,6 +252,21 @@ struct AssistantViewModel::State {
     bool show_actions = false, showing_actions = false;
     QPointer<QQuickWindow> action_window;
     std::unique_ptr<AssistantWidgetInput> widget_input;
+    bool manual_gesture_current(const ManualControlGesture& gesture) const {
+        if (gesture.receiver != &owner || !gesture.control || !gesture.window ||
+            gesture.control->window() != gesture.window || !gesture.control->isVisible() || !gesture.control->isEnabled() ||
+            gesture.project != project || gesture.observed_window != action_window || gesture.helper != widget_input.get() ||
+            gesture.generation != generation || (gesture.has_action_owner && !gesture.action_owner) ||
+            (gesture.has_structure && !gesture.structure) || (gesture.has_experiment && !gesture.experiment) ||
+            gesture.structure != (project ? project->currentStructure() : nullptr) ||
+            gesture.experiment != (project ? project->currentExperiment() : nullptr)) return false;
+#ifndef __EMSCRIPTEN__
+        if (gesture.serial != native_serial || gesture.account != usage_epoch || gesture.thread != generic_thread ||
+            gesture.records != native_records.size() || gesture.widget.lock() != native_widget ||
+            (native_call && gesture.record.lock() != native_call->record)) return false;
+#endif
+        return publishing;
+    }
     QVariantMap observed;
     // Only the controller owns a lease. This index borrows it for quota checks and
     // event deduplication; explicit State teardown destroys the controller first.
@@ -441,6 +482,7 @@ struct AssistantViewModel::State {
         QString relation_stage;
         QPointer<QQuickItem> relation_form;
         std::shared_ptr<ProjectViewModel::WidgetRelationInput> relation_input;
+        unsigned reveal_steps = 0;
         double value = 0;
         bool free = false;
         std::uint64_t edit_scope = 0, fit_token = 0;
@@ -475,6 +517,71 @@ struct AssistantViewModel::State {
         for (auto* item : widget_items())
             if (item->objectName() == name && widget_input->usableTarget(*item)) return item;
         return nullptr;
+    }
+    bool manual_request_current() const noexcept {
+        if (!show_actions || !generic_mode || !generic_busy || !project || !action_window ||
+            !generic_authenticated || generic_retiring || generic_revoke_pending || generic_clear_pending ||
+            generic_context_pending || generic_blocked || !generic_question_id.isEmpty() || !publishing) return false;
+        // Cancellation is not scientific mutation admission. Use original
+        // request identity without allocating full input fingerprints before
+        // delivering a real IME/key event to its original editor.
+        if (native_receipt && !native_receipt->retired && native_receipt->generation == generation &&
+            native_receipt->thread == generic_thread && !generic_turn.isEmpty() &&
+            native_receipt->turn == generic_turn && native_receipt->project == project) return true;
+        // The exact admitted request can still be awaiting its turn/start ACK.
+        for (auto it = native_pending.constBegin(); it != native_pending.constEnd(); ++it) {
+            const auto& r = it.value();
+            if (r && !r->retired && r->serial == native_serial && r->generation == generation &&
+                r->thread == generic_thread && r->project == project) return true;
+        }
+        return false;
+    }
+    bool manual_control(QQuickItem* target, bool handler_action = false) const {
+        if (!target || !action_window || target->window() != action_window) return false;
+        bool control = handler_action; // Actual app-owned handler supplies its own control.
+        for (auto* item = target; item; item = item->parentItem()) {
+            if (!item->isVisible() || !item->isEnabled()) return false;
+            const auto name = item->objectName();
+            if (name.startsWith("workflow.") && (name.endsWith(".manualSidebar") || name.endsWith(".mainContent"))) return control;
+            // Existing common/parameter editors mark even a clean draft. This
+            // is control identity, never a read or write of the event's text.
+            if (item->property("assistantManualDraft").isValid() || item->property("assistantEditing").isValid() ||
+                item->property("down").isValid() || item->property("pressed").isValid() || item->property("interactive").toBool()) {
+                const auto read_only = item->property("readOnly");
+                if (!read_only.isValid() || !read_only.toBool()) control = true;
+            }
+        }
+        return false; // In particular the assistant composer is outside this tree.
+    }
+    bool retire_manual_input(QQuickItem* control, bool handler_action = false) {
+        if (!manual_control(control, handler_action) || !manual_request_current()) return true;
+        const QPointer<QQuickItem> original(control);
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto binding = generation; const auto serial = native_serial; const auto account = usage_epoch;
+        const auto receipt = native_receipt;
+        const auto original_widget = native_widget;
+        const auto record = native_call ? native_call->record : nullptr;
+        const auto entries = native_records.size();
+        const QPointer<AssistantWidgetInput> helper(widget_input.get());
+        const auto thread = generic_thread, turn = generic_turn;
+        const QPointer<ProjectViewModel> target(project);
+        const QPointer<QQuickWindow> window(action_window);
+        // A post-tool takeover suppresses later restoration only; no immediate
+        // sidebar/focus operation is added before this real user action.
+        if (showing_actions) try { emit owner.actionManualTakeover(); } catch (...) {}
+        const auto original_owner = [&] {
+            return receiver && original && generation == binding && native_serial == serial && usage_epoch == account &&
+                project == target && action_window == window && original->window() == window;
+        };
+        if (!original_owner()) return false;
+        if (native_receipt != receipt || generic_thread != thread || generic_turn != turn || native_widget != original_widget ||
+            native_records.size() != entries || widget_input.get() != helper ||
+            (native_call ? native_call->record : nullptr) != record) return false; // A never cancels/acts through new B.
+        if (manual_request_current()) try { owner.cancel(); } catch (...) {}
+        // A handler must not run its old action against a replacement project,
+        // window/helper or reentrant successor admitted during cancellation.
+        return original_owner() && !native_widget && native_records.size() == entries && widget_input.get() == helper &&
+            (!native_call || native_call->record == record);
     }
     void widget_showing(bool value) {
         if (showing_actions == value) return;
@@ -629,11 +736,81 @@ struct AssistantViewModel::State {
         }
         native_call->may_have_written = true; // Immediately before the genuine final event, not during typing.
     }
+    bool widget_reveal_parameter(const std::shared_ptr<NativeWidget>& run, QQuickItem* field) {
+        if (!widget_current(run) || !widget_input || !field || field->window() != run->window ||
+            !widget_page_selected(run) || widget_input->manualDraftPresent()) {
+            widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
+        }
+        QPointer<QQuickItem> wanted(field), group, viewport;
+        for (auto* a = field->parentItem(); a; a = a->parentItem()) {
+            if (!group && a->property("collapsed").isValid() && a->objectName().startsWith("group.")) group = a;
+            if (a->property("contentY").isValid() && a->property("contentHeight").isValid()) viewport = a;
+            if (a->objectName().endsWith(".manualSidebar")) break;
+        }
+        if (group && group->property("collapsed").toBool()) {
+            auto* title = qobject_cast<QQuickItem*>(group->property("titleArea").value<QObject*>());
+            if (!title || title->window() != run->window) { widget_refuse(run, QObject::tr("The actual owning group header is unavailable")); return false; }
+            wanted = title;
+        }
+        if (widget_input->usableTarget(*wanted)) {
+            if (wanted == field) return true;
+            AssistantWidgetInput::Request request;
+            request.kind = AssistantWidgetInput::Kind::Navigate; request.target = wanted;
+            request.current = [this, run] { return widget_current(run) && widget_page_selected(run); };
+            request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
+            request.completed = [this, run, group](bool delivered, const QString& message) noexcept {
+                if (!widget_owned(run)) return;
+                try {
+                    if (!delivered || !group || group->property("collapsed").toBool()) {
+                        widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine group click did not expand its controls") : message); return;
+                    }
+                    QTimer::singleShot(500, &owner, [this, run] {
+                        try { widget_reach_parameter(run); }
+                        catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+                    });
+                } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+            };
+            widget_input->start(std::move(request)); return false;
+        }
+        // A visible viewport receives real bounded wheel input. Read-only
+        // geometry/currentness determines direction; never assign contentY,
+        // checked/index, group state or any scientific property.
+        if (!viewport || !widget_input->usableTarget(*viewport) || ++run->reveal_steps > 64) {
+            widget_refuse(run, QObject::tr("The current parameter viewport cannot be revealed within this action")); return false;
+        }
+        const auto center = wanted->mapToItem(viewport, QPointF(wanted->width()/2, wanted->height()/2));
+        const auto before = viewport->property("contentY").toDouble();
+        if (!std::isfinite(center.y()) || !std::isfinite(before) || !std::isfinite(viewport->height()) || viewport->height() <= 0 ||
+            (center.y() >= 0 && center.y() <= viewport->height())) {
+            widget_refuse(run, QObject::tr("The exact control is hidden or disabled outside a scrollable viewport")); return false;
+        }
+        AssistantWidgetInput::Request request;
+        request.kind = AssistantWidgetInput::Kind::Scroll; request.target = viewport;
+        request.scrollDirection = center.y() < 0 ? 1 : -1;
+        request.current = [this, run, viewport] { return viewport && widget_current(run) && widget_page_selected(run); };
+        request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
+        request.completed = [this, run, viewport, before](bool delivered, const QString& message) noexcept {
+            if (!widget_owned(run)) return;
+            try {
+                if (!delivered) { widget_refuse(run, message); return; }
+                QTimer::singleShot(500, &owner, [this, run, viewport, before] {
+                    try {
+                        if (!widget_current(run)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+                        if (!viewport || viewport->property("contentY").toDouble() == before) {
+                            widget_refuse(run, QObject::tr("The genuine wheel did not move the current viewport")); return;
+                        }
+                        widget_reach_parameter(run);
+                    } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+                });
+            } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+        };
+        widget_input->start(std::move(request)); return false;
+    }
     void widget_reach_parameter(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_current(run)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-        // One existing once-scheduled lookup per original call. No new entry,
-        // retry, or NativeWidget/accounting size change. Diagnose only the
-        // requested tool/tab, retaining conversion before detailed ancestry.
+        // The existing diagnostic stays bounded per lookup and disabled by
+        // default. Reveal continuations belong to this same original call;
+        // requested-tab conversion still precedes detailed ancestry.
         unsigned log_records = 0;
         bool log_omitted = false;
         auto diagnostic = [&](auto&& write) noexcept {
@@ -728,7 +905,7 @@ struct AssistantViewModel::State {
         else if (action_window && action_window->contentItem()) {
             for (auto* item : widget_items()) {
                 const bool usable = widget_input && widget_input->usableTarget(*item);
-                if (!usable) { observe(item, false, nullptr, nullptr, nullptr, nullptr); continue; }
+                if (!usable && run->tab == "appBar.tab.analysis") { observe(item, false, nullptr, nullptr, nullptr, nullptr); continue; }
                 ParameterItem* parameter = nullptr;
                 QVariant parameter_property;
                 QObject* converted_parameter = nullptr;
@@ -750,11 +927,26 @@ struct AssistantViewModel::State {
                     converted_parameter = parameter_property.value<QObject*>();
                     parameter = qobject_cast<ParameterItem*>(converted_parameter);
                 }
-                observe(item, true, &parameter_property, converted_parameter, parameter, property_owner);
-                if (parameter == run->parameter) { target = item; break; }
+                observe(item, usable, &parameter_property, converted_parameter, parameter, property_owner);
+                if (parameter == run->parameter) {
+                    // Retained Basic/Extras trees can contain the same item.
+                    // Only the captured current Main sidebar owns this route.
+                    auto* basic = widget_sidebar_tab(run, "basic");
+                    bool current_main = run->tab == "appBar.tab.analysis";
+                    for (auto* a = item->parentItem(); a && !current_main; a = a->parentItem())
+                        current_main = a->objectName() == QStringLiteral("workflow.") + run->tab.mid(11) + ".manualSidebar";
+                    bool other_tier = false;
+                    for (auto* a = item->parentItem(); a; a = a->parentItem()) {
+                        const auto tier = a->property("shownTier");
+                        if (tier.isValid() && tier.toString() != "Basic") other_tier = true;
+                    }
+                    if (!current_main || other_tier || !basic || !basic->property("checked").toBool()) continue;
+                    target = item; break;
+                }
             }
         }
-        if (!target) { widget_refuse(run, QObject::tr("This exact native parameter/control is not exposed by the current page, selection or filters; use normal mode")); return; }
+        if (!target) { widget_refuse(run, QObject::tr("This exact native parameter/control is not exposed by the current page, selection or filters")); return; }
+        if (run->tab != "appBar.tab.analysis" && !widget_reveal_parameter(run, target)) return;
         AssistantWidgetInput::Request request;
         request.kind = run->tool == "run_fit" ? AssistantWidgetInput::Kind::Fit : run->tool == "set_free" ? AssistantWidgetInput::Kind::Free : AssistantWidgetInput::Kind::Value;
         request.target = target; request.value = run->valueText;
@@ -1094,7 +1286,7 @@ struct AssistantViewModel::State {
             auto number = QJsonDocument(QJsonArray{run->value}).toJson(QJsonDocument::Compact);
             run->valueText = QString::fromUtf8(number.mid(1, number.size() - 2)); // Actual JSON round-trip numeric spelling.
             run->tab = tool == "set_free" ? "appBar.tab.analysis"
-                : run->parameter->name() == "setup_wavelength" ? "appBar.tab.experiment"
+                : run->parameter->category() == "instrument" ? "appBar.tab.experiment"
                 : run->parameter->category() == "cell" ? "appBar.tab.structure" : "appBar.tab.analysis";
         } else run->tab = "appBar.tab.analysis";
         if (run->parameter && run->tab == "appBar.tab.analysis") {
@@ -1125,7 +1317,7 @@ struct AssistantViewModel::State {
             if (values.size() == 1) {
                 const auto path = values[0].toObject().value("path").toString();
                 for (auto* parameter : project->findChildren<ParameterItem*>()) if (parameter->path() == path) {
-                    if (parameter->name() == "setup_wavelength") page = "experiment";
+                    if (parameter->category() == "instrument") page = "experiment";
                     else if (parameter->category() == "cell") page = "structure";
                     break;
                 }
@@ -2520,15 +2712,20 @@ struct AssistantViewModel::State {
             !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) return;
         agent->settleOperation();
         generic_revoke_pending = false;
+        generic_clear_interrupt_sent = false;
     }
     void generic_advance_clear() {
-        if (!generic_clear_pending && !generic_context_pending) return;
+        if (!generic_clear_pending && !generic_context_pending && !generic_revoke_pending) return;
         if (!generic_authenticated || generic_retiring) return; // Real account/failure retirement remains authoritative.
         if (generic_busy && !generic_turn.isEmpty() && !generic_clear_interrupt_sent && generic_interrupt_rpc.isEmpty()) {
             generic_clear_interrupt_sent = true;
             generic_interrupt_rpc = generic_request("turn/interrupt", {{"threadId", generic_thread}, {"turnId", generic_turn}});
             generic_interrupt_thread = generic_thread; generic_interrupt_turn = generic_turn;
         }
+        // Stop/manual takeover can precede the original turn/start ACK.
+        // The same existing revoke deadline/once flag sends its interrupt only
+        // when the real original turn ID arrives; never disconnect to guess it.
+        if (!generic_clear_pending && !generic_context_pending) return;
         // A terminal event alone does not retire the still-correlated input or
         // interrupt replies. Keep their actual IDs and the first revoke deadline.
         if (native_fit || native_worker_admitted() || generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) return;
@@ -4594,13 +4791,52 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
 }
 bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
 #ifndef __EMSCRIPTEN__
-    if (watched == state_->action_window && state_->widget_input && state_->widget_input->ownMouseEvent(event))
-        return false; // Exact device replay; the retained input owner checks currentness or consumes it.
+    if (state_->widget_input && state_->widget_input->ownMouseEvent(event))
+        return state_->widget_input->rejectOwnEvent(watched, event); // Every original window/item boundary is checked.
+    // A whole Show-actions request owns input delegation before its first
+    // mutable tool too. Observe only actual current manual controls; composer
+    // typing, other windows and pure queries never cancel a running request.
+    try {
+        if (!state_->native_widget && state_->manual_request_current() &&
+            (!state_->widget_input || !state_->widget_input->injecting())) {
+            QQuickItem* target = nullptr;
+            const bool window_event = watched == state_->action_window;
+            const bool focus_event = state_->action_window && watched == state_->action_window->focusObject();
+            auto* delivered_item = qobject_cast<QQuickItem*>(watched);
+            // Qt's actual delivery agent sends the selected mouse/wheel/touch item
+            // through QCoreApplication::sendEvent. Observe that real receiver,
+            // not an approximation of hit testing under Popup/Overlay branches.
+            switch (event->type()) {
+            case QEvent::InputMethod: case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride:
+                if (window_event || focus_event) target = state_->action_window->activeFocusItem();
+                break;
+            case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseButtonDblClick:
+                target = delivered_item;
+                break;
+            case QEvent::MouseMove:
+                if (static_cast<QMouseEvent*>(event)->buttons() != Qt::NoButton) target = delivered_item;
+                break;
+            case QEvent::Wheel:
+                target = delivered_item;
+                break;
+            case QEvent::TouchBegin:
+                target = delivered_item;
+                break;
+            default: break;
+            }
+            if (state_->manual_control(target)) {
+                const QPointer<QObject> original_target(watched);
+                state_->retire_manual_input(target);
+                return !original_target; // Same original genuine event, never synthesized again.
+            }
+        }
+    } catch (...) {} // Observation failure never consumes or rewrites genuine input.
     const bool owned_window = watched == state_->action_window;
     const bool focus_text = state_->action_window && watched == state_->action_window->focusObject() &&
         (event->type() == QEvent::InputMethod || event->type() == QEvent::KeyPress ||
          event->type() == QEvent::KeyRelease || event->type() == QEvent::ShortcutOverride);
-    if ((owned_window || focus_text) && state_->showing_actions && (!state_->widget_input || !state_->widget_input->injecting())) {
+    const bool window_lifecycle = event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide || event->type() == QEvent::Close;
+    if ((owned_window || focus_text) && state_->showing_actions && (state_->native_widget || window_lifecycle) && (!state_->widget_input || !state_->widget_input->injecting())) {
         switch (event->type()) {
         case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:
         case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride: case QEvent::Wheel: case QEvent::TouchBegin: case QEvent::InputMethod: {
@@ -4997,6 +5233,66 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
 #endif
     state_->command({{"type", "answer"}, {"question_id", id}, {"answer", answer}});
 }
+QVariant AssistantViewModel::beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner) {
+    if (!control || !control->window() || !point.device() || point.state() != QEventPoint::State::Pressed) return {};
+    try {
+        auto gesture = std::make_shared<ManualControlGesture>();
+        gesture->receiver = this; gesture->control = control; gesture->action_owner = actionOwner;
+        gesture->has_action_owner = actionOwner != nullptr;
+        gesture->project = state_->project;
+        gesture->structure = state_->project ? state_->project->currentStructure() : nullptr;
+        gesture->experiment = state_->project ? state_->project->currentExperiment() : nullptr;
+        gesture->has_structure = !gesture->structure.isNull(); gesture->has_experiment = !gesture->experiment.isNull();
+        gesture->window = control->window(); gesture->observed_window = state_->action_window;
+        gesture->helper = state_->widget_input.get(); gesture->generation = state_->generation;
+        gesture->device = point.device(); gesture->point = point.id(); gesture->press = point.pressTimestamp();
+#ifndef __EMSCRIPTEN__
+        gesture->serial = state_->native_serial; gesture->account = state_->usage_epoch;
+        gesture->thread = state_->generic_thread; gesture->records = state_->native_records.size();
+        gesture->record = state_->native_call ? state_->native_call->record : nullptr;
+        gesture->widget = state_->native_widget;
+#endif
+        // Allocate the return value BEFORE any synchronous cancellation. A
+        // rejected original grab remains a rejected opaque proof, never a retry.
+        auto proof = QVariant::fromValue(gesture);
+        const auto receiver = gesture->receiver;
+        bool allowed = false;
+        const auto private_point = AssistantWidgetInput::rejectOwnedPoint(control, point);
+        if (private_point) allowed = !*private_point;
+#ifndef __EMSCRIPTEN__
+        else if (receiver) allowed = state_->retire_manual_input(control, true);
+#else
+        else allowed = true; // Ordinary browser/manual controls require no native agent.
+#endif
+        if (!receiver || !allowed) return proof;
+#ifndef __EMSCRIPTEN__
+        // Retirement may consume A's widget, but must not publish a new owner,
+        // helper, record or B. retire_manual_input already checks that boundary.
+        if (!private_point) gesture->widget = state_->native_widget;
+#endif
+        gesture->allowed = state_->manual_gesture_current(*gesture);
+        return proof;
+    } catch (...) { return {}; } // The original gesture never rearms on release.
+}
+bool AssistantViewModel::completeManualControlInput(QQuickItem* control, const QEventPoint& point,
+                                                  QObject* actionOwner, const QVariant& proof) {
+    try {
+        if (proof.metaType() != QMetaType::fromType<ManualControlProof>()) return false;
+        const auto gesture = *static_cast<const ManualControlProof*>(proof.constData());
+        if (!gesture || gesture->consumed) return false;
+        gesture->consumed = true; // Sole action, including a refused/stale final delivery.
+        if (!gesture->allowed || gesture->receiver != this || gesture->control != control ||
+            gesture->action_owner != actionOwner || !gesture->device || point.device() != gesture->device || point.id() != gesture->point ||
+            point.pressTimestamp() != gesture->press || point.state() != QEventPoint::State::Released ||
+            !state_->manual_gesture_current(*gesture)) return false;
+        // Private input needs its ORIGINAL live window/sequence/stamp at this
+        // real recipient too; a genuine release never cancels a fresh request.
+        if (const auto rejected = AssistantWidgetInput::rejectOwnedPoint(control, point)) {
+            if (*rejected) return false;
+        }
+        return gesture->receiver && state_->manual_gesture_current(*gesture);
+    } catch (...) { return false; }
+}
 void AssistantViewModel::cancel() {
 #ifndef __EMSCRIPTEN__
     state_->retire_result();
@@ -5018,9 +5314,17 @@ void AssistantViewModel::cancel() {
                 state_->generic_revoke_pending = true;
                 if (!state_->generic_retire_question()) return;
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);
+                state_->generic_clear_interrupt_sent = true;
                 state_->generic_interrupt_rpc = state_->generic_request("turn/interrupt", {{"threadId", state_->generic_thread}, {"turnId", state_->generic_turn}});
                 state_->generic_interrupt_thread = state_->generic_thread; state_->generic_interrupt_turn = state_->generic_turn;
-            } else if (state_->generic_connecting || state_->generic_busy) state_->generic_fail(tr("Agent sign-in or input was interrupted."));
+            } else if (state_->generic_busy && !state_->generic_connecting) {
+                // A submitted turn/start has no turn ID yet. Retire its native
+                // authority now, retain real account/correlation, and interrupt
+                // exactly once after its actual ACK/started notification.
+                state_->generic_revoke_pending = true;
+                if (!state_->generic_retire_question()) return;
+                state_->agent->beginOperation(State::Limits::revoke_ms, 0);
+            } else if (state_->generic_connecting) state_->generic_fail(tr("Agent sign-in or input was interrupted."));
             state_->notify();
         } catch (...) {
             if (self && state_->generation == binding && state_->native_serial == serial && state_->usage_epoch == account &&

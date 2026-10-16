@@ -2,6 +2,7 @@
 #pragma once
 #include <QObject>
 #include <QEvent>
+#include <QEventPoint>
 #include <memory>
 #include <QPointer>
 #include <QPointF>
@@ -20,10 +21,11 @@ namespace edi_app {
 class AssistantWidgetInput final : public QObject {
     Q_OBJECT
  public:
-    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter, StagedText };
+    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll };
     struct Request {
         Kind kind;
         QPointer<QQuickItem> target;
+        int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
         QString value; // Native NumberText/full numeric spelling; never a shell/DSL.
         std::function<bool()> current;
         std::function<bool()> restoreCurrent; // Same exact widget/owner; independent of retired mutation authority.
@@ -40,6 +42,12 @@ class AssistantWidgetInput final : public QObject {
     bool injecting() const noexcept { return injecting_; }
     // Exact private mouse device, including Qt clones; not a synthetic-event heuristic.
     bool ownMouseEvent(const QEvent* event) const noexcept;
+    // Recognition is not admission: every window/item delivery rechecks the
+    // retained original device/window/sequence/stamp, including direct clones.
+    bool rejectOwnEvent(QObject* receiver, QEvent* event) const noexcept;
+    // Actual QML handler pre-action boundary, also after helper destruction.
+    // nullopt means genuine other-device input; true consumes stale own input.
+    static std::optional<bool> rejectOwnedPoint(QObject* receiver, const QEventPoint& point) noexcept;
     bool active() const noexcept { return static_cast<bool>(request_); }
     bool usableTarget(QQuickItem& item) const; // Same actual window/clip check used immediately before input.
     bool manualDraftPresent() const; // App-private current-focus preflight, never a provider selector.
@@ -57,8 +65,9 @@ class AssistantWidgetInput final : public QObject {
     enum class Step { Move, Press, Release, Select, Delete, Type, Commit };
     void advance() noexcept;
     bool current(std::uint64_t id) const;
-    bool visibleCenter(QQuickItem& item, QPointF& center) const;
+    bool visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter = false) const;
     bool mouse(QEvent::Type type, Qt::MouseButton button);
+    bool scroll();
     bool selectAll();
     bool key(int code, Qt::KeyboardModifiers modifiers = Qt::NoModifier, const QString& text = {});
     void stop(bool delivered, const QString& diagnostic, bool restoreDraft) noexcept;

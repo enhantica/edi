@@ -287,7 +287,48 @@ EaElements.GroupBox {
 
                 objectName: `parameters.row.${index}`
                 TapHandler {
-                    onTapped: group.selected = row.parameter
+                    readonly property var assistantGesture: ({ current: null })
+
+                    function sameGesture(point) {
+                        const retained = assistantGesture.current;
+                        return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                    }
+                    function discardGesture(point) {
+                        if (sameGesture(point)) {
+                            assistantGesture.current.closed = true;
+                            assistantGesture.current.proof = null;
+                        }
+                    }
+                    onGrabChanged: (transition, eventPoint) => {
+                        if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
+                            if (sameGesture(eventPoint))
+                                return; // Passive/exclusive transitions cannot rearm this press.
+                            if (eventPoint.state !== EventPoint.Pressed)
+                                return;
+                            const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
+                            const holder = assistantGesture;
+                            holder.current = original; // No QML notification before capture/cancellation.
+                            const proof = Session.assistant.beginManualControlInput(row, eventPoint, row.parameter);
+                            if (holder.current === original && !original.closed)
+                                original.proof = proof; // An old callback cannot overwrite a newer grab.
+                        } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
+                            discardGesture(eventPoint);
+                        }
+                    }
+                    onCanceled: eventPoint => {
+                        if (sameGesture(eventPoint))
+                            discardGesture(eventPoint);
+                    }
+                    onTapped: eventPoint => {
+                        if (!sameGesture(eventPoint) || assistantGesture.current.closed)
+                            return;
+                        const original = assistantGesture.current;
+                        const proof = original.proof;
+                        original.closed = true;
+                        original.proof = null; // Consume BEFORE validation/action and any reentry.
+                        if (Session.assistant.completeManualControlInput(row, eventPoint, row.parameter, proof))
+                            group.selected = row.parameter;
+                    }
                 }
 
                 EaComponents.TableViewLabel {

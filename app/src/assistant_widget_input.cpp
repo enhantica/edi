@@ -6,6 +6,7 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QPointingDevice>
 #include <QElapsedTimer>
 #include <array>
@@ -37,6 +38,7 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
         switch (event->type()) {
         case QEvent::MouseMove: case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseButtonDblClick:
             return static_cast<const QMouseEvent*>(event)->pointingDevice() == &device;
+        case QEvent::Wheel: return static_cast<const QWheelEvent*>(event)->pointingDevice() == &device;
         default: return false;
         }
     }
@@ -51,6 +53,7 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
         case QEvent::MouseMove: return 0;
         case QEvent::MouseButtonPress: return 1;
         case QEvent::MouseButtonRelease: return 2;
+        case QEvent::Wheel: return 3;
         default: return -1;
         }
     }
@@ -107,38 +110,76 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
             });
         } catch (...) {} // No queued cleanup: begin remains fenced until window retirement.
     }
-    bool eventFilter(QObject* watched, QEvent* event) override {
-        if (!recognizes(event) || !qobject_cast<QQuickWindow*>(watched)) return false;
-        if (watched != window) return true; // Old own event cannot retarget another window.
-        const auto* mouse = static_cast<const QMouseEvent*>(event);
-        if (cleanup_delivery && mouse->timestamp() == cleanup_delivery &&
-            event->type() == QEvent::MouseButtonRelease && mouse->position() == QPointF(-1, -1)) return false;
+    bool rejectDelivery(QObject* watched, QEvent::Type type, quint64 timestamp, const QPointF& scene) const noexcept {
+        const QPointer<QObject> receiver(watched);
+        const auto receiverWindow = [&]() -> QQuickWindow* {
+            if (auto* item = qobject_cast<QQuickItem*>(receiver.data())) return item->window();
+            return qobject_cast<QQuickWindow*>(receiver.data());
+        };
+        auto* delivered_window = receiverWindow();
+        if (!delivered_window || delivered_window != window) return true;
+        const bool outside_release = type == QEvent::MouseButtonRelease && scene == QPointF(-1, -1);
+        if (cleanup_delivery && timestamp == cleanup_delivery && outside_release) return false;
         const auto input = owner;
-        const QPointer<MouseOwnership> self(this);
+        const QPointer<const MouseOwnership> self(this);
         const auto stamp = sequence;
-        const int index = eventIndex(event->type());
-        if (!input || input->mouse_stamp_ != stamp || index < 0 ||
-            !stamps[static_cast<std::size_t>(index)] || mouse->timestamp() != stamps[static_cast<std::size_t>(index)]) return true;
-        // Retirement precedes balancing an outside release. A nested delayed
-        // PRESS during that release remains retired and cannot become a click.
-        if (input->injecting_ && input->cleanup_release_ && event->type() == QEvent::MouseButtonRelease &&
-            mouse->position() == QPointF(-1, -1)) return false;
+        const int index = eventIndex(type);
+        if (!input || input->window_ != window || input->mouse_stamp_ != stamp || index < 0 ||
+            !stamps[static_cast<std::size_t>(index)] || timestamp != stamps[static_cast<std::size_t>(index)]) return true;
+        // Qt localizes item position; stable scene coordinates identify the
+        // original balancing release throughout its real delivery chain.
+        if (input->injecting_ && input->cleanup_release_ && outside_release) return false;
         if (!accepting || !input->request_) return true;
         const auto serial = input->serial_;
         bool current = false;
         try { current = input->current(serial); } catch (...) {}
-        return !self || !input || !current || owner != input || sequence != stamp || !accepting ||
-            input->mouse_stamp_ != stamp || input->serial_ != serial || !input->request_;
+        return !self || !input || !receiver || !current || owner != input || sequence != stamp || !accepting ||
+            receiverWindow() != window || input->window_ != window || input->mouse_stamp_ != stamp || input->serial_ != serial || !input->request_;
+    }
+    bool reject(QObject* watched, const QEvent* event) const noexcept {
+        if (!recognizes(event)) return false;
+        // A window check cannot authorize a later item recipient after a
+        // synchronous retirement/replacement. Recheck at every real receiver.
+        const auto* input = static_cast<const QInputEvent*>(event);
+        const auto scene = event->type() == QEvent::Wheel ? static_cast<const QWheelEvent*>(event)->position()
+            : static_cast<const QMouseEvent*>(event)->scenePosition();
+        return rejectDelivery(watched, event->type(), input->timestamp(), scene);
+    }
+    bool rejectPoint(QObject* receiver, const QEventPoint& point) const noexcept {
+        // The actual handler supplies its grab/release point before action.
+        // No event is fabricated/redelivered. Foreign devices never enter this
+        // private predicate; unknown/late own points fail closed.
+        const auto type = point.state() == QEventPoint::State::Pressed ? QEvent::MouseButtonPress
+            : point.state() == QEventPoint::State::Released ? QEvent::MouseButtonRelease : QEvent::None;
+        return type == QEvent::None || rejectDelivery(receiver, type, point.timestamp(), point.scenePosition());
+    }
+    bool eventFilter(QObject* watched, QEvent* event) override {
+        return reject(watched, event); // Stale private input is consumed, never manual.
     }
     QPointer<QQuickWindow> window;
     QPointingDevice device;
     QPointer<AssistantWidgetInput> owner;
     quint64 sequence = 0, cleanup_pending = 0, cleanup_delivery = 0, last_event_stamp = 0;
-    std::array<quint64, 3> stamps{};
+    std::array<quint64, 4> stamps{};
     bool accepting = false, held = false;
 };
 bool AssistantWidgetInput::ownMouseEvent(const QEvent* event) const noexcept {
     return mouse_owner_ && mouse_owner_->recognizes(event);
+}
+bool AssistantWidgetInput::rejectOwnEvent(QObject* receiver, QEvent* event) const noexcept {
+    const QPointer<MouseOwnership> retained(mouse_owner_);
+    return !retained || retained->reject(receiver, event);
+}
+std::optional<bool> AssistantWidgetInput::rejectOwnedPoint(QObject* receiver, const QEventPoint& point) noexcept {
+    if (auto* application = QCoreApplication::instance()) {
+        // Same application-lifetime owner discovery as helper construction.
+        // It survives helper/window teardown to consume their late points.
+        for (auto* child : application->children()) {
+            if (auto* retained = dynamic_cast<MouseOwnership*>(child); retained && point.device() == &retained->device)
+                return retained->rejectPoint(receiver, point);
+        }
+    }
+    return std::nullopt;
 }
 AssistantWidgetInput::AssistantWidgetInput(QQuickWindow& window, QObject* parent)
     : QObject(parent), window_(&window) {
@@ -171,9 +212,9 @@ bool AssistantWidgetInput::current(std::uint64_t id) const {
     const bool valid = request->current();
     return self && valid && serial_ == id && request_ == request && window_ && request->target;
 }
-bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center) const {
+bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter) const {
     if (!window_ || item.window() != window_ || !window_->isVisible() || item.width() <= 0 || item.height() <= 0) return false;
-    center = item.mapToScene(QPointF(item.width() / 2, item.height() / 2));
+    center = item.mapToScene(QPointF(scrollGutter ? std::min(1.0, item.width() / 2) : item.width() / 2, item.height() / 2));
     if (!std::isfinite(center.x()) || !std::isfinite(center.y()) || !QRectF(0, 0, window_->width(), window_->height()).contains(center)) return false;
     for (auto* ancestor = &item; ancestor; ancestor = ancestor->parentItem()) {
         if (!ancestor->isVisible() || !ancestor->isEnabled() || ancestor->opacity() <= 0) return false;
@@ -205,7 +246,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
         !request.finishCommit || !request.completed || serial_ == UINT64_MAX)
         throw std::runtime_error("A visible input owner is unavailable");
     QPointF center;
-    if (!request.current() || !visibleCenter(*request.target, center))
+    if (!request.current() || !visibleCenter(*request.target, center, request.kind == Kind::Scroll))
         throw std::runtime_error("The genuine input control is not visible and current");
     const qsizetype text_limit = request.kind == Kind::StagedText
         ? static_cast<qsizetype>(edi::assistant::Limits::context_bytes) : 256;
@@ -215,6 +256,8 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     // Applies to navigation/free/fit too: their click can commit an unrelated
     // pre-existing manual draft through ordinary focus loss.
     if (manualDraftPresent()) throw std::runtime_error("Finish the current manual input first");
+    if (request.kind == Kind::Scroll && request.scrollDirection != 1 && request.scrollDirection != -1)
+        throw std::runtime_error("The bounded viewport scroll is unavailable");
     original_text_ = (request.kind == Kind::Value || request.kind == Kind::StagedText) ? request.target->property("editText").toString() : QString{};
     if (original_text_.size() > text_limit) throw std::runtime_error("The original numeric draft exceeds the visible input bound");
     auto prepared = std::make_shared<Request>(std::move(request)); // All job/callback allocation precedes visibility.
@@ -251,6 +294,20 @@ bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     event.setTimestamp(mouse_owner_->eventStamp(type));
     QCoreApplication::sendEvent(window, &event);
     if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, original_stamp);
+    return self && window && serial_ == id && request_ == original;
+}
+bool AssistantWidgetInput::scroll() {
+    if (!window_ || !request_ || !mouse_owner_ || !request_->scrollDirection) return false;
+    const QPointer<AssistantWidgetInput> self(this);
+    const QPointer<QQuickWindow> window(window_);
+    const auto original = request_; const auto id = serial_;
+    const bool old = injecting_; injecting_ = true;
+    const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
+    QWheelEvent event(center_, window->mapToGlobal(center_), QPoint(),
+        QPoint(0, 120 * original->scrollDirection), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false,
+        Qt::MouseEventNotSynthesized, &mouse_owner_->device);
+    event.setTimestamp(mouse_owner_->eventStamp(QEvent::Wheel));
+    QCoreApplication::sendEvent(window, &event);
     return self && window && serial_ == id && request_ == original;
 }
 bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const QString& text) {
@@ -292,7 +349,7 @@ void AssistantWidgetInput::advance() noexcept {
     try {
         const bool valid = current(id);
         if (!self) return;
-        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_)) { if (serial_ == id && request_ == request) stop(false, tr("Visible action target changed or is unavailable"), true); return; }
+        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (serial_ == id && request_ == request) stop(false, tr("Visible action target changed or is unavailable"), true); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
             stop(false, interrupted_, false); return;
         }
@@ -304,6 +361,13 @@ void AssistantWidgetInput::advance() noexcept {
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
             step_ = Step::Press; timer_.start(move_ms); return;
         case Step::Press:
+            if (request->kind == Kind::Scroll) {
+                // Wheel movement changes only the actual existing viewport; it
+                // never focuses/blurs an editor or synthesizes a button click.
+                if (!scroll()) { if (self && serial_ == id && request_ == request) stop(false, tr("The viewport did not receive its wheel input"), false); return; }
+                if (self && serial_ == id && request_ == request) stop(true, {}, false);
+                return;
+            }
             if (!mouse(QEvent::MouseMove, Qt::NoButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The target did not receive pointer movement"), false); return; }
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
@@ -426,7 +490,7 @@ void AssistantWidgetInput::cancel() { stop(false, interrupted_, true); }
 bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     // The retained application filter separately consumes stale own events, even
     // when this helper is inactive/replaced. Genuine devices remain manual.
-    if (watched == window_ && ownMouseEvent(event)) return false;
+    if (ownMouseEvent(event)) return rejectOwnEvent(watched, event);
     const bool owned_window = watched == window_;
     const bool focus_text = window_ && watched == window_->focusObject() &&
         (event->type() == QEvent::InputMethod || event->type() == QEvent::KeyPress ||
