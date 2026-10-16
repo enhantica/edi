@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "title": "Work with the displayed Edi project",
       "summary": "Create a supported native CW project from selected IDs, inspect and edit live parameters, and run actual native fits.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "b81f2f27944ac929db403d4b54892b7e7c75f39e70d66cdc55d124446450540e",
+      "sha256": "59d012dbd5ce4540a349a2c7178381968eafb1cd866ad4fb42fbf44c9d8f2278",
       "requires": [],
       "capabilities": [
         "inspect_project",

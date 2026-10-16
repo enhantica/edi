@@ -5,7 +5,7 @@ description: Inspect and edit the displayed native Edi project with actual param
 
 # Work with the displayed Edi project
 
-Version: 1.4.0. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
+Version: 1.4.1. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
 
 Use `inspect_project`, `list_parameters` and `diagnostics` to inspect the actual project, measurement, weighting, exclusions, phase links and independent/dependent parameters. A missing project or scientific prerequisite is not permission to invent data. Report unsupported formats/conversions honestly. Files or paths mentioned in chat do not expand selected-file or filesystem permission.
 
@@ -17,7 +17,9 @@ When offered, `set_parameters` changes a complete validated batch of actual inde
 
 When `create_cwl_project` is offered in an empty Session, use actual selected CIF and measurement IDs, not paths. Its native reader supports a single classic/dot-vocabulary structure and plain CW neutron text data (two columns derive counting sigma; three columns preserve supplied sigma). It does not convert packed FullProf, GSAS/GPX, multi-bank or TOF data. Supply the complete typed recipe: actual radiation/wavelength and explicit profile, zero, phase scale, background anchors, exclusions and initial parameter choices. Under delegated work you may choose justified starting assumptions and report them; do not relabel assumptions or native factory defaults as measured instrument facts. Preserve supplied values and composition. The result reports actual reader filtering/sigma diagnostics and whether the GUI project was adopted. Creation is unsaved, calculation is asynchronous, and no fit is implied. A changed owner, cancellation, invalid input or unavailable complete context refuses without replacing the original project.
 
-Native save/report and working-folder access are not registered in this slice. Normal application controls may open/save a project, but writing a staged receipt or Markdown path alone does not prove host opening/export. Do not claim a report, conversion, fit, improvement or convergence without actual observed evidence. Explain material decisions, reasons/assumptions, results and unresolved limits briefly.
+Native save/report generation and working-folder access are not registered in this slice. Normal application controls may open/save a project, but writing a staged receipt or Markdown path alone does not prove host opening/export. Do not claim a report, conversion, fit, improvement or convergence without actual observed evidence. Explain material decisions, reasons/assumptions, results and unresolved limits briefly.
+
+To show the current project's report, offer [Open Report page](edi:report). This user-click navigation opens the existing live Report preview and its ordinary export controls when the current project enables that page. It does not generate or save a separate report, certify results, or retrieve a historical report for an earlier project. Keep that current-project meaning explicit; do not invent an HTML path or claim that navigation saved a file.
 
 ## Restricted compatibility tools
 

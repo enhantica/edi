@@ -70,6 +70,19 @@ Popup {
             if (panel.sendAfterConsent && panel.assistant.contextPreview !== panel.consentContext) panel.retireConsentSend();
         }
     }
+    // A user navigation link always refers to the current project's normal
+    // Report page. Other links retain their completed-row/file ownership checks.
+    function openReportLink(sourceRowId, link) {
+        if (link === "edi:report") {
+            if (Session.project !== null && AppState.reportPageEnabled) {
+                AppState.open(AppState.Page.Report);
+                return true;
+            }
+            reportPageUnavailable.open();
+            return false;
+        }
+        return panel.assistant.openReport(sourceRowId, link);
+    }
     required property Item toggleControl
     readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
@@ -314,7 +327,7 @@ Popup {
                         payload: model.payload
                         status: model.status
                         rowId: model.id
-                        onReportRequested: (sourceRowId, link) => panel.assistant.openReport(sourceRowId, link)
+                        onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
                         onDetailsChanging: {
                             conversation.cancelFlick();
                             conversation.followsTail = false;
@@ -602,6 +615,19 @@ Popup {
                         wrapMode: Text.Wrap
                     }
                 }
+            }
+        }
+        AppDialog {
+            id: reportPageUnavailable
+            objectName: "assistant.reportPageUnavailable"
+            title: qsTr("Report page unavailable")
+            width: Math.min(AppSizes.unit * 28, Math.max(0, parent.width - AppSizes.unit * 2))
+            standardButtons: Dialog.Close
+            EaElements.Label {
+                width: reportPageUnavailable.availableWidth
+                text: qsTr("The current project's Report page is unavailable. Open a project with a structure and an experiment to use its report preview and export controls.")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
             }
         }
         AssistantSkillsDialog {

@@ -594,3 +594,24 @@ The assistant's app-local Rows adapter owns model keys while message values borr
 The existing adapter now serializes its assign transactions. Nested requests only mark a newer projection; the current Qt begin/end transaction finishes before the adapter drains the newest canonical array and announces it. This applies to the same adapter's message, model, skill and selected-file rows, without changing the shared RowTableModel protocol, adding a second payload snapshot, or invoking Controller code from a retention/event hook.
 
 The existing clearHistoryNow API boundary reconciles model keys against current canonical history after an actual committed discard, on all authenticated/disconnected/deferred attachment return paths. Failed discard does not reconcile/erase retained data. A nested newer owner is presented from its current history; a stale Clear cannot manufacture an empty replacement history. A presentation allocation failure keeps the actual discard latch, records the existing warning and queues a normal render rather than claiming archive rollback, authentication loss, or successful durable output. This closes model projection; account, cancellation, attachment and retained artifact authority remain their existing separate contracts.
+
+
+### Assistant report link reuses the main Report page (2026-10-16)
+
+Owner013474622 supersedes the unapplied separate report-generation design. The
+exact user-click URI `edi:report` navigates to the CURRENT project's existing
+Report page via `AppState.open(AppState.Page.Report)`, only when the current
+Session project exists and the same `reportPageEnabled` guard used by the normal
+Report tab is true. The existing page owns its normal ReportViewModel, preview,
+plots, Contents and export controls; no report model, native tool, Worker, HTML
+artifact or new filesystem authority is created. A navigation link is not a
+saved/historical report, convergence statement or successful export receipt.
+
+The existing AssistantMessage anchor signal and pointing-hand cursor are
+unchanged. AssistantPanel intercepts only the exact internal URI before its
+existing row-bound protected file-report router. Every other link still uses
+that router and its retained provenance, no-follow/path/byte/view checks. A
+missing or disabled current Report page opens the ordinary app dialog with a
+plain-language explanation. No arbitrary URL opener or project replacement is
+introduced. The versioned project-assistance skill names the exact current-page
+link; its catalog digest changes without claiming a new native capability.
