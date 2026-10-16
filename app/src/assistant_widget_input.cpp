@@ -203,7 +203,8 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     QPointF center;
     if (!request.current() || !visibleCenter(*request.target, center))
         throw std::runtime_error("The genuine input control is not visible and current");
-    if (request.kind == Kind::Value && (request.value.isEmpty() || request.value.size() > 256))
+    if ((request.kind == Kind::Value || request.kind == Kind::ParameterFilter) &&
+        (request.value.isEmpty() || request.value.size() > 256))
         throw std::runtime_error("The numeric input spelling is unavailable");
     // Applies to navigation/free/fit too: their click can commit an unrelated
     // pre-existing manual draft through ordinary focus loss.
@@ -297,7 +298,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Release; timer_.start(press_ms); return;
         case Step::Release:
-            if (request->kind != Kind::Value) {
+            if (request->kind != Kind::Value && request->kind != Kind::ParameterFilter) {
                 commit_prepared_ = true; // Exact finish is owed even if preparation reenters/cancels.
                 if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The native input could not be prepared"), false); return; }
                 if (!self) return;
@@ -307,23 +308,27 @@ void AssistantWidgetInput::advance() noexcept {
             pressed_ = false;
             if (!mouse(QEvent::MouseButtonRelease, Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its release"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            if (request_->kind != Kind::Value) { stop(true, {}, false); return; }
+            if (request_->kind != Kind::Value && request_->kind != Kind::ParameterFilter) { stop(true, {}, false); return; }
             step_ = Step::Select; timer_.start(click_relaxation_ms); return;
         case Step::Select:
-            if (!QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The numeric control has no safe draft owner"), true); return; }
+            if (request->kind == Kind::Value && !QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The numeric control has no safe draft owner"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            draft_ = true;
+            draft_ = request->kind == Kind::Value;
             if (!selectAll()) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input did not acquire focus"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Delete; timer_.start(character_ms); return;
         case Step::Delete:
-            draft_ = true; // Own cancellation restoration before the first destructive key.
+            // A filter's text is immediate presentation state, not a deferred
+            // scientific edit. Never restore/reflow it before a manual event.
+            draft_ = request->kind == Kind::Value;
             if (!key(Qt::Key_Backspace)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input changed focus"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Type; timer_.start(character_ms); return;
         case Step::Type:
             if (character_ < request_->value.size()) {
-                const QString character = request_->value.mid(character_++, 1);
+                const auto width = request_->value.at(character_).isHighSurrogate() &&
+                    character_ + 1 < request_->value.size() && request_->value.at(character_ + 1).isLowSurrogate() ? 2 : 1;
+                const QString character = request_->value.mid(character_, width); character_ += width;
                 if (!key(0, Qt::NoModifier, character)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input changed focus"), true); return; }
                 if (!self || serial_ != id || request_ != request) return;
                 timer_.start(character_ms); return;
@@ -335,7 +340,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
-            if (!QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
+            if (request->kind == Kind::Value && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             if (!key(Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input commit was not confirmed"), true); return; }
             if (self && serial_ == id && request_ == request) { draft_ = false; stop(true, {}, false); }

@@ -536,3 +536,30 @@ its full control. The helper still requires finite window coordinates, positive
 size, actual visible/enabled ancestors and current native ownership; only the
 matching public clipping geometry is used. This follows the reached204 operands
 and pinned Qt6.11.2 public TextInput clipRect contract, not a visibility bypass.
+
+
+### Genuine Analysis parameter filter input
+
+Visible singleton Analysis parameter/free actions now click the ordinary reset
+filters button, then click/select/type the exact actual ParameterItem path into
+the existing name filter using the same paced real Qt input sequencer. The
+filter text kind is app-private and bounded to256 UTF-16 units with no controls;
+Unicode scalar pairs stay intact. Its real onTextChanged handler updates only
+presentation. Cancellation leaves the actually displayed partial filter in
+place rather than changing layout underneath the original manual event; no
+filter text can later commit scientific state on focus loss. Scientific numeric
+draft ownership stays exclusive to the existing Value kind.
+
+Original request/receipt/project/parameter/real window and every helper event
+retain currentness checks; filter text is read back before final target lookup.
+The final actual parameter pointer and exposed Value/Free control are still
+required. Matching uses the existing common filter semantics; an unavailable
+remaining target refuses honestly without direct/native fallback or another
+parameter's edit. Filter paths and the enlarged run are precharged before UI.
+No scientific may-have-written latch is set for navigation/filter input. Real
+recorded edit/Undo starts only at the final original parameter control event.
+Fit keeps its genuine fixed-open Start control and real final report.
+
+This is a narrow exposure increment, not generic computer use or full visible
+create/background/relation/batch/save support. Source197 own-event/clipRect
+prerequisite remains separately reviewed/applied before runtime qualification.

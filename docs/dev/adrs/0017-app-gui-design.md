@@ -1009,3 +1009,14 @@ a later user edit. Native own-edit scope prevents this known persistence update
 from cancelling its own original call; unrelated ownership changes still retire
 currentness. A disk commit survives a failed or interrupted presentation as an
 explicit saved-but-unconfirmed outcome, without altering the replacement owner.
+
+
+### Parameter filter reset and visible row exposure
+
+ParametersGroup keeps its existing common filter model and actual manual inputs.
+A normal reset-filters ToolButton clears name/category/variability through its
+ordinary click handler, synchronizes the variability selector and returns the
+viewport to the beginning. A filtered current row is kept inside the viewport
+through ListView.positionViewAtIndex after the ordinary model update; no
+scientific field or parameter value is written by presentation navigation.
+The existing fixed-open Parameters/Fitting groups are not new collapsed groups.

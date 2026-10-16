@@ -108,15 +108,16 @@ EaElements.GroupBox {
             id: filters
             spacing: AppSizes.inputSpacing
             EaElements.TextField {
+                id: nameFilter
                 objectName: "parameters.nameFilter"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing - resetFilters.width) / 3
                 placeholderText: qsTr("Filter by name")
                 onTextChanged: filter.nameFilter = text
             }
             SearchableComboBox {
                 id: categoryPicker
                 objectName: "parameters.category"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing - resetFilters.width) / 3
                 model: filter.categoryGroups
                 textRole: "title"
                 searchThreshold: 1000
@@ -158,10 +159,28 @@ EaElements.GroupBox {
                 }
             }
             SearchableComboBox {
+                id: variabilityPicker
                 objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing - resetFilters.width) / 3
                 model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
                 onActivated: index => filter.variability = index
+            }
+            // A normal manual control: the assistant clicks this same button,
+            // rather than writing the filters behind decorative pointer input.
+            EaElements.ToolButton {
+                id: resetFilters
+                objectName: "parameters.resetFilters"
+                width: height
+                fontIcon: "eraser"
+                ToolTip.text: qsTr("Show all parameters and clear filters")
+                Accessible.name: ToolTip.text
+                onClicked: {
+                    nameFilter.clear();
+                    filter.categoryFilter = "";
+                    filter.variability = 0;
+                    variabilityPicker.currentIndex = 0;
+                    table.positionViewAtBeginning();
+                }
             }
         }
 
@@ -177,6 +196,13 @@ EaElements.GroupBox {
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
+            // Keep an ordinary filtered selection in view after model updates;
+            // delegates are intentionally created only inside this viewport.
+            function revealCurrentRow() {
+                if (currentRow >= 0 && currentRow < count)
+                    positionViewAtIndex(currentRow, ListView.Contain);
+            }
+            onCurrentRowChanged: Qt.callLater(revealCurrentRow)
 
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
