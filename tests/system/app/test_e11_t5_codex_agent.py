@@ -5386,7 +5386,7 @@ def test_native145_affine_refusal_is_atomic_for_declarations_and_parameter_state
         assert removed['reply']['remaining'] == 0, (
             'AFFINE SETUP: actual public structure removal reaches structureless owner'
         )
-        before = removed['vm']
+        before = native145_science_settled(actor)
     native145_configure(actor, trace, [[native_call('add_relations', **args)]])
     connected = native145_science_settled(actor)
     assert connected['project']['parameters'] == before['project']['parameters'], (
