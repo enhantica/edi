@@ -410,3 +410,112 @@ def test_draft226_common_editor_preserves_real_user_work(case, tmp_path):  # noq
             for path in fixture.rglob('*') if path.is_file()} == original_files, (
         'DRAFT1: real input/edit/Undo cannot rewrite the independent source fixture'
     )
+
+
+EXPOSURE229_CASES = [
+    'visible-extra', 'visible-filtered', 'visible-offscreen', 'normal-page',
+    'assistant-fit-modal', 'manual-fit-modal',
+]
+
+
+@pytest.mark.parametrize('case', EXPOSURE229_CASES)
+def test_exposure229_genuine_navigation_filters_and_modal_origin(case, tmp_path):  # noqa: PLR0914, PLR0915 -- one finite actual Main/RPC/worker receipt
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'EXPOSURE SETUP: freshly matching actual Main consumer required'
+    environment = popup171_owned_environment(tmp_path)
+    environment['QT_QUICK_CONTROLS_HOVER_ENABLED'] = '1'
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text(encoding='utf-8'))
+    config.pop('report_page_reply')
+    purpose = 'Original navigation and result presentation request ' + case
+    path = ('experiment.preferred_orientation[lbco].march_r'
+            if case == 'visible-offscreen' else 'structure.atom_sites[La].adp_iso')
+    value = 0.9 if case == 'visible-offscreen' else 0.6
+    identifier = 'exposure229-action-' + case
+    if case == 'manual-fit-modal':
+        calls = []
+    elif case == 'assistant-fit-modal':
+        calls = [{'tool': 'run_fit', 'call_id': identifier,
+                  'arguments': {'purpose': purpose}}]
+    else:
+        calls = [
+            {'tool': 'set_parameters', 'call_id': 'exposure229-value-' + case,
+             'arguments': {'purpose': purpose, 'values': [{'path': path, 'value': value}]}},
+            {'tool': 'set_free', 'call_id': identifier,
+             'arguments': {'purpose': purpose, 'flags': [{'path': path, 'free': True}]}},
+        ]
+    config.update(scenario='native:script', native_turn_calls=[calls])
+    config_path.write_text(json.dumps(config), encoding='utf-8')
+    original_config = config_path.read_bytes()
+    fixture = ROOT / ('docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+                      if case.endswith('fit-modal') else 'tests/fixtures/e04_t1/editable-project')
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_exposure229_existing_manual_controls:' + case, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            received = getattr(error, stream) or b''
+            raw = received if isinstance(received, bytes) else received.encode()
+            destination = tmp_path / ('exposure229-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'exposure229.stdout.log').write_text(result.stdout)
+    (tmp_path / 'exposure229.stderr.log').write_text(result.stderr)
+    (tmp_path / 'exposure229-process.json').write_text(json.dumps({
+        'argv': argv, 'returncode': result.returncode, 'config_unchanged':
+        config_path.read_bytes() == original_config}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_exposure229_existing_manual_controls('
+        + case + ')' in output
+    ), 'EXPOSURE: the original actual Main control/RPC/worker case must execute\n' + output
+    assert config_path.read_bytes() == original_config, (
+        'EXPOSURE: prelaunch original script is immutable'
+    )
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'EXPOSURE: original independent scientific fixture bytes remain unchanged'
+    )
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()]
+    starts = [request for request in requests if request.get('method') == 'turn/start']
+    assert len(starts) == (0 if case == 'manual-fit-modal' else 1), (
+        'EXPOSURE: one actual original input; manual control needs no delegated turn'
+    )
+    if starts:
+        assert starts[0]['params'].get('clientUserMessageId'), (
+            'EXPOSURE: actual original input has its own identity'
+        )
+    assert not any(request.get('method') in {'account/login/start', 'account/logout'}
+                   for request in requests), (
+        'EXPOSURE: navigation and fitting cannot repair/reset genuine auth'
+    )
+    reply_path = trace.with_suffix('.native-replies.jsonl')
+    replies = ([json.loads(line) for line in reply_path.read_text(encoding='utf-8').splitlines()]
+               if reply_path.exists() else [])
+    assert len(replies) == len(calls), (
+        'EXPOSURE: one actual original response per requested native operation'
+    )
+    for receipt, expected in zip(replies, calls, strict=True):
+        original, response = receipt['original'], receipt['response']
+        assert original['params']['tool'] == expected['tool']
+        assert original['params']['callId'] == expected['call_id']
+        assert original['params']['arguments'] == expected['arguments']
+        assert response['id'] == original['id'] != original['params']['callId'], (
+            'EXPOSURE: actual original reverse envelope owns the response, not model call ID'
+        )
+        result = response['result']
+        assert result['success'] is True, (
+            'EXPOSURE: actual operation is confirmed, never applied_unconfirmed'
+        )
+        content = result['contentItems']
+        assert len(content) == 1 and content[0]['type'] == 'inputText'
+        decoded = json.loads(content[0]['text'])
+        assert decoded['status'] in (
+            {'done', 'max_iterations', 'no_step'} if expected['tool'] == 'run_fit' else {'edited'}
+        ), 'EXPOSURE: actual native outcome is truthful; worker success does not imply convergence'

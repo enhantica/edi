@@ -1602,4 +1602,265 @@ TestCase {
             for (const button of tierButtons) button.checkedChanged.disconnect(tierReceipt);
         }
     }
+    function exposure229_pick(combo, index) {
+        verify(combo !== null && combo.enabled && Ui.exposed(combo),
+            "EXPOSURE SETUP: actual filter control receives the original mouse event");
+        mouseClick(combo);
+        tryCompare(combo.popup, "opened", true, 2000,
+            "EXPOSURE SETUP: genuine filter popup opens before keyboard selection");
+        keyClick(Qt.Key_Home);
+        for (let row = 0; row < index; ++row) keyClick(Qt.Key_Down);
+        keyClick(Qt.Key_Return);
+        tryCompare(combo, "currentIndex", index, 2000,
+            "EXPOSURE SETUP: actual keyboard selection reaches the requested existing option");
+    }
+    function test_exposure229_existing_manual_controls_data() {
+        return ["visible-extra", "visible-filtered", "visible-offscreen", "normal-page",
+            "assistant-fit-modal", "manual-fit-modal"].map(tag => ({tag: tag}));
+    }
+    function test_exposure229_existing_manual_controls(data) {
+        const fitCase = data.tag.endsWith("fit-modal");
+        const manualFit = data.tag === "manual-fit-modal";
+        const visible = data.tag.startsWith("visible-");
+        const fixture = fitCase ? "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project"
+            : "tests/fixtures/e04_t1/editable-project";
+        verify(Session.openProject(Probe.repoUrl(fixture)),
+            "EXPOSURE SETUP: independent original complete measured project opens");
+        const project = Session.project;
+        const parameters = visible185_parameters(project);
+        let target = null;
+        if (fitCase) {
+            const cells = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+            compare(cells.length, 1, "EXPOSURE FIT SETUP: original independent cell is unique");
+            target = cells[0];
+            for (const parameter of parameters) parameter.free = false;
+            target.free = true;
+            project.currentExperiment.scale.free = true;
+            project.analysis.maxIterations = 8; // Existing original bounded real-fit setup, not an optimum oracle.
+        } else {
+            const lengths = project.currentStructure.scatteringLengths;
+            const custom = Probe.rows(lengths);
+            compare(custom.length, 1, "EXPOSURE SETUP: literal original custom table has its one entry");
+            compare(custom[0].typeSymbol, "La", "EXPOSURE SETUP: original custom entry is the fixture La row");
+            compare(custom[0].lengthFm, 8.24, "EXPOSURE SETUP: fixture bytes retain their declared neutron length");
+            for (let index = custom.length - 1; index >= 0; --index) lengths.remove(index);
+            compare(lengths.count, 0, "EXPOSURE SETUP: genuine public empty custom map restores built-in data");
+            if (data.tag === "visible-offscreen") {
+                const matches = parameters.filter(parameter => parameter.name === "march_r");
+                compare(matches.length, 1, "EXPOSURE SETUP: original declared orientation scalar is unique");
+                target = matches[0];
+            } else target = visible185_parameter(project, "La", "adp_iso");
+            target.free = false;
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "EXPOSURE SETUP: actual original calculation and ordinary subset setup settle");
+        if (fitCase) verify(project.fit.available,
+            "EXPOSURE FIT SETUP: genuine current installed backend must admit the real worker");
+        const beforeValues = visible185_values(project);
+        const beforeInputs = visible185_inputs(project);
+        const beforeDeclarations = JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]);
+        const beforeValue = target.value;
+        const requested = data.tag === "visible-offscreen" ? 0.9 : 0.6;
+        if (!fitCase) verify(beforeValue !== requested,
+            "EXPOSURE SETUP: original user request changes the actual current scalar");
+        compare(assistant.showActions, false, "EXPOSURE: fresh real process keeps default OFF");
+        toggle();
+        assistant.signIn();
+        visible185_ready("exposure-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("exposure-disclosed");
+        verify(!assistant.contextConsentRequired, "EXPOSURE SETUP: genuine current disclosed context is approved");
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        if (visible) {
+            const show = item("assistant.showActions");
+            verify(show.visible && show.enabled, "EXPOSURE SETUP: real checkbox is actionable");
+            mouseClick(show);
+            compare(assistant.showActions, true, "EXPOSURE SETUP: genuine pointer enables visible mode");
+        }
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        const table = Ui.control(Probe, window, "parameters.list");
+        const group = Ui.control(Probe, window, "group.parameters");
+        verify(table !== null && group !== null && table.sourceModel !== null,
+            "EXPOSURE SETUP: original current Analysis table/filter model exists");
+        const filter = table.sourceModel;
+        const actualNameFilter = Ui.control(Probe, window, "parameters.nameFilter");
+        verify(actualNameFilter !== null, "EXPOSURE SETUP: actual current Analysis name input is retained");
+        if (data.tag === "visible-filtered") {
+            const cellCategory = filter.categories.indexOf("cell");
+            verify(cellCategory > 0, "EXPOSURE SETUP: actual public category list has the independent cell category");
+            exposure229_pick(Ui.control(Probe, window, "parameters.category"), cellCategory);
+            exposure229_pick(Ui.control(Probe, window, "parameters.variability"), 1);
+            const name = Ui.control(Probe, window, "parameters.nameFilter");
+            verify(name !== null && Ui.exposed(name), "EXPOSURE SETUP: genuine name filter is exposed");
+            mouseClick(name);
+            visible185_type("length_a");
+            compare(filter.nameFilter, "length_a", "EXPOSURE SETUP: actual typed name filter is active");
+            compare(filter.categoryFilter, "cell", "EXPOSURE SETUP: real category menu changed the filter");
+            compare(filter.variability, 1, "EXPOSURE SETUP: real free-only menu changed the filter");
+            verify(!filter.shows(target), "EXPOSURE SETUP: original requested target is genuinely excluded");
+        }
+        if (data.tag === "visible-offscreen") {
+            // Establish the original matching/all-rows viewport through genuine existing controls.
+            exposure229_pick(Ui.control(Probe, window, "parameters.category"), 0);
+            exposure229_pick(Ui.control(Probe, window, "parameters.variability"), 0);
+            const name = Ui.control(Probe, window, "parameters.nameFilter");
+            mouseClick(name);
+            visible185_type("");
+            mouseWheel(table, table.width / 2, table.height / 2, 0, 120 * parameters.length);
+            rendered();
+            compare(filter.nameFilter, "", "EXPOSURE SETUP: offscreen witness has no name exclusion");
+            compare(filter.categoryFilter, "", "EXPOSURE SETUP: offscreen witness has no category exclusion");
+            compare(filter.variability, 0, "EXPOSURE SETUP: offscreen witness has no free-only exclusion");
+            verify(filter.shows(target), "EXPOSURE SETUP: target actually belongs to the current filtered set");
+            const exposed = Ui.itemsWithProperty(Ui.page(window), "item").filter(control =>
+                control.item === target && control.objectName.startsWith("parameters.value.") && Ui.exposed(control));
+            compare(exposed.length, 0, "EXPOSURE SETUP: requested genuine row is initially outside the actual viewport");
+        }
+        if (data.tag === "visible-extra" || data.tag === "normal-page" || data.tag === "assistant-fit-modal") {
+            Ui.click(this, Probe, window, "sideBar.tab.extras");
+            verify(Ui.control(Probe, window, "sideBar.tab.extras").checked,
+                "EXPOSURE SETUP: actual manual Extra tier is selected before original work");
+        }
+        if (data.tag === "normal-page" || data.tag === "assistant-fit-modal") visible185_page("structure");
+        let typed = 0, toggled = 0, filterTyped = 0, started = 0, finished = 0, automatic = 0, active = 0;
+        let filterSpellings = [];
+        function filterReceipt() { ++filterTyped; filterSpellings.push(actualNameFilter.text); }
+        let observedFields = [], observedFree = [];
+        function typedReceipt() { ++typed; }
+        function freeReceipt() { ++toggled; }
+        function observeControls() {
+            for (const field of Ui.itemsWithProperty(Ui.page(window), "item")) {
+                if (field.item !== target || !field.objectName.startsWith("parameters.value.")
+                    || !Ui.exposed(field) || observedFields.includes(field)) continue;
+                field.textEdited.connect(typedReceipt);
+                observedFields.push(field);
+            }
+            for (const control of Ui.itemsWithProperty(Ui.page(window), "objectName")) {
+                if (!control.objectName.startsWith("parameters.free.") || !Ui.exposed(control)
+                    || observedFree.includes(control)) continue;
+                for (let parent = control.parent; parent; parent = parent.parent) {
+                    if (parent.parameter !== target) continue;
+                    control.toggled.connect(freeReceipt);
+                    observedFree.push(control);
+                    break;
+                }
+            }
+        }
+        function startReceipt() { if (project.fit.running) ++started; }
+        function finishedReceipt() { ++finished; }
+        function automaticReceipt() { ++automatic; }
+        function activeReceipt() { if (assistant.showingActions) ++active; observeControls(); }
+        const slots = [[assistant.actionPointerShown, observeControls], [assistant.actionPointerMoved, observeControls],
+            [assistant.actionPointerPressed, observeControls], [window.activeFocusItemChanged, observeControls],
+            [assistant.showingActionsChanged, activeReceipt], [project.fit.runningChanged, startReceipt],
+            [project.fit.finished, finishedReceipt], [project.fit.automaticResultsRequested, automaticReceipt],
+            [actualNameFilter.textEdited, filterReceipt]];
+        for (const slot of slots) slot[0].connect(slot[1]);
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const call = "exposure229-action-" + data.tag;
+        const results = item("fit.results");
+        const error = item("fit.error");
+        verify(!results.visible && !error.visible, "EXPOSURE SETUP: original fit dialogs are initially closed");
+        try {
+            if (visible) toggle();
+            observeControls();
+            if (manualFit) {
+                Ui.click(this, Probe, window, "fitting.start");
+                tryVerify(() => finished === 1 && !project.fit.running, 10000,
+                    "EXPOSURE FIT: original manual Start produces one actual Worker completion");
+            } else {
+                visible185_ready("exposure-before-send");
+                assistant.send(fitCase
+                    ? "Run the actual current fit and retain assistant results in the conversation, " + data.tag
+                    : "Set " + (data.tag === "visible-offscreen" ? "orientation march_r" : "La isotropic ADP")
+                        + " to " + requested + " and make that same parameter free; reveal its existing controls, " + data.tag);
+                tryVerify(() => visible185_outcome(call, previousIds) !== null
+                    && !assistant.canCancel && !assistant.showingActions, 10000,
+                    "EXPOSURE: original current RPC and actual owner settle without a stale historical substitute");
+                const outcome = visible185_outcome(call, previousIds);
+                if (fitCase) verify(["done", "max_iterations", "no_step"].includes(outcome.status),
+                    "EXPOSURE FIT: real native attempt finishes honestly, without invented optimum or unavailable substitute");
+                else compare(outcome.status, "edited", "EXPOSURE: original native operation is genuinely applied and confirmed");
+            }
+            compare(window.appBarCentralTabs.currentIndex, 4,
+                "EXPOSURE: original parameter/free/fit action follows the existing Analysis page");
+            verify(Ui.control(Probe, window, "sideBar.tab.basic").checked,
+                "EXPOSURE: the genuine requested current Analysis Main tier is selected");
+            if (fitCase) {
+                verify(started > 0 && finished === 1 && !project.fit.running,
+                    "EXPOSURE FIT: actual worker start and final report precede presentation assertions");
+                verify(Probe.rows(project.fit.results).length > 0,
+                    "EXPOSURE FIT SETUP: actual supported final report has real ordinary result rows");
+                if (manualFit) {
+                    compare(automatic, 1, "EXPOSURE MODAL: genuine manual fitting retains one automatic result notification");
+                    tryCompare(results, "opened", true, 2000,
+                        "EXPOSURE MODAL: genuine manual result opens the existing actual dialog");
+                    const ok = results.standardButton(Dialog.Ok);
+                    verify(ok !== null && ok.visible && ok.enabled, "EXPOSURE MODAL: actual dialog acknowledgement exists");
+                    mouseClick(ok);
+                    tryCompare(results, "visible", false, 2000, "EXPOSURE MODAL: real acknowledgement closes the dialog");
+                } else {
+                    compare(automatic, 0, "EXPOSURE MODAL: assistant-owned fit does not emit a manual automatic popup request");
+                    verify(!results.visible && !error.visible,
+                        "EXPOSURE MODAL: actual assistant fit settles without either automatic result/error dialog");
+                }
+                if (project.fit.canUndo) {
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                    compare(visible185_values(project), beforeValues,
+                        "EXPOSURE FIT: ordinary actual fit Undo restores the complete original subset/state");
+                }
+            } else {
+                compare(target.value, requested, "EXPOSURE: original requested value reaches exact current ParameterItem");
+                compare(target.free, true, "EXPOSURE: actual original free flag reaches the same current ParameterItem");
+                if (visible) {
+                    verify(active > 0 && typed > 0 && toggled === 1,
+                        "EXPOSURE: genuine visible typing and one real checkbox toggle accompany the scientific edits");
+                    const currentField = visible185_field(target);
+                    const currentFree = visible185_free(target);
+                    verify(currentField.item === target && Ui.exposed(currentFree),
+                        "EXPOSURE: actual final visible controls bind the exact original requested owner");
+                    compare(filter.nameFilter, target.path,
+                        "EXPOSURE: the real name filter contains the exact original requested ParameterItem path");
+                    compare(actualNameFilter.text, target.path,
+                        "EXPOSURE: actual displayed filter and public model agree on that exact path");
+                    verify(filterTyped > 0 && filterSpellings.includes(target.path),
+                        "EXPOSURE: genuine original filter key input reaches the exact requested path");
+                    compare(filter.categoryFilter, "", "EXPOSURE: genuine category filter is cleared to reveal requested row");
+                    compare(filter.variability, 0, "EXPOSURE: genuine free-only filter is cleared to reveal requested row");
+                } else compare(active, 0, "EXPOSURE: normal OFF page following does not manufacture pointer presentation");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(target.free, false, "EXPOSURE: first real normal Undo restores the original free flag");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(target.value, beforeValue, "EXPOSURE: second real normal Undo restores the requested value");
+                compare(visible185_values(project), beforeValues,
+                    "EXPOSURE: complete actual Undo preserves every unrelated value/free/SU");
+            }
+            compare(visible185_inputs(project), beforeInputs,
+                "EXPOSURE: original observations/sigmas/masks/weights/links are unchanged");
+            compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                beforeDeclarations, "EXPOSURE: original scientific declarations are preserved");
+            verify(Session.project === project && assistant.connected,
+                "EXPOSURE: genuine actual current owner and managed account survive");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "EXPOSURE: genuine catalog survives without login repair");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "EXPOSURE: original retained history is not discarded during navigation/work");
+        } finally {
+            console.log("EXPOSURE229_STATE", data.tag, JSON.stringify({
+                currentOwner: Session.project === project, connected: assistant.connected,
+                page: window.appBarCentralTabs.currentIndex, showingActions: assistant.showingActions,
+                canCancel: assistant.canCancel, lastError: assistant.lastError,
+                target: {path: target.path, value: target.value, free: target.free},
+                typed: typed, toggled: toggled, filterTyped: filterTyped, filterSpellings: filterSpellings,
+                active: active, started: started, finished: finished,
+                automatic: automatic, resultsVisible: results.visible, errorVisible: error.visible,
+                filter: {name: filter.nameFilter, category: filter.categoryFilter, variability: filter.variability},
+                originalOutcome: manualFit ? null : visible185_outcome(call, previousIds)}));
+            for (const slot of slots) slot[0].disconnect(slot[1]);
+            for (const field of observedFields) if (field) field.textEdited.disconnect(typedReceipt);
+            for (const control of observedFree) if (control) control.toggled.disconnect(freeReceipt);
+        }
+    }
 }
