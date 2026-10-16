@@ -732,6 +732,26 @@ TestCase {
         editor.clear();
     }
     // Real retained transcript, no fixture row/model mutation or direct page handler call.
+    function report187_state(stage) {
+        console.log("REPORT187_STATE", stage, JSON.stringify({
+            connected: assistant.connected, state: assistant.state, canCancel: assistant.canCancel,
+            contextConsentRequired: assistant.contextConsentRequired, lastError: assistant.lastError,
+            pendingQuestion: assistant.pendingQuestion, pendingPlan: assistant.pendingPlan,
+            projectPresent: Session.project !== null,
+            calculating: Session.project ? Session.project.calculating : null,
+            models: assistant.models.count,
+            focusedControl: window.activeFocusItem ? window.activeFocusItem.objectName : null,
+            rows: Probe.rows(assistant.messages).map(row => ({id: row.id, kind: row.kind,
+                status: row.status, text: row.text}))
+        }));
+    }
+    function report187_ready(stage, approved) {
+        try {
+            tryVerify(() => assistant.connected && assistant.state === "idle" && !assistant.canCancel
+                && (!approved || !assistant.contextConsentRequired), 2000,
+                "REPORT171 SETUP: actual current thread is idle and disclosed before original Send");
+        } finally { report187_state(stage); }
+    }
     function test_report171_chat_anchor_uses_existing_current_report_page_data() {
         return [{tag: "current"}, {tag: "replacement"}, {tag: "missing"},
             {tag: "disabled"}, {tag: "protected-other"}];
@@ -744,14 +764,18 @@ TestCase {
         assistant.signIn();
         tryCompare(assistant, "connected", true, 2000, "REPORT171 SETUP: genuine managed account/catalog bootstrap");
         verify(assistant.models.count > 0, "REPORT171 SETUP: real catalog is admitted");
+        report187_ready("before-approval-" + data.tag, false);
         if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("before-send-" + data.tag, true);
         verify(!assistant.contextConsentRequired, "REPORT171 SETUP: actual current disclosure is approved");
         const draft = "Original Main report navigation " + data.tag;
         const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
         assistant.send(draft);
+        try {
         tryVerify(() => Probe.rows(assistant.messages).some(row => !previousIds.has(row.id) && row.kind === "assistant"
             && row.status === "completed" && row.text === original), 2000,
             "REPORT171 SETUP: genuine original completed transcript row exists before pointer input");
+        } finally { report187_state("after-row-wait-" + data.tag); }
         const retained = Probe.rows(assistant.messages).find(row => !previousIds.has(row.id) && row.kind === "assistant"
             && row.status === "completed" && row.text === original);
         verify(retained.id.length > 0, "REPORT171: actual immutable source row has a real identity");
@@ -776,7 +800,7 @@ TestCase {
         const current = Session.project;
         const history = JSON.stringify(Probe.rows(assistant.messages));
         const parameters = current ? JSON.stringify(Probe.rows(current.parameters)) : "";
-        const row = Probe.objectsWithProperty(window, "rowId").filter(item => item.rowId === retained.id
+        const row = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(item => item.rowId === retained.id
             && item.kind === "assistant" && item.status === "completed");
         compare(row.length, 1, "REPORT171: real production delegate belongs to the retained row");
         const bodies = Ui.itemsWithProperty(row[0], "readOnly").filter(item => item.visible
@@ -837,6 +861,360 @@ TestCase {
         verify(assistant.connected, "REPORT171: page navigation/refusal preserves genuine managed account");
         assistant.signOut();
         tryCompare(assistant, "connected", false, 2000, "REPORT171: owned fixture teardown actually settles");
+    }
+
+    // Genuine Main/default Session and ordinary native script. No fake account,
+    // scientific model, busy state, pointer flag or worker is assigned here.
+    function visible185_parameters(project) {
+        return Probe.rows(project.parameters).map(row => row.parameter);
+    }
+    function visible185_parameter(project, label, name) {
+        const found = visible185_parameters(project).filter(parameter =>
+            parameter.rowLabel === label && parameter.name === name);
+        compare(found.length, 1, "VA SETUP: independent original parameter metadata is unique");
+        return found[0];
+    }
+    function visible185_inputs(project) {
+        const experiment = project.currentExperiment;
+        const observations = Probe.rows(experiment.pattern).map(row => [row.x, row.intensityMeas, row.intensityMeasSu]);
+        verify(observations.length > 0 && observations.every(row => row.every(Number.isFinite) && row[2] > 0),
+            "VA SETUP: genuine measured observations and positive supplied sigmas exist before preservation is asserted");
+        return JSON.stringify({
+            observations: observations,
+            weight: experiment.datasetWeight,
+            exclusions: Probe.rows(experiment.excludedRegions),
+            links: Probe.rows(experiment.linkedStructures).map(row => [row.structureId, row.enabled])
+        });
+    }
+    function visible185_values(project) {
+        return JSON.stringify(visible185_parameters(project).map(parameter =>
+            [parameter.path, parameter.value, parameter.free, parameter.hasUncertainty, parameter.uncertainty]));
+    }
+    function visible185_type(text) {
+        keySequence(StandardKey.SelectAll);
+        keyClick(Qt.Key_Backspace);
+        for (const character of text)
+            keyClick(character);
+    }
+    function visible185_page(name) {
+        Ui.click(this, Probe, window, "appBar.tab." + name);
+        rendered();
+    }
+    function visible185_field(parameter) {
+        const fields = Ui.itemsWithProperty(Ui.page(window), "item").filter(candidate =>
+            candidate.objectName.startsWith("parameters.value.")
+            && candidate.item === parameter && candidate.visible && Ui.exposed(candidate));
+        compare(fields.length, 1, "VA1 SETUP: genuine exposed visual Analysis cell belongs to exact ParameterItem");
+        return fields[0];
+    }
+    function visible185_free(parameter) {
+        const found = Ui.itemsWithProperty(Ui.page(window), "objectName").filter(candidate => {
+            if (!candidate.objectName.startsWith("parameters.free.") || !Ui.exposed(candidate)) return false;
+            for (let parent = candidate.parent; parent; parent = parent.parent)
+                if (parent.parameter === parameter) return true;
+            return false;
+        });
+        compare(found.length, 1, "VA1 SETUP: genuine exposed free checkbox belongs to exact visual row parameter");
+        return found[0];
+    }
+    function visible185_outcome(callId) {
+        const row = Probe.rows(assistant.messages).find(value => value.kind === "activity"
+            && value.payload && value.payload.id === callId && value.payload.nativeOutcome);
+        return row ? row.payload.nativeOutcome : null;
+    }
+    function visible185_ready(stage) {
+        try {
+            tryVerify(() => assistant.connected && assistant.state === "idle" && !assistant.canCancel,
+                2000, "VA SETUP: actual current managed context is idle before original admission");
+        } finally { report187_state("visible-" + stage); }
+    }
+    function visible185_capture(stage) {
+        // Optional actual frame receipt; no extra sleep/render wait or pixel oracle.
+        try {
+            const image = grabImage(window.contentItem);
+            if (image.width > 0 && image.height > 0) {
+                image.save("visible185-" + stage + ".png");
+                console.log("VISIBLE185_FRAME", stage, image.width, image.height);
+            }
+        } catch (error) { console.log("VISIBLE185_FRAME_UNAVAILABLE", stage, String(error)); }
+    }
+    function test_visible185_actual_native_manual_interaction_data() {
+        return ["default-off", "analysis-value-free", "wavelength", "manual-override",
+            "dirty-valid-value", "dirty-invalid-value", "dirty-valid-free", "dirty-invalid-free",
+            "dirty-valid-fit", "dirty-invalid-fit", "real-fit", "fit-stop", "close-owner",
+            "unsupported-values", "unsupported-free", "unsupported-relations", "normal-relations"].map(tag => ({tag: tag}));
+    }
+    function test_visible185_actual_native_manual_interaction(data) {
+        const fitCase = ["real-fit", "fit-stop"].includes(data.tag) || data.tag.endsWith("-fit");
+        const fixture = fitCase ? "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project"
+            : "tests/fixtures/e04_t1/editable-project";
+        verify(Session.openProject(Probe.repoUrl(fixture)), "VA SETUP: genuine independent complete project opens normally");
+        const project = Session.project;
+        const parameters = visible185_parameters(project);
+        const cell = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+        compare(cell.length, 1, "VA SETUP: original independent cell scalar is unique");
+        const la = fitCase ? cell[0] : visible185_parameter(project, "La", "adp_iso");
+        const ba = fitCase ? null : visible185_parameter(project, "Ba", "adp_iso");
+        if (fitCase) {
+            for (const parameter of parameters) parameter.free = false;
+            cell[0].free = true;
+            project.currentExperiment.scale.free = true;
+            project.analysis.maxIterations = 8; // Existing bounded real-fit prior art; no optimum oracle.
+        } else {
+            la.free = false;
+            ba.free = false;
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "VA SETUP: real original calculation and ordinary free-subset edits settle");
+        if (fitCase) verify(project.fit.available, "VA SETUP: actual installed native backend admits this real single fit");
+        const inputs = visible185_inputs(project);
+        const originalValues = visible185_values(project);
+        const originalValue = la.value;
+        const originalFlag = la.free;
+        const wavelength = parameters.filter(parameter => parameter.name === "setup_wavelength");
+        compare(wavelength.length, 1, "VA SETUP: genuine original wavelength scalar exists");
+        const originalWavelength = wavelength[0].value;
+        const declarationRows = [Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)];
+        const originalDeclarations = JSON.stringify(declarationRows);
+        compare(typeof assistant.showActions, "boolean", "VA SETUP: real production mode property is available");
+        compare(assistant.showActions, false, "VA: every actual new Session mode starts OFF, not fabricated enabled");
+        toggle();
+        assistant.signIn();
+        visible185_ready("bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("disclosed");
+        verify(!assistant.contextConsentRequired, "VA SETUP: genuine current disclosed context is approved");
+        const accountRows = Probe.rows(assistant.models).map(row => row.id);
+        if (!["default-off", "normal-relations"].includes(data.tag)) {
+            const checkbox = item("assistant.showActions");
+            verify(checkbox.visible && checkbox.enabled, "VA SETUP: actual Show actions control is actionable");
+            mouseClick(checkbox);
+            compare(assistant.showActions, true, "VA: real checkbox enables the nonpersistent mode");
+        }
+        toggle(); // Actual original toggle exposes manual controls before setup input.
+        visible185_page("analysis");
+        if (!fitCase) {
+            const filter = Ui.control(Probe, window, "parameters.nameFilter");
+            verify(filter !== null && Ui.exposed(filter), "VA SETUP: actual Analysis filter is exposed");
+            mouseClick(filter);
+            visible185_type("adp_iso");
+            rendered();
+        }
+        let field = fitCase ? null : visible185_field(la);
+        let free = fitCase ? null : visible185_free(la);
+        if (data.tag === "wavelength") {
+            visible185_page("experiment");
+            field = Ui.control(Probe, window, "instrument.setup_wavelength");
+            verify(field !== null && field.item === wavelength[0] && Ui.exposed(field),
+                "VA SETUP: original supplied wavelength has its genuine current field");
+            free = null;
+        }
+        const fitButton = fitCase ? Ui.control(Probe, window, "fitting.start") : null;
+        if (fitCase) verify(fitButton !== null && Ui.exposed(fitButton), "VA FIT SETUP: genuine normal Start fitting button is exposed");
+        let typed = 0, toggled = 0, activeStarts = 0, fitStarted = 0, finished = 0;
+        let capturedTyping = false;
+        let spellings = [], writes = [], fitClicks = 0;
+        const editedParameter = data.tag === "wavelength" ? wavelength[0] : la;
+        function valueReceipt() { writes.push(editedParameter.value); }
+        function fitClickReceipt() { ++fitClicks; }
+        function typedReceipt() {
+            ++typed;
+            spellings.push(field.text);
+            if (data.tag === "analysis-value-free" && !capturedTyping) {
+                capturedTyping = true;
+                visible185_capture("typing");
+            }
+        }
+        function freeReceipt() { ++toggled; }
+        function activeReceipt() { if (assistant.showingActions) ++activeStarts; }
+        function fitReceipt() { if (project.fit.running) ++fitStarted; }
+        function finishedReceipt() {
+            ++finished;
+            console.log("VISIBLE185_FINISHED", data.tag, JSON.stringify({finished: finished,
+                actualOutcome: project.fit.outcome, running: project.fit.running,
+                currentOwner: Session.project === project}));
+        }
+        if (field) field.textEdited.connect(typedReceipt);
+        if (free) free.toggled.connect(freeReceipt);
+        editedParameter.valueChanged.connect(valueReceipt);
+        if (fitButton) fitButton.clicked.connect(fitClickReceipt);
+        assistant.showingActionsChanged.connect(activeReceipt);
+        project.fit.runningChanged.connect(fitReceipt);
+        project.fit.finished.connect(finishedReceipt);
+        let draftField = null, draft = "", draftFocus = null, draftSelection = null, draftPage = -1;
+        const call = "visible185-action-" + data.tag;
+        try {
+            if (data.tag === "analysis-value-free") {
+                verify(!Probe.objectsWithProperty(window, "item").includes(field),
+                    "VA1 SETUP: actual value delegate is visual-only relative to QObject root traversal");
+                verify(!Probe.objectsWithProperty(window, "checked").includes(free),
+                    "VA1 SETUP: actual free delegate is visual-only relative to QObject root traversal");
+            }
+            if (data.tag.startsWith("dirty-")) {
+                visible185_page("structure");
+                draftField = Ui.control(Probe, window, "cell.length_a");
+                verify(draftField !== null && draftField.enabled && Ui.exposed(draftField),
+                    "VA3 SETUP: genuine editable manual field is exposed before delegated work");
+                mouseClick(draftField);
+                draft = data.tag.startsWith("dirty-invalid") ? "invalid-partial" : String(cell[0].value + 0.02);
+                visible185_type(draft);
+                verify(draftField.activeFocus && draftField.text === draft,
+                    "VA3 SETUP: original genuine keyboard draft is still active and uncommitted");
+                compare(visible185_values(project), originalValues,
+                    "VA3 SETUP: typing without Return has not committed a scientific change");
+                draftFocus = window.activeFocusItem;
+                draftSelection = [draftField.selectionStart, draftField.selectionEnd];
+                draftPage = window.appBarCentralTabs.currentIndex;
+            }
+            if (["analysis-value-free", "wavelength", "manual-override", "close-owner", "real-fit", "fit-stop"].includes(data.tag)) {
+                toggle();
+                compare(Preferences.assistantShown, true, "VA SETUP: actual stored request covers manual controls before temporary action reveal");
+            }
+            visible185_ready("before-original-send");
+            // Direct public Send is setup only: it intentionally does not blur a manual draft.
+            assistant.send("Original delegated visible operation " + data.tag);
+            if (["manual-override", "close-owner"].includes(data.tag)) {
+                tryVerify(() => assistant.showingActions && field.activeFocus && field.text !== field.editText,
+                    10000, "VA2/VA4 SETUP: genuine paced original draft is active before intervention");
+                const pointer = item("assistant.actionPointer");
+                verify(Ui.rendered(pointer), "VA SETUP: actual accent pointer is rendered during real input");
+                if (data.tag === "manual-override") {
+                    const manual = visible185_free(ba);
+                    const beforeFree = ba.free;
+                    let manualToggles = 0;
+                    function manualReceipt() { ++manualToggles; }
+                    manual.toggled.connect(manualReceipt);
+                    try {
+                        const point = Ui.clickPoint(manual);
+                        verify(point !== null, "VA2 SETUP: original manual event has a genuine exposed target");
+                        mouseClick(manual, point.x, point.y);
+                        tryCompare(ba, "free", !beforeFree, 2000,
+                            "VA2: original user checkbox event reaches its original target while cancellation restores view");
+                        compare(manualToggles, 1, "VA2: user input is delivered once, never retargeted or replayed");
+                    } finally { manual.toggled.disconnect(manualReceipt); }
+                    tryCompare(assistant, "showingActions", false, 10000,
+                        "VA2: original visible input retires after real manual takeover");
+                    compare(la.value, originalValue, "VA2: cancelled uncommitted agent draft cannot write scientific state");
+                    verify(Ui.rendered(manual), "VA2: manual controls stay exposed after genuine user takeover");
+                    compare(Preferences.assistantShown, true, "VA2: takeover preserves the actual stored assistant request");
+                    tryCompare(popup, "visible", false, 2000, "VA2: no sheet reopens between user press/release or subsequent input");
+                } else {
+                    Session.closeProject();
+                    tryCompare(assistant, "showingActions", false, 10000,
+                        "VA4: ordinary Session retirement cancels real presentation without stale owner continuation");
+                    compare(Session.project, null, "VA4: late original input cannot resurrect the closed owner");
+                }
+            }
+            if (data.tag === "fit-stop") {
+                tryVerify(() => project.fit.running && assistant.showingActions, 10000,
+                    "VA FIT SETUP: actual worker is running before real Stop, never a fake pending interval");
+                const stop = item("assistant.stopVisibleAction");
+                verify(stop.visible && stop.enabled && Ui.exposed(stop), "VA FIT SETUP: real appbar Stop is available");
+                mouseClick(stop);
+            }
+            if (data.tag !== "close-owner") {
+                tryVerify(() => visible185_outcome(call) !== null && !assistant.canCancel && !assistant.showingActions,
+                    10000, "VA: actual original native outcome settles after its own input/worker owner");
+                const outcome = visible185_outcome(call);
+                if (data.tag.startsWith("dirty-")) {
+                    verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
+                        "VA3: original draft receives a truthful before-write refusal, never successful admission");
+                    compare(visible185_values(project), originalValues, "VA3: refusal preserves every original value/free/SU");
+                    compare(draftField.text, draft, "VA3: refusal preserves exact original uncommitted spelling");
+                    compare(window.activeFocusItem, draftFocus, "VA3: preflight does not blur the original manual input");
+                    compare(draftField.selectionStart, draftSelection[0], "VA3: original draft selection start survives");
+                    compare(draftField.selectionEnd, draftSelection[1], "VA3: original draft selection end survives");
+                    compare(window.appBarCentralTabs.currentIndex, draftPage, "VA3: refusal precedes navigation");
+                    compare(fitStarted, 0, "VA3: a blocked draft never admits a hidden worker");
+                } else if (data.tag.startsWith("unsupported-")) {
+                    verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
+                        "VA: unsupported visible operations fail honestly before write without hidden fallback");
+                    compare(visible185_values(project), originalValues, "VA: unsupported batch/relation cannot partly mutate the owner");
+                    compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                        originalDeclarations, "VA: unsupported relation preserves every original declaration");
+                    compare(typed + toggled, 0, "VA: refusal cannot be a decorative event sequence over a hidden write");
+                } else if (data.tag === "normal-relations") {
+                    compare(outcome.status, "edited", "VA SETUP CONTROL: identical valid relation payload is admitted in normal OFF mode");
+                    verify(project.analysis.aliases.count === declarationRows[0].length + 2
+                        && project.analysis.constraints.count === declarationRows[1].length + 1,
+                        "VA SETUP CONTROL: genuine valid relation append proves unsupported-visible payload is not a malformed refusal");
+                    compare(activeStarts, 0, "VA: normal relation control does not invent visible activity");
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                    compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                        originalDeclarations, "VA: complete normal Undo restores original declarations");
+                    compare(visible185_values(project), originalValues, "VA: complete relation Undo restores all original values/free/SU");
+                } else if (fitCase) {
+                    verify(fitStarted > 0 && finished === 1, "VA FIT: genuine worker admission and one actual completion precede result");
+                    verify(!project.fit.running && project.fit.outcome.length > 0 && fitClicks > 0,
+                        "VA FIT: actual Start click and normal final report publication precede original RPC settlement");
+                    if (outcome.adopted) verify(project.fit.canUndo && Probe.rows(project.fit.results).length > 0,
+                        "VA FIT: actual adopted report exposes ordinary result rows and normal Undo");
+                    if (data.tag === "fit-stop") {
+                        verify(["cancelled", "interrupted", "superseded"].includes(outcome.status),
+                            "VA FIT: genuine Stop is a truthful partial/cancel outcome, not convergence");
+                    } else {
+                        verify(["done", "max_iterations", "no_step"].includes(outcome.status),
+                            "VA FIT SETUP: actual supported backend finishes a real attempt, not unavailable/error substitute");
+                        compare(typeof outcome.iterations, "number", "VA FIT: actual iteration count is reported");
+                        verify(Number.isFinite(outcome.iterations) && outcome.iterations >= 0,
+                            "VA FIT: actual iteration report is finite without an invented optimum");
+                        if (outcome.reduced_chi_square !== undefined)
+                            verify(Number.isFinite(outcome.reduced_chi_square) && outcome.reduced_chi_square >= 0,
+                                "VA FIT: reported actual objective is finite, not an expected golden");
+                    }
+                } else if (data.tag !== "manual-override") {
+                    compare(outcome.status, "edited", "VA: actual ordinary native edit is committed truthfully");
+                    if (data.tag === "wavelength") {
+                        compare(wavelength[0].value, 1.49, "VA: actual supplied wavelength is typed exactly, no guessed intermediate");
+                        verify(typed > 0 && spellings.includes("1.49"), "VA: real field receives original numeric spelling through actual key events");
+                        compare(JSON.stringify(writes), JSON.stringify([1.49]), "VA: incomplete numeric drafts never become scientific intermediate writes");
+                    } else {
+                        compare(la.value, 0.6, "VA1: genuine original Analysis parameter changes through actual input");
+                        if (data.tag === "analysis-value-free") {
+                            compare(la.free, true, "VA1: actual visual-only free checkbox changes its own ParameterItem");
+                            verify(typed > 0 && toggled === 1, "VA1: actual typing and one real checkbox toggle accompany scientific edits");
+                        }
+                    }
+                    if (data.tag === "default-off") compare(activeStarts, 0, "VA: default OFF keeps normal native behavior without fake pointer activity");
+                    else verify(activeStarts > 0, "VA: enabled supported operation has an actual presentation interval");
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                    if (data.tag === "analysis-value-free") {
+                        compare(la.free, originalFlag, "VA: first normal Undo restores actual checkbox edit");
+                        Ui.click(this, Probe, window, "appBar.button.undo");
+                    }
+                    if (data.tag === "wavelength") compare(wavelength[0].value, originalWavelength, "VA: normal Undo restores actual original wavelength");
+                    else compare(la.value, originalValue, "VA: normal Undo restores actual original edited value");
+                    compare(visible185_values(project), originalValues,
+                        "VA: normal Undo restores every original parameter value/free/SU, including unrelated state");
+                }
+                compare(visible185_inputs(project), inputs, "VA: actual input never changes measured observations/sigmas/exclusions/weights/links");
+                compare(Session.project, project, "VA: final action/report belongs to the same actual native owner");
+            }
+            verify(assistant.connected, "VA: genuine account survives own native input, Stop or project retirement");
+            compare(JSON.stringify(Probe.rows(assistant.models).map(row => row.id)), JSON.stringify(accountRows),
+                "VA: genuine managed catalog remains without login repair");
+            if (data.tag === "manual-override") {
+                mouseClick(item("assistant.toggle"));
+                tryCompare(popup, "opened", true, 2000, "VA2: only the next real opener restores assistant after takeover");
+                compare(Preferences.assistantShown, true, "VA2: explicit opener does not corrupt stored request");
+            }
+            if (data.tag === "analysis-value-free") visible185_capture("restored");
+            console.log("VISIBLE185_RESULT", data.tag, JSON.stringify({typed: typed, toggled: toggled,
+                activeStarts: activeStarts, fitStarted: fitStarted, finished: finished, fitClicks: fitClicks,
+                currentOwner: Session.project === project, connected: assistant.connected}));
+        } finally {
+            if (field && field.textEdited) field.textEdited.disconnect(typedReceipt);
+            if (free && free.toggled) free.toggled.disconnect(freeReceipt);
+            if (editedParameter && editedParameter.valueChanged) editedParameter.valueChanged.disconnect(valueReceipt);
+            if (fitButton && fitButton.clicked) fitButton.clicked.disconnect(fitClickReceipt);
+            assistant.showingActionsChanged.disconnect(activeReceipt);
+            if (project && project.fit) {
+                project.fit.runningChanged.disconnect(fitReceipt);
+                project.fit.finished.disconnect(finishedReceipt);
+                if (Session.project === project && project.fit.running) project.fit.cancel();
+            }
+            if (assistant.canCancel) assistant.cancel();
+        }
     }
 
 }
