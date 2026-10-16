@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtTest
 import edi.app
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EdiAcceptance 1.0
 import "../../unit/app/UiInteraction.js" as Ui
@@ -383,16 +384,44 @@ TestCase {
         Preferences.toolTips = true;
         const tooltip = button.ToolTip.text;
         verify(/manual|sidebar|controls/i.test(tooltip), "NAV1: shown-state tooltip describes the actual sidebar-return action");
-        mouseMove(button, button.width / 2, button.height / 2);
         const candidates = Probe.objectsWithProperty(button, "closePolicy");
         const ownedToolTips = [];
         for(let i=0;i<candidates.length;++i)
             if(candidates[i] instanceof EaElements.ToolTip)ownedToolTips.push(candidates[i]);
         compare(ownedToolTips.length, 1, "NAV1 SETUP: actual Ea ToolButton owns one painted custom tooltip");
         const toolTipPopup = ownedToolTips[0];
-        tryVerify(() => toolTipPopup.visible && toolTipPopup.contentItem !== null
-            && Ui.rendered(toolTipPopup.contentItem) && Ui.text(toolTipPopup.contentItem).includes(tooltip),
-            2000, "NAV1: actual hovered tooltip popup renders its action text, not merely attached metadata");
+        function hoverObservation(stage) {
+            const handlers = Probe.objectsWithProperty(button, "hovered");
+            const realHandlers = [];
+            for(let i=0;i<handlers.length;++i)
+                if(String(handlers[i]).includes("HoverHandler"))realHandlers.push({
+                    type: String(handlers[i]), hovered: handlers[i].hovered,
+                    parent: handlers[i].parent ? String(handlers[i].parent) : null});
+            console.info("NAV_HOVER", stage, JSON.stringify({
+                hoverEnabled: button.hoverEnabled, hovered: button.hovered,
+                showToolTips: EaGlobals.Vars.showToolTips, toolTipsPreference: Preferences.toolTips,
+                buttonRect: rect(button), buttonVisible: button.visible, buttonEnabled: button.enabled,
+                tooltipVisible: toolTipPopup.visible, tooltipOpened: toolTipPopup.opened,
+                tooltipText: toolTipPopup.text,
+                contentText: toolTipPopup.contentItem ? Ui.text(toolTipPopup.contentItem) : null,
+                contentRendered: toolTipPopup.contentItem ? Ui.rendered(toolTipPopup.contentItem) : false,
+                contentRect: toolTipPopup.contentItem ? rect(toolTipPopup.contentItem) : null,
+                outerRect: toolTipPopup.contentItem && toolTipPopup.contentItem.parent
+                    ? rect(toolTipPopup.contentItem.parent) : null,
+                hoverHandlers: realHandlers}));
+        }
+        hoverObservation("before-away");
+        mouseMove(window.contentItem, window.width / 2, window.height - 2);
+        hoverObservation("after-away");
+        mouseMove(button, button.width / 2, button.height / 2);
+        hoverObservation("after-return");
+        try {
+            tryVerify(() => toolTipPopup.visible && toolTipPopup.contentItem !== null
+                && Ui.rendered(toolTipPopup.contentItem) && Ui.text(toolTipPopup.contentItem).includes(tooltip),
+                2000, "NAV1: actual hovered tooltip popup renders its action text, not merely attached metadata");
+        } finally {
+            hoverObservation("after-hover-wait");
+        }
         const editor = item("assistant.composer");
         editor.insert(0, "Original navigation draft");
         editor.select(2, 9);
