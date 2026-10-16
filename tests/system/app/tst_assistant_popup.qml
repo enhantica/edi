@@ -6,6 +6,7 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EdiAcceptance 1.0
+import EdiChartReference 1.0
 import "../../unit/app/UiInteraction.js" as Ui
 
 // Owner 99d50f71f supersedes the former second-dock and alternate-entry tests.
@@ -1862,5 +1863,232 @@ TestCase {
             for (const field of observedFields) if (field) field.textEdited.disconnect(typedReceipt);
             for (const control of observedFree) if (control) control.toggled.disconnect(freeReceipt);
         }
+    }
+    function slider231_curves(project) {
+        const chart = ChartOracle.object(Ui.page(window), "chart");
+        const rows = Probe.rows(project.currentExperiment.pattern);
+        const byX = new Map(rows.map(row => [row.x, row]));
+        const roles = {calc: "intensityCalc", bkg: "intensityBkg", resid: "residual"};
+        const curves = {};
+        for (const kind of ["calc", "bkg", "resid"]) {
+            const points = ChartOracle.points(ChartOracle.object(chart, "chart.series." + kind));
+            let finite = 0;
+            for (const point of points) {
+                if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
+                const row = byX.get(point.x);
+                if (!row || row[roles[kind]] !== point.y)
+                    return {consistent: false, kind: kind, x: point.x, points: points.length};
+                ++finite;
+            }
+            if (!finite) return {consistent: false, kind: kind, points: points.length};
+            curves[kind] = points;
+        }
+        return {consistent: true, signature: JSON.stringify(curves),
+            counts: Object.keys(curves).map(kind => curves[kind].length)};
+    }
+    function test_slider231_real_manual_publication_persists_data() {
+        return ["native-platform", "clean-tab-focus", "full-precision", "dirty-valid", "dirty-invalid"].map(tag => ({tag: tag}));
+    }
+    function test_slider231_real_manual_publication_persists(data) {
+        const fixture = "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project";
+        verify(Session.openProject(Probe.repoUrl(fixture)),
+            "SLIDER SETUP: actual original complete measured project opens");
+        const project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "SLIDER SETUP: actual original native calculation settles");
+        compare(assistant.showActions, false, "SLIDER: genuine fresh process keeps assistant mode OFF");
+        toggle();
+        assistant.signIn();
+        visible185_ready("slider-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("slider-disclosed");
+        verify(!assistant.contextConsentRequired, "SLIDER SETUP: genuine current context is approved");
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        const name = Ui.control(Probe, window, "parameters.nameFilter");
+        verify(name !== null && Ui.exposed(name), "SLIDER SETUP: actual name filter is exposed");
+        mouseClick(name);
+        visible185_type("length_");
+        rendered();
+        const parameters = visible185_parameters(project);
+        const matches = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+        const others = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_b");
+        compare(matches.length, 1, "SLIDER SETUP: original requested cell-a identity is unique");
+        compare(others.length, 1, "SLIDER SETUP: a genuine different current row exists");
+        const target = matches[0];
+        const other = others[0];
+        const originalValue = target.value;
+        const group = Ui.control(Probe, window, "group.parameters");
+        const field = visible185_field(target);
+        const slider = Ui.control(Probe, window, "parameters.slider");
+        verify(slider !== null && slider.enabled && Ui.exposed(slider),
+            "SLIDER SETUP: original selected row has its actual exposed slider");
+        const nativeFocusPolicy = slider.focusPolicy;
+        // Pinned Qt6.11.2 QQuickSlider constructor: macOS TabFocus; other platforms StrongFocus.
+        // Declare that public focus policy BEFORE input; never force the field after a slider event.
+        if (data.tag !== "native-platform") slider.focusPolicy = Qt.TabFocus;
+        const declaredFocusPolicy = slider.focusPolicy;
+        if (data.tag !== "native-platform") compare(declaredFocusPolicy, Qt.TabFocus,
+            "SLIDER SETUP: explicit pinned macOS focus contract is declared before genuine input");
+        verify(field.enabled && !field.readOnly, "SLIDER SETUP: original current numeric cell is editable");
+        const originalUndo = {project: project.canUndo, button: item("appBar.button.undo").enabled};
+        let draftEdits = 0;
+        function draftReceipt() { ++draftEdits; }
+        field.textEdited.connect(draftReceipt);
+        try {
+            mouseClick(field);
+            verify(field.activeFocus && group.selected === target,
+                "SLIDER SETUP: original actual row selection has real editor focus");
+            if (data.tag === "full-precision") {
+                visible185_type("10.333333333333334");
+                keyClick(Qt.Key_Return);
+                compare(target.value, 10.333333333333334,
+                    "SLIDER SETUP: real original user typing establishes its full-precision value");
+                verify(Number(field.value) !== target.value,
+                    "SLIDER SETUP: actual rounded display genuinely differs from full stored value");
+            } else if (data.tag.startsWith("dirty-")) {
+                const draft = data.tag === "dirty-valid" ? "10.32" : "not-a-number";
+                const beforeTyping = visible185_values(project);
+                visible185_type(draft);
+                compare(field.text, draft, "SLIDER DRAFT: actual user spelling reaches the original field");
+                compare(visible185_values(project), beforeTyping,
+                    "SLIDER DRAFT: genuine typing is still uncommitted before original manual focus handoff");
+                verify(draftEdits > 0, "SLIDER DRAFT: real textEdited distinguishes a user draft from formatting");
+                verify(field.activeFocus && !slider.enabled,
+                    "SLIDER DRAFT: actual pending same-parameter user draft disables the real slider without discarding text");
+                compare(field.text, draft, "SLIDER DRAFT: displayed typed spelling remains owned until ordinary commit/refusal");
+                keyClick(Qt.Key_Tab);
+                tryCompare(slider, "enabled", true, 2000,
+                    "SLIDER DRAFT: ordinary explicit focus handoff resolves the draft and restores the real control");
+                if (data.tag === "dirty-valid") {
+                    compare(target.value, 10.32,
+                        "SLIDER DRAFT: ordinary genuine manual Tab commits a valid typed draft");
+                    compare(field.refusal, "", "SLIDER DRAFT: valid actual input is not falsely refused");
+                } else {
+                    compare(target.value, originalValue,
+                        "SLIDER DRAFT: invalid original user text never becomes a scientific value");
+                    verify(typeof field.refusal === "string" && field.refusal.length > 0,
+                        "SLIDER DRAFT: invalid input retains an actual honest refusal");
+                }
+            }
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment)
+                && slider231_curves(project).consistent, 10000,
+                "SLIDER SETUP: genuine committed input and actual plotted/model columns agree");
+            rendered();
+            mouseClick(field);
+            verify(field.activeFocus && group.selected === target,
+                "SLIDER SETUP: clean original full-value editor focus is genuine, never forced");
+            compare(Number(field.text), target.value,
+                "SLIDER SETUP: focused clean text is the authoritative full-precision current number");
+            compare(project.canUndo, originalUndo.project,
+                "SLIDER HISTORY: ordinary typed commit/refusal preserves the prior public Undo availability");
+            compare(item("appBar.button.undo").enabled, originalUndo.button,
+                "SLIDER HISTORY: ordinary typed input cannot manufacture a recorded Undo step");
+            const beforeSliderValues = visible185_values(project);
+            const beforeSlider = target.value;
+            const beforeCurves = slider231_curves(project);
+            const inputs = visible185_inputs(project);
+            const models = JSON.stringify(Probe.rows(assistant.models));
+            const history = JSON.stringify(Probe.rows(assistant.messages));
+            const declarations = JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]);
+            verify(slider.enabled && Ui.exposed(slider),
+                "SLIDER SETUP: resolved clean focus keeps the actual slider enabled");
+            compare(slider.value, beforeSlider, "SLIDER SETUP: real slider belongs to the original selected parameter");
+            let moved = 0, edited = 0;
+            let writes = [];
+            function moveReceipt() { ++moved; }
+            function textReceipt() { ++edited; }
+            function valueReceipt() {
+                writes.push(target.value);
+            }
+            slider.moved.connect(moveReceipt);
+            field.textEdited.connect(textReceipt);
+            target.valueChanged.connect(valueReceipt);
+            try {
+                const startX = slider.handle.x + slider.handle.width / 2;
+                const endX = slider.leftPadding + slider.handle.width / 2
+                    + 0.7 * (slider.availableWidth - slider.handle.width);
+                verify(Math.abs(startX - endX) > 1,
+                    "SLIDER SETUP: actual original handle and requested drag end are distinct screen points");
+                mousePress(slider, startX, slider.height / 2);
+                try {
+                    if (data.tag !== "native-platform") verify(field.activeFocus,
+                        "SLIDER FOCUS SETUP: declared TabFocus press genuinely retains original clean field focus");
+                    mouseMove(slider, endX, slider.height / 2);
+                    if (data.tag !== "native-platform") verify(field.activeFocus,
+                        "SLIDER FOCUS SETUP: original clean editor remains focused during genuine slider publication");
+                } finally {
+                    mouseRelease(slider, endX, slider.height / 2);
+                }
+                const changed = target.value;
+                verify(moved > 0 && writes.length > 0 && changed !== beforeSlider,
+                    "SLIDER: genuine pointer slider input actually changes the selected scientific parameter");
+                compare(changed, slider.value, "SLIDER: actual selected core value agrees with the real moved control");
+                if (field.activeFocus) compare(Number(field.text), changed,
+                    "SLIDER: focused clean numeric display immediately follows authoritative slider publication");
+                else compare(field.text, field.value,
+                    "SLIDER: actual native platform focus handoff keeps the normal current display binding");
+                compare(edited, 0, "SLIDER: programmatic publication/formatting is not fabricated user text input");
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment)
+                    && slider231_curves(project).consistent, 10000,
+                    "SLIDER: actual current model columns and rendered calc/background/residual agree after input");
+                const afterCurves = slider231_curves(project);
+                verify(afterCurves.signature !== beforeCurves.signature,
+                    "SLIDER: original cell change genuinely publishes a changed plotted calculation");
+                const writesAfterDrag = writes.length;
+                keyClick(Qt.Key_Tab);
+                verify(!field.activeFocus, "SLIDER: actual Tab leaves the original numeric editor");
+                compare(target.value, changed, "SLIDER: Tab cannot submit stale clean text over the changed core value");
+                compare(field.text, field.value, "SLIDER: unfocused row uses its actual current formatted display");
+                compare(writes.length, writesAfterDrag, "SLIDER: clean focus loss creates no second scientific edit");
+                const otherField = visible185_field(other);
+                verify(otherField.enabled && Ui.exposed(otherField),
+                    "SLIDER SETUP: real different row is actionable before the original row switch");
+                mouseClick(otherField);
+                compare(group.selected, other, "SLIDER: actual pointer selects a genuinely different parameter row");
+                compare(target.value, changed, "SLIDER: switching rows cannot restore the obsolete original value");
+                compare(field.text, field.value, "SLIDER: old row still displays its authoritative current value");
+                compare(writes.length, writesAfterDrag, "SLIDER: row switch does not invent an old-value write");
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment)
+                    && slider231_curves(project).consistent, 10000,
+                    "SLIDER: retained current plotted/model result survives actual Tab and row navigation");
+                compare(slider231_curves(project).signature, afterCurves.signature,
+                    "SLIDER: original changed chart persists instead of reverting after focus/selection changes");
+                const expectedValues = JSON.parse(beforeSliderValues);
+                const expectedTarget = expectedValues.find(row => row[0] === target.path);
+                verify(expectedTarget !== undefined, "SLIDER SETUP: captured exact target belongs to the public prestate");
+                expectedTarget[1] = changed;
+                compare(visible185_values(project), JSON.stringify(expectedValues),
+                    "SLIDER: only the actual selected scalar changes; unrelated values/free/SUs stay intact");
+                compare(project.canUndo, originalUndo.project,
+                    "SLIDER HISTORY: ordinary unrecorded slider input preserves prior public Undo availability");
+                compare(item("appBar.button.undo").enabled, originalUndo.button,
+                    "SLIDER HISTORY: actual pointer input/Tab/row switch creates no phantom recorded Undo step");
+                compare(visible185_inputs(project), inputs,
+                    "SLIDER: original observations/sigmas/masks/weights/links are preserved");
+                compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                    declarations, "SLIDER: original scientific declarations are not changed by manual input");
+                verify(Session.project === project && assistant.connected,
+                    "SLIDER: original actual owner and genuine managed account survive all manual actions");
+                compare(JSON.stringify(Probe.rows(assistant.models)), models, "SLIDER: genuine catalog is preserved");
+                compare(JSON.stringify(Probe.rows(assistant.messages)), history,
+                    "SLIDER: ordinary manual input does not rewrite retained conversation history");
+            } finally {
+                console.log("SLIDER231_STATE", data.tag, JSON.stringify({
+                    currentOwner: Session.project === project, connected: assistant.connected,
+                    nativeFocusPolicy: nativeFocusPolicy, declaredFocusPolicy: declaredFocusPolicy,
+                    originalUndo: originalUndo, currentUndo: {project: project.canUndo, button: item("appBar.button.undo").enabled},
+                    fieldText: field.text, fieldDisplay: field.value, fieldFocused: field.activeFocus,
+                    selectedPath: group.selected ? group.selected.path : null, targetPath: target.path,
+                    targetValue: target.value, beforeSlider: beforeSlider, sliderValue: slider.value,
+                    moved: moved, writes: writes, userTextEditsDuringDrag: edited, draftTextEdits: draftEdits,
+                    calculating: project.calculating, computedCurrent: Probe.computedCurrent(project.currentExperiment),
+                    chart: slider231_curves(project).counts, lastError: project.lastError}));
+                slider.moved.disconnect(moveReceipt);
+                field.textEdited.disconnect(textReceipt);
+                target.valueChanged.disconnect(valueReceipt);
+            }
+        } finally { field.textEdited.disconnect(draftReceipt); }
     }
 }

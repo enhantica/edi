@@ -519,3 +519,67 @@ def test_exposure229_genuine_navigation_filters_and_modal_origin(case, tmp_path)
         assert decoded['status'] in (
             {'done', 'max_iterations', 'no_step'} if expected['tool'] == 'run_fit' else {'edited'}
         ), 'EXPOSURE: actual native outcome is truthful; worker success does not imply convergence'
+
+
+SLIDER231_CASES = [
+    'native-platform', 'clean-tab-focus', 'full-precision', 'dirty-valid', 'dirty-invalid',
+]
+
+
+@pytest.mark.parametrize('case', SLIDER231_CASES)
+def test_slider231_real_manual_value_display_chart_and_undo(case, tmp_path):  # noqa: PLR0914 -- finite real Main/manual evidence
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'SLIDER SETUP: actual coherent Main consumer required'
+    environment = popup171_owned_environment(tmp_path)
+    environment['QT_QUICK_CONTROLS_HOVER_ENABLED'] = '1'
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    original_config = config_path.read_bytes()
+    fixture = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_slider231_real_manual_publication_persists:' + case,
+            '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            received = getattr(error, stream) or b''
+            raw = received if isinstance(received, bytes) else received.encode()
+            destination = tmp_path / ('slider231-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'slider231.stdout.log').write_text(result.stdout, encoding='utf-8')
+    (tmp_path / 'slider231.stderr.log').write_text(result.stderr, encoding='utf-8')
+    (tmp_path / 'slider231-process.json').write_text(json.dumps({
+        'argv': argv, 'returncode': result.returncode,
+        'config_unchanged': config_path.read_bytes() == original_config,
+    }, indent=2), encoding='utf-8')
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_slider231_real_manual_publication_persists('
+        + case + ')' in output
+    ), 'SLIDER: original manual slider/model/display/chart/Undo case must execute\n' + output
+    assert config_path.read_bytes() == original_config, 'SLIDER: original owned input is immutable'
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'SLIDER: original independent scientific fixture bytes remain unchanged'
+    )
+    config = json.loads(original_config)
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()]
+    methods = [request.get('method') for request in requests]
+    required = {'initialize', 'account/read', 'model/list', 'skills/list', 'thread/start'}
+    assert required <= set(methods), (
+        'SLIDER: actual managed peer genuinely connected through original bootstrap doors'
+    )
+    assert not any(method in {'turn/start', 'turn/steer', 'account/login/start', 'account/logout'}
+                   for method in methods), (
+        'SLIDER: genuine manual input needs no delegated turn, native tool or auth repair'
+    )
+    native = trace.with_suffix('.native-replies.jsonl')
+    assert not native.exists() or not native.read_text(encoding='utf-8').strip(), (
+        'SLIDER: no native response or hidden agent write substitutes for original slider events'
+    )
