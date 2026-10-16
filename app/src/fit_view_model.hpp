@@ -233,6 +233,11 @@ class FitViewModel : public QObject {
     void showFrame();
     void ended(const edi::FitReport& report);
     void presentEnded(const edi::FitReport& report);
+    void startImpl();
+    friend class AssistantViewModel;
+    std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion);
+    void discardNativePreparation(std::uint64_t token) noexcept;
+    std::uint64_t native_completion_serial_ = 0;
     std::function<void(const edi::FitReport&, bool)> native_completion_;
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);

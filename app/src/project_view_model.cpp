@@ -1256,6 +1256,8 @@ QString ProjectViewModel::pendingRefusal() const { return editReadinessRefusal(f
 QString ProjectViewModel::criticalEditRefusal(bool restoring) const {
     if (retired_) return tr("This project owner has been replaced or closed");
     if (editing_) return tr("The current project edit is still being published");
+    if (widget_input_ && !widget_input_executing_)
+        return tr("The current visible native input is still being completed");
     if (edit_publication_failed_ && !restoring)
         return tr("An edit was applied but its presentation failed: Undo or reopen the project before further changes");
     return {};
@@ -1978,6 +1980,52 @@ void ProjectViewModel::pinTimestamps(const QString& timestamp) {
     edi::Project& project = *project_;
     apply(edi::Edit::timestamps(project, timestamp.toStdString()), false);
     setModified(modified);
+}
+
+std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetValue(const edi::Parameter& parameter, double value) {
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) throw std::runtime_error(pending.toStdString());
+    auto input = std::make_shared<WidgetParameterInput>();
+    input->field = WidgetParameterInput::Field::Value; input->parameter = &parameter; input->value = value;
+    input->outcome.message = tr("The visible parameter input was not committed");
+    widget_input_ = input;
+    return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetFree(const edi::Parameter& parameter, bool free) {
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) throw std::runtime_error(pending.toStdString());
+    auto input = std::make_shared<WidgetParameterInput>();
+    input->field = WidgetParameterInput::Field::Free; input->parameter = &parameter; input->free = free;
+    input->outcome.message = tr("The visible free-flag input was not committed");
+    widget_input_ = input;
+    return input;
+}
+void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept {
+    if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
+}
+QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, double value) {
+    const PublicationScope publication(*this);
+    const auto input = widget_input_;
+    if (!input) return ProjectEditor::assign_parameter_value(parameter, value);
+    if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Value || input->value != value)
+        return tr("A different parameter input cannot enter the current native event");
+    input->consumed = true;
+    widget_input_executing_ = true;
+    const QPointer<ProjectViewModel> self(this);
+    const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
+    input->outcome = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+    return input->outcome.applied ? QString{} : input->outcome.message;
+}
+QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool free) {
+    const PublicationScope publication(*this);
+    const auto input = widget_input_;
+    if (!input) return ProjectEditor::assign_parameter_free(parameter, free);
+    if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Free || input->free != free)
+        return tr("A different free-flag input cannot enter the current native event");
+    input->consumed = true;
+    widget_input_executing_ = true;
+    const QPointer<ProjectViewModel> self(this);
+    const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
+    input->outcome = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+    return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {

@@ -78,7 +78,23 @@ EaElements.ParamTextField {
 
     // Return and leaving the field both commit; the second of the two finds nothing new. Text left as shown, rounded or
     // in full, changes nothing.
+    // Host-owned cancellation restores the current committed model binding,
+    // never the old pre-animation number or a newer manual model edit.
+    property bool assistantEditing: false
+    function beginAssistantEdit() { assistantEditing = true; }
+    function allowAssistantCommit() { assistantEditing = false; }
+    function cancelAssistantEdit() {
+        // Retain the partial-text guard until the current binding is restored.
+        // A failed presentation cleanup must not expose agent draft as a write.
+        text = Qt.binding(() => field.value);
+        typedRefusal = "";
+        deselect();
+        cursorPosition = 0;
+        assistantEditing = false;
+    }
     function commit() {
+        // Focus loss while paced typing is not permission to commit a partial number.
+        if (assistantEditing) { cancelAssistantEdit(); return; }
         if (item === null)
             return;
         if (text !== field.value && text !== field.editText) {

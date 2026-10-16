@@ -91,7 +91,7 @@ void ParameterItem::setValue(double value) {
         return;
     }
     edi::Parameter* parameter = parameter_;
-    setLastError(editor_.apply(edi::Edit::value(*parameter, value), false));
+    setLastError(editor_.assign_parameter_value(*parameter, value));
 }
 
 void ParameterItem::setFree(bool free) {
@@ -104,7 +104,7 @@ void ParameterItem::setFree(bool free) {
         return;
     }
     edi::Parameter* parameter = parameter_;
-    setLastError(editor_.apply(edi::Edit::assign(parameter->free, free), false));
+    setLastError(editor_.assign_parameter_free(*parameter, free));
 }
 
 int ParameterItem::publish() {

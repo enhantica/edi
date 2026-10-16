@@ -318,6 +318,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_INVOKABLE int structureIndex(const QString& name) const;
 
     QString apply(const edi::Edit& change, bool structural) override;
+    QString assign_parameter_value(edi::Parameter& parameter, double value) override;
+    QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
     QString apply_relation_edit(const edi::Edit& change) override;
     QString rename_structure(edi::Structure& structure, const std::string& name) override;
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
@@ -433,6 +435,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setLastError(const QString& error);
     friend class Session;
     friend class FitViewModel;
+    friend class AssistantViewModel;
+    struct WidgetParameterInput {
+        enum class Field { Value, Free } field;
+        const edi::Parameter* parameter = nullptr;
+        double value = 0;
+        bool free = false, consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetParameterInput> widget_input_;
+    bool widget_input_executing_ = false;
+    std::shared_ptr<WidgetParameterInput> prepareWidgetValue(const edi::Parameter& parameter, double value);
+    std::shared_ptr<WidgetParameterInput> prepareWidgetFree(const edi::Parameter& parameter, bool free);
+    void finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept;
     void retire() noexcept;
     bool retired_ = false;
     unsigned publication_depth_ = 0;

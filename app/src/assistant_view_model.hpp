@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QQuickWindow>
+#include <QPointF>
 #include <QUrl>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
@@ -23,6 +25,9 @@ class AssistantViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to Session")
+    Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
+    Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
+    Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(QString connectionLabel READ connectionLabel NOTIFY connectionLabelChanged)
@@ -50,6 +55,11 @@ class AssistantViewModel : public QObject {
     AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr);
 #endif
     ~AssistantViewModel() override;
+    bool showActions() const;
+    bool showingActions() const;
+    QQuickWindow* actionWindow() const;
+    void setShowActions(bool value);
+    void setActionWindow(QQuickWindow* window);
     QString state() const;
     bool connected() const;
     QString connectionLabel() const;
@@ -94,6 +104,14 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void showActionsChanged();
+    void showingActionsChanged();
+    void actionWindowChanged();
+    void actionPointerShown();
+    void actionPointerMoved(const QPointF& position);
+    void actionPointerPressed();
+    void actionPointerHidden();
+    void actionManualTakeover(); // Manual controls stay exposed for the original user event.
     void fileSelectionRetired(const QString& requestId);
     /// Revokes deferred UI intent even when replacement context bytes are identical.
     void conversationRetired();
@@ -114,6 +132,8 @@ class AssistantViewModel : public QObject {
     void workingFolderChanged();
     void workingFolderSelectionRetired(const QString& intent);
 
+   protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
    private:
     friend class Session;
     bool attachProject(ProjectViewModel* project, bool managedResult); // Session-only exact attachment result.

@@ -305,16 +305,36 @@ void FitViewModel::close() {
     job_.reset();
 }
 
+std::uint64_t FitViewModel::prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion) {
+    if (nativeRunning() || native_completion_ || native_completion_serial_ == UINT64_MAX)
+        throw std::runtime_error("A native fit is already owned or its completion identity is exhausted");
+    native_completion_ = std::move(completion); // Callback ownership precedes either real start entrance.
+    return ++native_completion_serial_;
+}
+void FitViewModel::discardNativePreparation(std::uint64_t token) noexcept {
+    if (native_completion_serial_ == token && !nativeRunning()) native_completion_ = {};
+}
 void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> completion) {
-    if (nativeRunning() || native_completion_) throw std::runtime_error("A native fit is already owned");
-    native_completion_ = std::move(completion); // All callback allocation precedes submission.
+    const auto token = prepareNativeCompletion(std::move(completion));
     const QPointer<FitViewModel> self(this);
-    try { start(); }
-    catch (...) { if (self && !self->nativeRunning()) self->native_completion_ = {}; throw; }
-    if (self && !self->nativeRunning()) self->native_completion_ = {};
+    try { startImpl(); }
+    catch (...) { if (self) self->discardNativePreparation(token); throw; }
+    if (self) self->discardNativePreparation(token); // A submitted worker keeps its actual completion.
 }
 
 void FitViewModel::start() {
+    const QPointer<FitViewModel> self(this);
+    try { startImpl(); }
+    catch (...) {
+        if (!self) return;
+        // Cancellation can throw from Worker tracing after setting its actual
+        // flag. Neither that nor a diagnostic observer may escape this QML door.
+        try { if (nativeRunning()) cancel(); } catch (...) {}
+        if (self) try { emit refused(tr("Fitting could not be started or presented; any admitted worker is being stopped")); } catch (...) {}
+        // An admitted worker still owns its original real FitReport callback.
+    }
+}
+void FitViewModel::startImpl() {
     const ProjectViewModel::PublicationScope publication(owner_);
     if (const QString critical = owner_.criticalEditRefusal(); !critical.isEmpty()) { emit refused(critical); return; }
     if (!job_ || job_->running() || !available_) {

@@ -246,7 +246,8 @@ Popup {
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: skillsButton
                         KeyNavigation.tab: chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton
-                            : temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton : composer.firstFocusItem
+                            : temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
+                            : showActionsControl.enabled ? showActionsControl : composer.firstFocusItem
                         ToolTip.text: panel.usageCaption()
                         Accessible.name: panel.usageCaption()
                         Accessible.description: qsTr("Actual account allowance windows and supplied credits. Context occupancy is independently unavailable.")
@@ -324,7 +325,7 @@ Popup {
                             KeyNavigation.priority: KeyNavigation.BeforeItem
                             KeyNavigation.backtab: usageButton
                             KeyNavigation.tab: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled
-                                ? temporaryWorkingFolderButton : composer.firstFocusItem
+                                ? temporaryWorkingFolderButton : showActionsControl.enabled ? showActionsControl : composer.firstFocusItem
                             text: qsTr("Choose working folder")
                             enabled: !panel.assistant.canCancel
                             Accessible.name: text
@@ -336,7 +337,7 @@ Popup {
                             KeyNavigation.priority: KeyNavigation.BeforeItem
                             KeyNavigation.backtab: chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled
                                 ? chooseWorkingFolderButton : usageButton
-                            KeyNavigation.tab: composer.firstFocusItem
+                            KeyNavigation.tab: showActionsControl.enabled ? showActionsControl : composer.firstFocusItem
                             text: qsTr("Use temporary folder")
                             visible: panel.assistant.workingFolder.length > 0
                             enabled: !panel.assistant.canCancel
@@ -574,13 +575,26 @@ Popup {
                     implicitHeight: EaStyle.Sizes.borderThickness
                     color: EaStyle.Colors.appBorder
                 }
+                EaElements.CheckBox {
+                    id: showActionsControl
+                    objectName: "assistant.showActions"
+                    KeyNavigation.priority: KeyNavigation.BeforeItem
+                    KeyNavigation.backtab: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
+                        : chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton : usageButton
+                    KeyNavigation.tab: composer.firstFocusItem
+                    text: qsTr("Show actions")
+                    checked: panel.assistant.showActions
+                    enabled: !panel.assistant.canCancel
+                    onToggled: panel.assistant.showActions = checked
+                    Accessible.description: qsTr("Use real visible controls for supported single-parameter edits and fits. Normal mode has no pointer or typing delays.")
+                }
                 AssistantComposer {
                     id: composer
                     Layout.fillWidth: true
                     assistant: panel.assistant
                     toggleControl: panel.toggleControl
                     popupBoundary: panel.contentItem
-                    previousFocusItem: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
+                    previousFocusItem: showActionsControl.enabled ? showActionsControl : temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
                         : chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton : usageButton
                     hasPreviousUserMessage: conversation.previousUserIndex >= 0
                     hasNextUserMessage: conversation.nextUserIndex >= 0

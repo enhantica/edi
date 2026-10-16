@@ -32,6 +32,8 @@ EaComponents.ApplicationWindow {
     property Item assistantPreviousHost: null
     property var assistantPreviousProject: null
     property int assistantFocusEpoch: 0
+    property var assistantManualTakeoverProject: null
+    readonly property bool assistantManualTakeover: assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
 
     function containsAssistantItem(ancestor, item) {
         for (let current = item; current; current = current.parent)
@@ -77,6 +79,7 @@ EaComponents.ApplicationWindow {
         assistantPreviousPage = null;
         assistantPreviousHost = null;
         assistantPreviousProject = null;
+        if (assistantManualTakeover) return; // Never redirect a genuine manual event/focus.
         Qt.callLater(() => {
             if (epoch !== assistantFocusEpoch || assistantPanel.shown || assistantPanel.visible)
                 return;
@@ -163,19 +166,36 @@ EaComponents.ApplicationWindow {
 
     appBarRightButtons: [
         EaElements.ToolButton {
+            objectName: "assistant.stopVisibleAction"
+            // Keep this slot during manual takeover: removing it before the
+            // original press/release would move the adjacent app-bar controls.
+            visible: Session.assistant.showingActions || window.assistantManualTakeover
+            enabled: Session.assistant.canCancel
+            fontIcon: "stop-circle"
+            ToolTip.text: window.assistantManualTakeover && !enabled ? qsTr("Manual control; open assistant to return") : qsTr("Stop assistant action")
+            Accessible.name: ToolTip.text
+            onClicked: Session.assistant.cancel()
+        },
+        EaElements.ToolButton {
             id: assistantToggle
             KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
-            fontIcon: assistantPanel.shown ? "columns" : "robot"
+            readonly property bool assistantSelected: assistantPanel.shown || (Session.assistant.showingActions && Preferences.assistantShown)
+            fontIcon: assistantSelected ? "columns" : "robot"
             enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
                 : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages")
-                : assistantPanel.shown ? qsTr("Show project sidebar") : qsTr("Open assistant")
-            Accessible.name: assistantPanel.shown ? qsTr("Show project sidebar") : qsTr("Open assistant")
+                : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.name: assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantUnavailableReason
             onClicked: {
                 if (!assistantToggle.enabled)
                     return;
+                if (window.assistantManualTakeover) {
+                    window.assistantManualTakeoverProject = null;
+                    Preferences.assistantShown = true;
+                    return;
+                }
                 if (!Preferences.assistantShown) {
                     ++window.assistantFocusEpoch;
                     window.assistantPreviousFocus = window.activeFocusItem;
@@ -333,11 +353,36 @@ EaComponents.ApplicationWindow {
         clip: true
         z: 20
     }
+    Binding {
+        target: Session.assistant
+        property: "actionWindow"
+        value: window
+    }
+    EaElements.RemotePointer {
+        id: assistantPointer
+        objectName: "assistant.actionPointer"
+        parent: window.contentItem
+        z: 1000
+        color: EaStyle.Colors.themeAccent
+        Accessible.ignored: true
+    }
+    Connections {
+        target: Session.assistant
+        function onActionPointerShown() { assistantPointer.show(); }
+        function onActionPointerMoved(position) { assistantPointer.move(position.x, position.y); }
+        function onActionPointerPressed() { assistantPointer.click(); }
+        function onActionPointerHidden() { assistantPointer.hide(); }
+        function onActionManualTakeover() {
+            // Synchronous marker only: the sidebar is already exposed. Keep it
+            // so until the user explicitly chooses to reopen the assistant.
+            window.assistantManualTakeoverProject = Session.project;
+        }
+    }
     AssistantPanel {
         id: assistantPanel
         parent: assistantFallbackHost
         assistant: Session.assistant
-        shown: Preferences.assistantShown && window.assistantWorkflowPage !== null
+        shown: Preferences.assistantShown && !Session.assistant.showingActions && !window.assistantManualTakeover && window.assistantWorkflowPage !== null
         toggleControl: assistantToggle
         onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()

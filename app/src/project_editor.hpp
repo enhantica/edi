@@ -24,6 +24,14 @@ class ProjectEditor {
     // warning); nonempty only for a refusal before the core operation writes.
     // Native callers use ProjectViewModel's explicit applied/published outcome.
     virtual QString apply(const edi::Edit& change, bool structural) = 0;
+    // The same closed typed writes used by genuine parameter widgets. A native
+    // recorded-input scope may own their Undo without replacing widget events.
+    virtual QString assign_parameter_value(edi::Parameter& parameter, double value) {
+        return apply(edi::Edit::value(parameter, value), false);
+    }
+    virtual QString assign_parameter_free(edi::Parameter& parameter, bool free) {
+        return apply(edi::Edit::assign(parameter.free, free), false);
+    }
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.
     virtual QString apply_relation_edit(const edi::Edit& change) = 0;
