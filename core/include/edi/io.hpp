@@ -272,13 +272,12 @@ void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrela
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs);
 
-// Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
-// `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form
-// `.edi` schema and the classic CIF vocabulary: the structure entry dispatches on
-// the cell vocabulary to the restored reader (B/U/aniso ADP ladder); the experiment entry
-// translates diffraction-lib's `cif_names` spellings (`_pd_meas.*`, `_instr.*`,
-// `_easydiffraction_peak.*`, …) to their `.edi` tags and flows through the one experiment
-// builder. Fails closed (IoError) as the directory loader does.
+// Build one entity from text using the existing parsed-block builders.
+// An explicit native schema/native-only structure identity selects strict Edi;
+// otherwise supported dotted/classic CIF aliases share the classic reader,
+// matching data names without ASCII case, preserving values, uncertainty and setting.
+// Duplicate case variants/aliases refuse; explicit native declarations stay strict.
+// The experiment reader retains its existing diffraction-lib vocabulary route.
 Structure structure_from_edi_text(const std::string& text);
 BraggPdExperiment experiment_from_edi_text(const std::string& text);
 

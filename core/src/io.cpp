@@ -2443,6 +2443,15 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
     } else {
         structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
     }
+    if (const auto* code = block.find("_space_group_IT_coordinate_system_code"))
+        if (*code != "?" && *code != ".") structure.space_group.coord_system_code = *code;
+    if (const auto* number = block.find("_space_group_IT_number"); number && *number != "?" && *number != ".") {
+        std::size_t used = 0; int value = 0;
+        try { value = std::stoi(*number, &used); } catch (const std::exception&) {}
+        if (used != number->size() || value < 1 || value > 230)
+            fail_schema(where, "invalid-it-number", "The supplied CIF IT number must be an integer in 1..230");
+        structure.space_group.it_number = value;
+    }
     read_into(structure.cell.length_a,
               parse_parameter(block.require("_cell_length_a", where), where), where);
     read_into(structure.cell.length_b,
@@ -2614,17 +2623,107 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
     return structure;
 }
 
+// CIF 1.1 section 26: data names ignore ASCII case, data values do not.
+// Keep this local to the structure CIF vocabulary; native schema parsing stays strict.
+std::string structure_cif_tag_key(std::string tag) {
+    for (char& c : tag) if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    return tag;
+}
+bool structure_cif_has_tag(const Block& block, const std::string& key) {
+    for (const auto& item : block.items) if (structure_cif_tag_key(item.first) == key) return true;
+    for (const auto& loop : block.loops)
+        for (const auto& tag : loop.tags) if (structure_cif_tag_key(tag) == key) return true;
+    return false;
+}
+
+// Dotted CIF cell names overlap the native format. Only an explicit native
+// declaration selects the strict Edi reader; CIF aliases reuse the parsed Block
+// and classic builder. Values, uncertainty spelling and row order are untouched.
+Block structure_cif_vocabulary(const Block& block, const std::string& where) {
+    static const std::map<std::string, std::string> aliases = [] {
+        const std::pair<const char*, const char*> spellings[]{
+        {"_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff"},
+        {"_geom.bond_distance_incr", "_geom_bond_distance_incr"},
+        {"_cell.length_a", "_cell_length_a"},
+        {"_cell.length_b", "_cell_length_b"},
+        {"_cell.length_c", "_cell_length_c"},
+        {"_cell.angle_alpha", "_cell_angle_alpha"},
+        {"_cell.angle_beta", "_cell_angle_beta"},
+        {"_cell.angle_gamma", "_cell_angle_gamma"},
+        {"_space_group.name_H-M_alt", "_space_group_name_H-M_alt"},
+        {"_space_group.IT_coordinate_system_code", "_space_group_IT_coordinate_system_code"},
+        {"_space_group.IT_number", "_space_group_IT_number"},
+        {"_symmetry.space_group_name_H-M", "_symmetry_space_group_name_H-M"},
+        {"_symmetry.Int_Tables_number", "_space_group_IT_number"},
+        {"_symmetry_Int_Tables_number", "_space_group_IT_number"},
+        {"_atom_site.label", "_atom_site_label"},
+        {"_atom_site.type_symbol", "_atom_site_type_symbol"},
+        {"_atom_site.fract_x", "_atom_site_fract_x"},
+        {"_atom_site.fract_y", "_atom_site_fract_y"},
+        {"_atom_site.fract_z", "_atom_site_fract_z"},
+        {"_atom_site.occupancy", "_atom_site_occupancy"},
+        {"_atom_site.Wyckoff_symbol", "_atom_site_Wyckoff_symbol"},
+        {"_atom_site.B_iso_or_equiv", "_atom_site_B_iso_or_equiv"},
+        {"_atom_site.U_iso_or_equiv", "_atom_site_U_iso_or_equiv"},
+        {"_atom_site.ADP_type", "_atom_site_adp_type"},
+        {"_atom_site.adp_type", "_atom_site_adp_type"},
+        {"_atom_site_aniso.label", "_atom_site_aniso_label"},
+        {"_atom_site_aniso.U_11", "_atom_site_aniso_U_11"},
+        {"_atom_site_aniso.U_22", "_atom_site_aniso_U_22"},
+        {"_atom_site_aniso.U_33", "_atom_site_aniso_U_33"},
+        {"_atom_site_aniso.U_12", "_atom_site_aniso_U_12"},
+        {"_atom_site_aniso.U_13", "_atom_site_aniso_U_13"},
+        {"_atom_site_aniso.U_23", "_atom_site_aniso_U_23"},
+        {"_atom_site_aniso.B_11", "_atom_site_aniso_B_11"},
+        {"_atom_site_aniso.B_22", "_atom_site_aniso_B_22"},
+        {"_atom_site_aniso.B_33", "_atom_site_aniso_B_33"},
+        {"_atom_site_aniso.B_12", "_atom_site_aniso_B_12"},
+        {"_atom_site_aniso.B_13", "_atom_site_aniso_B_13"},
+        {"_atom_site_aniso.B_23", "_atom_site_aniso_B_23"},
+        {"_atom_site_aniso.beta_11", "_atom_site_aniso_beta_11"},
+        {"_atom_site_aniso.beta_22", "_atom_site_aniso_beta_22"},
+        {"_atom_site_aniso.beta_33", "_atom_site_aniso_beta_33"},
+        {"_atom_site_aniso.beta_12", "_atom_site_aniso_beta_12"},
+        {"_atom_site_aniso.beta_13", "_atom_site_aniso_beta_13"},
+        {"_atom_site_aniso.beta_23", "_atom_site_aniso_beta_23"}};
+        std::map<std::string, std::string> result;
+        for (const auto& [alias, canonical] : spellings) {
+            result.emplace(structure_cif_tag_key(alias), canonical);
+            result.emplace(structure_cif_tag_key(canonical), canonical);
+        }
+        return result;
+    }();
+    std::set<std::string> declarations;
+    const auto normalize = [&](std::string& tag) {
+        if (const auto found = aliases.find(structure_cif_tag_key(tag)); found != aliases.end()) tag = found->second;
+        if (!declarations.insert(structure_cif_tag_key(tag)).second)
+            fail_schema(where, "duplicate-cif-alias", "More than one declaration names CIF field " + tag);
+    };
+    Block normalized; normalized.name = block.name;
+    for (const auto& item : block.items) {
+        auto tag = item.first; normalize(tag);
+        normalized.items.emplace_back(std::move(tag), item.second);
+    }
+    for (const auto& loop : block.loops) {
+        auto tags = loop.tags;
+        for (auto& tag : tags) normalize(tag);
+        // Loop tags/rows are immutable. Reconstruct through their actual identity
+        // validating constructor; never cast away const or bypass the boundary.
+        normalized.loops.emplace_back(std::move(tags), loop.rows, where);
+    }
+    return normalized;
+}
+
 Structure structure_from_edi_text(const std::string& text) {
     const std::string where = "<from_cif_str>";
     const Block block = parse_block(text, where);
-    // Vocabulary dispatch: the dot-form `.edi` schema and classic IUCr CIF are both accepted,
-    // exactly one per document, decided by which cell vocabulary is present.
-    if (block.find("_cell.length_a") != nullptr) {
-        return structure_from_block(block, where);
-    }
-    if (block.find("_cell_length_a") != nullptr) {
-        return structure_from_cif_block(block, where);
-    }
+    // Native schema/native-only identities stay strict; never insert a schema
+    // tag into ordinary CIF just because its dictionary uses dotted names.
+    if (structure_cif_has_tag(block, "_edi.schema_version")) return structure_from_block(block, where);
+    if (structure_cif_has_tag(block, "_atom_site.id") || structure_cif_has_tag(block, "_atom_site.adp_iso") ||
+        structure_cif_has_tag(block, "_space_group.name_h_m")) return structure_from_block(block, where);
+    const auto cif = structure_cif_vocabulary(block, where);
+    if (cif.find("_cell_length_a") != nullptr) return structure_from_cif_block(cif, where);
     throw IoError(where +
                   ": neither `.edi` (_cell.length_a) nor CIF (_cell_length_a) cell vocabulary "
                   "present");
