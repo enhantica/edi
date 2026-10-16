@@ -352,7 +352,7 @@ struct AssistantViewModel::State {
     static Object native_response(bool success, const Object& outcome) {
         generic_size(outcome, Limits::context_bytes);
         Object response{{"success", success}, {"contentItems", QJsonArray{Object{{"type", "inputText"},
-            {"text", QString::fromUtf8(QJsonDocument(outcome).toJson(QJsonDocument::Compact))}}}};
+            {"text", QString::fromUtf8(QJsonDocument(outcome).toJson(QJsonDocument::Compact))}}}}};
         generic_size(response, Limits::message_bytes);
         return response;
     }
