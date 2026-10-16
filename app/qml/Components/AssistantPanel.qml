@@ -228,6 +228,7 @@ Popup {
                     EaElements.ToolButton {
                         id: usageButton
                         objectName: "assistant.usage"
+                        showBackground: false
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: skillsButton
                         KeyNavigation.tab: composer.firstFocusItem
@@ -237,36 +238,41 @@ Popup {
                         contentItem: Item {
                             implicitWidth: AppSizes.unit * 0.85 * 1.5
                             implicitHeight: AppSizes.unit * 0.85 * 1.5
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: AppSizes.unit * 0.85 * 1.5
-                                height: width
-                                radius: width * 0.5
-                                color: "transparent"
-                                border.width: 2
-                                border.color: EaStyle.Colors.themeForegroundDisabled
-                            }
                             Canvas {
-                                anchors.fill: parent
+                                anchors.centerIn: parent
+                                width: Math.max(0, Math.min(parent.width, parent.height, AppSizes.unit * 0.85 * 1.5))
+                                height: width
                                 readonly property bool windowAvailable: panel.usageWindow !== null && panel.usageWindow !== undefined
                                 readonly property real used: windowAvailable ? Math.max(0, Math.min(100, panel.usageWindow.usedPercent)) / 100 : 0
-                                readonly property color arcColor: EaStyle.Colors.themeAccent
+                                readonly property color fillColor: EaStyle.Colors.themeAccent
+                                readonly property color outlineColor: EaStyle.Colors.themeForegroundDisabled
                                 onWindowAvailableChanged: requestPaint()
                                 onVisibleChanged: requestPaint()
                                 onAvailableChanged: requestPaint()
                                 Component.onCompleted: requestPaint()
                                 onUsedChanged: requestPaint()
-                                onArcColorChanged: requestPaint()
+                                onFillColorChanged: requestPaint()
+                                onOutlineColorChanged: requestPaint()
                                 onWidthChanged: requestPaint()
                                 onHeightChanged: requestPaint()
                                 onPaint: {
                                     const context = getContext("2d");
                                     context.reset();
-                                    if (!windowAvailable) return;
-                                    context.lineWidth = 2;
-                                    context.strokeStyle = arcColor;
+                                    const x = width / 2;
+                                    const y = height / 2;
+                                    const radius = Math.max(0, Math.min(width, height) / 2 - 1);
+                                    if (windowAvailable && used > 0) {
+                                        context.fillStyle = fillColor;
+                                        context.beginPath();
+                                        context.moveTo(x, y);
+                                        context.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * used);
+                                        context.closePath();
+                                        context.fill();
+                                    }
+                                    context.lineWidth = 1;
+                                    context.strokeStyle = outlineColor;
                                     context.beginPath();
-                                    context.arc(width / 2, height / 2, Math.max(0, width / 2 - 1), -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - used));
+                                    context.arc(x, y, radius, 0, Math.PI * 2);
                                     context.stroke();
                                 }
                             }

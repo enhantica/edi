@@ -577,3 +577,11 @@ Canvas invalidation distinguishes supplied zero usage from no supplied window, i
 
 
 The initial optional account usage observation is issued only after the genuine required skills/thread bootstrap reaches its ready callback. Final model-catalog readiness records the account epoch but does not start an observation that the immediately following required skills request would preempt. Popup-open/sparse-update refresh and exact optional priority/disposition remain unchanged; no polling or response-completion retry loop is added.
+
+
+### Usage fills the compact circle, not an outer button ring (2026-10-16)
+
+The user explicitly wants the small account-usage circle itself filled proportionally, with no outside button ring. Its existing hit area/navigation/dialog and real-window accessibility stay unchanged; the secondary ToolButton background is transparent. The actual most-constrained returned usedPercent fills that fraction of the inner circle using themeAccent. No allowance is invented: unavailable has no numeric fill, known zero has zero fill, and the genuine remaining/reset/bucket/credit text retains its original meaning. Availability, actual percentage, theme and size changes repaint. This does not add polling/context-percent estimates or alter waiting animation.
+
+
+The usage ToolButton's assigned contentItem is a framework-sized host, not a glyph-size promise: hiding the backing does not remove its implicit size. The child Canvas is explicitly centered and bounded to the intended compact EA unit size, clamped to the host's available dimensions. The normal hit area, keyboard/dialog behavior and every data/theme/availability repaint remain. It no longer relies on implicit dimensions of a Control-managed contentItem to constrain drawing.
