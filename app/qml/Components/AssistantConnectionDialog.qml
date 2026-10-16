@@ -99,7 +99,7 @@ AppDialog {
                     if (workflow) for (let i = 0; i < dialog.assistant.skills.count; ++i)
                         if (dialog.assistant.skills.text(i, "id") === workflow.id) title = dialog.assistant.skills.text(i, "title");
                     if (dialog.assistant.selectedSkill.length === 0)
-                        return qsTr("The official agent uses a staged working copy of this project and the selected files. All bundled Edi skills are registered; relevant content is loaded on demand. Its ordinary shell/file tools may read files permitted by the runtime. Edi admits workspace writes with network disabled and declines broader authority requests; this is not a private read jail or a guarantee that inherited runtime extensions are confined. No result is automatically adopted into the open project. Inspect the exact context below.");
+                        return qsTr("The official agent uses a staged working copy of this project and the selected files. All bundled Edi skills are registered; relevant content is loaded on demand. Its ordinary shell/file tools may read files permitted by the runtime. Edi admits workspace writes with network disabled and declines broader authority requests; this is not a private read jail or a guarantee that inherited runtime extensions are confined. Native inspect_project/list_parameters/diagnostics read the displayed project. For the actual submitted objective, set_parameters/set_free may edit it and run_fit may run its real single/joint fit through normal Undo, Stop and physical/currentness validation. These tools cannot expand paths or capabilities. Native create/import/save/report is not yet registered. Inspect the exact context below.");
                     return qsTr("Workflow: %1 · %2. Its exact bundled content is included.\n%3 structures with site/space-group metadata; %4 datasets with axis, observations, weighting, exclusions and phases; %5 aliases and %6 constraints. See exact outgoing context for every field.")
                         .arg(title).arg(workflow ? workflow.version : "")
                         .arg(dialog.structures.length).arg(dialog.datasets.length)
@@ -118,7 +118,7 @@ AppDialog {
                 width: parent.width
                 wrapMode: Text.Wrap
                 textFormat: Text.PlainText
-                text: qsTr("Project context includes parameter paths, values, uncertainties, units, free flags and dependence, plus available diagnostics. Project changes require your approved plan. Files are not attached or read from paths typed into chat.")
+                text: dialog.assistant.selectedSkill.length === 0 ? qsTr("Project context includes parameter paths, values, uncertainties, units, free flags, dependence and available diagnostics. The genuine submitted objective authorizes only the disclosed native actions within current project/revision bounds; mere inspection does not authorize mutation. No second scientific-plan approval is required for already delegated work. Paths typed into chat do not grant host file access.") : qsTr("Project context includes parameter paths, values, uncertainties, units, free flags and dependence, plus available diagnostics. Project changes require your approved plan. Files are not attached or read from paths typed into chat.")
             }
             EaElements.Button {
                 id: details

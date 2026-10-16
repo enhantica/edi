@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "assistant_json.hpp"
+#include "assistant_parameter_edits.hpp"
 #include "assistant_capabilities.hpp"
 #include "assistant_skills.hpp"
 #include "edi/calculation.hpp"
@@ -1156,38 +1157,17 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (!active_job.empty()) refuse("busy", "A fit is running");
             if (trial && trial->report) refuse("invalid_argument", "Discard the fitted trial before changing its setup");
             Project& target = trial ? *trial->project : *live;
-            const auto rows = paths(target);
             const auto& allowed = trial ? plan->groups.at(trial->group) : plan->allowed;
-            std::map<std::string, ParameterEntry> metadata;
-            for (const auto& row : parameter_entries(target)) metadata.emplace(row.path, row);
             const bool values = name == "set_parameters";
             shape(args, {values ? "values" : "flags"});
-            std::set<std::string> seen;
             std::vector<std::pair<std::string, double>> edits;
             std::vector<std::pair<std::string, bool>> flags;
             for (const J& row : args.at(values ? "values" : "flags").array("parameter batch")) {
                 shape(row, {"path", values ? "value" : "free"});
-                const auto path = string(row, "path");
-                if (!seen.insert(path).second || !rows.count(path)) refuse("invalid_argument", "Unknown or duplicate parameter: " + path);
-                if (!allowed.count(path)) refuse("out_of_scope", "Parameter not approved: " + path);
-                auto [parameter, unique_name] = rows.at(path);
-                if (parameter->dependence != Dependence::Independent) refuse("out_of_scope", "Dependent parameter: " + path);
-                if (values) edits.emplace_back(unique_name, number(row, "value"));
-                else {
-                    const bool free = row.at("free").boolean("free");
-                    const auto& meta = metadata.at(path);
-                    if (free && (!meta.refinable || !meta.fittable || !meta.used_by_profile))
-                        refuse("out_of_scope", "The parameter is not independently fittable in this profile");
-                    flags.emplace_back(unique_name, free);
-                }
+                if (values) edits.emplace_back(string(row, "path"), number(row, "value"));
+                else flags.emplace_back(string(row, "path"), row.at("free").boolean("free"));
             }
-            if (seen.empty()) refuse("invalid_argument", "Empty parameter batch");
-            Project validated = target;
-            if (values) Edit::parameter_values(validated, edits)();
-            else Edit::set_free(validated, flags)();
-            if (!validated.aliases.empty() || !validated.constraints.empty()) complete_relations(validated);
-            else refresh_relations(validated);
-            const Edit change = values ? Edit::parameter_values(target, std::move(edits)) : Edit::set_free(target, std::move(flags));
+            const Edit change = values ? prepare_parameter_edit(target, edits, &allowed) : prepare_parameter_edit(target, flags, &allowed);
             O predicted{{"revision", std::to_string(version.revision + (trial ? 0 : 1))}};
             if (trial) { predicted.emplace_back("trial_id", trial->id); predicted.emplace_back("candidate_revision", std::to_string(trial->revision + 1)); }
             preflight(success(predicted));

@@ -9,6 +9,7 @@
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
 #include <memory>
+#include <functional>
 #include <optional>
 
 #include "edi/fit_job.hpp"
@@ -121,6 +122,9 @@ class FitViewModel : public QObject {
     ~FitViewModel() override;
 
     bool running() const { return running_; }
+    // Internal native adapter: actual worker admission is independent of UI publication.
+    bool nativeRunning() const noexcept { return job_ && job_->running(); }
+    void startNative(std::function<void(const edi::FitReport&, bool)> completion);
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
     bool scanning() const { return scanning_; }
@@ -228,6 +232,8 @@ class FitViewModel : public QObject {
     void frame(const edi::FitFrame& frame);
     void showFrame();
     void ended(const edi::FitReport& report);
+    void presentEnded(const edi::FitReport& report);
+    std::function<void(const edi::FitReport&, bool)> native_completion_;
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
     // A followed file's pattern, as its fit left it.

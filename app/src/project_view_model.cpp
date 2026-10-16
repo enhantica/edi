@@ -934,14 +934,17 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     if (flags.empty()) {
         return true;
     }
-    const QString error = apply(edi::Edit::set_free(*project_, std::move(flags)), false);
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
-    }
-    undo_history_.emplace_back(std::move(record));
-    syncUndo();
+    const QString error = applyRecordedFreeFlags(edi::Edit::set_free(*project_, std::move(flags)), std::move(record.before));
+    if (!error.isEmpty()) { emit refused(error); return false; }
     return true;
+}
+QString ProjectViewModel::applyRecordedFreeFlags(const edi::Edit& change, std::vector<std::pair<std::string, bool>> before) {
+    undo_history_.reserve(undo_history_.size() + 1); // Prepare the existing Undo owner before the first live write.
+    const QString refusal = apply(change, false);
+    if (!refusal.isEmpty()) return refusal;
+    undo_history_.emplace_back(FreeFlags{std::move(before)});
+    syncUndo();
+    return {};
 }
 
 bool ProjectViewModel::duplicateStructure() {

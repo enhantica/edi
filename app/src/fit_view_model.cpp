@@ -2,6 +2,8 @@
 #include "fit_view_model.hpp"
 
 #include <QFileInfo>
+#include <QPointer>
+#include <exception>
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -303,8 +305,17 @@ void FitViewModel::close() {
     job_.reset();
 }
 
+void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> completion) {
+    if (nativeRunning() || native_completion_) throw std::runtime_error("A native fit is already owned");
+    native_completion_ = std::move(completion); // All callback allocation precedes submission.
+    const QPointer<FitViewModel> self(this);
+    try { start(); }
+    catch (...) { if (self && !self->nativeRunning()) self->native_completion_ = {}; throw; }
+    if (self && !self->nativeRunning()) self->native_completion_ = {};
+}
+
 void FitViewModel::start() {
-    if (!job_ || running_ || !available_) {
+    if (!job_ || job_->running() || !available_) {
         return;
     }
     // A chosen dataset still being read: the model still shows the one before, which is not the one to fit. A scan
@@ -352,7 +363,7 @@ void FitViewModel::start() {
 }
 
 void FitViewModel::cancel() {
-    if (job_ && running_) {
+    if (job_ && job_->running()) {
         job_->cancel();
     }
 }
@@ -704,6 +715,18 @@ void FitViewModel::scanEnded(const edi::FitReport& report) {
 }
 
 void FitViewModel::ended(const edi::FitReport& report) {
+    // Take the callback before any presentation/receiver can throw or replace the
+    // model. FitJob owns this report through the entire completion invocation.
+    auto completion = std::move(native_completion_);
+    std::exception_ptr failure;
+    try { presentEnded(report); } catch (...) { failure = std::current_exception(); }
+    // Even a presentation failure has a real completed optimizer/publication
+    // report. Contain the internal callback independently of ordinary Qt signals.
+    if (completion) try { completion(report, !failure); } catch (...) {}
+    if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
+}
+
+void FitViewModel::presentEnded(const edi::FitReport& report) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
     follow_timer_.stop();

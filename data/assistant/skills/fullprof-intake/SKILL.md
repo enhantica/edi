@@ -5,7 +5,7 @@ description: Inspect selected PCR/data companions; conversion remains unavailabl
 
 # Inspect a selected FullProf project
 
-Version: 1.0.0. Purpose: inspect the files the user selected and explain associations and missing prerequisites. This resource does not implement a PCR converter or authorize a fit.
+Version: 1.0.1. Purpose: inspect the files the user selected and explain associations and missing prerequisites. This resource does not implement a PCR converter or authorize a fit.
 
 ## Available actions
 
@@ -34,4 +34,4 @@ Completion of this intake means the user can review the selected-input inventory
 
 ## Generic runtime reuse
 
-Use actual ordinary file reads in the disclosed working copy to inspect the selected PCR and its data/instrument companions. Preserve represented relative names; do not guess a universal DAT stem or that every comment denotes an authoritative file. Ask the user about missing or ambiguous associations. Existing Edi CIF/raw-data factories are useful only after actual dialect and scientific semantics have been mapped; they are not a PCR conversion parser. Do not manufacture an executable converter from unsupported grammar or claim a reconstructed project preserves constraints/occupancy/profile/background without independent checking. Relevant project-assistance guidance describes the existing Python/CLI routes and accepted-best preservation.
+Use actual ordinary file reads in the disclosed working copy to inspect the selected PCR and its data/instrument companions. Preserve represented relative names; do not guess a universal DAT stem or that every comment denotes an authoritative file. Ask the user about missing or ambiguous associations. Existing Edi CIF/raw-data factories are useful only after actual dialect and scientific semantics have been mapped; they are not a PCR conversion parser. Do not manufacture an executable converter from unsupported grammar or claim a reconstructed project preserves constraints/occupancy/profile/background without independent checking. Relevant project-assistance guidance names the actually offered native operations and their limits. Development Python/CLI references are not a production fallback.

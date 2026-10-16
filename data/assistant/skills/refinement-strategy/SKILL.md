@@ -5,7 +5,7 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.1.0. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.0. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
@@ -19,7 +19,7 @@ An initial route is scale and peak-position calibration (cell/zero), followed by
 
 Use a finite budget: a ceiling of 5–10 adaptive group passes is an owner-selected exploration budget, not a convergence criterion. Stop earlier on stable lack of useful improvement, unreliable steps, physical invalidity, cancellation or exhausted resources. Cycle correlated groups when useful, warming from the last accepted state; do not blindly repeat every group. Compare actual result status, convergence, residual, parameter movement, uncertainty and physical plausibility. MAX_ITER/NO_STEP are not convergence; failed/cancelled/unavailable/superseded fits do not authorize the next stage merely because some metrics look good.
 
-Keep separate saved project checkpoints for alternative paths and the accepted best. The CLI's undo is a single pre-fit snapshot, not a multi-step checkpoint stack. Restore the accepted checkpoint after a rejected candidate and verify the loaded observations, weights, exclusions and relations. Retain failed candidates only as explicitly labelled diagnostics.
+Keep separate saved project checkpoints for alternative paths and the accepted best. A fit's pre-fit Undo is not a multi-path checkpoint stack. Native checkpoint/import/save operations must actually be offered before executing this comparison; otherwise report the limitation. Restore the accepted checkpoint after a rejected candidate and verify the loaded observations, weights, exclusions and relations. Retain failed candidates only as explicitly labelled diagnostics.
 
 Holding another group fixed makes a group's uncertainty conditional. When identifiable and supported, finish with a joint fit/covariance of the accepted independent variables. Report unresolved correlation, fixed-variable reasons and conditional uncertainties honestly; alternating groups alone does not establish independence.
 
@@ -31,11 +31,11 @@ Before fitting, establish whether different species genuinely co-occupy the same
 
 When independently refined, confirmed same-phase co-occupied-site ADPs remain unresolved or have large uncertainty, an authorized delegated refinement suffices to run at least one bounded, physically supported shared-ADP candidate trial from the retained checkpoint. Do not request an additional shared-model preference or routine approval. An explicit user no-sharing/independent-ADP constraint prevails; report that limit rather than override it, and ask only about a genuinely new chemical assumption or scope conflict. Compare the same observations/weights/exclusions and objective, actual status/convergence/improvement, physical validity, stability and jointly assessed covariance. A low residual alone does not select the model; fixing a correlated group does not prove independence. Restore the accepted complete checkpoint if the candidate is rejected. Do not turn every high uncertainty into an equality constraint.
 
-The current public Python route is `project.analysis.aliases.create(id="name", param=actual_parameter)` and `project.analysis.constraints.create(expression="target_alias = source_alias")`. Resolve actual same-project parameters and inspect existing alias/constraint IDs first. Use distinct aliases for the intended matching coordinate or ADP components, preserve existing relations, and let the real validator refuse unsupported/cyclic/inconsistent declarations. This is the existing affine relation mechanism, not a new nonlinear constraint controller. Save and reopen the accepted candidate, read back enabled relation expressions and actual dependent/independent parameter states, and recalculate on the unchanged measurement. Report that evidence and any material reopened mismatch instead of claiming the saved result reproduces by intention alone.
+The affine relation mechanism must be exposed by actual native operations before the agent can create shared-coordinate/ADP constraints. It is not registered in the first native slice; report that concrete limit instead of using Python or fabricating a successful shared-model trial. Existing manual relations remain authoritative and the native parameter validator preserves them. Development API references do not grant a production capability.
 
 ## Use real operations
 
-Use the installed `edi` module with the actual configured extension. Existing `edi.Project.load(path)`, `project.save_as(new_path)` and `project.fit(on_iteration=...)` compose ordinary owned checkpoints and fitting; inspect the returned status and `converged` before continuing. The existing CLI supports `python -m edi calc PROJECT --dry --report machine` and `fit PROJECT --report machine --stream`; fit saves its working project on success. Run exploratory fits only on owned candidates. The shipped `examples/fit_lbco_hrpt.py` is one genuine two-stage public-API example, not a universal free set or chemical model. Do not use its output-parity reference as starting values or a scientific-quality target.
+Use the actually offered native `inspect_project`, `list_parameters`, `diagnostics`, `set_parameters`, `set_free` and `run_fit`. They operate on the displayed C++ project. Native edits trigger asynchronous calculation; fit completion is the actual final native report, not a busy flag. No Python runtime/module/source checkout is required or permitted as a production fallback. A live fit can publish partial adopted values and does not implement isolated accepted-best trials. Preserve the actual status, use normal native Stop/Undo and do not promise an unavailable checkpoint/restore/constraint/report operation.
 
 Report the accepted artifact, actual operations/outcomes, rejected alternatives, independent/fixed variables, uncertainty qualifications and unsupported steps. A saved project or converged solver status alone does not prove a scientifically adequate refinement.
 

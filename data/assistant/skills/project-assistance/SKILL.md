@@ -1,69 +1,28 @@
 ---
 name: project-assistance
-description: Inspect actual project context and propose bounded approved work.
+description: Inspect and edit the displayed native Edi project with actual parameter and fit tools.
 ---
 
-# Review an Edi project before changing it
+# Work with the displayed Edi project
 
-Version: 1.2.0. This is guidance for the tools actually offered in the current request, not an authority to add tools or approve edits.
+Version: 1.3.0. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
 
-Read the current revision-bound project/structure/dataset/parameter/constraint context. Use `inspect_project`, `list_parameters` and `diagnostics` where available. A missing project, measured dataset or valid uncertainty is a missing prerequisite, not permission to invent it. Use `read_selected_file` only for explicitly selected text and ask for missing companions; typing a path does not select a file. Unsupported conversion remains unsupported.
+Use `inspect_project`, `list_parameters` and `diagnostics` to inspect the actual project, measurement, weighting, exclusions, phase links and independent/dependent parameters. A missing project or scientific prerequisite is not permission to invent data. Report unsupported formats/conversions honestly. Files or paths mentioned in chat do not expand selected-file or filesystem permission.
 
-Clarify the scientific goal and the intended datasets/phases, then inspect the pattern, difference curve, range, exclusions, weights, free variables and declared dependencies before recommending a change. Explain relevant uncertainty and correlations. Do not infer a chemical constraint from correlation alone or prescribe a universal refinement order.
+The current explicit user objective and earlier unchanged constraints take priority over skill defaults or prior plans. Delegated refinement authorizes justified routine groups within that objective: state a bounded plan and proceed without another plan confirmation. Ask about genuinely missing/conflicting inputs, a changed objective or new chemical assumption. Mere inspection does not authorize mutation. Each action's `purpose` is a concise goal, not a claim of success.
 
-Propose one small reviewable plan with actual parameter paths/groups, comparable objective and explicit iteration/trial/time budget. Only the real user can approve it. Existing fixed flags, affine relations, bounds, uncertainties, accepted results and selected observations remain authoritative. Do not change data, weights or exclusions merely to improve a residual.
+When offered, `set_parameters` changes a complete validated batch of actual independent parameter paths/values, and `set_free` sets actual independent fittable flags through the same native editor/Undo used by manual controls. Keep fixed composition, relations, uncertainty, observations, weights and exclusions authoritative. Native edits request asynchronous calculation; inspect the actual settled state before starting a fit.
 
-After actual approval, use only offered typed edit/trial tools. Retain the accepted state, operate on the one isolated candidate and compare genuine results on the same objective/population/settings. Report a failed/cancelled/unavailable result truthfully; do not manufacture improvement, convergence or a report. Reject/discard unsuccessful candidates and preserve the accepted best. Ask the user when a scientific prerequisite is unclear. Stop/retirement/currentness/retention checks always take precedence over a skill suggestion.
+`run_fit`, when offered, runs the displayed project's existing single/joint native fit, progress and Stop controls. Wait for its actual final report/publication. `done`, `max_iterations`, `no_step`, `cancelled`, `error`, `superseded` and `unavailable` are different outcomes; adopted partial values do not establish convergence or scientific adequacy. This direct live operation is not an isolated accepted-best candidate/trial system. If a requested comparison requires checkpoints, constraints, import, save or report operations absent from the actual offered tools, state the precise limitation rather than improvise a converter or claim it ran. Consult refinement-strategy for scientific decisions, within the available operations.
 
-Before claiming completion, identify what actually ran, what changed, the actual observed result, what was retained or rejected and what remains unsupported. Current tools do not provide a general FullProf/GSAS converter, arbitrary filesystem access or scan artifact publication. A selected skill does not grant those capabilities.
+Native create/import/save/report and working-folder access are not registered in this first native slice. Normal application controls may open/save a project, but writing a staged receipt or Markdown path alone does not prove host opening/export. Do not claim a report, conversion, fit, improvement or convergence without actual observed evidence. Explain material decisions, reasons/assumptions, results and unresolved limits briefly.
+
+## Restricted compatibility tools
+
+Only when the offered tools actually include `propose_plan` and isolated trial operations, use their real user-approved plan/accepted-best mechanism. That compatibility path retains its own approval requirement; never fabricate approval. Do not impose its extra plan prompt on an already delegated native request.
+
+The bundled `create_from_selected.py` and repository examples are development/test API references, not production runtime instructions or dependencies.
 
 References:
 - IUCr Rietveld refinement guidelines: https://journals.iucr.org/j/issues/1999/01/00/gl0561/
-- GSAS-II sequential-refinement worked tutorial: https://advancedphotonsource.github.io/GSAS-II-tutorials/SeqRefine/SequentialTutorial.htm
-
-## Generic official-runtime edition
-
-When Edi actually supplies the generic runtime, its supported shell/file tools replace the restricted manifest calls above. Inspect the runtime's actual capabilities; do not invent tools named after these prose steps. Operate on Edi's disclosed owned working copy, retain original inputs and accepted checkpoints. A user request to create/refine with the remaining choices delegated is authorization to choose and execute scientifically justified free groups within that objective and the actual runtime permissions. State a bounded working plan and proceed; do not demand new approval for every ordinary group or fit. Ask when a missing scientific prerequisite, changed objective or new chemical assumption needs a user decision. The restricted typed-tool compatibility path above still requires its real plan-approval mechanism; guidance never bypasses a runtime approval or consent boundary. Consult the relevant refinement-strategy skill for adaptive staging, covariance and mixed-site decisions. Existing installed Edi supports `python -m edi calc PROJECT --dry --report machine`, `fit PROJECT --report machine --stream`, `undo PROJECT`, and `report PROJECT --check`. Fit writes its working project by default; it is not a harmless inspection command. Never run it on the original project as an exploratory probe.
-
-For an actual CIF plus raw diffraction measurement, reuse `edi.StructureFactory.from_cif_path` and `edi.ExperimentFactory.from_data_path`. Raw supported input is x/y/optional sigma; the actual reader skips nonnumeric rows, drops nonpositive y, supplies missing uncertainty and sorts/deduplicates x as documented by that factory. Explain those changes instead of promising byte-for-byte data interpretation. Ask for sample form, beam mode, radiation, scattering type, wavelength or TOF calibration, peak profile/background and phase associations when missing. A `.dat` extension alone does not identify them.
-
-The companion `create_from_selected.py` is a reference API composition, requiring an explicit validated experiment recipe and a new output directory. It is not a FullProf/GPX converter, does not run refinement, and has not yet been executed in the prototype. The runtime may inspect/run it only inside the owned workspace after prerequisites are genuine. Use `Project.load` to reopen the saved candidate and the existing machine calc report to verify a real calculation before claiming readiness. Final display/publication in the open application remains the host's separately approved current-owner boundary.
-
-
-## Offer a created native project to the application
-
-Only if the current ordinary input contains `EDI_RESULT_HANDOFF_V1` metadata, use its exact `intent`, `project` and `receipt` strings. The host currently opens only a self-contained new project into the same still-empty application Session; it does not replace an already-open project or merge dirty work. A successful command or Markdown path alone does not open or export anything. Do not promise adoption before the host verifies and opens it.
-
-Save the actual candidate with `project.save_as(str(target))`, then independently `edi.Project.load(str(target))` and inspect it. Preserve its measured values, uncertainties, exclusions, links and declared objective. Do not include external scan datasets, links, reports or sidecars in this first host route. A real calculation and converged refinement require their own observed outcomes; a saved receipt is not scientific approval or a quality certificate.
-
-The receipt uses ordinary Python files, not a new runtime tool. For example, after saving the real candidate (replace `metadata` with the exact current input metadata, not guessed paths):
-
-```python
-import hashlib, json
-from pathlib import Path
-
-root = Path.cwd().resolve()
-target = root / metadata["project"]
-receipt = root / metadata["receipt"]
-# Save the actual Project first, then reopen it. Never relabel an unrelated folder.
-project.save_as(str(target))
-check = edi.Project.load(str(target))
-files = []
-for path in sorted(target.rglob("*")):
-    if path.is_symlink():
-        raise ValueError("result links are unsupported")
-    if path.is_dir():
-        continue
-    if not path.is_file():
-        raise ValueError("result special entries are unsupported")
-    raw = path.read_bytes()
-    files.append({"path": path.relative_to(target).as_posix(),
-                  "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
-receipt.parent.mkdir(parents=True, exist_ok=True)
-receipt.write_text(json.dumps({"schema": "edi.assistant.result/1",
-    "intent": metadata["intent"], "project": "project", "files": files}), encoding="utf-8")
-```
-
-Host policy is finite: up to 32 represented directory entries (including directories), 32 files, 16 MiB per file, 64 MiB total file bytes and 512 UTF-8 bytes per relative name. Supported native layout is `project.edi`, `structures/*.edi`, `experiments/*.edi`, `analysis/analysis.edi`, and optional `reports/report.edi` settings with no saved external reports. Do not silently omit excess files or companions. If unsupported, keep the candidate and explain the exact limitation.
-
-Wait for actual host opening after the successful turn. This first export copies the exact unchanged saved artifact: use Save As before making manual edits in the host. Edited-result export is not available in this initial path. Save/Save As then uses the normal native picker to choose a parent, such as Desktop, and a fresh project folder name. The agent does not receive global Desktop write permission; existing destinations are never overwritten by this first export route.
+- GSAS-II sequential-refinement tutorial: https://advancedphotonsource.github.io/GSAS-II-tutorials/SeqRefine/SequentialTutorial.htm

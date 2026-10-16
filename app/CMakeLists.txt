@@ -365,7 +365,7 @@ endif()
 
 # ADR-0041: one native official-runtime frontend, with ordinary Qt process ownership.
 if(NOT EMSCRIPTEN)
-    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp)
+    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp src/assistant_native_tools.hpp src/assistant_native_tools.cpp)
     file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
          ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
     qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"

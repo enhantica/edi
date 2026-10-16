@@ -282,6 +282,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    // Internal native/UI shared recorded free-flag edit; caller prepared and validated the complete batch.
+    QString applyRecordedFreeFlags(const edi::Edit& change, std::vector<std::pair<std::string, bool>> before);
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();

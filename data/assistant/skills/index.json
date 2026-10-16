@@ -3,25 +3,18 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.2.0",
-      "title": "Review an Edi project",
-      "summary": "Inspect actual project context and propose bounded approved work.",
+      "version": "1.3.0",
+      "title": "Work with the displayed Edi project",
+      "summary": "Inspect native context and use actual parameter/free and fit actions.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "07928b58a24d406797ae425f83cc4da29cdc46cd972b701f128dd3fbe775e18e",
+      "sha256": "51e1c43713e85151d66a644ff2f25bfc2cc3abf257b117326206afe7c49cf8a7",
       "requires": [],
       "capabilities": [
         "inspect_project",
         "list_parameters",
         "diagnostics",
-        "read_selected_file",
-        "ask_question",
-        "propose_plan",
         "set_parameters",
-        "set_free",
-        "begin_trial",
-        "fit_trial",
-        "evaluate_trial",
-        "discard_trial"
+        "set_free"
       ],
       "references": [
         {
@@ -32,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "Inspect a FullProf project",
       "summary": "Inspect selected PCR/data companions; conversion remains unavailable.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "77f21326dccc31ad8b8a9bb63ac77e4067f1272b9685cb13acdd61187b165d79",
+      "sha256": "43d2d504db7fe336a1e4a4251b84f4376c2234265bcfc47af1544564892a6c10",
       "requires": [
         "selected_files"
       ],
@@ -74,23 +67,18 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "7310091749c4ab0ffc7c40535dc3427f87302e32bdb64cf1a092809e0f81c486",
+      "sha256": "a250b319ecb6e5be09f9195b0013e015e132d8c95accdf39d049f23c0b618a91",
       "requires": [],
       "capabilities": [
         "inspect_project",
         "list_parameters",
         "diagnostics",
-        "propose_plan",
         "set_parameters",
-        "set_free",
-        "begin_trial",
-        "fit_trial",
-        "evaluate_trial",
-        "discard_trial"
+        "set_free"
       ],
       "references": [
         {
