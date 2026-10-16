@@ -256,12 +256,24 @@ bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const 
     const auto original = request_; const auto id = serial_;
     const bool old = injecting_; injecting_ = true;
     const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
+    // Accepted numeric controls deliberately drop focus. Only the prepared
+    // final Return permits that transition; ordinary typing stays focus-bound.
+    const bool terminal = code == Qt::Key_Return && step_ == Step::Commit && commit_prepared_ &&
+        (original->kind == Kind::Value || original->kind == Kind::ParameterFilter);
+    const QPointer<QQuickItem> target(original->target);
+    if (terminal && target->window() != window) return false;
     QKeyEvent press(QEvent::KeyPress, code, modifiers, text);
     QCoreApplication::sendEvent(window, &press);
-    if (!self || !window || serial_ != id || request_ != original || !request_->target || !request_->target->hasActiveFocus()) return false;
+    if (!self || !window || serial_ != id || request_ != original || !request_->target) return false;
+    if (terminal) {
+        if (!target || request_->target != target || window_ != window || target->window() != window) return false;
+    } else if (!request_->target->hasActiveFocus()) return false;
     QKeyEvent release_event(QEvent::KeyRelease, code, modifiers, text);
-    QCoreApplication::sendEvent(window, &release_event);
-    return self && window && serial_ == id && request_ == original;
+    // Never route an accepted Return's release into a newly focused editor.
+    // The same original surviving item receives its real balancing key event.
+    QCoreApplication::sendEvent(terminal ? static_cast<QObject*>(target.data()) : static_cast<QObject*>(window.data()), &release_event);
+    return self && window && serial_ == id && request_ == original &&
+        (!terminal || (target && request_->target == target && window_ == window && target->window() == window));
 }
 bool AssistantWidgetInput::selectAll() {
     const auto bindings = QKeySequence::keyBindings(QKeySequence::SelectAll);
