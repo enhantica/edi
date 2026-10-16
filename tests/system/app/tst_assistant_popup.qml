@@ -858,9 +858,9 @@ TestCase {
             verify(dialog !== null, "REPORT171: actual unavailable dialog belongs to real Main");
             tryCompare(dialog, "opened", true, 2000, "REPORT171: unavailable navigation has a visible honest explanation");
             compare(dialog.title, "Report page unavailable", "REPORT171: report refusal is ordinary user-facing guidance");
-            const ok = dialog.standardButton(Dialog.Ok);
-            verify(ok !== null && ok.visible && ok.enabled, "REPORT171: real refusal dialog can be acknowledged");
-            mouseClick(ok);
+            const close = dialog.standardButton(Dialog.Close);
+            verify(close !== null && close.visible && close.enabled, "REPORT171: real refusal dialog can be acknowledged");
+            mouseClick(close);
         } else if (data.tag === "protected-other") {
             compare(window.appBarCentralTabs.currentIndex, pageBefore,
                 "REPORT171: only exact edi:report URI receives internal navigation authority");
@@ -988,6 +988,16 @@ TestCase {
             project.currentExperiment.scale.free = true;
             project.analysis.maxIterations = 8; // Existing bounded real-fit prior art; no optimum oracle.
         } else {
+            // The independent editable fixture deliberately supplies only La in a complete-replacement
+            // custom table. Restore the public built-in-table mode before this nonfit setup calculates.
+            const lengths = project.currentStructure.scatteringLengths;
+            const originalLengths = Probe.rows(lengths);
+            compare(originalLengths.length, 1, "VA SETUP: original fixture has its one declared custom neutron length");
+            compare(originalLengths[0].typeSymbol, "La", "VA SETUP: original custom table is the literal fixture La entry");
+            compare(originalLengths[0].lengthFm, 8.24, "VA SETUP: original custom length matches independent fixture bytes");
+            for (let index = originalLengths.length - 1; index >= 0; --index) lengths.remove(index);
+            compare(lengths.count, 0, "VA SETUP: public custom model is empty so the existing built-in table applies");
+            compare(Probe.rows(lengths).length, 0, "VA SETUP: actual model readback confirms custom replacement was removed");
             la.free = false;
             ba.free = false;
         }
@@ -1234,6 +1244,8 @@ TestCase {
                     compare(visible185_values(project), originalValues,
                         "VA: normal Undo restores every original parameter value/free/SU, including unrelated state");
                 }
+                if (!fitCase) compare(project.currentStructure.scatteringLengths.count, 0,
+                    "VA: nonfit actions and normal Undo preserve the selected built-in-table mode");
                 compare(visible185_inputs(project), inputs, "VA: actual input never changes measured observations/sigmas/exclusions/weights/links");
                 compare(Session.project, project, "VA: final action/report belongs to the same actual native owner");
             }
