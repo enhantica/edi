@@ -31,6 +31,7 @@
 #include <QJSValue>
 #include <QQmlApplicationEngine>
 #include <QQmlExpression>
+#include <QQmlContext>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QStandardPaths>
