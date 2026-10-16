@@ -1393,7 +1393,7 @@ struct AssistantViewModel::State {
         std::optional<edi::WorkStamps> stamps;
         Object selection;
         QMap<QString, QByteArray> hashes;
-        bool cancelled = false, abandoned = false;
+        bool cancelled = false, abandoned = false, authenticated = false;
     };
     std::shared_ptr<ManualImport> manual_import;
     bool manual_import_clearing = false;
@@ -2220,17 +2220,21 @@ struct AssistantViewModel::State {
         NativeAttachment* installed = nullptr;
         QPointer<ProjectViewModel> committed_target;
         Object committed_partial;
-        const auto same_population_projection = [&] {
-            return receiver && !intent->abandoned && intent->project && project == intent->project &&
-                // The one ordinary projectEdited signal retires Session's
-                // save intent and the file chooser, without replacing owner.
-                result_session() && result_session()->project() == intent->project && intent->epoch != UINT64_MAX &&
-                result_session()->assistantEpoch() == intent->epoch + 1 && intent->files != UINT64_MAX && file_epoch == intent->files + 1 &&
-                // Post-commit manual status grants no account/tool authority;
-                // disconnected ordinary context retirement may renew its epoch.
+        const auto same_committed_projection = [&](ProjectViewModel* target) {
+            // A committed result is a fact, not renewed execution authority.
+            // Ordinary notification paths may retire Session/chooser/account
+            // epochs more than once. Keep the original owner, source content,
+            // explicit cancellation and presentation identity instead.
+            return receiver && publishing && !intent->abandoned && target && project == target &&
+                result_session() && result_session()->project() == target &&
                 generation == intent->binding && native_serial == intent->input &&
+                generic_authenticated == intent->authenticated && (!intent->authenticated || usage_epoch == intent->account) &&
+                intent->hashes == generic_input_hashes && !manual_import_clearing &&
+                !attachment_clear_requested && !attachment_clear_draining &&
+                (!native_creation || native_creation == creation) &&
                 (!manual_import || manual_import == intent) && native_import_ui.value("id") == intent->id;
         };
+        const auto same_population_projection = [&] { return same_committed_projection(intent->project); };
         const auto release_original = [&] {
             if (!receiver) return;
             if (native_attachment && native_attachment.get() == installed && native_attachment->creation == creation)
@@ -2313,8 +2317,11 @@ struct AssistantViewModel::State {
             // owner never turns this truthful old result into its own result.
             if (!receiver) return;
             release_original();
-            if (manual_import != intent) return;
-            if (!adopted) throw std::runtime_error("The original empty Session changed; no project was replaced");
+            if (!adopted) {
+                if (manual_import != intent) return;
+                throw std::runtime_error("The original empty Session changed; no project was replaced");
+            }
+            if (!same_committed_projection(committed_target)) return;
             success["presentation_complete"] = presented;
             native_import_ui.swap(success);
             manual_import.reset();
@@ -2327,10 +2334,7 @@ struct AssistantViewModel::State {
             if (receiver && generation == intent->binding && native_serial == intent->input && project == committed_target) notify();
         } catch (...) {
             if (!receiver) return;
-            const bool same_attachment_projection = !intent->abandoned && committed_target && project == committed_target &&
-                result_session() && result_session()->project() == committed_target &&
-                generation == intent->binding && native_serial == intent->input &&
-                (!manual_import || manual_import == intent) && native_import_ui.value("id") == intent->id;
+            const bool same_attachment_projection = same_committed_projection(committed_target);
             const bool present_committed = creation->adopted && (creation->completing_existing ? same_population_projection() : same_attachment_projection);
             release_original();
             if (creation->adopted ? !present_committed : manual_import != intent) return;
@@ -6225,6 +6229,7 @@ QString AssistantViewModel::beginNativeImport(QObject* form) {
         auto intent = std::make_shared<State::ManualImport>();
         intent->id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         intent->binding = state_->generation; intent->epoch = session->assistantEpoch(); intent->account = state_->usage_epoch;
+        intent->authenticated = state_->generic_authenticated;
         intent->files = state_->file_epoch; intent->input = state_->native_serial;
         intent->controller = state_->controller.get(); intent->selection = state_->file_context(); intent->hashes = state_->generic_input_hashes;
         intent->project = state_->project;
@@ -6360,7 +6365,13 @@ void AssistantViewModel::cancelNativeImport(const QString& id) {
         catch (...) { if (receiver && state_->create_widget_owned(run)) state_->create_widget_refuse(run, state_->widget_outcome_error); }
         return;
     }
-    const auto intent = state_->manual_import;
+    auto intent = state_->manual_import;
+    if (!intent || intent->id != id) {
+        // Its own committed edit may already have retired the draft. Close
+        // still abandons that exact task retained by final delivery, never B.
+        const auto creation = state_->native_creation;
+        intent = creation && creation->manual && creation->manual->id == id ? creation->manual : nullptr;
+    }
     if (!intent || intent->id != id) return;
     state_->cancel_manual_import(intent);
 #else

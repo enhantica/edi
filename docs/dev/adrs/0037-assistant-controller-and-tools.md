@@ -715,3 +715,40 @@ UTF-16 boundaries too: an isolated surrogate retained by JSON.stringify contribu
 zero bytes through that stateless UTF-8 conversion; a valid pair contributes four.
 This matches the common decoders' actual Qt preflight and final guard without
 changing parser policy, normalizing input or raising the admitted byte limit.
+
+
+### Committed manual import presentation
+
+The ordinary native Import form and the visible assistant route share native
+creation, but a manual form's completed status is separate from new tool or
+account authority. Same-project population uses the existing structural editor
+and emits its normal project-change notifications. The Session, result manager
+and disconnected context cleanup may each retire their own intents; those
+notification counts are not a scientific-edit identity.
+
+After the closed population or Session adoption has latched a real commit, the
+manual projection checks the original live project and Session owner, binding,
+input serial, immutable selected-source ID/content hashes, form ID and exact
+creation/form ownership. It also retains the original connected/disconnected
+state; a connected original must keep its exact account epoch, while ordinary
+disconnected cleanup may retire its notification counter. Explicit Close, Stop, Clear or sign-out abandons that
+intent before publication. A replacement owner, source change, newer form or
+creation, or retired presentation cannot receive the older result. Notification
+retirement alone does not erase an already committed import outcome. The same
+check applies to successful and incomplete publication, for both existing-empty
+and no-project manual imports. It grants no retry, disclosure consent or further
+scientific write; genuine context retirement and Worker final delivery continue.
+
+The original assistant RPC path retains its existing record, receipt, once-only
+response and own-edit rules. This presentation change does not suppress model
+notifications, undo a user's edits, change the parser or scientific data, or
+alter one-step population Undo.
+
+
+Exact-ID form Close, hide and destruction first find the matching live manual
+draft, then the matching original manual task retained by native creation's
+final delivery. The task can outlive its draft because the committed edit's own
+notifications retire that draft. The existing cancellation helper marks explicit
+abandonment before any callback; an old form ID cannot cancel a different new
+draft, creation or visible request. This closes the public-caller path as well
+as the helper path without treating ordinary notification retirement as Close.
