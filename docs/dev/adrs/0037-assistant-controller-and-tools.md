@@ -432,3 +432,21 @@ or rewrite it. The ordinary native analysis writer continues to serialize the
 effective single mode. Unknown explicit modes, scan configuration and external
 asset restrictions remain refusals; resource, currentness and saved-value
 rounding checks are unchanged.
+
+
+### Fixed native-save preparation diagnostics
+
+A refused save exposes an app-owned diagnostic suffix in its existing original
+tool outcome: [save_project:STAGE/CLASS]. STAGE is a fixed literal at dispatch,
+argument validation, working-owner/name checks, task/snapshot/delivery/record
+preparation, outcome/retained reservation, currentness or worker submission.
+CLASS is ALLOCATION, CAPACITY, VALIDATION, STATE or EXCEPTION from the actual
+standard exception type. No what(), paths, project/user/provider text, URL or
+credential is copied into that suffix. Each original dispatch owns its stage on
+its stack; synchronous nested calls cannot overwrite another invocation.
+
+Existing original RPC/call/thread/currentness checks, refusal versus uncertain
+may-have-written status, genuine admitted Worker cancellation/report ownership
+and postcommit facts are unchanged. This identifies a reached preparation
+refusal; it does not label an unknown stage as a filesystem failure, turn a
+refusal into success, relax admission, or add telemetry/testing hooks.

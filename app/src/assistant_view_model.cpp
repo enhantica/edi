@@ -28,6 +28,7 @@
 #include <QUuid>
 #include <optional>
 #include <exception>
+#include <new>
 #include <stdexcept>
 #include <algorithm>
 #include <map>
@@ -1224,7 +1225,7 @@ struct AssistantViewModel::State {
             if (!admit(history)) throw std::length_error("Native terminal history capacity is unavailable");
         } catch (...) { native_call.reset(); native_records.remove(record->key); native_restore_charge(); throw; }
     }
-    void native_dispatch(const QJsonValue& rpc, const Object& params) {
+    void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage) {
         if (!native_current(native_receipt) || !native_pending.isEmpty() || native_call || native_fit || native_creation || native_save) {
             native_reply(rpc, false, {{"status", "refused"}, {"message", "No current settled native request is available."}}); return;
         }
@@ -1243,6 +1244,7 @@ struct AssistantViewModel::State {
             native_reply(rpc, false, {{"status", "refused"}, {"message", "Native call was already admitted or its turn budget is exhausted."}}); return;
         }
         const auto args = params.value("arguments").toObject();
+        save_stage = "ARGUMENTS";
         assistant_native_arguments(name, args);
         const auto purpose = assistant_native_purpose(args);
         const bool readonly = name == "inspect_project" || name == "list_parameters" || name == "diagnostics";
@@ -1259,7 +1261,7 @@ struct AssistantViewModel::State {
         if (!project && name != "inspect_project") {
             native_reply(rpc, false, {{"status", "unavailable"}, {"message", "Open a native Edi project first. Create a supported native CW project from genuine selected files first."}}); return;
         }
-        if(name=="save_project") {native_start_save(rpc,id,purpose,original,args);return;}
+        if(name=="save_project") {native_start_save(rpc,id,purpose,original,args,save_stage);return;}
         std::vector<std::pair<std::string, bool>> beforeFlags;
         auto edit = project ? assistant_native_edit(*project->assistantProject(), name, args, beforeFlags) : std::optional<edi::Edit>{};
         Object read_result;
@@ -1649,18 +1651,23 @@ struct AssistantViewModel::State {
             generic_advance_clear();if(!receiver || !scope())return;notify();}
         catch(...){if(receiver && scope())native_fence();}
     }
-    void native_start_save(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args) {
+    void native_start_save(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args,const char*& save_stage) {
+        save_stage = "WORKING_OWNER";
         if(!project || !result_session() || result_session()->project()!=project || !working_folder || !working_folder->current())
             throw std::invalid_argument("Choose a genuine working folder before saving the current project");
+        save_stage = "DESTINATION_NAME";
         const auto name=args.value("name").toString();
         if(!args.value("name").isString())throw std::invalid_argument("Save name must be a fresh single directory basename");
         validate_assistant_result_leaf(name);
+        save_stage = "TASK_PREPARATION";
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;task->folder=working_folder;task->name=name;task->epoch=result_session()->assistantEpoch();
         task->destination=QDir(task->folder->path()).filePath(name);
         constexpr edi::PersistenceLimits limits{edi::assistant::SelectedFileLimits::collection_bytes,
             edi::assistant::SelectedFileLimits::file_bytes,edi::assistant::SelectedFileLimits::collection_bytes,
             edi::assistant::SelectedFileLimits::files};
+        save_stage = "SNAPSHOT_ADMISSION";
         task->snapshot=edi::snapshot_for_persistence(*project->assistantProject(),limits);
+        save_stage = "DELIVERY_PREPARATION";
         Object maximum{{"status",QStringLiteral("committed_unconfirmed")},{"committed",false},{"reopened",false},{"active",false},
             {"presentation_complete",false},{"destination",task->destination},{"request_retired",true},
             {"message",QString(static_cast<qsizetype>(Limits::error_bytes),QChar(1))}};
@@ -1691,7 +1698,9 @@ struct AssistantViewModel::State {
             }
             return std::move(completion);
         };
+        save_stage = "RECORD_ADMISSION";
         native_prepare(rpc,id,"save_project",purpose,original,maximum);task->call=*native_call;
+        save_stage = "OUTCOME_RESERVATION";
         for(std::size_t i=0;i<task->progress.size();++i) {
             task->committed=i>=1;task->reopened=i>=2;task->active=i>=3;
             auto& progress=task->progress[i];
@@ -1707,6 +1716,7 @@ struct AssistantViewModel::State {
         }
         task->committed=false;task->reopened=false;task->active=false;
         try {
+            save_stage = "RETAINED_RESERVATION";
             native_save=task;
             // A concrete staged-result allowance, not all transport headroom.
             // The original complete model's admitted retained role bounds this
@@ -1714,7 +1724,9 @@ struct AssistantViewModel::State {
             // retainOutput still accounts for its real pending transport owners.
             task->calculation_reservation=task->snapshot.retained_bytes;
             native_charge();
+            save_stage = "CURRENTNESS";
             if(!native_save_current(task))throw std::runtime_error("Save retired before worker admission");
+            save_stage = "WORKER_SUBMIT";
             task->ticket=idle_worker->submit("assistant-native-save",std::move(job));
             if(!receiver)return;
             // Submitted trace may synchronously retire the owner before the
@@ -2870,9 +2882,19 @@ struct AssistantViewModel::State {
             const auto thread = generic_thread, turn = generic_turn;
             const auto request_scope = [&] { return publishing && generation == binding && native_serial == serial &&
                 usage_epoch == account && generic_thread == thread && generic_turn == turn; };
-            try { native_dispatch(id, params); }
-            catch (const std::exception&) {
+            const char* save_stage = "DISPATCH"; // Original invocation's stack; nested requests cannot overwrite it.
+            try { native_dispatch(id, params, save_stage); }
+            catch (const std::exception& failure) {
                 if (!request_scope()) return;
+                // App-owned fixed stage/class only. Never include what(), paths,
+                // input contents, URLs or credential/provider data in this diagnostic.
+                const bool saving = params.value("tool") == "save_project";
+                const char* reason = dynamic_cast<const std::bad_alloc*>(&failure) ? "ALLOCATION"
+                    : dynamic_cast<const std::length_error*>(&failure) ? "CAPACITY"
+                    : dynamic_cast<const std::invalid_argument*>(&failure) ? "VALIDATION"
+                    : dynamic_cast<const std::runtime_error*>(&failure) ? "STATE" : "EXCEPTION";
+                const auto save_diagnostic = saving ? QStringLiteral(" [save_project:%1/%2]")
+                    .arg(QString::fromLatin1(save_stage), QString::fromLatin1(reason)) : QString{};
                 if (native_call) {
                     if (native_call->rpc != id || native_call->record->thread != thread || native_call->record->turn != turn) return;
                     const auto original_call = *native_call;
@@ -2887,10 +2909,10 @@ struct AssistantViewModel::State {
                         return;
                     }
                     const bool uncertain = native_call->may_have_written;
-                    native_finish(false, {{"status", uncertain ? "unconfirmed" : "refused"}, {"message", uncertain ? "Native publication failed; inspect the actual displayed project before continuing." : "The native action was refused by Edi validation."}});
+                    native_finish(false, {{"status", uncertain ? "unconfirmed" : "refused"}, {"message", (uncertain ? QStringLiteral("Native publication failed; inspect the actual displayed project before continuing.") : QStringLiteral("The native action was refused by Edi validation.")) + save_diagnostic}});
                     if (uncertain && original_scope()) native_fence();
                 }
-                else native_reply(id, false, {{"status", "refused"}, {"message", "Native arguments are invalid or exceed scope/capacity."}});
+                else native_reply(id, false, {{"status", "refused"}, {"message", QStringLiteral("Native arguments are invalid or exceed scope/capacity.") + save_diagnostic}});
             }
             return;
         }
