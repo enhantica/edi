@@ -1115,7 +1115,11 @@ TestCase {
         let capturedTyping = false;
         let spellings = [], writes = [], fitClicks = 0;
         const editedParameter = data.tag === "wavelength" ? wavelength[0] : la;
-        const pacedObservation = assistant.showActions ? visible237_observationMs(
+        const pacedObservation = data.tag === "unsupported-relations"
+            ? relation246_observationMs({aliases: [
+                {id: "visible_original_la", path: la.path}, {id: "visible_original_ba", path: ba.path}],
+                constraints: [{id: "visible_original_shared", expression: "visible_original_ba = visible_original_la", enabled: true}]})
+            : assistant.showActions ? visible237_observationMs(
             data.tag === "analysis-value-free"
                 ? [{path: la.path, text: "0.6"}, {path: la.path, text: ""}]
                 : [{path: editedParameter.path, text: data.tag === "wavelength" ? "1.49" : "0.6"}]) : 10000;
@@ -1362,19 +1366,21 @@ TestCase {
                     compare(draftField.selectionEnd, draftSelection[1], "VA3: original draft selection end survives");
                     compare(window.appBarCentralTabs.currentIndex, draftPage, "VA3: refusal precedes navigation");
                     compare(fitStarted, 0, "VA3: a blocked draft never admits a hidden worker");
-                } else if (data.tag.startsWith("unsupported-")) {
+                } else if (data.tag.startsWith("unsupported-") && data.tag !== "unsupported-relations") {
                     verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
                         "VA: unsupported visible operations fail honestly before write without hidden fallback");
                     compare(visible185_values(project), originalValues, "VA: unsupported batch/relation cannot partly mutate the owner");
                     compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
                         originalDeclarations, "VA: unsupported relation preserves every original declaration");
                     compare(typed + toggled, 0, "VA: refusal cannot be a decorative event sequence over a hidden write");
-                } else if (data.tag === "normal-relations") {
-                    compare(outcome.status, "edited", "VA SETUP CONTROL: identical valid relation payload is admitted in normal OFF mode");
+                } else if (["normal-relations", "unsupported-relations"].includes(data.tag)) {
+                    compare(outcome.status, "edited", "REL SUPPORTED-STAGE: same original valid relation is confirmed by normal OFF or actual supported visible form");
                     verify(project.analysis.aliases.count === declarationRows[0].length + 2
                         && project.analysis.constraints.count === declarationRows[1].length + 1,
                         "VA SETUP CONTROL: genuine valid relation append proves unsupported-visible payload is not a malformed refusal");
-                    compare(activeStarts, 0, "VA: normal relation control does not invent visible activity");
+                    if (data.tag === "normal-relations")
+                        compare(activeStarts, 0, "VA: normal relation control does not invent visible activity");
+                    else verify(activeStarts > 0, "REL SUPPORTED-STAGE: original visible relation actually uses the real helper/form");
                     Ui.click(this, Probe, window, "appBar.button.undo");
                     compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
                         originalDeclarations, "VA: complete normal Undo restores original declarations");
@@ -2388,4 +2394,496 @@ TestCase {
             if (assistant.canCancel) assistant.cancel();
         }
     }
+    // PRIVATE candidate. Public214 form contract and original affine145 invariants;
+    // no production candidate body, calculated optimum or new test interface.
+    function relation245_declarations(project) {
+        return JSON.stringify([Probe.rows(project.analysis.aliases),
+            Probe.rows(project.analysis.constraints)]);
+    }
+    function relation245_text(name, text) {
+        const control = Ui.control(Probe, window, name);
+        verify(control !== null, "REL SETUP: ordinary named form editor exists");
+        Ui.scrollIntoView(control);
+        rendered();
+        Ui.click(this, Probe, window, name);
+        compare(window.activeFocusItem, control, "REL: real click focuses the original form editor");
+        visible185_type(text);
+        compare(control.text, text, "REL: actual keys preserve exact original declaration spelling");
+        return control;
+    }
+    function relation245_stage(project, aliases, constraints) {
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.extras");
+        const science = visible185_values(project);
+        const declarations = relation245_declarations(project);
+        for (const [kind, rows] of [["aliases", aliases], ["constraints", constraints]]) {
+            Ui.click(this, Probe, window, "relations.stage." + kind);
+            for (const row of rows) {
+                Ui.click(this, Probe, window, "relations.stage.add");
+                relation245_text("relations.stage.id", row.id);
+                relation245_text("relations.stage.definition", row.path === undefined ? row.expression : row.path);
+                if (row.enabled !== undefined) {
+                    const enabled = Ui.control(Probe, window, "relations.stage.enabled");
+                    verify(enabled !== null && Ui.exposed(enabled), "REL: ordinary enabled checkbox is exposed");
+                    if (enabled.checked !== row.enabled)
+                        Ui.click(this, Probe, window, "relations.stage.enabled");
+                    compare(enabled.checked, row.enabled, "REL: actual checkbox represents the requested declaration flag");
+                }
+                compare(visible185_values(project), science, "REL: staged typing/row/tab changes never publish science");
+                compare(relation245_declarations(project), declarations,
+                    "REL: stage remains presentation until one genuine Apply");
+            }
+        }
+    }
+    function test_relation245_actual_shared_manual_append_data() {
+        return ["manual-shared", "manual-varied", "zero-new-aliases"].map(tag => ({tag: tag}));
+    }
+    function test_relation245_actual_shared_manual_append(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")),
+            "REL SETUP: independent complete mixed-site fixture opens through real Session");
+        const project = Session.project;
+        const lengths = project.currentStructure.scatteringLengths;
+        const originalLengths = Probe.rows(lengths);
+        compare(originalLengths.length, 1, "REL SETUP: original fixture explicitly supplies one replacement-table entry");
+        compare(originalLengths[0].typeSymbol, "La", "REL SETUP: literal source fixture declares La");
+        compare(originalLengths[0].lengthFm, 8.24, "REL SETUP: original neutron length follows source bytes");
+        lengths.remove(0);
+        compare(lengths.count, 0, "REL SETUP: public empty custom map restores the ordinary complete built-in table");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL SETUP: real initial calculation settles before preservation snapshot");
+        const la = visible185_parameter(project, "La", "adp_iso");
+        const ba = visible185_parameter(project, "Ba", "adp_iso");
+        const co = visible185_parameter(project, "Co", "adp_iso");
+        // A non-identity equality: ordinary real typing changes Ba before the
+        // relation; manual scalar preparation itself promises no recorded Undo.
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "parameters.nameFilter");
+        visible185_type("adp_iso");
+        rendered();
+        const baField = visible185_field(ba);
+        Ui.click(this, Probe, window, baField.objectName);
+        visible185_type("0.8");
+        keyClick(Qt.Key_Return);
+        compare(ba.value, 0.8, "REL SETUP: actual ordinary input makes the shared-site equality nontrivial");
+        compare(la.value, 0.5, "REL SETUP: literal original independent La value is unchanged by Ba preparation");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL SETUP: genuine manual preparation calculation settles before baseline");
+        const inputs = visible185_inputs(project);
+        const original = visible185_values(project);
+        const initial = relation245_declarations(project);
+        const aliases = [{id: "rel245_la", path: la.path}, {id: "rel245_ba", path: ba.path}];
+        const shared = {id: "rel245_shared", expression: "rel245_ba = rel245_la", enabled: true};
+        let addedAliases = aliases;
+        let constraints = [shared];
+        if (data.tag === "manual-varied") {
+            addedAliases = aliases.concat([{id: "rel245_co", path: co.path}]);
+            constraints = [shared, {id: "rel245_disabled", expression: "rel245_co = 0.8", enabled: false}];
+        }
+        toggle();
+        assistant.signIn();
+        visible185_ready("relation245-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("relation245-disclosed");
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        toggle();
+        if (data.tag === "zero-new-aliases") {
+            // First real ordinary Apply establishes addresses. The second append
+            // adds zero aliases and references those existing original IDs.
+            relation245_stage(project, aliases, [{id: "rel245_prior", expression: "rel245_ba = rel245_la", enabled: false}]);
+            Ui.click(this, Probe, window, "relations.stage.apply");
+            compare(project.analysis.aliases.count, 2, "REL SETUP: actual prior ordinary aliases were published");
+            addedAliases = [];
+        }
+        const beforeValues = visible185_values(project);
+        const beforeDeclarations = relation245_declarations(project);
+        const beforeAliases = Probe.rows(project.analysis.aliases);
+        const beforeConstraints = Probe.rows(project.analysis.constraints);
+        relation245_stage(project, addedAliases, constraints);
+        Ui.click(this, Probe, window, "relations.stage.apply");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL: genuine shared editor publication/calculation completes before readback");
+        const actualAliases = Probe.rows(project.analysis.aliases);
+        const actualConstraints = Probe.rows(project.analysis.constraints);
+        compare(actualAliases.length, beforeAliases.length + addedAliases.length,
+            "REL: complete ordinary append preserves old aliases and adds exactly the requested count");
+        for (const row of addedAliases)
+            verify(actualAliases.some(value => value.id === row.id),
+                "REL: every actual requested alias identity is published, not just an arbitrary count");
+        compare(actualConstraints.length, beforeConstraints.length + constraints.length,
+            "REL: complete ordinary append preserves old constraints and adds the entire batch");
+        for (const row of beforeAliases)
+            verify(actualAliases.some(value => JSON.stringify(value) === JSON.stringify(row)),
+                "REL: prior alias declarations survive intact");
+        for (const row of beforeConstraints.concat(constraints))
+            verify(actualConstraints.some(value => value.id === row.id && value.expression === row.expression
+                && value.enabled === row.enabled), "REL: exact enabled/disabled expression declarations survive Apply");
+        compare(ba.value, la.value, "REL: independently requested equality applies to the mixed same-site ADPs");
+        compare(co.value, 0.5, "REL: disabled unrelated Co declaration does not change its literal original fixture value");
+        compare(visible185_inputs(project), inputs, "REL: complete measured data/sigma/weights/masks/links are preserved");
+        Ui.click(this, Probe, window, "appBar.button.undo");
+        compare(visible185_values(project), beforeValues, "REL: ONE real recorded Undo restores every value/free/SU");
+        compare(relation245_declarations(project), beforeDeclarations,
+            "REL: the same ONE Undo restores all prior declarations, never a partial batch");
+        if (data.tag === "zero-new-aliases") {
+            Ui.click(this, Probe, window, "appBar.button.undo");
+            compare(relation245_declarations(project), initial, "REL: separate original Apply retains its own complete Undo");
+        }
+        compare(visible185_values(project), original, "REL: complete manual control leaves original independent parameter state");
+        compare(Session.project, project, "REL: real Apply/Undo retains the actual current Session owner");
+        compare(JSON.stringify(Probe.rows(assistant.models)), models, "REL: ordinary form never repairs/resets account catalog");
+        verify(assistant.connected, "REL: actual managed account survives ordinary form Apply/Undo");
+    }
+
+    function relation246_parameters() {
+        return {
+            aliases: [{id: "rel246_la", path: "structure.atom_sites[La].adp_iso"},
+                {id: "rel246_ba", path: "structure.atom_sites[Ba].adp_iso"}],
+            constraints: [{id: "rel246_shared", expression: "rel246_ba = rel246_la", enabled: true}]
+        };
+    }
+    function relation246_observationMs(args) {
+        const texts = args.aliases.flatMap(row => [row.id, row.path]).concat(
+            args.constraints.flatMap(row => [row.id, row.expression]));
+        // Original10000 observation plus public paced key100/move500/press100/
+        // relax500 for actual tab/Add/two editors/optional flag per requested row.
+        return 10000 + 1100 * (3 + 5 * (args.aliases.length + args.constraints.length))
+            + 100 * texts.reduce((total, text) => total + [...text].length + 4, 0);
+    }
+    function relation246_shape(project) {
+        return JSON.stringify(Probe.rows(project.currentStructure.atomSites).map(row =>
+            [row.label, row.typeSymbol, row.wyckoffLetter, row.adpType, row.fractX.value,
+                row.fractY.value, row.fractZ.value, row.occupancy.value]));
+    }
+    function test_relation246_original_rpc_full_gui_data() {
+        return ["owner-fit", "varied-batch", "zero-new-aliases", "staged-draft",
+            "stop", "manual-takeover", "resolved", "cleanup-successor"].map(tag => ({tag: tag}));
+    }
+    function test_relation246_original_rpc_full_gui(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")),
+            "REL RPC SETUP: original independent complete mixed-site project opens normally");
+        const project = Session.project;
+        const lengths = project.currentStructure.scatteringLengths;
+        const originalLengths = Probe.rows(lengths);
+        compare(originalLengths.length, 1, "REL RPC SETUP: source fixture has its one declared custom entry");
+        compare(originalLengths[0].typeSymbol, "La", "REL RPC SETUP: literal custom entry is La");
+        compare(originalLengths[0].lengthFm, 8.24, "REL RPC SETUP: independent source neutron length remains exact");
+        lengths.remove(0);
+        compare(lengths.count, 0, "REL RPC SETUP: normal public built-in-table mode is restored");
+        const la = visible185_parameter(project, "La", "adp_iso");
+        const ba = visible185_parameter(project, "Ba", "adp_iso");
+        const co = visible185_parameter(project, "Co", "adp_iso");
+        if (data.tag === "owner-fit") {
+            // Scientific fixture preparation through the existing public model,
+            // explicitly NOT credited as input/visible free-helper delivery.
+            for (const parameter of visible185_parameters(project)) parameter.free = false;
+            project.analysis.maxIterations = 8; // Same bounded real FitJob prior art as VA185.
+        }
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "parameters.nameFilter");
+        visible185_type("adp_iso");
+        rendered();
+        for (const parameter of data.tag === "owner-fit" ? [la, ba] : [ba]) {
+            const field = visible185_field(parameter);
+            Ui.click(this, Probe, window, field.objectName);
+            visible185_type(data.tag === "owner-fit" ? "0" : "0.8");
+            keyClick(Qt.Key_Return);
+            compare(parameter.value, data.tag === "owner-fit" ? 0 : 0.8,
+                "REL RPC SETUP: ordinary actual input prepares the disclosed original mixed-site values");
+        }
+        if (data.tag === "owner-fit") {
+            verify(!la.free && !ba.free, "REL OWNER SETUP: original zero ADPs are genuinely fixed before delegation");
+            visible185_page("experiment");
+            Ui.click(this, Probe, window, "sideBar.tab.basic");
+            Ui.expandGroup(this, Probe, window, "group.instrument");
+            Ui.click(this, Probe, window, "instrument.setup_wavelength");
+            visible185_type("1.49");
+            keyClick(Qt.Key_Return);
+            const wavelength = visible185_parameters(project).filter(row => row.name === "setup_wavelength");
+            compare(wavelength.length, 1, "REL OWNER SETUP: original physical wavelength is unique");
+            compare(wavelength[0].value, 1.49, "REL OWNER: user's explicit wavelength is genuinely typed and committed");
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL RPC SETUP: actual original science settles before admission baseline");
+        const args = relation246_parameters();
+        if (data.tag === "varied-batch") {
+            args.aliases.push({id: "rel246_co", path: co.path});
+            args.constraints.push({id: "rel246_disabled", expression: "rel246_co = 0.8", enabled: false});
+        }
+        if (data.tag === "zero-new-aliases") {
+            relation245_stage(project, args.aliases,
+                [{id: "rel246_prior", expression: "rel246_ba = rel246_la", enabled: false}]);
+            Ui.click(this, Probe, window, "relations.stage.apply");
+            args.aliases = [];
+        } else {
+            // Preserve a genuine unrelated prior declaration across native append.
+            relation245_stage(project, [{id: "rel246_prior_co", path: co.path}],
+                [{id: "rel246_prior", expression: "rel246_prior_co = 0.5", enabled: false}]);
+            Ui.click(this, Probe, window, "relations.stage.apply");
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL RPC SETUP: actual prior manual Apply is settled before native context disclosure");
+        const values = visible185_values(project);
+        const declarations = relation245_declarations(project);
+        const inputs = visible185_inputs(project);
+        console.log("RELATION246_INPUT", JSON.stringify({observations: JSON.parse(inputs).observations}));
+        const structure = relation246_shape(project);
+        const oldAliases = Probe.rows(project.analysis.aliases);
+        const oldConstraints = Probe.rows(project.analysis.constraints);
+        const beforeUndo = item("appBar.button.undo").enabled;
+        toggle();
+        assistant.signIn();
+        visible185_ready("relation246-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("relation246-disclosed");
+        compare(visible185_values(project), values, "REL RPC SETUP: genuine managed bootstrap cannot change science");
+        const modeControl = item("assistant.showActions");
+        verify(modeControl.enabled && modeControl.visible, "REL RPC SETUP: genuine mode checkbox is actionable");
+        mouseClick(modeControl);
+        verify(assistant.showActions, "REL RPC: original real Show actions checkbox enables the mode");
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.extras");
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const call = "relation246-" + data.tag;
+        let textEvents = 0, applies = 0, starts = 0, finished = 0, running = 0;
+        let cleanupSends = 0, cleanupCallbackActive = false, requestPresentationStartedInside = false;
+        const stage = Ui.control(Probe, window, "relations.stage");
+        const editor = Ui.control(Probe, window, "relations.stage.id");
+        const definition = Ui.control(Probe, window, "relations.stage.definition");
+        const apply = Ui.control(Probe, window, "relations.stage.apply");
+        verify(stage !== null && editor !== null && definition !== null && apply !== null,
+            "REL RPC SETUP: existing current ordinary staged form owns its real controls");
+        function typed() { ++textEvents; }
+        function applied() { ++applies; }
+        function active() { if (assistant.showingActions) { ++starts; if (cleanupCallbackActive) requestPresentationStartedInside = true; } }
+        function fitFinished() { ++finished; }
+        function fitRunning() { if (project.fit.running) ++running; }
+        let cleanupArmed = false;
+        function resetBoundary() {
+            if (!cleanupArmed || cleanupSends || stage.aliasCount !== 0) return;
+            ++cleanupSends;
+            cleanupCallbackActive = true;
+            try { assistant.send("Apply the genuinely new relation246 successor request now"); }
+            finally { cleanupCallbackActive = false; }
+        }
+        editor.textEdited.connect(typed);
+        definition.textEdited.connect(typed);
+        apply.clicked.connect(applied);
+        assistant.showingActionsChanged.connect(active);
+        project.fit.finished.connect(fitFinished);
+        project.fit.runningChanged.connect(fitRunning);
+        stage.aliasCountChanged.connect(resetBoundary);
+        let draft = null, originalStage = null;
+        const pointer = item("assistant.actionPointer");
+        try {
+            if (data.tag === "staged-draft") {
+                relation245_stage(project, [{id: "manual246_co", path: co.path}],
+                    [{id: "manual246_preserved", expression: "manual246_co = 0.8", enabled: false}]);
+                draft = {id: editor.text, expression: definition.text, focus: window.activeFocusItem,
+                    start: definition.selectionStart, end: definition.selectionEnd,
+                    page: window.appBarCentralTabs.currentIndex, textEvents: textEvents, stage: stage.assistantStage};
+            }
+            assistant.send("Original complete relation request " + data.tag);
+            if (data.tag === "owner-fit") {
+                for (const editId of [call, "relation246-free"]) {
+                    tryVerify(() => {
+                        const edited = visible185_outcome(editId, previousIds);
+                        return edited !== null && edited.status === "edited" && !project.calculating
+                            && Probe.computedCurrent(project.currentExperiment) && Session.project === project;
+                    }, relation246_observationMs(args),
+                    "REL OWNER SETUP: exact original edit and real calculation settle before next original call");
+                    verify(assistant.canCancel && assistant.showingActions,
+                        "REL OWNER: per-tool settlement retains presentation across the genuine active objective");
+                    console.log("RELATION246_SETTLED", JSON.stringify({callId: editId, observedAtMs: Date.now(),
+                        canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                        calculating: project.calculating, computedCurrent: Probe.computedCurrent(project.currentExperiment),
+                        currentOwner: Session.project === project, value: la.value, free: la.free}));
+                    assistant.refreshUsage(); // Actual public event, no new objective/steer or timer.
+                }
+            }
+            if (["stop", "manual-takeover", "resolved", "cleanup-successor"].includes(data.tag)) {
+                tryVerify(() => assistant.showingActions && assistant.canCancel && textEvents > 0
+                    && editor.text.length > 0 && editor.text !== args.aliases[0].id,
+                    relation246_observationMs(args), "REL INTERVAL SETUP: genuine partial original staging is reached before intervention");
+                compare(visible185_values(project), values, "REL: partial original stage has not edited science");
+                compare(relation245_declarations(project), declarations, "REL: no declaration is published before actual Apply");
+                if (data.tag === "stop") {
+                    const stop = item("assistant.stopVisibleAction");
+                    verify(stop.enabled && Ui.exposed(stop), "REL STOP SETUP: actual original appbar Stop is exposed");
+                    mouseClick(stop);
+                }
+                else if (data.tag === "manual-takeover") {
+                    const target = Ui.control(Probe, window, "relations.stage.definition");
+                    Ui.scrollIntoView(target);
+                    rendered();
+                    const point = Ui.clickPoint(target);
+                    verify(point !== null, "REL TAKEOVER SETUP: original user's actual form input is exposed");
+                    mouseClick(target, point.x, point.y);
+                    verify(window.activeFocusItem === target, "REL: same surviving genuine manual receiver owns focus");
+                    keyClick("x");
+                    verify(target.text.includes("x"), "REL: original actual manual key survives helper retirement");
+                    draft = {id: editor.text, expression: target.text};
+                } else if (data.tag === "resolved") {
+                    // Existing ordinary optional read causes the owned peer to emit
+                    // real original serverRequest/resolved. It does not steer/change
+                    // objective or synthesize any app/helper/model state.
+                    originalStage = stage.assistantStage;
+                    verify(originalStage !== undefined && originalStage !== null
+                        && String(originalStage).length > 0 && pointer.opacity > 0,
+                        "REL RESOLVED SETUP: actual original keyed stage and painted pointer are captured");
+                    assistant.refreshUsage();
+                } else {
+                    cleanupArmed = true;
+                    assistant.cancel();
+                }
+            }
+            if (data.tag === "resolved") {
+                tryVerify(() => stage.assistantStage !== originalStage && pointer.opacity === 0, 10000,
+                    "REL RESOLVED: matching original stage retires and actual pointer paint ends");
+                verify(assistant.canCancel && assistant.showingActions,
+                    "REL RESOLVED: original held objective retains whole-request presentation after per-tool retirement");
+                const stoppedEvents = textEvents;
+                const stopped = [editor.text, definition.text];
+                rendered();
+                compare(textEvents, stoppedEvents, "REL RESOLVED: later rendering never continues original typing");
+                compare(JSON.stringify([editor.text, definition.text]), JSON.stringify(stopped),
+                    "REL RESOLVED: no late original staging cleanup rewrites current form");
+                compare(applies, 0, "REL RESOLVED: original resolved RPC can never reach a late Apply");
+                assistant.cancel(); // Explicit ordinary turn cleanup after stage-retirement facts.
+                tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
+                    "REL RESOLVED: whole presentation ends only after genuine explicit turn retirement");
+            } else {
+                const expected = data.tag === "cleanup-successor" ? "relation246-successor"
+                    : data.tag === "owner-fit" ? "relation246-diagnostics" : call;
+                tryVerify(() => visible185_outcome(expected, previousIds) !== null
+                    && (data.tag === "cleanup-successor" || (!assistant.canCancel && !assistant.showingActions)),
+                    relation246_observationMs(args) + (data.tag === "owner-fit" ? visible237_observationMs([
+                        {path: la.path, text: ""}]) + 10000 : 0),
+                    "REL RPC: real original operation and its publication settle with an actual retained outcome");
+                const outcome = visible185_outcome(data.tag === "cleanup-successor" ? expected : call, previousIds);
+                if (data.tag === "staged-draft") {
+                    verify(["refused", "unavailable"].includes(outcome.status) && outcome.message.length > 0,
+                        "REL DRAFT: existing original form draft causes honest before-write refusal");
+                    compare(editor.text, draft.id, "REL DRAFT: exact original ID remains untouched");
+                    compare(stage.assistantStage, draft.stage,
+                        "REL DRAFT: native refusal never replaces the original manual form stage");
+                    compare(applies, 0, "REL DRAFT: existing manual stage is never automatically applied");
+                    compare(textEvents, draft.textEvents, "REL DRAFT: no helper typing touches the original manual form");
+                    compare(definition.selectionStart, draft.start, "REL DRAFT: original selection start survives");
+                    compare(definition.selectionEnd, draft.end, "REL DRAFT: original selection end survives");
+                    compare(definition.text, draft.expression, "REL DRAFT: exact multiline original spelling survives");
+                    compare(window.activeFocusItem, draft.focus, "REL DRAFT: no preflight blur commits the original stage");
+                    compare(window.appBarCentralTabs.currentIndex, draft.page, "REL DRAFT: refusal precedes navigation");
+                    compare(item("appBar.button.undo").enabled, beforeUndo, "REL DRAFT: original Undo history is neither consumed nor extended");
+                } else if (["stop", "manual-takeover"].includes(data.tag)) {
+                    verify(outcome.status !== "edited" && outcome.message.length > 0,
+                        "REL CANCEL: truthful original cancellation never claims science was edited");
+                    compare(applies, 0, "REL CANCEL: no late original Apply after Stop/manual takeover");
+                    if (draft) {
+                        rendered();
+                        compare(editor.text, draft.id, "REL TAKEOVER: original handed-over staged ID survives late cleanup");
+                        compare(definition.text, draft.expression, "REL TAKEOVER: exact original user's text remains");
+                    }
+                } else {
+                    compare(outcome.status, "edited", "REL RPC: actual shared form/editor must confirm the complete native append");
+                    if (data.tag === "cleanup-successor") {
+                        compare(cleanupSends, 1, "REL REENTRY SETUP: one genuine old-stage reset signal admits the user's successor attempt");
+                        verify(assistant.canCancel && assistant.showingActions,
+                            "REL REENTRY: confirmed B operation retains whole presentation while its objective is held");
+                        assistant.cancel();
+                        tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
+                            "REL REENTRY: actual explicit turn cleanup ends the held whole-request presentation");
+                        // This flag observes only requestwide presentation, not an individual B start.
+                        // Exact B-inside-A admission remains an explicitly unqualified interval.
+                    }
+                    const aliases = Probe.rows(project.analysis.aliases);
+                    const constraints = Probe.rows(project.analysis.constraints);
+                    compare(aliases.length, oldAliases.length + args.aliases.length,
+                        "REL RPC: all requested aliases append once while prior declarations remain");
+                    compare(constraints.length, oldConstraints.length + args.constraints.length,
+                        "REL RPC: complete enabled/disabled constraint batch appends once");
+                    for (const row of args.aliases)
+                        verify(aliases.some(value => value.id === row.id && value.parameter
+                            === "lbco.atom_site." + (row.path.includes("[La]") ? "La"
+                                : row.path.includes("[Ba]") ? "Ba" : "Co") + ".adp_iso"),
+                            "REL RPC: native paths resolve to the independently declared fixture atom/site parameter");
+                    for (const row of oldAliases)
+                        verify(aliases.some(value => JSON.stringify(value) === JSON.stringify(row)),
+                            "REL RPC: prior original alias declarations survive intact");
+                    for (const row of oldConstraints.concat(args.constraints))
+                        verify(constraints.some(value => value.id === row.id && value.expression === row.expression
+                            && value.enabled === row.enabled), "REL RPC: exact prior and new constraint declarations survive");
+                    compare(ba.value, la.value, "REL RPC: actual mixed-site ADPs satisfy the independently requested equality");
+                    compare(co.value, 0.5, "REL RPC: disabled or unrelated Co remains the independent fixture value");
+                    if (data.tag === "owner-fit") {
+                        const free = visible185_outcome("relation246-free", previousIds);
+                        const fit = visible185_outcome("relation246-fit", previousIds);
+                        const diagnostic = visible185_outcome("relation246-diagnostics", previousIds);
+                        verify(free !== null && free.status === "edited" && la.free && !ba.free,
+                            "REL OWNER: genuine native free checkbox owns only the independent member of the equality");
+                        verify(running > 0 && finished === 1 && !project.fit.running && project.fit.outcome.length > 0,
+                            "REL OWNER: actual native FitJob/report completion precedes scientific acceptance");
+                        verify(fit !== null && ["done", "max_iterations", "no_step"].includes(fit.status),
+                            "REL OWNER: real supported fit attempt is not an unavailable/error substitute or fictitious success");
+                        verify(Number.isFinite(fit.iterations) && fit.iterations >= 0,
+                            "REL OWNER: actual iteration report is finite without an optimum golden");
+                        if (fit.reduced_chi_square !== undefined)
+                            verify(Number.isFinite(fit.reduced_chi_square) && fit.reduced_chi_square >= 0,
+                                "REL OWNER: genuine reported fit statistic is finite; improvement is not invented");
+                        verify(diagnostic !== null && diagnostic.diagnostics !== null
+                            && typeof diagnostic.diagnostics === "object",
+                            "REL OWNER: original native diagnostics returns after the real fit publication");
+                        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+                            10000, "REL OWNER: real post-fit calculated profile is current before observation");
+                        const modeled = Probe.rows(project.currentExperiment.pattern);
+                        compare(modeled.length, JSON.parse(inputs).observations.length,
+                            "REL OWNER: actual fit keeps the complete measured grid");
+                        verify(modeled.every(row => Number.isFinite(row.intensityCalc)),
+                            "REL OWNER: actual native modeled intensity is finite at every original observation");
+                        for (const parameter of visible185_parameters(project))
+                            if (parameter.hasUncertainty)
+                                verify(Number.isFinite(parameter.uncertainty) && parameter.uncertainty >= 0,
+                                    "REL OWNER: actual reported scientific uncertainty is finite and nonnegative");
+                        // Native fit may produce its own result Undo; ordinary appbar Undo
+                        // restores its adopted values before the two original native edits.
+                        if (fit.adopted) {
+                            verify(project.fit.canUndo, "REL OWNER: adopted actual fit exposes its ordinary result Undo");
+                            Ui.click(this, Probe, window, "appBar.button.undo");
+                        }
+                        Ui.click(this, Probe, window, "appBar.button.undo");
+                        compare(la.free, false, "REL OWNER: one native free Undo restores original fixed independent ADP");
+                    }
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                }
+            }
+            compare(visible185_values(project), values, "REL: complete Undo/refusal/retirement preserves all original values/free/SUs");
+            compare(relation245_declarations(project), declarations, "REL: original full declarations survive exactly");
+            compare(visible185_inputs(project), inputs, "REL: unchanged actual observations/sigmas/masks/weights/links survive");
+            compare(relation246_shape(project), structure, "REL: original composition/site coordinates/Wyckoff geometry survive");
+            verify(Session.project === project && assistant.connected, "REL: current owner and actual account remain genuine");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "REL: no account/catalog repair substitutes for completion");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "REL: retained original history survives native work and cancellation");
+        } finally {
+            console.log("RELATION246_STATE", data.tag, JSON.stringify({showingActions: assistant.showingActions,
+                canCancel: assistant.canCancel, textEvents: textEvents, applies: applies, starts: starts,
+                fitStarts: running, fitFinished: finished, currentOwner: Session.project === project,
+                connected: assistant.connected, lastError: assistant.lastError,
+                stagedId: editor.text, stagedDefinition: definition.text, cleanupSends: cleanupSends,
+                requestPresentationStartedInside: requestPresentationStartedInside,
+                originalStage: originalStage === null ? null : String(originalStage),
+                currentStage: String(stage.assistantStage), pointerOpacity: pointer.opacity, outcome: visible185_outcome(call, previousIds)}));
+            editor.textEdited.disconnect(typed);
+            definition.textEdited.disconnect(typed);
+            apply.clicked.disconnect(applied);
+            assistant.showingActionsChanged.disconnect(active);
+            project.fit.finished.disconnect(fitFinished);
+            project.fit.runningChanged.disconnect(fitRunning);
+            stage.aliasCountChanged.disconnect(resetBoundary);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
+
 }

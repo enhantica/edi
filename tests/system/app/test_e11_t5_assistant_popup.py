@@ -689,3 +689,273 @@ def test_sl1_233_original_focused_input_and_request_retirement(case, tmp_path): 
         ), (
             'SL1 HELPER: original retirement cannot claim a cancelled scientific edit'
         )
+
+
+@pytest.mark.parametrize('case', ['manual-shared', 'manual-varied', 'zero-new-aliases'])
+def test_relation245_real_shared_manual_form_apply_and_one_undo(case, tmp_path):
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'REL SETUP: actual coherent Main runner is required'
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text(encoding='utf-8'))
+    config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[])
+    config_path.write_text(json.dumps(config), encoding='utf-8')
+    original_config = config_path.read_bytes()
+    fixture = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_relation245_actual_shared_manual_append:' + case, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            received = getattr(error, stream) or b''
+            raw = received if isinstance(received, bytes) else received.encode()
+            destination = tmp_path / ('relation245-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'relation245.stdout.log').write_text(result.stdout)
+    (tmp_path / 'relation245.stderr.log').write_text(result.stderr)
+    (tmp_path / 'relation245-process.json').write_text(json.dumps({
+        'argv': argv, 'returncode': result.returncode}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_relation245_actual_shared_manual_append('
+        + case + ')' in output
+    ), 'REL: the original genuine manual staging/Apply/Undo/science case executes\n' + output
+    assert config_path.read_bytes() == original_config, (
+        'REL: one-time peer input remains unchanged'
+    )
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'REL: real manual control does not rewrite independent scientific fixture bytes'
+    )
+    requests = [json.loads(line) for line in
+                Path(config['trace']).read_text(encoding='utf-8').splitlines()]
+    assert not any(request.get('method') in {
+        'turn/start', 'account/login/start', 'account/logout'} for request in requests), (
+        'REL: ordinary form shares the editor without delegated work or fabricated auth repair'
+    )
+
+
+RELATION246_CASES = [
+    'owner-fit', 'varied-batch', 'zero-new-aliases', 'staged-draft',
+    'stop', 'manual-takeover', 'resolved', 'cleanup-successor',
+]
+
+
+def relation246_script(case):
+    purpose = 'Original complete same-site relation request ' + case
+    arguments = {
+        'purpose': purpose,
+        'aliases': [
+            {'id': 'rel246_la', 'path': 'structure.atom_sites[La].adp_iso'},
+            {'id': 'rel246_ba', 'path': 'structure.atom_sites[Ba].adp_iso'},
+        ],
+        'constraints': [
+            {'id': 'rel246_shared', 'expression': 'rel246_ba = rel246_la', 'enabled': True},
+        ],
+    }
+    if case == 'varied-batch':
+        arguments['aliases'].append({
+            'id': 'rel246_co', 'path': 'structure.atom_sites[Co].adp_iso',
+        })
+        arguments['constraints'].append({
+            'id': 'rel246_disabled', 'expression': 'rel246_co = 0.8', 'enabled': False,
+        })
+    if case == 'zero-new-aliases':
+        arguments['aliases'] = []
+    original = {'tool': 'add_relations', 'call_id': 'relation246-' + case,
+                'arguments': arguments}
+    calls = [original]
+    if case == 'owner-fit':
+        calls += [
+            {'tool': 'set_free', 'call_id': 'relation246-free', 'arguments': {
+                'purpose': purpose, 'flags': [
+                    {'path': 'structure.atom_sites[La].adp_iso', 'free': True},
+                ]}},
+            {'tool': 'run_fit', 'call_id': 'relation246-fit', 'arguments': {'purpose': purpose}},
+            {'tool': 'diagnostics', 'call_id': 'relation246-diagnostics',
+             'arguments': {'purpose': purpose}},
+        ]
+    return calls
+
+
+@pytest.mark.parametrize('case', RELATION246_CASES)
+def test_relation246_original_native_gui_science_and_retirement(case, tmp_path):  # noqa: PLR0912, PLR0914, PLR0915 -- finite original Main/RPC/worker receipts
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'REL RPC SETUP: genuinely matching Main consumer required'
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text(encoding='utf-8'))
+    config.pop('report_page_reply')
+    calls = relation246_script(case)
+    config.update(scenario='native:script', native_turn_calls=[calls])
+    if case == 'owner-fit':
+        config['relation246_wait_for_usage'] = [calls[0]['call_id'], 'relation246-free']
+    if case == 'resolved':
+        config['relation246_resolve_on_usage'] = calls[0]['call_id']
+        config['native_hold_after_calls'] = True
+    if case == 'cleanup-successor':
+        successor = {**calls[0], 'call_id': 'relation246-successor'}
+        config.update(native_turn_calls=[calls, [successor]], native_after_steer=[successor],
+                      native_steer_count=1, native_hold_after_calls=True)
+    config_path.write_text(json.dumps(config), encoding='utf-8')
+    original_config = config_path.read_bytes()
+    fixture = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_relation246_original_rpc_full_gui:' + case, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            received = getattr(error, stream) or b''
+            raw = received if isinstance(received, bytes) else received.encode()
+            destination = tmp_path / ('relation246-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'relation246.stdout.log').write_text(result.stdout, encoding='utf-8')
+    (tmp_path / 'relation246.stderr.log').write_text(result.stderr, encoding='utf-8')
+    (tmp_path / 'relation246-process.json').write_text(json.dumps({
+        'argv': argv, 'returncode': result.returncode}, indent=2), encoding='utf-8')
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_relation246_original_rpc_full_gui('
+        + case + ')' in output
+    ), 'REL RPC: original actual GUI/science/interruption premises and outcomes execute\n' + output
+    # Independent literal four-column measured-data loop of this committed fixture,
+    # not a second invocation of Edi's reader or a producer-generated golden.
+    measurement = original_files['experiments/hrpt.edi'].decode().split(
+        '_data.intensity_meas_su\n', 1)[1]
+    expected_observations = [[float(parts[0]), float(parts[2]), float(parts[3])]
+                             for line in measurement.splitlines() if (parts := line.split())]
+    observed_lines = [line.split('qml: RELATION246_INPUT ', 1)[1]
+                      for line in result.stdout.splitlines() if 'qml: RELATION246_INPUT ' in line]
+    assert len(observed_lines) == 1, 'REL INPUT SETUP: one actual independent input readback'
+    assert json.loads(observed_lines[0])['observations'] == expected_observations, (
+        'REL INPUT: every original measurement coordinate/intensity/literal sigma is preserved'
+    )
+    assert config_path.read_bytes() == original_config, (
+        'REL RPC: prelaunch original script remains immutable after one-time process load'
+    )
+    loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text(encoding='utf-8'))
+    assert loaded['native_turn_calls'] == config['native_turn_calls'], (
+        'REL RPC: ordinary peer actually consumed the original prelaunch script'
+    )
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'REL RPC: original independent science/input/recipe bytes are never rewritten'
+    )
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()]
+    inputs = [request for request in requests
+              if request.get('method') in {'turn/start', 'turn/steer'}]
+    assert len(inputs) == (2 if case == 'cleanup-successor' else 1), (
+        'REL RPC: exactly the genuine original objective and explicit successor, no invented work'
+    )
+    assert all(request['params'].get('clientUserMessageId') for request in inputs), (
+        'REL RPC: each actual admitted original input retains its identity'
+    )
+    assert not any(request.get('method') in {'account/login/start', 'account/logout'}
+                   for request in requests), 'REL RPC: actual work never fabricates account repair'
+    reply_path = trace.with_suffix('.native-replies.jsonl')
+    replies = ([json.loads(line) for line in reply_path.read_text(encoding='utf-8').splitlines()]
+               if reply_path.exists() else [])
+    expected = [] if case == 'resolved' else calls
+    if case == 'cleanup-successor':
+        expected = [calls[0], successor]
+    assert len(replies) == len(expected), 'REL RPC: every original live request settles once'
+    assert len({row['response']['id'] for row in replies}) == len(replies), (
+        'REL RPC: original envelopes cannot be answered twice across stage/cleanup/steer'
+    )
+    for receipt, call in zip(replies, expected, strict=True):
+        original, response = receipt['original'], receipt['response']
+        assert original['params']['tool'] == call['tool'], (
+            'REL RPC: original canonical tool survives'
+        )
+        assert original['params']['callId'] == call['call_id'], (
+            'REL RPC: original call identity survives staging and retirement'
+        )
+        assert original['params']['arguments'] == call['arguments'], (
+            'REL RPC: full original purpose/arguments remain canonical'
+        )
+        assert response['id'] == original['id'] != call['call_id'], (
+            'REL RPC: actual reverse envelope owns the response, never a model call ID substitute'
+        )
+        returned = response['result']
+        assert len(returned['contentItems']) == 1, 'REL RPC: one original typed native result'
+        assert returned['contentItems'][0]['type'] == 'inputText', (
+            'REL RPC: original public result uses the real typed inputText envelope'
+        )
+        decoded = json.loads(returned['contentItems'][0]['text'])
+        cancelled = case in {'stop', 'manual-takeover', 'staged-draft'} or (
+            case == 'cleanup-successor' and call['call_id'] == calls[0]['call_id'])
+        if cancelled:
+            assert returned['success'] is False and decoded.get('status') != 'edited' and (
+                isinstance(decoded.get('message'), str) and decoded['message']
+            ), 'REL RPC: refused/retired original work cannot claim a committed edit'
+        else:
+            assert returned['success'] is True, (
+                'REL RPC: genuine complete publication must not be applied_unconfirmed/refused'
+            )
+            if call['tool'] == 'run_fit':
+                assert decoded['status'] in {'done', 'max_iterations', 'no_step'}, (
+                    'REL RPC: actual fit outcome is not an unavailable/error substitute'
+                )
+            elif call['tool'] == 'diagnostics':
+                assert 'diagnostics' in decoded, 'REL RPC: actual original diagnostics is returned'
+            else:
+                assert decoded['status'] == 'edited', 'REL RPC: scientific edit is fully confirmed'
+    wrong = trace.with_suffix('.native-wrong-envelope.jsonl')
+    assert not wrong.exists() or not wrong.read_text(encoding='utf-8').strip(), (
+        'REL RPC: no original reply may arrive after server resolution or under the wrong envelope'
+    )
+    if case == 'resolved':
+        events = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text(
+            encoding='utf-8').splitlines()]
+        resolved = [event for event in events if event['kind'] == 'relation246-original-resolved']
+        assert len(resolved) == 1 and resolved[0]['call_id'] == calls[0]['call_id'], (
+            'REL RESOLVE SETUP: genuine pending original resolution is actually emitted'
+        )
+        assert resolved[0]['arguments'] == calls[0]['arguments'], (
+            'REL RESOLVE: actual original canonical arguments/identity survive public cancellation'
+        )
+
+    if case == 'owner-fit':
+        events = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text(
+            encoding='utf-8').splitlines()]
+        waits = [event for event in events if event['kind'] == 'relation246-waiting-after-edit']
+        releases = [event for event in events
+                    if event['kind'] == 'relation246-release-after-observed-settlement']
+        expected_barriers = [calls[0]['call_id'], 'relation246-free']
+        assert [row['call_id'] for row in waits] == expected_barriers, (
+            'REL OWNER SETUP: both exact original edits replied before public readiness release'
+        )
+        assert [row['call_id'] for row in releases] == expected_barriers, (
+            'REL OWNER SETUP: actual optional reads release both original calls once'
+        )
+        optional = {row['id'] for row in requests
+                    if row.get('method') == 'account/rateLimits/read'}
+        assert all(row['read_id'] in optional for row in releases), (
+            'REL OWNER SETUP: actual public requests supply release events, never invented state'
+        )
+        observed_ready = [json.loads(line.split('qml: RELATION246_SETTLED ', 1)[1])
+                          for line in result.stdout.splitlines()
+                          if 'qml: RELATION246_SETTLED ' in line]
+        assert [row['callId'] for row in observed_ready] == expected_barriers and all(
+            not row['calculating'] and row['computedCurrent'] and row['currentOwner']
+            and row['canCancel'] and row['showingActions']
+            for row in observed_ready
+        ), 'REL OWNER SETUP: both actual original scientific settlement snapshots are retained'
+        assert all(release['observed_at_ms'] >= ready['observedAtMs']
+                   for release, ready in zip(releases, observed_ready, strict=True)), (
+            'REL OWNER SETUP: earlier automatic reads cannot impersonate readiness release'
+        )

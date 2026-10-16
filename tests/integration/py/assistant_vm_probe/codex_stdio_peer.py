@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 from threading import Timer
 
@@ -1003,7 +1004,14 @@ def native_reply(request):
         )
     else:
         notify('item/completed', {**original['binding'], 'item': item})
-        if not config.get('native_parallel'):
+        if (result and result.get('success') and original['params']['callId']
+                in config.get('relation246_wait_for_usage', [])):
+            assert not native_pending, 'REL OWNER SETUP: only original completed edit waits'
+            config['_relation246_waiting_next'] = original['params']['callId']
+            clear_observation('relation246-waiting-after-edit', {
+                'call_id': original['params']['callId'], 'request_id': request['id'],
+            })
+        elif not config.get('native_parallel'):
             native_emit_next()
         elif not native_pending:
             complete()
@@ -1051,7 +1059,43 @@ def usage_snapshot(percent=17, *, empty=False):
     }
 
 
+def relation246_resolve_at_original_read():
+    # Optional response is an existing public wire door, not a new app hook.
+    # Only the real original pending native RPC may be resolved; no timer or
+    # fabricated helper/worker state supplies the staging premise.
+    call_id = config.get('relation246_resolve_on_usage')
+    if not call_id:
+        return
+    matches = [(rpc, original) for rpc, original in native_pending.items()
+               if original['params']['callId'] == call_id]
+    if not matches:
+        return  # The actor/wrapper must report the original interval unreached.
+    assert len(matches) == 1, 'REL RESOLVE SETUP: original pending RPC identity is unique'
+    rpc, original = matches[0]
+    native_pending.pop(rpc)
+    clear_observation('relation246-original-resolved', {
+        'request_id': rpc, 'call_id': call_id,
+        'thread_id': original['params']['threadId'],
+        'arguments': original['params']['arguments'],
+    })
+    notify('serverRequest/resolved', {
+        'threadId': original['params']['threadId'], 'requestId': rpc,
+    })
+
+
 def usage_read(request):
+    relation246_resolve_at_original_read()
+    waiting = config.pop('_relation246_waiting_next', None)
+    if waiting is not None:
+        assert waiting in config['relation246_wait_for_usage'], (
+            'REL OWNER SETUP: only exact original edit IDs admit this public-event release'
+        )
+        assert not native_pending, 'REL OWNER SETUP: previous original edit really replied'
+        clear_observation('relation246-release-after-observed-settlement', {
+            'call_id': waiting, 'read_id': request['id'],
+            'observed_at_ms': time.time_ns() // 1000000,
+        })
+        native_emit_next()
     usage_requests.append(request)
     number = len(usage_requests)
     mode = config.get('usage_mode', 'normal')
