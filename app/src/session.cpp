@@ -11,6 +11,10 @@
 #include "assistant_result.hpp"
 #include "../../core/src/assistant_project_io.hpp"
 #include "edi/calculation.hpp"
+#include "edi/parameter_walk.hpp"
+#include "../../core/src/canonical_encoding.hpp"
+#include <bit>
+#include <tuple>
 #include <algorithm>
 #include <utility>
 #include <filesystem>
@@ -23,6 +27,42 @@ namespace edi_app {
 namespace {
 
 const QString kExamples = QStringLiteral(":/edi/examples");
+
+// Initial host construction moves ItemVec ownership, renewing collection
+// generations without changing its scientific definition. Check that definition
+// at this one preparation boundary; all later writes use strict final-owner stamps.
+struct ResultDefinition {
+    std::string model;
+    using Parameter = std::tuple<std::string, std::string, std::uint64_t,
+        std::optional<std::uint64_t>, bool, std::optional<std::uint64_t>,
+        std::optional<std::uint64_t>, edi::Dependence, const edi::ParameterSpec*,
+        std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
+    std::vector<Parameter> parameters;
+    std::vector<std::tuple<std::string, std::string, std::uint64_t>> aliases;
+    std::vector<std::tuple<std::string, std::string, std::uint64_t, bool, std::uint64_t>> constraints;
+    bool operator==(const ResultDefinition&) const = default;
+};
+ResultDefinition result_definition(edi::Project& project) {
+    ResultDefinition result;
+    result.model = edi::detail::canonical_encoding(project);
+    const auto bits = [](double v) { return std::bit_cast<std::uint64_t>(v); };
+    const auto optional_bits = [&bits](std::optional<double> v) -> std::optional<std::uint64_t> {
+        return v ? std::optional{bits(*v)} : std::nullopt;
+    };
+    for (const auto& entry : edi::parameter_entries(project)) {
+        const auto& p = *entry.parameter;
+        result.parameters.emplace_back(entry.block_name, entry.path, bits(p.value.get()),
+            optional_bits(p.uncertainty.get()), p.free.get(), optional_bits(p.start_value.get()),
+            optional_bits(p.start_uncertainty.get()), p.dependence, p.spec,
+            p.value.written(), p.uncertainty.written(), p.free.written(),
+            p.start_value.written(), p.start_uncertainty.written());
+    }
+    for (const auto& a : project.aliases)
+        result.aliases.emplace_back(a->id.value(), a->parameter_unique_name.value(), a->parameter_unique_name.written());
+    for (const auto& c : project.constraints)
+        result.constraints.emplace_back(c->id.value(), c->expression.value(), c->expression.written(), c->enabled.get(), c->enabled.written());
+    return result;
+}
 
 }  // namespace
 
@@ -493,9 +533,17 @@ bool Session::adoptAssistantResult(std::shared_ptr<ImmutableAssistantResult> res
     // Load only the captured host lease; no runtime writer can change this tree.
     auto project = load_captured_assistant_result(*result);
     project.path.clear(); project.metadata.path.clear(); // The displayed unsaved model never writes into the sealed lease.
-    const auto saved = edi::work_stamps(project);
+    const auto source_stamps = edi::work_stamps(project);
+    const auto definition = result_definition(project);
     auto model = std::make_unique<ProjectViewModel>(std::move(project), this);
-    if (!edi::unchanged_since(*model->assistantProject(), saved))
+    const auto& owned = *model->assistantProject();
+    const auto saved = edi::work_stamps(owned);
+    if (definition != result_definition(*model->assistantProject()) ||
+        source_stamps.experiment_inputs != saved.experiment_inputs ||
+        source_stamps.structure_inputs != saved.structure_inputs ||
+        source_stamps.experiments != saved.experiments || source_stamps.structures != saved.structures ||
+        source_stamps.aliases != saved.aliases || source_stamps.constraints != saved.constraints ||
+        source_stamps.edits != saved.edits || source_stamps.edits_at != saved.edits_at)
         throw std::runtime_error("Saved result changed during host model preparation");
     if (!emptyAssistantOwner(epoch) || !current()) return false;
     model->setModified(true);
