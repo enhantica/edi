@@ -3529,7 +3529,16 @@ void AssistantViewModel::signIn() {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) context = state_->outgoing_context();
 #endif
-    if (context.contains("error")) { state_->error = tr("Project context exceeds the assistant limit; nothing was sent."); state_->notify(); return; }
+    if (context.contains("error")) {
+        const auto failure = context.value("error");
+        const auto code = failure.toObject().value("code").toString();
+        if (code == "edi.assistant.resource_exhausted" || failure == QJsonValue("Project context and native actions exceed context capacity"))
+            state_->error = tr("Project context exceeds the assistant limit; nothing was sent.");
+        else if (code == "edi.assistant.invalid_argument")
+            state_->error = tr("Project context contains invalid or unsupported metadata; nothing was sent.");
+        else state_->error = tr("Project context is unavailable; nothing was sent.");
+        state_->notify(); return;
+    }
     state_->consented_context = QJsonDocument(context).toJson(QJsonDocument::Compact);
     if (connected()) {
 #ifndef __EMSCRIPTEN__

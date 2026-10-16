@@ -10,6 +10,15 @@ AppDialog {
     id: dialog
     required property AssistantViewModel assistant
     signal contextApproved()
+    property bool connectionAttempt: false
+    function showConnectionFailureIfFinished() {
+        if (!connectionAttempt || assistant.state === "connecting") return;
+        connectionAttempt = false;
+        if (!assistant.connected && assistant.lastError.length > 0) {
+            connectionFailure.message = assistant.lastError;
+            connectionFailure.open();
+        }
+    }
     readonly property var disclosedContext: {
         try {
             return JSON.parse(assistant.contextPreview);
@@ -46,11 +55,47 @@ AppDialog {
             if (dialog.visible)
                 dialog.updateAcceptButton();
         }
+        function onStateChanged() { dialog.showConnectionFailureIfFinished(); }
+        function onLastErrorChanged() { dialog.showConnectionFailureIfFinished(); }
+        function onConversationRetired() {
+            dialog.connectionAttempt = false;
+            connectionFailure.close();
+        }
     }
     onAccepted: {
+        connectionFailure.close();
+        connectionAttempt = !assistant.connected;
         assistant.signIn();
+        showConnectionFailureIfFinished();
         if (assistant.connected && !assistant.contextConsentRequired)
             contextApproved();
+    }
+    AppDialog {
+        id: connectionFailure
+        objectName: "assistant.connectionFailure"
+        property string message: ""
+        title: qsTr("ChatGPT connection was not completed")
+        width: dialog.width
+        height: Math.min(implicitHeight, dialog.viewportHeight)
+        contentWidth: Math.max(0, width - leftPadding - rightPadding)
+        contentHeight: Math.min(failureText.implicitHeight, Math.max(0, dialog.viewportHeight - topPadding - bottomPadding
+            - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
+            - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+        standardButtons: Dialog.Ok
+        ScrollView {
+            id: failureScroll
+            width: connectionFailure.contentWidth
+            height: connectionFailure.contentHeight
+            clip: true
+            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+            EaElements.Label {
+                id: failureText
+                width: failureScroll.availableWidth
+                text: connectionFailure.message
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+        }
     }
     ScrollView {
         ScrollBar.vertical: EaElements.ScrollBar {
@@ -78,8 +123,14 @@ AppDialog {
                 wrapMode: Text.Wrap
                 textFormat: Text.PlainText
                 text: {
-                    if (dialog.disclosedContext.error)
-                        return qsTr("Project context is unavailable or exceeds its limit. Nothing will be sent.");
+                    if (dialog.disclosedContext.error) {
+                        const code = dialog.disclosedContext.error.code;
+                        if (code === "edi.assistant.resource_exhausted")
+                            return qsTr("Project context exceeds its limit. Nothing will be sent.");
+                        if (code === "edi.assistant.invalid_argument")
+                            return qsTr("Project context contains invalid or unsupported metadata. Nothing will be sent.");
+                        return qsTr("Project context is unavailable. Nothing will be sent.");
+                    }
                     const project = dialog.disclosedContext.project;
                     if (!project)
                         return qsTr("No project is open. No project parameters will be sent.");

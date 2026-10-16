@@ -14,8 +14,7 @@
         "list_parameters",
         "diagnostics",
         "set_parameters",
-        "set_free",
-        "create_cwl_project"
+        "set_free"
       ],
       "references": [
         {
