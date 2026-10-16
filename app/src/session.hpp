@@ -169,13 +169,16 @@ class Session : public QObject {
     bool openCopy(const QString& source, const QString& target, const QString& example);
     bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
                         bool managedResult = false, std::shared_ptr<ImmutableAssistantResult> result = {},
-                        std::optional<edi::WorkStamps> resultStamps = {});
+                        std::optional<edi::WorkStamps> resultStamps = {}, bool nativePrepared = false, bool* nativeCommitted = nullptr);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool emptyAssistantOwner(quint64 epoch) const noexcept;
     void retireAssistantIntent() noexcept;
     void retireExportIntent() noexcept;
     bool adoptAssistantResult(std::shared_ptr<ImmutableAssistantResult> result, quint64 epoch, const std::function<bool()>& current);
+    std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project project, quint64 epoch, const std::function<bool()>& current);
+    bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model, quint64 epoch,
+                                    const std::function<bool()>& current, bool& presentationComplete);
     struct SaveIntent;
     bool saveIntentCurrent(const SaveIntent& intent) const;
     std::unique_ptr<SaveIntent> save_intent_;

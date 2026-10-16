@@ -460,7 +460,7 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
 
 bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
                              bool managedResult, std::shared_ptr<ImmutableAssistantResult> result,
-                             std::optional<edi::WorkStamps> resultStamps) {
+                             std::optional<edi::WorkStamps> resultStamps, bool nativePrepared, bool* nativeCommitted) {
     // Same-pointer/null nested replacements still supersede this stack. Capture
     // the candidate while live, before any assistant or Qt callback can retire it.
     const QPointer<ProjectViewModel> target(project);
@@ -500,8 +500,11 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         if (previous_idle) previous->deleteLater();
     }
     const QString previous_example = opened_example_;
-    project_ = target;
-    if (!managedResult && !assistant_->attachProject(target, false)) return false;
+    if (nativePrepared && !assistant_->commitNativeProject(target))
+        throw std::runtime_error("Native creation owner changed before publication");
+    project_ = target; // Adjacent to the nonallocating native Controller/receipt swap.
+    if (nativeCommitted) *nativeCommitted = true; // Actual Session commit BEFORE any observer.
+    if (!managedResult && !nativePrepared && !assistant_->attachProject(target, false)) return false;
     // Attachment itself may close/open another owner, eagerly deleting target.
     // Stop BEFORE assigning this obsolete owner's example/warning metadata.
     if (!current() || project_ != target) return false;
@@ -583,6 +586,50 @@ bool Session::adoptAssistantResult(std::shared_ptr<ImmutableAssistantResult> res
         return installed;
     } catch (...) { release_unattached(); throw; }
 }
+std::unique_ptr<ProjectViewModel> Session::prepareAssistantNativeModel(edi::Project project, quint64 epoch,
+                                                               const std::function<bool()>& current) {
+    if (!emptyAssistantOwner(epoch) || !current()) return {};
+    project.path.clear(); project.metadata.path.clear();
+    // Same semantic-definition boundary as captured result adoption: moving
+    // ItemVec generations is initialization, changing science is not.
+    const auto definition = result_definition(project);
+    const auto source = edi::work_stamps(project);
+    auto model = std::make_unique<ProjectViewModel>(std::move(project), this);
+    const auto final = edi::work_stamps(*model->assistantProject());
+    if (definition != result_definition(*model->assistantProject()) ||
+        source.experiment_inputs != final.experiment_inputs || source.structure_inputs != final.structure_inputs ||
+        source.experiments != final.experiments || source.structures != final.structures ||
+        source.aliases != final.aliases || source.constraints != final.constraints || source.edits != final.edits || source.edits_at != final.edits_at)
+        throw std::runtime_error("Native creation changed during host model preparation");
+    if (!emptyAssistantOwner(epoch) || !current()) return {};
+    model->setModified(true);
+    return model;
+}
+bool Session::commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model, quint64 epoch,
+                                        const std::function<bool()>& current, bool& presentationComplete) {
+    presentationComplete = false;
+    if (!model || !emptyAssistantOwner(epoch) || !current()) return false;
+    const QPointer<ProjectViewModel> adopted(model.get());
+    if (replacement_generation_ == UINT64_MAX) throw std::length_error("Session replacement identity is exhausted");
+    const auto replacement = replacement_generation_ + 1;
+    bool committed = false;
+    try {
+        const bool published = replaceProject(adopted, {}, {}, false, {}, {}, true, &committed);
+        if (!committed) return false; // Still a genuinely local, unexposed candidate.
+        model.release(); // May already have been retired/deleted by a later observer.
+        presentationComplete = published && adopted && project_ == adopted && replacement_generation_ == replacement;
+        return true; // Real adoption, independently of later presentation/current owner.
+    } catch (...) {
+        if (committed) {
+            model.release();
+            if (replacement_generation_ == replacement && adopted && project_ == adopted)
+                try { setLastError(tr("The native project opened, but some presentation did not complete.")); } catch (...) {}
+            return true;
+        }
+        throw;
+    }
+}
+
 QString Session::beginSaveAs() {
     save_intent_.reset();
     if (!project_ || assistant_epoch_exhausted_ || project_->fit()->running() || !assistant_->resultSettledReady()) {

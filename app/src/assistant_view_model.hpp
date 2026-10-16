@@ -112,6 +112,7 @@ class AssistantViewModel : public QObject {
     enum class AttachmentClear { NotRequested, Discarded, Failed };
     AttachmentClear drainAttachmentClear() noexcept;
     bool clearHistoryNow(bool* committed = nullptr);
+    bool commitNativeProject(ProjectViewModel* project) noexcept;
     bool resultSettledReady() const;
     struct State;
     std::unique_ptr<State> state_;

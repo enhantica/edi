@@ -60,3 +60,6 @@ The real Python relation entrances are project.analysis.aliases.create(id=..., p
 
 
 Native production guidance names only the actual C++ tools, treats Python/CLI helpers as development/test references, and never requires a Python install/module/source checkout. The automatic bundled skill catalog and digest validation remain; descriptions distinguish live fit outcomes from unavailable isolated trials/checkpoints/import/constraints. Existing restricted compatibility instructions apply only when those actual tools are offered. No extra scientific-plan confirmation is imposed on a genuinely delegated native objective.
+
+
+The project-assistance 1.4 guidance names the implemented `create_cwl_project` recipe/selected-ID boundary and distinguishes native creation/adoption, reader diagnostics, asynchronous calculation, unsaved state and fitting. Delegated routine starting choices remain authorized, explicitly identified as assumptions rather than measured facts; unsupported packed formats, save/report, constraints and checkpoint operations cannot be replaced with production Python. Skill/index hashes are updated together; normal automatic discovery remains.

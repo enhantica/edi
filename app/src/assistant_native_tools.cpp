@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_tools.hpp"
+#include "assistant_native_create.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
 #include "edi/assistant_limits.hpp"
 #include <QSet>
@@ -37,11 +38,13 @@ QJsonArray assistant_native_tool_specs() {
         {{"flags", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"free", Object{{"type", "boolean"}}}}, {"path", "free"})}}}}, {"flags"});
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
+    add("create_cwl_project", "Create and display a NEW native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe; never replaces an existing project. No fit or save is implied.",
+        {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
     return name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
-        name == "set_parameters" || name == "set_free" || name == "run_fit";
+        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project";
 }
 QString assistant_native_purpose(const Object& args) {
     const auto value = args.value("purpose");
@@ -55,7 +58,8 @@ QString assistant_native_purpose(const Object& args) {
 }
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
-    if (name == "set_parameters") shape(args, {"purpose", "values"});
+    if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
+    else if (name == "set_parameters") shape(args, {"purpose", "values"});
     else if (name == "set_free") shape(args, {"purpose", "flags"});
     else if (assistant_native_tool(name)) shape(args, {"purpose"});
     else throw std::invalid_argument("Native action is unavailable");
