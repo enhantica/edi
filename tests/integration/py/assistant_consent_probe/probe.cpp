@@ -11,6 +11,7 @@
 #include <QGuiApplication>
 #include <QFont>
 #include <QFontInfo>
+#include <QFontMetricsF>
 #include <QImage>
 #include <QQuickTextDocument>
 #include <QScopeGuard>
@@ -18,6 +19,9 @@
 #include <QTextFragment>
 #include <QTextList>
 #include <QTextLayout>
+#include <QTextTable>
+#include <QTextCursor>
+#include <QScreen>
 #include <QJsonValue>
 #include <QJSValue>
 #include <QQmlApplicationEngine>
@@ -36,6 +40,11 @@ namespace {
 class ProviderControlDocument final : public QTextDocument {
 protected:
     QVariant loadResource(int, const QUrl&) override { return {}; }
+};
+// Ordinary Qt Markdown reference for header semantics; never permit resource IO.
+class NoResourceReferenceDocument final : public QTextDocument {
+protected:
+    QVariant loadResource(int, const QUrl&) override { return QVariant::fromValue(QImage{}); }
 };
 void drain(int ms=30) {
     QElapsedTimer elapsed;elapsed.start();
@@ -146,6 +155,54 @@ int main(int argc,char** argv) {
     const auto snapshot=[&] {
         if(markdown_mode) {
             auto* body=markdown_body();auto* document=markdown_document();
+            if(!window->screen())throw std::runtime_error("actual Markdown display DPI unavailable");
+            const auto font_facts=[&](const QFont& supplied) {
+                const auto effective=supplied.resolve(document->defaultFont());
+                const QFontInfo info(effective); const QFontMetricsF metrics(effective);
+                return Object{{"family",info.family()},{"pixel_size",info.pixelSize()},
+                    {"point_size",info.pointSizeF()},{"height",metrics.height()},
+                    {"x_height",metrics.xHeight()},{"cap_height",metrics.capHeight()}};
+            };
+            const auto table_facts=[](QTextDocument* source) {
+                Array tables;
+                for(auto* frame:source->rootFrame()->childFrames()) {
+                    auto* table=qobject_cast<QTextTable*>(frame);if(!table)continue;
+                    const auto format=table->format(); Array cells;
+                    for(int row=0;row<table->rows();++row)for(int column=0;column<table->columns();++column) {
+                        const auto cell=table->cellAt(row,column);
+                        auto cursor=cell.firstCursorPosition();
+                        cursor.setPosition(cell.lastCursorPosition().position(),QTextCursor::KeepAnchor);
+                        const auto cell_format=cell.format().toTableCellFormat();
+                        const auto first=cell.firstCursorPosition().block().begin().fragment();
+                        cells.push_back(Object{{"row",row},{"column",column},{"text",cursor.selectedText()},
+                            {"row_span",cell.rowSpan()},{"column_span",cell.columnSpan()},
+                            {"first_bold",first.isValid() && first.charFormat().fontWeight()>=QFont::DemiBold},
+                            {"background",cell_format.background().style()==Qt::NoBrush ? QJsonValue(QJsonValue::Null)
+                                : QJsonValue(cell_format.background().color().name(QColor::HexArgb))},
+                            {"top_border",cell_format.topBorder()},{"bottom_border",cell_format.bottomBorder()},
+                            {"left_border",cell_format.leftBorder()},{"right_border",cell_format.rightBorder()}});
+                    }
+                    tables.push_back(Object{{"rows",table->rows()},{"columns",table->columns()},
+                        {"header_rows",format.headerRowCount()},{"border",format.border()},
+                        {"border_style",static_cast<int>(format.borderStyle())},
+                        {"collapsed",format.borderCollapse()},{"padding",format.cellPadding()},
+                        {"spacing",format.cellSpacing()},{"cells",cells}});
+                }
+                return tables;
+            };
+            const auto qml_value=[&](const char* expression) {
+                QQmlExpression value(qmlContext(root),root,QString::fromLatin1(expression));
+                const auto result=value.evaluate();
+                if(value.hasError())throw std::runtime_error("actual shared font/theme observation unavailable");
+                return result;
+            };
+            const auto original=root->findChild<QObject*>("markdown.row")->property("text").toString();
+            const auto tables=table_facts(document); Array reference_tables;
+            if(!tables.empty()) {
+                NoResourceReferenceDocument reference;
+                reference.setMarkdown(original,QTextDocument::MarkdownDialectGitHub|QTextDocument::MarkdownNoHTML);
+                reference_tables=table_facts(&reference);
+            }
             Array fragments,blocks,lines;
             for(auto block=document->begin();block.isValid();block=block.next()) {
                 const auto* list=block.textList();
@@ -164,6 +221,7 @@ int main(int argc,char** argv) {
                     fragments.push_back(Object{{"text",fragment.text()},
                         {"bold",format.fontWeight()>=QFont::DemiBold},
                         {"fixed_pitch",format.fontFixedPitch() || QFontInfo(format.font()).fixedPitch()},
+                        {"effective_font",font_facts(format.font())},
                         {"anchor",format.isAnchor()},{"href",format.anchorHref()},
                         {"foreground",format.foreground().color().name(QColor::HexArgb)}});
                 }
@@ -177,7 +235,16 @@ int main(int argc,char** argv) {
                 {"read_only",body->property("readOnly").toBool()},
                 {"select_by_mouse",body->property("selectByMouse").toBool()},
                 {"body",geometry(body,window)},{"fragments",fragments},{"blocks",blocks},
-                {"lines",lines},{"theme_accent",accent_value.value<QColor>().name(QColor::HexArgb)}}}};
+                {"lines",lines},{"theme_accent",accent_value.value<QColor>().name(QColor::HexArgb)},
+                {"body_font",font_facts(body->property("font").value<QFont>())},
+                {"font_resources",Object{{"body_family",qml_value("EaStyle.Fonts.fontFamily").toString()},
+                    {"mono_family",qml_value("EaStyle.Fonts.monoFontFamily").toString()},
+                    {"body_loaded",qml_value("EaStyle.Fonts.ptSansRegular.status === FontLoader.Ready").toBool()},
+                    {"mono_loaded",qml_value("EaStyle.Fonts.ptMono.status === FontLoader.Ready").toBool()},
+                    {"mono_source",qml_value("EaStyle.Fonts.ptMono.source").toString()}}},
+                {"tables",tables},{"qt_reference_tables",reference_tables},
+                {"logical_dpi_y",window->screen()->logicalDotsPerInchY()},
+                {"theme_background",qml_value("EaStyle.Colors.contentBackground").value<QColor>().name(QColor::HexArgb)}}}};
         }
 
         Object vm{{"connected",session->assistant()->connected()},{"state",session->assistant()->state()},

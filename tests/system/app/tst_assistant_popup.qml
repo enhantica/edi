@@ -219,6 +219,73 @@ TestCase {
         toggle();
         composer.clear();
     }
+    function test_navigation_keeps_visible_popup_fixed_data() {
+        return [{tag: "left", side: "Left"}, {tag: "right", side: "Right"}];
+    }
+    function test_navigation_keeps_visible_popup_fixed(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "NAV1 SETUP: original complete project enables genuine workflow navigation");
+        Preferences.sideBarSide = data.side;
+        const analysis = item("appBar.tab.analysis");
+        verify(analysis.visible && analysis.enabled, "NAV1 SETUP: actual Analysis tab is available without forcing eligibility");
+        mouseClick(analysis);
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Analysis, 2000, "NAV1: genuine appbar action reaches Analysis");
+        rendered();
+        const button = item("assistant.toggle");
+        const closedIcon = button.fontIcon;
+        toggle();
+        verify(/manual|sidebar|controls/i.test(button.Accessible.name), "NAV1: shown-state appbar action truthfully names return to manual controls");
+        verify(button.fontIcon !== closedIcon, "NAV1: shown-state real appbar icon distinguishes returning from opening Assistant");
+        const tooltip = button.ToolTip.text;
+        verify(/manual|sidebar|controls/i.test(tooltip), "NAV1: shown-state tooltip describes the actual sidebar-return action");
+        mouseMove(button, button.width / 2, button.height / 2);
+        tryVerify(() => Ui.itemsWithProperty(Ui.windowRoot(window), "text").some(control => control.visible && control.text === tooltip && Ui.exposed(control)), 2000, "NAV1: actual hovered appbar tooltip is shown, not merely attached text");
+        const editor = item("assistant.composer");
+        editor.insert(0, "Original navigation draft");
+        editor.select(2, 9);
+        const draft = editor.text;
+        const selection = [editor.selectionStart, editor.selectionEnd];
+        const project = Session.project;
+        const messages = assistant.messages;
+        const viewport = window.contentArea[AppState.Page.Project].SwipeView.view.contentItem;
+        verify(viewport !== null && typeof viewport.contentX === "number", "NAV1 SETUP: actual outer workflow viewport exposes rendered navigation progress");
+        for (const destination of [{name: "project", index: AppState.Page.Project}, {name: "analysis", index: AppState.Page.Analysis}]) {
+            const before = rect(popup.contentItem);
+            const firstX = viewport.contentX;
+            const target = item("appBar.tab." + destination.name);
+            verify(target.visible && target.enabled, "NAV1 SETUP: real destination appbar control remains eligible");
+            mouseClick(target);
+            const samples = [];
+            for (let frame = 0; frame < 12; ++frame) {
+                window.update();
+                verify(waitForRendering(window.contentItem, 500), "NAV1: global geometry samples follow actual rendered frames");
+                samples.push({x: viewport.contentX, moving: viewport.moving, rectangle: rect(popup.contentItem)});
+            }
+            tryCompare(window.appBarCentralTabs, "currentIndex", destination.index, 2000, "NAV1: real navigation reaches the requested destination");
+            rendered();
+            const lastX = viewport.contentX;
+            const positions = [];
+            for (const sample of samples)
+                if (sample.x > Math.min(firstX, lastX) + 0.5 && sample.x < Math.max(firstX, lastX) - 0.5 && !positions.some(value => Math.abs(value - sample.x) < 0.5))
+                    positions.push(sample.x);
+            console.info("NAVIGATION_GEOMETRY", data.side, destination.name, JSON.stringify({before: before, firstX: firstX, lastX: lastX, samples: samples}));
+            verify(positions.length >= 2, "NAV1 SETUP: genuine workflow animation visits distinct intermediate rendered positions, not immediate endpoints");
+            for (const sample of samples)
+                sameRect(sample.rectangle, before);
+            sameRect(rect(popup.contentItem), before);
+            sameRect(rect(popup.contentItem), rect(item("workflow." + destination.name + ".sidebarHost")));
+            compare(Session.project, project, "NAV1: navigation preserves the real project owner");
+            compare(assistant.messages, messages, "NAV1: navigation preserves the actual retained conversation model");
+            compare(editor.text, draft, "NAV1: navigation preserves the actual unsent draft");
+            compare(editor.selectionStart, selection[0], "NAV1: navigation preserves draft selection start");
+            compare(editor.selectionEnd, selection[1], "NAV1: navigation preserves draft selection end");
+        }
+        button.forceActiveFocus();
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", false, 2000, "NAV1: normal keyboard activation of the real return button reveals manual controls");
+        rendered();
+        verify(/assistant/i.test(button.Accessible.name), "NAV1: closed-state action truthfully offers Assistant again");
+        editor.clear();
+    }
     // POP1: actual traversal must escape Qt's Popup tab fence to the sole hide button.
     function test_keyboard_can_return_to_appbar_data() {
         return [
