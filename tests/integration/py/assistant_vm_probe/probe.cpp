@@ -623,7 +623,10 @@ int main(int argc,char** argv) {
                 const auto action=input["action"].toString(),signal=input["signal"].toString();
                 const auto destination=input["destination"].toString();
                 const auto replacement=input["replacement"].toString();
-                auto callback=[&,owner=QPointer<edi_app::ProjectViewModel>(owner),action,signal,destination,replacement] {
+                const auto import_intent=input["import_intent"].toString();
+                if(action=="import272-cancel" && import_intent.isEmpty())
+                    throw std::invalid_argument("actual original import intent required");
+                auto callback=[&,owner=QPointer<edi_app::ProjectViewModel>(owner),action,signal,destination,replacement,import_intent] {
                     if(!publication_armed)return;publication_armed=false;
                     publication_observer={{"entered",true},{"action",action},{"signal",signal},
                         {"same_owner_at_entry",owner && session->project()==owner},
@@ -638,6 +641,20 @@ int main(int argc,char** argv) {
                     else if(action=="restore-patterns")owner->restorePatterns();
                     else if(action=="scan-prepare")refusal=owner->prepareScan(true);
                     else if(action=="scan-reset")refusal=owner->resetScan();
+                    else if(action=="import272-cancel") {
+                        auto* vm=session->assistant();
+                        const auto current=QJsonValue::fromVariant(vm->property("nativeImport")).toObject();
+                        Object observed{{"intent",import_intent},{"before",current},
+                            {"can_cancel_at_entry",vm->canCancel()},
+                            {"structures_at_entry",static_cast<int>(owner->project().structures.size())},
+                            {"experiments_at_entry",static_cast<int>(owner->project().experiments.size())}};
+                        // Existing real synchronous publication receiver calls the SAME
+                        // public exact-ID door as original form Close/hide/destruction.
+                        vm->cancelNativeImport(import_intent);
+                        observed["after"]=QJsonValue::fromVariant(vm->property("nativeImport"));
+                        observed["returned"]=true;
+                        publication_observer["import272"]=observed;
+                    }
                     else if(action=="close")session->closeProject();
                     else if(action=="replace")publication_observer["replacement_opened"]=session->openProject(QUrl::fromLocalFile(replacement));
                     else throw std::invalid_argument("undeclared finite publication action");

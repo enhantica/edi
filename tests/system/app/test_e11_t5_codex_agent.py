@@ -7157,3 +7157,162 @@ def test_import265_public_manual_recipe_admission_and_same_owner(generic, tmp_pa
     assert not actor.last['vm']['connected'] and not actor.peer_pid_file.exists() and not trace.exists(), (
         'IMPORT265: ordinary offline form API cannot silently bootstrap a provider/account'
     )
+
+
+@pytest.mark.parametrize('saved', [False, True], ids=['unsaved', 'saved'])
+def test_import272_exact_close_after_real_committed_owner_retirement_cannot_be_overwritten(
+    generic, tmp_path, saved
+):
+    """Synchronous real projectEdited -> original public cancel, not a fake worker window."""
+    def original_empty(scenario):
+        actor, trace = generic(scenario)
+        assert actor.command('named_empty_create', name='Original Close-boundary owner',
+                             title='Original retained title', authors='Original author',
+                             description='Original owner metadata, not recipe defaults',
+                             su_rule='iucr_99', report_libraries=True,
+                             location=str(tmp_path / 'original-saved-empty') if saved else '')[
+            'reply'
+        ]['created'], 'MI-CLOSE SETUP: actual public Session creates the original empty owner'
+        return actor, trace
+    actor, trace, arguments, owned = native145_selected(original_empty, tmp_path)
+    before = actor.last['vm']
+    original = before['project']['empty_completion_observer']
+    original_bytes = [path.read_bytes() for path in owned]
+    saved_files = save211_files(Path(original['path'])) if saved else None
+    intent = actor.command('import265_begin')['reply']['intent']
+    assert intent and actor.last['vm']['native_import_observer']['state'] == 'draft', (
+        'MI-CLOSE SETUP: one actual original public manual intent owns the complete recipe'
+    )
+    armed = actor.command('publication_arm', action='import272-cancel', signal='projectEdited',
+                          import_intent=intent)
+    assert armed['reply']['armed'], (
+        'MI-CLOSE SETUP: existing one-shot real projectEdited receiver is armed before Apply'
+    )
+    applied = actor.command('import265_apply', intent=intent,
+                            cif_id=arguments['cif_file_id'], data_id=arguments['data_file_id'],
+                            recipe_json=json.dumps(arguments['recipe'], separators=(',', ':')))
+    assert applied['reply']['admitted'], (
+        'MI-CLOSE SETUP: actual original manual Apply genuinely submits native creation'
+    )
+    state = settle(actor, lambda value: (
+        value.get('publication_observer', {}).get('import272', {}).get('returned')
+        and not value['can_cancel'] and not value['project']['science_observer']['calculating']
+        and all(row['current'] for row in value['project']['science_observer']['calculations'])
+    ))
+    publication = state['publication_observer']
+    observed = publication['import272']
+    assert publication['entered'] and publication['signal'] == 'projectEdited' and (
+        publication['same_owner_at_entry'] and publication['current_owner_is_original']
+        and publication['returned']
+    ), 'MI-CLOSE SETUP: genuine original owner publication actually invokes/returns the receiver'
+    assert observed['intent'] == intent and observed['before']['id'] == intent and (
+        observed['before']['state'] == 'retired' and observed['before']['retryable'] is False
+        and observed['can_cancel_at_entry'] and observed['structures_at_entry'] == 1
+        and observed['experiments_at_entry'] == 1
+    ), (
+        'MI-CLOSE SETUP: actual scientific commit and own retired projection precede the exact '
+        'public Close cancellation while original final delivery still owns cancellable work'
+    )
+    assert observed['after']['id'] == intent and observed['after']['state'] == 'retired' and (
+        observed['after']['retryable'] is False
+    ), 'MI-CLOSE: exact original public cancellation remains a truthful withdrawn presentation'
+    projection = state['native_import_observer']
+    assert projection == observed['after'] and projection['state'] == 'retired', (
+        'MI-CLOSE: old final delivery cannot overwrite explicit withdrawal with created/partial status'
+    )
+    assert state['project']['empty_completion_observer'] == {
+        **original, 'structures': 1, 'experiments': 1,
+    }, 'MI-CLOSE: explicit postcommit Close preserves actual same-owner/core metadata/settings/path'
+    assert [(row['path'], row['value'], row['free'], row['uncertainty'])
+            for row in state['project']['parameters']] == [
+        (row['path'], row['value'], row['free'], row['uncertainty'])
+        for row in publication['before']['parameters']
+    ], 'MI-CLOSE: explicit withdrawal/final delivery cannot alter any alreadycommitted value/free/SU'
+    inputs = native_inputs(state)
+    expected = [list(map(float, row.split())) for row in owned[1].read_text().splitlines()
+                if row.strip() and not row.lstrip().startswith('#')]
+    assert len(inputs) == 1 and inputs[0]['weight'] == 1.0, (
+        'MI-CLOSE: genuine alreadycommitted measurement remains one unit-weight dataset'
+    )
+    for key, column in [('axis', 0), ('intensity', 1), ('sigma', 2)]:
+        assert inputs[0][key] == [row[column] for row in expected], (
+            'MI-CLOSE: explicit presentation withdrawal preserves every original measured input/sigma'
+        )
+    assert inputs[0]['exclusions'] == [[row['first'], row['second']]
+                                     for row in arguments['recipe']['exclusions']], (
+        'MI-CLOSE: alreadycommitted original masks survive genuine public cancellation'
+    )
+    structure = state['project']['science_observer']['structures'][0]
+    assert inputs[0]['phases'] == [structure['id']], (
+        'MI-CLOSE: actual committed measured pattern retains its original single-phase link'
+    )
+    sites = {row['id']: row for row in structure['sites']}
+    expected_sites = {'Pb': ('Pb', [0.1882, 0.25, 0.167]), 'S': ('S', [0.063, 0.25, 0.686]),
+                      'O1': ('O', [-0.095, 0.25, 0.6]), 'O2': ('O', [0.181, 0.25, 0.543]),
+                      'O3': ('O', [0.085, 0.026, 0.806])}
+    assert structure['space_group'] == 'P n m a' and set(sites) == set(expected_sites), (
+        'MI-CLOSE: committed original crystal symmetry/allfive independent site identities survive'
+    )
+    for name, (symbol, position) in expected_sites.items():
+        site = sites[name]
+        assert site['type_symbol'] == symbol and any(
+            tuple(value % 1.0 for value in site['fractional']) == pytest.approx(orbit, abs=1e-12)
+            for orbit in native145_original_orbits(*position)
+        ) and (
+            site['occupancy'] == 1.0 and site['adp_type'] == 'Uiso' and site['adp_iso'] == 0.01
+        ), 'MI-CLOSE: original literal species/geometry/occupancy/ADP is not undone or replaced'
+    for name, value in [('length_a', 8.48), ('length_b', 5.398), ('length_c', 6.958)]:
+        parameter = native_parameter(state, 'structure.cell.' + name)
+        assert parameter['value'] == value and parameter['free'] is False and (
+            parameter['uncertainty'] == 0
+        ), 'MI-CLOSE: original fixed cell and exact public numeric-zero SU remain committed'
+    assert state['selected_files'] == before['selected_files'] and not state['connected'] and (
+        [path.read_bytes() for path in owned] == original_bytes
+        and not actor.peer_pid_file.exists()
+    ), 'MI-CLOSE: ordinary public Close preserves sources and stays genuinely offline'
+    # A real stale original Apply is refused before any additional scientific edit.
+    replay = actor.command('import265_apply', intent=intent,
+                           cif_id=arguments['cif_file_id'], data_id=arguments['data_file_id'],
+                           recipe_json=json.dumps(arguments['recipe'], separators=(',', ':')))
+    assert not replay['reply']['admitted'] and not replay['vm']['can_cancel'] and (
+        replay['vm']['project'] == state['project']
+        and replay['vm']['native_import_observer']['id'] == intent
+        and replay['vm']['native_import_observer']['state'] == 'retired'
+        and replay['vm']['native_import_observer']['retryable'] is False
+    ), 'MI-CLOSE: withdrawn original ID cannot Apply again or reopen its historical presentation'
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'MI-CLOSE: actual committed scientific addition still has exactly its normal one Undo'
+    )
+    undone = settle(actor, lambda value: (
+        value['project']['empty_completion_observer']['structures'] == 0
+        and value['project']['empty_completion_observer']['experiments'] == 0
+        and not value['project']['science_observer']['calculating']
+    ))
+    assert undone['project']['empty_completion_observer'] == original and (
+        undone['project']['parameters'] == before['project']['parameters']
+        and undone['project']['mode'] == before['project']['mode']
+        and undone['project']['native_observer']['record']
+        == before['project']['native_observer']['record']
+        and undone['project']['science_observer'] == before['project']['science_observer']
+        and undone['project']['native_observer']['can_undo']
+        == before['project']['native_observer']['can_undo']
+    ), 'MI-CLOSE: one real Undo restores original complete empty owner without late science'
+    # Genuine reachable old-A/new-B draft separation after A's settled final delivery.
+    current_id = actor.command('import265_begin')['reply']['intent']
+    draft = actor.last['vm']['native_import_observer']
+    assert current_id and current_id != intent and draft['id'] == current_id and (
+        draft['state'] == 'draft'
+    ), 'MI-CLOSE SETUP: actual current empty owner admits a genuinely new B draft'
+    actor.command('import265_cancel', intent=intent)
+    assert actor.last['vm']['native_import_observer'] == draft and (
+        actor.last['vm']['project'] == undone['project']
+    ), 'MI-CLOSE: stale old A Close cannot withdraw B or mutate its current empty owner'
+    actor.command('import265_cancel', intent=current_id)
+    assert actor.last['vm']['native_import_observer']['state'] == 'retired' and (
+        not actor.last['vm']['can_cancel']
+        and actor.last['vm']['project'] == undone['project']
+    ), 'MI-CLOSE: only the actual current B ID can explicitly withdraw its own draft'
+    if saved:
+        assert save211_files(Path(original['path'])) == saved_files, (
+            'MI-CLOSE: Close/replay/oneUndo/newdraft never overwrites the independent saved source tree'
+        )
