@@ -3107,6 +3107,10 @@ TestCase {
             import276_comboReceipt("after-Return", control, name, label, matches);
             compare(control.currentIndex, matches[0], "IMPORT265: real ComboBox keyboard selects original choice");
             compare(control.currentText, label, "IMPORT265: actual displayed source/profile matches original choice");
+            // Existing2000ms form-focus setup bound; wait on the real popup, not elapsed animation time.
+            tryVerify(() => !control.popup.visible && !control.popup.opened, 2000,
+                "IMPORT278 SETUP: original selected ComboBox popup is closed before the next physical input");
+            import276_comboReceipt("after-popup-closed", control, name, label, matches);
         } finally {
             import276_comboReceipt("finally", control, name, label, matches, {observedSignals: signalCount});
             observations.forEach(observation => observation.signal.disconnect(observation.receive));
