@@ -1810,10 +1810,56 @@ TestCase {
         const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
         const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
         const call = "exposure229-action-" + data.tag;
+        // Passive receipts on the original actual buttons; never navigate or retarget input here.
+        const navSlots240 = [];
+        let navCount240 = 0;
+        const expectedPage240 = Ui.page(window);
+        const pageButton240 = Ui.control(Probe, window, "appBar.tab.analysis");
+        const mainButtons240 = Ui.itemsWithProperty(expectedPage240, "objectName")
+            .filter(control => control.objectName === "sideBar.tab.basic");
+        function nav240(stage, source) {
+            if (data.tag !== "visible-extra" || navCount240 >= 48) return;
+            ++navCount240;
+            try {
+                function fact(control) {
+                    if (!control) return null;
+                    const point = control.mapToItem(window.contentItem, 0, 0);
+                    return {identity: String(control), name: control.objectName,
+                        visible: control.visible, enabled: control.enabled, activeFocus: control.activeFocus,
+                        pressed: control.pressed, down: control.down, checked: control.checked,
+                        rect: [point.x, point.y, control.width, control.height], clickPoint: Ui.clickPoint(control)};
+                }
+                console.log("EXPOSURE240_NAV", data.tag, JSON.stringify({sequence: navCount240,
+                    stage: stage, source: source, epochMs: Date.now(),
+                    page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
+                    expectedPage: String(expectedPage240), pageIsExpected: Ui.page(window) === expectedPage240,
+                    pageButton: fact(pageButton240), mainButtons: mainButtons240.map(fact),
+                    currentSidebarTabs: Ui.itemsWithProperty(Ui.page(window), "objectName")
+                        .filter(control => control.objectName.startsWith("sideBar.tab."))
+                        .map(fact), showActions: assistant.showActions,
+                    showingActions: assistant.showingActions, canCancel: assistant.canCancel,
+                    sameOwner: Session.project === project, connected: assistant.connected,
+                    lastError: assistant.lastError}));
+            } catch (error) { console.log("EXPOSURE240_NAV_ERROR", stage, String(error)); }
+        }
+        if (data.tag === "visible-extra") {
+            for (const button of [pageButton240, ...mainButtons240]) {
+                if (!button) continue;
+                for (const name of ["pressedChanged", "released", "clicked", "checkedChanged"]) {
+                    const signal = button[name];
+                    if (!signal || !signal.connect) continue;
+                    const label = String(button) + ":" + name;
+                    const callback = () => nav240(name, label);
+                    signal.connect(callback);
+                    navSlots240.push([signal, callback]);
+                }
+            }
+        }
         const results = item("fit.results");
         const error = item("fit.error");
         verify(!results.visible && !error.visible, "EXPOSURE SETUP: original fit dialogs are initially closed");
         try {
+            nav240("before-original-action", null);
             if (visible) toggle();
             observeControls();
             if (manualFit) {
@@ -1827,7 +1873,9 @@ TestCase {
                     : "Set " + (data.tag === "visible-offscreen" ? "orientation march_r" : "La isotropic ADP")
                         + " to " + requested + " and make that same parameter free; reveal its existing controls, " + data.tag);
                 tryVerify(() => visible185_outcome(call, previousIds) !== null
-                    && !assistant.canCancel && !assistant.showingActions, 10000,
+                    && !assistant.canCancel && !assistant.showingActions,
+                    visible && !fitCase ? visible237_observationMs([
+                        {path: target.path, text: String(requested)}, {path: target.path, text: ""}]) : 10000,
                     "EXPOSURE: original current RPC and actual owner settle without a stale historical substitute");
                 const outcome = visible185_outcome(call, previousIds);
                 if (fitCase) verify(["done", "max_iterations", "no_step"].includes(outcome.status),
@@ -1897,6 +1945,11 @@ TestCase {
             verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
                 "EXPOSURE: original retained history is not discarded during navigation/work");
         } finally {
+            nav240("after-original-action", null);
+            for (const slot of navSlots240) {
+                try { slot[0].disconnect(slot[1]); }
+                catch (error) { console.log("EXPOSURE240_NAV_DISCONNECT", String(error)); }
+            }
             console.log("EXPOSURE229_STATE", data.tag, JSON.stringify({
                 currentOwner: Session.project === project, connected: assistant.connected,
                 page: window.appBarCentralTabs.currentIndex, showingActions: assistant.showingActions,
