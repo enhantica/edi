@@ -218,6 +218,10 @@ Rectangle {
                 document: body.textDocument
                 source: row.summarizedActivity ? "" : row.text
                 accentColor: EaStyle.Colors.link
+                bodyFont: body.font
+                monoFontFamily: EaStyle.Fonts.monoFontFamily
+                tableBorderColor: EaStyle.Colors.appBorder
+                tableShadeColor: EaStyle.Colors.contentBackground
                 markdown: row.kind === "assistant"
             }
             readOnly: true

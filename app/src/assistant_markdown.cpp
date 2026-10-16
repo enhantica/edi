@@ -2,6 +2,8 @@
 #include "assistant_markdown.hpp"
 
 #include <QImage>
+#include <algorithm>
+#include <cmath>
 #include <QFontMetricsF>
 #include <QTextBlock>
 #include <QTextList>
@@ -39,16 +41,54 @@ void AssistantMarkdown::setAccentColor(const QColor& color) {
         try { formatPresentation(); } catch (...) {}
     }
 }
+QFont AssistantMarkdown::bodyFont() const { return body_font_; }
+QString AssistantMarkdown::monoFontFamily() const { return mono_font_family_; }
+QColor AssistantMarkdown::tableBorderColor() const { return table_border_color_; }
+QColor AssistantMarkdown::tableShadeColor() const { return table_shade_color_; }
+void AssistantMarkdown::setBodyFont(const QFont& font) {
+    if (body_font_set_ && body_font_ == font) return;
+    body_font_ = font; body_font_set_ = true;
+    if (document_) {
+        document_->setDefaultFont(font);
+        if (markdown_) try { formatPresentation(); } catch (...) {}
+    }
+}
+void AssistantMarkdown::setMonoFontFamily(const QString& family) {
+    if (mono_font_family_ == family) return;
+    mono_font_family_ = family;
+    if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
+}
+void AssistantMarkdown::setTableBorderColor(const QColor& color) {
+    if (table_border_color_ == color) return;
+    table_border_color_ = color;
+    if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
+}
+void AssistantMarkdown::setTableShadeColor(const QColor& color) {
+    if (table_shade_color_ == color) return;
+    table_shade_color_ = color;
+    if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
+}
 void AssistantMarkdown::formatPresentation() {
     if (!document_) return;
     auto option = document_->defaultTextOption();
     option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     document_->setDefaultTextOption(option);
-    const qreal line = QFontMetricsF(document_->defaultFont()).height();
+    const auto body_font = document_->defaultFont();
+    const QFontMetricsF body_metrics(body_font);
+    const qreal line = body_metrics.height();
+    auto mono_font = body_font;
+    // Both names come from actual bundled EA Fonts, never a platform fixed font.
+    mono_font.setFamilies({mono_font_family_.isEmpty() ? body_font.family() : mono_font_family_});
+    mono_font.setFixedPitch(true);
+    const qreal mono_x = QFontMetricsF(mono_font).xHeight();
+    const qreal scale = mono_x > 0 && body_metrics.xHeight() > 0 ? body_metrics.xHeight() / mono_x : 1;
+    if (body_font.pixelSize() > 0) mono_font.setPixelSize(std::max(1, qRound(body_font.pixelSize() * scale)));
+    else if (body_font.pointSizeF() > 0) mono_font.setPointSizeF(body_font.pointSizeF() * scale);
     document_->setIndentWidth(line * 1.25);
     // QTextDocument retains the semantic list/code/table structure. Relax only
     // parsed no-wrap block presentation, never inject characters into content.
-    std::vector<std::pair<int, int>> anchors;
+    std::vector<std::pair<int, int>> anchors, code;
+    std::vector<QTextTable*> tables;
     for (auto block = document_->begin(); block.isValid(); block = block.next()) {
         auto format = block.blockFormat();
         format.setNonBreakableLines(false);
@@ -57,15 +97,56 @@ void AssistantMarkdown::formatPresentation() {
         format.setBottomMargin(listed && block.next().textList() == block.textList() ? 0 : line * 0.4);
         QTextCursor cursor(block);
         cursor.setBlockFormat(format);
-        if (auto* table = cursor.currentTable()) {
-            auto table_format = table->format();
-            table_format.setWidth(QTextLength(QTextLength::PercentageLength, 100));
-            table->setFormat(table_format);
-        }
+        if (auto* table = cursor.currentTable(); table && std::find(tables.begin(), tables.end(), table) == tables.end()) tables.push_back(table);
         for (auto it = block.begin(); !it.atEnd(); ++it) {
             const auto fragment = it.fragment();
-            if (fragment.isValid() && fragment.charFormat().isAnchor())
-                anchors.emplace_back(fragment.position(), fragment.length());
+            if (!fragment.isValid()) continue;
+            if (fragment.charFormat().isAnchor()) anchors.emplace_back(fragment.position(), fragment.length());
+            if (format.hasProperty(QTextFormat::BlockCodeLanguage) || fragment.charFormat().fontFixedPitch())
+                code.emplace_back(fragment.position(), fragment.length());
+        }
+    }
+    for (const auto& [position, length] : code) {
+        QTextCursor cursor(document_);
+        cursor.setPosition(position); cursor.setPosition(position + length, QTextCursor::KeepAnchor);
+        auto format = cursor.charFormat();
+        format.setFontFamilies(mono_font.families()); format.setFontFixedPitch(true);
+        format.clearProperty(QTextFormat::FontSizeAdjustment);
+        if (mono_font.pixelSize() > 0) {
+            format.clearProperty(QTextFormat::FontPointSize);
+            format.setProperty(QTextFormat::FontPixelSize, mono_font.pixelSize());
+        } else {
+            format.clearProperty(QTextFormat::FontPixelSize); format.setFontPointSize(mono_font.pointSizeF());
+        }
+        cursor.setCharFormat(format);
+    }
+    // Existing report_html.cpp: thin outside/header rules, zero vertical
+    // padding, 6pt horizontal spacing at 20.4pt line height, shaded header/even rows.
+    for (auto* table : tables) {
+        auto format = table->format();
+        // These tables come exclusively from setMarkdown(MarkdownNoHTML).
+        // Markdown tables have one header row; Qt marks TH text bold but does
+        // not populate QTextTableFormat::headerRowCount itself.
+        format.setHeaderRowCount(1);
+        format.setWidth(QTextLength(QTextLength::PercentageLength, 100));
+        format.setCellSpacing(0); format.setCellPadding(0); format.setBorderCollapse(true);
+        format.setBorder(0.5); format.setBorderStyle(QTextFrameFormat::BorderStyle_Solid);
+        if (table_border_color_.isValid()) format.setBorderBrush(table_border_color_);
+        table->setFormat(format);
+        for (int r = 0; r < table->rows(); ++r) for (int column = 0; column < table->columns(); ++column) {
+            auto cell = table->cellAt(r, column);
+            if (cell.row() != r || cell.column() != column) continue; // Keep parsed merged-cell semantics.
+            auto cell_format = cell.format().toTableCellFormat();
+            cell_format.setBorder(0); cell_format.setTopPadding(0); cell_format.setBottomPadding(0);
+            cell_format.setLeftPadding(line * 6 / 20.4); cell_format.setRightPadding(line * 6 / 20.4);
+            if (r + cell.rowSpan() == format.headerRowCount()) {
+                cell_format.setBottomBorder(0.5); cell_format.setBottomBorderStyle(QTextFrameFormat::BorderStyle_Solid);
+                if (table_border_color_.isValid()) cell_format.setBottomBorderBrush(table_border_color_);
+            }
+            if (table_shade_color_.isValid() && (r < format.headerRowCount() || (r - format.headerRowCount()) % 2 == 1))
+                cell_format.setBackground(table_shade_color_);
+            else cell_format.clearBackground();
+            cell.setFormat(cell_format);
         }
     }
     if (!accent_color_.isValid()) return;
@@ -93,6 +174,7 @@ void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
         replacement->setDocumentMargin(previous->documentMargin());
         replacement->setTextWidth(previous->textWidth());
     }
+    if (body_font_set_) replacement->setDefaultFont(body_font_);
     target->setTextDocument(replacement);
     document_ = replacement;
     render();
