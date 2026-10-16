@@ -12,6 +12,7 @@ import edi.app
 Popup {
     id: panel
     objectName: "assistant.popup"
+    signal chooseWorkingFolderRequested()
     required property AssistantViewModel assistant
     // One bounded JSON-domain presentation copy handles Qt QVariant lists.
     readonly property var usageData: {
@@ -244,7 +245,8 @@ Popup {
                         showBackground: false
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: skillsButton
-                        KeyNavigation.tab: composer.firstFocusItem
+                        KeyNavigation.tab: chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton
+                            : temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton : composer.firstFocusItem
                         ToolTip.text: panel.usageCaption()
                         Accessible.name: panel.usageCaption()
                         Accessible.description: qsTr("Actual account allowance windows and supplied credits. Context occupancy is independently unavailable.")
@@ -310,6 +312,47 @@ Popup {
                 anchors.bottom: parent.bottom
                 anchors.margins: AppSizes.unit
                 spacing: AppSizes.unit * 0.855
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: AppSizes.unit * 0.25
+                    Flow {
+                        Layout.fillWidth: true
+                        implicitHeight: childrenRect.height
+                        spacing: AppSizes.unit * 0.25
+                        EaElements.Button {
+                            id: chooseWorkingFolderButton
+                            objectName: "assistant.chooseWorkingFolder"
+                            KeyNavigation.priority: KeyNavigation.BeforeItem
+                            KeyNavigation.backtab: usageButton
+                            KeyNavigation.tab: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled
+                                ? temporaryWorkingFolderButton : composer.firstFocusItem
+                            text: qsTr("Choose working folder")
+                            enabled: !panel.assistant.canCancel
+                            Accessible.name: text
+                            onClicked: panel.chooseWorkingFolderRequested()
+                        }
+                        EaElements.Button {
+                            id: temporaryWorkingFolderButton
+                            objectName: "assistant.temporaryWorkingFolder"
+                            KeyNavigation.priority: KeyNavigation.BeforeItem
+                            KeyNavigation.backtab: chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled
+                                ? chooseWorkingFolderButton : usageButton
+                            KeyNavigation.tab: composer.firstFocusItem
+                            text: qsTr("Use temporary folder")
+                            visible: panel.assistant.workingFolder.length > 0
+                            enabled: !panel.assistant.canCancel
+                            Accessible.name: text
+                            onClicked: panel.assistant.useTemporaryWorkingFolder()
+                        }
+                    }
+                    EaElements.Label {
+                        Layout.fillWidth: true
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                        color: EaStyle.Colors.themeForegroundMinor
+                        text: panel.assistant.workingFolder.length ? qsTr("Read/write scope: %1").arg(panel.assistant.workingFolder) : qsTr("Working folder: app-owned temporary workspace")
+                    }
+                }
                 ListView {
                     id: conversation
                     objectName: "assistant.messages"
@@ -538,7 +581,8 @@ Popup {
                     assistant: panel.assistant
                     toggleControl: panel.toggleControl
                     popupBoundary: panel.contentItem
-                    previousFocusItem: usageButton
+                    previousFocusItem: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
+                        : chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton : usageButton
                     hasPreviousUserMessage: conversation.previousUserIndex >= 0
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)

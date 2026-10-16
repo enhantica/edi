@@ -40,6 +40,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
+    Q_PROPERTY(QString workingFolder READ workingFolder NOTIFY workingFolderChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
 
@@ -67,6 +68,11 @@ class AssistantViewModel : public QObject {
     QString lastError() const;
     QVariantMap usage() const;
     Q_INVOKABLE void refreshUsage();
+    QString workingFolder() const;
+    Q_INVOKABLE QString beginWorkingFolderSelection();
+    Q_INVOKABLE bool completeWorkingFolderSelection(const QString& intent, const QUrl& directory);
+    Q_INVOKABLE void cancelWorkingFolderSelection(const QString& intent);
+    Q_INVOKABLE bool useTemporaryWorkingFolder();
     QString contextPreview() const;
     bool contextConsentRequired() const;
     void setSelectedModel(const QString& model);
@@ -105,6 +111,8 @@ class AssistantViewModel : public QObject {
     void lastErrorChanged();
     void usageChanged();
     void contextPreviewChanged();
+    void workingFolderChanged();
+    void workingFolderSelectionRetired(const QString& intent);
 
    private:
     friend class Session;

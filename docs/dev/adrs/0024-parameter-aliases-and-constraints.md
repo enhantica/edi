@@ -102,3 +102,10 @@ A failure in Undo-availability publication retains the already prepared warning 
 
 
 The existing scan file set-aside helper reserves its bounded moved-file ledger and recovery-path string before renaming. Recording a successful move or retaining its path therefore cannot introduce a new allocation after that move. Existing filesystem refusal/kept-aside diagnostics and restore policy are preserved; no global directory mutation or new filesystem transaction route is added.
+
+
+### Native affine append through the shared editor
+
+The app-only add_relations action uses the existing AliasListModel/ConstraintListModel representation, Edit::restore_relations, complete_relations and preowned ProjectViewModel::applyRecordedEdit/RelationsUndo. It appends actual parameter-path aliases and explicit id/expression/enabled constraints to a complete copied declaration; existing rows and composition are not replaced. The actual SDK parser/graph validates before returning the live Edit. The shared joint relation replacement and exact changed-parameter Undo remain unchanged; no rollback with guessed values or second expression parser exists. Structureless projects refuse because that existing completion seam cannot validate them. Unsupported/invalid batches refuse before mutation; postwrite presentation uncertainty keeps real Undo and the recovery fence.
+
+This supplies a relationship mechanism for a justified same-phase co-occupied-site ADP/coordinate model. It does not decide scientific equivalence, create an automatic equality from high uncertainty, run a fit or implement accepted-best/checkpoint restoration. Explicit user no-sharing instructions and known occupancy/composition remain authoritative.

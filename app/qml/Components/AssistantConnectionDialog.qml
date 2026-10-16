@@ -118,6 +118,14 @@ AppDialog {
                 text: qsTr("OpenAI will receive your message, conversation context and the project information described below. Edi uses your ChatGPT subscription; availability and usage limits depend on your account.")
             }
             EaElements.Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+                text: dialog.assistant.workingFolder.length
+                    ? qsTr("The native folder picker grants read/write scope to %1, alongside Edi's temporary staging workspace. Network remains disabled; broader authority is declined. Selecting the folder does not authorize overwriting an open or externally changed project.").arg(dialog.assistant.workingFolder)
+                    : qsTr("Writes are limited to Edi's temporary staging workspace. Choose working folder in the assistant to grant a specific folder; chat paths alone do not grant access.")
+            }
+            EaElements.Label {
                 objectName: "assistant.contextSummary"
                 width: parent.width
                 wrapMode: Text.Wrap

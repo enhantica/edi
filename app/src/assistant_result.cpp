@@ -321,6 +321,77 @@ edi::Project load_captured_assistant_result(const ImmutableAssistantResult& resu
 #endif
 }
 
+struct AssistantWorkingFolder::State {
+    QString path;
+    static bool separatedFromHostStorage(const QString& physical) {
+        const auto base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        if (base.isEmpty()) return false;
+        const auto within = [](const QString& child, const QString& parent) {
+            return child.compare(parent, Qt::CaseInsensitive) == 0 || child.startsWith(parent + '/', Qt::CaseInsensitive);
+        };
+        // Include actual existing child aliases, not only the app-data spelling.
+        // No enumeration or provider-supplied protected-root list is involved.
+        for (const auto* suffix : {"", "/assistant", "/assistant/agent", "/assistant/input-cache", "/assistant/results", "/assistant/report-views"}) {
+            const QFileInfo entry(base + QString::fromLatin1(suffix));
+            const auto protectedPath = entry.canonicalFilePath();
+            if (protectedPath.isEmpty()) {
+                if (!*suffix || entry.exists() || entry.isSymLink()) return false;
+                continue;
+            }
+            if (within(physical, protectedPath) || within(protectedPath, physical)) return false;
+        }
+        return true;
+    }
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+    Fd descriptor;
+    Identity identity;
+    explicit State(QString physical)
+        : path(std::move(physical)), descriptor(directory(path)), identity(descriptor.n) {
+        if (!S_ISDIR(identity.value.st_mode) || ::faccessat(descriptor.n, ".", R_OK | W_OK | X_OK, 0))
+            throw std::runtime_error("The chosen working folder is not readable and writable");
+    }
+#endif
+};
+AssistantWorkingFolder::AssistantWorkingFolder(const QString& selected) {
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+    // Admit path bytes before canonicalization and retain the physical spelling.
+    // A selected alias is permitted, but does not turn later aliases into grants.
+    if (selected.isEmpty() || selected.size() > static_cast<qsizetype>(Limits::id_bytes) ||
+        selected.contains(QChar(0)) || selected.toUtf8().size() > static_cast<qsizetype>(Limits::id_bytes) ||
+        !QDir::isAbsolutePath(selected))
+        throw std::runtime_error("Choose an existing local working folder");
+    const auto physical = QFileInfo(selected).canonicalFilePath();
+    if (physical.isEmpty() || physical == "/" || physical.toUtf8().size() > static_cast<qsizetype>(Limits::id_bytes))
+        throw std::runtime_error("Choose a bounded project working folder");
+    if (!State::separatedFromHostStorage(physical))
+        throw std::runtime_error("Choose a working folder outside Edi's protected storage");
+    auto prepared = std::make_unique<State>(physical);
+    // The actual selected alias must still name that pinned object after all
+    // fallible admission. Future runtime requests use only the physical path.
+    const auto selectedNow = QFileInfo(selected).canonicalFilePath();
+    auto namedNow = directory(physical);
+    if (selectedNow != physical || !prepared->identity.object(namedNow.n) || !State::separatedFromHostStorage(physical))
+        throw std::runtime_error("The chosen working folder changed");
+    state_ = std::move(prepared);
+#else
+    Q_UNUSED(selected);
+    throw std::runtime_error("Working-folder access is unavailable on this platform");
+#endif
+}
+AssistantWorkingFolder::~AssistantWorkingFolder() = default;
+const QString& AssistantWorkingFolder::path() const noexcept { return state_->path; }
+bool AssistantWorkingFolder::current() const noexcept {
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+    try {
+        auto named = directory(state_->path);
+        return state_->identity.object(state_->descriptor.n) && state_->identity.object(named.n) &&
+            State::separatedFromHostStorage(state_->path) && !::faccessat(state_->descriptor.n, ".", R_OK | W_OK | X_OK, 0);
+    } catch (...) { return false; }
+#else
+    return false;
+#endif
+}
+
 struct AssistantResultExport::State {
     QString parent, stage, leaf, destination;
     QJsonArray files;

@@ -342,6 +342,31 @@ EaComponents.ApplicationWindow {
         onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()
         onClosed: window.restoreAssistantFocus()
+        onChooseWorkingFolderRequested: {
+            if (assistantWorkingFolder.visible) return;
+            const token = Session.assistant.beginWorkingFolderSelection();
+            if (!token.length) return;
+            assistantWorkingFolder.intent = token;
+            assistantWorkingFolder.open();
+        }
+    }
+    Connections {
+        target: Session.assistant
+        function onWorkingFolderSelectionRetired(token) {
+            if (assistantWorkingFolder.intent !== token) return;
+            assistantWorkingFolder.intent = "";
+            assistantWorkingFolder.reject();
+        }
+    }
+    FolderDialog {
+        id: assistantWorkingFolder
+        property string intent: ""
+        title: qsTr("Choose the assistant working folder")
+        onRejected: { Session.assistant.cancelWorkingFolderSelection(intent); intent = ""; }
+        onAccepted: {
+            const token = intent; intent = "";
+            Session.assistant.completeWorkingFolderSelection(token, selectedFolder);
+        }
     }
 
     Repeater {

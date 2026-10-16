@@ -26,6 +26,22 @@ edi::Project load_captured_assistant_result(const ImmutableAssistantResult& resu
 // Rechecks the real loader's declared mode before any ProjectViewModel/cache construction.
 void check_assistant_result_mode(const edi::Project& project);
 
+// A native picker, never a provider path argument, constructs this grant.
+// It pins the physical root; mutable descendants remain untrusted and must use
+// the existing bounded no-follow readers/writers. No directory enumeration here.
+class AssistantWorkingFolder {
+ public:
+    explicit AssistantWorkingFolder(const QString& selected);
+    ~AssistantWorkingFolder();
+    AssistantWorkingFolder(const AssistantWorkingFolder&) = delete;
+    AssistantWorkingFolder& operator=(const AssistantWorkingFolder&) = delete;
+    const QString& path() const noexcept;
+    bool current() const noexcept;
+ private:
+    struct State;
+    std::unique_ptr<State> state_;
+};
+
 // User-click read-only report snapshots reuse the same no-follow bounded file
 // reader. A retained lease outlives the asynchronous platform viewer.
 struct ImmutableAssistantReport {

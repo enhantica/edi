@@ -2,6 +2,7 @@
 #include "assistant_native_tools.hpp"
 #include "assistant_native_create.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
+#include "../../core/src/assistant_relation_edits.hpp"
 #include "edi/assistant_limits.hpp"
 #include <QSet>
 #include <cmath>
@@ -40,11 +41,17 @@ QJsonArray assistant_native_tool_specs() {
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
     add("create_cwl_project", "Create and display a NEW native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe; never replaces an existing project. No fit or save is implied.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
+    add("add_relations", "Append a complete validated affine alias/constraint batch to the displayed project through the native relation editor and Undo. Existing relations/composition are preserved; this edit is not a trial or fit.",
+        {{"aliases", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
+            {"items", object({{"id", text}, {"path", text}}, {"id", "path"})}}},
+         {"constraints", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
+            {"items", object({{"id", text}, {"expression", Object{{"type", "string"}, {"minLength", 1}, {"maxLength", static_cast<int>(edi::assistant::Limits::context_bytes)}}},
+                {"enabled", Object{{"type", "boolean"}}}}, {"id", "expression", "enabled"})}}}}, {"aliases", "constraints"});
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
     return name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
-        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project";
+        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations";
 }
 QString assistant_native_purpose(const Object& args) {
     const auto value = args.value("purpose");
@@ -59,6 +66,7 @@ QString assistant_native_purpose(const Object& args) {
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
     if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
+    else if (name == "add_relations") shape(args, {"purpose", "aliases", "constraints"});
     else if (name == "set_parameters") shape(args, {"purpose", "values"});
     else if (name == "set_free") shape(args, {"purpose", "flags"});
     else if (assistant_native_tool(name)) shape(args, {"purpose"});
@@ -66,6 +74,34 @@ void assistant_native_arguments(const QString& name, const Object& args) {
 }
 std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QString& name, const Object& args, std::vector<std::pair<std::string, bool>>& beforeFlags) {
     assistant_native_arguments(name, args);
+    if (name == "add_relations") {
+        const auto aliasValue = args.value("aliases"), constraintValue = args.value("constraints");
+        if (!aliasValue.isArray() || !constraintValue.isArray() || aliasValue.toArray().size() > static_cast<qsizetype>(edi::assistant::Limits::stream_items) ||
+            constraintValue.toArray().isEmpty() || constraintValue.toArray().size() > static_cast<qsizetype>(edi::assistant::Limits::stream_items))
+            throw std::invalid_argument("Invalid native relation batch");
+        std::vector<edi::assistant::detail::NativeAliasInput> aliases;
+        std::vector<edi::assistant::detail::NativeConstraintInput> constraints;
+        const auto text = [](const Object& row, const char* key, quint64 limit) {
+            const auto field = row.value(key);
+            if (!field.isString() || field.toString().isEmpty() || static_cast<quint64>(field.toString().size()) > limit)
+                throw std::invalid_argument("Invalid native relation text");
+            const auto bytes = field.toString().toUtf8();
+            if (static_cast<quint64>(bytes.size()) > limit || bytes.contains('\0')) throw std::invalid_argument("Invalid native relation text");
+            return bytes.toStdString();
+        };
+        for (const auto& value : aliasValue.toArray()) {
+            if (!value.isObject()) throw std::invalid_argument("Invalid native alias row");
+            const auto row = value.toObject(); shape(row, {"id", "path"});
+            aliases.push_back({text(row, "id", edi::assistant::Limits::id_bytes), text(row, "path", edi::assistant::Limits::id_bytes)});
+        }
+        for (const auto& value : constraintValue.toArray()) {
+            if (!value.isObject()) throw std::invalid_argument("Invalid native constraint row");
+            const auto row = value.toObject(); shape(row, {"id", "expression", "enabled"});
+            if (!row.value("enabled").isBool()) throw std::invalid_argument("Native constraint enabled must be boolean");
+            constraints.push_back({text(row, "id", edi::assistant::Limits::id_bytes), text(row, "expression", edi::assistant::Limits::context_bytes), row.value("enabled").toBool()});
+        }
+        return edi::assistant::detail::prepare_relation_append(project, aliases, constraints);
+    }
     if (name != "set_parameters" && name != "set_free") return {};
     const bool values = name == "set_parameters";
     const auto field = args.value(values ? "values" : "flags");

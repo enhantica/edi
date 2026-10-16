@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.4.1",
+      "version": "1.5.2",
       "title": "Work with the displayed Edi project",
       "summary": "Create a supported native CW project from selected IDs, inspect and edit live parameters, and run actual native fits.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "59d012dbd5ce4540a349a2c7178381968eafb1cd866ad4fb42fbf44c9d8f2278",
+      "sha256": "333b0db5b957e1495c9cac7e13befa76179e2de7526bf8590b5d515186b8d524",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -67,11 +67,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "a250b319ecb6e5be09f9195b0013e015e132d8c95accdf39d049f23c0b618a91",
+      "sha256": "266f9d54e8c8b0bf9ce205365854d112e0e3f1d0a0b6d15feaa1957f084290a9",
       "requires": [],
       "capabilities": [
         "inspect_project",

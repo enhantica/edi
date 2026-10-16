@@ -5,7 +5,7 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.0. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.1. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
@@ -31,7 +31,7 @@ Before fitting, establish whether different species genuinely co-occupy the same
 
 When independently refined, confirmed same-phase co-occupied-site ADPs remain unresolved or have large uncertainty, an authorized delegated refinement suffices to run at least one bounded, physically supported shared-ADP candidate trial from the retained checkpoint. Do not request an additional shared-model preference or routine approval. An explicit user no-sharing/independent-ADP constraint prevails; report that limit rather than override it, and ask only about a genuinely new chemical assumption or scope conflict. Compare the same observations/weights/exclusions and objective, actual status/convergence/improvement, physical validity, stability and jointly assessed covariance. A low residual alone does not select the model; fixing a correlated group does not prove independence. Restore the accepted complete checkpoint if the candidate is rejected. Do not turn every high uncertainty into an equality constraint.
 
-The affine relation mechanism must be exposed by actual native operations before the agent can create shared-coordinate/ADP constraints. It is not registered in the first native slice; report that concrete limit instead of using Python or fabricating a successful shared-model trial. Existing manual relations remain authoritative and the native parameter validator preserves them. Development API references do not grant a production capability.
+When offered, native `add_relations` supplies an explicit affine alias/constraint batch through the existing SDK validator, live editor and Undo; inspect actual parameter paths and existing relations first. Preserve manual relations and known fixed fractions. That mechanism alone does not implement checkpointed or isolated accepted-best trials: report a missing trial/restore operation rather than using Python or fabricating a successful shared-model comparison. Development API references do not grant a production capability.
 
 ## Use real operations
 
