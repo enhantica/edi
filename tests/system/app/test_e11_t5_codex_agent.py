@@ -3592,8 +3592,9 @@ def test_usage129_actual_small_enlarged_dialog_scrolls_with_shared_ea_component(
     )
     bars = [bar for bar in actual['scrollbars'] if bar['visible']]
     assert bars and any(
-        'EasyApplication' in bar['component_url']
-        and bar['component_url'].endswith('/ScrollBar.qml')
+        bar['matches_ea_type']
+        and 'EasyApplication' in bar['ea_reference_url']
+        and bar['ea_reference_url'].endswith('/ScrollBar.qml')
         for bar in bars
     ), 'US5: real overflow uses the same loaded EA scrollbar component as ordinary manual sidebar'
     initial = max((row['content_y'] for row in actual['scrollables']), default=0)
@@ -4256,7 +4257,10 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
         assert native_parameter(state)['value'] == 3.88
     elif not state['project_present']:
         # Successful user Clear may revoke an uncommitted intent without an error.
-        # Actual absence plus canonical durable discard establishes cancellation.
+        # Check the captured post-retirement frame BEFORE any archive/inspect
+        # command drains another queued renderer delivery. This is outside the
+        # actual Qt notification callback, never halfway through begin/end rows.
+        assert_clear_projection156(state)
         assert actor.command('archive')['reply']['rows'] == [], (
             'R3-R6: successful Clear durably discards the original conversation'
         )

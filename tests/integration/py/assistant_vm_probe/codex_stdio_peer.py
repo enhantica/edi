@@ -1128,6 +1128,15 @@ for line in sys.stdin:
             native_reply(request)
         elif scenario.startswith('usage:') and request.get('id') == 'original-question-rpc':
             clear_observation('usage-question-result', {'response': request})
+            # Same genuine item finalization as gn:x:question-answer. A settled
+            # reverse RPC alone does not complete its retained original item.
+            publish_item({
+                'type': 'dynamicToolCall',
+                'id': 'original-question-item',
+                'tool': 'request_user_input',
+                'arguments': {},
+                'status': 'completed',
+            }, completed=True)
             complete()
         elif request.get('id') == server_id:
             complete()

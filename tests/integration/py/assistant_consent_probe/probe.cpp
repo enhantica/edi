@@ -32,6 +32,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlExpression>
 #include <QQmlContext>
+#include <QQmlComponent>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QStandardPaths>
@@ -151,6 +152,15 @@ int main(int argc,char** argv) {
     auto* root=engine.rootObjects().front();auto* window=qobject_cast<QQuickWindow*>(root);
     if(!window)return 94;
     drain();
+    std::unique_ptr<QObject> ea_scrollbar_reference;
+    QUrl ea_scrollbar_definition;
+    if(usage_mode) {
+        QQmlComponent reference(&engine);
+        reference.loadFromModule("EasyApplication.Gui.Elements","ScrollBar");
+        ea_scrollbar_reference.reset(reference.create());
+        if(!ea_scrollbar_reference)throw std::runtime_error(reference.errorString().toStdString());
+        ea_scrollbar_definition=reference.url();
+    }
     OwnedUrlRecorder report_urls;
     const QStringList observed_schemes{QStringLiteral("file"),QStringLiteral("http"),
         QStringLiteral("https"),QStringLiteral("javascript"),QStringLiteral("data"),
@@ -257,6 +267,13 @@ int main(int argc,char** argv) {
                 auto observed=geometry(item,window);
                 auto* context=qmlContext(item);
                 observed["component_url"]=context?context->baseUrl().toString():QString();
+                Array classes;
+                for(auto* meta=item->metaObject();meta;meta=meta->superClass())classes.push_back(meta->className());
+                observed["class_chain"]=classes;
+                observed["matches_ea_type"]=ea_scrollbar_reference &&
+                    item->metaObject()->inherits(ea_scrollbar_reference->metaObject());
+                observed["ea_reference_class"]=ea_scrollbar_reference->metaObject()->className();
+                observed["ea_reference_url"]=ea_scrollbar_definition.toString();
                 observed["position"]=item->property("position").toDouble();
                 observed["size"]=item->property("size").toDouble();
                 bars.push_back(observed);
