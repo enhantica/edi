@@ -105,42 +105,11 @@ Rectangle {
         return action.type === "unknown";
     }
     function activityDescription() {
-        if (commandActivity) {
-            const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
-            if (Array.isArray(actions) && actions.length === 1) {
-                const action = actions[0];
-                if (action && action.type === "read") {
-                    const target = shortActionObject(action.path, true) || shortActionObject(action.name, false);
-                    return target ? qsTr("Read %1").arg(target) : qsTr("Read selected file");
-                }
-                if (action && action.type === "listFiles") {
-                    const target = shortActionObject(action.path, true);
-                    return target ? qsTr("List %1").arg(target) : qsTr("List working folder");
-                }
-                if (action && action.type === "search") {
-                    const query = shortActionObject(action.query, false);
-                    return query ? qsTr("Find %1").arg(query) : qsTr("Search file contents");
-                }
-            }
-            // The pinned schema has no purpose field for opaque shell commands.
-            return Array.isArray(actions) && actions.length > 1 && actions.every(usableCommandAction)
-                ? qsTr("Run combined actions") : qsTr("Run shell command");
-        }
-        if (payload.type === "fileChange") {
-            const changes = JSON.parse(JSON.stringify(payload.changes || []));
-            const target = Array.isArray(changes) && changes.length === 1 && changes[0]
-                ? shortActionObject(changes[0].path, true) : "";
-            return target ? qsTr("Update %1").arg(target) : qsTr("Update selected files");
-        }
-        if (payload.type === "webSearch") {
-            const query = shortActionObject(payload.query, false);
-            return query ? qsTr("Search %1").arg(query) : qsTr("Search the web");
-        }
-        if (["mcpToolCall", "dynamicToolCall", "collabAgentToolCall"].indexOf(payload.type) >= 0) {
-            const tool = shortActionObject(payload.tool, false);
-            return tool ? qsTr("Call %1").arg(tool) : qsTr("Call supplied tool");
-        }
-        return payload.type === "plan" ? qsTr("Update work plan") : "";
+        // Purpose is explicit action metadata, never inferred from a command,
+        // filename or tool name. The pinned runtime can omit it entirely.
+        const supplied = typeof payload.purpose === "string" ? payload.purpose
+                       : typeof payload.description === "string" ? payload.description : "";
+        return shortActionObject(supplied, false);
     }
     function activityCaption() {
         if (decisionActivity) {
@@ -150,7 +119,7 @@ Rectangle {
             return qsTr("Request outcome");
         }
         const description = activityDescription();
-        if (commandActivity) return commandCaption() + " · " + description;
+        if (commandActivity) return commandCaption() + (description ? " · " + description : "");
         const label = activityLabel(row.status === "in_progress");
         if (row.status === "in_progress") return description ? label + " · " + description : label;
         // Keep the normalized public outcome visible; do not manufacture a

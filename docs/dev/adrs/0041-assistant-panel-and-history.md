@@ -506,3 +506,7 @@ The parsed-table styling explicitly bridges Markdown's one-header-row semantics 
 
 
 The owner's larger working cue scales the actual decorative glyph by1.75 from its former0.75-font-pixel extent. Its allocated slot and label left padding use that same new extent, and the layout's minimum height contains it without overlap. Both genuine icon and steady Working text use themeAccent. Text, visibility/question suppression, per-appearance random choice, exact branded/simple motions, reduced-motion and hidden-stop behavior are unchanged. No new progress state or fake busy source is introduced.
+
+### Purposeful titles and open table typography
+
+Assistant tables use left-aligned header/value blocks, larger cell/frame spacing and no vertical borders. Only the restrained horizontal header rule and alternating row shade remain. Activity suffixes use an explicitly supplied purpose/description; missing metadata yields the truthful category/outcome alone, never a guessed goal from shell text or repeated file names. Retained source/copy text and passive Markdown resource handling are unchanged.

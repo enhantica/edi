@@ -130,15 +130,16 @@ void AssistantMarkdown::formatPresentation() {
         format.setHeaderRowCount(1);
         format.setWidth(QTextLength(QTextLength::PercentageLength, 100));
         format.setCellSpacing(0); format.setCellPadding(0); format.setBorderCollapse(true);
-        format.setBorder(0.5); format.setBorderStyle(QTextFrameFormat::BorderStyle_Solid);
+        format.setBorder(0); format.setBorderStyle(QTextFrameFormat::BorderStyle_None);
+        format.setTopMargin(line * 0.6); format.setBottomMargin(line * 0.6);
         if (table_border_color_.isValid()) format.setBorderBrush(table_border_color_);
         table->setFormat(format);
         for (int r = 0; r < table->rows(); ++r) for (int column = 0; column < table->columns(); ++column) {
             auto cell = table->cellAt(r, column);
             if (cell.row() != r || cell.column() != column) continue; // Keep parsed merged-cell semantics.
             auto cell_format = cell.format().toTableCellFormat();
-            cell_format.setBorder(0); cell_format.setTopPadding(0); cell_format.setBottomPadding(0);
-            cell_format.setLeftPadding(line * 6 / 20.4); cell_format.setRightPadding(line * 6 / 20.4);
+            cell_format.setBorder(0); cell_format.setTopPadding(line * 0.3); cell_format.setBottomPadding(line * 0.3);
+            cell_format.setLeftPadding(line * 0.5); cell_format.setRightPadding(line * 0.5);
             if (r + cell.rowSpan() == format.headerRowCount()) {
                 cell_format.setBottomBorder(0.5); cell_format.setBottomBorderStyle(QTextFrameFormat::BorderStyle_Solid);
                 if (table_border_color_.isValid()) cell_format.setBottomBorderBrush(table_border_color_);
@@ -147,6 +148,14 @@ void AssistantMarkdown::formatPresentation() {
                 cell_format.setBackground(table_shade_color_);
             else cell_format.clearBackground();
             cell.setFormat(cell_format);
+            // Qt imports Markdown's column alignment into each block. The
+            // Assistant deliberately presents every header/value left aligned.
+            const auto end = cell.lastCursorPosition().position();
+            for (auto block = cell.firstCursorPosition().block(); block.isValid() && block.position() <= end; block = block.next()) {
+                auto block_format = block.blockFormat();
+                block_format.setAlignment(Qt::AlignLeft);
+                QTextCursor cursor(block); cursor.setBlockFormat(block_format);
+            }
         }
     }
     if (!accent_color_.isValid()) return;
