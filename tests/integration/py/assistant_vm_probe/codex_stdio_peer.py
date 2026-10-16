@@ -1308,7 +1308,9 @@ for line in sys.stdin:
             'modelProvider': 'openai',
             'sandbox': {
                 'type': 'workspaceWrite',
-                'writableRoots': [cwd],
+                'writableRoots': params.get('config', {}).get('sandbox_workspace_write', {}).get(
+                    'writable_roots', [cwd]
+                ),
                 'networkAccess': False,
                 'excludeSlashTmp': True,
                 'excludeTmpdirEnvVar': True,
