@@ -2542,8 +2542,9 @@ TestCase {
         };
     }
     function relation246_observationMs(args) {
-        const texts = args.aliases.flatMap(row => [row.id, row.path]).concat(
-            args.constraints.flatMap(row => [row.id, row.expression]));
+        const texts = [];
+        args.aliases.forEach(row => texts.push(row.id, row.path));
+        args.constraints.forEach(row => texts.push(row.id, row.expression));
         // Original10000 observation plus public paced key100/move500/press100/
         // relax500 for actual tab/Add/two editors/optional flag per requested row.
         return 10000 + 1100 * (3 + 5 * (args.aliases.length + args.constraints.length))
