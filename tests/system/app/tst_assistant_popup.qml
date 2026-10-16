@@ -1411,4 +1411,188 @@ TestCase {
         }
     }
 
+    // GUI-DRAFT1: actual common controls and normal native request; no guard-property oracle.
+    function draft226_core(project) {
+        return JSON.stringify({values: visible185_values(project),
+            labels: Probe.rows(project.currentStructure.atomSites).map(row => row.label),
+            background: Probe.rows(project.currentExperiment.background).map(row => [row.id, row.position]),
+            maxIterations: project.analysis.maxIterations,
+            tolerance: project.analysis.chiSquareTolerance,
+            aliases: Probe.rows(project.analysis.aliases),
+            constraints: Probe.rows(project.analysis.constraints)});
+    }
+    function test_draft226_common_editor_preserves_user_work_data() {
+        return ["normal-text-id", "visible-text-id", "normal-integer", "visible-integer",
+            "normal-number", "visible-number", "normal-partial", "visible-partial",
+            "normal-formatted", "visible-formatted",
+            "normal-text-formatted", "visible-text-formatted"].map(tag => ({tag: tag}));
+    }
+    function test_draft226_common_editor_preserves_user_work(data) {
+        verify(Session.openProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project")),
+            "DRAFT1 SETUP: genuine original complete measured project opens normally");
+        const project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "DRAFT1 SETUP: actual native calculation settles, never a fake current flag");
+        const wavelength = visible185_parameters(project).filter(row => row.name === "setup_wavelength");
+        compare(wavelength.length, 1, "DRAFT1 SETUP: actual native request has one original wavelength");
+        const textFormatted = data.tag.endsWith("text-formatted");
+        const cell = visible185_parameters(project).filter(row => row.category === "cell" && row.name === "length_a");
+        compare(cell.length, 1, "DRAFT1 SETUP: independent original cell target is unique");
+        const target = textFormatted ? cell[0] : wavelength[0];
+        const originalValue = target.value;
+        const requestedValue = textFormatted ? 10.4 : 1.49;
+        verify(originalValue !== requestedValue, "DRAFT1 SETUP: positive control must cause a real edit");
+        compare(assistant.showActions, false, "DRAFT1: fresh process has actual default-OFF mode");
+        toggle();
+        assistant.signIn();
+        visible185_ready("draft226-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("draft226-current-context");
+        verify(!assistant.contextConsentRequired, "DRAFT1 SETUP: actual disclosed current input is approved");
+        if (data.tag.startsWith("visible-")) {
+            const show = item("assistant.showActions");
+            verify(show.visible && show.enabled, "DRAFT1 SETUP: actual mode checkbox receives pointer input");
+            mouseClick(show);
+            compare(assistant.showActions, true, "DRAFT1 SETUP: visible route is genuinely enabled");
+        }
+        toggle();
+        const textCase = data.tag.endsWith("text-id");
+        visible185_page(textCase ? "structure" : textFormatted ? "experiment" : "analysis");
+        if (!textCase && !textFormatted) {
+            Ui.click(this, Probe, window, "sideBar.tab.extras");
+            rendered();
+            const group = Ui.control(Probe, window, "group.minimizer");
+            verify(group !== null, "DRAFT1 SETUP: real minimizer group exists in Analysis Extra");
+            if (group.collapsed) Ui.click(this, Probe, window, "group.minimizer");
+        }
+        if (textFormatted) {
+            const background = Ui.control(Probe, window, "group.background");
+            verify(background !== null, "DRAFT1 SETUP: actual existing line-segment background is available");
+            if (background.collapsed) Ui.click(this, Probe, window, "group.background");
+        }
+        const name = textCase ? "atomSite.label.0" : textFormatted ? "background.position.0"
+            : data.tag.endsWith("integer")
+            ? "minimizer.maxIterations" : "minimizer.chiSquareTolerance";
+        const candidates = Ui.itemsWithProperty(Ui.page(window), "objectName")
+            .filter(control => control.objectName === name);
+        compare(candidates.length, 1, "DRAFT1 SETUP: genuine visual common editor identity is unique");
+        const field = candidates[0];
+        Ui.scrollIntoView(field);
+        rendered();
+        verify(field.visible && field.enabled && !field.readOnly && Ui.exposed(field),
+            "DRAFT1 SETUP: actual common editor is actionable inside the real viewport");
+        const cleanControl = data.tag.endsWith("formatted");
+        if (cleanControl) {
+            mouseClick(field);
+            visible185_type("0.3333333333333333");
+            keyClick(Qt.Key_Return);
+            const actual = textFormatted ? Probe.rows(project.currentExperiment.background)[0].position
+                : project.analysis.chiSquareTolerance;
+            compare(actual, 1 / 3,
+                "DRAFT1 SETUP: real typing/Return establishes the explicit full-precision control");
+            mouseClick(field);
+            verify(field.text !== String(actual),
+                "DRAFT1 SETUP: unedited formatted spelling actually differs from the core number");
+        } else {
+            mouseClick(field);
+            const originalText = field.text;
+            const draft = textCase ? "original_manual_site" : data.tag.endsWith("integer")
+                ? "19" : data.tag.endsWith("partial") ? "-" : "0.25";
+            verify(draft !== originalText, "DRAFT1 SETUP: actual dirty spelling differs from displayed value");
+            const beforeTyping = draft226_core(project);
+            visible185_type(draft);
+            compare(field.text, draft, "DRAFT1 SETUP: real key input reaches the common editor");
+            compare(draft226_core(project), beforeTyping,
+                "DRAFT1 SETUP: typed text/id/integer/number remains genuinely uncommitted");
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "DRAFT1 SETUP: any genuine manual control edit has a current real calculation");
+        // Public connected-context approval is setup, never an account repair or focus setter.
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("draft226-before-send");
+        verify(!assistant.contextConsentRequired && field.activeFocus,
+            "DRAFT1 SETUP: real current account/input and original editor focus coexist");
+        const core = draft226_core(project);
+        const inputs = visible185_inputs(project);
+        const beforeText = field.text;
+        const beforeFocus = window.activeFocusItem;
+        const selection = [field.selectionStart, field.selectionEnd];
+        const beforePage = window.appBarCentralTabs.currentIndex;
+        const beforeTier = ["basic", "extras", "text", "settings"].map(tier => {
+            const button = Ui.control(Probe, window, "sideBar.tab." + tier);
+            return button ? button.checked : null;
+        });
+        const beforeUndo = item("appBar.button.undo").enabled;
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        let finished = 0, committed = 0, navigated = 0, tiersChanged = 0;
+        function finishReceipt() { ++finished; }
+        function commitReceipt() { ++committed; }
+        function pageReceipt() { ++navigated; }
+        function tierReceipt() { ++tiersChanged; }
+        const tierButtons = ["basic", "extras", "text", "settings"].map(tier =>
+            Ui.control(Probe, window, "sideBar.tab." + tier)).filter(button => button !== null);
+        field.editingFinished.connect(finishReceipt);
+        field.committed.connect(commitReceipt);
+        window.appBarCentralTabs.currentIndexChanged.connect(pageReceipt);
+        for (const button of tierButtons) button.checkedChanged.connect(tierReceipt);
+        try {
+            assistant.send("Change " + (textFormatted ? "cell a" : "wavelength") + " to "
+                + requestedValue + " while preserving my unrelated manual editor, " + data.tag);
+            tryVerify(() => visible185_outcome("draft226-action-" + data.tag) !== null
+                && !assistant.canCancel && !assistant.showingActions, 10000,
+                "DRAFT1: genuine original native request publishes and settles its own outcome");
+            const outcome = visible185_outcome("draft226-action-" + data.tag);
+            if (cleanControl) {
+                compare(outcome.status, "edited", "DRAFT1: unedited formatted value never blocks valid navigation/work");
+                compare(target.value, requestedValue, "DRAFT1: actual requested native edit lands");
+                compare(committed, 0, "DRAFT1: navigation cannot commit an unedited formatted number");
+                compare(textFormatted ? Probe.rows(project.currentExperiment.background)[0].position
+                    : project.analysis.chiSquareTolerance, 1 / 3,
+                    "DRAFT1: formatting never silently rounds or rewrites the unrelated core value");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(target.value, originalValue,
+                    "DRAFT1: one normal Undo restores the original actual request value");
+                compare(draft226_core(project), core, "DRAFT1: one Undo restores every baseline field/declaration");
+            } else {
+                verify(["refused", "unavailable"].includes(outcome.status)
+                    && typeof outcome.message === "string" && outcome.message.length > 0,
+                    "DRAFT1: original dirty common editor causes an honest before-write refusal");
+                compare(draft226_core(project), core, "DRAFT1: no unrelated draft or native edit reaches core");
+                compare(item("appBar.button.undo").enabled, beforeUndo,
+                    "DRAFT1: blocked work neither consumes nor creates the ordinary Undo record");
+                compare(field.text, beforeText, "DRAFT1: exact original uncommitted spelling survives");
+                compare(window.activeFocusItem, beforeFocus, "DRAFT1: original real input is never blurred");
+                compare(field.selectionStart, selection[0], "DRAFT1: original selection start survives");
+                compare(field.selectionEnd, selection[1], "DRAFT1: original selection end survives");
+                compare(finished, 0, "DRAFT1: no editingFinished event escapes before refusal");
+                compare(committed, 0, "DRAFT1: no commit escapes before refusal");
+                compare(navigated, 0, "DRAFT1: no transient page navigation precedes refusal");
+                compare(tiersChanged, 0, "DRAFT1: no transient Main/Extra change precedes refusal");
+                compare(window.appBarCentralTabs.currentIndex, beforePage, "DRAFT1: original page remains current");
+                compare(JSON.stringify(["basic", "extras", "text", "settings"].map(tier => {
+                    const button = Ui.control(Probe, window, "sideBar.tab." + tier);
+                    return button ? button.checked : null;
+                })), JSON.stringify(beforeTier), "DRAFT1: actual Main/Extra choice is unchanged");
+            }
+            verify(assistant.connected, "DRAFT1: native refusal/work preserves genuine managed account");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "DRAFT1: genuine catalog remains unchanged");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "DRAFT1: original retained conversation is not discarded to protect a draft");
+            compare(visible185_inputs(project), inputs, "DRAFT1: original measured data/sigmas/masks/weights/links survive");
+            compare(Session.project, project, "DRAFT1: outcome remains owned by the actual original Session project");
+        } finally {
+            console.log("DRAFT226_STATE", data.tag, JSON.stringify({
+                currentOwner: Session.project === project, connected: assistant.connected,
+                text: field.text, activeFocus: field.activeFocus, page: window.appBarCentralTabs.currentIndex,
+                finished: finished, committed: committed, navigated: navigated, tiersChanged: tiersChanged,
+                beforeUndo: beforeUndo, afterUndo: item("appBar.button.undo").enabled,
+                lastError: assistant.lastError, showingActions: assistant.showingActions,
+                outcome: visible185_outcome("draft226-action-" + data.tag)}));
+            field.editingFinished.disconnect(finishReceipt);
+            field.committed.disconnect(commitReceipt);
+            window.appBarCentralTabs.currentIndexChanged.disconnect(pageReceipt);
+            for (const button of tierButtons) button.checkedChanged.disconnect(tierReceipt);
+        }
+    }
 }

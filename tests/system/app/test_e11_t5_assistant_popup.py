@@ -307,3 +307,106 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
                 decoded['status'] in {'refused', 'unavailable'}
                 and isinstance(decoded.get('message'), str) and decoded['message']
             ), 'VA: actual before-write failure is truthful, bounded and never a success'
+
+
+DRAFT226_CASES = [
+    'normal-text-id', 'visible-text-id', 'normal-integer', 'visible-integer',
+    'normal-number', 'visible-number', 'normal-partial', 'visible-partial',
+    'normal-formatted', 'visible-formatted',
+    'normal-text-formatted', 'visible-text-formatted',
+]
+
+
+@pytest.mark.parametrize('case', DRAFT226_CASES)
+def test_draft226_common_editor_preserves_real_user_work(case, tmp_path):  # noqa: PLR0914, PLR0915 -- finite Main/wire preservation receipts
+    """Actual common editor/focus/core/Undo and original native wire; no guard-property mirror."""
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'DRAFT1 SETUP: actual freshly matching Main consumer required'
+    environment = popup171_owned_environment(tmp_path)
+    environment['QT_QUICK_CONTROLS_HOVER_ENABLED'] = '1'
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text(encoding='utf-8'))
+    config.pop('report_page_reply')
+    call = {'tool': 'set_parameters', 'call_id': 'draft226-action-' + case,
+            'arguments': {'purpose': 'Preserve my draft during the requested parameter edit',
+                          'values': [{'path': 'structure.cell.length_a'
+                                      if case.endswith('text-formatted')
+                                      else 'experiment.instrument.setup_wavelength',
+                                      'value': 10.4 if case.endswith('text-formatted')
+                                      else 1.49}]}}
+    config.update(scenario='native:script', native_turn_calls=[[call]])
+    config_path.write_text(json.dumps(config), encoding='utf-8')
+    original_config = config_path.read_bytes()
+    fixture = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_draft226_common_editor_preserves_user_work:' + case,
+            '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode()
+            path = tmp_path / ('draft226-timeout.' + stream + '.log')
+            path.write_bytes(raw)
+            error.add_note(str(path) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'draft226.stdout.log').write_text(result.stdout)
+    (tmp_path / 'draft226.stderr.log').write_text(result.stderr)
+    (tmp_path / 'draft226-process.json').write_text(json.dumps({
+        'argv': argv, 'returncode': result.returncode, 'case': case,
+        'original_config_unchanged': config_path.read_bytes() == original_config,
+    }, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_draft226_common_editor_preserves_user_work('
+        + case + ')'
+    ) in output, 'DRAFT1: the original actual common-editor/Main row must execute\n' + output
+    assert config_path.read_bytes() == original_config, (
+        'DRAFT1: prelaunch script remains immutable'
+    )
+    loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['native_turn_calls'] == [[call]], (
+        'DRAFT1: real owned peer consumed the exact script'
+    )
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()]
+    turns = [row for row in requests if row.get('method') == 'turn/start']
+    assert len(turns) == 1 and turns[0]['params']['clientUserMessageId'], (
+        'DRAFT1: one genuinely admitted original input owns this request'
+    )
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in requests), 'DRAFT1: account is never repaired by login/logout'
+    replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl')
+               .read_text().splitlines()]
+    assert len(replies) == 1, 'DRAFT1: original native action receives exactly one response'
+    original, response = replies[0]['original'], replies[0]['response']
+    assert original['params']['callId'] == call['call_id'] and (
+        original['params']['tool'], original['params']['arguments']
+    ) == (call['tool'], call['arguments']), (
+        'DRAFT1: original native arguments/identity stay canonical'
+    )
+    assert response['id'] == original['id'] != call['call_id'], (
+        'DRAFT1: host answers original reverse envelope rather than call ID'
+    )
+    content = response['result']['contentItems']
+    assert len(content) == 1 and content[0]['type'] == 'inputText'
+    outcome = json.loads(content[0]['text'])
+    if case.endswith('formatted'):
+        assert response['result']['success'] and outcome['status'] == 'edited', (
+            'DRAFT1: genuinely unedited formatted field allows real work'
+        )
+    else:
+        assert not response['result']['success'] and (
+            outcome['status'] in {'refused', 'unavailable'}
+        )
+        assert isinstance(outcome.get('message'), str) and outcome['message'], (
+            'DRAFT1: actual before-write refusal retains a truthful original-channel explanation'
+        )
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'DRAFT1: real input/edit/Undo cannot rewrite the independent source fixture'
+    )
