@@ -405,7 +405,7 @@ bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     if (watched == window_ && request_ && !injecting_) {
         switch (event->type()) {
         case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:
-        case QEvent::Wheel: case QEvent::KeyPress: case QEvent::ShortcutOverride: case QEvent::TouchBegin: {
+        case QEvent::Wheel: case QEvent::KeyPress: case QEvent::ShortcutOverride: case QEvent::TouchBegin: case QEvent::InputMethod: {
             const QPointer<AssistantWidgetInput> self(this);
             const auto original = request_; const auto id = serial_;
             try { emit manualInput(); } catch (...) {}

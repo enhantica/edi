@@ -1020,3 +1020,12 @@ viewport to the beginning. A filtered current row is kept inside the viewport
 through ListView.positionViewAtIndex after the ordinary model update; no
 scientific field or parameter value is written by presentation navigation.
 The existing fixed-open Parameters/Fitting groups are not new collapsed groups.
+
+
+### Clean parameter text versus an actual draft (E11-T5, 2026-10-16)
+
+Prior art: ParameterCell and ParameterField temporarily showed full editText by assigning text on focus. That removed the model binding, and an authoritative Analysis slider update could leave an old clean number which commit mistook for typed input on Tab/row change. Both forms now distinguish actual TextInput.textEdited from focus formatting/model publication. Clean focused text follows raw NumberText.full changes of the current model (even when its rounded display is identical); unfocused clean text uses the normal display binding. Clean blur never writes. IME composition is a genuine draft; refresh does not assign text over its preedit. Rounded unfocused display and SU/full-precision rules are unchanged.
+
+A real manual edit detaches only that draft and keeps its exact ParameterItem owner. Unrelated publication does not overwrite it. The same parameter's Analysis slider is disabled while its focused genuine draft is pending; Return/ordinary manual commit or explicit Escape resolves it, without forced blur/implicit draft discard. A recycled cell cannot apply the old draft to a different item. Common ValueField/TextCell were inspected: they do not perform the offending full-precision focus assignment and retain their existing display-comparison/manual commit rules.
+
+Assistant paced typing retains begin/allow/cancel authority: agent text is not a manual draft, only the actual prepared final commit can write, and cancellation restores the current authoritative model rather than a saved pre-slider value. A later genuine manual draft is never cleared by assistant cleanup. An actual InputMethod event joins the helper's existing genuine-manual takeover switch, preserving the same event/target and original cancellation cleanup. Assistant numeric typing remains its exact own key path. The existing native ParameterItem/editor/Undo/slider setter and calculation path remain unchanged. This correction changes input provenance/display synchronization, not scientific rounding, precision, validation or background/composition.

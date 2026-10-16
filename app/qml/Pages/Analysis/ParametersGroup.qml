@@ -358,6 +358,17 @@ EaElements.GroupBox {
             id: sliderRow
 
             readonly property ParameterItem selected: group.selected
+            // A real same-parameter draft takes precedence over slider input.
+            // Finish it with Return/ordinary commit or cancel explicitly with
+            // Escape; never blur, apply or discard it just to enable a slider.
+            readonly property bool selectedDraft: {
+                const window = group.Window.window;
+                for (let editor = window ? window.activeFocusItem : null; editor; editor = editor.parentItem) {
+                    if (editor.assistantManualDraft === true && editor.manualDraftParameter === selected)
+                        return true;
+                }
+                return false;
+            }
             property real lower: 0
             property real upper: 1
 
@@ -392,7 +403,7 @@ EaElements.GroupBox {
                 objectName: "parameters.slider"
                 width: EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize * 14
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: sliderRow.selected !== null
+                enabled: sliderRow.selected !== null && !sliderRow.selectedDraft
                 from: sliderRow.lower
                 to: sliderRow.upper
                 value: sliderRow.selected ? sliderRow.selected.value : 0
