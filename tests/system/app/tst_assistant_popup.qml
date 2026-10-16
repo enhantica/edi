@@ -731,4 +731,112 @@ TestCase {
         tryCompare(manualTab, "checked", true, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
         editor.clear();
     }
+    // Real retained transcript, no fixture row/model mutation or direct page handler call.
+    function test_report171_chat_anchor_uses_existing_current_report_page_data() {
+        return [{tag: "current"}, {tag: "replacement"}, {tag: "missing"},
+            {tag: "disabled"}, {tag: "protected-other"}];
+    }
+    function test_report171_chat_anchor_uses_existing_current_report_page(data) {
+        const original = "[Open Report page](edi:report)\n\n[Unknown protected report](not-a-report:original)";
+        toggle();
+        // Ordinary public bootstrap uses the deliberate absolute owned peer;
+        // it is not proof of physical Sign in delivery or provider entitlement.
+        assistant.signIn();
+        tryCompare(assistant, "connected", true, 2000, "REPORT171 SETUP: genuine managed account/catalog bootstrap");
+        verify(assistant.models.count > 0, "REPORT171 SETUP: real catalog is admitted");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        verify(!assistant.contextConsentRequired, "REPORT171 SETUP: actual current disclosure is approved");
+        const draft = "Original Main report navigation " + data.tag;
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        assistant.send(draft);
+        tryVerify(() => Probe.rows(assistant.messages).some(row => !previousIds.has(row.id) && row.kind === "assistant"
+            && row.status === "completed" && row.text === original), 2000,
+            "REPORT171 SETUP: genuine original completed transcript row exists before pointer input");
+        const retained = Probe.rows(assistant.messages).find(row => !previousIds.has(row.id) && row.kind === "assistant"
+            && row.status === "completed" && row.text === original);
+        verify(retained.id.length > 0, "REPORT171: actual immutable source row has a real identity");
+        compare(Probe.rows(assistant.messages).filter(row => row.kind === "user" && row.text === draft).length,
+            1, "REPORT171: ordinary original input is admitted once");
+        if (data.tag === "replacement") {
+            verify(Session.openProject(Probe.repoUrl("tests/fixtures/report_options/pairs")),
+                "REPORT171 SETUP: genuine different current project replaces original row owner");
+        } else if (data.tag === "missing") {
+            Session.closeProject();
+        } else if (data.tag === "disabled") {
+            Session.project.removeStructure(0);
+            compare(Session.project.structures.count, 0, "REPORT171 SETUP: actual model removal disables Report");
+        }
+        // Home hides Assistant by policy; use the real eligible workflow action,
+        // never force a page/enable property to make the anchor reachable.
+        mouseClick(item("appBar.tab.project"));
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000,
+            "REPORT171 SETUP: genuine Project action exposes the retained chat");
+        rendered();
+        tryCompare(popup, "opened", true, 2000, "REPORT171 SETUP: retained Assistant is actually visible");
+        const current = Session.project;
+        const history = JSON.stringify(Probe.rows(assistant.messages));
+        const parameters = current ? JSON.stringify(Probe.rows(current.parameters)) : "";
+        const row = Probe.objectsWithProperty(window, "rowId").filter(item => item.rowId === retained.id
+            && item.kind === "assistant" && item.status === "completed");
+        compare(row.length, 1, "REPORT171: real production delegate belongs to the retained row");
+        const bodies = Ui.itemsWithProperty(row[0], "readOnly").filter(item => item.visible
+            && typeof item.linkAt === "function" && item.readOnly);
+        compare(bodies.length, 1, "REPORT171: actual rendered message owns its real selectable anchor");
+        const body = bodies[0];
+        const label = data.tag === "protected-other" ? "Unknown protected report" : "Open Report page";
+        const href = data.tag === "protected-other" ? "not-a-report:original" : "edi:report";
+        const plain = body.getText(0, body.length);
+        const start = plain.indexOf(label);
+        verify(start >= 0, "REPORT171: original visible link label survives actual Markdown rendering");
+        const bounds = body.positionToRectangle(start + 2);
+        const x = bounds.x + Math.max(1, bounds.width / 2);
+        const y = bounds.y + bounds.height / 2;
+        compare(body.linkAt(x, y), href, "REPORT171: physical point belongs to the exact original URI");
+        mouseMove(window.contentItem, 1, window.height - 1);
+        mouseMove(body, x, y);
+        tryCompare(body, "hoveredLink", href, 2000, "REPORT171: actual pointer enters the rendered anchor");
+        verify(Probe.objectsWithProperty(row[0], "cursorShape").some(handler => handler.cursorShape === Qt.PointingHandCursor),
+            "REPORT171: live production anchor offers its actual pointing-hand cursor role");
+        const pageBefore = window.appBarCentralTabs.currentIndex;
+        mouseClick(body, x, y);
+        if (data.tag === "missing" || data.tag === "disabled") {
+            verify(!AppState.reportPageEnabled, "REPORT171 SETUP: normal project guard genuinely forbids Report");
+            compare(window.appBarCentralTabs.currentIndex, pageBefore,
+                "REPORT171: unavailable Report does not navigate a stale page");
+            const dialog = findChild(window, "assistant.reportPageUnavailable");
+            verify(dialog !== null, "REPORT171: actual unavailable dialog belongs to real Main");
+            tryCompare(dialog, "opened", true, 2000, "REPORT171: unavailable navigation has a visible honest explanation");
+            compare(dialog.title, "Report page unavailable", "REPORT171: report refusal is ordinary user-facing guidance");
+            const ok = dialog.standardButton(Dialog.Ok);
+            verify(ok !== null && ok.visible && ok.enabled, "REPORT171: real refusal dialog can be acknowledged");
+            mouseClick(ok);
+        } else if (data.tag === "protected-other") {
+            compare(window.appBarCentralTabs.currentIndex, pageBefore,
+                "REPORT171: only exact edi:report URI receives internal navigation authority");
+            tryVerify(() => assistant.lastError.length > 0, 2000,
+                "REPORT171: unchanged protected report guard refuses an untrusted unrelated scheme");
+        } else {
+            tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Report, 2000,
+                "REPORT171: real anchor click reaches existing Main Report page");
+            rendered();
+            const preview = Ui.control(Probe, window, "report.preview");
+            verify(preview !== null && Ui.rendered(preview), "REPORT171: existing live preview is actually exposed");
+            compare(preview.report, current.report, "REPORT171: link means actual current report, including after replacement");
+            tryCompare(current.report, "active", true, 2000, "REPORT171: existing Report model follows real selected page");
+            verify(Ui.control(Probe, window, "group.reportExport") !== null,
+                "REPORT171: existing export controls are reused rather than duplicated");
+            verify(findChild(window, "assistant.reportPageUnavailable") === null
+                || !findChild(window, "assistant.reportPageUnavailable").opened,
+                "REPORT171: valid current navigation does not report unavailable");
+        }
+        compare(Session.project, current, "REPORT171: navigation alone never replaces project ownership");
+        if (current) compare(JSON.stringify(Probe.rows(current.parameters)), parameters,
+            "REPORT171: navigation cannot edit current native values/free/SU");
+        compare(JSON.stringify(Probe.rows(assistant.messages)), history,
+            "REPORT171: clicking a link preserves actual original conversation bytes/identities");
+        verify(assistant.connected, "REPORT171: page navigation/refusal preserves genuine managed account");
+        assistant.signOut();
+        tryCompare(assistant, "connected", false, 2000, "REPORT171: owned fixture teardown actually settles");
+    }
+
 }

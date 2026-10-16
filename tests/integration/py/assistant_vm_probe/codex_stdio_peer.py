@@ -78,6 +78,13 @@ def complete():
         if scenario == 'fileauth'
         else 'Original offline reply',
     }
+    # Opt-in fixed original acceptance text, published by the genuine retained-turn path.
+    # Existing scenarios and account/skills/native protocols are unchanged.
+    if config.get('report_page_reply') is True:
+        item['text'] = (
+            '[Open Report page](edi:report)\n\n'
+            '[Unknown protected report](not-a-report:original)'
+        )
     notify('item/started', {'threadId': thread_id, 'turnId': turn_id, 'item': item})
     notify(
         'item/completed',
