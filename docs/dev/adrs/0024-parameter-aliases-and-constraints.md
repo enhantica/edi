@@ -81,3 +81,24 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
 | Parse or evaluate expressions in edi or Python | Rejected: a second parser drifts from crysta's, and an interpreter runs arbitrary text. |
 | Keep edi's own cell and position completion beside crysta's applier | Rejected: two rules for the same dependents. |
 | Replace a row on a taken id, as diffraction-lib does | Rejected: ids are unique within a collection everywhere else in edi. |
+
+
+## Prepared bulk restore and recorded edit ownership
+
+The prior implementations are `Edit::restore_relations`, the manual alias and constraint list editors, `ProjectViewModel::apply_relation_edit`, and the parameter table's free-flag batch. The restore prepares both complete ItemVec tables before either live move commit; resolution and all fallible membership/table admission precede the scalar and collection commit. A copied validation model is not a reservation for live table allocation.
+
+The shared recorded-edit entrance owns the complete before declaration, parameter states, resolved parameter pointers and reserved history slot before a relation/value/free batch writes. These closed edits preserve parameter membership and names. After actual relation completion, and before presentation can signal other editors, an allocation-free pass retains exactly states whose values, uncertainty or free flag changed. A completion exception uses the same pass on the actual reached state. No post-write named-slot traversal or history growth is needed; a genuinely refused operation drops its provisional slot. Scalar assignments follow the existing RowHold numeric/optional/flag no-failure contract. This is not a promise to display diagnostics through permanent allocator exhaustion.
+
+A true core refusal and a successful core write followed by failed presentation are distinct. The latter retains Undo, leaves an explicit applied/unconfirmed outcome and fences further edits/fits until a genuine Undo or reopening. The legacy manual editor returns empty for an actual write, with the app warning retained; the native route receives both applied and published explicitly. Undo consumes an actually applied reversal once even if its later presentation fails. It does not repeat that reversal as if nothing had happened. Existing manual alias/constraint append, duplicate, rename, target/expression change, enable/disable and removal all use this shared entrance. Native value/free batches use it too; a native batch is one normal Undo step.
+
+Native affine declaration registration and its model-admission helper are outside this six-tool unit. Deliberately disabled manual drafts keep the ordinary editor behavior. Shared-ADP accepted-best trials, checkpoint isolation and physical site identification remain separate capabilities; none is implied by recorded parameter editing.
+
+
+### Shared critical admission and explicit recovery siblings
+
+The publication/reentrancy fence applies to every actual sibling admission, not only scalar/relation edits: report settings and their Undo, scan prepare/reset/restore and genuine fit start, data restoration, fit Undo, and save/write/readback. Critical admission is separate from displayed-dataset readiness, so scans still run from their template and save/reset policy is preserved. Only the private actual Undo entrances may recover a held publication failure; a public setting or Save cannot silently clear it. Report and scan reset/preparation own their normal Undo metadata/capacity before their existing closed file/model write doors. A completed file reversal is not repeated as a no-write refusal when its later presentation fails. Deferred same-dataset refresh revalidates the surviving owner/index and reads its latest template, never old captured model values.
+
+A failure in Undo-availability publication retains the already prepared warning in the normal app error channel as well as the native result. Successful complete recovery clears the held cause; failed or retired presentation does not erase it. Actual UI/worker lifetime and preview pre-admission semantics are specified at the shared ADR0020 seam.
+
+
+The existing scan file set-aside helper reserves its bounded moved-file ledger and recovery-path string before renaming. Recording a successful move or retaining its path therefore cannot introduce a new allocation after that move. Existing filesystem refusal/kept-aside diagnostics and restore policy are preserved; no global directory mutation or new filesystem transaction route is added.

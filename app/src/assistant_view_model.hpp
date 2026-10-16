@@ -108,7 +108,10 @@ class AssistantViewModel : public QObject {
 
    private:
     friend class Session;
-    void setResultProject(ProjectViewModel* project);
+    bool attachProject(ProjectViewModel* project, bool managedResult); // Session-only exact attachment result.
+    enum class AttachmentClear { NotRequested, Discarded, Failed };
+    AttachmentClear drainAttachmentClear() noexcept;
+    bool clearHistoryNow(bool* committed = nullptr);
     bool resultSettledReady() const;
     struct State;
     std::unique_ptr<State> state_;

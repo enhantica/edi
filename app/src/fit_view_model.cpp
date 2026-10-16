@@ -315,6 +315,8 @@ void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> 
 }
 
 void FitViewModel::start() {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (const QString critical = owner_.criticalEditRefusal(); !critical.isEmpty()) { emit refused(critical); return; }
     if (!job_ || job_->running() || !available_) {
         return;
     }
@@ -323,6 +325,7 @@ void FitViewModel::start() {
     if (const QString pending = owner_.pendingRefusal();
         !pending.isEmpty() && !edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_))) {
         emit refused(pending);
+        if (owner_.retired_) return;
         return;
     }
     // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
@@ -332,15 +335,22 @@ void FitViewModel::start() {
         const QString error = owner_.prepareScan(scan_.processed() == 0);
         if (!error.isEmpty()) {
             emit refused(error);
+            if (owner_.retired_) return;
             return;
         }
         setFollowing(true);
+        if (owner_.retired_) return;
+        if (owner_.retired_) return;
         job_->follow(true);
+        if (owner_.retired_) return;
     }
-    if (job_->start(scan ? owner_.scanTemplate() : nullptr)) {
+    const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
+    if (owner_.retired_) return;
+    if (admitted) {
         if (scan_last_ != scan) {
             scan_last_ = scan;
             emit scanSummaryChanged();
+            if (owner_.retired_) return;
         }
         if (scan) {
             scan_resumed_ = 0;
@@ -350,15 +360,22 @@ void FitViewModel::start() {
             frame_shown_ = true;
             dropHandedFile();
             setScanRefused(false);
+            if (owner_.retired_) return;
             setScanning(true);
+            if (owner_.retired_) return;
             setScanCounts(scan_, QString());
+            if (owner_.retired_) return;
         }
         results_->clear();
+        if (owner_.retired_) return;
         clock_.start();
         clock_timer_.start();
         setElapsed(duration(0.0));
+        if (owner_.retired_) return;
         setRunning(true);
+        if (owner_.retired_) return;
         setProgress(QString(), QString(), tr("Running"));
+        if (owner_.retired_) return;
     }
 }
 
@@ -369,13 +386,15 @@ void FitViewModel::cancel() {
 }
 
 bool FitViewModel::undo() {
+    const ProjectViewModel::PublicationScope publication(owner_);
     if (running_ || !can_undo_) {
         return false;
     }
     // Through the project's one write door, as an edit: the restore, then the calculation of the pre-fit
     // state on the worker (edi::Edit::undo_fit). The fit items describe a fit the model no longer holds.
     edi::Project& project = project_;
-    if (owner_.apply(edi::Edit::undo_fit(project), false).isEmpty()) {
+    if (owner_.applyUndo(edi::Edit::undo_fit(project), false).isEmpty()) {
+        if (owner_.retired_) return true;
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->clear();
@@ -704,25 +723,30 @@ void FitViewModel::settleScanCounts() {
 
 void FitViewModel::scanEnded(const edi::FitReport& report) {
     setScanning(false);
+    if (owner_.retired_) return;
     const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
     // The owner reads the rows on disk again and shows the run's summary, its own end and time included.
     owner_.scanEnded(report.status, seconds);
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
+        if (owner_.retired_) return;
         return;
     }
     emit scanFinished();
+    if (owner_.retired_) return;
 }
 
 void FitViewModel::ended(const edi::FitReport& report) {
+    const ProjectViewModel::PublicationScope publication(owner_);
     // Take the callback before any presentation/receiver can throw or replace the
     // model. FitJob owns this report through the entire completion invocation.
     auto completion = std::move(native_completion_);
     std::exception_ptr failure;
-    try { presentEnded(report); } catch (...) { failure = std::current_exception(); }
+    const bool visible = !owner_.retired_;
+    try { if (visible) presentEnded(report); } catch (...) { failure = std::current_exception(); }
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
-    if (completion) try { completion(report, !failure); } catch (...) {}
+    if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
     if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
 }
 
@@ -738,55 +762,78 @@ void FitViewModel::presentEnded(const edi::FitReport& report) {
         // A followed scan always ends on its last file, whatever the interval skipped.
         if (following() && !latest_file_.empty() && latest_file_ != followed_file_ && latest_file_ != handed_file_) {
             owner_.followScanFile(latest_file_, handOver(latest_file_));
+            if (owner_.retired_) return;
         }
         // Files skipped after the last row have sent no event: the counts are settled first, so the running bar
         // closes on every file the run processed, whatever it ended as.
         settleScanCounts();
+        if (owner_.retired_) return;
         setRunning(false);
+        if (owner_.retired_) return;
         scanEnded(report);
+        if (owner_.retired_) return;
         return;
     }
     setRunning(false);
+    if (owner_.retired_) return;
     if (report.adopted()) {
         // The table, the χ², the chart and the texts all come from this one result, in this one step.
         owner_.publishFit();
+        if (owner_.retired_) return;
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),
                     status_text(report.status), outcome_key(report.status));
+        if (owner_.retired_) return;
         setElapsed(duration(project_.fit_result.fitting_time));
+        if (owner_.retired_) return;
         results_->setRecord(project_);
+        if (owner_.retired_) return;
         sync();
+        if (owner_.retired_) return;
         emit finished();
+        if (owner_.retired_) return;
         return;
     }
     // Nothing was written: the chart goes back to what the project holds.
     owner_.restorePatterns();
+    if (owner_.retired_) return;
     setProgress(QString(), QString(), status_text(report.status), outcome_key(report.status));
+    if (owner_.retired_) return;
     setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0));
+    if (owner_.retired_) return;
     sync();
+    if (owner_.retired_) return;
     if (report.status == edi::FitStatus::ERROR) {
         emit refused(QString::fromStdString(report.refusal));
+        if (owner_.retired_) return;
     }
 }
 
 void FitViewModel::setRunning(bool running) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (running != running_) {
         running_ = running;
         // canUndo is settled before the change is announced, so a listener reading both sees one state:
         // when a fit ends, the start state it can undo is already back.
         sync();
+        if (owner_.retired_) return;
         emit runningChanged();
+        if (owner_.retired_) return;
     }
 }
 
 void FitViewModel::setFollowing(bool following) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (job_) {
         job_->follow(following);
     }
     if (following != following_) {
         following_ = following;
         emit followingChanged();
+        if (owner_.retired_) return;
         // Follow turned on again: the newest finished file is shown now, calculated beside the scan, and the next
         // ones as they come.
         if (this->following() && !latest_file_.empty() && latest_file_ != followed_file_ &&
@@ -794,6 +841,7 @@ void FitViewModel::setFollowing(bool following) {
             frame_shown_ = false;
             follow_clock_.start();
             owner_.followScanFile(latest_file_, handOver(latest_file_));
+            if (owner_.retired_) return;
         }
         // Follow turned off: a file still waiting to be drawn is not counted.
         if (!this->following()) {
@@ -825,21 +873,27 @@ void FitViewModel::setElapsed(const QString& elapsed) {
 
 void FitViewModel::setProgress(const QString& iterations, const QString& goodness, const QString& status,
                                const QString& outcome) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (iterations != iterations_) {
         iterations_ = iterations;
         emit iterationsChanged();
+        if (owner_.retired_) return;
     }
     if (goodness != goodness_of_fit_) {
         goodness_of_fit_ = goodness;
         emit goodnessOfFitChanged();
+        if (owner_.retired_) return;
     }
     if (status != status_) {
         status_ = status;
         emit statusChanged();
+        if (owner_.retired_) return;
     }
     if (outcome != outcome_) {
         outcome_ = outcome;
         emit outcomeChanged();
+        if (owner_.retired_) return;
     }
 }
 

@@ -365,7 +365,7 @@ bool Session::createProject(const QString& name, const QString& description, con
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
-    replaceProject(created, {}, {});
+    if (!replaceProject(created, {}, {})) return false;
     if (location.isEmpty()) {
         return true;
     }
@@ -426,8 +426,7 @@ bool Session::open(const QString& directory, const QString& example) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
         return false;
     }
-    replaceProject(opened, warnings, example);
-    return true;
+    return replaceProject(opened, warnings, example);
 }
 
 bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
@@ -456,24 +455,33 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
         return false;
     }
-    replaceProject(opened, warnings, example);
-    return true;
+    return replaceProject(opened, warnings, example);
 }
 
-void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
                              bool managedResult, std::shared_ptr<ImmutableAssistantResult> result,
                              std::optional<edi::WorkStamps> resultStamps) {
+    // Same-pointer/null nested replacements still supersede this stack. Capture
+    // the candidate while live, before any assistant or Qt callback can retire it.
+    const QPointer<ProjectViewModel> target(project);
+    const bool has_target = project != nullptr;
+    if (replacement_generation_ == UINT64_MAX) throw std::length_error("Session replacement identity is exhausted");
+    const auto replacement = ++replacement_generation_;
+    const auto current = [&] { return replacement_generation_ == replacement && (!has_target || target); };
+    const QPointer<ProjectViewModel> original(project_);
     retireAssistantIntent();
     if (managedResult) {
-        try { assistant_->setResultProject(project); }
+        try { if (!assistant_->attachProject(target, true)) return false; }
         catch (...) {
             // Preparation failed before the host project commit. Restore the old
             // attachment fail-closed; never leave a borrowed candidate dangling.
-            try { assistant_->setProject(project_); } catch (...) {}
+            if (current() && project_ == original && (!original || !original->retired_))
+                try { (void)assistant_->attachProject(original, false); } catch (...) {}
             throw;
         }
     }
-    auto previous_result = std::move(assistant_result_); // Outlives deletion of the previous ProjectViewModel below.
+    if (!current()) return false;
+    auto previous_result = std::move(assistant_result_); // Transferred to the retired PVM until its actual deletion.
     assistant_result_ = std::move(result); fresh_result_ = bool(assistant_result_);
     result_edited_ = false; result_saved_stamps_ = std::move(resultStamps);
     read_only_copy_ = false;
@@ -481,11 +489,25 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // the cleared error — is in place before any consumer is told, so a handler of one signal reads
     // the new state of the others; then each property signals only if it changed.
     ProjectViewModel* previous = project_;
+    const QPointer<ProjectViewModel> previous_owner(previous);
+    const bool previous_idle = previous == nullptr || (previous->publication_depth_ == 0 && !previous->editing_);
+    if (previous != nullptr) {
+        // Retire authority immediately, but never destroy a QObject whose
+        // synchronous publication stack may have called close/replaceProject.
+        disconnect(previous, nullptr, this, nullptr);
+        previous->retire();
+        previous->retired_result_ = std::move(previous_result);
+        if (previous_idle) previous->deleteLater();
+    }
     const QString previous_example = opened_example_;
-    project_ = project;
-    if (!managedResult) assistant_->setProject(project_);
+    project_ = target;
+    if (!managedResult && !assistant_->attachProject(target, false)) return false;
+    // Attachment itself may close/open another owner, eagerly deleting target.
+    // Stop BEFORE assigning this obsolete owner's example/warning metadata.
+    if (!current() || project_ != target) return false;
     opened_example_ = example;
     warnings_->setMessages(warnings);
+    if (!current() || project_ != target) return false;
     if (project_ != nullptr) {
         connect(project_, &ProjectViewModel::projectEdited, this, [this] {
             if (fresh_result_) result_edited_ = true;
@@ -499,23 +521,25 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         });
     }
     syncCalculationMessages();  // the new project calculated before it was connected
+    if (!current() || project_ != target) return false;
     setLastError({});
+    if (!current() || project_ != target) return false;
     if ((previous != nullptr) != (project_ != nullptr)) {
         emit hasProjectChanged();
+        if (!current() || project_ != target) return false;
     }
     if (previous_example != opened_example_) {
         emit openedExampleChanged();
+        if (!current() || project_ != target) return false;
     }
     emit projectChanged();
+    if (!current() || project_ != target) return false;
     emit projectLocationChanged();
+    if (!current() || project_ != target) return false;
     emit needsSaveAsChanged();
-    if (previous != nullptr) {
-        previous->deleteLater();
-        // Free the replaced project's view-models, and the page items the views released for them,
-        // now rather than at the next event-loop turn: projects opened back to back (a script, a
-        // test) must hold one project's pages, not every one opened so far.
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    }
+    if (previous_owner && previous_idle)
+        QCoreApplication::sendPostedEvents(previous_owner.data(), QEvent::DeferredDelete);
+    return current() && project_ == target;
 }
 
 void Session::retireExportIntent() noexcept { save_intent_.reset(); }
@@ -547,10 +571,17 @@ bool Session::adoptAssistantResult(std::shared_ptr<ImmutableAssistantResult> res
         throw std::runtime_error("Saved result changed during host model preparation");
     if (!emptyAssistantOwner(epoch) || !current()) return false;
     model->setModified(true);
-    auto* adopted = model.release();
-    try { replaceProject(adopted, {}, {}, true, std::move(result), saved); }
-    catch (...) { if (project_ != adopted) delete adopted; throw; }
-    return true;
+    const QPointer<ProjectViewModel> adopted(model.release());
+    const auto release_unattached = [&] {
+        // A candidate that became a Session owner is retired/deleted by that
+        // replacement, possibly still unwinding a real publication scope.
+        if (adopted && project_ != adopted && !adopted->retired_) delete adopted.data();
+    };
+    try {
+        const bool installed = replaceProject(adopted, {}, {}, true, std::move(result), saved);
+        if (!installed) release_unattached();
+        return installed;
+    } catch (...) { release_unattached(); throw; }
 }
 QString Session::beginSaveAs() {
     save_intent_.reset();
@@ -599,6 +630,7 @@ bool Session::completeSaveAs(const QString& token, const QUrl& parent, const QSt
         setLastError(tr("This first export supports the unchanged opened assistant result. Save a fresh result before editing; edited-result export is not yet available.")); return false;
     }
     std::unique_ptr<AssistantResultExport> prepared;
+    auto replacement = replacement_generation_;
     try {
         // Copy the exact bounded saved artifact; do not invoke an unbounded scratch writer.
         prepared = std::make_unique<AssistantResultExport>(*assistant_result_, parent.toLocalFile(), leaf);
@@ -610,12 +642,27 @@ bool Session::completeSaveAs(const QString& token, const QUrl& parent, const QSt
         if (!current()) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
         auto model = std::make_unique<ProjectViewModel>(prepared->reopen(), this);
         if (!current()) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
-        auto* opened = model.release();
-        try { replaceProject(opened, {}, {}, true); }
-        catch (...) { if (project_ != opened) delete opened; throw; }
+        const QPointer<ProjectViewModel> opened(model.release());
+        if (replacement_generation_ == UINT64_MAX) { delete opened.data(); throw std::length_error("Session replacement identity is exhausted"); }
+        replacement = replacement_generation_ + 1;
+        const auto release_unattached = [&] {
+            if (opened && project_ != opened && !opened->retired_) delete opened.data();
+        };
+        try {
+            if (!replaceProject(opened, {}, {}, true)) {
+                release_unattached();
+                // Actual export persists even when Clear cancels the managed
+                // reopen. Only this same replacement may report that outcome.
+                if (replacement_generation_ == replacement)
+                    setLastError(tr("Exported, but not opened: %1").arg(exported_result_));
+                return false;
+            }
+        } catch (...) { release_unattached(); throw; }
+        if (!opened || project_ != opened) return false;
         emit projectDirectoryUsed(exported_result_);
-        return true;
+        return opened && project_ == opened;
     } catch (...) {
+        if (replacement_generation_ != replacement) return false;
         if (prepared && prepared->committed()) setLastError(tr("Exported, but not opened: %1").arg(prepared->destination()));
         else setLastError(tr("Save As was refused. Use a fresh folder name in a writable parent; the displayed project and existing destinations are preserved. An unpublished temporary export folder may remain for recovery."));
         return false;

@@ -167,7 +167,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source, const QString& target, const QString& example);
-    void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
                         bool managedResult = false, std::shared_ptr<ImmutableAssistantResult> result = {},
                         std::optional<edi::WorkStamps> resultStamps = {});
     friend class AssistantViewModel;
@@ -181,6 +181,7 @@ class Session : public QObject {
     std::unique_ptr<SaveIntent> save_intent_;
     std::shared_ptr<ImmutableAssistantResult> assistant_result_;
     quint64 assistant_epoch_ = 0;
+    quint64 replacement_generation_ = 0; // Private exact synchronous attachment owner.
     bool assistant_epoch_exhausted_ = false, fresh_result_ = false, result_edited_ = false;
     std::optional<edi::WorkStamps> result_saved_stamps_;
     QString exported_result_;

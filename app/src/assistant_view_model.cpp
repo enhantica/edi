@@ -24,6 +24,7 @@
 #include "edi/io.hpp"
 #include <QUuid>
 #include <optional>
+#include <exception>
 #include <stdexcept>
 #include <algorithm>
 #include <map>
@@ -160,7 +161,34 @@ struct AssistantViewModel::State {
     QString choice_store, remembered_model, remembered_effort;
     bool restore_choice_pending = true, choice_warning_shown = false, choice_read_complete = false;
 
-    bool own_edit = false, auth_pending = false;
+    bool auth_pending = false;
+    unsigned session_attachment_depth = 0;
+    bool attachment_clear_requested = false, attachment_clear_draining = false;
+    bool controller_attached = false;
+    QPointer<ProjectViewModel> controller_project;
+    ProjectViewModel* rebind_project() const noexcept {
+        // Clear follows the actual host owner, never a retiring pre-target borrow.
+        if (auto* session = qobject_cast<Session*>(owner.parent())) return session->project();
+        return project;
+    }
+    bool attached_to(ProjectViewModel* target) const noexcept {
+        return controller && controller_attached && controller_project == target && project == target;
+    }
+    struct OwnEdit { std::uint64_t id, generation; QPointer<ProjectViewModel> project; };
+    std::optional<OwnEdit> own_edit;
+    std::uint64_t own_edit_serial = 0;
+    std::uint64_t begin_own_edit() {
+        if (own_edit_serial == UINT64_MAX) throw std::length_error("Native edit identity is exhausted");
+        const auto id = ++own_edit_serial;
+        own_edit = OwnEdit{id, generation, project};
+        return id;
+    }
+    void end_own_edit(std::uint64_t id) noexcept {
+        if (own_edit && own_edit->id == id) own_edit.reset();
+    }
+    bool applying_own_edit() const noexcept {
+        return own_edit && own_edit->generation == generation && own_edit->project == project;
+    }
     QString observed_native_error;
     std::uint64_t generation = 0;
     QTimer timer{&owner};
@@ -269,7 +297,7 @@ struct AssistantViewModel::State {
         return QString::fromUtf8(QJsonDocument(QJsonArray{thread, turn, call}).toJson(QJsonDocument::Compact));
     }
     bool native_owner(const std::shared_ptr<NativeReceipt>& receipt) const {
-        return receipt && !receipt->retired && !native_blocked && publishing && generic_authenticated && !generic_retiring &&
+        return receipt && !receipt->retired && !native_blocked && !attachment_clear_requested && !attachment_clear_draining && publishing && generic_authenticated && !generic_retiring &&
             !generic_revoke_pending && !generic_blocked && !generic_context_pending && !generic_clear_pending &&
             generic_question_id.isEmpty() && !file_selection && !file_staging &&
             receipt->generation == generation && receipt->thread == generic_thread && !receipt->turn.isEmpty() &&
@@ -380,6 +408,7 @@ struct AssistantViewModel::State {
         return false;
     }
     void native_retire(bool respond, bool closing = false, bool discard = false) {
+        own_edit.reset(); // No original call may suppress a later owner's manual edit.
         if (native_receipt) native_receipt->retired = true;
         native_receipt.reset(); native_pending.clear();
         for (auto& record : native_records) {
@@ -575,13 +604,22 @@ struct AssistantViewModel::State {
         native_prepare(rpc, id, name, purpose, original, read_result);
         if (readonly) { native_finish(true, read_result); return; }
         if (edit) {
+            const auto edit_scope = begin_own_edit();
             native_call->may_have_written = true;
-            own_edit = true;
-            QString refusal;
-            try { refusal = name == "set_free" ? project->applyRecordedFreeFlags(*edit, std::move(beforeFlags)) : project->apply(*edit, false); own_edit = false; }
-            catch (...) { own_edit = false; throw; }
-            native_finish(refusal.isEmpty(), {{"status", refusal.isEmpty() ? "edited" : "refused"},
-                {"calculation_pending", project->calculating()}, {"message", refusal.isEmpty() ? QString("Native edit published; calculation is asynchronous.") : bounded_error(refusal)}});
+            const auto original_record = native_call->record;
+            const auto original_receipt = native_call->receipt;
+            const QPointer<ProjectViewModel> original_project = project;
+            ProjectViewModel::EditOutcome result;
+            try { result = project->applyRecordedEdit(*edit, false); }
+            catch (...) {
+                end_own_edit(edit_scope);
+                throw;
+            }
+            end_own_edit(edit_scope);
+            if (!original_project || project != original_project || !native_call ||
+                native_call->record != original_record || native_call->receipt != original_receipt) return;
+            native_finish(result.applied && result.published, {{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
+                {"calculation_pending", project->calculating()}, {"message", result.message.isEmpty() ? QString("Native edit published with Undo; calculation is asynchronous.") : bounded_error(result.message)}});
             return;
         }
         if (name == "run_fit") {
@@ -1036,7 +1074,7 @@ struct AssistantViewModel::State {
         if (clear) {
             generic_blocked = false; generic_held_row.reset();
             native_discard_pending = true; native_complete_discard();
-            bind(project, true); // Existing settled-only managed rebind, no authentication assignment.
+            bind(rebind_project(), true); // Actual current Session owner; never the retired pre-target borrow.
         } else generic_retire_context();
     }
     void generic_retire_context() {
@@ -1098,12 +1136,17 @@ struct AssistantViewModel::State {
         generic_report_views.clear();
         generic_report_bytes = 0;
     }
-    void generic_clear() {
+    void generic_clear(bool* discarded = nullptr) {
+        if (discarded) *discarded = false;
         native_retire(true, false, true);
-        if (generic_clear_pending) return; // Repeated Clear never refreshes cancellation deadlines.
+        if (generic_clear_pending) {
+            if (discarded) *discarded = true; // The original archive discard already committed.
+            return; // Repeated Clear never refreshes cancellation deadlines.
+        }
         const bool was_refused = archive_refused;
         archive_refused = false;
         if (!publish({})) { archive_refused = was_refused; error = storage_error; notify(); return; }
+        if (discarded) *discarded = true; // Real archive commit, independently of later preparation/rebind.
         generic_clear_reports();
         generic_context_retention_pending = false; generic_context_retention_error.clear();
         emit owner.conversationRetired();
@@ -1812,6 +1855,7 @@ struct AssistantViewModel::State {
 #endif
     }
     bool file_current(const FileSelection& scope) const {
+        if (attachment_clear_requested || attachment_clear_draining) return false;
 #ifndef __EMSCRIPTEN__
         if (generic_mode && generic_context_retention_pending) return false;
 #endif
@@ -2090,7 +2134,9 @@ struct AssistantViewModel::State {
 #ifndef __EMSCRIPTEN__
         if (generic_mode && native_blocked) error = native_capacity_error;
 #endif
-        auto property = [this](const QString& name, const auto& value, auto signal) {
+        const auto scope = generation;
+        auto property = [this, scope](const QString& name, const auto& value, auto signal) {
+            if (scope != generation) return;
             const QVariant next = QVariant::fromValue(value);
             if (!observed.contains(name) || observed.value(name) != next) { observed[name] = next; (owner.*signal)(); }
         };
@@ -2524,6 +2570,7 @@ struct AssistantViewModel::State {
         }
     }
     void sync() {
+        const auto scope = generation;
         const Object next_core = controller ? object(controller->state()) : Object{};
 #ifndef __EMSCRIPTEN__
         const Object next_native = generic_mode ? generic_native : object(connection->state());
@@ -2541,8 +2588,11 @@ struct AssistantViewModel::State {
 #else
         sync_skills();
 #endif
+        if (scope != generation) return;
         models.assign(choices);
+        if (scope != generation) return;
         select_from_catalog(choices);
+        if (scope != generation) return;
         if (core.value("pending_plan_id").toString().isEmpty()) plan = {};
         #ifndef __EMSCRIPTEN__
         if (!generic_mode)
@@ -2565,22 +2615,32 @@ struct AssistantViewModel::State {
         sync(); notify();
         return reply;
     }
-    void bind(ProjectViewModel* next, bool managedResult = false, bool preserveNativeSettlement = false) {
+    bool bind(ProjectViewModel* next, bool managedResult = false, bool preserveNativeSettlement = false) {
+        const QPointer<ProjectViewModel> target(next);
+        const bool has_target = next != nullptr;
+        if (generation == UINT64_MAX) throw std::length_error("Assistant owner identity is exhausted");
+        const auto binding = ++generation;
+        own_edit.reset();
+        const auto current = [&] { return generation == binding && (!has_target || target); };
 #ifndef __EMSCRIPTEN__
-        const bool replacedNativeOwner = next != project;
+        const bool replacedNativeOwner = target != project;
         if (generic_mode) try { native_retire(true, true); } catch (...) { generic_fail(QObject::tr("The native request could not be retired during project replacement.")); }
+        if (!current()) return false;
         if (!preserveNativeSettlement) native_fit.clear();
         if (generic_mode && replacedNativeOwner && native_discard_pending) {
             // The persisted discard was already authorized. This owner entrance
             // permanently retires the old worker/response, so no destroyed old
             // ProjectVM callback is required to release its recovery fence.
             native_call.reset(); native_complete_discard();
+            if (!current()) return false;
         }
         generic_clear_pending = false;
         // The old context's issued interrupt belongs to its retained turn,
         // including after acknowledgement. Rebinding cannot erase that proof.
 #endif
-        emit owner.conversationRetired(); // Before any fallible replacement preparation.
+        if (!current()) return false;
+        emit owner.conversationRetired(); // Nested close/open owns its newer binding.
+        if (!current()) return false;
 #ifndef __EMSCRIPTEN__
         if (generic_mode) {
             if (managedResult) {
@@ -2588,41 +2648,54 @@ struct AssistantViewModel::State {
                 retire_result();
                 generic_thread.clear(); generic_turn.clear(); generic_terminal_turn.clear();
                 generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear();
-                if (!generic_retire_question()) return;
+                if (!generic_retire_question() || !current()) return false;
                 generic_workspace.clear(); generic_skill_paths.clear();
                 generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear();
                 // Keep only the actual managed process/account/catalog. No old thread/call/context authority survives.
             } else (void)generic_context_changed(); // Session may already have committed its new owner; always finish attachment.
+            if (!current()) return false;
             generic_input_paths.clear(); generic_input_cache.reset();
             if (!generic_context_retention_pending) { generic_held_row.reset(); generic_blocked = false; }
         }
 #endif
         retire_file_selection();
+        if (!current()) return false;
 #ifndef __EMSCRIPTEN__
         if (controller && connection) connection->cancel(core.value("active_turn_id").toString().toStdString());
 #endif
-        ++generation;
+        if (!current()) return false;
         consented_context.clear();
         if (project) {
             QObject::disconnect(project, nullptr, &owner, nullptr);
             QObject::disconnect(project->fit(), nullptr, &owner, nullptr);
         }
-        controller.reset(); retentions.clear(); failure_slot.reset(); queued_request.clear();
+        controller_attached = false; controller_project.clear();
+        controller.reset();
+        if (!current()) return false;
+        retentions.clear(); failure_slot.reset(); queued_request.clear();
         skill_catalog_binding.clear(); selected_skill.clear(); if (!managedResult) skills.assign({});
-        selected_reply.clear(); selected_rows = {}; selected_files.assign(selected_rows); selected_rows_dirty = false;
-        project = next; plan = {}; question = {};
+        if (!current()) return false;
+        selected_reply.clear(); selected_rows = {}; selected_files.assign(selected_rows);
+        if (!current()) return false;
+        selected_rows_dirty = false;
+        project = target; plan = {}; question = {};
         edi::assistant::Hooks hooks;
-        hooks.reserve_terminal = [this](const std::string& input) { return reserve(input); };
-        hooks.event = [this](const std::string& text) { event(text); };
-        hooks.apply = [this](const edi::Edit& edit, bool structural) {
-            if (!project) return std::string("The project was closed");
-            own_edit = true;
-            try {
-                const auto error_text = project->apply(edit, structural); own_edit = false;
-                return error_text.toStdString();
-            } catch (...) { own_edit = false; throw; }
+        hooks.reserve_terminal = [this, binding](const std::string& input) {
+            if (generation != binding) throw std::runtime_error("The assistant owner was replaced");
+            return reserve(input);
         };
-        hooks.provider_request = [this](const std::string& text) {
+        hooks.event = [this, binding](const std::string& text) { if (generation == binding) event(text); };
+        hooks.apply = [this, binding](const edi::Edit& edit, bool structural) {
+            if (generation != binding || !project) return std::string("The project was closed or replaced");
+            const auto edit_scope = begin_own_edit();
+            try {
+                const auto error_text = project->apply(edit, structural);
+                end_own_edit(edit_scope);
+                return error_text.toStdString();
+            } catch (...) { end_own_edit(edit_scope); throw; }
+        };
+        hooks.provider_request = [this, binding](const std::string& text) {
+            if (generation != binding) return;
             const auto scope = generation;
             const auto captured = object(text);
             if (!QMetaObject::invokeMethod(&owner, [this, text, scope, captured] {
@@ -2656,15 +2729,22 @@ struct AssistantViewModel::State {
                 } catch (...) { error = storage_error; controller->cancel(); (void)queue_render(); }
             }, Qt::QueuedConnection)) throw std::runtime_error("Assistant dispatch queue is unavailable");
         };
-        controller = std::make_unique<edi::assistant::Controller>(project ? project->assistantWorker() : *idle_worker, std::move(hooks));
-        if (project) {
-            controller->attach(project->assistantProject(), QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString());
-            QObject::connect(project, &ProjectViewModel::projectEdited, &owner, [this] {
-                if (controller && !own_edit) {
+        // Keep the candidate Controller locally alive through its synchronous
+        // attachment event; a nested bind cannot destroy its executing receiver.
+        auto attached = std::make_unique<edi::assistant::Controller>(project ? project->assistantWorker() : *idle_worker, std::move(hooks));
+        if (target) attached->attach(target->assistantProject(), QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString());
+        if (!current()) return false;
+        controller = std::move(attached);
+        if (target) {
+            QObject::connect(target, &ProjectViewModel::projectEdited, &owner, [this, binding] {
+                if (generation != binding) return;
+                if (controller && !applying_own_edit()) {
 #ifndef __EMSCRIPTEN__
                     if (generic_mode) retire_result();
 #endif
-                    retire_file_selection(); controller->notify_changed(); plan = {}; question = {};
+                    retire_file_selection();
+                    if (generation != binding || !controller) return;
+                    controller->notify_changed(); plan = {}; question = {};
 #ifndef __EMSCRIPTEN__
                     if (generic_mode) (void)generic_context_changed();
 #endif
@@ -2672,18 +2752,22 @@ struct AssistantViewModel::State {
                 }
             });
 #ifndef __EMSCRIPTEN__
-            QObject::connect(project->fit(), &FitViewModel::iterationsChanged, &owner, [this] {
+            QObject::connect(target->fit(), &FitViewModel::iterationsChanged, &owner, [this, binding] {
+                if (generation != binding) return;
                 if (generic_mode && native_fit && native_call && native_current(native_call->receipt)) agent->activity();
             });
 #endif
-            QObject::connect(project->fit(), &FitViewModel::finished, &owner, [this] {
+            QObject::connect(target->fit(), &FitViewModel::finished, &owner, [this, binding] {
+                if (generation != binding) return;
 #ifndef __EMSCRIPTEN__
                 if (generic_mode && native_fit) return;
 #endif
 #ifndef __EMSCRIPTEN__
                 if (generic_mode) retire_result();
 #endif
-                retire_file_selection(); if (controller) controller->notify_changed();
+                retire_file_selection();
+                if (generation != binding) return;
+                if (controller) controller->notify_changed();
 #ifndef __EMSCRIPTEN__
                 if (generic_mode) (void)generic_context_changed();
 #endif
@@ -2700,7 +2784,12 @@ struct AssistantViewModel::State {
         if (state.value("status") == "ready") controller->provider_event(json(Object{{"schema", "edi.assistant/1"},
             {"type", "connection"}, {"connection_id", state.value("connection_id")}, {"status", "ready"}, {"capabilities", capabilities}}));
 #endif
-        sync(); notify();
+        if (!current()) return false;
+        controller_project = target; controller_attached = true;
+        sync();
+        if (!current()) return false;
+        notify();
+        return current();
     }
 };
 
@@ -2810,13 +2899,72 @@ void AssistantViewModel::selectSkill(const QString& id) {
     } catch (...) { state_->error = state_->storage_error; state_->notify(); }
 }
 void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(project); }
-void AssistantViewModel::setResultProject(ProjectViewModel* project) {
+bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedResult) {
+    const QPointer<ProjectViewModel> target(project);
+    const bool has_target = project != nullptr;
+    if (state_->session_attachment_depth == std::numeric_limits<unsigned>::max())
+        throw std::length_error("Session attachment depth is exhausted");
+    ++state_->session_attachment_depth;
+    std::exception_ptr failure;
+    try {
 #ifndef __EMSCRIPTEN__
-    if (state_->generic_mode && state_->generic_authenticated) { state_->bind(project, true); return; }
+        if (managedResult && state_->generic_mode && state_->generic_authenticated) (void)state_->bind(target, true);
+        else (void)state_->bind(target);
+#else
+        (void)managedResult;
+        (void)state_->bind(target);
 #endif
-    state_->bind(project);
+    } catch (...) { failure = std::current_exception(); }
+    const bool clear_requested = state_->attachment_clear_requested;
+    const bool cancelled_candidate = managedResult && clear_requested;
+    if (cancelled_candidate) {
+        // Cancellation precedes the fallible archive operation. The candidate
+        // must never remain the borrowed owner merely because discard fails.
+        try {
+            const QPointer<ProjectViewModel> actual(state_->rebind_project());
+            if (!state_->attached_to(actual)) (void)state_->bind(actual);
+        } catch (...) { if (!failure) failure = std::current_exception(); }
+        if (!state_->attached_to(state_->rebind_project()) && (state_->controller_project == target || state_->project == target)) {
+            // A failed restoration may not leave a Controller borrowing the
+            // candidate that its caller will destroy. The existing Session catch
+            // owns restoration/refusal; no mutation/account success is invented.
+            state_->controller_attached = false; state_->controller_project.clear();
+            state_->controller.reset();
+            state_->project = state_->rebind_project();
+        }
+    }
+    --state_->session_attachment_depth;
+    const auto clear = drainAttachmentClear();
+    if (cancelled_candidate) {
+        if (state_->attached_to(state_->rebind_project())) return false;
+        if (failure) std::rethrow_exception(failure);
+        throw std::runtime_error("The cancelled candidate could not restore its actual Session attachment");
+    }
+    // A committed ordinary target may finish after a genuine same-Session Clear,
+    // including a failed discard with its retained warning. A newer Session owner
+    // is still governed by the caller's independent replacement token.
+    const bool attached = (!has_target || target) && state_->attached_to(target);
+    if (failure && !(clear != AttachmentClear::NotRequested && attached)) std::rethrow_exception(failure);
+    return attached;
+}
+AssistantViewModel::AttachmentClear AssistantViewModel::drainAttachmentClear() noexcept {
+    if (state_->session_attachment_depth || state_->attachment_clear_draining || !state_->attachment_clear_requested)
+        return AttachmentClear::NotRequested;
+    state_->attachment_clear_requested = false;
+    state_->attachment_clear_draining = true;
+    bool discarded = false;
+    try { (void)clearHistoryNow(&discarded); }
+    catch (...) {
+        try { state_->error = state_->storage_error; (void)state_->queue_render(); } catch (...) {}
+    }
+    // Nested requests coalesce, but failure remains a meaningful result separate
+    // from Controller/project identity and cannot authorize managed adoption.
+    state_->attachment_clear_requested = false;
+    state_->attachment_clear_draining = false;
+    return discarded ? AttachmentClear::Discarded : AttachmentClear::Failed;
 }
 bool AssistantViewModel::resultSettledReady() const {
+    if (state_->attachment_clear_requested || state_->attachment_clear_draining) return false;
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) return !state_->generic_busy && !state_->generic_connecting && !state_->generic_retiring &&
         !state_->generic_revoke_pending && !state_->generic_held_row && state_->generic_rpc_rows.isEmpty() &&
@@ -2826,6 +2974,7 @@ bool AssistantViewModel::resultSettledReady() const {
 }
 void AssistantViewModel::send(const QString& text) {
     if (text.trimmed().isEmpty()) return;
+    if (state_->attachment_clear_requested || state_->attachment_clear_draining) return; // Actual Clear owns this attachment boundary.
     try {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
@@ -3057,10 +3206,20 @@ void AssistantViewModel::signOut() {
     state_->controller->cancel(); state_->sync(); state_->notify();
 }
 void AssistantViewModel::clearHistory() {
+    if (state_->session_attachment_depth || state_->attachment_clear_draining) {
+        state_->attachment_clear_requested = true;
+        return; // The actual request is drained at the existing attachment boundary.
+    }
+    (void)clearHistoryNow();
+}
+bool AssistantViewModel::clearHistoryNow(bool* committed) {
+    bool local = false;
+    bool& discarded = committed ? *committed : local;
+    discarded = false; // The caller owns this actual latch even if later diagnostics throw.
     try {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode && state_->generic_authenticated && !state_->generic_retiring) {
-            state_->generic_clear(); return;
+            state_->generic_clear(&discarded); return discarded;
         }
 #endif
 #ifndef __EMSCRIPTEN__
@@ -3069,15 +3228,14 @@ void AssistantViewModel::clearHistory() {
         state_->auth_pending = false;
 #ifndef __EMSCRIPTEN__
         const bool nativeSettling = state_->generic_mode && state_->native_fit && state_->native_fit->nativeRunning();
-        state_->bind(state_->project, false, nativeSettling);
-#else
-        state_->bind(state_->project);
 #endif
         const bool was_refused = state_->archive_refused;
         state_->archive_refused = false;
         if (!state_->publish({})) {
             state_->archive_refused = was_refused; state_->error = state_->storage_error;
+            state_->sync(); return false;
         } else {
+            discarded = true; // Persisted discard survives a later preparation/observer exception.
 #ifndef __EMSCRIPTEN__
             // Persisted explicit discard, independently of later UI allocation.
             state_->native_discard_pending = true;
@@ -3087,8 +3245,14 @@ void AssistantViewModel::clearHistory() {
 #endif
             state_->error.clear();
         }
+#ifndef __EMSCRIPTEN__
+        if (!state_->bind(state_->rebind_project(), false, nativeSettling)) return discarded;
+#else
+        if (!state_->bind(state_->rebind_project())) return discarded;
+#endif
         state_->sync();
     } catch (...) { state_->error = state_->storage_error; (void)state_->queue_render(); }
+    return discarded;
 }
 
 QString AssistantViewModel::beginFileSelection() {
@@ -3099,7 +3263,7 @@ QString AssistantViewModel::beginFileSelection() {
     try {
         if (!state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
             throw std::runtime_error("The selected-file owner is unavailable");
-        if (state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()))
+        if (state_->attachment_clear_requested || state_->attachment_clear_draining || state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()))
             throw std::runtime_error("Finish the active operation before selecting files");
         if (!state_->flush_selected_rows()) { state_->notify(); return {}; }
         const auto descriptor = state_->file_context();
@@ -3186,7 +3350,7 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
     bool admitted = false;
     bool context_preserved = true;
     try {
-        if (state_->file_selection || state_->file_staging || state_->auth_pending ||
+        if (state_->attachment_clear_requested || state_->attachment_clear_draining || state_->file_selection || state_->file_staging || state_->auth_pending ||
 #ifndef __EMSCRIPTEN__
             (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) ||
 #endif

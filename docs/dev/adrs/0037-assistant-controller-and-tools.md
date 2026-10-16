@@ -213,3 +213,16 @@ An actual finished FitJob releases its exact captured handle even if logout/fata
 
 
 The already persisted native-discard latch also completes at a genuine project-owner replacement/close entrance after the old native worker/response authority is permanently retired. It does not wait for a callback from a destroyed old ProjectViewModel. A same-project still-running cancellation continues to hold; failed archive Clear never arms this release. This retires the obsolete owner without fabricating a completed fit report or settling a replacement call.
+
+
+### Native value/free Undo and relation publication boundary
+
+Native set_parameters and set_free call the same preowned recorded-edit entrance as the manual relation and free-batch editor. Normal app Undo exists before any live batch write. The native result reports edited only after actual application and presentation; an actual write followed by failed presentation reports applied_unconfirmed, retains its Undo and the app's recovery fence, and is not called a no-write refusal. Calculation remains asynchronous. The closed restore's joint collection preparation and exact changed-state narrowing are specified in ADR0024; the real applied receipt is specified in ADR0020. No restricted Controller approval or scientific model policy is bypassed, and no completed constrained trial/checkpoint/restore workflow is inferred from this primitive.
+
+
+The recorded-edit successor also closes the preview-admission and owner-retirement siblings: actual preparation failure keeps an honest owed calculation without a phantom ticket, and synchronous Session replacement cannot destroy or continue the old publication stack into a replacement. Native reply/currentness remains bound to the original project, record and receipt after editing. Shared report/scan/save/Undo critical guards cannot bypass that fence; no additional provider authority or capability is registered by these repairs.
+
+
+### Original-owner edit suppression
+
+The native and restricted edit hooks suppress manual-change retirement only for their exact original generation/project and scoped edit token. Every success, exception and early retired-call return releases that token. Owner/call retirement invalidates it; a stale return cannot clear a newer reentrant token. A later genuine manual edit therefore still retires result/file/context/controller authority, even after the original native project/call was replaced or closed. Native outcome/RPC publication remains independently guarded by the original project, record and receipt. Binding/Session notification fences and scan Undo commit ownership are specified in ADR0020; they add no registered capability, Python dependency or authority over a replacement project.

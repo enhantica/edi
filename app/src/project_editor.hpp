@@ -20,7 +20,9 @@ namespace edi_app {
 class ProjectEditor {
    public:
     virtual ~ProjectEditor() = default;
-    // Empty on success; the core's refusal message otherwise, with nothing changed.
+    // Empty after an actual edit (a later presentation failure remains a held app
+    // warning); nonempty only for a refusal before the core operation writes.
+    // Native callers use ProjectViewModel's explicit applied/published outcome.
     virtual QString apply(const edi::Edit& change, bool structural) = 0;
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.

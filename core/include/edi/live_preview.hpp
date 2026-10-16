@@ -53,8 +53,12 @@ class LivePreview {
     // request, the publication the model holds stays current, and a calculation in flight is still
     // the newest and publishes. Otherwise the edit is noted (Project::note_edit), `edited` is called,
     // and it is a request. There is no rollback: a callable cannot be passed, so a change that writes
-    // and then throws cannot reach this door.
-    void apply(const Edit& edit);
+    // and then throws cannot reach this door. Exceptions from a later hook/request are different:
+    // the optional applied receipt remains true and the actual edit is not rolled back.
+    // Optional owner-local receipt: false before the operation, true immediately after
+    // the closed Edit completes, before any fallible trace/hook/request publication.
+    // A later exception does not turn an actual edit into a refusal.
+    void apply(const Edit& edit, bool* applied = nullptr);
     // An edit of a setting no calculation reads (the report's, ADR-0036 §7): runs it on the live project at once and
     // refuses as `apply` does, but is neither noted nor a request, so the publication stays current. The owner
     // publishes what the setting changes; `edited` is not called.

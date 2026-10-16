@@ -43,6 +43,8 @@
 
 namespace edi_app {
 
+struct ImmutableAssistantResult;
+
 // A value and its standard uncertainty as the project's rule writes them, for QML: the value's text, the s.u.'s text
 // in the value's last digits, and the bracket; all empty when there is no s.u. to write.
 struct UncertaintyText {
@@ -282,8 +284,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
     // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
-    // Internal native/UI shared recorded free-flag edit; caller prepared and validated the complete batch.
-    QString applyRecordedFreeFlags(const edi::Edit& change, std::vector<std::pair<std::string, bool>> before);
+    struct EditOutcome {
+        bool applied = false;
+        bool published = false;
+        QString message;
+    };
+    // Native batches and the existing manual relation/free editor share the same
+    // preowned Undo and actual applied/publication boundary. No QML entry point.
+    EditOutcome applyRecordedEdit(const edi::Edit& change, bool structural);
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
@@ -366,7 +374,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
     QString apply_report_setting(const edi::Edit& change);
     // Writes report settings through the preview's settings door and publishes what they change.
-    QString write_report_settings(const edi::Edit& change);
+    QString write_report_settings(const edi::Edit& change, bool restoring = false);
     // The scan's results (null outside a scan project).
     const ScanSession* scanSession() const { return scan_session_; }
 
@@ -424,6 +432,26 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void publishCalculating();
     void setLastError(const QString& error);
     friend class Session;
+    friend class FitViewModel;
+    void retire() noexcept;
+    bool retired_ = false;
+    unsigned publication_depth_ = 0;
+    // Private stack lifetime, not a callback/API or model authority grant. Session
+    // may eagerly drain only an idle old owner; active stacks unwind normally.
+    struct PublicationScope {
+        ProjectViewModel& owner;
+        explicit PublicationScope(ProjectViewModel& value) noexcept : owner(value) { ++owner.publication_depth_; }
+        ~PublicationScope() {
+            if (--owner.publication_depth_ == 0 && owner.retired_) owner.deleteLater();
+        }
+        PublicationScope(const PublicationScope&) = delete;
+        PublicationScope& operator=(const PublicationScope&) = delete;
+    };
+    // Keep the exact old sealed files alive until normal QObject deferred deletion.
+    std::shared_ptr<ImmutableAssistantResult> retired_result_;
+    QString criticalEditRefusal(bool restoring = false) const;
+    QString applyUndo(const edi::Edit& change, bool structural);
+    void holdPublicationFailure(const QString& warning) noexcept;
     void setModified(bool modified);
 
     std::unique_ptr<edi::Project> project_;
@@ -482,8 +510,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Each experiment view's Load data… state: every experiment but a scan's.
     void syncLoadState();
     // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
-    QString replaceData(int index, edi::BraggPdExperiment replacement);
-    bool restoreScanRun(const ScanRun& run);
+    QString replaceData(int index, edi::BraggPdExperiment replacement, bool restoring = false);
+    bool restoreScanRun(const ScanRun& run, bool restoring = false);
     // The results read again from disk (after a run, an undo or a load), with every view of them.
     void reloadScanResults();
     // The indexed results in the lists, Evolution, the fit summary and the outdated state.
@@ -613,6 +641,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::unique_ptr<edi::work::Worker> worker_;
     std::unique_ptr<edi::LivePreview> preview_;
     bool pending_structural_ = false;
+    bool editing_ = false;
+    bool edit_publication_failed_ = false;
+    struct RecordedEdit {
+        std::size_t index = 0;
+        std::vector<const edi::Parameter*> targets;
+    };
+    RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
+    void finishRecordedEdit() noexcept;
+    EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
+    QString editReadinessRefusal(bool restoring) const;
     bool calculating_ = false;
     bool modified_ = false;
     QString last_error_;

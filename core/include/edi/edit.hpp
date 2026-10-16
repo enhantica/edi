@@ -48,6 +48,43 @@
 
 namespace edi {
 
+namespace detail {
+struct ScanViewValue {
+    std::string unique_name;
+    double value = 0.0;
+    std::optional<double> uncertainty;
+};
+// The existing scan-view operation split at its real write boundary. Scan Undo
+// prepares it before reversing files; ordinary Edit still resolves at execution.
+struct PreparedScanView {
+    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; };
+    ExperimentBase* experiment;
+    std::optional<PdDataBase> data;
+    std::vector<Target> targets;
+    void commit() noexcept {
+        static_assert(std::is_nothrow_move_assignable_v<std::optional<PdDataBase>>);
+        experiment->data = std::move(data);
+        experiment->calculation_only = false;
+        for (const auto& target : targets) {
+            target.parameter->value = target.value;
+            target.parameter->uncertainty = target.uncertainty;
+        }
+    }
+};
+inline PreparedScanView prepare_scan_view(Project& project, ExperimentBase& experiment,
+                                         const std::vector<ScanViewValue>& values, PdDataBase data) {
+    PreparedScanView prepared{&experiment, std::move(data), {}};
+    std::map<std::string, Parameter*> by_name;
+    for (const NamedSlot& slot : named_slots(project)) by_name.emplace(slot.unique_name, slot.parameter);
+    prepared.targets.reserve(values.size());
+    for (const auto& value : values) {
+        if (const auto found = by_name.find(value.unique_name); found != by_name.end())
+            prepared.targets.push_back({found->second, value.value, value.uncertainty});
+    }
+    return prepared;
+}
+} // namespace detail
+
 // edi ADR-0024: an edit of the declared relations, as undo restores it. The alias and constraint rows
 // before the edit, and the state then of every parameter the edit changed (a dependent's implied value,
 // a free flag a new relation cleared, an uncertainty), each by its unique name. Taken with
@@ -733,37 +770,21 @@ class Edit {
     // dataset's, and each named parameter given its value and uncertainty (a fitted dataset's results row, or the
     // template's). Every name is resolved first; one the model does not have is left out, as a results column of
     // a parameter the template no longer has. The writes are assignments, which cannot fail.
-    struct ScanValue {
-        std::string unique_name;
-        double value = 0.0;
-        std::optional<double> uncertainty;
-    };
+    using ScanValue = detail::ScanViewValue;
     static Edit scan_view(Project& project, ExperimentBase& experiment, std::vector<ScanValue> values, PdDataBase data) {
         auto shown = std::make_shared<PdDataBase>(std::move(data));
         return Edit([&project, &experiment, values = std::move(values), shown] {
-            std::map<std::string, Parameter*> by_name;
-            for (const NamedSlot& slot : named_slots(project)) {
-                by_name.emplace(slot.unique_name, slot.parameter);
-            }
-            std::vector<std::pair<Parameter*, const ScanValue*>> targets;
-            for (const ScanValue& value : values) {
-                if (const auto found = by_name.find(value.unique_name); found != by_name.end()) {
-                    targets.emplace_back(found->second, &value);
-                }
-            }
-            experiment.data = *shown;
-            experiment.calculation_only = false;
-            for (const auto& [parameter, value] : targets) {
-                parameter->value = value->value;
-                parameter->uncertainty = value->uncertainty;
-            }
+            auto prepared = detail::prepare_scan_view(project, experiment, values, *shown);
+            prepared.commit();
         });
     }
 
     // An edit of the relations undone (edi ADR-0024): the alias and constraint rows as they were, and each
     // parameter the edit changed back to its state then. Every parameter is resolved first, so one whose
-    // row was removed since refuses with nothing written; the rows were admitted before, so the
-    // assignments cannot refuse. The door's completion then re-derives every mark and implied value.
+    // row was removed since refuses with nothing written. Both complete ItemVec replacements
+    // (keys, table columns and memberships) are admitted before either live move commit;
+    // numeric/optional/flag writes and those moves cannot fail. The door's completion then
+    // re-derives every mark and implied value.
     static Edit restore_relations(Project& project, RelationsUndo before) {
         return Edit([&project, before = std::move(before)] {
             std::map<std::string, Parameter*> by_name;
@@ -787,8 +808,12 @@ class Edit {
             for (const ParameterConstraint& row : before.constraints) {
                 constraints.push_back(std::make_shared<ParameterConstraint>(row));
             }
-            project.aliases.assign(std::move(aliases));
-            project.constraints.assign(std::move(constraints));
+            // ItemVec admission builds the columns, keys and memberships. Prepare BOTH
+            // collections before either live write; their move commits cannot throw.
+            ItemVec<ParameterAlias> prepared_aliases(std::move(aliases));
+            ItemVec<ParameterConstraint> prepared_constraints(std::move(constraints));
+            project.aliases = std::move(prepared_aliases);
+            project.constraints = std::move(prepared_constraints);
             for (const auto& [parameter, state] : targets) {
                 parameter->value = state->value;
                 parameter->uncertainty = state->uncertainty;
