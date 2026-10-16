@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <numbers>
+#include <set>
 #include <sstream>
 #include <filesystem>
 #include <fstream>
@@ -970,9 +972,13 @@ void lbco159_model(const edi::Structure& structure, double la_b) {
     }
     const auto geometry = edi::structure_geometry(structure);
     const auto& atoms = geometry.expanded_atom_sites;
-    REQUIRE_MESSAGE(atoms.size() == 6,
-                    "CIF159: Pm-3m gives La1/Ba1/Co1/O3 species contributions before occupancy");
-    std::vector<std::array<double, 3>> oxygen;
+    // The public default view is [0,1] INCLUSIVE: faces, edges and corners carry
+    // translated visual copies. Compare physical orbits modulo whole lattice
+    // translations PER original species/site, not the raw number of view rows.
+    const std::vector<std::vector<std::array<double, 3>>> orbits{
+        {{0., 0., 0.}}, {{0., 0., 0.}}, {{.5, .5, .5}},
+        {{0., .5, .5}, {.5, 0., .5}, {.5, .5, 0.}}};
+    std::vector<std::set<std::size_t>> seen(labels.size());
     for (std::size_t i = 0; i < atoms.size(); ++i) {
         const auto found = std::find(labels.begin(), labels.end(), atoms.atom_site_id[i]);
         REQUIRE_MESSAGE(found != labels.end(), "CIF159: every physical atom belongs to an original row");
@@ -982,21 +988,29 @@ void lbco159_model(const edi::Structure& structure, double la_b) {
         const double b = index == 0 ? la_b : 0.0;
         CHECK_MESSAGE(atoms.u_iso[i] == doctest::Approx(b / (8.0 * std::numbers::pi * std::numbers::pi)),
                       "CIF159: independent B=8*pi^2*U conversion is nontrivial for the derived La control");
-        if (index == 3) oxygen.push_back({atoms.fract_x[i], atoms.fract_y[i], atoms.fract_z[i]});
-        else {
-            CHECK_MESSAGE((atoms.fract_x[i] == doctest::Approx(positions[index][0]) &&
-                          atoms.fract_y[i] == doctest::Approx(positions[index][1]) &&
-                          atoms.fract_z[i] == doctest::Approx(positions[index][2])),
-                          "CIF159: cubic origin/body-centre orbits are physically unchanged");
+        const std::array<double, 3> image{atoms.fract_x[i], atoms.fract_y[i], atoms.fract_z[i]};
+        auto matched = orbits[index].size();
+        for (std::size_t candidate = 0; candidate < orbits[index].size(); ++candidate) {
+            bool translated_original = true;
+            for (std::size_t axis = 0; axis < 3; ++axis) {
+                const double shift = image[axis] - orbits[index][candidate][axis];
+                translated_original = translated_original && std::isfinite(shift) &&
+                    shift == doctest::Approx(std::round(shift));
+            }
+            if (translated_original) { matched = candidate; break; }
         }
+        REQUIRE_MESSAGE(matched < orbits[index].size(),
+                        "CIF159: every image is an integer translation of its original closed-form orbit");
+        seen[index].insert(matched);
     }
-    std::sort(oxygen.begin(), oxygen.end());
-    const std::vector<std::array<double, 3>> faces{{0., .5, .5}, {.5, 0., .5}, {.5, .5, 0.}};
-    REQUIRE_MESSAGE(oxygen.size() == faces.size(), "CIF159: oxygen's face-centre orbit has multiplicity3");
-    for (std::size_t i = 0; i < faces.size(); ++i)
-        for (std::size_t axis = 0; axis < 3; ++axis)
-            CHECK_MESSAGE(oxygen[i][axis] == doctest::Approx(faces[i][axis]),
-                          "CIF159: oxygen positions are the closed-form cubic face centres");
+    std::size_t physical_contributions = 0;
+    for (std::size_t i = 0; i < labels.size(); ++i) {
+        CHECK_MESSAGE(seen[i].size() == orbits[i].size(),
+                      "CIF159: each original species retains its complete origin/body/face-centre orbit");
+        physical_contributions += seen[i].size();
+    }
+    CHECK_MESSAGE(physical_contributions == 6,
+                  "CIF159: distinct La1/Ba1/Co1/O3 physical contributions survive view replication");
 }
 }  // namespace
 

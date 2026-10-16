@@ -242,6 +242,17 @@ int main(int argc,char** argv) {
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(
                 QByteArrayView(reinterpret_cast<const char*>(pixels.constBits()),pixels.sizeInBytes()),
                 QCryptographicHash::Sha256).toHex())}};
+        const auto capture_root=qEnvironmentVariable("EDI_TEST_USAGE_CAPTURE_DIR");
+        if(!capture_root.isEmpty()) {
+            const auto directory=QDir(capture_root).filePath(QString::number(QCoreApplication::applicationPid()));
+            const auto path=QDir(directory).filePath("usage-current.png");
+            const bool saved=QDir::isAbsolutePath(capture_root) && QDir().mkpath(directory)
+                && actual.save(path,"PNG");
+            image["png_path"]=path;image["png_saved"]=saved;
+            QFile png(path);
+            if(saved && png.open(QIODevice::ReadOnly))image["png_sha256"]=QString::fromLatin1(
+                QCryptographicHash::hash(png.readAll(),QCryptographicHash::Sha256).toHex());
+        }
         auto* dialog=usage_dialog();auto* content=dialog->property("contentItem").value<QQuickItem*>();
         auto* outer=content?content->parentItem():nullptr;
         if(!content || !outer)throw std::runtime_error("actual usage popup item unavailable");
