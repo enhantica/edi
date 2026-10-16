@@ -4207,11 +4207,20 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
         connect(actor)
     state = actor.last['vm']
     assert state['connected'] and state['project_present']
-    target = native_parameter(state)
+    if state['context_consent_required']:
+        actor.command('sign_in')  # Existing connected GUI disclosure approval only.
+    approved = actor.last['vm']
+    assert approved['connected'] and not approved['context_consent_required'], (
+        'R3-R6 SETUP: actual newest-owner disclosure is approved before manual change'
+    )
+    target = native_parameter(approved)
     changed = actor.command('manual_value', path=target['path'], value=target['value'] + 0.001)
     assert not changed['reply']['error'], 'R3-R6: actual newest-owner manual editor remains usable'
     assert native_parameter(changed['vm'])['value'] == target['value'] + 0.001
     assert changed['vm']['connected']
+    assert changed['vm']['context'] != approved['context'], (
+        'R3-R6: actual manual change updates the complete newest-owner disclosure'
+    )
     assert changed['vm']['context_consent_required'], (
         'R3-R6: actual newest-owner context notifications remain usable'
     )
