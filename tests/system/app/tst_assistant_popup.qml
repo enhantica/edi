@@ -1234,10 +1234,28 @@ TestCase {
             }
             if (data.tag.startsWith("dirty-")) {
                 visible185_page("structure");
+                Ui.click(this, Probe, window, "sideBar.tab.basic");
+                Ui.expandGroup(this, Probe, window, "group.cell");
                 draftField = Ui.control(Probe, window, "cell.length_a");
-                verify(draftField !== null && draftField.enabled && Ui.exposed(draftField),
+                if (draftField !== null) {
+                    Ui.scrollIntoView(draftField);
+                    rendered();
+                }
+                console.log("DRAFT253_PREMISE", data.tag, JSON.stringify({
+                    page: window.appBarCentralTabs.currentIndex,
+                    group: {identity: String(Ui.control(Probe, window, "group.cell")),
+                        collapsed: Ui.control(Probe, window, "group.cell").collapsed},
+                    basicChecked: Ui.control(Probe, window, "sideBar.tab.basic").checked,
+                    field: draftField ? {identity: String(draftField), item: String(draftField.item),
+                        exactItem: draftField.item === cell[0], visible: draftField.visible,
+                        enabled: draftField.enabled, activeFocus: draftField.activeFocus,
+                        readOnly: draftField.readOnly === undefined ? null : draftField.readOnly,
+                        rect: rect(draftField),
+                        clickPoint: Ui.clickPoint(draftField), exposed: Ui.exposed(draftField)} : null,
+                    currentOwner: Session.project === project, connected: assistant.connected}));
+                verify(draftField !== null && draftField.item === cell[0] && draftField.enabled && Ui.exposed(draftField),
                     "VA3 SETUP: genuine editable manual field is exposed before delegated work");
-                mouseClick(draftField);
+                Ui.click(this, Probe, window, draftField.objectName);
                 draft = data.tag.startsWith("dirty-invalid") ? "invalid-partial" : String(cell[0].value + 0.02);
                 visible185_type(draft);
                 verify(draftField.activeFocus && draftField.text === draft,
@@ -1261,22 +1279,44 @@ TestCase {
                 const pointer = item("assistant.actionPointer");
                 verify(Ui.rendered(pointer), "VA SETUP: actual accent pointer is rendered during real input");
                 if (data.tag === "manual-override") {
-                    const manual = visible185_free(ba);
-                    const beforeFree = ba.free;
+                    // The exact original La path is now the genuine displayed filter.
+                    // Ba exposure under that filter remains explicitly unqualified.
+                    verify(la.refinable && la.fittable,
+                        "VA2 SETUP: original same-row manual target is independently fittable, never a derived alias");
+                    const manual = visible185_free(la);
+                    const beforeFree = la.free;
+                    const beforeManualUndo = project.canUndo;
+                    const manualValues = JSON.parse(originalValues).map(row =>
+                        row[0] === la.path ? [row[0], row[1], !beforeFree, row[3], row[4]] : row);
+                    const filter = Ui.control(Probe, window, "parameters.list").sourceModel;
+                    console.log("MANUAL253_PREMISE", JSON.stringify({target: la.path,
+                        value: la.value, free: beforeFree, page: window.appBarCentralTabs.currentIndex,
+                        filter: {name: filter.nameFilter, category: filter.categoryFilter,
+                            variability: filter.variability, targetShown: filter.shows(la), targetRow: filter.rowOf(la),
+                            otherShown: filter.shows(ba), otherRow: filter.rowOf(ba)},
+                        rect: rect(manual), clickPoint: Ui.clickPoint(manual),
+                        currentOwner: Session.project === project, connected: assistant.connected}));
                     let manualToggles = 0;
                     function manualReceipt() { ++manualToggles; }
                     manual.toggled.connect(manualReceipt);
                     try {
                         const point = Ui.clickPoint(manual);
                         verify(point !== null, "VA2 SETUP: original manual event has a genuine exposed target");
-                        mouseClick(manual, point.x, point.y);
-                        tryCompare(ba, "free", !beforeFree, 2000,
+                        Ui.click(this, Probe, window, manual.objectName);
+                        tryCompare(la, "free", !beforeFree, 2000,
                             "VA2: original user checkbox event reaches its original target while cancellation restores view");
                         compare(manualToggles, 1, "VA2: user input is delivered once, never retargeted or replayed");
                     } finally { manual.toggled.disconnect(manualReceipt); }
                     tryCompare(assistant, "showingActions", false, 10000,
                         "VA2: original visible input retires after real manual takeover");
                     compare(la.value, originalValue, "VA2: cancelled uncommitted agent draft cannot write scientific state");
+                    rendered();
+                    compare(visible185_values(project), JSON.stringify(manualValues),
+                        "VA2: only the genuine original manual free action changes state; no late numeric/other write");
+                    compare(visible185_inputs(project), inputs,
+                        "VA2: original manual receiver preserves every measured sigma/weight/mask/link");
+                    compare(project.canUndo, beforeManualUndo,
+                        "VA2: cancellation consumes no prior Undo and creates no phantom native step");
                     verify(Ui.rendered(manual), "VA2: manual controls stay exposed after genuine user takeover");
                     compare(Preferences.assistantShown, true, "VA2: takeover preserves the actual stored assistant request");
                     tryCompare(popup, "visible", false, 2000, "VA2: no sheet reopens between user press/release or subsequent input");
@@ -2678,6 +2718,27 @@ TestCase {
         stage.aliasCountChanged.connect(resetBoundary);
         let draft = null, originalStage = null;
         const pointer = item("assistant.actionPointer");
+        let phase = "armed", lastAggregateConjuncts = "";
+        function phase253(name) {
+            phase = name;
+            if (data.tag !== "owner-fit") return;
+            try {
+                const diagnostic = visible185_outcome("relation246-diagnostics", previousIds);
+                console.log("RELATION253_PHASE", JSON.stringify({phase: phase, observedAtMs: Date.now(),
+                    diagnosticsOutcomePresent: diagnostic !== null,
+                    canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                    currentOwner: Session.project === project, calculating: project.calculating,
+                    computedCurrent: Probe.computedCurrent(project.currentExperiment),
+                    fitRunning: project.fit.running, fitOutcome: project.fit.outcome,
+                    fitStarts: running, fitFinished: finished, textEvents: textEvents, applies: applies,
+                    originalOutcome: visible185_outcome(call, previousIds),
+                    freeOutcome: visible185_outcome("relation246-free", previousIds),
+                    fitOutcomeRecord: visible185_outcome("relation246-fit", previousIds),
+                    diagnosticOutcome: diagnostic, connected: assistant.connected,
+                    lastError: assistant.lastError}));
+            } catch (error) { console.log("RELATION253_PHASE_ERROR", phase, String(error)); }
+        }
+        phase253("before-original-send");
         try {
             if (data.tag === "staged-draft") {
                 relation245_stage(project, [{id: "manual246_co", path: co.path}],
@@ -2689,6 +2750,7 @@ TestCase {
             assistant.send("Original complete relation request " + data.tag);
             if (data.tag === "owner-fit") {
                 for (const editId of [call, "relation246-free"]) {
+                    phase253("wait-edit-" + editId);
                     tryVerify(() => {
                         const edited = visible185_outcome(editId, previousIds);
                         return edited !== null && edited.status === "edited" && !project.calculating
@@ -2701,6 +2763,7 @@ TestCase {
                         canCancel: assistant.canCancel, showingActions: assistant.showingActions,
                         calculating: project.calculating, computedCurrent: Probe.computedCurrent(project.currentExperiment),
                         currentOwner: Session.project === project, value: la.value, free: la.free}));
+                    phase253("settled-edit-" + editId);
                     assistant.refreshUsage(); // Actual public event, no new objective/steer or timer.
                 }
             }
@@ -2758,11 +2821,21 @@ TestCase {
             } else {
                 const expected = data.tag === "cleanup-successor" ? "relation246-successor"
                     : data.tag === "owner-fit" ? "relation246-diagnostics" : call;
-                tryVerify(() => visible185_outcome(expected, previousIds) !== null
-                    && (data.tag === "cleanup-successor" || (!assistant.canCancel && !assistant.showingActions)),
+                phase253("aggregate-wait");
+                tryVerify(() => {
+                    const present = visible185_outcome(expected, previousIds) !== null;
+                    const conjuncts = JSON.stringify([present, assistant.canCancel, assistant.showingActions]);
+                    if (data.tag === "owner-fit" && conjuncts !== lastAggregateConjuncts) {
+                        lastAggregateConjuncts = conjuncts;
+                        phase253("aggregate-conjunct-change");
+                    }
+                    return present
+                        && (data.tag === "cleanup-successor" || (!assistant.canCancel && !assistant.showingActions));
+                },
                     relation246_observationMs(args) + (data.tag === "owner-fit" ? visible237_observationMs([
                         {path: la.path, text: ""}]) + 10000 : 0),
                     "REL RPC: real original operation and its publication settle with an actual retained outcome");
+                phase253("aggregate-passed");
                 const outcome = visible185_outcome(data.tag === "cleanup-successor" ? expected : call, previousIds);
                 if (data.tag === "staged-draft") {
                     verify(["refused", "unavailable"].includes(outcome.status) && outcome.message.length > 0,
@@ -2836,6 +2909,7 @@ TestCase {
                         verify(diagnostic !== null && diagnostic.diagnostics !== null
                             && typeof diagnostic.diagnostics === "object",
                             "REL OWNER: original native diagnostics returns after the real fit publication");
+                        phase253("post-fit-science");
                         tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
                             10000, "REL OWNER: real post-fit calculated profile is current before observation");
                         const modeled = Probe.rows(project.currentExperiment.pattern);
@@ -2851,14 +2925,18 @@ TestCase {
                         // restores its adopted values before the two original native edits.
                         if (fit.adopted) {
                             verify(project.fit.canUndo, "REL OWNER: adopted actual fit exposes its ordinary result Undo");
+                            phase253("fit-undo");
                             Ui.click(this, Probe, window, "appBar.button.undo");
                         }
+                        phase253("free-undo");
                         Ui.click(this, Probe, window, "appBar.button.undo");
                         compare(la.free, false, "REL OWNER: one native free Undo restores original fixed independent ADP");
                     }
+                    phase253("relation-undo");
                     Ui.click(this, Probe, window, "appBar.button.undo");
                 }
             }
+            phase253("final-preservation");
             compare(visible185_values(project), values, "REL: complete Undo/refusal/retirement preserves all original values/free/SUs");
             compare(relation245_declarations(project), declarations, "REL: original full declarations survive exactly");
             compare(visible185_inputs(project), inputs, "REL: unchanged actual observations/sigmas/masks/weights/links survive");
@@ -2868,6 +2946,7 @@ TestCase {
             verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
                 "REL: retained original history survives native work and cancellation");
         } finally {
+            phase253("finally-after-" + phase);
             console.log("RELATION246_STATE", data.tag, JSON.stringify({showingActions: assistant.showingActions,
                 canCancel: assistant.canCancel, textEvents: textEvents, applies: applies, starts: starts,
                 fitStarts: running, fitFinished: finished, currentOwner: Session.project === project,

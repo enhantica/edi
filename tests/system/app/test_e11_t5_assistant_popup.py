@@ -785,6 +785,40 @@ def relation246_script(case):
     return calls
 
 
+def relation253_owner_process_budget(calls):
+    """Process backstop: sum this composed case's existing bounded windows.
+
+    Ui.click's six fixed waits total18s, with an extra2s for names containing
+    .tab.; rendered is2s+2s+QtTest's declared5s render default. Counts below
+    include genuine manual preparation, three possible result Undos and normal
+    init/cleanup. This does not extend any QML wait or production deadline.
+    """
+    arguments = calls[0]['arguments']
+    texts = [text for row in arguments['aliases'] for text in (row['id'], row['path'])]
+    texts += [text for row in arguments['constraints']
+              for text in (row['id'], row['expression'])]
+    relation_ms = 10000 + 1100 * (
+        3 + 5 * (len(arguments['aliases']) + len(arguments['constraints']))
+    ) + 100 * sum(len(text) + 4 for text in texts)
+    free_path = calls[1]['arguments']['flags'][0]['path']
+    free_ms = 10000 + 5 * 1100 + 100 * (4 + len(free_path)) + 2 * 500
+    windows = {
+        'manual_preparation_and_undo_ui_clicks': 25 * 18000,
+        'ui_tab_checked_waits': 7 * 2000,
+        'rendered_calls_including_init_and_cleanup': 16 * (2000 + 2000 + 5000),
+        'instrument_group_discovery_and_expansion': 2 * 2000,
+        'actual_bootstrap_readiness': 2 * 2000,
+        'initial_prior_apply_and_postfit_science': 3 * 10000,
+        'init_cleanup_project_selection': 3 * 2000,
+        'body_and_conditional_cleanup_popup_visibility': 8000,
+        # Two actual edit-settlement barriers, then unchanged aggregate wait.
+        'original_composed_operation_observations': 3 * relation_ms + free_ms + 10000,
+    }
+    return {'windows_ms': windows, 'relation_observation_ms': relation_ms,
+            'free_observation_ms': free_ms,
+            'process_ms': max(90000, sum(windows.values()))}
+
+
 @pytest.mark.parametrize('case', RELATION246_CASES)
 def test_relation246_original_native_gui_science_and_retirement(case, tmp_path):  # noqa: PLR0912, PLR0914, PLR0915 -- finite original Main/RPC/worker receipts
     runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
@@ -811,9 +845,14 @@ def test_relation246_original_native_gui_science_and_retirement(case, tmp_path):
                       for path in fixture.rglob('*') if path.is_file()}
     argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
             'AssistantPopup::test_relation246_original_rpc_full_gui:' + case, '-o', '-,txt']
+    process_seconds = 90
+    if case == 'owner-fit':
+        budget = relation253_owner_process_budget(calls)
+        (tmp_path / 'relation253-process-budget.json').write_text(json.dumps(budget, indent=2))
+        process_seconds = budget['process_ms'] / 1000
     try:
         result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
-                                text=True, timeout=90, check=False)
+                                text=True, timeout=process_seconds, check=False)
     except subprocess.TimeoutExpired as error:
         for stream in ('stdout', 'stderr'):
             received = getattr(error, stream) or b''
