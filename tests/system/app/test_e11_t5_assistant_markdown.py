@@ -240,9 +240,10 @@ def test_code_uses_actual_bundled_font_and_fits_the_body_line(markdown):
 
 def test_report_table_topology_preserves_partial_header_and_original_cells(markdown):
     # Independent report_html.cpp prior art: --bw:0.4pt, shaded header/even rows,
-    # thin outer/header-bottom border; ordinary body cells have no vertical grid.
+    # Owner seq113 supersedes outer/vertical rules and Markdown column alignment:
+    # every header/body cell is left aligned, padded and has no vertical separator.
     report_stroke_points = 0.4
-    original = '| Original label | |\n| --- | --- |\n| First | alpha |\n| Second | beta |'
+    original = '| Original label | |\n| ---: | :---: |\n| First | alpha |\n| Second | beta |'
     expected = [['Original label', ''], ['First', 'alpha'], ['Second', 'beta']]
     for dark in (False, True):
         observed = markdown.command('markdown_row', kind='assistant', text=original, dark=dark)[
@@ -268,8 +269,8 @@ def test_report_table_topology_preserves_partial_header_and_original_cells(markd
                     'TABLE1: every original cell, including an empty header, remains exact'
                 )
         thin_limit = report_stroke_points * observed['logical_dpi_y'] / 72
-        assert thin_limit > 0 and 0 < table['border'] <= thin_limit + 1e-9, (
-            'TABLE1: actual outer stroke stays thin at the independent report scale'
+        assert thin_limit > 0 and table['border'] == 0, (
+            'TABLE1: the table frame cannot introduce a vertical gutter or side rule'
         )
         assert table['collapsed'], (
             'TABLE1: actual table uses collapsed rather than doubled grid borders'
@@ -278,13 +279,18 @@ def test_report_table_topology_preserves_partial_header_and_original_cells(markd
             assert 0 < cells[0, column]['bottom_border'] <= thin_limit + 1e-9, (
                 'TABLE1: the complete header has one thin separating stroke'
             )
-        for row in (1, 2):
-            for column in range(2):
-                assert (
-                    cells[row, column]['left_border'] == cells[row, column]['right_border'] == 0
-                ), (
-                    'TABLE1: ordinary report-style body cells do not acquire a heavy vertical grid'
-                )
+        for cell in cells.values():
+            assert cell['paragraph_alignments'] and all(
+                paragraph['left'] for paragraph in cell['paragraph_alignments']
+            ), 'TABLE1: every header and body paragraph is actually left aligned'
+            assert cell['left_border'] == cell['right_border'] == 0, (
+                'TABLE1: neither header nor body cells introduce vertical separators'
+            )
+            assert all(
+                cell[f'{side}_padding'] > 0 for side in ('top', 'bottom', 'left', 'right')
+            ), (
+                'TABLE1: every cell has actual breathing room on all sides, not flush text'
+            )
         fills = {position: cell['background'] or observed['theme_background']
                  for position, cell in cells.items()}
         assert fills[0, 0] == fills[0, 1] == fills[2, 0] == fills[2, 1], (

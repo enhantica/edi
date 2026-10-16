@@ -174,8 +174,24 @@ int main(int argc,char** argv) {
                         cursor.setPosition(cell.lastCursorPosition().position(),QTextCursor::KeepAnchor);
                         const auto cell_format=cell.format().toTableCellFormat();
                         const auto first=cell.firstCursorPosition().block().begin().fragment();
+                        Array paragraph_alignments;
+                        for(auto block=cell.firstCursorPosition().block();block.isValid()
+                            && block.position()<=cell.lastCursorPosition().position();block=block.next()) {
+                            paragraph_alignments.push_back(Object{{"text",block.text()},
+                                {"left",block.blockFormat().alignment().testFlag(Qt::AlignLeft)
+                                    && !(block.blockFormat().alignment()&(Qt::AlignRight|Qt::AlignHCenter|Qt::AlignJustify))}});
+                        }
                         cells.push_back(Object{{"row",row},{"column",column},{"text",cursor.selectedText()},
                             {"row_span",cell.rowSpan()},{"column_span",cell.columnSpan()},
+                            {"paragraph_alignments",paragraph_alignments},
+                            {"top_padding",cell_format.hasProperty(QTextFormat::TableCellTopPadding)
+                                ? cell_format.topPadding() : format.cellPadding()},
+                            {"bottom_padding",cell_format.hasProperty(QTextFormat::TableCellBottomPadding)
+                                ? cell_format.bottomPadding() : format.cellPadding()},
+                            {"left_padding",cell_format.hasProperty(QTextFormat::TableCellLeftPadding)
+                                ? cell_format.leftPadding() : format.cellPadding()},
+                            {"right_padding",cell_format.hasProperty(QTextFormat::TableCellRightPadding)
+                                ? cell_format.rightPadding() : format.cellPadding()},
                             {"first_bold",first.isValid() && first.charFormat().fontWeight()>=QFont::DemiBold},
                             {"background",cell_format.background().style()==Qt::NoBrush ? QJsonValue(QJsonValue::Null)
                                 : QJsonValue(cell_format.background().color().name(QColor::HexArgb))},
