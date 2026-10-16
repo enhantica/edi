@@ -4130,7 +4130,7 @@ def test_native135_real_conversation_retirement_callback_keeps_latest_session_ow
         ('ordinary', 'fileSelectionRetired', True, True),
     ],
 )
-def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usable(  # noqa: PLR0915 -- finite public owner/callback outcomes
+def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usable(  # noqa: PLR0912, PLR0915 -- finite public owner/callback outcomes
     generic, tmp_path, attachment, signal, authenticated, queued
 ):
     actor, trace = generic('result:complete' if attachment == 'managed-result' else 'complete')
@@ -4156,8 +4156,9 @@ def test_native139_assistant_only_clear_during_real_bind_keeps_current_owner_usa
         connect(actor)
     before = actor.last['vm']
     if signal == 'fileSelectionRetired':
-        request = actor.command('selected_begin')['reply']['request_id']
-        assert request, 'R3-R6 SETUP: genuine current native chooser request is pending'
+        assert actor.command('selected_begin')['reply']['request_id'], (
+            'R3-R6 SETUP: genuine current native chooser request is pending'
+        )
     assert actor.command('retirement_arm', action='clear', signal=signal, queued=queued)['reply'][
         'armed'
     ]
