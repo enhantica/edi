@@ -7,6 +7,7 @@
 #include <QPointF>
 #include <QEventPoint>
 #include <QUrl>
+#include <QList>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
@@ -29,6 +30,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
+    Q_PROPERTY(QVariantMap nativeImport READ nativeImport NOTIFY nativeImportChanged)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(QString connectionLabel READ connectionLabel NOTIFY connectionLabelChanged)
@@ -104,12 +106,19 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void signIn();
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void clearHistory();
+    QVariantMap nativeImport() const;
+    Q_INVOKABLE QStringList nativeImportProfiles() const;
+    Q_INVOKABLE QString beginNativeImport(QObject* form = nullptr);
+    Q_INVOKABLE bool applyNativeImport(const QString& intent, const QString& cifId, const QString& dataId, const QString& recipeJson);
+    Q_INVOKABLE void cancelNativeImport(const QString& intent);
+    Q_INVOKABLE QString completeNativeImportFiles(const QString& requestId, const QList<QUrl>& urls);
     Q_INVOKABLE QString beginFileSelection();
     Q_INVOKABLE bool addSelectedFiles(const QString& requestId, const QList<QUrl>& urls);
     Q_INVOKABLE void cancelFileSelection(const QString& requestId);
     Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void nativeImportChanged();
     void showActionsChanged();
     void showingActionsChanged();
     void actionWindowChanged();

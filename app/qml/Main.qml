@@ -33,7 +33,9 @@ EaComponents.ApplicationWindow {
     property var assistantPreviousProject: null
     property int assistantFocusEpoch: 0
     property var assistantManualTakeoverProject: null
-    readonly property bool assistantManualTakeover: assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
+    property bool assistantEmptyManualTakeover: false
+    readonly property bool assistantManualTakeover: assistantEmptyManualTakeover && Session.project === null
+        || assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
 
     function containsAssistantItem(ancestor, item) {
         for (let current = item; current; current = current.parent)
@@ -194,6 +196,7 @@ EaComponents.ApplicationWindow {
                     return;
                 if (window.assistantManualTakeover) {
                     window.assistantManualTakeoverProject = null;
+                    window.assistantEmptyManualTakeover = false;
                     Preferences.assistantShown = true;
                     return;
                 }
@@ -362,8 +365,9 @@ EaComponents.ApplicationWindow {
     EaElements.RemotePointer {
         id: assistantPointer
         objectName: "assistant.actionPointer"
-        parent: window.contentItem
-        z: 1000
+        parent: Overlay.overlay.parent
+        z: Overlay.overlay.z + 1
+        enabled: false
         color: EaStyle.Colors.themeAccent
         Accessible.ignored: true
     }
@@ -387,13 +391,14 @@ EaComponents.ApplicationWindow {
                 target.showSidebarTab(extra);
         }
         function onActionPointerShown() { assistantPointer.show(); }
-        function onActionPointerMoved(position) { assistantPointer.move(position.x, position.y); }
+        function onActionPointerMoved(position) { const local = assistantPointer.parent.mapFromItem(null, position.x, position.y); assistantPointer.move(local.x, local.y); }
         function onActionPointerPressed() { assistantPointer.click(); }
         function onActionPointerHidden() { assistantPointer.hide(); }
         function onActionManualTakeover() {
             // Synchronous marker only: the sidebar is already exposed. Keep it
             // so until the user explicitly chooses to reopen the assistant.
             window.assistantManualTakeoverProject = Session.project;
+            window.assistantEmptyManualTakeover = Session.project === null;
         }
     }
     AssistantPanel {
@@ -639,6 +644,7 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: Session
+        function onProjectChanged() { window.assistantEmptyManualTakeover = false; }
         function onLoadFailed(message) {
             refusal.title = qsTr("The project was not opened");
             refusal.message = message;

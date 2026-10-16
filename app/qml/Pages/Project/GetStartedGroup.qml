@@ -56,12 +56,82 @@ EaElements.GroupBox {
             onClicked: AppState.saveAsRequested()
         }
 
+        EaElements.SideBarButton {
+            objectName: "project.importNativeCwl"
+            text: qsTr("Import CIF and CW measurement…")
+            fontIcon: "file-import"
+            enabled: (!Session.assistant.canCancel || Session.assistant.showingActions) && !WebFiles.available
+            onClicked: nativeImport.openNew()
+        }
+
         // Opening a project from a URL is not implemented: shown, disabled (edi ADR-0017 §4).
         EaElements.SideBarButton {
             objectName: "project.openUrl"
             enabled: false
             fontIcon: "link"
             text: qsTr("Open project from URL…")
+        }
+    }
+
+    // Native import is a separate ordinary workflow, not an OS-loader override.
+    property string importFileRequest: ""
+    function chooseImportFiles() {
+        if (Session.assistant.canCancel || WebFiles.available) return;
+        const originalProject = Session.project;
+        const originalPicker = importFileRequest;
+        nativeImport.close();
+        if (Session.project !== originalProject || importFileRequest !== originalPicker || Session.assistant.canCancel) return;
+        importFileRequest = Session.assistant.beginFileSelection();
+        if (importFileRequest.length) nativeInputFiles.open();
+    }
+    NativeCwlImportDialog {
+        id: nativeImport
+        parent: Overlay.overlay
+        assistant: Session.assistant
+        onFilesRequested: group.chooseImportFiles()
+    }
+    FileDialog {
+        id: nativeInputFiles
+        objectName: "nativeImport.files"
+        title: qsTr("Choose structure CIF and CW measurement files")
+        fileMode: FileDialog.OpenFiles
+        onAccepted: {
+            const original = group.importFileRequest;
+            const originalProject = Session.project;
+            group.importFileRequest = "";
+            const intent = Session.assistant.completeNativeImportFiles(original, selectedFiles);
+            if (Session.project !== originalProject) return;
+            if (intent.length) nativeImport.openWithIntent(intent);
+            else importError.open();
+        }
+        onRejected: {
+            const original = group.importFileRequest;
+            group.importFileRequest = "";
+            Session.assistant.cancelFileSelection(original);
+        }
+    }
+    Connections {
+        target: Session.assistant
+        function onFileSelectionRetired(intent) {
+            if (group.importFileRequest !== intent) return;
+            group.importFileRequest = "";
+            nativeInputFiles.reject();
+        }
+    }
+    AppDialog {
+        id: importError
+        parent: Overlay.overlay
+        objectName: "nativeImport.inputError"
+        title: qsTr("Native import was not prepared")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: importErrorText.implicitHeight
+        EaElements.Label {
+            id: importErrorText
+            width: importError.contentWidth
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            text: Session.assistant.lastError || qsTr("The source selection or empty Session changed. Existing inputs and projects are preserved.")
         }
     }
 

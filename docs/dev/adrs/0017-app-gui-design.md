@@ -1129,3 +1129,49 @@ Private input recognition grants no recipient permission. Existing application-l
 The prior source221 ChartToolButton and Structure/Experiment/Analysis handlers discarded grab refusal and called cancellation again at tap. Each existing handler now latches its actual Qt point and an opaque original-owner proof before synchronous grab retirement. Passive/exclusive transitions for the same press do not rearm it. A rejected grab stays rejected; tap consumes the proof once, validates the same original control, row/action owner, selected structure/experiment, project/window/helper and request/account identities, then runs the unchanged action. Tap never starts new cancellation. Newer owner/request admission, canceled/ungrabbed points, retired helper/window and replaced/recycled rows cannot turn an old press into a new action.
 
 The proof retains only fixed weak QObject/record identities and the bounded original thread identifier, not project data, Worker ownership or a provider payload. It is local to the actual existing handler gesture, with no global map, timer, synthetic exemption or action executor. Its native one-use latch also rejects duplicate final calls. The fixed QML JavaScript holder installs its slot before cancellation without publishing a QML property change, and updates it only if it is still the same slot, so reentrant B cannot be overwritten by A's return. Cancel/ungrab discards the matching proof while retaining only its last physical point keys, so another grab transition cannot rearm that canceled press; a later independent ordinary gesture works while disconnected or in WASM. The exact private point still uses the existing IE2 original window/sequence/stamp predicate at grab and final delivery. No scientific editing, manual event, focus or geometry is synthesized or changed by this ownership check.
+
+
+## Shared typed CW import and visible input
+
+Prior art: Project/GetStartedGroup's Create/Open and ProjectDescriptionDialog,
+the actual create_cwl_project typed reader/Worker (ADR-0037), and the existing
+real pointer/keyboard sequencer. Import CIF and CW measurement is an additional
+ordinary manual workflow; it does not change OS project or structure loaders.
+The same common form supports no current project and the scientifically empty
+current owner. Its Inputs/Instrument/Background/Exclusions/Initial values tabs
+contain genuine source/profile ComboBoxes, text/numeric fields, a selected-row
+editor with Add/Remove and one Apply. All three arrays retain the actual native
+256-row bounds, including zero exclusions/initial parameters and at least two
+background anchors. Domain/physics validation belongs to the existing parser
+and native reader, not a new GUI model. Staging and blur do not edit science.
+
+Manual file selection uses the existing immutable selected-file picker and its
+owner token. Cancel/error does not grant a path, replace a project or submit a
+recipe. Form Close/reject/aboutToHide revokes the exact original authority before
+exit animation. Never-opened token retirement consumes its exact ID without
+waiting for an impossible closed signal. Pending newer file selections/forms
+remain separate; reentrant reset/Add/Remove/load-row operations stop before
+changing another intent. Nonadopted current failures retain real retry authority;
+retired/cancelled owners require reopening, and actual adoption cannot retry.
+
+The assistant's visible create action uses these same widgets and actual Apply,
+with the original once-owned RPC, account, selected-byte and Session proof.
+Project/Home navigation and already-selected tabs use ordinary real controls;
+no direct currentIndex, field setter or scientific fallback is called by the
+assistant. Each staged row is checked against its actual section/count/selection,
+and the final form's complete typed recipe/source IDs must equal the request.
+A single disabled passive pointer sits in a root sibling layer above Overlay,
+with scene-coordinate mapping; it neither raises application content nor
+intercepts input or creates a second pointer. ComboBox choices use actual
+pointer opening and keyboard selection; their final Return balances only its
+original surviving target. A field's canceled partial agent text restores its
+view-only original draft before the same genuine manual event is delivered.
+
+The original request is retired for helper-active and inter-step manual input,
+including the exact no-project popup. Manual takeover preserves target geometry
+until that event returns; old projection changes are queued and exact-ID scoped.
+Non-takeover retirement closes/consumes only the original form, including before
+open/capture finishes. Cleanup balances the original helper before terminal
+external QML cleanup and cannot resume against a reentrant newer operation.
+One existing fixed total deadline remains; actual delivered characters refresh
+idle activity without extending that total or exposing their contents.

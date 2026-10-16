@@ -645,3 +645,73 @@ context-byte changes can still require disclosure confirmation. Stable project
 conversation reuse and scope-based consent are separate required improvements;
 this flag neither delivers them nor proves the owner's desktop grouping/title
 behavior. Existing persistent clutter is not scanned or cleaned by this unit.
+
+
+### Native creation through the ordinary import form
+
+Prior art is the normal native create_cwl_project immutable-file/typed-recipe
+Worker, the same-owner prepared population/Undo operation above, and the ordinary
+manual Project import form (ADR-0017). Both entrances share creation_input and
+creation_job; manual use requires no provider/RPC. The offline manual snapshot
+uses the app-private temporary host directory and refuses overlap with either
+actual runtime writable root. It does not reinterpret an empty workspace as cwd,
+read arbitrary chat paths, alter a grant or trust a model-supplied file path.
+
+Visible mode preowns a finite input sequence, form/row/editor/helper text roles,
+original prepared result and exact account/receipt/Session/source authority before
+showing controls. It uses real tabs, ComboBox opening/keyboard choices, paced text,
+Add rows and the real final Apply. Apply parses the actual complete form and
+requires equality with the original recipe and immutable selected IDs before the
+shared native job is admitted. No scientific mutation happens while staging.
+The global nine-tool catalog and strict bundled core capability prerequisites
+are unchanged; project-assistance version1.5.12/index digest/effective instructions
+advertise this actual route, with missing folder intake and visible saving still
+explicit limits. Capacity or deadline refusal does not trigger normal-mode fallback.
+
+Manual import captures source hashes, original Controller/Session/PVM and WorkStamps
+before its worker. A current nonadopted failure keeps that same correctable intent;
+Close/Stop/Clear, source/owner/account change and actual adoption do not renew it.
+Same-owner population remains one real manual structural edit and scientific Undo:
+it does not suppress ordinary projectEdited/context retirement or grant consent.
+The closed population commit latch and preowned complete/uncertain view projections
+retain the actual result despite that ordinary retirement. Publication requires
+the original owner and the exact single ordinary Session/file-intent retirement;
+explicit abandonment and newer owners/forms cannot be overwritten. No-project
+manual adoption uses the original prepared Controller/adjacent Session commit,
+with receiver and original identity checks after every reentrant publication.
+
+Original tool final delivery remains once-owned. Stop/close after worker admission
+sets cancellation and retains the actual final delivery/receipt; it never answers
+or cancels a newer call. Form cleanup clears original task ownership before any
+notification, balances only its original input helper, and makes exact-form QML
+cleanup terminal. Manual takeover marks eventual sidebar restoration and defers
+projection changes until its unchanged original event returns. Old callbacks,
+queued tasks and original response tails fence receiver/call/receipt/account/
+project/window/helper identity rather than treating a surviving shared widget as
+authority. Saved=false and modified/path-preserved completion remain truthful;
+this operation adds neither current-directory saving nor folder read admission.
+
+
+### Native import recipe encoding admission
+
+The common native import form and its manual/assistant Apply decoders share the
+existing context-byte limit. Each decoder admits the actual complete UTF-8 length
+before allocating its owning encoded recipe, using the bounded code-point
+encoding walk already used for assistant diagnostics. The post-encoding byte
+check and the existing JSON parser, typed recipe validation, original recipe
+comparison and source/owner checks remain in place.
+
+The form retains its bounded raw-draft preprocessing and additionally counts the
+complete plain recipe's JSON spelling before `JSON.stringify`: field names,
+punctuation, numeric spellings, Unicode and JSON escapes all count against the
+same context-byte limit. The count admits equality at the limit. It does not use
+a six-times estimate at the decoder limit, which would reject otherwise valid
+Unicode or ASCII recipes. The existing JSON writer remains the sole serializer;
+no parser, scientific operation, file authority or lifecycle behavior changes.
+
+
+The recipe byte counter follows the pinned Qt writer and converter at malformed
+UTF-16 boundaries too: an isolated surrogate retained by JSON.stringify contributes
+zero bytes through that stateless UTF-8 conversion; a valid pair contributes four.
+This matches the common decoders' actual Qt preflight and final guard without
+changing parser policy, normalizing input or raising the admitted byte limit.

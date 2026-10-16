@@ -21,11 +21,12 @@ namespace edi_app {
 class AssistantWidgetInput final : public QObject {
     Q_OBJECT
  public:
-    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll };
+    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose };
     struct Request {
         Kind kind;
         QPointer<QQuickItem> target;
         int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
+        int option = -1; // Actual finite ComboBox option.
         QString value; // Native NumberText/full numeric spelling; never a shell/DSL.
         std::function<bool()> current;
         std::function<bool()> restoreCurrent; // Same exact widget/owner; independent of retired mutation authority.
@@ -53,6 +54,7 @@ class AssistantWidgetInput final : public QObject {
     bool manualDraftPresent() const; // App-private current-focus preflight, never a provider selector.
  signals:
     void activeChanged(bool active);
+    void inputProgress(); // A real delivered character; no text/payload.
     void manualInput(); // Keep the manual target exposed before yielding its original event.
     void pointerShown();
     void pointerMoved(const QPointF& position);
@@ -62,7 +64,7 @@ class AssistantWidgetInput final : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
  private:
     struct MouseOwnership;
-    enum class Step { Move, Press, Release, Select, Delete, Type, Commit };
+    enum class Step { Move, Press, Release, Select, Delete, Type, Commit, ChooseHome, ChooseDown, ChooseCommit };
     void advance() noexcept;
     bool current(std::uint64_t id) const;
     bool visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter = false) const;
@@ -81,6 +83,9 @@ class AssistantWidgetInput final : public QObject {
     Step step_ = Step::Move;
     qsizetype character_ = 0;
     QString original_text_;
+    QPointer<QObject> choice_popup_;
+    int option_step_ = 0;
+    bool choiceKeyboardOwned() const;
     const QString failed_ = QStringLiteral("The visible action could not be completed; inspect the current project");
     const QString interrupted_ = QStringLiteral("Visible action interrupted");
     QPointF center_;
