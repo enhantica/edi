@@ -383,22 +383,24 @@ Popup {
                         && Object.keys(panel.assistant.pendingPlan).length === 0
                     text: qsTr("Working…")
                     textFormat: Text.PlainText
-                    color: EaStyle.Colors.themeForegroundMinor
+                    color: EaStyle.Colors.themeAccent
                     Accessible.name: qsTr("Assistant is working")
                     property bool branded: false
-                    leftPadding: AppSizes.unit + AppSizes.unit * 0.5
+                    readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
+                    Layout.minimumHeight: iconExtent
+                    leftPadding: iconExtent + AppSizes.unit * 0.5
                     onVisibleChanged: {
                         if (visible) branded = Math.random() < 0.5;
                         else workGlyph.rotation = 0;
                     }
                     Item {
-                        width: AppSizes.unit
+                        width: workStatus.iconExtent
                         height: width
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                         ControlsImpl.IconImage {
                             id: workGlyph
-                            width: EaStyle.Sizes.fontPixelSize * 0.75
+                            width: workStatus.iconExtent
                             height: width
                             anchors.centerIn: parent
                             source: workStatus.branded ? "../../resources/logo/AssistantWorking.svg" : "../../resources/logo/AssistantSpinner.svg"
