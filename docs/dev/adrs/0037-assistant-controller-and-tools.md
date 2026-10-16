@@ -272,3 +272,10 @@ FitViewModel separates fallible native-completion preparation from its existing 
 
 
 Visible-input refusal contains diagnostic preparation itself. When it cannot prepare the actual row, the original preadmitted native outcome/response and exact request remain authoritative, further work is fenced, and any real fit still settles only from its final FitReport. Real manual takeover cancels this original call while leaving the user's actual controls exposed; it is neither a new objective nor a provider grant. These changes retain the same eight native tools and all ordinary-mode recorded edits, Undo, currentness and worker ownership.
+
+
+### Retained native outcome is independent of completion (2026-10-16)
+
+An app-owned uncertain/refused/interrupted result is distinct from provider item completion and from an actual edit, adoption or Worker report. Ordinary non-worker Stop/manual takeover/mode/window retirement settles its original prepared result through the existing bounded native_finish row/response path. The existing record marks a chosen host outcome independently of completed, so later immutable-associated provider item/completed or terminal snapshots keep that actual nativeOutcome even after contained preparation/publication failure. This flag grants no execution, provider terminal or durable archive success. Original response transfer remains once-only and storage failure retains the existing fence/prepared outcome.
+
+Actual submitted FitReport/creation finalDelivery remains awaited; discard/context/Clear/permanent-close/no-response paths retain their existing authority and no-republication rules. Only still-owned visible history can be published; a cleared/replaced conversation is never revived by the outcome marker. Newer owner/call replacement after synchronous fallback publication stops the old response continuation. No target visibility delay/guard relaxation or claim that a refused/interrupted scientific input ran is introduced. This corrects the actual first153 response-versus-retained-row class, separately from later visible-create/batch candidates and the still-unobserved original lookup/takeover event origin.

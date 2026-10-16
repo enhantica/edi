@@ -409,6 +409,7 @@ struct AssistantViewModel::State {
         Object original, canonical, outcome, response, terminal, maximum_row, maximum_response;
         quint64 row_bytes = 0, outcome_bytes = 0;
         bool reserved = true, retired = false, discarded = false, completed = false, answered = false;
+        bool outcome_ready = false; // Chosen host result; independent of provider/native completion.
     };
     struct NativeCall {
         QJsonValue rpc;
@@ -849,6 +850,13 @@ struct AssistantViewModel::State {
         if (native_call) {
             native_call->receipt->retired = true; native_call->retiring = true;
             if (respond && (native_fit || native_creation_admitted()) && !closing) return; // Keep real report/RPC owner, never its discarded UI.
+            if (respond && !closing && !discard) {
+                // Settle the original prepared uncertainty through the same
+                // bounded row/response path as an ordinary native refusal.
+                // This neither claims an edit nor releases an admitted worker.
+                native_finish(false, native_call->record->outcome);
+                return;
+            }
             auto call = std::move(*native_call); native_call.reset();
             if (respond && !call.resolved && !call.record->answered) {
                 call.record->answered = true;
@@ -948,6 +956,7 @@ struct AssistantViewModel::State {
             // Own the actual result before any storage, post-write fingerprint or
             // wire operation. The preprepared uncertainty roles remain a fallback.
             record->outcome = std::move(actual); record->response = std::move(response); record->terminal = std::move(row);
+            record->outcome_ready = true;
             native_charge();
             try { native_refresh(call); }
             catch (...) { if (!original_call()) return; native_fence(); }
@@ -980,10 +989,14 @@ struct AssistantViewModel::State {
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
             if (!receiver || !original_call()) return;
             native_fence();
-            if (!original_call()) return;
+            if (!receiver || !original_call()) return;
             if (!native_fit && !native_creation_admitted()) {
+                // Even a contained preparation/publication failure chooses the
+                // already-owned honest fallback. Canonical updates must keep it.
+                record->outcome_ready = true;
                 try {
                     if (native_visible(call)) (void)generic_present(record->terminal);
+                    if (!receiver || !original_call()) return;
                     if (!call.resolved && !record->answered) {
                         record->answered = true; (void)agent->answer(call.rpc, record->response);
                     }
@@ -2250,7 +2263,7 @@ struct AssistantViewModel::State {
             const auto record = native_records.value(native_key(generic_thread, generic_turn, id));
             if (record) {
                 auto payload = row.value("payload").toObject(); payload["purpose"] = record->purpose;
-                if (record->completed) payload["nativeOutcome"] = record->outcome;
+                if (record->completed || record->outcome_ready) payload["nativeOutcome"] = record->outcome;
                 row["payload"] = payload;
             }
         }
