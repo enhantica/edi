@@ -1488,7 +1488,7 @@ for line in sys.stdin:
                 'createdAt': 1,
                 'updatedAt': 1,
                 'cwd': cwd,
-                'ephemeral': True,
+                'ephemeral': params.get('ephemeral') is True,
                 'modelProvider': 'openai',
                 'preview': '',
                 'projectId': None,
@@ -1508,6 +1508,21 @@ for line in sys.stdin:
             value['approvalsReviewer'] = 'auto_review'
         elif scenario == 'different-provider':
             value['modelProvider'] = 'other-original-provider'
+        if config.get('ephemeral257_variant'):
+            variant = config['ephemeral257_variant']
+            if variant == 'missing':
+                value['thread'].pop('ephemeral')
+            elif variant == 'false':
+                value['thread']['ephemeral'] = False
+            elif variant == 'malformed':
+                value['thread']['ephemeral'] = 'true'
+            with trace.with_suffix('.ephemeral257-responses.jsonl').open(
+                'a', encoding='utf-8'
+            ) as output:
+                output.write(json.dumps({
+                    'request': request,
+                    'response': {'id': request['id'], 'result': value},
+                }) + '\n')
         reply(request, value)
     elif method == 'turn/start':
         if scenario.startswith('rpc83:unknown:'):

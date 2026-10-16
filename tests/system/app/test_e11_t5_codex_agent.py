@@ -6866,3 +6866,110 @@ def test_completion254_real_named_empty_owner_and_native_creation(generic, tmp_p
         assert save211_files(source_directory) == source_files, (
             'COMPLETE: one model Undo does not overwrite the independent saved empty tree'
         )
+
+
+@pytest.mark.parametrize('variant', ['effective', 'missing', 'false', 'malformed'])
+def test_ephemeral257_actual_thread_admission_and_live_turn_clear_ownership(  # noqa: PLR0914, PLR0915 -- original reply/turn/Clear facts
+    generic, tmp_path, variant
+):
+    actor, trace = generic('fileauth')
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['ephemeral257_variant'] = variant
+    config_path.write_text(json.dumps(config))  # Original one-time prelaunch peer input.
+    fixture = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    original_files = {str(path.relative_to(fixture)): path.read_bytes()
+                      for path in fixture.rglob('*') if path.is_file()}
+    owned = tmp_path / 'Original ephemeral current owner'
+    shutil.copytree(fixture, owned)
+    assert actor.command('open', path=str(owned))['reply']['opened'], (
+        'EPHEMERAL SETUP: genuine ordinary Session opens the original owned project'
+    )
+    before = actor.last['vm']
+    actor.command('sign_in')
+    state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
+    observations = native_records(trace, '.ephemeral257-responses.jsonl')
+    assert len(observations) == 1, 'EPHEMERAL SETUP: one real bootstrap thread reply observed'
+    observation = observations[0]
+    request = observation['request']
+    assert request['method'] == 'thread/start' and (
+        type(request['params'].get('ephemeral')) is bool
+        and request['params']['ephemeral'] is True
+    ), 'EPHEMERAL: actual outgoing request explicitly requires boolean true before readiness'
+    assert observation['response']['id'] == request['id'], (
+        'EPHEMERAL: the effective projection belongs to that original outstanding request'
+    )
+    effective = observation['response']['result']['thread']
+    assert state['project'] == before['project'], (
+        'EPHEMERAL: bootstrap policy cannot change current owner/science/path/Undo state'
+    )
+    if variant == 'effective':
+        assert effective['ephemeral'] is True and state['connected'] and (
+            state['models'] and state['handoff']['account_label'] and not state['last_error']
+        ), 'EPHEMERAL: actual boolean true is acknowledged before genuine readiness'
+        signin206_shipped(state, trace)
+        connected = state
+        first = folder167_send(actor, trace, 'Original ephemeral live turn A')
+        second = folder167_send(actor, trace, 'Original ephemeral live turn B')
+        turns = started_requests(trace)
+        assert len(turns) == 2 and all(
+            row['params']['threadId'] == effective['id'] for row in turns
+        ), 'EPHEMERAL: ordinary live turns reuse their admitted thread without new bootstrap'
+        assert len([row for row in records(trace) if row.get('method') == 'thread/start']) == 1
+        assert all(row in second['messages'] for row in first['messages']), (
+            'EPHEMERAL: nondurable backend mode preserves ordinary retained Edi history'
+        )
+        actor.command('clear_history')
+        cleared = settle(actor, lambda value: value['connected'] and (
+            not value['can_cancel'] and not value['messages']
+        ))
+        assert cleared['models'] == connected['models'] and (
+            cleared['handoff']['account_label'] == connected['handoff']['account_label']
+        ), 'EPHEMERAL: genuine settled Clear retains the original account and catalog'
+        final = folder167_send(actor, trace, 'Original ephemeral fresh turn after Clear')
+        turns = started_requests(trace)
+        assert len(turns) == 3 and turns[-1]['params']['threadId'] != effective['id'], (
+            'EPHEMERAL: Clear resets model memory through a genuinely new admitted thread'
+        )
+        later = native_records(trace, '.ephemeral257-responses.jsonl')
+        assert len(later) == 2 and all(
+            type(row['request']['params'].get('ephemeral')) is bool
+            and row['request']['params']['ephemeral'] is True
+            and row['response']['result']['thread']['ephemeral'] is True
+            for row in later
+        ), 'EPHEMERAL: both original and genuinely fresh threads require effective true'
+        assert not any(row.get('text') in {
+            'Original ephemeral live turn A', 'Original ephemeral live turn B'
+        } for row in final['messages']), (
+            'EPHEMERAL: retired conversation cannot revive after Clear'
+        )
+        assert final['project'] == before['project'], (
+            'EPHEMERAL: live turns and Clear preserve all original current project facts'
+        )
+    else:
+        if variant == 'missing':
+            assert 'ephemeral' not in effective
+        elif variant == 'false':
+            assert effective['ephemeral'] is False
+        else:
+            assert effective['ephemeral'] == 'true' and type(effective['ephemeral']) is str
+        assert not state['connected'] and state['last_error'] and (
+            len(state['last_error'].encode()) <= 512
+        ), 'EPHEMERAL: missing/false/malformed proof cannot be silently admitted as ephemeral'
+        actor.command('send_text', text='Original refused ephemeral request')
+        assert not started_requests(trace), (
+            'EPHEMERAL: incompatible original reply refuses before any inference admission'
+        )
+        assert actor.last['vm']['project'] == before['project'], (
+            'EPHEMERAL: attempted nonadmitted input cannot mutate the original owner'
+        )
+    assert not any(row.get('method') in {
+        'account/login/start', 'account/logout', 'thread/archive', 'thread/unarchive',
+        'thread/name/set', 'thread/list', 'thread/read',
+    } for row in records(trace)), (
+        'EPHEMERAL: policy admission does not repair auth or inspect/alter personal histories'
+    )
+    assert {str(path.relative_to(fixture)): path.read_bytes()
+            for path in fixture.rglob('*') if path.is_file()} == original_files, (
+        'EPHEMERAL: original committed scientific input bytes remain unchanged'
+    )
