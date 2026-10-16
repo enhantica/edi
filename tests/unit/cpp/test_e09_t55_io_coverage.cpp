@@ -944,9 +944,9 @@ void lbco159_model(const edi::Structure& structure, double la_b) {
                                       structure.cell.length_c.value.get()};
     for (const auto value : lengths)
         CHECK_MESSAGE(value == doctest::Approx(3.88), "CIF159: literal cubic3.88A is not retuned");
-    CHECK_MESSAGE(structure.cell.angle_alpha.value.get() == 90.0 &&
+    CHECK_MESSAGE((structure.cell.angle_alpha.value.get() == 90.0 &&
                   structure.cell.angle_beta.value.get() == 90.0 &&
-                  structure.cell.angle_gamma.value.get() == 90.0,
+                  structure.cell.angle_gamma.value.get() == 90.0),
                   "CIF159: all original right angles are retained");
     const std::vector<std::string> labels{"La", "Ba", "Co", "O"};
     const std::vector<std::array<double, 3>> positions{{0., 0., 0.}, {0., 0., 0.},
@@ -956,16 +956,16 @@ void lbco159_model(const edi::Structure& structure, double la_b) {
                     "CIF159: distinct partially occupied La/Ba rows are never merged or dropped");
     for (std::size_t i = 0; i < labels.size(); ++i) {
         const auto& site = *structure.atom_sites[i];
-        CHECK_MESSAGE(site.id == labels[i] && site.type_symbol == labels[i],
+        CHECK_MESSAGE((site.id == labels[i] && site.type_symbol == labels[i]),
                       "CIF159: original label, order and scattering species survive");
-        CHECK_MESSAGE(site.fract_x.value.get() == positions[i][0] &&
+        CHECK_MESSAGE((site.fract_x.value.get() == positions[i][0] &&
                       site.fract_y.value.get() == positions[i][1] &&
-                      site.fract_z.value.get() == positions[i][2],
+                      site.fract_z.value.get() == positions[i][2]),
                       "CIF159: actual original site geometry is preserved");
         CHECK_MESSAGE(site.occupancy.value.get() == populations[i],
                       "CIF159: original La/Ba half populations and full Co/O survive");
-        CHECK_MESSAGE(site.adp_type == "Biso" &&
-                      site.adp_iso.value.get() == doctest::Approx(i == 0 ? la_b : 0.0),
+        CHECK_MESSAGE((site.adp_type == "Biso" &&
+                      site.adp_iso.value.get() == doctest::Approx(i == 0 ? la_b : 0.0)),
                       "CIF159: declared Biso units and literal/derived values survive");
     }
     const auto geometry = edi::structure_geometry(structure);
@@ -984,9 +984,9 @@ void lbco159_model(const edi::Structure& structure, double la_b) {
                       "CIF159: independent B=8*pi^2*U conversion is nontrivial for the derived La control");
         if (index == 3) oxygen.push_back({atoms.fract_x[i], atoms.fract_y[i], atoms.fract_z[i]});
         else {
-            CHECK_MESSAGE(atoms.fract_x[i] == doctest::Approx(positions[index][0]) &&
+            CHECK_MESSAGE((atoms.fract_x[i] == doctest::Approx(positions[index][0]) &&
                           atoms.fract_y[i] == doctest::Approx(positions[index][1]) &&
-                          atoms.fract_z[i] == doctest::Approx(positions[index][2]),
+                          atoms.fract_z[i] == doctest::Approx(positions[index][2])),
                           "CIF159: cubic origin/body-centre orbits are physically unchanged");
         }
     }
@@ -1056,7 +1056,7 @@ TEST_CASE("E11-T5 CIF159 standard native Edi remains schema strict and cannot fa
     auto native = read_text(repo_root() / "tests/fixtures/c11_t4_cw_selection/structure.edi");
     SUBCASE("original schema-native positive control") {
         const auto structure = edi::structure_from_edi_text(native);
-        CHECK_MESSAGE(structure.name == "ncaf" && structure.atom_sites.size() == 6,
+        CHECK_MESSAGE((structure.name == "ncaf" && structure.atom_sites.size() == 6),
                       "CIF159: existing schema-native structure remains a real positive control");
     }
     SUBCASE("missing native schema is not accepted as a raw dotted CIF") {
