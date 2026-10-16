@@ -2182,7 +2182,7 @@ struct AssistantViewModel::State {
                 reason_code = "REQUEST_ADMISSION";
                 generic_request("model/list", {{"includeHidden", true}});
             } else if (account_value.isNull() || (account_value.isObject() &&
-                (account.value("type") == "apiKey" || (account.value("type") == "amazonBedrock" && account.value("usesCodexManagedCredentials").isBool())))) {
+                (account.value("type") == "apiKey" || (account.value("type") == "amazonBedrock" && (!account.contains("usesCodexManagedCredentials") || account.value("usesCodexManagedCredentials").isBool()))))) {
                 // The user selected managed ChatGPT sign-in. Never infer/use
                 // API billing or remove another credential to make it succeed.
                 if (generic_login_attempted) throw std::runtime_error("Managed ChatGPT login was not established");
