@@ -190,14 +190,30 @@ int main(int argc,char** argv) {
         if(!button)throw std::runtime_error("actual usage control unavailable");
         return button;
     };
+    Array usage_dialog_candidates;
     const auto usage_dialog=[&]() -> QObject* {
-        QObject* found=nullptr;
-        for(auto* object:root->findChildren<QObject*>())
-            if(object->property("title").toString()=="Usage" && object->property("contentItem").isValid()) {
-                if(found)throw std::runtime_error("actual usage dialog is not unique");
-                found=object;
-            }
-        if(!found)throw std::runtime_error("actual usage dialog unavailable");
+        QObject* found=nullptr;usage_dialog_candidates=Array{};
+        for(auto* object:root->findChildren<QObject*>()) {
+            if(object->property("title").toString()!="Usage" || !object->property("contentItem").isValid())continue;
+            Array ancestry;
+            for(auto* parent=object->parent();parent;parent=parent->parent())
+                ancestry.push_back(Object{{"class",parent->metaObject()->className()},
+                    {"name",parent->objectName()},
+                    {"identity",QString::number(reinterpret_cast<quintptr>(parent),16)}});
+            const bool actual_dialog=object->inherits("QQuickDialog")
+                && object->metaObject()->indexOfProperty("opened")>=0
+                && object->metaObject()->indexOfProperty("standardButtons")>=0;
+            usage_dialog_candidates.push_back(Object{
+                {"class",object->metaObject()->className()},{"name",object->objectName()},
+                {"identity",QString::number(reinterpret_cast<quintptr>(object),16)},
+                {"actual_dialog",actual_dialog},{"ancestry",ancestry}});
+            if(!actual_dialog)continue;
+            if(found && found!=object)throw std::runtime_error((QString("actual usage dialog is not unique: ")
+                +QString::fromUtf8(encode(usage_dialog_candidates))).toStdString());
+            found=object;
+        }
+        if(!found)throw std::runtime_error((QString("actual usage dialog unavailable: ")
+            +QString::fromUtf8(encode(usage_dialog_candidates))).toStdString());
         return found;
     };
     const auto usage_ui=[&]() -> Object {
@@ -241,7 +257,7 @@ int main(int argc,char** argv) {
                 bars.push_back(observed);
             }
         }
-        return {{"button",geometry(button,window)},
+        return {{"button",geometry(button,window)},{"dialog_candidates",usage_dialog_candidates},
             {"canvas",Object{{"geometry",geometry(canvas,window)},
                 {"window_available",json_value(canvas->property("windowAvailable"))},{"frame",image}}},
             {"popup",Object{{"visible",dialog->property("visible").toBool()},

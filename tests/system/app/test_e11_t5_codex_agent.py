@@ -2314,16 +2314,31 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
 def test_native125_actual_editor_batch_is_undoable_and_keeps_managed_account(generic, tool):
     original = ROOT / 'tests/fixtures/e04_t1/editable-project'
 
+    # Two independent original fixture fields exercise ONE recorded value batch;
+    # cubic followers may change legitimately, so restoration compares the full model.
+    value_paths = ('structure.cell.length_a', 'experiment.instrument.setup_wavelength')
+
     def calls(before):
         scalar = native_parameter(before)
         assert scalar['independent'], (
             'NATIVE SETUP: actual independent scalar, not dependent override'
         )
-        arguments = (
-            {'values': [{'path': scalar['path'], 'value': scalar['value'] + 0.01}]}
-            if tool == 'set_parameters'
-            else {'flags': [{'path': scalar['path'], 'free': not scalar['free']}]}
-        )
+        if tool == 'set_parameters':
+            fields = [native_parameter(before, path) for path in value_paths]
+            assert all(row['independent'] for row in fields), (
+                'NATIVE SETUP: both originally exposed physical fields are independent'
+            )
+            assert all(row['value'] > 0 for row in fields), (
+                'NATIVE SETUP: original positive cell/wavelength domains are preserved'
+            )
+            arguments = {
+                'values': [
+                    {'path': row['path'], 'value': row['value'] + delta}
+                    for row, delta in zip(fields, (0.01, 0.001), strict=True)
+                ]
+            }
+        else:
+            arguments = {'flags': [{'path': scalar['path'], 'free': not scalar['free']}]}
         return [native_call(tool, **arguments)]
 
     actor, trace = native_case(generic, calls, project=original, hold=True)
@@ -2334,9 +2349,28 @@ def test_native125_actual_editor_batch_is_undoable_and_keeps_managed_account(gen
     assert replies[0]['response']['result']['success'], (
         'NATIVE: admitted valid edit reaches actual editor'
     )
-    assert native_parameter(state)[('value' if tool == 'set_parameters' else 'free')] == (
-        scalar['value'] + 0.01 if tool == 'set_parameters' else not scalar['free']
-    ), 'NATIVE: actual editor batch is undoable and keeps managed account'
+    if tool == 'set_parameters':
+        for path, delta in zip(value_paths, (0.01, 0.001), strict=True):
+            assert (
+                native_parameter(state, path)['value']
+                == native_parameter(before, path)['value'] + delta
+            ), 'NATIVE: BOTH independent values in one actual batch are adopted'
+        assert [row['free'] for row in state['project']['parameters']] == [
+            row['free'] for row in before['project']['parameters']
+        ], 'NATIVE: value batch preserves all actual free flags'
+        assert [
+            row
+            for row in state['project']['parameters']
+            if row['independent'] and row['path'] not in value_paths
+        ] == [
+            row
+            for row in before['project']['parameters']
+            if row['independent'] and row['path'] not in value_paths
+        ], 'NATIVE: value batch preserves unrelated independent parameter state'
+    else:
+        assert native_parameter(state)['free'] == (not scalar['free']), (
+            'NATIVE: actual editor batch is undoable and keeps managed account'
+        )
     assert state['project']['native_observer']['can_undo'], (
         'NATIVE: actual editor batch is undoable and keeps managed account'
     )
@@ -2350,6 +2384,10 @@ def test_native125_actual_editor_batch_is_undoable_and_keeps_managed_account(gen
     assert restored['vm']['project']['parameters'] == before['project']['parameters'], (
         'NATIVE: genuine normal project Undo restores original values and free flags'
     )
+    assert (
+        restored['vm']['project']['native_observer']['can_undo']
+        == before['project']['native_observer']['can_undo']
+    ), 'NATIVE: ONE normal Undo consumes the whole value batch, not only its last member'
     assert restored['vm']['connected'] and original_peer_is_live(identity), (
         'NATIVE: actual editor batch is undoable and keeps managed account'
     )
@@ -2483,9 +2521,7 @@ def test_native125_real_worker_result_is_published_before_reverse_rpc_success(
     generic, project_path
 ):
     calls = [native_call('run_fit')]
-    actor, trace = native_case(
-        generic, calls, project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
-    )
+    actor, trace = native_case(generic, calls, project=ROOT / project_path)
     before = actor.last['vm']
     if project_path.endswith('/joint'):
         assert before['project']['mode'] == 'joint' and len(native_inputs(before)) == 2, (
@@ -2559,11 +2595,37 @@ def test_native125_actual_running_fit_retirement_cannot_publish_into_obsolete_ow
         expected = replaced['vm']['project']['parameters']
     elif retirement == 'manual':
         target = native_parameter(state)
-        changed = actor.command('manual_value', path=target['path'], value=target['value'] + 0.01)
-        assert not changed['reply']['error'], (
-            'NATIVE FIT SETUP: actual manual editor admits the newer revision'
+        attempted = actor.command(
+            'manual_value', path=target['path'], value=target['value'] + 0.01
         )
-        expected = changed['vm']['project']['parameters']
+        assert attempted['reply']['fit_running_at_entry'], (
+            'NATIVE FIT SETUP: ordinary edit reached a genuinely running fit, not a stale snapshot'
+        )
+        assert attempted['reply']['error'], (
+            'ADR0020: ordinary manual edits are lawfully refused while a fit runs'
+        )
+        assert attempted['reply']['parameters_after'] == attempted['reply']['parameters_before'], (
+            'ADR0020: refused concurrent manual edit writes nothing'
+        )
+        settled = settle(
+            actor,
+            lambda value: (
+                not value['project']['native_observer']['fit_running'] and not value['can_cancel']
+            ),
+        )
+        assert native_inputs(settled) == native_inputs(before), (
+            'NATIVE: lawful readonly fit preserves genuine observations and exclusions'
+        )
+        target = native_parameter(settled)
+        admitted = actor.command('manual_value', path=target['path'], value=target['value'] + 0.01)
+        assert not admitted['reply']['fit_running_at_entry'] and not admitted['reply']['error'], (
+            'ADR0020: normal actual manual edit is admitted AFTER real fit settlement'
+        )
+        assert native_parameter(admitted['vm'])['value'] == target['value'] + 0.01, (
+            'NATIVE: real post-settlement edit is visible, not a forced concurrent core write'
+        )
+        expected = admitted['vm']['project']['parameters']
+        # Concurrent manual supersession is unqualified: the ordinary app rejects it.
     else:
         actor.command('cancel')
         expected = None
@@ -2761,11 +2823,26 @@ def test_native129_actual_host_outcome_and_canonical_call_survive_later_provider
     ), 'NATIVE: actual host outcome and canonical call survive later provider claim'
     state = settle(actor, lambda value: not value['can_cancel'] or bool(value['last_error']))
     call_id = replies[0]['original']['params']['callId']
-    rows = [row for row in state['messages'] if row['id'] == call_id]
+    rows = [
+        row
+        for row in state['messages']
+        if row['kind'] == 'activity'
+        and row.get('payload', {}).get('type') == 'dynamicToolCall'
+        and row.get('payload', {}).get('id') == call_id
+    ]
     assert len(rows) == 1, (
         'N2: actual committed native outcome remains retained once after provider traffic'
     )
     payload = rows[0]['payload']
+    assert rows[0]['status'] == 'completed' and payload['nativeOutcome']['status'] == 'edited', (
+        'N2: retained public outcome reports the actual successful host edit'
+    )
+    assert isinstance(payload['nativeOutcome']['calculation_pending'], bool), (
+        'N2: asynchronous calculation state remains truthful after native publication'
+    )
+    assert not state['connected'] and state['last_error'], (
+        'N2: contradictory canonical provider identity remains a genuine protocol fence'
+    )
     assert payload['tool'] == call['tool'] and payload.get('namespace') is None, (
         'NATIVE: actual host outcome and canonical call survive later provider claim'
     )
@@ -2883,13 +2960,13 @@ def test_native129_retirement_cancels_real_worker_without_repopulating_retired_r
             'N3: real account signout immediately revokes authentication'
         )
     else:
-        path = tmp_path / 'Original-native-new-context.txt'
-        path.write_text('Original new selected context')
-        request = actor.command('selected_begin')['reply']['request_id']
-        assert actor.command('selected_add', request_id=request, urls=[path.as_uri()])['reply'][
-            'accepted'
-        ], 'NATIVE: retirement cancels real worker without repopulating retired rows'
-        retired = actor.last['vm']
+        replacement = tmp_path / 'Original-native-current-project'
+        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
+        replaced = actor.command('open', path=str(replacement))
+        assert replaced['reply']['opened'], (
+            'N3 SETUP: ordinary Session admits a genuine project-context replacement'
+        )
+        retired = replaced['vm']
     ids = {row['id'] for row in retired['messages']}
     final = settle(
         actor,
@@ -2911,6 +2988,9 @@ def test_native129_retirement_cancels_real_worker_without_repopulating_retired_r
     else:
         assert final['connected'] and final['selected_files'] == retired['selected_files'], (
             'NATIVE: retirement cancels real worker without repopulating retired rows'
+        )
+        assert final['project']['parameters'] == retired['project']['parameters'], (
+            'N3: late old fit never rewrites the actual replacement project context'
         )
 
 
@@ -3234,6 +3314,14 @@ def test_usage129_bootstrap_automatic_read_delivers_original_result_not_just_req
 @pytest.mark.parametrize('channel', ['control-capacity', 'reverse-capacity'])
 def test_usage129_outstanding_optional_read_never_starves_real_required_channels(generic, channel):
     actor, trace = usage_case(generic, mode=channel)
+    settle(
+        actor,
+        lambda value: (
+            any(row.get('method') == 'account/rateLimits/read' for row in records(trace))
+            or bool(value['last_error'])
+            or not value['connected']
+        ),
+    )
     assert any(row.get('method') == 'account/rateLimits/read' for row in records(trace)), (
         'US1 SETUP: genuine optional request is outstanding on original channel'
     )
@@ -3607,10 +3695,59 @@ def test_native129_real_shared_transport_admission_refuses_before_later_native_w
     bounds = actor.last['vm']['policy']
     config_path = trace.parent / 'peer-input.json'
     config = json.loads(config_path.read_text())
-    # Finite original wire records, each below public record_bytes. Retaining the
-    # matching retained originals/active source exceed the shared cap.
+    # Exact original committed measurement text is untrusted protocol fixture DATA,
+    # not private reasoning, scientific output, padding or a held native request.
+    source = (
+        ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi'
+    ).read_text()
+    owned_source = trace.parent / 'original-capacity-measurement.edi'
+    owned_source.write_text(source)
+    count = bounds['retained_record_bytes'] // len(source.encode()) + 1
+    items = [
+        {
+            'type': 'reasoning',
+            'id': 'original-live-source-' + str(index),
+            'summary': [],
+            'content': [source],
+        }
+        for index in range(count)
+    ]
+
+    def encoded(value):
+        return json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode()
+
+    # These are unfinalized known originals in ONE still-active turn. All remain
+    # current simultaneously: no item/completed, replacement or turn terminal releases one.
+    wires = [
+        {
+            'method': 'item/started',
+            'params': {
+                'threadId': '019a0290-0000-7000-8000-000000000001',
+                'turnId': '019a0290-0000-7000-8000-000000000002',
+                'item': item,
+            },
+        }
+        for item in items
+    ]
+    source_bytes = sum(len(encoded(item)) for item in items)
+    assert source_bytes > bounds['retained_record_bytes'], (
+        'N2-R SETUP: independent simultaneous original sources exceed the shared capacity'
+    )
+    assert count < bounds['stream_items'] and source_bytes < bounds['stream_retained_bytes'], (
+        'N2-R SETUP: this group fits independent item/count/output-retention roles'
+    )
+    assert max(len(encoded(wire)) for wire in wires) + 1 <= bounds['record_bytes'], (
+        'N2-R SETUP: EVERY complete original JSONL wire fits its individual source bound'
+    )
+    assert sum(len(encoded(wire)) + 1 for wire in wires) < bounds['stream_wire_bytes'], (
+        'N2-R SETUP: the complete original wire group fits the separate total wire role'
+    )
+    # Pinned reasoning originals are not copied to public message/history rows;
+    # the old command copy exceeded presentation capacity before this transport role.
     config.update(
-        native_capacity='retained-item', native_capacity_bytes=bounds['record_bytes'] - 4096
+        native_capacity='retained-live-reasoning',
+        native_capacity_source=str(owned_source),
+        native_capacity_count=count,
     )
     config_path.write_text(json.dumps(config))
     connect(actor)
@@ -3625,8 +3762,18 @@ def test_native129_real_shared_transport_admission_refuses_before_later_native_w
     assert measurements and measurements[0]['source_bytes'] > bounds['retained_record_bytes'], (
         'N2-R SETUP: independently encoded retained originals exceed the public shared cap'
     )
-    assert measurements[0]['max_source_bytes'] < bounds['record_bytes'], (
-        'N2-R SETUP: the escape is aggregate owned assembly, not a single oversized source record'
+    assert measurements[0]['source_bytes'] == source_bytes and measurements[0]['count'] == count, (
+        'N2-R SETUP: peer BEFORE-emission measurement matches independently encoded '
+        'known originals'
+    )
+    assert measurements[0]['source_sha256'] == hashlib.sha256(source.encode()).hexdigest(), (
+        'N2-R SETUP: exact committed original bytes, not fabricated padding/native receipts'
+    )
+    assert measurements[0]['max_wire_bytes'] + 1 <= bounds['record_bytes'], (
+        'N2-R SETUP: the escape is simultaneous aggregate ownership, not one oversized source'
+    )
+    assert measurements[0]['presentation_rows'] == 0 and measurements[0]['finalized_items'] == 0, (
+        'N2-R SETUP: no presentation overflow or terminal release masks the intended original role'
     )
     assert state['project']['parameters'] == before, (
         'N2-R: actual shared-budget failure precedes any later genuine native mutation'

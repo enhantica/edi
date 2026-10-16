@@ -816,20 +816,13 @@ def native_emit_next():
     clear_observation('native-call-emitted', {'rpc': rpc_id, 'call': call_id})
     emit({'id': rpc_id, 'method': 'item/tool/call', 'params': params})
     if config.get('native_foreign_resolve'):
-
-        def resolve_foreign():
-            clear_observation(
-                'native-foreign-resolve',
-                {'rpc': rpc_id, 'still_pending': rpc_id in native_pending},
-            )
-            notify(
-                'serverRequest/resolved',
-                {'threadId': '019a0290-0000-7000-8000-000000009999', 'requestId': rpc_id},
-            )
-
-        timer = Timer(0.2, resolve_foreign)
-        timer.daemon = True
-        timer.start()
+        clear_observation(
+            'native-foreign-resolve', {'rpc': rpc_id, 'still_pending': rpc_id in native_pending}
+        )
+        notify(
+            'serverRequest/resolved',
+            {'threadId': '019a0290-0000-7000-8000-000000009999', 'requestId': rpc_id},
+        )
 
 
 def native_start(request):
@@ -840,42 +833,46 @@ def native_start(request):
         return
     reply(request, {'turn': turn('inProgress')})
     notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
-    if config.get('native_capacity'):
-        extent = config['native_capacity_bytes']
-        original = {
-            'type': 'commandExecution',
-            'id': 'original-large-work',
-            'status': 'inProgress',
-            'command': 'Original nonexecuted command ' + 'x' * extent,
-            'commandActions': [],
-            'cwd': cwd,
-        }
-        companion = {
-            **original,
-            'id': 'original-large-companion',
-            'command': 'Original companion ' + 'x' * 16384,
-        }
-        publish_item(original)
-        completed = {
-            **original,
-            'id': 'original-retained-complete',
-            'status': 'completed',
-            'exitCode': 0,
-        }
-        publish_item(completed, completed=True)
-        sources = [original, completed, companion]
-        publish_item(companion)
+    if config.get('native_capacity') == 'retained-live-reasoning':
+        source = Path(config['native_capacity_source']).read_text(encoding='utf-8')
+        sources = [
+            {
+                'type': 'reasoning',
+                'id': 'original-live-source-' + str(index),
+                'summary': [],
+                'content': [source],
+            }
+            for index in range(config['native_capacity_count'])
+        ]
+
+        def encoded(value):
+            return json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode()
+
+        wires = [
+            {
+                'method': 'item/started',
+                'params': {'threadId': thread_id, 'turnId': turn_id, 'item': item},
+            }
+            for item in sources
+        ]
+        # Before emission, so a genuine early bounded refusal cannot erase the
+        # independently authored size/shape premises by closing the peer channel.
         clear_observation(
             'native-shared-capacity',
             {
-                'source_bytes': sum(
-                    len(json.dumps(value, separators=(',', ':')).encode()) for value in sources
-                ),
-                'max_source_bytes': max(
-                    len(json.dumps(value, separators=(',', ':')).encode()) for value in sources
-                ),
+                'count': len(sources),
+                'source_bytes': sum(len(encoded(item)) for item in sources),
+                'max_source_bytes': max(len(encoded(item)) for item in sources),
+                'max_wire_bytes': max(len(encoded(wire)) for wire in wires),
+                'wire_bytes': sum(len(encoded(wire)) + 1 for wire in wires),
+                'source_sha256': hashlib.sha256(source.encode()).hexdigest(),
+                'presentation_rows': 0,
+                'finalized_items': 0,
+                'phase': 'one-active-turn-live-known-originals-before-native-request',
             },
         )
+        for wire in wires:
+            emit(wire)
     if config.get('native_exit_while_running'):
 
         def original_eof():

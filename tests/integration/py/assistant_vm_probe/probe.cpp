@@ -239,6 +239,10 @@ int main(int argc,char** argv) {
         if(codex_mode) {
             result["policy"]=Object{
                 {"record_bytes",static_cast<double>(edi::assistant::Limits::record_bytes)},
+                {"message_bytes",static_cast<double>(edi::assistant::Limits::message_bytes)},
+                {"stream_items",static_cast<double>(edi::assistant::Limits::stream_items)},
+                {"stream_retained_bytes",static_cast<double>(edi::assistant::Limits::stream_retained_bytes)},
+                {"stream_wire_bytes",static_cast<double>(edi::assistant::Limits::stream_wire_bytes)},
                 {"retained_record_bytes",static_cast<double>(edi::assistant::Limits::retained_record_bytes)},
                 {"context_bytes",static_cast<double>(edi::assistant::Limits::context_bytes)},
                 {"stream_calls",static_cast<double>(edi::assistant::Limits::stream_calls)},
@@ -353,8 +357,25 @@ int main(int argc,char** argv) {
                 for(const auto& entry:edi::parameter_entries(*live))
                     if(entry.path==path) {selected=entry.parameter;break;}
                 if(!selected)throw std::invalid_argument("manual edit path is absent from the real project");
+                const bool fitting_at_entry=session->project()->fit()->running();
+                const auto actual_values=[&] {
+                    Array values;
+                    for(const auto& entry:edi::parameter_entries(*live)) {
+                        const auto& parameter=*entry.parameter;
+                        values.push_back(Object{{"path",QString::fromStdString(entry.path)},
+                            {"value",parameter.value.get()},{"free",parameter.free.get()},
+                            {"uncertainty",parameter.uncertainty?QJsonValue(*parameter.uncertainty):QJsonValue()}});
+                    }
+                    return values;
+                };
+                const auto before_values=codex_mode?actual_values():Array{};
                 const auto error=session->project()->apply(edi::Edit::value(*selected,input["value"].toDouble()),false);
                 result={{"error",error}};
+                if(codex_mode) {
+                    result["fit_running_at_entry"]=fitting_at_entry;
+                    result["parameters_before"]=before_values;
+                    result["parameters_after"]=actual_values();
+                }
             }
             else if(op=="close_project")session->closeProject();
             else if(op=="destroy")session.reset();
