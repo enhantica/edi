@@ -16,6 +16,10 @@ struct PersistenceSnapshot {
     std::vector<bool> computed_current;
     std::size_t construction_bytes = 0;
     std::size_t retained_bytes = 0;
+    // Preowned reusable payload slot after model is released by the save worker.
+    // This is an allowance, not a claim that rounded hkl/geometry counts cannot
+    // grow: calculate_saved_project checks its actual result before transfer.
+    std::size_t calculation_bytes = 0;
 };
 struct PersistenceLimits {
     std::size_t construction_bytes;

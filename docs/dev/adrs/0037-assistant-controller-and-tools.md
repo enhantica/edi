@@ -450,3 +450,38 @@ may-have-written status, genuine admitted Worker cancellation/report ownership
 and postcommit facts are unchanged. This identifies a reached preparation
 refusal; it does not label an unknown stage as a filesystem failure, turn a
 refusal into success, relax admission, or add telemetry/testing hooks.
+
+
+### Typed retained saving roles and reusable worker payload
+
+The fitted-save reservation above is superseded by typed retained ownership
+and an explicit worker lifetime boundary. Construction/formatting still uses
+its existing conservative scalar/copy admission. Retained numeric vectors have
+one numeric slot per element; strings have their shell and text, without a
+fictional string per numeric row. Inline members are not charged again as
+independent slots. ItemVec row/table images and Written loop read tables remain
+real owners. Immutable ComputedColumn/Column buffers are charged once by actual
+buffer identity, including their pinned payload; sharing does not make them
+free. Unknown future retained types fail compilation instead of bypassing the
+walk. The late DataCategory already includes residual and is visited once.
+
+After the existing formatter returns owning documents, the save worker destroys
+its private snapshot.model before reopening/calculating the rounded image.
+Nothing later reads that model; original WorkStamps remain separately owned for
+currentness and final adoption. The task preowns one reusable payload slot,
+charged as max(snapshot retained payload, calculation allowance), unchanged by
+worker-thread phase transitions. It does not retain both model and new result
+at once or dynamically lower its charge while observers run.
+
+The finite calculation allowance is the released model payload slot, plus the
+CalculationResult/stamp/completed-row shells/text and prospective computed-only
+measured-row output: four doubles and one incl/excl string per measured point,
+with owning vector/control shells. The released slot remains available for
+variable reflection/geometry payload. This is a bounded transfer allowance,
+not a claim that existing reflection counts bound a rounded/new calculation.
+The actual complete staged result is admitted against it before task transfer;
+larger output refuses before any disk commit. An unfitted source needs no
+existing computed columns to reserve those measured-row roles. Resource caps
+are unchanged. Original post-context, artifact, factual outcome, generic and
+live transport owners keep their own admission and may still refuse genuine
+capacity exhaustion. No successful save is inferred from accounting alone.

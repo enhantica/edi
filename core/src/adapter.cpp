@@ -2615,12 +2615,13 @@ namespace {
 // until its bounded contribution is explicitly handled.
 class PersistenceAdmission {
  public:
-    explicit PersistenceAdmission(std::size_t limit,bool payload=false) : limit_(limit),remaining_(limit),factor_(payload?1:8),scalar_cost_(payload?0:scalar_role) {}
+    explicit PersistenceAdmission(std::size_t limit,bool payload=false) : limit_(limit),remaining_(limit),factor_(payload?1:8),scalar_cost_(payload?0:scalar_role),payload_(payload) {}
     std::size_t used() const noexcept {return limit_-remaining_;}
     void bytes(std::size_t n) { if(n > remaining_) throw std::length_error("Save construction exceeds capacity"); remaining_-=n; }
     void rows(std::size_t n,std::size_t width) { if(width && n>remaining_/width) throw std::length_error("Save rows exceed capacity"); bytes(n*width); }
     void text(std::string_view s,std::size_t copies=1) { rows(s.size(),copies); }
     template<class T> void value(const T& v) {
+        if(payload_) { retained(v); return; }
         if constexpr(std::is_same_v<T,std::string>) {text(v,factor_); bytes(factor_*sizeof(std::string));}
         else if constexpr(std::is_same_v<T,Parameter>) {bytes(factor_*sizeof(Parameter)+factor_*scalar_cost_);}
         else if constexpr(std::is_same_v<T,ItemKey> || std::is_same_v<T,detail::WrittenText>) value(v.value());
@@ -2640,11 +2641,87 @@ class PersistenceAdmission {
             bytes(factor_*sizeof(T));std::apply([&](auto... m){(value(v.*m),...);},crysta::RowSchema<T>::fields);
         } else static_assert(sizeof(T)==0,"Native save source requires explicit admission");
     }
-    template<class C,class T> void category(const T& obj) {std::apply([&](auto... m){(value(obj.*m),...);},C::columns);}
+    template<class T> void member(const T& v) {if(payload_)retained(v,true);else value(v);}
+    template<class C,class T> void category(const T& obj) {std::apply([&](auto... m){(member(obj.*m),...);},C::columns);}
  private:
+    // Retained ownership is not the construction formatter's copy/scalar policy.
+    // Enclosing objects/slots include inline members; only their owning payload
+    // is visited again. A shared immutable buffer is charged once by identity.
+    template<class T> void retained(const T& v, bool embedded=false) {
+        using U=std::remove_cvref_t<T>;
+        if(!embedded)bytes(sizeof(U));
+        if constexpr(std::is_same_v<U,std::string>) {text(v);bytes(1);}
+        else if constexpr(std::is_same_v<U,Parameter>) {}
+        else if constexpr(std::is_same_v<U,ItemKey> || std::is_same_v<U,detail::WrittenText>) retained(v.value(),true);
+        else if constexpr(std::is_same_v<U,detail::ParameterColumns>) {
+            retained(v.value,true);retained(v.uncertainty,true);retained(v.free,true);
+            retained(v.start_value,true);retained(v.start_uncertainty,true);
+        } else if constexpr(requires {v.buffer();v.values();}) {
+            if(v.buffer()) {
+                const void* identity=v.buffer().get();
+                if(!buffers_.contains(identity)) {
+                    // The bounded admission walk's own identity entry is also
+                    // prepared before insertion; no size-proportional free set.
+                    bytes(sizeof(void*)+4*sizeof(void*));
+                    buffers_.insert(identity);
+                    bytes(2*sizeof(void*)); // shared ownership control block
+                    retained(v.values());
+                    using Element=typename std::remove_cvref_t<decltype(v.values())>::value_type;
+                    rows(v.values().capacity()-v.values().size(),sizeof(Element));
+                }
+            }
+        } else if constexpr(requires {v.get();}) {
+            retained(v.get(),true);
+            // Written loop cells also retain their real typed read table.
+            if constexpr(requires {v.table();}) {
+                const auto& table=v.table();
+                if constexpr(requires {table.first;table.second;}) {retained(table.first,true);retained(table.second,true);}
+                else if constexpr(requires {table.key;table.value;}) {retained(table.key,true);retained(table.value,true);}
+                else if constexpr(requires {table.names;}) retained(table.names,true);
+                else if constexpr(requires {table.columns;}) retained(table.columns,true);
+                else static_assert(sizeof(U)==0,"Save retained loop requires explicit table admission");
+            }
+        } else if constexpr(std::is_arithmetic_v<U> || std::is_enum_v<U>) {}
+        else if constexpr(requires {v.has_value();*v;}) {
+            if(v) {
+                if constexpr(std::is_same_v<U,OptionalParameter>) {
+                    bytes(sizeof(Parameter)+sizeof(detail::RowLink)+2*sizeof(void*));
+                    retained(*v,true);
+                } else retained(*v,true);
+            }
+        } else if constexpr(requires {v.first;v.second;}) {retained(v.first,true);retained(v.second,true);}
+        else if constexpr(requires {v.record();v.size();v.begin();}) {
+            // ItemVec owns cloned row objects AND their table's column image,
+            // row holds/anchors/membership. Numeric cells have no string role.
+            using Row=std::remove_cvref_t<decltype(**v.begin())>;
+            bytes(sizeof(detail::Membership)+2*sizeof(void*));
+            // Existing Table's owning shells (columns, anchors, notes, holds,
+            // store pointer/vptr), plus notes' one pointer/stamp per column.
+            bytes(sizeof(detail::RowColumns<Row>)+sizeof(crysta::detail::AnchorList)+
+                sizeof(detail::TableNotes)+sizeof(std::vector<std::shared_ptr<detail::RowHold>>)+2*sizeof(void*));
+            std::apply([&](auto... m){((rows(std::is_same_v<std::remove_cvref_t<decltype(v.column(m))>,detail::ParameterColumns>?5:1,
+                sizeof(void*)+sizeof(std::uint64_t))),...);},crysta::RowSchema<Row>::fields);
+            rows(v.size(),sizeof(std::shared_ptr<Row>)+sizeof(Row)+
+                sizeof(detail::RowHold)+sizeof(detail::Holding)+sizeof(crysta::detail::RowAnchor)+4*sizeof(void*));
+            for(const auto& row:v) {if(!row)throw std::invalid_argument("Save has an empty row");retained(*row,true);}
+            std::apply([&](auto... m){(retained(v.column(m)),...);},crysta::RowSchema<Row>::fields);
+        } else if constexpr(requires {v.size();v.begin();v.end();}) {
+            // std::vector/map own slots; std::array's slots are already inline.
+            using Element=std::remove_cvref_t<decltype(*v.begin())>;
+            if constexpr(requires {v.capacity();}) rows(v.size(),sizeof(Element));
+            else if constexpr(requires {typename U::key_type;}) rows(v.size(),sizeof(Element)+4*sizeof(void*));
+            else if constexpr(!requires {std::tuple_size<U>::value;})
+                static_assert(sizeof(U)==0,"Save retained container requires explicit slot admission");
+            for(const auto& row:v)retained(row,true);
+        } else if constexpr(requires {requires (std::tuple_size_v<decltype(crysta::RowSchema<U>::fields)> > 0);}) {
+            std::apply([&](auto... m){(retained(v.*m,true),...);},crysta::RowSchema<U>::fields);
+        } else static_assert(sizeof(U)==0,"Native save retained source requires explicit admission");
+    }
+    std::set<const void*> buffers_;
     static constexpr std::size_t scalar_role = std::numeric_limits<double>::max_exponent10 -
         std::numeric_limits<double>::min_exponent10 + std::numeric_limits<double>::max_digits10 + 128 + 8*sizeof(std::string);
     std::size_t limit_,remaining_,factor_,scalar_cost_;
+    bool payload_;
 };
 void admit_currentness_inputs(const Project& project, PersistenceAdmission& budget) {
     constexpr std::uint64_t word = 16;
@@ -2844,33 +2921,34 @@ std::size_t admit_persistence(const Project& p,const PersistenceLimits& limits,b
     PersistenceAdmission a(limits.construction_bytes,payload);
     persistence_owner_graph(p); if(!payload)admit_currentness_inputs(p,a);
     a.bytes((payload?1:8)*sizeof(Project));
+    if(payload) {a.member(p.structures);a.member(p.experiments);}
     a.category<MetadataCategory>(p.metadata);a.category<SuFormatCategory>(p);a.category<ReportSettingsCategory>(p);
     a.category<CorrelationChartCategory>(p);a.category<PatternChartCategory>(p);a.category<FittingModeCategory>(p);
     a.category<MinimizerCategory>(p);a.category<ProjectStateCategory>(p);a.category<SequentialFitCategory>(p.sequential_fit);
-    a.category<FitResultCategory>(p.fit_result);a.value(p.fit_result.correlations);a.value(p.aliases);a.value(p.constraints);
+    a.category<FitResultCategory>(p.fit_result);a.member(p.fit_result.correlations);a.member(p.aliases);a.member(p.constraints);
     for(const auto& s:p.structures) {
-        a.value(s->name);a.category<SpaceGroupCategory>(s->space_group);a.category<CellCategory>(s->cell);
-        a.category<GeomCategory>(s->geom);a.value(s->atom_sites);a.value(s->atom_site_aniso);a.value(s->scattering_lengths_fm);
+        if(!payload)a.value(s->name);a.category<SpaceGroupCategory>(s->space_group);a.category<CellCategory>(s->cell);
+        a.category<GeomCategory>(s->geom);a.member(s->atom_sites);a.member(s->atom_site_aniso);a.member(s->scattering_lengths_fm);
         a.category<SpaceGroupSymopCategory>(s->geometry.space_group_symop);
         a.category<ExpandedAtomSiteCategory>(s->geometry.expanded_atom_sites);
         a.category<GeomBondCategory>(s->geometry.geom_bond);a.category<CartnTransformCategory>(s->geometry.atom_sites_cartn_transform);
         // A snapshot retains these shared records even when they describe a
         // larger, now stale source. Admit their actual text, not today's shape.
         if(s->geometry_source) {
-            a.bytes(sizeof(detail::GeometrySource));a.value(s->geometry_source->inputs);a.value(s->geometry_source->relations);
+            a.bytes(sizeof(detail::GeometrySource));a.member(s->geometry_source->inputs);a.member(s->geometry_source->relations);
         }
     }
     for(const auto& e:p.experiments) {
         if(!e->data || e->calculation_only) throw std::invalid_argument("Native saving requires embedded measured data");
-        a.value(e->name);a.category<ExperimentTypeCategory>(e->experiment_type);a.category<ScatteringSourceCategory>(*e);
+        if(!payload)a.value(e->name);a.category<ExperimentTypeCategory>(e->experiment_type);a.category<ScatteringSourceCategory>(*e);
         a.category<PeakCategory>(e->peak);a.category<InstrumentCategory>(e->instrument);a.category<AbsorptionCategory>(e->absorption);
         a.category<BackgroundCategory>(*e);a.category<DataSourceCategory>(*e);a.category<JointFitCategory>(*e);a.category<FitResultBankCategory>(*e);
-        a.value(e->linked_structures);a.value(e->preferred_orientation);a.value(e->background);a.value(e->background_terms);a.value(e->excluded_regions);
+        a.member(e->linked_structures);a.member(e->preferred_orientation);a.member(e->background);a.member(e->background_terms);a.member(e->excluded_regions);
         for(const auto& link:e->linked_structures)a.category<FitResultPhaseCategory>(*link);
         a.category<DataCategory>(*e->data);a.category<ReflnCategory>(e->refln);
         if(e->carried_reflections)a.category<CarriedReflnCategory>(*e->carried_reflections);
         if(e->computed_source) {
-            a.bytes(sizeof(detail::ComputedSource));a.value(e->computed_source->inputs);a.value(e->computed_source->relations);
+            a.bytes(sizeof(detail::ComputedSource));a.member(e->computed_source->inputs);a.member(e->computed_source->relations);
         }
     }
     return a.used();
@@ -2930,6 +3008,31 @@ PersistenceSnapshot snapshot_for_persistence(const Project& live,const Persisten
     out.geometry_current.reserve(live.structures.size());out.computed_current.reserve(live.experiments.size());
     for(const auto& s:live.structures)out.geometry_current.push_back(s->geometry_current());
     for(const auto& e:live.experiments)out.computed_current.push_back(e->computed_current());
+    // The old private image's payload slot becomes reusable only AFTER its
+    // destruction. Allow the result to use that same finite slot for variable
+    // derived tables, and separately prepare the computed-only measured-row
+    // output and its copied original stamps. No second Project is retained.
+    // This also admits a source with no current computed columns; current hkl
+    // counts are never treated as a bound on rounded/new calculation output.
+    PersistenceAdmission result(limits.construction_bytes,true);
+    result.bytes(out.retained_bytes);
+    result.bytes(sizeof(CalculationResult));
+    result.value(out.stamps.experiment_inputs);result.value(out.stamps.structure_inputs);result.value(out.stamps.relations);
+    result.rows(live.experiments.size(),sizeof(PdDataBase)+sizeof(PowderReflnDataBase));
+    result.rows(live.structures.size(),sizeof(std::optional<StructureGeometry>));
+    for(const auto& bank:live.experiments) {
+        const auto points=bank->data->intensity_meas.size();
+        // stage_computed: d, calculated, background, residual and incl/excl.
+        // The slot covers their owning vector/control blocks and status text.
+        result.rows(5,sizeof(std::vector<double>)+2*sizeof(void*));
+        result.rows(points,4*sizeof(double)+sizeof(std::string)+5);
+    }
+    // Existing construction admission already covers the named join's own
+    // allocation; retained completed rows keep only these actual names/values.
+    for(const auto& dependent:named_dependents(live)) {
+        result.bytes(sizeof(std::pair<std::string,double>));result.text(dependent.unique_name);result.bytes(1);
+    }
+    out.calculation_bytes=result.used();
     out.model=std::make_unique<Project>(live);out.model->metadata.update_last_modified();return out;
 }
 std::vector<std::pair<std::string,std::string>> prepare_project_documents(const PersistenceSnapshot& source,const PersistenceLimits& limits) {
@@ -2965,7 +3068,7 @@ CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& o
     // and completed names must fit the task's already reserved allowance.
     held.rows(calculated.data.size(),sizeof(PdDataBase));
     for(const auto& data:calculated.data) {
-        held.category<DataCategory>(data);held.value(data.residual);
+        held.category<DataCategory>(data);
     }
     held.rows(calculated.refln.size(),sizeof(PowderReflnDataBase));
     for(const auto& refln:calculated.refln)held.category<ReflnCategory>(refln);

@@ -902,14 +902,16 @@ struct AssistantViewModel::State {
         if (native_creation) raw(sizeof(NativeCreation));
         if(native_save) {
             raw(sizeof(NativeSave));receipt(native_save->call.receipt);value(native_save->call.rpc);
-            raw(native_save->snapshot.retained_bytes);
+            // The worker destroys snapshot.model after formatting and BEFORE it
+            // creates/stages the rounded calculation. These two payloads never
+            // overlap; the reservation remains constant across worker phases.
+            raw(std::max(native_save->snapshot.retained_bytes,native_save->calculation_reservation));
             raw(native_save->snapshot.stamps.relations.size());
             for(const auto& stamp:native_save->snapshot.stamps.experiment_inputs)raw(sizeof(std::string)+stamp.size());
             for(const auto& stamp:native_save->snapshot.stamps.structure_inputs)raw(sizeof(std::string)+stamp.size());
             raw(static_cast<quint64>(native_save->name.size()+native_save->destination.size())*sizeof(QChar));
             for(const auto& progress:native_save->progress) {value(progress.outcome);value(progress.response);value(progress.row);}
             raw(NativeSave::artifact_reservation);
-            raw(native_save->calculation_reservation);
         }
         if (native_attachment) {
             const auto& a = *native_attachment;
@@ -1676,6 +1678,10 @@ struct AssistantViewModel::State {
         edi::work::Job job=[task,limits,completion=std::move(completion)](const edi::work::CancelToken& cancel,const edi::work::Emit&)mutable->edi::work::Delivery {
             if(!cancel.cancelled())try {
                 const auto documents=edi::prepare_project_documents(task->snapshot,limits);
+                // No later save phase reads this model. Original stamps stay
+                // owned separately for final currentness/adoption; releasing
+                // the private image makes the preowned payload slot reusable.
+                task->snapshot.model.reset();
                 if(!cancel.cancelled()) {
                     auto artifact=capture_prepared_native_documents(documents);
                     quint64 roles=artifact->receipt.size();
@@ -1718,11 +1724,11 @@ struct AssistantViewModel::State {
         try {
             save_stage = "RETAINED_RESERVATION";
             native_save=task;
-            // A concrete staged-result allowance, not all transport headroom.
-            // The original complete model's admitted retained role bounds this
-            // task's late calculation; a larger result refuses before transfer.
-            // retainOutput still accounts for its real pending transport owners.
-            task->calculation_reservation=task->snapshot.retained_bytes;
+            // A finite preowned reusable slot, not all transport headroom.
+            // The snapshot image is destroyed before rounded result staging;
+            // actual larger output still refuses before transfer to this task.
+            // retainOutput continues to count the real pending transport owners.
+            task->calculation_reservation=task->snapshot.calculation_bytes;
             native_charge();
             save_stage = "CURRENTNESS";
             if(!native_save_current(task))throw std::runtime_error("Save retired before worker admission");
