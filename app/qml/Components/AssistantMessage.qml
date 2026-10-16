@@ -17,9 +17,10 @@ Rectangle {
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
     readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
     readonly property bool summarizedActivity: decisionActivity || kind === "activity" && payload &&
-        ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan"].indexOf(payload.type) >= 0
+        ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan", "ediOutcome"].indexOf(payload.type) >= 0
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
     signal detailsChanging()
+    signal reportRequested(string sourceRowId, string link)
     function resetDetails() {
         if (commandDisclosure) commandDisclosure.checked = false;
         if (disclosure) disclosure.checked = false;
@@ -112,6 +113,7 @@ Rectangle {
         return shortActionObject(supplied, false);
     }
     function activityCaption() {
+        if (payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string") return payload.title;
         if (decisionActivity) {
             if (row.status === "refused" || row.status === "declined") return qsTr("Request refused");
             if (row.status === "interrupted") return qsTr("Request interrupted");
@@ -199,7 +201,8 @@ Rectangle {
             selectionColor: EaStyle.Colors.themeAccent
             selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
-            onLinkActivated: link => {}
+            onLinkActivated: link => row.reportRequested(row.rowId, link)
+            HoverHandler { cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor }
             wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
             font.family: EaStyle.Fonts.fontFamily

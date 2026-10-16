@@ -236,6 +236,7 @@ Popup {
                         payload: model.payload
                         status: model.status
                         rowId: model.id
+                        onReportRequested: (sourceRowId, link) => panel.assistant.openReport(sourceRowId, link)
                         onDetailsChanging: {
                             conversation.cancelFlick();
                             conversation.followsTail = false;

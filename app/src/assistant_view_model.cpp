@@ -199,11 +199,15 @@ struct AssistantViewModel::State {
     QMap<QString, QString> generic_input_paths;
     std::unique_ptr<QTemporaryDir> generic_input_cache;
     QStringList generic_skill_paths;
+    QMap<QString, QString> generic_report_roots;
+    QMap<QString, std::shared_ptr<ImmutableAssistantReport>> generic_report_views;
+    quint64 generic_report_bytes = 0;
     QMap<QString, Object> generic_items;
     QMap<QString, QString> generic_item_rows, generic_rpc_rows;
     struct PendingSteer {
         QString thread, turn;
         bool terminal_retained = false;
+        bool terminal_observed = false;
     };
     QMap<QString, PendingSteer> generic_rpc_turns;
     QSet<QString> generic_final_items;
@@ -243,25 +247,58 @@ struct AssistantViewModel::State {
             input->thread == generic_thread && result_terminal_success && result_terminal_thread == input->thread &&
             result_terminal_turn == input->turn && session && session->emptyAssistantOwner(input->epoch);
     }
+    Object prepare_result_notice(const std::shared_ptr<ResultInput>& input, bool opened) {
+        const auto title = opened ? QObject::tr("Edi · Project opened") : QObject::tr("Edi · Project opening failed");
+        const auto explanation = opened
+            ? QObject::tr("The validated saved result is now open in Edi. Use Save As to choose a fresh native project folder.")
+            : QObject::tr("The saved assistant result could not be verified or opened. The current project and retained conversation are preserved.");
+        Object payload{{"type", "ediOutcome"}, {"actor", "Edi"}, {"title", title}, {"intent", input->intent}, {"message", explanation}};
+        Object row{{"id", "edi-result-" + input->intent}, {"kind", "activity"}, {"text", explanation},
+            {"status", opened ? "completed" : "failed"}, {"payload", payload}};
+        generic_size(row, Limits::message_bytes);
+        return row;
+    }
+    void result_notice_fallback() noexcept {
+        try { error = storage_error; notify(); } catch (...) {}
+    }
+    void result_notice(Object row) noexcept {
+        try {
+            if (!generic_present(row)) { generic_held_row = std::move(row); generic_blocked = true; error = storage_error; }
+            notify();
+        } catch (...) {
+            try { generic_held_row = std::move(row); generic_blocked = true; } catch (...) {}
+            result_notice_fallback();
+        }
+    }
     void offer_result() {
         if (result_offer_queued || !result_current_owner(result_current) || result_current->offered) return;
         const auto input = result_current;
         result_offer_queued = true;
         if (!QMetaObject::invokeMethod(&owner, [this, input] {
             result_offer_queued = false;
-            if (!result_current_owner(input)) { offer_result(); return; }
-            input->offered = true; // One attempt on the settled snapshot, never a watcher of later writes.
-            const auto receipt = generic_workspace + "/.edi-result/" + input->intent + "/result.json";
-            if (!QFileInfo::exists(receipt)) return; // A normal conversational reply owes no saved artifact.
             try {
-                auto snapshot = capture_assistant_result(generic_workspace, input->intent);
-                if (!result_current_owner(input)) return;
+                if (!result_current_owner(input)) { offer_result(); return; }
+                input->offered = true;
+                const auto receipt = generic_workspace + "/.edi-result/" + input->intent + "/result.json";
+                if (!QFileInfo::exists(receipt)) return;
+                auto success = prepare_result_notice(input, true);
+                auto failure = prepare_result_notice(input, false);
+                bool opened = false;
+                try {
+                    auto snapshot = capture_assistant_result(generic_workspace, input->intent);
+                    if (!result_current_owner(input)) return;
+                    auto* session = result_session();
+                    opened = session->adoptAssistantResult(std::move(snapshot), input->epoch, [this, input] { return result_current_owner(input); });
+                } catch (...) {
+                    if (result_current_owner(input)) result_notice(std::move(failure));
+                    return;
+                }
+                // Post-adoption notice errors never reclassify a real opening.
                 auto* session = result_session();
-                session->adoptAssistantResult(std::move(snapshot), input->epoch, [this, input] { return result_current_owner(input); });
-            } catch (...) {
-                error = QObject::tr("The saved assistant result could not be verified or opened. The current project and retained conversation are preserved.");
-                notify();
-            }
+                if (opened && input->generation != UINT64_MAX && generation == input->generation + 1 &&
+                    project && session && session->project() == project && !generic_clear_pending)
+                    result_notice(std::move(success));
+            } catch (...) { result_notice_fallback(); }
         }, Qt::QueuedConnection)) { result_offer_queued = false; throw std::runtime_error("Result publication could not be queued"); }
     }
     void acknowledge_result(const QString& rpc, const QString& turn) {
@@ -528,11 +565,17 @@ struct AssistantViewModel::State {
             return false;
         }
     }
+    void generic_clear_reports() noexcept {
+        generic_report_roots.clear();
+        generic_report_views.clear();
+        generic_report_bytes = 0;
+    }
     void generic_clear() {
         if (generic_clear_pending) return; // Repeated Clear never refreshes cancellation deadlines.
         const bool was_refused = archive_refused;
         archive_refused = false;
         if (!publish({})) { archive_refused = was_refused; error = storage_error; notify(); return; }
+        generic_clear_reports();
         generic_context_retention_pending = false; generic_context_retention_error.clear();
         emit owner.conversationRetired();
         retire_result(); retire_file_selection(); consented_context.clear(); ++generation;
@@ -632,7 +675,8 @@ struct AssistantViewModel::State {
             const bool currentInput = generic_authenticated && !generic_retiring && (!generic_revoke_pending || generic_clear_pending || generic_context_pending || method == "turn/steer") &&
                 ((method == "turn/start" && generic_busy && generic_turn.isEmpty()) ||
                  (method == "turn/steer" && !expectedTurn.isEmpty() && origin.thread == generic_thread &&
-                  ((generic_busy && expectedTurn == generic_turn) || origin.terminal_retained)));
+                  ((generic_busy && expectedTurn == generic_turn) || origin.terminal_retained ||
+                   ((generic_clear_pending || generic_context_pending) && origin.terminal_observed))));
             const bool retainSession = nonadmitted && currentInput && generic_rpc_rows.contains(id);
             // Display no arbitrary server prose/data, echoed input, path,
             // credential, reasoning or stderr. Known explanations are app-owned.
@@ -793,6 +837,7 @@ struct AssistantViewModel::State {
     }
     bool generic_item(const Object& item, bool completed, bool snapshot = false) {
         const auto id = generic_id(item.value("id")), type = generic_id(item.value("type"));
+        if (type == "ediOutcome") throw std::runtime_error("Host outcome type is reserved for Edi");
         if (!generic_items.contains(id) && generic_items.size() >= static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Agent item limit exceeded");
         const auto old = generic_items.value(id);
         if (!old.isEmpty() && old.value("type") != type) throw std::runtime_error("Agent item type changed");
@@ -956,14 +1001,24 @@ struct AssistantViewModel::State {
                 auto row = next[i].toObject();
                 if (row.value("status") == "in_progress") { row["status"] = status; next[i] = row; }
             }
-            if (!publish(std::move(next))) { generic_fail(storage_error); return; }
+            // Retired UI context settles its real protocol without a new archive write.
+            const bool discarded = generic_clear_pending || generic_context_pending;
+            const bool retained = !discarded && publish(std::move(next));
+            if (!discarded && !retained) { generic_fail(storage_error); return; }
+            if (retained && status == "completed" && !generic_revoke_pending) {
+                for (auto it = generic_item_rows.constBegin(); it != generic_item_rows.constEnd(); ++it)
+                    if (generic_items.value(it.key()).value("type") == "agentMessage" && generic_final_items.contains(it.key()))
+                        generic_report_roots.insert(it.value(), generic_workspace);
+            }
             // This receipt follows validation AND durable original-outcome
             // retention. Keep it only on still-pending owned steer requests;
             // their definite refusals may arrive after this terminal event.
             for (auto it = generic_rpc_turns.begin(); it != generic_rpc_turns.end(); ++it)
-                if (it->thread == generic_thread && it->turn == generic_turn) it->terminal_retained = true;
+                if (it->thread == generic_thread && it->turn == generic_turn) {
+                    it->terminal_observed = true; it->terminal_retained = retained;
+                }
             result_terminal_thread = generic_thread; result_terminal_turn = generic_turn;
-            result_terminal_success = status == "completed" && !generic_revoke_pending;
+            result_terminal_success = retained && status == "completed" && !generic_revoke_pending;
             if (generic_interrupt_thread == generic_thread && generic_interrupt_turn == generic_turn) {
                 generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
             }
@@ -2130,6 +2185,46 @@ void AssistantViewModel::send(const QString& text) {
         state_->error = state_->storage_error; (void)state_->queue_render();
     }
 }
+bool AssistantViewModel::openReport(const QString& rowId, const QString& link) {
+#ifndef __EMSCRIPTEN__
+    try {
+        if (QThread::currentThread() != thread() || !state_->publishing || !state_->generic_report_roots.contains(rowId))
+            throw std::runtime_error("Report ownership is unavailable");
+        bool retained = false;
+        for (const auto& value : state_->history) {
+            const auto row = value.toObject();
+            if (row.value("id") == rowId && row.value("kind") == "assistant" && row.value("status") == "completed") retained = true;
+        }
+        if (!retained || link.toUtf8().size() > static_cast<qsizetype>(edi::assistant::SelectedFileLimits::name_bytes))
+            throw std::runtime_error("Report is not retained");
+        const auto url = QUrl::fromEncoded(link.toUtf8(), QUrl::StrictMode);
+        if (!url.isValid() || !url.host().isEmpty() || url.hasQuery() || (!url.scheme().isEmpty() && url.scheme() != "file"))
+            throw std::runtime_error("Unsupported report link");
+        const auto root = state_->generic_report_roots.value(rowId);
+        const auto path = url.isRelative() ? QDir(root).filePath(url.path()) : url.toLocalFile();
+        const auto relative = QDir(root).relativeFilePath(path);
+        const auto key = rowId + '\n' + relative;
+        auto report = state_->generic_report_views.value(key);
+        if (!report) {
+            if (state_->generic_report_views.size() >= static_cast<qsizetype>(State::Limits::ui_messages))
+                throw std::runtime_error("Report view capacity is unavailable");
+            report = capture_assistant_report(root, relative, edi::assistant::SelectedFileLimits::collection_bytes - state_->generic_report_bytes);
+            if (report->bytes > edi::assistant::SelectedFileLimits::collection_bytes - state_->generic_report_bytes)
+                throw std::runtime_error("Report view capacity is unavailable");
+            state_->generic_report_views.insert(key, report); state_->generic_report_bytes += report->bytes;
+        }
+        auto target = QUrl::fromLocalFile(report->file);
+        target.setFragment(url.fragment());
+        if (!QDesktopServices::openUrl(target)) throw std::runtime_error("Report viewer is unavailable");
+        return true;
+    } catch (...) {
+        state_->error = tr("This report is unavailable, outside its retained workspace, or cannot be opened. No external link was followed.");
+        state_->notify(); return false;
+    }
+#else
+    Q_UNUSED(rowId); Q_UNUSED(link); return false;
+#endif
+}
 void AssistantViewModel::approvePlan(const QString& id) {
     const auto revision = state_->controller->revision();
     state_->command({{"type", "approve_plan"}, {"plan_id", id}, {"project_id", QString::fromStdString(revision.project_id)},
@@ -2267,6 +2362,7 @@ void AssistantViewModel::clearHistory() {
             state_->archive_refused = was_refused; state_->error = state_->storage_error;
         } else {
 #ifndef __EMSCRIPTEN__
+            state_->generic_clear_reports();
             state_->generic_context_retention_pending = false; state_->generic_context_retention_error.clear();
 #endif
             state_->error.clear();

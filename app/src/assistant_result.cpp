@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QUuid>
@@ -330,9 +331,14 @@ struct AssistantResultExport::State {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     Fd parentFd, stageFd;
     Identity parentIdentity, stageIdentity;
+    static Fd selectedParent(const QString& path) {
+        const auto physical = QFileInfo(path).canonicalFilePath();
+        if (physical.isEmpty()) refuse();
+        return directory(physical);
+    }
     State(const QString& parentPath, const QString& leafName)
         : parent(parentPath), stage(".edi-export-" + QUuid::createUuid().toString(QUuid::WithoutBraces)), leaf(leafName),
-          destination(QDir(parentPath).filePath(leafName)), parentFd(directory(parentPath)), parentIdentity(parentFd.n),
+          destination(QDir(parentPath).filePath(leafName)), parentFd(selectedParent(parentPath)), parentIdentity(parentFd.n),
           stageIdentity(parentFd.n) {
         leaf_name(leaf);
         if (leaf.toCaseFolded() == stage.toCaseFolded()) refuse();
@@ -384,7 +390,7 @@ void AssistantResultExport::publish(const std::function<bool()>& current) {
     if (!current()) refuse();
     // Hashing and host-currentness can be lengthy. Only now revalidate the
     // actual selected parent and named source that rename will consume.
-    auto parent = directory(s.parent);
+    auto parent = State::selectedParent(s.parent);
     if (!s.parentIdentity.object(parent.n)) refuse();
     auto stage = below(parent.n, s.stage, true);
     if (!s.stageIdentity.object(stage.n)) refuse();
@@ -404,7 +410,7 @@ edi::Project AssistantResultExport::reopen() const {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     const auto& s = *state_;
     if (!s.committed) refuse();
-    auto parent = directory(s.parent); auto final = below(parent.n, s.leaf, true);
+    auto parent = State::selectedParent(s.parent); auto final = below(parent.n, s.leaf, true);
     if (!s.parentIdentity.object(parent.n) || !s.stageIdentity.object(final.n)) refuse();
     verify(s.stageFd.n, s.entries);
     auto result = load_owned_project(s.stageFd.n, s.destination, s.entries);
@@ -416,6 +422,87 @@ edi::Project AssistantResultExport::reopen() const {
     return result;
 #else
     refuse();
+#endif
+}
+std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString& workspace, const QString& relative, quint64 remaining) {
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+    if (relative.isEmpty() || QDir::isAbsolutePath(relative) || relative.toUtf8().size() > static_cast<qsizetype>(Bounds::name_bytes)) refuse();
+    const auto suffix = QFileInfo(relative).suffix().toLower();
+    if (suffix != "html" && suffix != "htm" && suffix != "pdf") refuse();
+    auto root = directory(workspace);
+    const Identity rootIdentity(root.n);
+    const auto parentName = QFileInfo(relative).path();
+    const auto leaf = QFileInfo(relative).fileName(); leaf_name(leaf);
+    auto sourceRoot = parentName == "." ? Fd(::openat(root.n, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)) : below(root.n, parentName, true);
+    const Identity sourceRootIdentity(sourceRoot.n);
+    auto result = std::make_shared<ImmutableAssistantReport>();
+    const auto cache = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/report-views";
+    if (!QDir().mkpath(cache)) refuse();
+    result->lease = std::make_shared<QTemporaryDir>(cache + "/report-XXXXXX");
+    if (!result->lease->isValid()) refuse();
+    const auto physicalCopy = QFileInfo(result->lease->path()).canonicalFilePath();
+    const auto agentRoot = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/agent").canonicalFilePath();
+    if (physicalCopy.isEmpty() || agentRoot.isEmpty() || physicalCopy == agentRoot || physicalCopy.startsWith(agentRoot + '/')) refuse();
+    auto destination = directory(physicalCopy);
+    struct Source { QString path; Identity identity; bool directory; };
+    std::vector<Source> admitted; std::set<QString> aliases;
+    std::size_t entries = 0;
+    const auto copyTree = [&](auto&& self, int from, int to, const QString& prefix, std::size_t depth) -> void {
+        if (depth > Limits::json_depth) refuse();
+        Fd scan(::openat(from, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
+        DIR* raw = ::fdopendir(scan.n); if (!raw) refuse(); scan.n = -1;
+        std::unique_ptr<DIR, decltype(&::closedir)> stream(raw, ::closedir);
+        for (;;) {
+            errno = 0; auto* entry = ::readdir(raw);
+            if (!entry) { if (errno) refuse(); break; }
+            const QByteArray rawName(entry->d_name); if (rawName == "." || rawName == "..") continue;
+            if (++entries > Bounds::files) refuse();
+            const auto name = QString::fromUtf8(rawName); if (name.toUtf8() != rawName) refuse(); leaf_name(name);
+            const auto path = prefix.isEmpty() ? name : prefix + '/' + name;
+            if (path.toUtf8().size() > static_cast<qsizetype>(Bounds::name_bytes) || !aliases.insert(path.normalized(QString::NormalizationForm_C).toCaseFolded()).second) refuse();
+            struct stat st{}; if (::fstatat(from, rawName.constData(), &st, AT_SYMLINK_NOFOLLOW)) refuse();
+            const bool isDirectory = S_ISDIR(st.st_mode);
+            if (!isDirectory && !S_ISREG(st.st_mode)) refuse();
+            auto input = below(from, name, isDirectory);
+            const Identity identity(input.n);
+            admitted.push_back({path, identity, isDirectory});
+            if (isDirectory) {
+                if (::mkdirat(to, rawName.constData(), 0700)) refuse();
+                auto child = below(to, name, true); self(self, input.n, child.n, path, depth + 1);
+            } else {
+                const auto bytes = read_file(input.n, std::min<quint64>(Bounds::file_bytes, remaining - result->bytes));
+                Fd output(::openat(to, rawName.constData(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600));
+                qsizetype written = 0;
+                while (written < bytes.size()) {
+                    const auto n = ::write(output.n, bytes.constData() + written, static_cast<std::size_t>(bytes.size() - written));
+                    if (n < 0) { if (errno == EINTR) continue; refuse(); }
+                    if (!n) refuse(); written += n;
+                }
+                if (::fchmod(output.n, 0400)) refuse();
+                result->bytes += static_cast<quint64>(bytes.size());
+            }
+        }
+    };
+    // Preserve the entry point and its local relative assets, not a renamed
+    // text-only HTML file. No HTML is parsed/re-written and no URI is fetched.
+    if (suffix == "pdf") {
+        auto input = below(sourceRoot.n, leaf);
+        const auto bytes = read_file(input.n, std::min<quint64>(Bounds::file_bytes, remaining));
+        admitted.push_back({leaf, Identity(input.n), false});
+        Fd output(::openat(destination.n, leaf.toUtf8().constData(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600));
+        qsizetype written = 0;
+        while (written < bytes.size()) { const auto n = ::write(output.n, bytes.constData() + written, static_cast<std::size_t>(bytes.size() - written)); if (n < 0) { if (errno == EINTR) continue; refuse(); } if (!n) refuse(); written += n; }
+        if (::fchmod(output.n, 0400)) refuse(); result->bytes = static_cast<quint64>(bytes.size());
+    } else copyTree(copyTree, sourceRoot.n, destination.n, {}, 0);
+    for (const auto& source : admitted) { auto check = below(sourceRoot.n, source.path, source.directory); if (!source.identity.unchanged(check.n)) refuse(); }
+    auto rootAgain = directory(workspace);
+    auto sourceAgain = parentName == "." ? Fd(::openat(rootAgain.n, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)) : below(rootAgain.n, parentName, true);
+    if (!rootIdentity.object(rootAgain.n) || !sourceRootIdentity.unchanged(sourceAgain.n)) refuse();
+    auto entryPoint = below(destination.n, leaf); // The actual linked report must exist in the copy.
+    result->file = physicalCopy + '/' + leaf;
+    return result;
+#else
+    Q_UNUSED(workspace); Q_UNUSED(relative); Q_UNUSED(remaining); refuse();
 #endif
 }
 bool AssistantResultExport::committed() const noexcept { return state_ && state_->committed; }

@@ -26,6 +26,15 @@ edi::Project load_captured_assistant_result(const ImmutableAssistantResult& resu
 // Rechecks the real loader's declared mode before any ProjectViewModel/cache construction.
 void check_assistant_result_mode(const edi::Project& project);
 
+// User-click read-only report snapshots reuse the same no-follow bounded file
+// reader. A retained lease outlives the asynchronous platform viewer.
+struct ImmutableAssistantReport {
+    std::shared_ptr<QTemporaryDir> lease;
+    QString file;
+    quint64 bytes = 0;
+};
+std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString& workspace, const QString& relative, quint64 remaining);
+
 class AssistantResultExport {
  public:
     AssistantResultExport(const ImmutableAssistantResult& source, const QString& parent, const QString& leaf);

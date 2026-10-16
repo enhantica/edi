@@ -71,6 +71,7 @@ class AssistantViewModel : public QObject {
     /// Attach the live project through its existing worker and edit door; nullptr keeps a conversational session.
     void setProject(ProjectViewModel* project);
     Q_INVOKABLE void send(const QString& text);
+    Q_INVOKABLE bool openReport(const QString& rowId, const QString& link);
     Q_INVOKABLE void selectSkill(const QString& id);
     Q_INVOKABLE void approvePlan(const QString& id);
     Q_INVOKABLE void answerQuestion(const QString& id, const QString& answer);
