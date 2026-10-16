@@ -5,6 +5,8 @@
 #include <QDateTime>
 #include <QSettings>
 #include <QThread>
+#include <QPointer>
+#include <QScopeGuard>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -108,12 +110,27 @@ class Rows : public RowTableModel {
         // Keys only: payloads belong to the canonical JSON array, not a second
         // recursively converted QVariant snapshot in the model.
         if (!canonical_) own_ = data;
-        const auto& source = canonical_ ? *canonical_ : own_;
-        QList<Row> rows; rows.reserve(source.size());
-        for (qsizetype i = 0; i < source.size(); ++i)
-            rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {}});
-        setTableRows(rows);
-        announceRows(0, static_cast<int>(source.size()) - 1);
+        pending_ = true;
+        if (assigning_) return;
+        assigning_ = true;
+        const QPointer<Rows> alive(this);
+        const auto release = qScopeGuard([this, alive] { if (alive) assigning_ = false; });
+        // Every model signal may synchronously request a newer projection. A
+        // nested request records that fact, but must not nest Qt begin/end row
+        // transactions. Complete the current transaction, then take ONLY the
+        // newest canonical source before announcing further row values.
+        while (pending_) {
+            pending_ = false;
+            const auto& source = canonical_ ? *canonical_ : own_;
+            QList<Row> rows; rows.reserve(source.size());
+            for (qsizetype i = 0; i < source.size(); ++i)
+                rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {}});
+            setTableRows(rows);
+            if (!alive) return;
+            if (pending_) continue;
+            announceRows(0, count() - 1);
+            if (!alive) return;
+        }
     }
    protected:
     QList<QVariant> rowValues(int row) const override {
@@ -128,6 +145,7 @@ class Rows : public RowTableModel {
     QStringList names_;
     const QJsonArray* canonical_;
     QJsonArray own_;
+    bool assigning_ = false, pending_ = false;
 };}
 
 struct AssistantViewModel::State {
@@ -2314,6 +2332,17 @@ struct AssistantViewModel::State {
         }
         return QString::fromUtf8(bytes);
     }
+    void reconcile_history() noexcept {
+        try {
+            messages.assign(history);
+            render_dirty = false;
+        } catch (...) {
+            // The actual archive discard already committed. Failure to present
+            // it is a UI/storage warning, never an invented failed discard.
+            render_dirty = true; error = storage_error;
+            try { (void)queue_render(); } catch (...) {}
+        }
+    }
     bool queue_render() {
         if (!publishing) return false;
         render_dirty = true;
@@ -3607,6 +3636,14 @@ bool AssistantViewModel::clearHistoryNow(bool* committed) {
     bool local = false;
     bool& discarded = committed ? *committed : local;
     discarded = false; // The caller owns this actual latch even if later diagnostics throw.
+    const QPointer<AssistantViewModel> alive(this);
+    const auto present_discard = qScopeGuard([this, alive, &discarded] {
+        // All successful explicit Clear paths share this boundary, including a
+        // managed attachment drain, disconnected Clear, and early owner change.
+        // Reconcile the CURRENT canonical history; never force-empty a newer
+        // owner's messages and never announce a failed archive discard.
+        if (alive && discarded) state_->reconcile_history();
+    });
     try {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode && state_->generic_authenticated && !state_->generic_retiring) {

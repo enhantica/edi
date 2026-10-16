@@ -585,3 +585,12 @@ The user explicitly wants the small account-usage circle itself filled proportio
 
 
 The usage ToolButton's assigned contentItem is a framework-sized host, not a glyph-size promise: hiding the backing does not remove its implicit size. The child Canvas is explicitly centered and bounded to the intended compact EA unit size, clamped to the host's available dimensions. The normal hit area, keyboard/dialog behavior and every data/theme/availability repaint remain. It no longer relies on implicit dimensions of a Control-managed contentItem to constrain drawing.
+
+
+### Clear and reentrant row projection (2026-10-16)
+
+The assistant's app-local Rows adapter owns model keys while message values borrow the retained canonical JSON history. A successful archive Clear could leave old model keys until the queued render; those keys then read null roles from the empty canonical array. Ordinary assign publication could also be reentered from Qt data/insert/remove/move/count notifications: a nested latest assignment changed the source, but the outer key target could continue and reinstall stale keys.
+
+The existing adapter now serializes its assign transactions. Nested requests only mark a newer projection; the current Qt begin/end transaction finishes before the adapter drains the newest canonical array and announces it. This applies to the same adapter's message, model, skill and selected-file rows, without changing the shared RowTableModel protocol, adding a second payload snapshot, or invoking Controller code from a retention/event hook.
+
+The existing clearHistoryNow API boundary reconciles model keys against current canonical history after an actual committed discard, on all authenticated/disconnected/deferred attachment return paths. Failed discard does not reconcile/erase retained data. A nested newer owner is presented from its current history; a stale Clear cannot manufacture an empty replacement history. A presentation allocation failure keeps the actual discard latch, records the existing warning and queues a normal render rather than claiming archive rollback, authentication loss, or successful durable output. This closes model projection; account, cancellation, attachment and retained artifact authority remain their existing separate contracts.
