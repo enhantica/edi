@@ -5504,7 +5504,11 @@ def folder167_preserved(before, state, trace):
 
 
 def folder167_policy(trace, chosen):
-    request = started_requests(trace)[-1]['params']
+    traffic = records(trace)
+    turn_index = max(
+        index for index, row in enumerate(traffic) if row.get('method') == 'turn/start'
+    )
+    request = traffic[turn_index]['params']
     policy = request['sandboxPolicy']
     assert policy['type'] == 'workspaceWrite' and not policy['networkAccess'], (
         'FOLDER: chosen local scope retains the admitted no-network write policy'
@@ -5512,7 +5516,12 @@ def folder167_policy(trace, chosen):
     assert policy['excludeSlashTmp'] and policy['excludeTmpdirEnvVar'], (
         'FOLDER: choosing one directory cannot grant global temporary roots'
     )
-    cwd = Path(request['cwd']).resolve()
+    cwd_value = request.get('cwd')
+    if cwd_value is None:
+        cwd_value = next(
+            row for row in reversed(traffic[:turn_index]) if row.get('method') == 'thread/start'
+        )['params']['cwd']
+    cwd = Path(cwd_value).resolve()
     roots = [Path(value).resolve() for value in policy['writableRoots']]
     owned = trace.parent.resolve()
     assert roots and all(root in {chosen, cwd} for root in roots), (
