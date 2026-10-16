@@ -30,6 +30,7 @@ TestCase {
     function rendered() {
         tryVerify(() => !Ui.moving(window.contentItem), 2000, "I16/popup: actual navigation finishes before geometry observations");
         verify(waitForPolish(window, 2000), "I16/popup: queued layout settles before geometry observations");
+        window.update();
         verify(waitForRendering(window.contentItem), "I16/popup: actual window renders after interaction");
     }
     function rect(control) {
@@ -44,11 +45,42 @@ TestCase {
         const control = item("assistant.toggle");
         verify(control.visible && control.enabled, "I16/popup: existing appbar button remains actionable");
         const requested = !Preferences.assistantShown;
+        pointerObservation("before-toggle", control, requested);
         mouseClick(control);
-        tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
+        pointerObservation("after-toggle", control, requested);
+        try {
+            tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
+        } finally {
+            pointerObservation("after-toggle-wait", control, requested);
+        }
         if (requested)
             tryCompare(popup, "opened", true, 2000, "I16/slide: settled opening waits for actual enter completion");
         rendered();
+    }
+    function pointerObservation(stage, control, requested) {
+        const center = control.mapToItem(window.contentItem, control.width / 2, control.height / 2);
+        const path = [];
+        let parent = window.contentItem;
+        let point = center;
+        for (let depth = 0; parent && depth < 32; ++depth) {
+            const hit = parent.childAt(point.x, point.y);
+            if (!hit) break;
+            path.push({name: hit.objectName, type: String(hit), visible: hit.visible,
+                enabled: hit.enabled, z: hit.z, geometry: rect(hit)});
+            point = hit.mapFromItem(parent, point.x, point.y);
+            parent = hit;
+        }
+        console.log("APPBAR_POINTER", stage, JSON.stringify({
+            requested: requested, shown: Preferences.assistantShown, popupVisible: popup.visible,
+            popupOpened: popup.opened, page: window.appBarCentralTabs.currentIndex,
+            windowActive: window.active, windowVisible: window.visible,
+            buttonVisible: control.visible, buttonEnabled: control.enabled,
+            buttonFocus: control.activeFocus, buttonDown: control.down,
+            buttonHovered: control.hovered, buttonRect: rect(control),
+            clickPoint: [center.x, center.y], visualHitPath: path
+        }));
+        // childAt reports the actual visual stacking path, not a claim about
+        // event acceptance by a handler or passive decorative item.
     }
     function scopeObservation(stage) {
         const button = item("assistant.toggle");
