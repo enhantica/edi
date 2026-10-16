@@ -52,18 +52,18 @@ TestCase {
             receipts.push(name);
             pointerObservation("button-" + name, control, requested);
         }
-        function pressed() { receipt("pressed"); }
+        function pressedChanged() { receipt("pressedChanged=" + control.pressed); }
         function released() { receipt("released"); }
         function clicked() { receipt("clicked"); }
         function canceled() { receipt("canceled"); }
-        control.pressed.connect(pressed);
+        control.pressedChanged.connect(pressedChanged);
         control.released.connect(released);
         control.clicked.connect(clicked);
         control.canceled.connect(canceled);
         try {
             mouseClick(control);
         } finally {
-            control.pressed.disconnect(pressed);
+            control.pressedChanged.disconnect(pressedChanged);
             control.released.disconnect(released);
             control.clicked.disconnect(clicked);
             control.canceled.disconnect(canceled);
