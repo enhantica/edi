@@ -6835,8 +6835,8 @@ def test_completion254_real_named_empty_owner_and_native_creation(generic, tmp_p
                         ('structure.cell.length_c', 6.958)]:
         parameter = native_parameter(state, path)
         assert parameter['value'] == value and not parameter['free'] and (
-            parameter['uncertainty'] is None
-        ), 'COMPLETE: independent original unfitted cell value/fixed flag/missing SU remain exact'
+            parameter['uncertainty'] == 0
+        ), 'COMPLETE: original bare CIF cell value/fixed flag/numeric zero SU remain exact'
     assert state['project']['native_observer']['can_undo'], (
         'COMPLETE: real same-owner population installs its ordinary complete Undo record'
     )
