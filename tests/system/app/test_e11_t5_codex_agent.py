@@ -6113,7 +6113,7 @@ def save211_files(directory):
     return {str(path.relative_to(directory)): path.read_bytes() for path in paths}
 
 
-def save211_owner(generic, tmp_path, turns):
+def save211_owner(generic, tmp_path, turns, *, declared_mode=None):
     source = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
     fixture = tmp_path / 'Original scientific input'
     shutil.copytree(source, fixture)
@@ -6129,6 +6129,19 @@ def save211_owner(generic, tmp_path, turns):
         'original_oxygen_full "original_o1_occupancy = 1" true\n'
         'original_inactive_co "original_co1_biso = 0.5" false\n'
     ))
+    if declared_mode is not None:
+        assert declared_mode in {'', 'single'}, (
+            'SAVE217 SETUP: only the declared blank/explicit-single paired input is selected'
+        )
+        text = analysis.read_text()
+        row = '_fitting_mode.type single\n'
+        assert text.count(row) == 1, (
+            'SAVE217 SETUP: original analysis has one independently known explicit mode row'
+        )
+        analysis.write_text(text.replace(row, '' if not declared_mode else row, 1))
+        assert ('_fitting_mode.type' not in analysis.read_text()) == (not declared_mode), (
+            'SAVE217 SETUP: undeclared mode is a real omitted input row before Session loading'
+        )
     actor, trace = native_case(generic, [], project=fixture, connect_now=False)
     assert actor.command('native_science_enable')['reply']['enabled'], (
         'SAVE SETUP: existing actual model/relations observer is enabled'
@@ -6513,3 +6526,140 @@ def save212_ordinary_bytes(files):
     )
     normalized['project.edi'] = b''.join(lines)
     return normalized
+
+
+@pytest.mark.parametrize('declared_mode', ['', 'single'], ids=['undeclared', 'explicit-single'])
+def test_save217_undeclared_single_keeps_real_fit_and_native_roundtrip(  # noqa: PLR0914, PLR0915 -- finite real fit/default-mode/persistence facts
+    generic, tmp_path, declared_mode
+):
+    leaf = 'Original default-mode save'
+    actor, trace, source = save211_owner(generic, tmp_path, [
+        [native_call('run_fit')], [native_call('save_project', name=leaf)],
+    ], declared_mode=declared_mode)
+    assert actor.last['vm']['project']['mode'] == declared_mode, (
+        'SAVE217 SETUP: actual Session retains the declared or genuinely omitted input mode'
+    )
+    parent = tmp_path / 'Original mode-save chosen parent'
+    sentinel = save211_grant(actor, trace, parent)
+    before_fit = actor.last['vm']
+    assert before_fit['project']['native_observer']['fit_available'], (
+        'SAVE217 SETUP: actual linked fit backend, never a synthetic worker'
+    )
+    _state, fit_replies = native_send(actor, trace, 1)
+    outcome = fit_replies[0]['decoded']
+    fitted = save211_settled(actor)
+    assert outcome['status'] in {'done', 'max_iterations'} and outcome['adopted'], (
+        'SAVE217 SETUP: a genuine adopted fit precedes saving in both mode representations'
+    )
+    assert outcome['iterations'] > 0 and fitted['project']['parameters'] != (
+        before_fit['project']['parameters']
+    ), 'SAVE217 SETUP: actual moving fit, never no-step/unavailable/cached success'
+    assert any(row['uncertainty'] is not None and row['uncertainty'] > 0
+               for row in fitted['project']['parameters']), (
+        'SAVE217 SETUP: real fitted SUs exercise normal native rounding'
+    )
+    chi_square = fitted['project']['native_observer']['record']['reduced_chi_square']
+    assert type(chi_square) in {int, float} and float('-inf') < chi_square < float('inf'), (
+        'SAVE217 SETUP: actual fit statistic is finite without an optimum golden'
+    )
+    assert fitted['project']['mode'] == declared_mode, (
+        'SAVE217: default-single fitting preserves the original raw declaration before save'
+    )
+    assert native_inputs(fitted) == native_inputs(before_fit), (
+        'SAVE217: default mode fitting preserves original observations/sigmas/masks/weights'
+    )
+    original_files = save211_files(source)
+    native145_approve(actor)
+    assert actor.last['vm']['project']['mode'] == declared_mode, (
+        'SAVE217 SETUP: first native save actually receives the undeclared or explicit mode'
+    )
+    _state, replies = save211_send(actor, trace, 2, leaf)
+    saved = save211_settled(actor)
+    result = replies[-1]['decoded']
+    destination = parent / leaf
+    assert replies[-1]['response']['result']['success'] and result['status'] == 'succeeded', (
+        'SAVE217: blank effective-single and explicit-single both save on the original RPC'
+    )
+    assert all(result.get(key) is True for key in ('committed', 'reopened', 'active')), (
+        'SAVE217: success requires actual disk commit, real reopen and current active adoption'
+    )
+    assert Path(result['destination']).resolve() == destination.resolve() and (
+        Path(saved['project']['host_snapshot']['path']).resolve() == destination.resolve()
+    ), 'SAVE217: the actual displayed saved path is the requested child under the genuine grant'
+    assert not saved['project']['host_snapshot']['modified'] and not (
+        saved['handoff']['needs_save_as']
+    ), 'SAVE217: the actual displayed model is normally saved/unmodified'
+    assert (saved['project']['mode'] or 'single') == 'single', (
+        'SAVE217: active adoption preserves effective single, allowing ordinary canonical storage'
+    )
+    assert native_inputs(saved) == native_inputs(fitted), (
+        'SAVE217: mode admission never replaces original measured data or objective weights'
+    )
+    assert [(row['path'], row['free']) for row in saved['project']['parameters']] == [
+        (row['path'], row['free']) for row in fitted['project']['parameters']
+    ], 'SAVE217: saving default single preserves every actual parameter free declaration'
+    for key in ('kind', 'exit_reason', 'success', 'iterations'):
+        assert saved['project']['native_observer']['record'][key] == (
+            fitted['project']['native_observer']['record'][key]
+        ), 'SAVE217: native saving retains the original actual final fit identity'
+    assert saved['connected'] and saved['handoff']['account_label'] == (
+        fitted['handoff']['account_label']
+    ) and saved['models'] == fitted['models'], (
+        'SAVE217: both mode representations preserve genuine account/catalog ownership'
+    )
+    assert all(row in saved['messages'] for row in fitted['messages']), (
+        'SAVE217: native saving preserves the originating retained conversation'
+    )
+    assert save211_files(source) == original_files and sentinel.read_bytes() == (
+        b'Original data is never overwrite authorization\n'
+    ), 'SAVE217: the original raw-mode input and unrelated user bytes remain exact'
+    assert sorted(path.name for path in parent.iterdir()) == [leaf, sentinel.name], (
+        'SAVE217: publication creates only the requested child, without residual staging'
+    )
+    saved_files = save211_files(destination)
+    control = tmp_path / 'Original ordinary mode control'
+    control.mkdir()
+    intent = actor.command('save_as_begin')['reply']
+    assert intent['invoked'] and intent['intent'], (
+        'SAVE217 CONTROL: ordinary Save As captures the actual saved fitted model'
+    )
+    manual = actor.command('save_as_complete', intent=intent['intent'],
+                           parent=str(control), leaf='')
+    assert manual['reply']['invoked'] and manual['reply']['accepted'], (
+        'SAVE217 CONTROL: the existing ordinary native writer provides real readback bytes'
+    )
+    save211_settled(actor)
+    assert save211_files(destination) == saved_files and save212_ordinary_bytes({
+        name: data for name, data in saved_files.items() if name.endswith('.edi')
+    }) == save212_ordinary_bytes({
+        name: data for name, data in save211_files(control).items() if name.endswith('.edi')
+    }), 'SAVE217: saved native science/fit bytes are ordinary-writer stable except valid timestamp'
+    loader, _ = generic('fileauth')
+    assert loader.command('native_science_enable')['reply']['enabled'], (
+        'SAVE217: a second real Session exposes existing structural readback'
+    )
+    assert loader.command('open', path=str(control))['reply']['opened'], (
+        'SAVE217 CONTROL: the ordinary native tree genuinely reopens'
+    )
+    expected = native145_science_settled(loader)
+    assert loader.command('open', path=str(destination))['reply']['opened'], (
+        'SAVE217: the first native saved tree genuinely reopens in an independent Session'
+    )
+    reopened = native145_science_settled(loader)
+    assert expected['project']['mode'] == reopened['project']['mode'] == 'single', (
+        'SAVE217: ordinary persisted/readback mode is canonical single for either declaration'
+    )
+    save211_compare_model(expected, reopened)
+    assert reopened['project']['parameters'] == saved['project']['parameters'] and (
+        native_inputs(reopened) == native_inputs(saved)
+    ), 'SAVE217: current adopted rounded values/free/SUs/data match the real saved-file loader'
+    assert reopened['project']['science_observer'] == saved['project']['science_observer'], (
+        'SAVE217: current physical sites/geometry/aliases/relations match genuine native readback'
+    )
+    assert reopened['project']['native_observer']['record'] == (
+        saved['project']['native_observer']['record']
+    ), 'SAVE217: the complete adopted fit record matches actual persisted native readback'
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), (
+        'SAVE217: saving never repairs auth through login/logout'
+    )
