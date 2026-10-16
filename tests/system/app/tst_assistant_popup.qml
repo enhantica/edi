@@ -944,10 +944,12 @@ TestCase {
         compare(found.length, 1, "VA1 SETUP: genuine exposed free checkbox belongs to exact visual row parameter");
         return found[0];
     }
-    function visible185_outcome(callId) {
-        const row = Probe.rows(assistant.messages).find(value => value.kind === "activity"
-            && value.payload && value.payload.id === callId && value.payload.nativeOutcome);
-        return row ? row.payload.nativeOutcome : null;
+    function visible185_outcome(callId, previousIds) {
+        const rows = Probe.rows(assistant.messages).filter(value => !previousIds.has(value.id)
+            && value.kind === "activity" && value.payload
+            && value.payload.id === callId && value.payload.nativeOutcome);
+        verify(rows.length <= 1, "VA: one new retained row owns the original current native call");
+        return rows.length ? rows[0].payload.nativeOutcome : null;
     }
     function visible185_ready(stage) {
         try {
@@ -1100,6 +1102,7 @@ TestCase {
         project.fit.finished.connect(finishedReceipt);
         let draftField = null, draft = "", draftFocus = null, draftSelection = null, draftPage = -1;
         const call = "visible185-action-" + data.tag;
+        const requestPreviousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
         const timelineEnabled = data.tag === "analysis-value-free";
         const timelinePriorIds = timelineEnabled ? new Set(Probe.rows(assistant.messages).map(row => row.id)) : null;
         let timelineCount = 0;
@@ -1148,7 +1151,7 @@ TestCase {
                     target: {identity: String(la), path: la.path, value: la.value, free: la.free},
                     typed: typed, toggled: toggled, currentOwner: Session.project === project,
                     connected: assistant.connected, connectionLabel: assistant.connectionLabel,
-                    models: Probe.rows(assistant.models).map(row => row.id), outcome: visible185_outcome(call),
+                    models: Probe.rows(assistant.models).map(row => row.id), outcome: visible185_outcome(call, requestPreviousIds),
                     newNativeRows: rows.map(row => ({id: row.id, kind: row.kind, status: row.status,
                         payload: {id: row.payload.id, tool: row.payload.tool, namespace: row.payload.namespace,
                             arguments: row.payload.arguments, status: row.payload.status,
@@ -1244,7 +1247,7 @@ TestCase {
             }
             if (data.tag !== "close-owner") {
                 try {
-                    tryVerify(() => visible185_outcome(call) !== null && !assistant.canCancel && !assistant.showingActions,
+                    tryVerify(() => visible185_outcome(call, requestPreviousIds) !== null && !assistant.canCancel && !assistant.showingActions,
                         10000, "VA: actual original native outcome settles after its own input/worker owner");
                 } finally {
                     try {
@@ -1268,10 +1271,10 @@ TestCase {
                         const table = Ui.control(Probe, window, "parameters.list");
                         const group = Ui.control(Probe, window, "group.parameters");
                         const filter = table ? table.sourceModel : null;
-                        const outcome = visible185_outcome(call);
+                        const outcome = visible185_outcome(call, requestPreviousIds);
                         const visual = Ui.itemsWithProperty(page, "item").filter(control => control.item === la);
                         const owned = Probe.objectsWithProperty(window, "item").filter(control => control.item === la);
-                        const nativeRows = Probe.rows(assistant.messages).filter(row => row.payload
+                        const nativeRows = Probe.rows(assistant.messages).filter(row => !requestPreviousIds.has(row.id) && row.payload
                             && [call, "visible185-value-" + data.tag, "visible185-read-" + data.tag].includes(row.payload.id));
                         console.log("VISIBLE197_OUTCOME", data.tag, JSON.stringify({
                             outcome: outcome, outcomePresent: outcome !== null,
@@ -1303,7 +1306,7 @@ TestCase {
                         }));
                     } catch (error) { console.log("VISIBLE197_OUTCOME_DIAGNOSTIC_ERROR", data.tag, String(error)); }
                 }
-                const outcome = visible185_outcome(call);
+                const outcome = visible185_outcome(call, requestPreviousIds);
                 if (data.tag.startsWith("dirty-")) {
                     verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
                         "VA3: original draft receives a truthful before-write refusal, never successful admission");
@@ -1473,8 +1476,11 @@ TestCase {
         const name = textCase ? "atomSite.label.0" : textFormatted ? "background.position.0"
             : data.tag.endsWith("integer")
             ? "minimizer.maxIterations" : "minimizer.chiSquareTolerance";
-        const candidates = Ui.itemsWithProperty(Ui.page(window), "objectName")
-            .filter(control => control.objectName === name);
+        const candidates = [...new Set(Ui.itemsWithProperty(Ui.page(window), "objectName"))]
+            .filter(control => control.objectName === name && Ui.inPane(control)
+                && typeof control.text === "string" && typeof control.cursorPosition === "number"
+                && control.editingFinished !== undefined && control.textEdited !== undefined
+                && control.committed !== undefined);
         compare(candidates.length, 1, "DRAFT1 SETUP: genuine visual common editor identity is unique");
         const field = candidates[0];
         Ui.scrollIntoView(field);
@@ -1525,6 +1531,7 @@ TestCase {
         const beforeUndo = item("appBar.button.undo").enabled;
         const models = JSON.stringify(Probe.rows(assistant.models));
         const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const requestPreviousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
         let finished = 0, committed = 0, navigated = 0, tiersChanged = 0;
         function finishReceipt() { ++finished; }
         function commitReceipt() { ++committed; }
@@ -1539,10 +1546,10 @@ TestCase {
         try {
             assistant.send("Change " + (textFormatted ? "cell a" : "wavelength") + " to "
                 + requestedValue + " while preserving my unrelated manual editor, " + data.tag);
-            tryVerify(() => visible185_outcome("draft226-action-" + data.tag) !== null
+            tryVerify(() => visible185_outcome("draft226-action-" + data.tag, requestPreviousIds) !== null
                 && !assistant.canCancel && !assistant.showingActions, 10000,
                 "DRAFT1: genuine original native request publishes and settles its own outcome");
-            const outcome = visible185_outcome("draft226-action-" + data.tag);
+            const outcome = visible185_outcome("draft226-action-" + data.tag, requestPreviousIds);
             if (cleanControl) {
                 compare(outcome.status, "edited", "DRAFT1: unedited formatted value never blocks valid navigation/work");
                 compare(target.value, requestedValue, "DRAFT1: actual requested native edit lands");
@@ -1588,7 +1595,7 @@ TestCase {
                 finished: finished, committed: committed, navigated: navigated, tiersChanged: tiersChanged,
                 beforeUndo: beforeUndo, afterUndo: item("appBar.button.undo").enabled,
                 lastError: assistant.lastError, showingActions: assistant.showingActions,
-                outcome: visible185_outcome("draft226-action-" + data.tag)}));
+                outcome: visible185_outcome("draft226-action-" + data.tag, requestPreviousIds)}));
             field.editingFinished.disconnect(finishReceipt);
             field.committed.disconnect(commitReceipt);
             window.appBarCentralTabs.currentIndexChanged.disconnect(pageReceipt);
