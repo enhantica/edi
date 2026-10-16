@@ -13,6 +13,8 @@
 #include <optional>
 #include <cstdint>
 
+class QMouseEvent;
+
 namespace edi_app {
 // App-private real input sequencer. No Q_INVOKABLE, script commands, model
 // setters or provider-selected QObject targets. The native adapter supplies an
@@ -32,6 +34,9 @@ class AssistantWidgetInput final : public QObject {
         std::function<bool()> prepareCommit;
         std::function<void()> finishCommit;
         std::function<void(bool delivered, const QString& diagnostic)> completed;
+        // Optional app debug sink, never input authority. Only checked-tab
+        // navigation populates it; original-call finite logging budget owns it.
+        std::function<void(const char*, const QMouseEvent*, const char*)> navigationTrace;
     };
     explicit AssistantWidgetInput(QQuickWindow& window, QObject* parent = nullptr);
     ~AssistantWidgetInput() override;
@@ -59,6 +64,7 @@ class AssistantWidgetInput final : public QObject {
     bool current(std::uint64_t id) const;
     bool visibleCenter(QQuickItem& item, QPointF& center) const;
     bool mouse(QEvent::Type type, Qt::MouseButton button);
+    void navigationTrace(const char* phase, const QMouseEvent* event, const char* disposition) noexcept;
     bool selectAll();
     bool key(int code, Qt::KeyboardModifiers modifiers = Qt::NoModifier, const QString& text = {});
     void stop(bool delivered, const QString& diagnostic, bool restoreDraft) noexcept;

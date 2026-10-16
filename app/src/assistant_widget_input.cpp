@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_widget_input.hpp"
 #include <QCoreApplication>
+#include <QLoggingCategory>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QKeySequence>
@@ -15,6 +16,7 @@
 #include <stdexcept>
 
 namespace edi_app {
+Q_DECLARE_LOGGING_CATEGORY(lcAssistantWidgetLookup)
 namespace {
 // Actual matched RemotePointer/RemoteController prior art, not blocking waits.
 constexpr int move_ms = 500, press_ms = 100, click_relaxation_ms = 500, character_ms = 100;
@@ -106,28 +108,41 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
             });
         } catch (...) {} // No queued cleanup: begin remains fenced until window retirement.
     }
+    bool navigationDecision(bool rejected, const QMouseEvent* event, const char* disposition) noexcept {
+        if (!lcAssistantWidgetLookup().isDebugEnabled()) return rejected;
+        const QPointer<MouseOwnership> self(this);
+        const auto input = owner; const auto original_window = window; const auto stamp = sequence;
+        const auto request = input ? input->request_ : nullptr;
+        const bool original_accepting = accepting;
+        if (!input || !request || !request->navigationTrace) return rejected;
+        input->navigationTrace("ownership", event, disposition);
+        return rejected || !self || !input || !original_window || owner != input || window != original_window ||
+            sequence != stamp || input->request_ != request || accepting != original_accepting;
+    }
     bool eventFilter(QObject* watched, QEvent* event) override {
         if (!recognizes(event) || !qobject_cast<QQuickWindow*>(watched)) return false;
-        if (watched != window) return true; // Old own event cannot retarget another window.
+        if (watched != window) return navigationDecision(true, static_cast<const QMouseEvent*>(event), "wrong-window"); // Never retarget.
         const auto* mouse = static_cast<const QMouseEvent*>(event);
         if (cleanup_delivery && mouse->timestamp() == cleanup_delivery &&
-            event->type() == QEvent::MouseButtonRelease && mouse->position() == QPointF(-1, -1)) return false;
+            event->type() == QEvent::MouseButtonRelease && mouse->position() == QPointF(-1, -1)) return navigationDecision(false, mouse, "deferred-cleanup");
         const auto input = owner;
         const QPointer<MouseOwnership> self(this);
         const auto stamp = sequence;
         const int index = eventIndex(event->type());
         if (!input || input->mouse_stamp_ != stamp || index < 0 ||
-            !stamps[static_cast<std::size_t>(index)] || mouse->timestamp() != stamps[static_cast<std::size_t>(index)]) return true;
+            !stamps[static_cast<std::size_t>(index)] || mouse->timestamp() != stamps[static_cast<std::size_t>(index)]) return navigationDecision(true, mouse, "stale-identity");
         // Retirement precedes balancing an outside release. A nested delayed
         // PRESS during that release remains retired and cannot become a click.
         if (input->injecting_ && input->cleanup_release_ && event->type() == QEvent::MouseButtonRelease &&
-            mouse->position() == QPointF(-1, -1)) return false;
-        if (!accepting || !input->request_) return true;
+            mouse->position() == QPointF(-1, -1)) return navigationDecision(false, mouse, "held-cleanup");
+        if (!accepting || !input->request_) return navigationDecision(true, mouse, "retired");
         const auto serial = input->serial_;
         bool current = false;
         try { current = input->current(serial); } catch (...) {}
-        return !self || !input || !current || owner != input || sequence != stamp || !accepting ||
+        const bool rejected = !self || !input || !current || owner != input || sequence != stamp || !accepting ||
             input->mouse_stamp_ != stamp || input->serial_ != serial || !input->request_;
+        if (!self) return true;
+        return navigationDecision(rejected, mouse, rejected ? "currentness-rejected" : "current");
     }
     QPointer<QQuickWindow> window;
     QPointingDevice device;
@@ -235,18 +250,31 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     timer_.start(0);
     return id;
 }
+void AssistantWidgetInput::navigationTrace(const char* phase, const QMouseEvent* event, const char* disposition) noexcept {
+    try {
+        if (!lcAssistantWidgetLookup().isDebugEnabled()) return;
+        const auto original = request_;
+        if (original && original->kind == Kind::Navigate && original->navigationTrace)
+            original->navigationTrace(phase, event, disposition);
+    } catch (...) {}
+}
 bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     if (!window_ || !request_ || !mouse_owner_) return false;
     const QPointer<AssistantWidgetInput> self(this);
     const QPointer<QQuickWindow> window(window_);
     const auto original = request_; const auto id = serial_;
+    const auto original_stamp = mouse_stamp_;
     const bool old = injecting_; injecting_ = true;
     const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
     const auto buttons = type == QEvent::MouseButtonRelease ? Qt::NoButton : button;
     QMouseEvent event(type, center_, window->mapToGlobal(center_), button, buttons, Qt::NoModifier, &mouse_owner_->device);
     event.setTimestamp(mouse_owner_->eventStamp(type));
+    navigationTrace(type == QEvent::MouseButtonPress ? "before-press" : type == QEvent::MouseButtonRelease ? "before-release" : "before-move", &event, "send");
+    if (!self || !window || serial_ != id || request_ != original) return false;
     QCoreApplication::sendEvent(window, &event);
-    if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, mouse_stamp_);
+    if (self && serial_ == id && request_ == original)
+        navigationTrace(type == QEvent::MouseButtonPress ? "after-press" : type == QEvent::MouseButtonRelease ? "after-release" : "after-move", &event, "returned");
+    if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, original_stamp);
     return self && window && serial_ == id && request_ == original;
 }
 bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const QString& text) {
