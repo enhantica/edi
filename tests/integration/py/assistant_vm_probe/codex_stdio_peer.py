@@ -58,7 +58,9 @@ def turn(status):
 
 
 def complete():
-    item = {'type': 'agentMessage', 'id': 'original-message', 'text': 'Original offline reply'}
+    item = {'type': 'agentMessage', 'id': turn_id + '-message' if scenario == 'fileauth'
+            else 'original-message', 'text': f'Original fileauth reply {turn_number}'
+            if scenario == 'fileauth' else 'Original offline reply'}
     notify('item/started', {'threadId': thread_id, 'turnId': turn_id, 'item': item})
     notify(
         'item/completed',
@@ -702,7 +704,7 @@ for line in sys.stdin:
         if scenario.startswith('result:'):
             result_thread_number += 1
             thread_id = '019a0290-0000-7000-8000-' + f'{5000 + result_thread_number:012d}'
-        elif scenario.startswith('clear:'):
+        elif scenario.startswith('clear:') or scenario == 'fileauth':
             count = sum(json.loads(line).get('method') == 'thread/start'
                         for line in trace.read_text(encoding='utf-8').splitlines())
             thread_id = '019a0290-0000-7000-8000-' + f'{6000 + count:012d}'
@@ -764,6 +766,8 @@ for line in sys.stdin:
             })
             continue
         turn_number += 1
+        if scenario == 'fileauth':
+            turn_id = '019a0290-0000-7000-8000-' + f'{8000 + turn_number:012d}'
         if scenario.startswith('clear:'):
             clear_start(request)
             continue

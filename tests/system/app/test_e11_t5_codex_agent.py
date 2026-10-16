@@ -1436,3 +1436,117 @@ def test_rpc83_uncertain_or_unrecognized_failure_remains_private_fenced_and_not_
     assert len(rows) == 1 and rows[0]['status'] != 'completed', (
         'RPC2: uncertain original input remains visible without invented completed admission'
     )
+
+
+@pytest.mark.parametrize('remove_one', [False, True], ids=['add', 'remove-one-of-two'])
+def test_file_selection_context_retirement_preserves_managed_authentication(  # noqa: PLR0914, PLR0915
+    generic, tmp_path, remove_one
+):
+    actor, trace = generic('fileauth')
+    connect(actor)
+    actor.command('send_text', text='Original retained conversation before file intake')
+    before = settle(actor, lambda value: not value['can_cancel'] and any(
+        row.get('text') == 'Original fileauth reply 1' for row in value['messages']
+    ))
+    identity = live_original_peer(actor)
+    assert before['handoff']['account_label'] == 'original@example.invalid' and before['models'], (
+        'FILEAUTH SETUP: actual managed account/catalog replies precede file intake'
+    )
+    retained = {row['id']: row for row in before['messages']}
+    auth_methods = {
+        'initialize', 'account/read', 'model/list', 'account/login/start', 'account/logout',
+    }
+    original_auth = [row for row in records(trace) if row.get('method') in auth_methods]
+    original_project = before['project']
+    paths = [tmp_path / 'Original-file-alpha.txt', tmp_path / 'Original-file-beta.txt']
+    for index, path in enumerate(paths):
+        path.write_text(f'Original harmless selected bytes {index}\n')
+    request = actor.command('selected_begin')['reply']['request_id']
+    admitted = actor.command('selected_add', request_id=request, urls=[
+        path.as_uri() for path in (paths if remove_one else paths[:1])
+    ])
+    assert admitted['reply']['accepted'], (
+        'FILEAUTH SETUP: actual current file selection admits bytes'
+    )
+    selected = admitted['vm']['selected_files']
+    expected_names = {path.name for path in (paths if remove_one else paths[:1])}
+    assert {row['name'] for row in selected} == expected_names, (
+        'FILEAUTH: actual selected rows match only the independently planted originals'
+    )
+
+    def preserved(state):
+        assert state['connected'] and state['handoff']['account_label'] == before['handoff'][
+            'account_label'
+        ], 'FILEAUTH: changing selected context preserves the genuine signed-in identity'
+        assert state['models'] == before['models'] and (
+            state['selected_model'], state['selected_effort']
+        ) == (before['selected_model'], before['selected_effort']), (
+            'FILEAUTH: original catalog and explicit choices survive selected-file retirement'
+        )
+        assert original_peer_is_live(identity), (
+            'FILEAUTH: context invalidation retains the exact original process identity'
+        )
+        assert all(row in state['messages'] for row in retained.values()), (
+            'FILEAUTH: selected-file changes retain every original conversation row unchanged'
+        )
+        assert state['project'] == original_project, (
+            'FILEAUTH: selecting files does not mutate project'
+        )
+        assert [
+            row for row in records(trace) if row.get('method') in auth_methods
+        ] == original_auth, (
+            'FILEAUTH: no reinitialization, login/logout or account/catalog refresh repairs action'
+        )
+        assert state['context_consent_required'], (
+            'FILEAUTH: changed selected scope requires actual fresh outgoing-context approval'
+        )
+
+    preserved(admitted['vm'])
+    if remove_one:
+        removed = next(row for row in selected if row['name'] == paths[0].name)
+        result = actor.command('selected_remove', id=removed['id'])
+        assert result['reply']['accepted'], 'FILEAUTH SETUP: remove addresses the actual opaque ID'
+        expected_names.remove(paths[0].name)
+        assert result['vm']['selected_files'] == [row for row in selected if row != removed], (
+            'FILEAUTH: removal preserves the other original selected identity and bytes metadata'
+        )
+        preserved(result['vm'])
+    assert len(started_requests(trace)) == 1, (
+        'FILEAUTH: neither add nor remove silently sends or replays any conversation prompt'
+    )
+    manifest = actor.last['vm']['context']['selected_files']
+    assert {row['name'] for row in manifest['files']} == expected_names, (
+        'FILEAUTH: actual disclosed outgoing context contains exactly the remaining selection'
+    )
+    # The real GUI uses this method to acknowledge current context. Authentication
+    # and process preservation have already been proved; this cannot repair either.
+    actor.command('sign_in')
+    assert not actor.last['vm']['context_consent_required'], (
+        'FILEAUTH: explicit current-context approval is distinct from a new login'
+    )
+    text = 'Original fresh user input after file context change'
+    actor.command('send_text', text=text)
+    after = settle(actor, lambda value: not value['can_cancel'] and any(
+        row.get('text') == 'Original fileauth reply 2' for row in value['messages']
+    ))
+    assert after['connected'] and original_peer_is_live(identity), (
+        'FILEAUTH: the preserved managed connection completes genuine subsequent work'
+    )
+    sent = started_requests(trace)
+    assert len(sent) == 2 and len(users(actor, text)) == 1, (
+        'FILEAUTH: actual new input dispatches once with one retained admitted user row'
+    )
+    wire = json.dumps(sent[-1]['params']['input'], ensure_ascii=False)
+    assert wire.count(text) == 1 and all(name in wire for name in expected_names), (
+        'FILEAUTH: approved actual new wire includes current selected scope and draft exactly once'
+    )
+    if remove_one:
+        assert paths[0].name not in wire, (
+            'FILEAUTH: removed file is absent from new outgoing scope'
+        )
+    assert all(row in after['messages'] for row in retained.values()), (
+        'FILEAUTH: completing new work still retains the original conversation unchanged'
+    )
+    assert [row for row in records(trace) if row.get('method') in auth_methods] == original_auth, (
+        'FILEAUTH: context approval/new work never repairs auth through another account flow'
+    )
