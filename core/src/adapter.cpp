@@ -2629,14 +2629,15 @@ class PersistenceAdmission {
         else if constexpr(std::is_arithmetic_v<T> || std::is_enum_v<T>) bytes(factor_*sizeof(T)+scalar_cost_);
         else if constexpr(requires {v.has_value();*v;}) {bytes(factor_*sizeof(T)); if(v)value(*v);}
         else if constexpr(requires {v.first;v.second;}) {value(v.first);value(v.second);}
-        else if constexpr(requires {crysta::RowSchema<T>::fields;}) {
-            bytes(factor_*sizeof(T));std::apply([&](auto... m){(value(v.*m),...);},crysta::RowSchema<T>::fields);
-        } else if constexpr(requires {v.size();v.begin();v.end();}) {
+        else if constexpr(requires {v.size();v.begin();v.end();}) {
+            // A universal empty RowSchema is not a schema for this container.
             rows(v.size(),factor_*sizeof(*v.begin())+factor_*sizeof(std::string));
             for(const auto& row:v) {
                 if constexpr(requires {row.get();*row;}) {if(!row)throw std::invalid_argument("Save has an empty row");value(*row);}
                 else value(row);
             }
+        } else if constexpr(requires {requires (std::tuple_size_v<decltype(crysta::RowSchema<T>::fields)> > 0);}) {
+            bytes(factor_*sizeof(T));std::apply([&](auto... m){(value(v.*m),...);},crysta::RowSchema<T>::fields);
         } else static_assert(sizeof(T)==0,"Native save source requires explicit admission");
     }
     template<class C,class T> void category(const T& obj) {std::apply([&](auto... m){(value(obj.*m),...);},C::columns);}
@@ -2647,6 +2648,7 @@ class PersistenceAdmission {
 };
 void admit_currentness_inputs(const Project& project, PersistenceAdmission& budget) {
     constexpr std::uint64_t word = 16;
+    const auto initial_roles = budget.used();
     const auto text = [&](std::string_view value) { budget.bytes(word + 1); budget.text(value); };
     const auto written_text = [&](std::string_view value) { text(value); budget.bytes(word); };
     const auto named = [&](std::string_view block, std::string_view row, std::string_view leaf,
@@ -2666,6 +2668,7 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
     // Charging both is conservative even when a source is stale or absent.
     budget.bytes(1024 + 4096);
     budget.bytes(2 * word); // structure count + relation collection generations
+    const auto structure_begin = budget.used();
     for (const auto& held : project.structures) {
         const Structure& structure = *held;
         const auto* owner = static_cast<const detail::KeyedBase&>(structure.atom_sites).host();
@@ -2700,6 +2703,10 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
         }
         budget.rows(2, 1 + 2 * word); // optional geometry constants + their write IDs
     }
+    // calculation_inputs repeats ALL structures for EVERY bank. A fixed
+    // once-per-project charge cannot bound that variable Cartesian join.
+    const auto structure_roles = budget.used() - structure_begin;
+    budget.rows(project.experiments.size(), structure_roles);
     for (const auto& held : project.experiments) {
         const ExperimentBase& experiment = *held;
         const auto* rows = experiment.name.owner();
@@ -2790,6 +2797,12 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
         text(constraint->id.value()); written_text(constraint->expression.value());
         budget.bytes(2 * word); // enabled VALUE and write, disabled drafts included
     }
+    // Original/currentness comparisons, retained WorkStamps, prepared sources
+    // and calculation/publication temporaries each own complete encodings.
+    // The same finite construction-copy policy covers these derived roles;
+    // multiplication remains checked even for long multi-bank source strings.
+    const auto complete_roles = budget.used() - initial_roles;
+    budget.rows(7, complete_roles);
 }
 
 void persistence_owner_graph(const Project& project) {
@@ -2814,11 +2827,19 @@ void persistence_owner_graph(const Project& project) {
 }
 
 std::size_t admit_persistence(const Project& p,const PersistenceLimits& limits,bool payload=false) {
-    if(!limits.construction_bytes || !limits.file_bytes || !limits.collection_bytes || limits.files<4 ||
-       p.structures.empty() || p.experiments.empty() || p.structures.size()>limits.files-4 ||
-       p.experiments.size()>limits.files-4-p.structures.size())
+    if(!limits.construction_bytes || !limits.file_bytes || !limits.collection_bytes || limits.files<2 ||
+       p.structures.empty() || p.experiments.empty())
         throw std::invalid_argument("Save input/document capacity is unavailable");
-    if((p.fitting_mode!="single" && p.fitting_mode!="joint") || !p.report_files.empty() || !p.fit_result.scan_results.empty())
+    std::size_t documents=2;
+    const auto add_documents=[&](std::size_t n){
+        if(n>limits.files-documents)throw std::length_error("Save document count exceeds capacity");
+        documents+=n;
+    };
+    add_documents(p.structures.size());add_documents(p.experiments.size());
+    if(p.report_html || p.report_pdf || p.report_cif || p.report_html_offline || p.report_excluded)add_documents(1);
+    const auto& scan=p.sequential_fit;
+    if(!scan.data_dir.empty() || scan.file_pattern!="*" || scan.reverse || !scan.template_file.empty() || !scan.extract.empty() ||
+       (p.fitting_mode!="single" && p.fitting_mode!="joint") || !p.report_files.empty() || !p.fit_result.scan_results.empty())
         throw std::invalid_argument("Native saving currently supports embedded single/joint projects without external report/scan assets");
     PersistenceAdmission a(limits.construction_bytes,payload);
     persistence_owner_graph(p); if(!payload)admit_currentness_inputs(p,a);
@@ -2833,6 +2854,11 @@ std::size_t admit_persistence(const Project& p,const PersistenceLimits& limits,b
         a.category<SpaceGroupSymopCategory>(s->geometry.space_group_symop);
         a.category<ExpandedAtomSiteCategory>(s->geometry.expanded_atom_sites);
         a.category<GeomBondCategory>(s->geometry.geom_bond);a.category<CartnTransformCategory>(s->geometry.atom_sites_cartn_transform);
+        // A snapshot retains these shared records even when they describe a
+        // larger, now stale source. Admit their actual text, not today's shape.
+        if(s->geometry_source) {
+            a.bytes(sizeof(detail::GeometrySource));a.value(s->geometry_source->inputs);a.value(s->geometry_source->relations);
+        }
     }
     for(const auto& e:p.experiments) {
         if(!e->data || e->calculation_only) throw std::invalid_argument("Native saving requires embedded measured data");
@@ -2843,6 +2869,9 @@ std::size_t admit_persistence(const Project& p,const PersistenceLimits& limits,b
         for(const auto& link:e->linked_structures)a.category<FitResultPhaseCategory>(*link);
         a.category<DataCategory>(*e->data);a.category<ReflnCategory>(e->refln);
         if(e->carried_reflections)a.category<CarriedReflnCategory>(*e->carried_reflections);
+        if(e->computed_source) {
+            a.bytes(sizeof(detail::ComputedSource));a.value(e->computed_source->inputs);a.value(e->computed_source->relations);
+        }
     }
     return a.used();
 }
@@ -2915,6 +2944,29 @@ std::vector<std::pair<std::string,std::string>> prepare_project_documents(const 
     });
 }
 
+CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
+    const PersistenceLimits& limits, std::size_t retained_limit, const work::CancelToken& cancel) {
+    if(cancel.cancelled())throw std::invalid_argument("Saved-state calculation was cancelled");
+    PersistenceAdmission construction(limits.construction_bytes);
+    construction.bytes(admit_persistence(reopened, limits));
+    construction.value(original.experiment_inputs); construction.value(original.structure_inputs); construction.value(original.relations);
+    // The copied original stamps can retain older/larger encodings. Admit their
+    // actual payload, not only today's reloaded shape, before the copy below.
+    PersistenceAdmission held(retained_limit, true);
+    held.bytes(sizeof(CalculationResult));
+    held.value(original.experiment_inputs); held.value(original.structure_inputs); held.value(original.relations);
+    if(cancel.cancelled())throw std::invalid_argument("Saved-state calculation was cancelled");
+    WorkSnapshot work{reopened, original, {}};
+    auto calculated = calculate(work, cancel); // The ordinary native calculator.
+    if (calculated.cancelled || cancel.cancelled())throw std::invalid_argument("Saved-state calculation was cancelled");
+    if (!calculated.refusal.empty())throw std::invalid_argument("The rounded saved model could not be calculated");
+    // Staged arrays share immutable calculated buffers. Check all retained
+    // source/column/name roles before transferring them to the task/delivery.
+    held.bytes(admit_persistence(work.project, limits, true));
+    for (const auto& value : calculated.completed)held.value(value);
+    return calculated;
+}
+
 struct PreparedSavedValues::State {
     Project* owner=nullptr;
     bool committed=false;
@@ -2925,12 +2977,17 @@ struct PreparedSavedValues::State {
     std::optional<detail::PreparedPublication> publication;
     std::string destination,metadata_path,last_modified;
 };
-PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,WorkStamps stamps,std::string destination)
+PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,WorkStamps stamps,CalculationResult calculated,std::string destination)
     :state_(std::make_unique<State>()) {
     state_->owner=&live;
     if(!unchanged_since(live,stamps) || live.structures.size()!=saved.structures.size() ||
        live.experiments.size()!=saved.experiments.size())
         throw std::invalid_argument("Saved project no longer matches the current owner");
+    if(calculated.cancelled || !calculated.refusal.empty() || !unchanged_since(live,calculated.stamps))
+        throw std::invalid_argument("Saved calculation no longer matches the current owner");
+    std::map<std::string,double> completed;
+    for(const auto& value:calculated.completed)
+        if(!completed.emplace(value).second)throw std::invalid_argument("Saved dependent identity repeats");
     std::map<std::string,const Parameter*> written;
     const auto retain_saved_parameter=[&](const NamedParameter& slot) {
         if(!written.emplace(slot.unique_name,slot.parameter).second)throw std::invalid_argument("Saved parameter identity repeats");
@@ -2946,7 +3003,8 @@ PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,Work
         const Parameter& source=*found->second;
         // Saving rounds value and SU; it does not change the selected free set.
         if(slot.parameter->free.get()!=source.free.get())throw std::invalid_argument("Saved free state differs from the displayed project");
-        state_->parameters.push_back({slot.parameter,source.value.get(),source.uncertainty.get()});
+        const auto dependent=completed.find(slot.unique_name);
+        state_->parameters.push_back({slot.parameter,dependent==completed.end()?source.value.get():dependent->second,source.uncertainty.get()});
     }
     using Key=std::tuple<std::string,std::string,std::string>;
     const auto key=[](const FitParameterCorrelation& r){return Key{r.parameter_unique_name_i.value(),r.parameter_unique_name_j.value(),r.file_path.value()};};
@@ -2962,11 +3020,9 @@ PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,Work
         rows.push_back(std::move(next));
     }
     state_->correlations.assign(std::move(rows));
-    // A full fitted current project is the first supported saved-state path.
-    // Loaded columns are the native writer's admitted/reopened units; no second
-    // calculation or replacement Project is installed behind the user's model.
-    auto calculated=stage_computed(saved,std::move(stamps));
-    if(!calculated.refusal.empty())throw std::invalid_argument("The saved project does not retain its complete current calculation");
+    // The strict loader restores measured inputs only. These columns came
+    // from the actual worker calculation of that rounded/normalized model,
+    // never from relabelled pre-round arrays or parser-trusted computed text.
     // Dependents land through the same exact named-parameter join above, not a
     // competing late completion that could overwrite the rounded value.
     calculated.completed.clear();

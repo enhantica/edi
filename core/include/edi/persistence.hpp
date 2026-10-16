@@ -27,12 +27,18 @@ PersistenceSnapshot snapshot_for_persistence(const Project&, const PersistenceLi
 // Worker-safe; the one existing native formatter, no calculation or file IO.
 std::vector<std::pair<std::string,std::string>> prepare_project_documents(
     const PersistenceSnapshot&, const PersistenceLimits&);
+// Worker-side ordinary calculation of a strict native reopen. Inputs and
+// copied stamps are admitted first; cancellation/refusal never publishes data.
+// The returned immutable staged units must fit the caller's preowned retained
+// role before transfer. No file I/O or publication on the live project occurs.
+CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
+    const PersistenceLimits&, std::size_t retained_limit, const work::CancelToken&);
 // Prepared against the actual live owner, before disk publication. This is the
 // existing save rounding contract (values/SUs and saved correlations), with all
 // row/source/path allocations moved before its nonthrowing landing.
 class PreparedSavedValues {
  public:
-    PreparedSavedValues(Project&, const Project& reopened, WorkStamps, std::string destination);
+    PreparedSavedValues(Project&, const Project& reopened, WorkStamps, CalculationResult, std::string destination);
     ~PreparedSavedValues();
     PreparedSavedValues(const PreparedSavedValues&)=delete;
     PreparedSavedValues& operator=(const PreparedSavedValues&)=delete;

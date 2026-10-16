@@ -2468,13 +2468,13 @@ struct ProjectViewModel::NativeSavedState {
     bool modified_changed=false;
 };
 std::shared_ptr<ProjectViewModel::NativeSavedState> ProjectViewModel::prepareNativeSaved(
-    const edi::Project& reopened,const edi::WorkStamps& original,const QString& destination) {
+    const edi::Project& reopened,const edi::WorkStamps& original,edi::CalculationResult calculation,const QString& destination) {
     const PublicationScope publication(*this);
     if(retired_ || editing_ || edit_publication_failed_ || scan_template_ || calculating_ ||
        (fit_ && fit_->running()) || !edi::unchanged_since(*project_,original))
         throw std::invalid_argument("The project is not a settled current save owner");
     auto ready=std::make_shared<NativeSavedState>();ready->owner=project_.get();ready->original=original;
-    ready->values=std::make_unique<edi::PreparedSavedValues>(*project_,reopened,original,destination.toStdString());
+    ready->values=std::make_unique<edi::PreparedSavedValues>(*project_,reopened,original,std::move(calculation),destination.toStdString());
     return ready;
 }
 bool ProjectViewModel::commitNativeSaved(NativeSavedState& ready) noexcept {
@@ -2494,8 +2494,9 @@ bool ProjectViewModel::presentNativeSaved(NativeSavedState& ready) {
     const auto saved_stamps=edi::work_stamps(*project_);
     if(ready.modified_changed)emit modifiedChanged();
     if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
-    emit projectEdited();
-    if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
+    // This is persistence presentation, not a new user edit. Its known landing
+    // is refreshed explicitly by the original native call. Any nested actual
+    // edit still emits the ordinary projectEdited signal without suppression.
     emit pathChanged();
     if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
     publish(false);
@@ -2516,7 +2517,7 @@ bool ProjectViewModel::presentNativeSaved(NativeSavedState& ready) {
     if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
     report_->refresh();
     if(retired_ || !edi::unchanged_since(*project_,saved_stamps))return false;
-    setLastError({});return !retired_;
+    setLastError({});return !retired_ && edi::unchanged_since(*project_,saved_stamps);
 }
 
 QString ProjectViewModel::saveTo(const QString& directory) {

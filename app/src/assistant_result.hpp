@@ -12,6 +12,8 @@
 #include "edi/model.hpp"
 
 namespace edi_app {
+// Same bounded single-leaf domain as ordinary result Save As; no path grant.
+void validate_assistant_result_leaf(const QString& name);
 // App-private: no provider-visible operation or writable application path.
 struct AssistantResultDirectory;
 struct ImmutableAssistantResult {

@@ -263,7 +263,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Same current PVM, its registry/Undo and Session attachment remain owned.
     // All rounding/row/path/source preparation precedes destination publication.
     std::shared_ptr<NativeSavedState> prepareNativeSaved(const edi::Project& reopened,
-        const edi::WorkStamps& original, const QString& destination);
+        const edi::WorkStamps& original, edi::CalculationResult calculation, const QString& destination);
     bool commitNativeSaved(NativeSavedState&) noexcept;
     bool presentNativeSaved(NativeSavedState&);
 

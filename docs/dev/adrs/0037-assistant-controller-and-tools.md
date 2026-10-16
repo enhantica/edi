@@ -349,3 +349,63 @@ views partition and expose the existing native writer's complete parameter walk;
 the adapter does not call its namespace-private `parameter_slots` helper or
 duplicate parameter-name grammar. Independent and dependent values retain the
 same exact identity, uncertainty and free-state checks before publication.
+
+
+### Closed save admission dispatch and exact document count (E11-T5 PS1/PS2)
+
+The primary RowSchema declares an empty fields tuple for every type. Admission
+therefore traverses actual containers before considering a row schema, and only
+a nonempty declared schema may admit an aggregate. Unknown future types fail to
+compile instead of silently charging sizeof-only. Existing string/scalar/wrapper
+and column handling remains; arrays, nested vectors/maps/strings and RowVec /
+KeyedVec rows all contribute their complete borrowed payload before copying.
+
+The unsupported scan route refuses its whole nondefault configuration, including
+undeclared file_pattern/reverse/template/extract residue, before a complete model
+copy. Actual parameter-slot counts and block/row IDs bound multiplied fit-state
+and relation name joins; fixed spelling allowance alone never bounds a dynamic ID.
+
+Inclusive document admission counts the real emitted project and analysis files,
+each actual structure/bank, and report settings only when any optional setting is
+present. False and empty optional settings are still present. Checked additions
+precede reserve/copy; exact limits pass without raising host caps. The final sink
+count/byte checks and same formatter/SF1 stream semantics remain authoritative.
+
+The Edi snapshot also retains shared GeometrySource/ComputedSource records. Both
+construction and retained-role admission count their actual input/relation text
+before copying, including stale records from a formerly larger model; today's
+row count alone never bounds that older retained payload.
+
+
+### Rounded save calculation and unsuppressed presentation (E11-T5 NS1–NS4)
+
+The strict Edi loader restores measured/model values, never trusted computed
+arrays. The existing original Worker calculates the real native reopen after
+SU/value rounding and normal relation completion. Its staged immutable result
+and completed dependent values are prepared before destination publication,
+then resolved against the same live parameter identities. Existing pre-round
+arrays are never relabelled current. Original WorkStamps/cancellation/folder
+checks still gate disk publication and the no-callback saved-state landing.
+
+The worker's result/delivery has its own reserved native retained role before
+submission; complete source containers, recorded currentness strings and the
+actual bank-by-structure canonical join are admitted. Currentness roles use
+the same finite construction-copy policy, with checked multiplication. The
+ordinary native calculation itself remains the existing engine operation; this
+is not a new allocator guarantee or alternate calculation engine.
+
+Native saving validates names at the exact existing exporter/Save As leaf
+boundary. Spaces/Unicode are accepted within its 512 UTF-8-byte limit; path,
+NUL, dot/trailing-name and fresh-destination safeguards remain unchanged. The
+old initial ASCII restriction is superseded. The schema and effective skill
+state that same domain without turning a chat path into a grant.
+
+Persistence presentation does not emit a synthetic user projectEdited event.
+The known successful landing refreshes only its original native call through
+the existing explicit completion path. It holds no broad own-edit scope across
+Session/PVM observers, so genuine nested edits/Undo/settings changes retain
+their ordinary epoch/context/controller retirement. This also removes the
+raw-State scope destructor previously reachable after receiver deletion.
+Saved disk/active facts latch before observers and survive interrupted or
+retired presentation; no manual edit is rolled back or absorbed into an old
+approved request.

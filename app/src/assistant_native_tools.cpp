@@ -4,6 +4,7 @@
 #include "../../core/src/assistant_parameter_edits.hpp"
 #include "../../core/src/assistant_relation_edits.hpp"
 #include "edi/assistant_limits.hpp"
+#include "edi/assistant_files.hpp"
 #include <QSet>
 #include <cmath>
 #include <stdexcept>
@@ -42,8 +43,8 @@ QJsonArray assistant_native_tool_specs() {
     add("create_cwl_project", "Create and display a NEW native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe; never replaces an existing project. No fit or save is implied.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
     add("save_project", "Save the actual settled current fitted single/joint native project into a fresh child of the genuinely chosen working folder, verify reopen and make it the active saved project. Normal mode only; no overwrite, scan or external report assets.",
-        {{"name", Object{{"type","string"},{"minLength",1},{"maxLength",120},{"pattern","^[A-Za-z0-9_-]+$"},
-            {"description","Fresh child directory basename under the actual chosen working folder. A chat path never grants access."}}}}, {"name"});
+        {{"name", Object{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(edi::assistant::SelectedFileLimits::name_bytes)},
+            {"description","Fresh single child directory name under the genuine chosen folder; spaces and Unicode are supported within the shared 512 UTF-8-byte Save As limit. No separators, dot components, NUL, trailing dot/space or existing destination. A chat path never grants access."}}}}, {"name"});
     add("add_relations", "Append a complete validated affine alias/constraint batch to the displayed project through the native relation editor and Undo. Existing relations/composition are preserved; this edit is not a trial or fit.",
         {{"aliases", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"path", text}}, {"id", "path"})}}},

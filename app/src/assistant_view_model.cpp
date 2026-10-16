@@ -763,6 +763,12 @@ struct AssistantViewModel::State {
         std::shared_ptr<AssistantWorkingFolder> folder;
         QString name,destination;
         edi::PersistenceSnapshot snapshot;
+        std::optional<edi::CalculationResult> calculation;
+        quint64 calculation_reservation=0;
+        // Receipt and manifest have bounded names/counts/hash fields. Reserve
+        // both roles before the worker, without reading its in-flight output.
+        static constexpr quint64 artifact_reservation=sizeof(ImmutableAssistantResult)+
+            2*edi::assistant::SelectedFileLimits::files*(edi::assistant::SelectedFileLimits::name_bytes+Limits::id_bytes+Limits::error_bytes)+2*Limits::id_bytes;
         std::shared_ptr<ImmutableAssistantResult> artifact;
         edi::work::Ticket ticket=0;
         quint64 epoch=0;
@@ -901,9 +907,8 @@ struct AssistantViewModel::State {
             for(const auto& stamp:native_save->snapshot.stamps.structure_inputs)raw(sizeof(std::string)+stamp.size());
             raw(static_cast<quint64>(native_save->name.size()+native_save->destination.size())*sizeof(QChar));
             for(const auto& progress:native_save->progress) {value(progress.outcome);value(progress.response);value(progress.row);}
-            if(native_save->artifact) {
-                raw(native_save->artifact->receipt.size());value(native_save->artifact->files);
-            }
+            raw(NativeSave::artifact_reservation);
+            raw(native_save->calculation_reservation);
         }
         if (native_attachment) {
             const auto& a = *native_attachment;
@@ -1594,10 +1599,12 @@ struct AssistantViewModel::State {
                     QStringLiteral("Saving was cancelled or its original owner changed; no destination was published.")));
             } else {
                 AssistantResultExport output(*task->artifact,task->folder,task->name);
-                // The same strict native loader prepares exact rounded values,
-                // current computed columns, correlations and path before write.
+                // The strict loader restores rounded measured/model values;
+                // actual current arrays were calculated by the original worker.
+                if(!task->calculation)throw std::runtime_error("The rounded saved calculation is unavailable");
                 auto prepared_model=load_captured_assistant_result(*task->artifact);
-                auto ready=task->project->prepareNativeSaved(prepared_model,task->snapshot.stamps,task->destination);
+                auto ready=task->project->prepareNativeSaved(prepared_model,task->snapshot.stamps,std::move(*task->calculation),task->destination);
+                task->calculation.reset();
                 if(!native_save_current(task))throw std::runtime_error("The save owner changed before publication");
                 native_call->may_have_written=true;
                 try { output.publish([this,task]{return native_save_current(task);}); }
@@ -1607,8 +1614,8 @@ struct AssistantViewModel::State {
                 auto reopened=output.reopen(); // Actual published bytes checked through retained descriptors.
                 (void)reopened;task->reopened=true;native_save_latch(task,2);
                 if(!native_save_current(task))throw std::runtime_error("The save completed after its displayed owner changed");
-                const auto own=begin_own_edit();
-                const auto end=qScopeGuard([this,own]{end_own_edit(own);});
+                // No own-edit suppression across synchronous presentation:
+                // genuine manual edits keep their normal retirement path.
                 if(!result_session()->commitAssistantCurrentSave(task->project,task->epoch,*ready))throw std::runtime_error("The saved current model could not be adopted");
                 task->active=true;native_save_latch(task,3);
                 task->call.may_have_written=true;
@@ -1646,10 +1653,8 @@ struct AssistantViewModel::State {
         if(!project || !result_session() || result_session()->project()!=project || !working_folder || !working_folder->current())
             throw std::invalid_argument("Choose a genuine working folder before saving the current project");
         const auto name=args.value("name").toString();
-        if(!args.value("name").isString() || name.isEmpty() || name.size()>120)
-            throw std::invalid_argument("Save name must be a fresh single directory basename");
-        for(const auto c:name)if(!((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='-'||c=='_'))
-            throw std::invalid_argument("Save name permits only ASCII letters, digits, hyphens and underscores");
+        if(!args.value("name").isString())throw std::invalid_argument("Save name must be a fresh single directory basename");
+        validate_assistant_result_leaf(name);
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;task->folder=working_folder;task->name=name;task->epoch=result_session()->assistantEpoch();
         task->destination=QDir(task->folder->path()).filePath(name);
         constexpr edi::PersistenceLimits limits{edi::assistant::SelectedFileLimits::collection_bytes,
@@ -1664,7 +1669,18 @@ struct AssistantViewModel::State {
         edi::work::Job job=[task,limits,completion=std::move(completion)](const edi::work::CancelToken& cancel,const edi::work::Emit&)mutable->edi::work::Delivery {
             if(!cancel.cancelled())try {
                 const auto documents=edi::prepare_project_documents(task->snapshot,limits);
-                if(!cancel.cancelled())task->artifact=capture_prepared_native_documents(documents);
+                if(!cancel.cancelled()) {
+                    auto artifact=capture_prepared_native_documents(documents);
+                    quint64 roles=artifact->receipt.size();
+                    if(!codex_encoded_size(artifact->files,NativeSave::artifact_reservation,roles))
+                        throw std::length_error("Save artifact receipt exceeds its prepared role");
+                    auto reopened=load_captured_assistant_result(*artifact);
+                    auto calculated=edi::calculate_saved_project(reopened,task->snapshot.stamps,limits,task->calculation_reservation,cancel);
+                    if(!cancel.cancelled()) {
+                        task->calculation=std::move(calculated);
+                        task->artifact=std::move(artifact);
+                    }
+                }
             }catch(const std::exception& e) {
                 const auto* message=e.what();std::size_t n=0;
                 while(n<Limits::error_bytes && message[n])++n;
@@ -1692,6 +1708,10 @@ struct AssistantViewModel::State {
         task->committed=false;task->reopened=false;task->active=false;
         try {
             native_save=task;native_charge();
+            const auto occupied=native_bytes()+generic_item_bytes+generic_progress_bytes;
+            if(occupied>=Limits::stream_retained_bytes)throw std::length_error("No retained role remains for the saved calculation");
+            task->calculation_reservation=Limits::stream_retained_bytes-occupied;
+            native_charge(); // Preown the entire bounded late-delivery role.
             if(!native_save_current(task))throw std::runtime_error("Save retired before worker admission");
             task->ticket=idle_worker->submit("assistant-native-save",std::move(job));
             if(!receiver)return;

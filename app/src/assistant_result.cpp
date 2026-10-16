@@ -36,21 +36,24 @@
 #endif
 
 namespace edi_app {
+void validate_assistant_result_leaf(const QString& name) {
+    using Bounds = edi::assistant::SelectedFileLimits;
+    if (name.isEmpty() || name == "." || name == ".." || name.contains('/') || name.contains('\\') || name.contains(QChar(0)) ||
+        name.toUtf8().size() > static_cast<qsizetype>(Bounds::name_bytes) || name.endsWith('.') || name.endsWith(' '))
+        throw std::runtime_error("Saved assistant result is unavailable, changed, or outside the supported self-contained project limits");
+}
 namespace {
 using Bounds = edi::assistant::SelectedFileLimits;
 using Limits = edi::assistant::Limits;
 [[noreturn]] void refuse() { throw std::runtime_error("Saved assistant result is unavailable, changed, or outside the supported self-contained project limits"); }
-void leaf_name(const QString& name) {
-    if (name.isEmpty() || name == "." || name == ".." || name.contains('/') || name.contains('\\') || name.contains(QChar(0)) ||
-        name.toUtf8().size() > static_cast<qsizetype>(Bounds::name_bytes) || name.endsWith('.') || name.endsWith(' ')) refuse();
-}
+
 QString relative_name(const std::string& bytes) {
     if (bytes.empty() || bytes.size() > Bounds::name_bytes) refuse();
     const auto name = QString::fromUtf8(bytes.data(), static_cast<qsizetype>(bytes.size()));
     if (name.toUtf8() != QByteArray(bytes.data(), static_cast<qsizetype>(bytes.size())) || name.startsWith('/')) refuse();
     const auto parts = name.split('/');
     if (parts.size() > static_cast<qsizetype>(Limits::json_depth)) refuse();
-    for (const auto& part : parts) leaf_name(part);
+    for (const auto& part : parts) validate_assistant_result_leaf(part);
     // This first route accepts only the actual fixed native project layout.
     if (name == "project.edi") return name;
     if (parts.size() != 2 || !parts[1].endsWith(".edi") || parts[1].size() <= 4 ||
@@ -105,7 +108,7 @@ Fd below(int parent, const QString& name, bool dir = false) {
     const auto parts = name.split('/');
     Fd fd(::dup(parent));
     for (qsizetype i = 0; i < parts.size(); ++i) {
-        leaf_name(parts[i]);
+        validate_assistant_result_leaf(parts[i]);
         const bool directoryPart = i + 1 != parts.size() || dir;
         if (!directoryPart) {
             struct stat admitted{};
@@ -148,7 +151,7 @@ void enumerate(int parent, const QString& prefix, std::set<QString>& files, std:
         if (++entries > Bounds::files) refuse(); // Includes directories and empty directories.
         const auto name = QString::fromUtf8(rawName);
         if (name.toUtf8() != rawName) refuse();
-        leaf_name(name);
+        validate_assistant_result_leaf(name);
         const auto path = prefix.isEmpty() ? name : prefix + '/' + name;
         if (path.toUtf8().size() > static_cast<qsizetype>(Bounds::name_bytes) || !aliases.insert(path.normalized(QString::NormalizationForm_C).toCaseFolded()).second) refuse();
         struct stat st{};
@@ -296,7 +299,7 @@ void check_assistant_result_mode(const edi::Project& project) {
 }
 std::shared_ptr<ImmutableAssistantResult> capture_assistant_result(const QString& workspace, const QString& intent) {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
-    leaf_name(intent);
+    validate_assistant_result_leaf(intent);
     auto root = directory(workspace);
     const auto receiptName = ".edi-result/" + intent + "/result.json";
     auto receipt = below(root.n, receiptName);
@@ -468,7 +471,7 @@ struct AssistantResultExport::State {
         : parent(parentPath), stage(".edi-export-" + QUuid::createUuid().toString(QUuid::WithoutBraces)), leaf(leafName),
           destination(QDir(parentPath).filePath(leafName)), parentFd(std::move(pinnedParent)), parentIdentity(parentFd.n),
           stageIdentity(parentFd.n) {
-        leaf_name(leaf);
+        validate_assistant_result_leaf(leaf);
         if (leaf.toCaseFolded() == stage.toCaseFolded()) refuse();
         if (::mkdirat(parentFd.n, stage.toUtf8().constData(), 0700)) refuse();
         stageFd = below(parentFd.n, stage, true); stageIdentity = Identity(stageFd.n);
@@ -583,7 +586,7 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
     auto root = directory(workspace);
     const Identity rootIdentity(root.n);
     const auto parentName = QFileInfo(relative).path();
-    const auto leaf = QFileInfo(relative).fileName(); leaf_name(leaf);
+    const auto leaf = QFileInfo(relative).fileName(); validate_assistant_result_leaf(leaf);
     auto sourceRoot = parentName == "." ? Fd(::openat(root.n, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)) : below(root.n, parentName, true);
     const Identity sourceRootIdentity(sourceRoot.n);
     auto result = std::make_shared<ImmutableAssistantReport>();
@@ -608,7 +611,7 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
             if (!entry) { if (errno) refuse(); break; }
             const QByteArray rawName(entry->d_name); if (rawName == "." || rawName == "..") continue;
             if (++entries > Bounds::files) refuse();
-            const auto name = QString::fromUtf8(rawName); if (name.toUtf8() != rawName) refuse(); leaf_name(name);
+            const auto name = QString::fromUtf8(rawName); if (name.toUtf8() != rawName) refuse(); validate_assistant_result_leaf(name);
             const auto path = prefix.isEmpty() ? name : prefix + '/' + name;
             if (path.toUtf8().size() > static_cast<qsizetype>(Bounds::name_bytes) || !aliases.insert(path.normalized(QString::NormalizationForm_C).toCaseFolded()).second) refuse();
             struct stat st{}; if (::fstatat(from, rawName.constData(), &st, AT_SYMLINK_NOFOLLOW)) refuse();

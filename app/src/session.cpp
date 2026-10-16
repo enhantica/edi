@@ -556,8 +556,10 @@ bool Session::commitAssistantCurrentSave(ProjectViewModel* original,quint64 epoc
     return true;
 }
 bool Session::presentAssistantCurrentSave(ProjectViewModel* original,quint64 epoch) {
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> target(original);
     const auto token=replacement_generation_;
-    const auto current=[&]{return !assistant_epoch_exhausted_ && assistant_epoch_==epoch && project_==original && replacement_generation_==token;};
+    const auto current=[&]{return receiver && target && !assistant_epoch_exhausted_ && assistant_epoch_==epoch && project_==target && replacement_generation_==token;};
     if(!current())return false;
     setLastError({});if(!current())return false;
     emit openedExampleChanged();if(!current())return false;
