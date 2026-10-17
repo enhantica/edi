@@ -323,8 +323,7 @@ double d_at(const std::vector<double>& native, const std::vector<double>& d, dou
 }
 
 // The source on the d axis: x, the ticks and the excluded bands in d (capture_pattern's contract).
-void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnDataBase& refln,
-               const std::vector<std::string>& names) {
+void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnDataBase& refln) {
     const std::vector<double>& d = data.d_spacing.values();
     const std::vector<double> native = data.axis();
     if (!source.current || d.size() != native.size() || d.size() < 2) {
@@ -344,19 +343,19 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
     }
     // A tick is drawn where its peak is: its native position mapped as the points are, so the zero and line shifts
     // that move the peak off the reflection's d move the tick with it. Its readout keeps the reflection's d.
-    const std::vector<double>& positions = refln.position.values();
-    std::vector<double> drawn;
-    drawn.reserve(positions.size());
-    for (const double position : positions) {
-        drawn.push_back(d_at(native, d, position, true));
-    }
-    source.phases = group_reflections(refln.structure_id.values(), drawn, refln.index_h.values(),
-                                      refln.index_k.values(), refln.index_l.values(), names);
-    const std::vector<PatternSource::Phase> reflection_d =
-        group_reflections(refln.structure_id.values(), refln.d_spacing.values(), refln.index_h.values(),
-                          refln.index_k.values(), refln.index_l.values(), names);
-    for (std::size_t place = 0; place < source.phases.size() && place < reflection_d.size(); ++place) {
-        source.phases[place].readout = reflection_d[place].position;
+    const std::vector<double>& reflection_d = refln.d_spacing.values();
+    for (PatternSource::Phase& phase : source.phases) {
+        const std::size_t count = phase.position ? phase.position->size() : 0;
+        std::vector<double> drawn(count), readout(count, kNaN);
+        for (std::size_t index = 0; index < count; ++index) {
+            drawn[index] = d_at(native, d, (*phase.position)[index], true);
+            const std::size_t row = phase.rows.empty() ? index : phase.rows[index];
+            if (row < reflection_d.size()) {
+                readout[index] = reflection_d[row];
+            }
+        }
+        phase.position = std::make_shared<const std::vector<double>>(std::move(drawn));
+        phase.readout = std::make_shared<const std::vector<double>>(std::move(readout));
     }
 }
 
@@ -404,7 +403,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
                                       refln.index_h.values(), refln.index_k.values(),
                                       refln.index_l.values(), names);
     if (axis == PatternAxis::DSpacing) {
-        to_d_axis(source, data, refln, names);
+        to_d_axis(source, data, refln);
     }
     return source;
 }
