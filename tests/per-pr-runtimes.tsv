@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T12:23:56Z
+# measured_utc = 2026-10-17T13:31:51Z
 #
-# Recorded from: measured test run (120 node(s) measured once, 11506 banked, 0 stale row(s) dropped)
-# Collected tests: 12662; with a reported duration: 7219
+# Recorded from: measured test run (14 node(s) measured once, 11577 banked, 1 stale row(s) dropped)
+# Collected tests: 12675; with a reported duration: 7220
 # Module-scoped fixture costs recorded: 45
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12662
+# inventory_python = 12675
 # inventory_cpp = 313
-# inventory_measured = 11578
-# inventory_unmeasured = 1397
+# inventory_measured = 11583
+# inventory_unmeasured = 1405
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -6097,12 +6097,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.600	tests/integration/py/test_table_display.py::test_sequential_count_colours_follow_zero_and_nonzero_state
 0.270	tests/integration/py/test_ui_input_settling.py::test_real_input_waits_for_motion_and_rendering_but_refuses_a_stuck_viewport
 0.000	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
-0.000	tests/integration/py/test_weight_fraction_app.py::test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_empty
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fraction_app.py::test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fraction_app.py::test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_unity
 0.070	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[False]
 0.050	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[True]
 0.080	tests/integration/py/test_weight_fractions.py::test_hill_howard_values_uncertainties_and_warm_scale_changes
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[False-all-disabled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[False-one-disabled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[False-single]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[True-all-disabled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[True-one-disabled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[True-single]
 0.150	tests/integration/py/test_weight_fractions.py::test_stored_cross_scale_correlation_matches_closed_form_quotient[-0.375]
 0.130	tests/integration/py/test_weight_fractions.py::test_stored_cross_scale_correlation_matches_closed_form_quotient[0.625]
+0.010	tests/integration/py/test_weight_fractions.py::test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values
+0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[disabled]
+0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[duplicate]
+0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[missing]
+0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[uncertainty]
+0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[wrong]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[True]
 0.050	tests/integration/py/test_xray_doublet.py::test_fixed_fullprof_profile_and_reached_correction_escape[absorption]

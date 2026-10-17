@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.py.test_table_display import run_functions
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -47,7 +49,7 @@ def check_cell(cell):
         'The derived fraction must supply its uncertainty separately for the value menu'
     )
     assert re.search(r'"value"\s*:\s*""', cell), (
-        'An absent single-phase fraction must display an empty value cell'
+        'An unavailable or disabled fraction retains an empty value cell'
     )
 
 
@@ -70,7 +72,7 @@ def test_linked_structure_table_displays_weight_fraction_without_an_editor():
             check_cell(cell.replace(old, new))
 
 
-def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_empty():
+def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_unity():
     model = source('app/src/experiment_models.cpp')
     assert re.search(r'fraction\s*=\s*edi::weight_fraction\(link\)', model), (
         'The app role must obtain the live derived linked-structure result'
@@ -81,9 +83,21 @@ def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phas
     assert re.search(r'QStringLiteral\("uncertainty"\)\s*,\s*fraction->uncertainty', model), (
         'The weight-fraction role must carry the live derived uncertainty'
     )
-    assert re.search(
-        r'enabled_links\s*>\s*1\s*\?\s*weight_fraction_cell\(\*link\)\s*:\s*QVariantMap\(\)', model
-    ), 'The single enabled phase must supply an empty map instead of displaying unity'
+    direct = re.search(
+        r'static_cast<int>\(names.indexOf\(id\)\),\s*weight_fraction_cell\(\*link\)', model
+    )
+    fast_single = (
+        re.search(
+            r'if\s*\(link.enabled.get\(\)\)\s*\{\s*return QVariantMap\{\{'
+            r'QStringLiteral\("value"\), 1.0\}',
+            model,
+        )
+        and re.search(r'QStringLiteral\("uncertainty"\), 0.0', model)
+        and re.search(r'static_cast<int>\(names.indexOf\(id\)\),\s*fraction\(\*link\)', model)
+    )
+    assert direct or fast_single, (
+        'Enabled rows supply their live fraction or exact single-phase unity without s.u.'
+    )
     control = source('app/qml/Base/Gui/Components/TableViewParameter.qml')
     assert 'control.openContextMenu(menuArea)' in control, (
         'The read-only parameter must retain its ordinary value context menu'
@@ -96,4 +110,20 @@ def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phas
     )
     assert re.search(r'visible:\s*control.fittable\s*&&\s*!control.readOnly', control), (
         'A read-only value must hide the menu free checkbox'
+    )
+
+
+def test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting():
+    actual = run_functions(
+        ROOT / 'app/qml/Globals/NumberText.qml',
+        ['parameter', 'error'],
+        [{'name': 'fraction', 'args': args} for args in ([1.0, 0], [0.375, 0.012], [None, 0])],
+        consumer='fraction',
+    )
+    assert actual == [
+        {'value': '1.0', 'error': ''},
+        {'value': '0.38', 'error': '0.01'},
+        {'value': '', 'error': ''},
+    ], (
+        'The real cell displays 1.0; multiphase s.u. and unavailable cells retain their rules'
     )

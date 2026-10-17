@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from tests.fixtures.multiphase import support as case
+from tests.fixtures.weight_fractions.single_phase_bytes import COLUMN, historical_single_fraction
 
 
 def weighted_project(path, *, free_scales=True):
@@ -239,3 +240,116 @@ def check_correlation_omission(saved, rho, wanted, uncorrelated):
             atol=1e-12,
             err_msg='stored covariance escape',
         )
+
+
+@pytest.mark.parametrize('state', ['single', 'one-disabled', 'all-disabled'])
+@pytest.mark.parametrize('free_scale', [False, True])
+def test_single_enabled_fraction_is_unity_in_memory_save_and_reopen(tmp_path, state, free_scale):
+    source = tmp_path / 'input'
+    phases = ('alpha',) if state == 'single' else ('alpha', 'beta')
+    case.write_project(source, phases=phases)
+    project = engine.Project.load(source)
+    experiment = project.experiments[0]
+    rows = case.links(experiment)
+    if state in {'one-disabled', 'all-disabled'}:
+        case.enable(rows['beta'], value=False)
+    if state == 'all-disabled':
+        case.enable(rows['alpha'], value=False)
+    for name in tuple(rows.keys()):
+        row = rows[name]
+        row.scale.free = free_scale
+        if free_scale:
+            row.scale.uncertainty = 0.03
+    for stage in ('first', 'reopened'):
+        rows = case.links(project.experiments[0])
+        for name in tuple(rows.keys()):
+            row = rows[name]
+            fraction = row.weight_fraction
+            if state == 'all-disabled' or name == 'beta':
+                assert fraction is None, 'Disabled links retain no share in memory or after reload'
+            else:
+                assert fraction is not None, 'A sole enabled link exposes its derived fraction'
+                assert fraction.value.hex() == (1.0).hex(), (
+                    'A sole enabled linked structure has exactly unity weight fraction'
+                )
+                assert fraction.uncertainty is None, (
+                    'A sole enabled fraction has no uncertainty even with a free uncertain scale'
+                )
+        destination = tmp_path / stage
+        project.save_as(destination)
+        data = (destination / 'experiments/pattern.edi').read_bytes()
+        legacy = historical_single_fraction('experiments/pattern.edi', data)
+        assert COLUMN not in legacy, 'The historical byte view retains the pre-column schema'
+        assert COLUMN in data, 'Every saved linked experiment gains the fraction column'
+        project = engine.Project.load(destination)
+
+
+@pytest.mark.parametrize('damage', ['missing', 'wrong', 'uncertainty', 'duplicate', 'disabled'])
+def test_unity_byte_adaptation_refuses_changed_or_missing_fraction(damage):
+    before = (
+        b'data_pattern\nloop_\n_linked_structure.structure_id\n'
+        b'_linked_structure.scale\n_linked_structure.enabled\n'
+        b'alpha 2.75 true\nbeta 0.375 false\n\n'
+    )
+    after = before.replace(b'alpha 2.75 true', COLUMN + b'alpha 2.75 true 1.0').replace(
+        b'beta 0.375 false', b'beta 0.375 false .'
+    )
+    assert historical_single_fraction('experiments/pattern.edi', after) == before, (
+        'Before: absent column; after: checked unity/dot cells preserve every other byte'
+    )
+    changed = {
+        'missing': before,
+        'wrong': after.replace(b'1.0', b'0.9'),
+        'uncertainty': after.replace(b'1.0', b'1.0(0)'),
+        'duplicate': after.replace(COLUMN, COLUMN * 2),
+        'disabled': after.replace(b'false .', b'false 1.0'),
+    }[damage]
+    with pytest.raises(AssertionError):
+        historical_single_fraction('experiments/pattern.edi', changed)
+    different = after.replace(b'2.75', b'2.76')
+    assert historical_single_fraction('experiments/pattern.edi', different) != before, (
+        'The fraction adaptation retains unrelated scale changes for the exact old byte oracle'
+    )
+    assert historical_single_fraction('structures/pattern.edi', after) == after, (
+        'The fraction adaptation never removes similarly spelled structure bytes'
+    )
+
+
+def test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values(tmp_path):
+    source = tmp_path / 'input'
+    case.write_project(source)
+    gamma = source / 'structures/gamma.edi'
+    gamma.write_text(
+        (source / 'structures/alpha.edi').read_text().replace('data_alpha', 'data_gamma')
+    )
+    path = source / 'experiments/pattern.edi'
+    path.write_text(path.read_text().replace('beta 0.375\n', 'beta 0.375\ngamma 1.25\n'))
+    project = engine.Project.load(source)
+    amounts = [
+        2.75 * math.prod(case.LENGTHS['alpha']),
+        0.375 * math.prod(case.LENGTHS['beta']),
+        1.25 * math.prod(case.LENGTHS['alpha']),
+    ]
+    wanted = [amount / sum(amounts) for amount in amounts]
+    rows = case.links(project.experiments[0])
+    np.testing.assert_allclose(
+        [rows[name].weight_fraction.value for name in ('alpha', 'beta', 'gamma')],
+        wanted,
+        rtol=2e-12,
+        atol=1e-14,
+        err_msg='Three enabled structures retain normalized scale times cell mass times volume',
+    )
+    project.save_as(tmp_path / 'saved')
+    data = (tmp_path / 'saved/experiments/pattern.edi').read_bytes()
+    assert historical_single_fraction('experiments/pattern.edi', data) == data, (
+        'The single-structure adaptation leaves every byte of a multiphase saved experiment intact'
+    )
+    match = re.search(rb'_linked_structure.weight_fraction\n((?:[^\n]+\n)+)', data)
+    assert match, 'Three linked structures retain their saved weight-fraction column'
+    np.testing.assert_allclose(
+        [float(line.split()[-1]) for line in match[1].splitlines()],
+        wanted,
+        rtol=2e-12,
+        atol=1e-14,
+        err_msg='Every multiphase saved fraction retains its independently normalized value',
+    )

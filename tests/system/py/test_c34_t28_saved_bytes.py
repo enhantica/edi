@@ -18,6 +18,7 @@ import pytest
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/c34_t28_baseline'
@@ -60,6 +61,8 @@ def observe_legacy_pin(source, destination, *, calculator=False):
     legacy = stored_id_bytes.ordinal_copy(
         source, destination, destination.with_name('ordinal-pin')
     )
+    for path in (legacy / 'experiments').glob('*.edi'):
+        path.write_bytes(historical_single_fraction('experiments/' + path.name, path.read_bytes()))
     analysis = legacy / 'analysis/analysis.edi'
     if analysis.is_file():
         analysis.write_bytes(
