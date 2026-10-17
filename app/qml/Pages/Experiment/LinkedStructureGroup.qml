@@ -114,7 +114,8 @@ Column {
                 item: row.model.scale
             }
             // Read-only, as a parameter the scales imply: written by the app's number rule like the scale, its s.u. in
-            // the value's menu, never edited or fitted.
+            // the value's menu, never edited or fitted. A fraction keeps its decimal point, so a lone phase shows 1.0
+            // as the saved file writes it.
             EaComponents.TableViewParameter {
                 id: fraction
 
@@ -127,7 +128,7 @@ Column {
                 enabled: row.model.enabled
                 readOnly: true
                 parameter: known ? {
-                    "value": NumberText.parameter(fractionValue, fractionError),
+                    "value": (text => /[.e]/.test(text) ? text : text + ".0")(NumberText.parameter(fractionValue, fractionError)),
                     "error": NumberText.error(fractionError, 0, fractionValue),
                     "enabled": true,
                     "fittable": false,
