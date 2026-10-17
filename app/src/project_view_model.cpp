@@ -2514,10 +2514,11 @@ void ProjectViewModel::publishCalculating() {
 }
 
 const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedFiles() const {
-    // One save of the whole project serves every Text tab until the next change (D7).
+    // One save of the whole project serves every Text tab until the next change (D7). It is of the model the pages
+    // show: while a scan dataset is shown, that dataset's values, though a save writes the template (edi ADR-0015).
     if (!saved_files_.has_value()) {
         try {
-            saved_files_ = SavedFiles{edi::project_edi_files(scanTemplateOrModel()), {}};
+            saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
         } catch (const std::exception& refusal) {
             saved_files_ = SavedFiles{{}, refusal.what()};
         }
