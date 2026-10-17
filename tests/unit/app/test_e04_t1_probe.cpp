@@ -39,6 +39,7 @@
 class AcceptanceProbe final : public QObject {
     Q_OBJECT
     struct Watch {
+        QPointer<QObject> original;
         std::vector<std::unique_ptr<QSignalSpy>> spies;
         QList<QByteArray> names;
     };
@@ -340,6 +341,7 @@ public:
             return -1;
         }
         Watch watch;
+        watch.original = object;
         const auto *meta = object->metaObject();
         for (int i = 0; i < meta->methodCount(); ++i) {
             const auto method = meta->method(i);
@@ -352,6 +354,11 @@ public:
         }
         watches_.push_back(std::move(watch));
         return static_cast<int>(watches_.size()) - 1;
+    }
+    Q_INVOKABLE bool watchedAlive(int handle) const {
+        if (handle < 0 || handle >= static_cast<int>(watches_.size()))
+            qFatal("313: invalid original QObject lifetime watch");
+        return !watches_[handle].original.isNull();
     }
     Q_INVOKABLE QVariantMap events(int handle) const {
         QVariantMap result;

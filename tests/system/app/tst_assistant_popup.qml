@@ -25,6 +25,25 @@ TestCase {
         Main {}
     }
 
+    // Existing Probe.watch owns a QPointer and signal spies; retain only its
+    // integer handle and a scalar identity captured while the QObject is alive.
+    function lifetime313(object) {
+        if (object === null) return null;
+        const handle = Probe.watch(object);
+        verify(handle >= 0 && Probe.watchedAlive(handle),
+            "OBS313 SETUP: original QObject lifetime is captured while alive");
+        return {handle: handle, identity: String(object)};
+    }
+    function alive313(receipt) {
+        return receipt !== null && Probe.watchedAlive(receipt.handle);
+    }
+    function identity313(receipt) { return receipt === null ? "null" : receipt.identity; }
+    function disconnect313(receipt, object, signal, callback) {
+        // QObject destruction already disconnects its signals. Never access a
+        // dead wrapper merely to ask whether its old signal property exists.
+        if (alive313(receipt)) object[signal].disconnect(callback);
+    }
+
     function item(name) {
         const found = findChild(window, name);
         verify(found !== null, "I16/popup: the actual application owns " + name);
@@ -555,6 +574,7 @@ TestCase {
         window.appBarCentralTabs.currentIndex = 1;
         rendered();
         const oldField = item("project.name");
+        const oldFieldLife313 = lifetime313(oldField);
         mouseClick(oldField);
         verify(oldField.activeFocus, "I16/POP2: real manual field owns focus before pointer opening");
         toggle();
@@ -578,7 +598,7 @@ TestCase {
             const current = window.activeFocusItem;
             return current !== null && Ui.rendered(current);
         }, 500, "I16/POP2: deferred close restores only a genuinely rendered current target");
-        verify(!oldField.activeFocus, "I16/POP2: retained or replaced offscreen field cannot receive restored focus");
+        verify(!alive313(oldFieldLife313) || !oldField.activeFocus, "I16/POP2: retained or replaced offscreen field cannot receive restored focus");
         const current = window.activeFocusItem;
         keyClick(Qt.Key_Tab);
         verify(window.activeFocusItem !== oldField, "I16/POP2: following real keyboard traversal stays outside the retired field");
@@ -1135,13 +1155,17 @@ TestCase {
         }
         function freeReceipt() { ++toggled; }
         function activeReceipt() { if (assistant.showingActions) ++activeStarts; }
-        function fitReceipt() { if (project.fit.running) ++fitStarted; }
+        function fitReceipt() { if (alive313(fitLife313) && fitOwner313.running) ++fitStarted; }
         function finishedReceipt() {
             ++finished;
             console.log("VISIBLE185_FINISHED", data.tag, JSON.stringify({finished: finished,
-                actualOutcome: project.fit.outcome, running: project.fit.running,
+                actualOutcome: alive313(fitLife313) ? fitOwner313.outcome : null,
+                running: alive313(fitLife313) ? fitOwner313.running : null,
                 currentOwner: Session.project === project}));
         }
+        const fieldLife313 = lifetime313(field), freeLife313 = lifetime313(free);
+        const parameterLife313 = lifetime313(editedParameter), fitButtonLife313 = lifetime313(fitButton);
+        const fitOwner313 = project.fit, fitLife313 = lifetime313(fitOwner313);
         if (field) field.textEdited.connect(typedReceipt);
         if (free) free.toggled.connect(freeReceipt);
         editedParameter.valueChanged.connect(valueReceipt);
@@ -1487,15 +1511,15 @@ TestCase {
                 activeStarts: activeStarts, fitStarted: fitStarted, finished: finished, fitClicks: fitClicks,
                 currentOwner: Session.project === project, connected: assistant.connected}));
         } finally {
-            if (field && field.textEdited) field.textEdited.disconnect(typedReceipt);
-            if (free && free.toggled) free.toggled.disconnect(freeReceipt);
-            if (editedParameter && editedParameter.valueChanged) editedParameter.valueChanged.disconnect(valueReceipt);
-            if (fitButton && fitButton.clicked) fitButton.clicked.disconnect(fitClickReceipt);
+            disconnect313(fieldLife313, field, "textEdited", typedReceipt);
+            disconnect313(freeLife313, free, "toggled", freeReceipt);
+            disconnect313(parameterLife313, editedParameter, "valueChanged", valueReceipt);
+            disconnect313(fitButtonLife313, fitButton, "clicked", fitClickReceipt);
             assistant.showingActionsChanged.disconnect(activeReceipt);
-            if (project && project.fit) {
-                project.fit.runningChanged.disconnect(fitReceipt);
-                project.fit.finished.disconnect(finishedReceipt);
-                if (Session.project === project && project.fit.running) project.fit.cancel();
+            if (alive313(fitLife313)) {
+                fitOwner313.runningChanged.disconnect(fitReceipt);
+                fitOwner313.finished.disconnect(finishedReceipt);
+                if (Session.project === project && fitOwner313.running) fitOwner313.cancel();
             }
             if (assistant.canCancel) assistant.cancel();
             for (const slot of timelineSlots) slot[0].disconnect(slot[1]);
@@ -2698,14 +2722,17 @@ TestCase {
         const apply = Ui.control(Probe, window, "relations.stage.apply");
         verify(stage !== null && editor !== null && definition !== null && apply !== null,
             "REL RPC SETUP: existing current ordinary staged form owns its real controls");
+        const editorLife313 = lifetime313(editor), definitionLife313 = lifetime313(definition);
+        const applyLife313 = lifetime313(apply), stageLife313 = lifetime313(stage);
+        const fitOwner313 = project.fit, fitLife313 = lifetime313(fitOwner313);
         function typed() { ++textEvents; }
         function applied() { ++applies; }
         function active() { if (assistant.showingActions) { ++starts; if (cleanupCallbackActive) requestPresentationStartedInside = true; } }
         function fitFinished() { ++finished; }
-        function fitRunning() { if (project.fit.running) ++running; }
+        function fitRunning() { if (alive313(fitLife313) && fitOwner313.running) ++running; }
         let cleanupArmed = false;
         function resetBoundary() {
-            if (!cleanupArmed || cleanupSends || stage.aliasCount !== 0) return;
+            if (!cleanupArmed || cleanupSends || !alive313(stageLife313) || stage.aliasCount !== 0) return;
             ++cleanupSends;
             cleanupCallbackActive = true;
             try { assistant.send("Apply the genuinely new relation246 successor request now"); }
@@ -2953,17 +2980,20 @@ TestCase {
                 canCancel: assistant.canCancel, textEvents: textEvents, applies: applies, starts: starts,
                 fitStarts: running, fitFinished: finished, currentOwner: Session.project === project,
                 connected: assistant.connected, lastError: assistant.lastError,
-                stagedId: editor.text, stagedDefinition: definition.text, cleanupSends: cleanupSends,
+                stagedId: alive313(editorLife313) ? editor.text : null,
+                stagedDefinition: alive313(definitionLife313) ? definition.text : null,
+                stageAlive: alive313(stageLife313), editorAlive: alive313(editorLife313),
+                definitionAlive: alive313(definitionLife313), cleanupSends: cleanupSends,
                 requestPresentationStartedInside: requestPresentationStartedInside,
                 originalStage: originalStage === null ? null : String(originalStage),
-                currentStage: String(stage.assistantStage), pointerOpacity: pointer.opacity, outcome: visible185_outcome(call, previousIds)}));
-            editor.textEdited.disconnect(typed);
-            definition.textEdited.disconnect(typed);
-            apply.clicked.disconnect(applied);
+                currentStage: alive313(stageLife313) ? String(stage.assistantStage) : null, pointerOpacity: pointer.opacity, outcome: visible185_outcome(call, previousIds)}));
+            disconnect313(editorLife313, editor, "textEdited", typed);
+            disconnect313(definitionLife313, definition, "textEdited", typed);
+            disconnect313(applyLife313, apply, "clicked", applied);
             assistant.showingActionsChanged.disconnect(active);
-            project.fit.finished.disconnect(fitFinished);
-            project.fit.runningChanged.disconnect(fitRunning);
-            stage.aliasCountChanged.disconnect(resetBoundary);
+            disconnect313(fitLife313, fitOwner313, "finished", fitFinished);
+            disconnect313(fitLife313, fitOwner313, "runningChanged", fitRunning);
+            disconnect313(stageLife313, stage, "aliasCountChanged", resetBoundary);
             if (assistant.canCancel) assistant.cancel();
         }
     }
@@ -3204,6 +3234,8 @@ TestCase {
                 "IMPORT265 SETUP: actual Session normally saves the real named empty owner");
         }
         const original = Session.project;
+        const originalLife313 = lifetime313(original);
+        let replacementLife313 = null, fieldLife313 = null, applyLife313 = null;
         const metadata = import265_owner(original);
         const originalUndo = original ? original.canUndo : null;
         const originalSavedText = original ? Probe.readFile(original.path + "/project.edi") : null;
@@ -3277,7 +3309,7 @@ TestCase {
                     }
                 }
                 applyTarget = import265_control("nativeImport.apply");
-                applyTarget.clicked.connect(applyReceipt);
+                applyLife313 = lifetime313(applyTarget); applyTarget.clicked.connect(applyReceipt);
                 import265_click("nativeImport.apply");
                 compare(applyClicks, 1, "IMPORT265: ordinary real Apply is clicked exactly once");
                 tryVerify(() => assistant.nativeImport.state === "created", 10000,
@@ -3311,7 +3343,7 @@ TestCase {
                     .filter(control => control.objectName === "nativeImport.apply");
                 compare(applyCandidates.length, 1, "IMPORT267 SETUP: one real actual form Apply owns the native stage");
                 applyTarget = applyCandidates[0];
-                applyTarget.clicked.connect(applyReceipt);
+                applyLife313 = lifetime313(applyTarget); applyTarget.clicked.connect(applyReceipt);
                 if (cancelled) {
                     if (data.tag === "visible-stop") {
                         const stop = item("assistant.stopVisibleAction");
@@ -3324,7 +3356,7 @@ TestCase {
                             compare(stopped, 1, "IMPORT267 SETUP: original genuine Stop click reaches its actual receiver");
                         } finally { stop.clicked.disconnect(stopReceipt); }
                     } else if (data.tag === "visible-manual-input") {
-                        field.textEdited.connect(editReceipt);
+                        fieldLife313 = lifetime313(field); field.textEdited.connect(editReceipt);
                         keyClick(Qt.Key_Z);
                         compare(edits, 1, "IMPORT265: original genuine user key reaches its actual focused form receiver once");
                         verify(field.text.includes("z") || field.text.includes("Z"), "IMPORT265: the original user's key text is retained");
@@ -3356,6 +3388,7 @@ TestCase {
                         verify(Session.createProject("Original replacement owner", "Original replacement metadata"),
                             "IMPORT265: genuine Session action installs the independent replacement owner");
                         replacement = Session.project;
+                        replacementLife313 = lifetime313(replacement);
                     }
                     tryVerify(() => !assistant.canCancel && !assistant.showingActions
                         && (data.tag === "visible-new-owner"
@@ -3432,12 +3465,12 @@ TestCase {
                 "IMPORT265: original managed account/catalog survive actual visible import and Undo");
         } finally {
             console.log("IMPORT265_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
-                originalOwner: String(original), replacementOwner: String(replacement),
+                originalOwner: identity313(originalLife313), replacementOwner: identity313(replacementLife313),
                 connected: assistant.connected, canCancel: assistant.canCancel, showingActions: assistant.showingActions,
                 nativeImport: assistant.nativeImport, pointerStarts: ownStarts, userEdits: edits,
                 applyClicks: applyClicks, originalOutcome: visible185_outcome(callId, previous)}));
-            if (field && retained !== null) field.textEdited.disconnect(editReceipt);
-            if (applyTarget && applyTarget.clicked) applyTarget.clicked.disconnect(applyReceipt);
+            disconnect313(fieldLife313, field, "textEdited", editReceipt);
+            disconnect313(applyLife313, applyTarget, "clicked", applyReceipt);
             assistant.actionPointerShown.disconnect(pointerReceipt);
             if (assistant.canCancel) assistant.cancel();
         }
@@ -3494,10 +3527,21 @@ TestCase {
                 ancestors: ancestors};
         } catch (error) { return {observationError: String(error)}; }
     }
+    function background313_lives(scope) {
+        const alive = {};
+        for (const key of Object.keys(scope.lifetimes)) alive[key] = alive313(scope.lifetimes[key]);
+        return alive;
+    }
+    function background313_candidates(scope, controls) {
+        scope.ownershipCandidates = controls;
+        scope.ownershipCandidateLives = controls.map(lifetime313);
+        scope.ownershipCandidateFacts = controls.map(background294_fact);
+    }
     function background294_observe(stage, scope) {
         try {
             const slot = Ui.page(window);
             const page = window.assistantWorkflowPage;
+            const originalViewAlive = scope && alive313(scope.lifetimes.view);
             const names = ["background.stage", "background.stage.id", "background.stage.apply"];
             const candidates = Ui.itemsWithProperty(slot, "objectName")
                 .filter(control => names.includes(control.objectName));
@@ -3509,23 +3553,26 @@ TestCase {
                 pageProject: page ? String(page.project) : null,
                 pageHasExperiment: page ? page.experiment !== undefined : false,
                 pageExperiment: page && page.experiment !== undefined ? String(page.experiment) : null,
-                currentOwner: String(Session.project), expectedOwner: scope ? String(scope.project) : null,
-                originalSlot: scope ? String(scope.slot) : null,
-                originalPage: scope ? String(scope.page) : null,
-                originalExperiment: scope ? String(scope.experiment) : null,
-                sidebar: scope ? String(scope.sidebar) : null,
-                view: scope ? String(scope.view) : null,
-                viewIndex: scope && scope.view ? scope.view.currentIndex : null,
-                selectedPane: scope && scope.view ? String(scope.view.currentItem) : null,
-                originalPane: scope ? String(scope.pane) : null,
-                selectedPaneContent: scope && scope.view && scope.view.currentItem
+                currentOwner: String(Session.project), expectedOwner: scope ? identity313(scope.lifetimes.project) : null,
+                originalSlot: scope ? identity313(scope.lifetimes.slot) : null,
+                originalPage: scope ? identity313(scope.lifetimes.page) : null,
+                originalExperiment: scope ? identity313(scope.lifetimes.experiment) : null,
+                sidebar: scope ? identity313(scope.lifetimes.sidebar) : null,
+                view: scope ? identity313(scope.lifetimes.view) : null,
+                viewIndex: originalViewAlive ? scope.view.currentIndex : null,
+                selectedPane: originalViewAlive ? String(scope.view.currentItem) : null,
+                originalPane: scope ? identity313(scope.lifetimes.pane) : null,
+                selectedPaneContent: originalViewAlive && scope.view.currentItem
                     ? String(scope.view.currentItem.item) : null,
-                originalPaneContent: scope ? String(scope.content) : null,
-                originalForm: scope ? String(scope.form) : null,
+                originalPaneContent: scope ? identity313(scope.lifetimes.content) : null,
+                originalForm: scope ? identity313(scope.lifetimes.form) : null,
                 focused: String(window.activeFocusItem), candidateCount: candidates.length,
                 candidates: candidates.slice(0, 12).map(background294_fact),
-                ownershipCandidates: scope && scope.ownershipCandidates
-                    ? scope.ownershipCandidates.slice(0, 8).map(background294_fact) : [],
+                originalLifetimesAlive: scope ? background313_lives(scope) : {},
+                ownershipCandidates: scope && scope.ownershipCandidateFacts
+                    ? scope.ownershipCandidateFacts.slice(0, 8) : [],
+                ownershipCandidateAlive: scope && scope.ownershipCandidateLives
+                    ? scope.ownershipCandidateLives.slice(0, 8).map(alive313) : [],
                 ownershipCandidateCount: scope && scope.ownershipCandidates ? scope.ownershipCandidates.length : 0}));
         } catch (error) { console.log("BACKGROUND294_OBSERVATION_ERROR", stage, String(error)); }
     }
@@ -3535,6 +3582,9 @@ TestCase {
         const scope = {project: project, experiment: project.currentExperiment,
             slot: Ui.page(window), page: window.assistantWorkflowPage,
             sidebar: null, view: null, pane: null, content: null, form: null};
+        scope.lifetimes = {};
+        for (const key of ["project", "experiment", "slot", "page", "sidebar", "view", "pane", "content", "group", "form", "source"])
+            scope.lifetimes[key] = lifetime313(scope[key] === undefined ? null : scope[key]);
         background294_observe(stage + "-before-ownership", scope);
         const page = scope.page;
         verify(Session.project === project && scope.slot !== null && page !== null
@@ -3547,20 +3597,23 @@ TestCase {
             "BG294 SETUP: operative current Experiment page belongs to the exact original project/experiment");
         const sidebars = Ui.itemsWithProperty(page, "objectName").filter(control =>
             control.objectName === "workflow.experiment.manualSidebar");
-        scope.ownershipCandidates = sidebars;
+        background313_candidates(scope, sidebars);
         background294_observe(stage + "-sidebar-candidates", scope);
         compare(sidebars.length, 1, "BG294 SETUP: current Experiment page owns exactly one ordinary sidebar");
         scope.sidebar = sidebars[0];
+        scope.lifetimes.sidebar = lifetime313(scope.sidebar);
         // Public EA SideBar: its direct-child SwipeView owns retained Loader items;
         // TabBar's internal view is not a direct child with this Container contract.
         const views = Ui.itemsWithProperty(scope.sidebar, "interactive").filter(control =>
             control.parent === scope.sidebar && typeof control.itemAt === "function"
             && control.currentIndex !== undefined && control.currentItem !== undefined);
-        scope.ownershipCandidates = views;
+        background313_candidates(scope, views);
         background294_observe(stage + "-view-candidates", scope);
         compare(views.length, 1, "BG294 SETUP: actual ordinary sidebar owns one direct selected-pane view");
         scope.view = views[0];
+        scope.lifetimes.view = lifetime313(scope.view);
         scope.pane = scope.view.currentItem;
+        scope.lifetimes.pane = lifetime313(scope.pane);
         const basic = Ui.itemsWithProperty(scope.sidebar, "objectName").filter(control =>
             control.objectName === "sideBar.tab.basic" && typeof control.checked === "boolean");
         background294_observe(stage + "-selected-pane", scope);
@@ -3572,26 +3625,32 @@ TestCase {
         // WorkflowPage declares Basic/Extras as Loader items of the sidebar view.
         // Category properties belong to their loaded content, never the Loader.
         scope.content = scope.pane.item;
+        scope.lifetimes.content = lifetime313(scope.content);
         const groups = Ui.itemsWithProperty(scope.content, "categoryId").filter(control =>
             control.objectName === "group.background" && control.categoryId === "background"
             && control.shownTier === "Basic");
-        scope.ownershipCandidates = groups;
+        background313_candidates(scope, groups);
         background294_observe(stage + "-category-candidates", scope);
         compare(groups.length, 1, "BG294 SETUP: actual current Basic pane owns exactly one Background category");
         scope.group = groups[0];
+        scope.lifetimes.group = lifetime313(scope.group);
         const forms = Ui.itemsWithProperty(scope.group, "objectName").filter(control =>
             control.objectName === "background.stage"
             && control.sourceModel === scope.experiment.background);
-        scope.ownershipCandidates = forms;
+        background313_candidates(scope, forms);
         background294_observe(stage + "-form-candidates", scope);
         compare(forms.length, 1, "BG294 SETUP: original category owns exactly one stage for the original background model");
         scope.form = forms[0];
+        scope.lifetimes.form = lifetime313(scope.form);
         scope.source = scope.experiment.background;
+        scope.lifetimes.source = lifetime313(scope.source);
         background294_observe(stage + "-owned-form", scope);
         return scope;
     }
     function background294_control(scope, name, stage) {
         background294_observe(stage + "-before-control", scope);
+        verify(Object.keys(scope.lifetimes).every(key => alive313(scope.lifetimes[key])),
+            "BG313 SETUP: all original scoped QObject receivers remain alive before property access");
         verify(Session.project === scope.project && Ui.page(window) === scope.slot
             && scope.slot === window.contentArea[AppState.Page.Experiment]
             && window.appBarCentralTabs.currentIndex === AppState.Page.Experiment
@@ -3608,7 +3667,7 @@ TestCase {
             "BG294 SETUP: exact original current form/pane/source ownership remains valid before accessing its receiver");
         const found = Ui.itemsWithProperty(scope.form, "objectName")
             .filter(control => control.objectName === name);
-        scope.ownershipCandidates = found;
+        background313_candidates(scope, found);
         background294_observe(stage + "-receiver-candidates", scope);
         compare(found.length, 1, "BG294 SETUP: exactly one original named receiver belongs to the operative source-bound form: " + name);
         return found[0];
@@ -3686,6 +3745,7 @@ TestCase {
         verify(Session.openProject(Probe.referenceUrl("Original declared background input")),
             "BG SETUP: independently generated original scientific source opens through real Session");
         const project = Session.project;
+        const projectLife313 = lifetime313(project);
         tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
             "BG SETUP: original actual calculation is current before staging/input baselines");
         const manual = ["manual-add", "manual-update", "manual-remove"].includes(data.tag);
@@ -3740,6 +3800,8 @@ TestCase {
         idField.textEdited.connect(edited); apply.clicked.connect(applied);
         assistant.actionPointerShown.connect(pointerStarted);
         assistant.actionManualTakeover.connect(tookOver);
+        const idLife313 = lifetime313(idField), applyLife313 = lifetime313(apply);
+        let replacementLife313 = null;
         let manualText = null, replacement = null, draft = null;
         const call = "background285-" + data.tag;
         try {
@@ -3792,6 +3854,7 @@ TestCase {
                     verify(Session.createProject("BG-new-owner", "Original real replacement"),
                         "BG SETUP: actual Session creates a distinct genuinely empty replacement owner");
                     replacement = Session.project;
+                    replacementLife313 = lifetime313(replacement);
                     verify(replacement !== project, "BG: original A cannot acquire the new B owner");
                 }
             }
@@ -3865,12 +3928,12 @@ TestCase {
         } finally {
             background294_observe("finally-" + data.tag, scope);
             console.log("BACKGROUND285_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
-                originalOwner: String(project), replacementOwner: String(replacement), connected: assistant.connected,
+                originalOwner: identity313(projectLife313), replacementOwner: identity313(replacementLife313), connected: assistant.connected,
                 canCancel: assistant.canCancel, showingActions: assistant.showingActions, edits: edits,
                 applies: applies, starts: starts, takeovers: takeovers,
                 originalOutcome: visible185_outcome(call, previousIds)}));
-            if (idField && idField.textEdited) idField.textEdited.disconnect(edited);
-            if (apply && apply.clicked) apply.clicked.disconnect(applied);
+            disconnect313(idLife313, idField, "textEdited", edited);
+            disconnect313(applyLife313, apply, "clicked", applied);
             assistant.actionPointerShown.disconnect(pointerStarted);
             assistant.actionManualTakeover.disconnect(tookOver);
             if (assistant.canCancel) assistant.cancel();
