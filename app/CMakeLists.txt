@@ -78,11 +78,25 @@ qt_add_qml_module(edi_app_module
         src/report_view_model.hpp src/report_view_model.cpp
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
+        src/assistant_view_model.hpp src/assistant_view_model.cpp
+        src/assistant_widget_input.hpp src/assistant_widget_input.cpp
+        src/assistant_result.hpp src/assistant_result.cpp
+        src/assistant_markdown.hpp src/assistant_markdown.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
     QML_FILES
         qml/Main.qml
+        qml/Components/AssistantPanel.qml
+        qml/Components/AssistantWorking.qml
+        qml/Components/AssistantMessage.qml
+        qml/Components/AssistantComposer.qml
+        qml/Components/AssistantPlan.qml
+        qml/Components/AssistantQuestion.qml
+        qml/Components/AssistantTrial.qml
+        qml/Components/AssistantSkillsDialog.qml
+        qml/Components/AssistantConnectionDialog.qml
         qml/Components/AppDialog.qml
+        qml/Components/NativeCwlImportDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
         qml/Components/CategoryGroup.qml
@@ -190,6 +204,8 @@ qt_add_qml_module(edi_app_module
         qml/Style/AppSizes.qml
     RESOURCES
         resources/logo/App.svg
+        resources/logo/AssistantWorking.svg
+        resources/logo/AssistantSpinner.svg
 )
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
@@ -345,3 +361,21 @@ set_target_properties(edi_app_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE
 include(GNUInstallDirs)
 install(TARGETS edi_app RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
+endif()
+
+# ADR-0041: one native official-runtime frontend, with ordinary Qt process ownership.
+if(NOT EMSCRIPTEN)
+    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp src/assistant_native_tools.hpp src/assistant_native_tools.cpp src/assistant_native_create.hpp src/assistant_native_create.cpp)
+    file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
+         ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
+    qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
+                     BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
+endif()
+
+if(NOT EMSCRIPTEN)
+    include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
+    edi_bundle_assistant_runtime()
+endif()

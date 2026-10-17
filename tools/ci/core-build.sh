@@ -68,9 +68,14 @@ trap 'rm -f "$BUILD_LOCK/owner"; rmdir "$BUILD_LOCK" 2>/dev/null || true' EXIT
 export EDI_PRODUCER_LOCK_HELD="$$.$RANDOM.$RANDOM"; printf '%s\n' "$EDI_PRODUCER_LOCK_HELD" >"$BUILD_LOCK/owner"
 # Acquire crysta as a CMake package, inside this producer lock: the pinned SDK (ADR-0017), or
 # CRYSTA_SDK_DIR's candidate. Needs the crysta link deps in the env (eigen/sleef/openmp) — see pixi.toml.
-bash tools/ci/build-crysta.sh
+if [ -n "${EDI_CRYSTA_PREFIX:-}" ]; then
+  [ -z "${CI:-}" ] || { echo "core-build: local development prefix refused in CI" >&2; exit 1; }
+  [ -d "$EDI_CRYSTA_PREFIX" ] || { echo "core-build: local crysta prefix is missing" >&2; exit 1; }
+else
+  bash tools/ci/build-crysta.sh
+fi
 # The linked commit's corpus and reference source for edi's tests (fetched, never built).
-bash tools/ci/crysta-src.sh
+[ -n "${EDI_CRYSTA_PREFIX:-}" ] || bash tools/ci/crysta-src.sh
 # A consumer job restores the artifact `native · <platform>` built once for this run, each bound field
 # and every restored byte checked against it, and compiles nothing.
 if [ "${EDI_NATIVE_ARTIFACT:-}" = 1 ]; then
@@ -80,22 +85,46 @@ fi
 # prefix, so edi configures against THAT prefix and into its own build tree. Keeping the two apart is
 # what lets a consumer run and edi's own pinned build coexist in one checkout without either
 # invalidating the other.
-if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
+if [ -n "${EDI_CRYSTA_PREFIX:-}" ]; then
+  CRYSTA_PREFIX="$EDI_CRYSTA_PREFIX"
+  EDI_BUILD_DIR=build/app-python
+elif [ -n "${CRYSTA_SDK_DIR:-}" ]; then
   CRYSTA_PREFIX="$ROOT/build/crysta-consumer-prefix"
   EDI_BUILD_DIR=build/ci-consumer
 else
   CRYSTA_PREFIX="$ROOT/build/crysta-prefix"
   EDI_BUILD_DIR=build/ci
 fi
+# Restored SDK headers can predate existing objects even when the prefix path is unchanged.
+# Hash actual installed content, not timestamps or only the claimed source SHA (ADR-0017).
+SDK_CONTENT="$(python tools/ci/sdk_content_identity.py "$CRYSTA_PREFIX")"
+SDK_MARKER="$EDI_BUILD_DIR/.edi-sdk-build-key"
+if [ -d "$EDI_BUILD_DIR" ] && [ "$(cat "$SDK_MARKER" 2>/dev/null || true)" != "$SDK_CONTENT" ]; then
+  echo "core-build: SDK content changed; configuring $EDI_BUILD_DIR fresh"
+  rm -rf "$EDI_BUILD_DIR"
+fi
+mkdir -p "$EDI_BUILD_DIR"
+printf '%s\n' "$SDK_CONTENT" > "$SDK_MARKER"
 # The declared deployment target on every configure, as for crysta above, so edi's objects and
 # its link agree with the crysta objects they link.
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" \
+  -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" -DEDI_BUILD_APP=OFF -DEDI_BUILD_BINDINGS=ON \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
-cmake --build "$EDI_BUILD_DIR" -j
+# Respect the developer command's forwarded build bound; a bare -j overrides
+# CMAKE_BUILD_PARALLEL_LEVEL and makes Ninja unbounded.
+BUILD_JOBS="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
+[[ "$BUILD_JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "core-build: parallel level must be a positive integer" >&2; exit 1; }
+cmake --build "$EDI_BUILD_DIR" --parallel "$BUILD_JOBS"
 # Further targets in this same tree, under this lock (the C++ tier's edi_tests).
-[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} -j
+[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} --parallel "$BUILD_JOBS"
 # Review-7 F7: tie provenance to the edi artifact actually LINKED. The prefix stamp and source
 # record are mutable across resolves; this record names the crysta the just-built edi contains,
 # and downstream consumers select it instead of re-reading whatever a later resolve left behind.
-cp "$CRYSTA_PREFIX/.crysta-sha" "$EDI_BUILD_DIR/.crysta-linked-sha"
+if [ -f "$CRYSTA_PREFIX/.crysta-sha" ]; then
+  cp "$CRYSTA_PREFIX/.crysta-sha" "$EDI_BUILD_DIR/.crysta-linked-sha"
+else
+  rm -f "$EDI_BUILD_DIR/.crysta-linked-sha"
+fi
+
+printf '%s\n' "$SDK_CONTENT" > "$EDI_BUILD_DIR/.crysta-linked-content.tmp"
+mv "$EDI_BUILD_DIR/.crysta-linked-content.tmp" "$EDI_BUILD_DIR/.crysta-linked-content"

@@ -1,0 +1,152 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 15/10/2026  Time: 01:16:33.488                              
+
+ => PCR file code: affine
+ => DAT file code: affine               -> Relative contribution: 1.0000                                                            
+ => Title: CoSiO D20 01_001 497.379 K, Biso(Co1) and Biso(Co2) tied: codeword 181
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Wavelengths:  1.87000 1.87000
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*    8.00
+ ==> Angular range, step and number of points:
+     2Thmin:       0.095300  2Thmax:     150.895294  Step:       0.100134  No. of points:   1508
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    4.664 g/cm3
+ => Scor: 2.2500
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:   39
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 CoSiO                                   P n m a             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   202  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Co1     0.00000(   0)  0.00000(   0)  0.00000(   0)  0.166(100)  0.500(  0)    4
+ Co2     0.28169(  89)  0.25000(   0)  0.98174( 197)  1.143(100)  0.500(  0)    4
+ Si      0.09423(  48)  0.25000(   0)  0.42980(  99)  0.706( 80)  0.500(  0)    4
+ O1      0.09094(  37)  0.25000(   0)  0.76945(  80)  1.071( 74)  0.500(  0)    4
+ O2      0.44864(  32)  0.25000(   0)  0.21549(  85)  1.067( 74)  0.500(  0)    4
+ O3      0.16409(  28)  0.03239(  43)  0.28014(  62)  1.314( 63)  1.000(  0)    8
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                             10.33581   0.00015
+                              6.02970   0.00009
+                              4.79756   0.00007
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :   1.289441     0.1366701E-01
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.23080   0.00803
+                             -0.51506   0.01734
+                              0.37566   0.01089
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.00993   0.00532
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.2900    0.0023
+ => Background Parameters (linear interpolation)  ==>
+                                 619.126        8.58473    
+                                 586.212        11.8582    
+                                 582.675        11.3728    
+                                 561.642        10.8250    
+                                 539.588        7.42959    
+                                 510.570        4.24599    
+                                 472.560        3.92006    
+                                 461.797        2.97429    
+                                 473.234        2.74853    
+                                 459.870        2.50770    
+                                 449.079        2.70727    
+                                 394.490        2.52269    
+                                 319.083        2.42437    
+                                 267.385        3.44027    
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle: 10 => MaxCycle:100
+ => N-P+C:  1379
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.26     Rwp:  4.62     Rexp:    2.11 Chi2:  4.80      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  16.4     Rwp:  14.8     Rexp:    6.77 Chi2:  4.80    
+ => Deviance:  0.152E+04     Dev*  :   1.099    
+ => DW-Stat.:    1.0500     DW-exp:     1.8911
+ => N-sigma of the GoF:       99.819
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  1292
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.37     Rwp:  4.74     Rexp:    2.11 Chi2:  5.06      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  15.9     Rwp:  14.7     Rexp:    6.55 Chi2:  5.06    
+ => Deviance:  0.150E+04     Dev*  :   1.157    
+ => DW-Stat.:    1.0634     DW-exp:     1.8895
+ => N-sigma of the GoF:      103.203
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   5.12    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     CoSiO
+ => Bragg R-factor:   8.60       Vol:  298.993( 0.008)  Fract(%):  100.00( 1.50)
+ => Rf-factor=  7.34             ATZ:         839.800   Brindley:  1.0000
+
+ 
+              CPU Time:     0.391 seconds
+                            0.007 minutes
+
+ => Run finished at:     Date: 15/10/2026  Time: 01:16:33.865                              

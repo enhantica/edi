@@ -4,6 +4,7 @@ import importlib.util
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -84,9 +85,17 @@ def test_failed_configure_preserves_attempt_for_next_no_export_build(tmp_path):
     root = tmp_path / 'desk'
     (root / 'tools/ci').mkdir(parents=True)
     shutil.copy2(ROOT / 'tools/ci/app-build.sh', root / 'tools/ci/app-build.sh')
+    identity_helper = ROOT / 'tools/ci/sdk_content_identity.py'
+    if identity_helper.is_file():
+        shutil.copy2(identity_helper, root / 'tools/ci' / identity_helper.name)
+    # Real directory/bytes for the real digest; this gate substitutes only CMake, not identity.
+    installed = root / 'build/crysta-prefix/include'
+    installed.mkdir(parents=True)
+    (installed / 'recovery_witness.hpp').write_text('inline int recovery_witness(){return 173;}\n')
     executable(root / 'tools/ci/build-crysta.sh', 'exit 0\n')
     bin_dir = root / 'bin'
     bin_dir.mkdir()
+    (bin_dir / 'python').symlink_to(sys.executable)
     executable(
         bin_dir / 'cmake',
         """
@@ -107,7 +116,12 @@ exit 0
     env = os.environ.copy()
     for name in ('EDI_GUI_COMPONENTS_SRC', 'GH_TOKEN', 'GITHUB_TOKEN', 'EDI_CRYSTA_PREFIX', 'CI'):
         env.pop(name, None)
-    env.update(PATH=f'{bin_dir}:/usr/bin:/bin', CONDA_PREFIX=str(prefix), CXX=str(bin_dir / 'c++'))
+    env.update(
+        PATH=f'{bin_dir}:/usr/bin:/bin',
+        CONDA_PREFIX=str(prefix),
+        CXX=str(bin_dir / 'c++'),
+        PIXI_ENVIRONMENT_NAME='default',
+    )
     command = ['bash', 'tools/ci/app-build.sh']
     failed = subprocess.run(
         command, cwd=root, env=env, capture_output=True, text=True, timeout=10, check=False

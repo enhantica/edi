@@ -48,5 +48,8 @@ fi
     cmake --build "$2" --target crysta_core crysta_cli
     cmake --install "$2" --prefix "$3" >/dev/null' _ "$src" "$tree" "$prefix"
 
+# The app's production assistant uses the native C++/QML tools. The Qt graph
+# already builds with EDI_BUILD_BINDINGS=OFF; a Python extension/default-env
+# bootstrap is a separate developer/test operation, never an app prerequisite.
 EDI_CRYSTA_PREFIX="$prefix" EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh
 exec bash tools/ci/app-run.sh "$@"

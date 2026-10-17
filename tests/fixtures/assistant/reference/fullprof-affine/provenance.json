@@ -1,0 +1,47 @@
+{
+  "schema": "independent-fullprof-affine/1",
+  "engine_version": "FullProf.2k 8.40 Feb2026-ILL JRC",
+  "executable": "/home/andrewsazonov/Applications/fullprof/fp2k",
+  "executable_sha256": "b8cb5cdb00ef55f2fef9004ef070324a459f2fcc92ad5c4613f2ea06118c9f1f",
+  "source": "knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_biso-tied/full-fit.inp",
+  "source_edit": "Co1 Biso start 0.98759 -> 0.01000; retain shared codeword181 and all other source bytes",
+  "rerun_command": "printf 'affine\\n\\n' | /home/andrewsazonov/Applications/fullprof/fp2k",
+  "completion": "Normal end reached; stdin closes at final interactive prompt",
+  "process_exit": 24,
+  "persistent_log": "/home/andrewsazonov/runs/ai-assistant/tests-seq2-fullprof-affine.log",
+  "files": {
+    "affine.pcr": {
+      "sha256": "6b21d8b91fad25f8cd886bd6beb3cd7ff78130fc67230ff90d9aea7e10e0c3f6",
+      "bytes": 3694
+    },
+    "affine.dat": {
+      "sha256": "22db61d0c3782c2614c6fccb92e1b9861010bfdb391ff87fa7ab0f53abcfc37f",
+      "bytes": 60686
+    },
+    "affine.new": {
+      "sha256": "adfc126b4fd89e8de05e9400599835073e9bc9721cd27ecebf48ddc0a8bca17b",
+      "bytes": 4290
+    },
+    "affine.prf": {
+      "sha256": "e8bb64a7df1f39a5d1f903e036d86c599ed5be59334141d75cca21b7dce72b0c",
+      "bytes": 79963
+    },
+    "affine.sum": {
+      "sha256": "6e0c7a3a0a12199dbe7915447efb3a0f7259a68b0cc33d03e2fc39b75b1a0548",
+      "bytes": 6521
+    },
+    "affine.out": {
+      "sha256": "8eafef5a9819c0f7b39ab4c354c96dc263d86f74f0a4053a9cfb2ce203a90d67",
+      "bytes": 115648
+    }
+  },
+  "observed_new_biso": {
+    "Co1": 0.16557,
+    "Co2": 1.14316
+  },
+  "invariant": {
+    "initial_difference": 0.97759,
+    "final_difference": 0.97759,
+    "codeword": 181
+  }
+}

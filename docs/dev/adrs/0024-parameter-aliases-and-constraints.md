@@ -81,3 +81,95 @@ through crysta (ADR-0019 already reads crysta for the symmetry ties).
 | Parse or evaluate expressions in edi or Python | Rejected: a second parser drifts from crysta's, and an interpreter runs arbitrary text. |
 | Keep edi's own cell and position completion beside crysta's applier | Rejected: two rules for the same dependents. |
 | Replace a row on a taken id, as diffraction-lib does | Rejected: ids are unique within a collection everywhere else in edi. |
+
+
+## Prepared bulk restore and recorded edit ownership
+
+The prior implementations are `Edit::restore_relations`, the manual alias and constraint list editors, `ProjectViewModel::apply_relation_edit`, and the parameter table's free-flag batch. The restore prepares both complete ItemVec tables before either live move commit; resolution and all fallible membership/table admission precede the scalar and collection commit. A copied validation model is not a reservation for live table allocation.
+
+The shared recorded-edit entrance owns the complete before declaration, parameter states, resolved parameter pointers and reserved history slot before a relation/value/free batch writes. These closed edits preserve parameter membership and names. After actual relation completion, and before presentation can signal other editors, an allocation-free pass retains exactly states whose values, uncertainty or free flag changed. A completion exception uses the same pass on the actual reached state. No post-write named-slot traversal or history growth is needed; a genuinely refused operation drops its provisional slot. Scalar assignments follow the existing RowHold numeric/optional/flag no-failure contract. This is not a promise to display diagnostics through permanent allocator exhaustion.
+
+A true core refusal and a successful core write followed by failed presentation are distinct. The latter retains Undo, leaves an explicit applied/unconfirmed outcome and fences further edits/fits until a genuine Undo or reopening. The legacy manual editor returns empty for an actual write, with the app warning retained; the native route receives both applied and published explicitly. Undo consumes an actually applied reversal once even if its later presentation fails. It does not repeat that reversal as if nothing had happened. Existing manual alias/constraint append, duplicate, rename, target/expression change, enable/disable and removal all use this shared entrance. Native value/free batches use it too; a native batch is one normal Undo step.
+
+Native affine declaration registration and its model-admission helper are outside this six-tool unit. Deliberately disabled manual drafts keep the ordinary editor behavior. Shared-ADP accepted-best trials, checkpoint isolation and physical site identification remain separate capabilities; none is implied by recorded parameter editing.
+
+
+### Shared critical admission and explicit recovery siblings
+
+The publication/reentrancy fence applies to every actual sibling admission, not only scalar/relation edits: report settings and their Undo, scan prepare/reset/restore and genuine fit start, data restoration, fit Undo, and save/write/readback. Critical admission is separate from displayed-dataset readiness, so scans still run from their template and save/reset policy is preserved. Only the private actual Undo entrances may recover a held publication failure; a public setting or Save cannot silently clear it. Report and scan reset/preparation own their normal Undo metadata/capacity before their existing closed file/model write doors. A completed file reversal is not repeated as a no-write refusal when its later presentation fails. Deferred same-dataset refresh revalidates the surviving owner/index and reads its latest template, never old captured model values.
+
+A failure in Undo-availability publication retains the already prepared warning in the normal app error channel as well as the native result. Successful complete recovery clears the held cause; failed or retired presentation does not erase it. Actual UI/worker lifetime and preview pre-admission semantics are specified at the shared ADR0020 seam.
+
+
+The existing scan file set-aside helper reserves its bounded moved-file ledger and recovery-path string before renaming. Recording a successful move or retaining its path therefore cannot introduce a new allocation after that move. Existing filesystem refusal/kept-aside diagnostics and restore policy are preserved; no global directory mutation or new filesystem transaction route is added.
+
+
+### Native affine append through the shared editor
+
+The app-only add_relations action uses the existing AliasListModel/ConstraintListModel representation, Edit::restore_relations, complete_relations and preowned ProjectViewModel::applyRecordedEdit/RelationsUndo. It appends actual parameter-path aliases and explicit id/expression/enabled constraints to a complete copied declaration; existing rows and composition are not replaced. The actual SDK parser/graph validates before returning the live Edit. The shared joint relation replacement and exact changed-parameter Undo remain unchanged; no rollback with guessed values or second expression parser exists. Structureless projects refuse because that existing completion seam cannot validate them. Unsupported/invalid batches refuse before mutation; postwrite presentation uncertainty keeps real Undo and the recovery fence.
+
+This supplies a relationship mechanism for a justified same-phase co-occupied-site ADP/coordinate model. It does not decide scientific equivalence, create an automatic equality from high uncertainty, run a fit or implement accepted-best/checkpoint restoration. Explicit user no-sharing instructions and known occupancy/composition remain authoritative.
+
+
+### Original manual declaration entry and visible sequencing
+
+Prior art is the existing AliasesGroup/ConstraintsGroup tables and their
+append/setText/setEnabled/remove model methods. Constraint Add now creates a
+disabled declaration; disabled ID/expression fields remain editable. The same
+actual enable toggle validates/applies the intended rule after entry, instead
+of activating a guessed default equality while the user is still editing.
+This changes only newly appended rows, never persisted flags or engine defaults.
+Each manual operation still records its own Undo through apply_relation_edit.
+
+The assistant uses those original controls, not another form. Its app-private
+RelationAction metadata names the exact model member, field and requested value
+at the final real event; a different control cannot consume that receipt.
+The preowned action captures actual applied state at the existing Preview write
+latch before model/publication callbacks. Normal native batches retain their
+one-edit/Undo semantics; a visible sequence reports genuine complete/partial
+steps and preserves all completed individual edits on interruption. Existing
+core expression parsing, validation, physical completion and Undo remain the
+only scientific authority. Details are in ADR-0037 and the GUI ADR-0017.
+
+
+### Shared text draft and ordinary alias defaults
+
+TextCell's first manual table entrances own the same draft rules as its paced
+assistant input. A clean display binding is removed with RestoreNone when real
+text/IME begins, without assigning over preedit. A draft captures its original
+project/delegate/model/index/control context; value-role publication cannot
+retarget or erase it. Each actual user text/preedit event replaces its revision
+record. Commit is single-entry and checks that original record/lifetime before
+any post-signal diagnostic or cleanup. A newer draft, IME, owner or member
+leaves the old continuation with no presentation authority. Cleanup releases
+only its own in-progress latch; clean formatting resumes through the binding
+only when there is no draft. Refused/no-op/Return/blur use the original model
+setter and formatting. Explicit human Escape can discard an obsolete draft;
+late assistant cleanup cannot discard newer manual input.
+
+The original Alias Add uses the actual offered independent parameter list. It
+chooses the first target with no alias, otherwise the first offered target: more
+than one alias for a real parameter is lawful. With no offered target, the
+ordinary button is disabled and the model refuses before admitting an Edit or
+Undo. All successful operations retain the same validator and recorded Undo;
+no alternate scientific executor or parallel form is added.
+
+
+### One text terminal entrance and explicit row ownership
+
+A TextCell commits only from editingFinished. Pinned Qt emits that signal before
+accepted for the same Return; accepted keeps only the original base visual
+feedback. It cannot capture/commit/clear a newer changed, identical or committed
+IME draft admitted during the first synchronous publication. A genuine later
+Return or focus loss still has its own editingFinished and commits normally.
+The existing single-frame latch continues to prevent recursive notification
+entry; it is not mistaken for proof against the later accepted signal tail.
+
+The base ListViewDelegate places contentRow inside a FocusScope. TextCell's
+immediate visual parent therefore is not the data delegate. Every original
+TextCell declaration supplies its actual lexical delegate, source model and row
+index explicitly. These bindings, current Session project, semantic control name
+and lifetime retire original ownership on actual changes; value-role publication
+does not become a new owner. No parent.model/index inference or synthetic input
+is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
+and all unrelated original controls remain unchanged.

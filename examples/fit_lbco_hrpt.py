@@ -95,7 +95,7 @@ from edi import ExperimentFactory, StructureFactory
 
 REPO = Path(__file__).resolve().parents[1]
 MEASUREMENT = (
-    REPO / 'knowledge' / 'verification' / 'fullprof' / 'pd-neut-cwl_lbco_basic' / 'lbco.dat'
+    REPO / 'knowledge' / 'verification' / 'fullprof' / 'pd-neut-cwl_lbco-hrpt_basic' / 'lbco.dat'
 )
 BASELINE = (
     Path(__file__).resolve().parents[1]
@@ -237,11 +237,13 @@ def fit_stage(
     label: str, project: edi.Project, data: tuple[list[float], list[float], list[float]]
 ) -> edi.FitResultBase:
     grid, observed, sigma = data
+    # The current public fit reads measured observations from the model. Keep
+    # the original arrays/uncertainties and experiment exclusions unchanged.
+    project.experiment.data = edi.PdCwlData(
+        two_theta=grid, intensity_meas=observed, intensity_meas_su=sigma
+    )
     print(f'{label}:')
     outcome = project.fit(
-        grid,
-        observed,
-        sigma,
         on_iteration=lambda record: print(
             f'  iteration {record.iteration:2d}  Rwp {record.rwp:.4f}'
         ),
@@ -251,6 +253,23 @@ def fit_stage(
         f'Rwp {outcome.rwp:.6f}, reduced chi2 {outcome.reduced_chi_square:.6f}'
     )
     return outcome
+
+
+def stage_exit_code(label: str, outcome: edi.FitResultBase) -> int:
+    """This example continues only after DONE + converged, never just good numbers.
+
+    MAX_ITER and NO_STEP retain their actual result but stop this example; using
+    either as a warm state needs an explicit different scientific plan. A user
+    cancellation stops the whole workflow before any later stage or parity read.
+    """
+    if outcome.status == edi.FitStatus.CANCELLED:
+        print(f'{label}: cancelled; no later stage or parity check will run')
+        return 130
+    if outcome.status != edi.FitStatus.DONE or not outcome.converged:
+        print(f'{label}: {outcome.status.name.lower()} (converged={outcome.converged}); '
+              'stopping without claiming workflow completion')
+        return 1
+    return 0
 
 
 def main() -> int:
@@ -264,7 +283,9 @@ def main() -> int:
 
     # Stage A — profile and ADPs held at their plain starts; warm up scale/background/cell/zero.
     release(project, full=False)
-    fit_stage('stage A (scale + background + cell a + zero-shift)', project, data)
+    warm = fit_stage('stage A (scale + background + cell a + zero-shift)', project, data)
+    if code := stage_exit_code('stage A', warm):
+        return code
 
     # Stage B — the full free set, released from stage A's warm state: everything stage A
     # refined carries forward (cell a, scale, zero-shift and the five background intensities,
@@ -273,6 +294,8 @@ def main() -> int:
     # a wrong basin (docstring).
     release(project, full=True)
     outcome = fit_stage('stage B (full free set from the warm state)', project, data)
+    if code := stage_exit_code('stage B', outcome):
+        return code
 
     # Engine parity: compare against diffraction-lib's own committed refinement of this data,
     # under that engine's own rtol. Nothing below was produced by edi's engine except the

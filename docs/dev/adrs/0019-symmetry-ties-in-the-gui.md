@@ -79,3 +79,102 @@ follow the fitting mode.
 | Compute the implied value in the app from the leader | Rejected: a tied coordinate can be a signed or offset image of its leader; the completion helpers already hold that rule. |
 | Disable every cell and coordinate field when the space group does not resolve | Rejected: the user could not repair the structure. |
 | Keep the scope filter in the table's name filter (the proxy) | Rejected: the status bar and the report would count rows the table does not show. |
+
+
+## Amendment: missing classic-CIF Wyckoff letters (E11-T5)
+
+Classic CIF permits an absent `_atom_site_Wyckoff_symbol`. Previously the reader
+returned empty letters and the first project save failed in engine constraints.
+The shared classic reader now asks a core-private adapter helper to normalize
+only absent, `?` and `.` letters before ADP completion. Explicit literals remain
+unchanged, including invalid author declarations; existing validation still
+owns their refusal. The dot-vocabulary project reader is unchanged.
+
+The helper resolves the actual setting through crysta's existing resolver and
+reads its public operators/table. It constructs the fractional site's complete
+periodic orbit, filters table positions by that observed orbit size, then uses
+`SpecialPosition::axis_basic/evaluate` against every equivalent image. A match
+must also reproduce the entire orbit. Exactly one supported position must match;
+zero, multiple, unsupported representative evaluation, or incomplete periodic
+inverse coverage refuses. Multiplicity alone never selects a letter. Inverse
+coverage is proved only for unit-sign basic axes and integral follower factors;
+nonintegral followers need additional lattice branches and are refused rather
+than tested incompletely. No new parser, public API, dependency or SDK is used.
+
+Periodic comparison uses 64 times `numeric_limits<double>::epsilon()` after
+reduction to a cell: a conservative short-affine-chain roundoff allowance, not
+the geometry renderer's `1e-4` identity tolerance, coordinate uncertainty, or a
+physical snapping distance. Independent membership and near-special controls
+must qualify this new import policy. Source coordinates, SU/free/start metadata,
+occupancy, ADP and space-group identity are never written by inference; only
+missing letters are staged and assigned after all sites have qualified. Site
+multiplicity remains engine-derived from the accepted letter/group, as before.
+
+
+### WYC1: downstream representative compatibility
+
+Orbit membership alone is insufficient: the engine uses the stored first basic
+coordinates when applying the selected representative's fixed/follower axes.
+Before accepting a missing letter, inference evaluates that actual parameterization
+using those stored basics (first-axis sign one and offset zero, matching crysta's
+`add_structure_positions`). Its result must be the same fractional point modulo
+lattice translation AND have the same complete orbit. Merely reaching another
+symmetry-equivalent point is insufficient: no tensor-frame transformation has
+been performed. A mismatch refuses clearly as an unsupported parameterization;
+the original point and all metadata remain untouched. This deliberately stages a
+supported subset rather than silently canonicalizing coordinates.
+
+For a supplied anisotropic tensor, the same existing public
+`crysta::tied_components` used by ordinary ADP completion must return exactly
+those components under a temporary proposed letter. A change refuses; inference
+never rotates, projects or repairs a tensor. The temporary one-site engine
+composition reuses `one_site_engine`, and does not mutate the imported model.
+Thus ordinary completion/save/calculate/fit begin from a compatible site/frame;
+future intentional refinement still follows the model's ordinary symmetry rules.
+Independent canonical, equivalent-image, periodic-lift, tied/rank-reduced and
+ADP-bearing acceptance/refusal gates remain necessary. The broader arbitrary-CIF
+representative transformation capability remains open.
+
+
+## Assistant native-result loader admission
+
+The app-private saved-result path uses a core-private `load_assistant_project` entry in `core/src/assistant_project_io.hpp`. It reuses `io.cpp`'s actual grammar and model builders, requires embedded measured data before generated-axis allocation, and refuses external scan/report declarations before materialization. Public factory/directory-loader behavior and scientific values remain unchanged. The caller first bounds and seals the exact native file set; this entry adds no independent parser, science inference, public Python API or new engine dependency.
+
+
+## CIF punctuation is not an Edi schema declaration (2026-10-16)
+
+The native create helper uses the shared structure-from-text API. Genuine upstream LBCO487B CIF uses dotted cell, space-group and atom-site dictionary names without an Edi schema. The old dot-cell predicate selected the strict Edi builder and refused the schema before reading scientific input. Supported CIF aliases now normalize in the existing parsed Block and reuse the classic structure builder, including its B/U/aniso handling and supported Wyckoff inference. No schema tag, parser, scientific literal or Python path is invented. Explicit Edi schema/native-only identities still select the strict native builder, preserving missing/unsupported-schema refusal. Repeated aliases refuse across scalar and loop declarations rather than choosing one value. The supplied coordinate-system code/IT number remain declared metadata.
+
+This extends shared factory prior art. The Edi-only file loader remains Edi-only. Qualification must reach the original487B input through native creation and cover classic/schema/alias/setting siblings; source preparation does not establish runtime or arbitrary-CIF support.
+
+
+The structure-from-text CIF normalization also owns CIF data-name case: [IUCr CIF1.1 file syntax, section26](https://www.iucr.org/what-we-do/digital-standards/cif/cif1/file-syntax) specifies case-independent identifiers while requiring value case preservation. Supported classic and dotted names now share ASCII-folded lookup keys and return the existing reader's exact canonical spelling, including mixed-case H-M, Wyckoff and ADP columns. Existing optional geom aliases use the same path. Every declaration's folded canonical identity is checked across scalar/loop boundaries before selection; case or punctuation aliases cannot silently choose a value. Unknown names are not promoted to supported fields, though repeated case variants still refuse. Block name, raw values, labels, symbols, literals, row order and uncertainties are copied unchanged. Reconstructed immutable Loops still execute their one actual identity-validation constructor.
+
+Explicit native/schema-only markers are detected regardless of tag case and sent unchanged to the strict native builder, so alternate casing cannot downgrade a malformed native file to CIF. This does not make the native file/directory grammar case permissive, rewrite tokenizer/reserved words, broaden experiment import, or invent chemical metadata. Original owner bytes remain untouched; genuine original/native creation plus scalar/loop/ADP/geometry/duplicate/strict-schema siblings require independent qualification.
+
+
+### CIF alias identity includes supported legacy replacements (2026-10-16)
+
+The existing structure CIF vocabulary owns both punctuation variants and legacy
+replacement names. IUCr's [archived H-M definition](https://www.iucr.org/__data/iucr/cifdic_html/1/cif_core.dic/Isymmetry_space_group_name_H-M.html)
+identifies [the replacement H-M item](https://www.iucr.org/__data/iucr/cifdic_html/1/cif_core.dic/Ispace_group_name_H-M_alt.html).
+The dotted/classic legacy symmetry H-M names now normalize to the same canonical
+replacement field as dotted/classic space-group H-M. The classic builder reads
+that sole normalized field, rather than preferring the replacement over an
+independently retained legacy value. A second supported declaration refuses,
+even if its value matches or is unknown: duplicate refusal is the existing
+structure-import policy, not a new semantic comparison of space-group strings.
+
+This uses the existing case-folded scalar/loop-wide declaration set and immutable
+Loop reconstruction. The audit covers cell, geometry, H-M, IT-number, setting,
+site, isotropic ADP and anisotropic column spellings. IT-number legacy aliases
+already share one key; the others already share their supported punctuation/case
+key. U versus B values/tensors are distinct physical representations, not aliases
+to collapse; existing conversion/selection/validation remains unchanged. Native
+schema/native-only markers still dispatch unchanged to the strict native reader
+before CIF normalization. No value, label, case-sensitive literal, symmetry
+setting, uncertainty, coordinate, ADP or original source byte is rewritten.
+
+Qualification must retain genuine standalone legacy/replacement imports and
+exercise case/punctuation/scalar/loop alias collisions through the real reader.
+Private source-table inspection is not an actual importer runtime claim.

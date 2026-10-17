@@ -1,0 +1,36 @@
+{
+  "upstream_revision": "c67a261f771a71461f6080a77efd91ab265abdf2",
+  "source": "/tmp/relay-e11-t5-tests/gsas/source/GSAS-II-c67a261f771a71461f6080a77efd91ab265abdf2/GSASII",
+  "local_binary": "/tmp/relay-e11-t5-setup/gsas-pyspg-build/pyspg.cpython-312-x86_64-linux-gnu.so",
+  "binary_sha256": "741c8c36cb49f935b20fb8d527cf67742d7ea692634f1734ed7c62177d10d973",
+  "build_script": "/tmp/ai-assistant-gsas-native.sh",
+  "build_log": "/home/andrewsazonov/runs/ai-assistant/gsas-native.log",
+  "source_changes": false,
+  "purpose": "independent reference runtime setup; no converter or correctness fixture authored",
+  "schema": "independent-gsas-positive-provenance/1",
+  "upstream_repository": "https://github.com/AdvancedPhotonSource/GSAS-II",
+  "licence": "../GSASII-LICENSE",
+  "generator": "../../generate_positive_gsas.py",
+  "inputs": {
+    "PBSO4.CWN": "59462ba6d7c72c9800b0b6bf41903f9933ed5ac5adab101d27022d5d25cf18ba",
+    "inst_d1a.prm": "a1031174a9b509f889377752f5c095a1dad49a25fb0a72c057f184f7b321fcea",
+    "PbSO4-Wyckoff.cif": "9bc19d0995561afd78a5f0563599c032751621da994e36c7570b4f515d9f0e2f"
+  },
+  "outputs": {
+    "positive-pbso4.gpx": "2039ee2c96864eaf6b65304246f0b37d0e9374146775a031c7922790d9b43872",
+    "positive-source-and-pattern.json": "2ba265d720c0c1286e5bb0c74d723a8432658d2c1b8ab67f5f25646829dbec35",
+    "mapping-witnesses.json": "a43e4215f5ca86582cb9e48f86796f208aaa88a80821f3ceb0fba6f37add4358"
+  },
+  "repeat_check": "Two fresh GSAS-II projects: exact scientific source/pattern JSON excluding GPX hash; exact mapping witnesses. GPX embeds saved timestamps.",
+  "units": {
+    "two_theta": "degree",
+    "weight": "inverse intensity variance",
+    "uiso": "angstrom_squared",
+    "size": "micrometre",
+    "microstrain": "ppm",
+    "sigma": "centidegree_squared Gaussian variance",
+    "gamma": "centidegree Lorentz FWHM",
+    "background": "GSAS-II declared basis over measured limits"
+  },
+  "native_gpx_acceptance": "OPEN: trusted generation proves neither production invocation nor hostile-input isolation."
+}

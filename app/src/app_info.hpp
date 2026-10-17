@@ -45,9 +45,11 @@ class ApplicationInfo : public QObject {
     // (the single-thread web build cannot), and the largest count it offers.
     Q_PROPERTY(bool engineThreadsSelectable READ engineThreadsSelectable CONSTANT)
     Q_PROPERTY(int engineThreadsMaximum READ engineThreadsMaximum CONSTANT)
+    Q_PROPERTY(bool assistantAvailable READ assistantAvailable CONSTANT)
+    Q_PROPERTY(QString assistantUnavailableReason READ assistantUnavailableReason CONSTANT)
 
    public:
-    explicit ApplicationInfo(QObject* parent = nullptr) : QObject(parent) {}
+    explicit ApplicationInfo(QObject* parent = nullptr);
 
     QString name() const { return QStringLiteral("EasyDiffraction"); }
     QString namePrefixForLogo() const { return QStringLiteral("easy"); }
@@ -86,6 +88,11 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QString diagnostics() const;
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
+    /// Device eligibility captured before QML observation; not provider connection or permission.
+    /// Read on the owning QObject thread. Native desktop remains eligible.
+    bool assistantAvailable() const;
+    /// Localized unsupported-device explanation, or empty when eligible. No network access.
+    QString assistantUnavailableReason() const;
     bool engineThreadsSelectable() const;
     // Twice the cores the platform reports, at least 16 and at most 64: a browser may report fewer cores
     // than the machine has (Brave reports 4 of an M2's 12), so a larger count can still be tried.
@@ -102,6 +109,7 @@ class ApplicationInfo : public QObject {
    private:
     // One column of the notices' "Components" list: 0 the name, 1 the licence, 2 the use, 3 the version.
     static QStringList componentColumn(int column);
+    const bool assistant_available_;
 
    public:
     QString description() const;

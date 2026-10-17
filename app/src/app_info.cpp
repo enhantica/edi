@@ -27,6 +27,7 @@
 #include <omp.h>
 #endif
 #ifdef Q_OS_WASM
+#include <emscripten.h>
 #include <emscripten/val.h>
 #endif
 
@@ -51,6 +52,82 @@ QString read_resource(const QString& path) {
     return QString::fromUtf8(file.readAll());
 }
 }  // namespace
+
+
+#ifdef Q_OS_WASM
+// Keep bounded navigator inspection/throw handling inside the existing browser bridge (ADR-0041).
+EM_JS(int, edi_assistant_device_available, (), {
+    try {
+        const nav = globalThis.navigator;
+        if (!nav || typeof nav !== "object") return 0;
+        const bounded = value => typeof value === "string" && value.length <= 4096;
+        const uaValue = nav.userAgent;
+        if (!bounded(uaValue) || uaValue.trim().length === 0) return 0;
+        const platformValue = nav.platform;
+        if (platformValue !== undefined && !bounded(platformValue)) return 0;
+        const touch = nav.maxTouchPoints;
+        if (touch !== undefined && (!Number.isSafeInteger(touch) || touch < 0)) return 0;
+        const hints = nav.userAgentData;
+        let hintPlatform = "";
+        if (hints !== undefined) {
+            if (hints === null || typeof hints !== "object" || Array.isArray(hints)) return 0;
+            const mobile = hints.mobile;
+            if (mobile !== undefined && typeof mobile !== "boolean") return 0;
+            if (mobile === true) return 0;
+            const value = hints.platform;
+            if (value !== undefined && !bounded(value)) return 0;
+            hintPlatform = value === undefined ? "" : value.toLowerCase();
+        }
+        const ua = uaValue.toLowerCase();
+        const platform = platformValue === undefined ? "" : platformValue.toLowerCase();
+        const mobile = value => /iphone|ipad|ipod|android|mobile|windows phone|iemobile|wince/.test(value);
+        if (mobile(ua) || mobile(platform) || mobile(hintPlatform)) return 0;
+        const family = value => {
+            let bits = 0;
+            if (/windows|win32|win64/.test(value)) bits |= 1;
+            if (/macintosh|macintel|macppc|mac68k|macos|mac os|^mac$/.test(value)) bits |= 2;
+            if (/linux|x11/.test(value)) bits |= 4;
+            if (/cros|chrome os|chromium os|chromeos/.test(value)) bits |= 8;
+            return bits;
+        };
+        const uaFamily = family(ua);
+        const platformFamily = family(platform);
+        const hintFamily = family(hintPlatform);
+        if (uaFamily === 0 || (platform.trim() !== "" && platformFamily === 0)
+            || (hintPlatform.trim() !== "" && hintFamily === 0)) return 0;
+        let combined = uaFamily | platformFamily | hintFamily;
+        // Chromium's CrOS UA and Linux legacy platform are compatible aliases.
+        if (combined === (4 | 8)) combined = 8;
+        if ((combined & (combined - 1)) !== 0) return 0;
+        if (combined === 2) {
+            const explicitDesktopHint = hintFamily === 2;
+            if (!explicitDesktopHint && (touch === undefined || touch > 1)) return 0;
+        }
+        return 1;
+    } catch (_) {
+        return 0;
+    }
+});
+#endif
+
+namespace {
+bool assistant_device_available() {
+#ifdef Q_OS_WASM
+    return edi_assistant_device_available() != 0;
+#else
+    return true;
+#endif
+}
+}  // namespace
+
+ApplicationInfo::ApplicationInfo(QObject* parent)
+    : QObject(parent), assistant_available_(assistant_device_available()) {}
+
+bool ApplicationInfo::assistantAvailable() const { return assistant_available_; }
+
+QString ApplicationInfo::assistantUnavailableReason() const {
+    return assistant_available_ ? QString() : tr("AI chat is not available on this device. Use a supported computer.");
+}
 
 void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
 

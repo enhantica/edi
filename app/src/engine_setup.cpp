@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "engine_setup.hpp"
+#include "session.hpp"
+#include <QThread>
+#include <QJSEngine>
+#include <stdexcept>
 
 #include <QDir>
 #include <QFile>
@@ -206,7 +210,7 @@ QByteArray& platform_spec() {
 }
 }  // namespace
 
-void configure_engine(QQmlEngine& engine) {
+static void configure_engine_settings(QQmlEngine& engine) {
     // The base's Settings objects write here (Globals/Vars.qml `pySettingsPath`); without it they would
     // point inside the read-only module resources. A demo or a test run uses its fresh directory.
     const QString config_dir = fresh_config_dir().isEmpty()
@@ -278,6 +282,48 @@ void store_settings_now() {
         browser_settings_stored() = text;
     }
 #endif
+}
+
+namespace {
+struct SessionBinding final : QObject {
+    explicit SessionBinding(QQmlEngine& engine, Session* object) : QObject(&engine), session(object) {}
+    Session* session;
+};
+SessionBinding* session_binding(QQmlEngine& engine) {
+    for (auto* child : engine.children()) if (auto* binding = dynamic_cast<SessionBinding*>(child)) return binding;
+    return nullptr;
+}
+}
+void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session) {
+    if (!session || session->parent() || session->thread() != engine.thread() ||
+        engine.thread() != QThread::currentThread() || session->engine_bound_ || session_binding(engine))
+        throw std::invalid_argument("Invalid or repeated per-engine Session composition");
+    auto* object = session.get();
+    auto binding = std::make_unique<SessionBinding>(engine, object);
+    object->setParent(&engine);
+    object->engine_bound_ = true;
+    QJSEngine::setObjectOwnership(object, QJSEngine::CppOwnership);
+    (void)session.release();
+    (void)binding.release();
+    configure_engine_settings(engine);
+}
+void configure_engine(QQmlEngine& engine) {
+    if (session_binding(engine) || engine.thread() != QThread::currentThread())
+        throw std::invalid_argument("Repeated or wrong-thread engine configuration");
+    configure_engine(engine, std::make_unique<Session>(nullptr));
+}
+Session* Session::create(QQmlEngine* engine, QJSEngine* script_engine) {
+    if (!engine || static_cast<QJSEngine*>(engine) != script_engine || engine->thread() != QThread::currentThread()) {
+        if (script_engine) script_engine->throwError(QStringLiteral("Session requires its configured owner engine"));
+        return nullptr;
+    }
+    const auto* binding = session_binding(*engine);
+    if (!binding || !binding->session || binding->session->thread() != engine->thread()) {
+        if (!binding) new SessionBinding(*engine, nullptr);
+        script_engine->throwError(QStringLiteral("Configure this engine before resolving edi Session"));
+        return nullptr;
+    }
+    return binding->session;
 }
 
 void use_design_font() {

@@ -529,6 +529,43 @@ TEST_CASE("E04-T9 C5 newest refusal clears all computed categories without dropp
         CHECK_MESSAGE(!preview.busy(), " C5 refusal ends the latest request without an infinite retry");
     }
 }
+// E11-T5 R1: existing trace instrumentation can fail at this genuine
+// post-edit/post-snapshot, pre-submit boundary. It is not an allocation hook.
+TEST_CASE("E11-T5 R1 pre-submit preparation failure preserves edit and permits real recovery") {
+    auto live = edi::load_project(e04_t9_fixture::silicon);
+    e04_t9::OwnerQueue queue;
+    bool fail_once = true;
+    int fired = 0, submissions = 0, edits = 0, publications = 0;
+    edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+        {{}, [&](const edi::work::Event& event) {
+            if (event.channel != "preview") return;
+            if (event.kind == edi::work::EventKind::Submitted) ++submissions;
+            if (event.kind == edi::work::EventKind::Snapshot && fail_once) {
+                fail_once = false; ++fired;
+                throw std::runtime_error("original one-shot preparation observer refusal");
+            }
+        }});
+    edi::LivePreview preview(live, worker,
+        {[&] { ++edits; }, [&](const edi::PreviewResult&) { ++publications; }});
+    const double original = live.structure().cell.length_a.value.get();
+    CHECK_THROWS_AS(preview.apply(edi::Edit::value(live.structure().cell.length_a,
+                                                original + 0.01)), std::runtime_error);
+    REQUIRE(fired == 1);
+    CHECK(live.structure().cell.length_a.value.get() == original + 0.01);
+    CHECK(edits == 1);
+    CHECK(publications == 0);
+    CHECK(submissions == 0);
+    // Busy may truthfully include owed work. The required property is that an
+    // explicit normal retry can actually submit, not cancel a phantom ticket.
+    preview.recalculate();
+    REQUIRE(submissions == 1);
+    queue.one();
+    CHECK(publications == 1);
+    CHECK_FALSE(preview.busy());
+    CHECK(live.structure().cell.length_a.value.get() == original + 0.01);
+    CHECK(fired == 1);
+}
+
 #else
 #define E04_T9_RED(name) TEST_CASE(name) { FAIL_CHECK(" accepted worker and transaction contracts are absent on red-first main"); }
 E04_T9_RED(" I2 I3 I4 I5 worker preserves every ordered delivery and cancellation")

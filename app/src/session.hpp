@@ -3,18 +3,27 @@
 #define EDI_APP_SESSION_HPP
 
 #include <QObject>
+#include <QJsonArray>
+#include "edi/calculation.hpp"
+#include <optional>
 #include <QString>
 #include <QTemporaryDir>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
+#include <functional>
 #include <vector>
 
 #include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+#include "assistant_view_model.hpp"
+
+class QQmlEngine;
+class QJSEngine;
 
 namespace edi_app {
+struct ImmutableAssistantResult;
 
 // The app's one list of messages (edi ADR-0017 §14): the warnings the last open reported and the errors the
 // views used to show in red — a calculation refusal, one row per distinct refusal. Roles `message` and
@@ -72,6 +81,7 @@ class Session : public QObject {
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
+    Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(edi_app::ExampleListModel* examples READ examples CONSTANT)
@@ -85,13 +95,21 @@ class Session : public QObject {
     Q_PROPERTY(QString projectLocation READ projectLocation NOTIFY projectLocationChanged)
     // Whether Save must ask where (edi ADR-0017 §13): a project with no directory yet, or a bundled example's
     // temporary working copy, is saved as.
+    Q_PROPERTY(bool assistantSaveReady READ assistantSaveReady NOTIFY assistantSaveChanged)
+    Q_PROPERTY(bool assistantSaveAs READ assistantSaveAs NOTIFY assistantSaveChanged)
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
+    Q_PROPERTY(bool needsFreshSaveAs READ needsFreshSaveAs NOTIFY needsSaveAsChanged)
 
    public:
-    explicit Session(QObject* parent = nullptr);
+    explicit Session(QObject* parent);
+    static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
+#ifndef __EMSCRIPTEN__
+    Session(edi::assistant::native::NativeDependencies dependencies, QObject* parent = nullptr);
+#endif
     ~Session() override;
 
     ProjectViewModel* project() const { return project_; }
+    AssistantViewModel* assistant() const { return assistant_; }
     bool hasProject() const { return project_ != nullptr; }
     QString lastError() const { return last_error_; }
     ExampleListModel* examples() const { return examples_; }
@@ -99,6 +117,14 @@ class Session : public QObject {
     QString openedExample() const { return opened_example_; }
     QString projectLocation() const;
     bool needsSaveAs() const;
+    bool needsFreshSaveAs() const { return fresh_result_; }
+    bool assistantSaveReady() const;
+    bool assistantSaveAs() const;
+    Q_INVOKABLE QUrl saveAsParent(const QString& intent) const;
+    Q_INVOKABLE QString beginSaveAs();
+    Q_INVOKABLE bool saveAsCurrent(const QString& intent) const;
+    Q_INVOKABLE bool completeSaveAs(const QString& intent, const QUrl& parent, const QString& leaf);
+    Q_INVOKABLE void cancelSaveAs(const QString& intent);
 
     // Open a project directory; only `file:` URLs (seam row 13).
     Q_INVOKABLE bool openProject(const QUrl& directory);
@@ -134,6 +160,7 @@ class Session : public QObject {
     void openedExampleChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    void assistantSaveChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op.
@@ -146,10 +173,42 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source, const QString& target, const QString& example);
-    void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
+                        bool managedResult = false, std::shared_ptr<ImmutableAssistantResult> result = {},
+                        std::optional<edi::WorkStamps> resultStamps = {}, bool nativePrepared = false, bool* nativeCommitted = nullptr);
+    friend class AssistantViewModel;
+    quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
+    bool emptyAssistantOwner(quint64 epoch) const noexcept;
+    void retireAssistantIntent() noexcept;
+    void retireExportIntent() noexcept;
+    bool adoptAssistantResult(std::shared_ptr<ImmutableAssistantResult> result, quint64 epoch, const std::function<bool()>& current);
+    std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project project, quint64 epoch, const std::function<bool()>& current);
+    bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model, quint64 epoch,
+                                    const std::function<bool()>& current, bool& presentationComplete);
+    bool commitAssistantCurrentSave(ProjectViewModel* original, quint64 epoch,
+        ProjectViewModel::NativeSavedState& prepared) noexcept;
+    bool presentAssistantCurrentSave(ProjectViewModel* original, quint64 epoch);
+    QString armAssistantSave(const QString& id, ProjectViewModel* original, quint64 epoch, bool fresh,
+        const QUrl& parent, const QString& leaf, std::function<bool()> current,
+        std::function<bool()> start, std::function<void()> cancelled);
+    struct SaveIntent;
+    static quint64 assistantSaveIntentBytes() noexcept;
+    bool consumeAssistantSave(std::unique_ptr<SaveIntent> intent, bool selectionMatches) noexcept;
+    bool saveIntentCurrent(const SaveIntent& intent) const;
+    std::unique_ptr<SaveIntent> save_intent_;
+    std::shared_ptr<ImmutableAssistantResult> assistant_result_;
+    quint64 assistant_epoch_ = 0;
+    quint64 replacement_generation_ = 0; // Private exact synchronous attachment owner.
+    bool assistant_epoch_exhausted_ = false, fresh_result_ = false, result_edited_ = false;
+    std::optional<edi::WorkStamps> result_saved_stamps_;
+    QString exported_result_;
+    QJsonArray exported_files_;
     void setLastError(const QString& error);
 
     ProjectViewModel* project_ = nullptr;
+    friend void configure_engine(QQmlEngine&, std::unique_ptr<Session>);
+    bool engine_bound_ = false;
+    AssistantViewModel* assistant_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;
     WarningListModel* warnings_;

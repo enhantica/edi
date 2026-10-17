@@ -108,15 +108,16 @@ EaElements.GroupBox {
             id: filters
             spacing: AppSizes.inputSpacing
             EaElements.TextField {
+                id: nameFilter
                 objectName: "parameters.nameFilter"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing - resetFilters.width) / 3
                 placeholderText: qsTr("Filter by name")
                 onTextChanged: filter.nameFilter = text
             }
             SearchableComboBox {
                 id: categoryPicker
                 objectName: "parameters.category"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing - resetFilters.width) / 3
                 model: filter.categoryGroups
                 textRole: "title"
                 searchThreshold: 1000
@@ -158,10 +159,28 @@ EaElements.GroupBox {
                 }
             }
             SearchableComboBox {
+                id: variabilityPicker
                 objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+                width: (EaStyle.Sizes.sideBarContentWidth - 3 * AppSizes.inputSpacing - resetFilters.width) / 3
                 model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
                 onActivated: index => filter.variability = index
+            }
+            // A normal manual control: the assistant clicks this same button,
+            // rather than writing the filters behind decorative pointer input.
+            EaElements.ToolButton {
+                id: resetFilters
+                objectName: "parameters.resetFilters"
+                width: height
+                fontIcon: "eraser"
+                ToolTip.text: qsTr("Show all parameters and clear filters")
+                Accessible.name: ToolTip.text
+                onClicked: {
+                    nameFilter.clear();
+                    filter.categoryFilter = "";
+                    filter.variability = 0;
+                    variabilityPicker.currentIndex = 0;
+                    table.positionViewAtBeginning();
+                }
             }
         }
 
@@ -177,6 +196,13 @@ EaElements.GroupBox {
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
+            // Keep an ordinary filtered selection in view after model updates;
+            // delegates are intentionally created only inside this viewport.
+            function revealCurrentRow() {
+                if (currentRow >= 0 && currentRow < count)
+                    positionViewAtIndex(currentRow, ListView.Contain);
+            }
+            onCurrentRowChanged: Qt.callLater(revealCurrentRow)
 
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 
@@ -261,7 +287,48 @@ EaElements.GroupBox {
 
                 objectName: `parameters.row.${index}`
                 TapHandler {
-                    onTapped: group.selected = row.parameter
+                    readonly property var assistantGesture: ({ current: null })
+
+                    function sameGesture(point) {
+                        const retained = assistantGesture.current;
+                        return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                    }
+                    function discardGesture(point) {
+                        if (sameGesture(point)) {
+                            assistantGesture.current.closed = true;
+                            assistantGesture.current.proof = null;
+                        }
+                    }
+                    onGrabChanged: (transition, eventPoint) => {
+                        if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
+                            if (sameGesture(eventPoint))
+                                return; // Passive/exclusive transitions cannot rearm this press.
+                            if (eventPoint.state !== EventPoint.Pressed)
+                                return;
+                            const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
+                            const holder = assistantGesture;
+                            holder.current = original; // No QML notification before capture/cancellation.
+                            const proof = Session.assistant.beginManualControlInput(row, eventPoint, row.parameter);
+                            if (holder.current === original && !original.closed)
+                                original.proof = proof; // An old callback cannot overwrite a newer grab.
+                        } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
+                            discardGesture(eventPoint);
+                        }
+                    }
+                    onCanceled: eventPoint => {
+                        if (sameGesture(eventPoint))
+                            discardGesture(eventPoint);
+                    }
+                    onTapped: eventPoint => {
+                        if (!sameGesture(eventPoint) || assistantGesture.current.closed)
+                            return;
+                        const original = assistantGesture.current;
+                        const proof = original.proof;
+                        original.closed = true;
+                        original.proof = null; // Consume BEFORE validation/action and any reentry.
+                        if (Session.assistant.completeManualControlInput(row, eventPoint, row.parameter, proof))
+                            group.selected = row.parameter;
+                    }
                 }
 
                 EaComponents.TableViewLabel {
@@ -332,6 +399,17 @@ EaElements.GroupBox {
             id: sliderRow
 
             readonly property ParameterItem selected: group.selected
+            // A real same-parameter draft takes precedence over slider input.
+            // Finish it with Return/ordinary commit or cancel explicitly with
+            // Escape; never blur, apply or discard it just to enable a slider.
+            readonly property bool selectedDraft: {
+                const window = group.Window.window;
+                for (let editor = window ? window.activeFocusItem : null; editor; editor = editor.parentItem) {
+                    if (editor.assistantManualDraft === true && editor.manualDraftParameter === selected)
+                        return true;
+                }
+                return false;
+            }
             property real lower: 0
             property real upper: 1
 
@@ -366,7 +444,7 @@ EaElements.GroupBox {
                 objectName: "parameters.slider"
                 width: EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize * 14
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: sliderRow.selected !== null
+                enabled: sliderRow.selected !== null && !sliderRow.selectedDraft
                 from: sliderRow.lower
                 to: sliderRow.upper
                 value: sliderRow.selected ? sliderRow.selected.value : 0

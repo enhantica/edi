@@ -271,11 +271,11 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     // published palette API, whose independent source and contrast gates own correctness.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,edi::pattern_colour(edi::ColourScheme::Default,0,1,false),edi::pattern_colour(edi::ColourScheme::Default,0,1,true),2},
+        {edi::SeriesKind::Measured,edi::pattern_colour(edi::kDefaultColourScheme,0,1,false),edi::pattern_colour(edi::kDefaultColourScheme,0,1,true),2},
         {edi::SeriesKind::Calculated,"#F44336","#EF9A9A",2},
         {edi::SeriesKind::Background,"#607D8B","#B0BEC5",1},
         {edi::SeriesKind::Residual,"#8BC34A","#C5E1A5",1},
-        {edi::SeriesKind::BraggTicks,edi::structure_colour(edi::ColourScheme::Default,0,false),edi::structure_colour(edi::ColourScheme::Default,0,true),1}}) {
+        {edi::SeriesKind::BraggTicks,edi::structure_colour(edi::kDefaultColourScheme,0,false),edi::structure_colour(edi::kDefaultColourScheme,0,true),1}}) {
         const auto& s = series(p,kind);
         const auto style = std::find_if(styles.begin(),styles.end(),[&](const auto& v){return v.key==s.style;});
         REQUIRE_MESSAGE(style != styles.end(), " I23 every series resolves to the one authoritative style table");

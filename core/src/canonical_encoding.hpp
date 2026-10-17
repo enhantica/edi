@@ -10,6 +10,8 @@
 // edi::Project REQUIRES extending it.
 
 #include <string>
+#include <cstddef>
+#include <vector>
 
 #include "edi/model.hpp"
 
@@ -32,12 +34,33 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
 // which is the conservative direction.
 std::string geometry_inputs(const Structure& structure);
 
+// Refill an existing encoding buffer. Publication reserves its complete unchanged-shape width before
+// scalar writes; values and write identities have fixed encoded widths, so refilling cannot grow it.
+void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structures,
+                             const ExperimentBase& experiment);
+void geometry_inputs_into(std::string& out, const Structure& structure);
+
 // The declared relations (edi ADR-0024): every alias and constraint row with the identity of each
 // field's last write, and each collection's generation. A declaration sets dependents' values, so it
 // is an input of every computed category and of the geometry; equal encodings mean no declaration
 // was written, an equal rewrite included.
 std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             const ItemVec<ParameterConstraint>& constraints);
+
+// Preparation resolves aliases and records only the fixed-width value/write-ID
+// slots. The owning declarations/shape must remain unchanged until commit.
+struct RelationValueSlot {
+    const Parameter* parameter;
+    std::size_t offset;
+};
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints,
+                            std::vector<RelationValueSlot>* values);
+// Slots were checked against this exact complete encoding before live writes.
+// No name joining, resizing, allocation or declaration traversal occurs here.
+void refresh_relation_values(std::string& encoding,
+                              const std::vector<RelationValueSlot>& values) noexcept;
+
 
 }  // namespace edi::detail
 

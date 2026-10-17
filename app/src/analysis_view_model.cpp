@@ -94,20 +94,25 @@ bool AliasListModel::setText(int row, const QString& role, const QString& value)
     }
     const std::string text = value.toStdString();
     if (role == QLatin1String("id")) {
-        return editor_.apply_relation_edit(edi::Edit::rename_alias(*alias, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::rename_alias(*alias, text), {ProjectEditor::RelationAction::Kind::AliasId, alias, value}).isEmpty();
     }
     if (role == QLatin1String("parameter")) {
-        return editor_.apply_relation_edit(edi::Edit::assign(alias->parameter_unique_name, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::assign(alias->parameter_unique_name, text), {ProjectEditor::RelationAction::Kind::AliasParameter, alias, value}).isEmpty();
     }
     return false;
 }
 
 void AliasListModel::append() {
     edi::Project& project = project_;
+    const auto offered = edi::named_parameters(project);
+    if (offered.empty()) return; // No lawful target: no Edit or Undo is admitted.
     edi::ParameterAlias alias;
     alias.id = unused_name("alias_", [&project](const std::string& id) { return holds_id(project.aliases, id); });
-    // The first parameter no alias names yet, else the first parameter.
-    for (const edi::NamedParameter& named : edi::named_parameters(project)) {
+    // First not-yet-named parameter, otherwise the first real offered target.
+    // Multiple alias names for one parameter are lawful; the shared validator
+    // still owns ID/target/dependence and complete scientific validation.
+    alias.parameter_unique_name = offered.front().unique_name;
+    for (const edi::NamedParameter& named : offered) {
         bool aliased = false;
         for (const auto& existing : project.aliases) {
             aliased = aliased || existing->parameter_unique_name.value() == named.unique_name;
@@ -117,7 +122,7 @@ void AliasListModel::append() {
             break;
         }
     }
-    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(alias)));
+    editor_.apply_relation_control(edi::Edit::append(project.aliases, std::move(alias)), {ProjectEditor::RelationAction::Kind::AliasAppend});
 }
 
 void AliasListModel::duplicate(int row) {
@@ -168,10 +173,10 @@ bool ConstraintListModel::setText(int row, const QString& role, const QString& v
     }
     const std::string text = value.toStdString();
     if (role == QLatin1String("id")) {
-        return editor_.apply_relation_edit(edi::Edit::rename_constraint(*constraint, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::rename_constraint(*constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintId, constraint, value}).isEmpty();
     }
     if (role == QLatin1String("expression")) {
-        return editor_.apply_relation_edit(edi::Edit::assign(constraint->expression, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::assign(constraint->expression, text), {ProjectEditor::RelationAction::Kind::ConstraintExpression, constraint, value}).isEmpty();
     }
     return false;
 }
@@ -182,7 +187,7 @@ bool ConstraintListModel::setEnabled(int row, bool enabled) {
     if (constraint == nullptr) {
         return false;
     }
-    return editor_.apply_relation_edit(edi::Edit::assign(constraint->enabled, enabled)).isEmpty();
+    return editor_.apply_relation_control(edi::Edit::assign(constraint->enabled, enabled), {ProjectEditor::RelationAction::Kind::ConstraintEnabled, constraint, {}, enabled}).isEmpty();
 }
 
 void ConstraintListModel::append() {
@@ -190,11 +195,12 @@ void ConstraintListModel::append() {
     edi::ParameterConstraint constraint;
     constraint.id =
         unused_name("constraint_", [&project](const std::string& id) { return holds_id(project.constraints, id); });
-    // A starting expression from the first two aliases, for the user to edit.
+    // New rows are editable declarations; activation is an explicit human choice (ADR-0024).
+    constraint.enabled = false;
     if (project.aliases.size() >= 2) {
         constraint.expression = project.aliases[1]->id.value() + " = " + project.aliases[0]->id.value();
     }
-    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(constraint)));
+    editor_.apply_relation_control(edi::Edit::append(project.constraints, std::move(constraint)), {ProjectEditor::RelationAction::Kind::ConstraintAppend});
 }
 
 void ConstraintListModel::duplicate(int row) {

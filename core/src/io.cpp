@@ -8,6 +8,8 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+
+#include <type_traits>
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
 #include "edi/validation.hpp"
@@ -18,6 +20,8 @@
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
+#include "import_symmetry.hpp"
+#include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 
 #include <algorithm>
@@ -1373,7 +1377,7 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     return data;
 }
 
-BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
+BraggPdExperiment experiment_from_block(const Block& block, const std::string& where, bool embedded_only = false) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
     BraggPdExperiment experiment;
@@ -1927,6 +1931,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         experiment.background.assign(std::move(points));
     }
     experiment.data = parse_measured_data(block, resolved.mode, where);
+    if (embedded_only && !experiment.data.has_value()) {
+        throw IoError("assistant result requires embedded measured data; generated grids are unsupported: " + where);
+    }
 
     // The one-loader ruling ("one loader, project contents select calculate vs fit"): a block may
     // declare its measured `_data` loop (fit-ready) or its `_data_range.<axis>_min/_max/_step`
@@ -2431,10 +2438,15 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
             structure.geom.*field = value;
         }
     }
-    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
-        structure.space_group.name_h_m = *symbol;
-    } else {
-        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
+    structure.space_group.name_h_m = block.require("_space_group_name_H-M_alt", where);
+    if (const auto* code = block.find("_space_group_IT_coordinate_system_code"))
+        if (*code != "?" && *code != ".") structure.space_group.coord_system_code = *code;
+    if (const auto* number = block.find("_space_group_IT_number"); number && *number != "?" && *number != ".") {
+        std::size_t used = 0; int value = 0;
+        try { value = std::stoi(*number, &used); } catch (const std::exception&) {}
+        if (used != number->size() || value < 1 || value > 230)
+            fail_schema(where, "invalid-it-number", "The supplied CIF IT number must be an integer in 1..230");
+        structure.space_group.it_number = value;
     }
     read_into(structure.cell.length_a,
               parse_parameter(block.require("_cell_length_a", where), where), where);
@@ -2591,6 +2603,7 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
             throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
         }
     }
+    detail::normalize_imported_wyckoff(structure);
     // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
     // each declared type, converted from the form the file spells it in, uncertainties with it.
     if (!structure.atom_site_aniso.empty()) {
@@ -2606,17 +2619,109 @@ Structure structure_from_cif_block(const Block& block, const std::string& where)
     return structure;
 }
 
+// CIF 1.1 section 26: data names ignore ASCII case, data values do not.
+// Keep this local to the structure CIF vocabulary; native schema parsing stays strict.
+std::string structure_cif_tag_key(std::string tag) {
+    for (char& c : tag) if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    return tag;
+}
+bool structure_cif_has_tag(const Block& block, const std::string& key) {
+    for (const auto& item : block.items) if (structure_cif_tag_key(item.first) == key) return true;
+    for (const auto& loop : block.loops)
+        for (const auto& tag : loop.tags) if (structure_cif_tag_key(tag) == key) return true;
+    return false;
+}
+
+// Dotted CIF cell names overlap the native format. Only an explicit native
+// declaration selects the strict Edi reader; CIF aliases reuse the parsed Block
+// and classic builder. Values, uncertainty spelling and row order are untouched.
+Block structure_cif_vocabulary(const Block& block, const std::string& where) {
+    static const std::map<std::string, std::string> aliases = [] {
+        const std::pair<const char*, const char*> spellings[]{
+        {"_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff"},
+        {"_geom.bond_distance_incr", "_geom_bond_distance_incr"},
+        {"_cell.length_a", "_cell_length_a"},
+        {"_cell.length_b", "_cell_length_b"},
+        {"_cell.length_c", "_cell_length_c"},
+        {"_cell.angle_alpha", "_cell_angle_alpha"},
+        {"_cell.angle_beta", "_cell_angle_beta"},
+        {"_cell.angle_gamma", "_cell_angle_gamma"},
+        {"_space_group.name_H-M_alt", "_space_group_name_H-M_alt"},
+        {"_space_group.IT_coordinate_system_code", "_space_group_IT_coordinate_system_code"},
+        {"_space_group.IT_number", "_space_group_IT_number"},
+        // The archived symmetry H-M name and its replacement denote one field.
+        {"_symmetry.space_group_name_H-M", "_space_group_name_H-M_alt"},
+        {"_symmetry_space_group_name_H-M", "_space_group_name_H-M_alt"},
+        {"_symmetry.Int_Tables_number", "_space_group_IT_number"},
+        {"_symmetry_Int_Tables_number", "_space_group_IT_number"},
+        {"_atom_site.label", "_atom_site_label"},
+        {"_atom_site.type_symbol", "_atom_site_type_symbol"},
+        {"_atom_site.fract_x", "_atom_site_fract_x"},
+        {"_atom_site.fract_y", "_atom_site_fract_y"},
+        {"_atom_site.fract_z", "_atom_site_fract_z"},
+        {"_atom_site.occupancy", "_atom_site_occupancy"},
+        {"_atom_site.Wyckoff_symbol", "_atom_site_Wyckoff_symbol"},
+        {"_atom_site.B_iso_or_equiv", "_atom_site_B_iso_or_equiv"},
+        {"_atom_site.U_iso_or_equiv", "_atom_site_U_iso_or_equiv"},
+        {"_atom_site.ADP_type", "_atom_site_adp_type"},
+        {"_atom_site.adp_type", "_atom_site_adp_type"},
+        {"_atom_site_aniso.label", "_atom_site_aniso_label"},
+        {"_atom_site_aniso.U_11", "_atom_site_aniso_U_11"},
+        {"_atom_site_aniso.U_22", "_atom_site_aniso_U_22"},
+        {"_atom_site_aniso.U_33", "_atom_site_aniso_U_33"},
+        {"_atom_site_aniso.U_12", "_atom_site_aniso_U_12"},
+        {"_atom_site_aniso.U_13", "_atom_site_aniso_U_13"},
+        {"_atom_site_aniso.U_23", "_atom_site_aniso_U_23"},
+        {"_atom_site_aniso.B_11", "_atom_site_aniso_B_11"},
+        {"_atom_site_aniso.B_22", "_atom_site_aniso_B_22"},
+        {"_atom_site_aniso.B_33", "_atom_site_aniso_B_33"},
+        {"_atom_site_aniso.B_12", "_atom_site_aniso_B_12"},
+        {"_atom_site_aniso.B_13", "_atom_site_aniso_B_13"},
+        {"_atom_site_aniso.B_23", "_atom_site_aniso_B_23"},
+        {"_atom_site_aniso.beta_11", "_atom_site_aniso_beta_11"},
+        {"_atom_site_aniso.beta_22", "_atom_site_aniso_beta_22"},
+        {"_atom_site_aniso.beta_33", "_atom_site_aniso_beta_33"},
+        {"_atom_site_aniso.beta_12", "_atom_site_aniso_beta_12"},
+        {"_atom_site_aniso.beta_13", "_atom_site_aniso_beta_13"},
+        {"_atom_site_aniso.beta_23", "_atom_site_aniso_beta_23"}};
+        std::map<std::string, std::string> result;
+        for (const auto& [alias, canonical] : spellings) {
+            result.emplace(structure_cif_tag_key(alias), canonical);
+            result.emplace(structure_cif_tag_key(canonical), canonical);
+        }
+        return result;
+    }();
+    std::set<std::string> declarations;
+    const auto normalize = [&](std::string& tag) {
+        if (const auto found = aliases.find(structure_cif_tag_key(tag)); found != aliases.end()) tag = found->second;
+        if (!declarations.insert(structure_cif_tag_key(tag)).second)
+            fail_schema(where, "duplicate-cif-alias", "More than one declaration names CIF field " + tag);
+    };
+    Block normalized; normalized.name = block.name;
+    for (const auto& item : block.items) {
+        auto tag = item.first; normalize(tag);
+        normalized.items.emplace_back(std::move(tag), item.second);
+    }
+    for (const auto& loop : block.loops) {
+        auto tags = loop.tags;
+        for (auto& tag : tags) normalize(tag);
+        // Loop tags/rows are immutable. Reconstruct through their actual identity
+        // validating constructor; never cast away const or bypass the boundary.
+        normalized.loops.emplace_back(std::move(tags), loop.rows, where);
+    }
+    return normalized;
+}
+
 Structure structure_from_edi_text(const std::string& text) {
     const std::string where = "<from_cif_str>";
     const Block block = parse_block(text, where);
-    // Vocabulary dispatch: the dot-form `.edi` schema and classic IUCr CIF are both accepted,
-    // exactly one per document, decided by which cell vocabulary is present.
-    if (block.find("_cell.length_a") != nullptr) {
-        return structure_from_block(block, where);
-    }
-    if (block.find("_cell_length_a") != nullptr) {
-        return structure_from_cif_block(block, where);
-    }
+    // Native schema/native-only identities stay strict; never insert a schema
+    // tag into ordinary CIF just because its dictionary uses dotted names.
+    if (structure_cif_has_tag(block, "_edi.schema_version")) return structure_from_block(block, where);
+    if (structure_cif_has_tag(block, "_atom_site.id") || structure_cif_has_tag(block, "_atom_site.adp_iso") ||
+        structure_cif_has_tag(block, "_space_group.name_h_m")) return structure_from_block(block, where);
+    const auto cif = structure_cif_vocabulary(block, where);
+    if (cif.find("_cell_length_a") != nullptr) return structure_from_cif_block(cif, where);
     throw IoError(where +
                   ": neither `.edi` (_cell.length_a) nor CIF (_cell_length_a) cell vocabulary "
                   "present");
@@ -3017,6 +3122,13 @@ bool holds_experiment(const Project& project, const std::string& name) {
 
 }  // namespace
 
+Structure load_structure_file(const std::string& path) {
+    const auto extension = fs::path(path).extension();
+    if (extension == ".edi") return load_structure_edi_file(path);
+    if (extension == ".cif") return structure_from_edi_text(read_file(path));
+    throw IoError(path + ": choose a native .edi structure or a supported .cif file");
+}
+
 Structure load_structure_edi_file(const std::string& path) {
     return structure_from_block(edi_file_block(path), path);
 }
@@ -3207,7 +3319,8 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+namespace {
+Project load_project_impl(const std::string& directory, const WarningSink& on_warning, bool assistant_result) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3258,7 +3371,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
             }
         }
-        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
         // The file's own contents declare its category — a `_data` loop means measured data
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
@@ -3300,6 +3413,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 }
             }
             if (const Loop* files = block.loop_with("_report_file.name")) {
+                if (assistant_result && !files->rows.empty()) throw IoError("assistant result external report files are unsupported");
                 for (const auto& row : files->rows) {
                     ReportFile file;
                     file.name = loop_cell(*files, row, "_report_file.name", where);
@@ -3320,6 +3434,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         const Block block =
             parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
         const std::string* mode = block.find("_fitting_mode.type");
+        if (assistant_result && (block.find("_sequential_fit.data_dir") ||
+            (mode && is_scan_fitting_mode(*mode)))) {
+            throw IoError("assistant result external scan declarations are unsupported");
+        }
         if (mode != nullptr) {
             // Review-1 F4: the closed set is enforced at LOAD on this side too. Without it a
             // lookalike survived loading and then performed one plausible template fit through
@@ -4047,6 +4165,16 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     return project;
 }
 
+} // namespace
+Project load_project(const std::string& directory, const WarningSink& on_warning) {
+    return load_project_impl(directory, on_warning, false);
+}
+namespace detail {
+Project load_assistant_project(const std::string& directory) {
+    return load_project_impl(directory, {}, true);
+}
+} // namespace detail
+
 double parse_edi_double(const std::string& text, const std::string& where) {
     // Review-10 F2: the ONE numeric boundary, exported for the adapter's start_tied parsing —
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
@@ -4186,13 +4314,15 @@ UndoFitOutcome restore_fit_start(Project& project) {
 }
 
 void copy_fit_result(Project& to, const Project& from) {
-    to.fit_result = from.fit_result;
+    FitResultRecord prepared = from.fit_result;
+    static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+    to.fit_result = std::move(prepared);
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
     }
 }
 
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) {
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept {
     to.fit_n_data_points = from.fit_n_data_points;
     to.fit_prof_r_factor = from.fit_prof_r_factor;
     to.fit_prof_wr_factor = from.fit_prof_wr_factor;

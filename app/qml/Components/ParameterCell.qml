@@ -69,9 +69,9 @@ EaComponents.TableViewParameter {
     readonly property string editText: item !== null ? NumberText.full(item.value) : value
 
     onActiveFocusChanged: {
-        if (activeFocus && text === value) {
-            text = editText;
-        } else if (!activeFocus) {
+        if (activeFocus) {
+            refreshCleanText();
+        } else {
             commit();
             cursorPosition = 0;
         }
@@ -105,22 +105,121 @@ EaComponents.TableViewParameter {
         visible: cell.warned && (cell.hovered || cell.activeFocus)
     }
 
-    onValueChanged: typedRefusal = ""
+    onValueChanged: {
+        typedRefusal = "";
+        refreshCleanText();
+    }
+    onEditTextChanged: refreshCleanText()
+    onItemChanged: {
+        if (manualEditing && manualItem !== item)
+            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it without applying it.");
+        else
+            refreshCleanText();
+    }
+    onInputMethodComposingChanged: {
+        if (inputMethodComposing && !assistantEditing) {
+            if (!manualEditing)
+                manualItem = item;
+            manualEditing = true;
+            // Do not assign text here: that would destroy the IME preedit.
+        }
+    }
+    // textEdited is real text input, unlike focus formatting or model publication.
+    onTextEdited: {
+        if (assistantEditing)
+            return;
+        if (!manualEditing)
+            manualItem = item;
+        manualEditing = true;
+        // TextInput editing can retain a QML binding. Detach only the genuine
+        // user draft so unrelated publication cannot replace what was typed.
+        const draft = text;
+        text = draft;
+    }
+    Keys.onEscapePressed: event => {
+        resetEditorText();
+        event.accepted = true;
+    }
     onAccepted: commit()
     onEditingFinished: commit()
 
     // Return and leaving the cell both commit; the second of the two finds nothing new. Text left as shown, rounded or
     // in full, changes nothing.
-    function commit() {
-        if (item === null)
+    // Host-owned cancellation restores the current committed model binding,
+    // never the old pre-animation number or a newer manual model edit.
+    property bool assistantEditing: false
+    property bool assistantCommitReady: false
+    property bool manualEditing: false
+    property ParameterItem manualItem: null
+    readonly property bool assistantManualDraft: manualEditing || inputMethodComposing
+    // The Analysis slider uses the exact draft owner, including a recycled cell.
+    readonly property ParameterItem manualDraftParameter: manualEditing ? manualItem : null
+    property bool committing: false
+    function refreshCleanText() {
+        if (manualEditing || inputMethodComposing || assistantEditing || assistantCommitReady)
             return;
-        if (text !== cell.value && text !== cell.editText) {
-            typedRefusal = TypedInput.refusal(text, "number");
-            if (typedRefusal === "") {
-                item.value = Number(text);
-            }
+        // Raw editText changes refresh a clean focused spelling, even when its
+        // rounded display is unchanged. No live binding can replace IME preedit.
+        if (activeFocus)
+            text = editText;
+        else
+            text = Qt.binding(() => cell.value);
+    }
+    function resetEditorText() {
+        manualEditing = false;
+        manualItem = null;
+        assistantCommitReady = false;
+        // Keep the assistant partial-text guard until the authoritative binding
+        // is back. This never writes an old pre-slider value to science.
+        if (activeFocus)
+            text = editText;
+        else
+            text = Qt.binding(() => cell.value);
+        typedRefusal = "";
+        deselect();
+        if (!activeFocus)
+            cursorPosition = 0;
+        assistantEditing = false;
+    }
+    function beginAssistantEdit() {
+        assistantEditing = true;
+        assistantCommitReady = false;
+        const draft = text;
+        text = draft;
+    }
+    function allowAssistantCommit() {
+        assistantCommitReady = true;
+        assistantEditing = false;
+    }
+    function cancelAssistantEdit() {
+        // An original real manual event may already own this editor. A late
+        // assistant cleanup never clears that new user's genuine draft.
+        if (!manualEditing)
+            resetEditorText();
+    }
+    function commit() {
+        if (committing || inputMethodComposing)
+            return;
+        // Focus loss while paced typing is not permission to commit a partial number.
+        if (assistantEditing) { cancelAssistantEdit(); return; }
+        // Clean full-precision display is never a user edit, even if the model
+        // changed after focus (slider/fit/Undo/SU refresh).
+        if (!manualEditing && !assistantCommitReady) { refreshCleanText(); return; }
+        if (item === null || (manualEditing && manualItem !== item)) {
+            typedRefusal = qsTr("This draft no longer belongs to the displayed parameter. Escape cancels it.");
+            return;
         }
-        text = Qt.binding(() => cell.value);
+        committing = true;
+        try {
+            if (text !== cell.value && text !== cell.editText) {
+                typedRefusal = TypedInput.refusal(text, "number");
+                if (typedRefusal === "")
+                    item.value = Number(text);
+            }
+            const refusal = typedRefusal;
+            resetEditorText();
+            typedRefusal = refusal;
+        } finally { committing = false; }
     }
     onFitToggled: checked => {
         if (item !== null)

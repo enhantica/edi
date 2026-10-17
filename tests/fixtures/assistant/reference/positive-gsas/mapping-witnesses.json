@@ -1,0 +1,173 @@
+{
+  "schema": "independent-assistant-seams/1",
+  "gsas_source_revision": "c67a261f771a71461f6080a77efd91ab265abdf2",
+  "weight_sigma": [
+    {
+      "index": 0,
+      "weight": 0.004545454545454545,
+      "sigma": 14.832396974191326
+    },
+    {
+      "index": 72,
+      "weight": 0.010256410256410256,
+      "sigma": 9.874208829065749
+    },
+    {
+      "index": 223,
+      "weight": 0.016304347826086956,
+      "sigma": 7.831560082980486
+    },
+    {
+      "index": 1000,
+      "weight": 0.0308641975308642,
+      "sigma": 5.692099788303083
+    },
+    {
+      "index": 2200,
+      "weight": 0.019230769230769232,
+      "sigma": 7.211102550927978
+    }
+  ],
+  "displacement": [
+    {
+      "label": "Pb",
+      "uiso_angstrom_squared": 0.0073,
+      "biso_angstrom_squared": 0.5763848970236185
+    },
+    {
+      "label": "S",
+      "uiso_angstrom_squared": 0.0121,
+      "biso_angstrom_squared": 0.9553777060254498
+    },
+    {
+      "label": "O1",
+      "uiso_angstrom_squared": 0.0187,
+      "biso_angstrom_squared": 1.476492818402968
+    },
+    {
+      "label": "O2",
+      "uiso_angstrom_squared": 0.0094,
+      "biso_angstrom_squared": 0.7421942509619197
+    },
+    {
+      "label": "O3",
+      "uiso_angstrom_squared": 0.0235,
+      "biso_angstrom_squared": 1.8554856274047993
+    }
+  ],
+  "occupancy": [
+    {
+      "label": "Pb",
+      "site_occupancy": 1.0,
+      "site_multiplicity": 4
+    },
+    {
+      "label": "S",
+      "site_occupancy": 1.0,
+      "site_multiplicity": 4
+    },
+    {
+      "label": "O1",
+      "site_occupancy": 1.0,
+      "site_multiplicity": 4
+    },
+    {
+      "label": "O2",
+      "site_occupancy": 1.0,
+      "site_multiplicity": 4
+    },
+    {
+      "label": "O3",
+      "site_occupancy": 0.83,
+      "site_multiplicity": 8
+    }
+  ],
+  "widths": [
+    {
+      "two_theta_deg": 73.0,
+      "variance_centideg_squared": 112.25312869584312,
+      "gaussian_fwhm_squared_deg": 0.062246351731645076,
+      "lorentz_fwhm_deg_instrument": 0.1990187120138759,
+      "lorentz_fwhm_deg_with_isotropic_sample": 0.20664126685229128
+    },
+    {
+      "two_theta_deg": 121.75,
+      "variance_centideg_squared": 385.7016716588102,
+      "gaussian_fwhm_squared_deg": 0.2138784209980496,
+      "lorentz_fwhm_deg_instrument": 0.3527504940924617,
+      "lorentz_fwhm_deg_with_isotropic_sample": 0.36983517235311447
+    }
+  ],
+  "background": {
+    "angles_deg": [
+      10.0,
+      32.5,
+      73.0,
+      121.75,
+      155.85
+    ],
+    "coefficients": [
+      113.0,
+      17.0,
+      -9.0
+    ],
+    "values_by_declared_basis": {
+      "chebyschev": [
+        87.0,
+        96.9420147565681,
+        110.5196157806266,
+        119.49972469966409,
+        121.0
+      ],
+      "chebyschev-1": [
+        87.0,
+        101.63891466911836,
+        119.35290999800327,
+        125.9487123407063,
+        121.0
+      ],
+      "cosine": [
+        121.37733482393531,
+        124.16206782875115,
+        123.50811550919174,
+        98.1074882694995,
+        87.0
+      ]
+    }
+  },
+  "fullprof": {
+    "source": "knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_biso-tied/PROVENANCE.md",
+    "occupancy": [
+      {
+        "label": "Co1",
+        "site_multiplicity": 4,
+        "general_multiplicity": 8,
+        "pcr_occ": 0.5,
+        "site_occupancy": 1.0
+      },
+      {
+        "label": "O3",
+        "site_multiplicity": 8,
+        "general_multiplicity": 8,
+        "pcr_occ": 1.0,
+        "site_occupancy": 1.0
+      }
+    ],
+    "affine_shared_shift": {
+      "starts": [
+        0.01,
+        0.98759
+      ],
+      "codewords": [
+        181.0,
+        181.0
+      ],
+      "shift": 0.15557,
+      "values": [
+        0.16557,
+        1.14316
+      ],
+      "preserved_offset": 0.97759
+    }
+  }
+}

@@ -122,7 +122,48 @@ EaElements.GroupBox {
 
                 objectName: `experiments.row.${index}`
                 TapHandler {
-                    onTapped: group.project.currentExperimentIndex = row.index
+                    readonly property var assistantGesture: ({ current: null })
+
+                    function sameGesture(point) {
+                        const retained = assistantGesture.current;
+                        return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                    }
+                    function discardGesture(point) {
+                        if (sameGesture(point)) {
+                            assistantGesture.current.closed = true;
+                            assistantGesture.current.proof = null;
+                        }
+                    }
+                    onGrabChanged: (transition, eventPoint) => {
+                        if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
+                            if (sameGesture(eventPoint))
+                                return; // Passive/exclusive transitions cannot rearm this press.
+                            if (eventPoint.state !== EventPoint.Pressed)
+                                return;
+                            const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
+                            const holder = assistantGesture;
+                            holder.current = original; // No QML notification before capture/cancellation.
+                            const proof = Session.assistant.beginManualControlInput(row, eventPoint, row.experiment);
+                            if (holder.current === original && !original.closed)
+                                original.proof = proof; // An old callback cannot overwrite a newer grab.
+                        } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
+                            discardGesture(eventPoint);
+                        }
+                    }
+                    onCanceled: eventPoint => {
+                        if (sameGesture(eventPoint))
+                            discardGesture(eventPoint);
+                    }
+                    onTapped: eventPoint => {
+                        if (!sameGesture(eventPoint) || assistantGesture.current.closed)
+                            return;
+                        const original = assistantGesture.current;
+                        const proof = original.proof;
+                        original.closed = true;
+                        original.proof = null; // Consume BEFORE validation/action and any reentry.
+                        if (Session.assistant.completeManualControlInput(row, eventPoint, row.experiment, proof))
+                            group.project.currentExperimentIndex = row.index;
+                    }
                 }
 
                 EaComponents.TableViewLabel {
@@ -151,6 +192,9 @@ EaElements.GroupBox {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.experiments : null
+                    editIndex: row.index
                     objectName: `experiments.name.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     value: row.name
@@ -215,7 +259,48 @@ EaElements.GroupBox {
                             cursorShape: Qt.PointingHandCursor
                         }
                         TapHandler {
-                            onTapped: loadData.clicked()
+                            readonly property var assistantGesture: ({ current: null })
+
+                            function sameGesture(point) {
+                                const retained = assistantGesture.current;
+                                return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                            }
+                            function discardGesture(point) {
+                                if (sameGesture(point)) {
+                                    assistantGesture.current.closed = true;
+                                    assistantGesture.current.proof = null;
+                                }
+                            }
+                            onGrabChanged: (transition, eventPoint) => {
+                                if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
+                                    if (sameGesture(eventPoint))
+                                        return; // Passive/exclusive transitions cannot rearm this press.
+                                    if (eventPoint.state !== EventPoint.Pressed)
+                                        return;
+                                    const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
+                                    const holder = assistantGesture;
+                                    holder.current = original; // No QML notification before capture/cancellation.
+                                    const proof = Session.assistant.beginManualControlInput(loadData, eventPoint, row.experiment);
+                                    if (holder.current === original && !original.closed)
+                                        original.proof = proof; // An old callback cannot overwrite a newer grab.
+                                } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
+                                    discardGesture(eventPoint);
+                                }
+                            }
+                            onCanceled: eventPoint => {
+                                if (sameGesture(eventPoint))
+                                    discardGesture(eventPoint);
+                            }
+                            onTapped: eventPoint => {
+                                if (!sameGesture(eventPoint) || assistantGesture.current.closed)
+                                    return;
+                                const original = assistantGesture.current;
+                                const proof = original.proof;
+                                original.closed = true;
+                                original.proof = null; // Consume BEFORE validation/action and any reentry.
+                                if (Session.assistant.completeManualControlInput(loadData, eventPoint, row.experiment, proof))
+                                    loadData.clicked();
+                            }
                         }
                         EaElements.ToolTip {
                             text: qsTr("Load another data file in place of this one")
@@ -281,16 +366,8 @@ EaElements.GroupBox {
                 fontIcon: "upload"
                 text: qsTr("Load experiment")
                 ToolTip.text: qsTr("Load experiments from .edi files, each with its type, data and parameters")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webDataExperiment = null;
-                        group.webRequest = WebFiles.openFiles(".edi", true);
-                    } else {
-                        loadDialog.open();
-                    }
-                }
+                onClicked: group.chooseExperimentFiles()
+
             }
             EaElements.SideBarButton {
                 objectName: "experiments.create"
@@ -315,82 +392,91 @@ EaElements.GroupBox {
         }
     }
 
-    // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
-    // that experiment wherever its row is by then, and is refused if it has gone.
+    // Original ordinary pickers; a chosen file never retargets a later owner.
+    property var pickerLife: ({ alive: true })
+    Component.onDestruction: pickerLife.alive = false
     readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv"
-    function chooseData(experiment) {
-        if (WebFiles.available) {
-            group.webRequestProject = group.project;
-            group.webDataExperiment = experiment;
-            group.webRequest = WebFiles.openFiles(group.dataFilter, false);
-        } else {
-            dataDialog.experiment = experiment;
-            dataDialog.project = group.project;
-            dataDialog.open();
-        }
-    }
-
-    // This page's browser file request and the project it was made for: only its own answer is used, and only
-    // while that project is still open. `webDataExperiment`: the experiment a Load data… request is for, or null
-    // for Load experiment.
     property int webRequest: 0
-    property var webRequestProject: null
-    property var webDataExperiment: null
+    property var webIntent: null
+    function chooseFiles(experiment) {
+        if (project === null || Session.project !== project || webIntent !== null ||
+            loadDialog.intent !== null || dataDialog.intent !== null || loadDialog.visible || dataDialog.visible) return false;
+        const life = pickerLife;
+        const original = { project: project, experiment: experiment };
+        if (WebFiles.available) {
+            webIntent = original;
+            if (!life.alive || webIntent !== original) return false;
+            if (project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
+            const request = WebFiles.openFiles(experiment !== null ? dataFilter : ".edi", experiment === null);
+            if (!life.alive || webIntent !== original) return false;
+            if (request === 0 || project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
+            webRequest = request;
+        } else {
+            const dialog = experiment !== null ? dataDialog : loadDialog;
+            dialog.intent = original;
+            if (!life.alive || dialog.intent !== original) return false;
+            if (project !== original.project || Session.project !== original.project) { dialog.intent = null; return false; }
+            dialog.open();
+        }
+        return true;
+    }
+    function chooseData(experiment) { return experiment !== null && chooseFiles(experiment); }
+    function chooseExperimentFiles() { return chooseFiles(null); }
+    function takeWebIntent(request) {
+        if (request !== webRequest || webIntent === null) return null;
+        const life = pickerLife;
+        const original = webIntent;
+        webRequest = 0;
+        if (!life.alive || webIntent !== original) return null;
+        webIntent = null;
+        if (!life.alive || webIntent !== null || project !== original.project || Session.project !== original.project) return null;
+        return original;
+    }
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            const experiment = group.webDataExperiment;
-            const forData = experiment !== null;
-            group.webDataExperiment = null;
-            if (group.project !== null && group.project === group.webRequestProject) {
-                if (forData)
-                    group.project.loadDataInto(experiment, files[0]);
-                else
-                    group.project.loadExperiments(files);
-            }
+            const original = group.takeWebIntent(request);
+            if (original === null) return;
+            if (original.experiment !== null) {
+                if (files.length === 1) original.project.loadDataInto(original.experiment, files[0]);
+            } else original.project.loadExperiments(files);
         }
-        function onFailed(request) {
-            if (request === group.webRequest) {
-                group.webRequest = 0;
-                group.webDataExperiment = null;
-            }
-        }
-        function onCancelled(request) {
-            if (request === group.webRequest) {
-                group.webRequest = 0;
-                group.webDataExperiment = null;
-            }
-        }
+        function onFailed(request) { group.takeWebIntent(request); }
+        function onCancelled(request) { group.takeWebIntent(request); }
     }
-
     FileDialog {
         id: loadDialog
+        objectName: "experiments.fileDialog"
+        property var intent: null
         title: qsTr("Load experiments from .edi block files")
         fileMode: FileDialog.OpenFiles
         nameFilters: [qsTr("edi block files (*.edi)")]
-        onAccepted: group.project.loadExperiments(selectedFiles)
+        onAccepted: {
+            const life = group.pickerLife;
+            const original = intent;
+            const files = selectedFiles;
+            intent = null;
+            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project)
+                original.project.loadExperiments(files);
+        }
+        onRejected: intent = null
     }
-
-    // The dialog's answer goes to the experiment and the project it was opened for, and only while that project
-    // is still the open one.
     FileDialog {
         id: dataDialog
-        property var experiment: null
-        property var project: null
+        objectName: "experiments.dataDialog"
+        property var intent: null
+        readonly property var experiment: intent !== null ? intent.experiment : null
+        readonly property var project: intent !== null ? intent.project : null
         title: qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         onAccepted: {
-            if (dataDialog.project !== null && dataDialog.project === group.project)
-                group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);
-            dataDialog.project = null;
-            dataDialog.experiment = null;
+            const life = group.pickerLife;
+            const original = intent;
+            const file = selectedFile;
+            intent = null;
+            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project)
+                original.project.loadDataInto(original.experiment, file);
         }
-        onRejected: {
-            dataDialog.project = null;
-            dataDialog.experiment = null;
-        }
+        onRejected: intent = null
     }
 }

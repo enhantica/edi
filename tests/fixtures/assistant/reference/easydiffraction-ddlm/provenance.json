@@ -1,0 +1,62 @@
+{
+  "source_repository": "https://github.com/easyscience/easydiffractionbeta",
+  "source_commit": "ec1d04ee36036dd092fdd8b779e99767afca6e5d",
+  "inputs": [
+    {
+      "path": "lbco.cif",
+      "bytes": 487,
+      "sha256": "64aaeb53aa22c222a0080e7ee3d8c8fb772107f327f7e320a0be3f818c199c89",
+      "original_path": "easyDiffractionApp/Examples/La0.5Ba0.5CoO3-Xye_HRPT@PSI/lbco.cif"
+    },
+    {
+      "path": "hrpt.xye",
+      "bytes": 83671,
+      "sha256": "70dba3f642b394f0e7e7802a8637e0e287164562671993ee0701b813c902e360",
+      "original_path": "easyDiffractionApp/Examples/La0.5Ba0.5CoO3-Xye_HRPT@PSI/hrpt.xye"
+    }
+  ],
+  "measurement_columns": [
+    "two_theta_degrees",
+    "measured_intensity",
+    "literal_standard_uncertainty"
+  ],
+  "measurement_rows": 3098,
+  "measurement_first": [
+    10.0,
+    167.0,
+    12.6
+  ],
+  "measurement_last": [
+    164.85,
+    109.0,
+    41.2
+  ],
+  "preparation": "Exact git-pinned input copies only; no Edi export, conversion, fitted values, synthesized sigma, resampling or source edit. Derived tag-case/alias/extension test controls are labelled in tests.",
+  "experiment_metadata": {
+    "path": "easyDiffractionApp/Examples/La0.5Ba0.5CoO3-Xye_HRPT@PSI/hrpt.cif",
+    "sha256": "9856a8fa6cf199541e84a10cc69378c9c39d4aa6ea422f39f1caffa65b2f65bd",
+    "probe": "neutron",
+    "wavelength_angstrom": 1.494,
+    "zero_offset_degrees": 0.0,
+    "profile_parameters": {
+      "broad_gauss_u": 0.08,
+      "broad_gauss_v": -0.11,
+      "broad_gauss_w": 0.12,
+      "broad_lorentz_x": 0.0,
+      "broad_lorentz_y": 0.0
+    },
+    "background": [
+      [
+        10.0,
+        100.0
+      ],
+      [
+        165.0,
+        100.0
+      ]
+    ],
+    "phase_scale": 1.0
+  },
+  "witness_recipe_note": "Native witness explicitly uses the owner-relayed 1.49 Angstrom wavelength (tests159), not a claim that it is the original 1.494 calibration. NPD is the requested experiment name. Canonical cwl-tch-pseudo-voigt is the existing supported-profile control; no guessed spelling/default. No fit/Ba-neutron-table/convergence claim.",
+  "structure_facts": "Literal source P m -3 m, cubic3.88A/90deg. La/Ba share origin at0.5 occupancy each; Co body centre occupancy1; O face centres occupancy1. Four source sites give six distinct species contributions, composition La0.5 Ba0.5 Co1 O3. Biso0 source values retained."
+}

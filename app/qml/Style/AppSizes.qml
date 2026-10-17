@@ -10,6 +10,10 @@ import EasyApplication.Gui.Style as EaStyle
 // tokens, colours from those and AppColors.
 QtObject {
     readonly property real unit: EaStyle.Sizes.fontPixelSize
+    readonly property real assistantDefaultWidth: unit * 30
+    readonly property real assistantMinimumWidth: unit * 23
+    readonly property real assistantMaximumWidth: unit * 48
+    readonly property real assistantMainMinimumWidth: unit * 40
 
     // The wordmark's mark (Components/Wordmark.qml; its name is 0.4309 of it): easydiffractionbeta's 5 units,
     // the same on Home and in About (WordmarkWithVersion, edi ADR-0017 §1).

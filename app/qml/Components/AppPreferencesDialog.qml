@@ -253,13 +253,26 @@ AppDialog {
             }
 
             RowLabel {
-                text: qsTr("Sidebar") + ":"
+                text: qsTr("Workflow sidebar side") + ":"
             }
             RowBox {
                 objectName: "preferences.sideBarSide"
                 model: [qsTr("Left"), qsTr("Right")]
                 currentIndex: Preferences.sideBarOnLeft ? 0 : 1
                 onActivated: index => Preferences.sideBarSide = index === 0 ? "Left" : "Right"
+            }
+
+            RowLabel {
+                visible: !ApplicationInfo.assistantAvailable
+                text: qsTr("Assistant") + ":"
+            }
+            EaElements.Label {
+                objectName: "preferences.assistantUnavailableReason"
+                visible: !ApplicationInfo.assistantAvailable
+                width: dialog.controlWidth
+                text: ApplicationInfo.assistantUnavailableReason
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
             }
 
             RowLabel {

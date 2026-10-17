@@ -12,6 +12,8 @@
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
+#include "background_input.hpp"
+#include <QPointer>
 
 namespace edi_app {
 
@@ -71,31 +73,48 @@ void BackgroundListModel::sync() {
 
 bool BackgroundListModel::setId(int row, const QString& id) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_id(*point, id.toStdString()), true).isEmpty();
+    if (!point) return false;
+    try { return editor_.rename_background_point(experiment_, *point, id.toStdString()).isEmpty(); }
+    catch (...) { return false; }
 }
-
 bool BackgroundListModel::setPosition(int row, double position) {
     auto* point = const_cast<edi::LineSegment*>(static_cast<const edi::LineSegment*>(keyAt(row)));
-    return point != nullptr && editor_.apply(edi::Edit::background_position(*point, position), false).isEmpty();
+    if (!point) return false;
+    edi::BackgroundPointInput input;
+    input.action = edi::BackgroundPointInput::Action::Update; input.id = point->id.value();
+    input.position = position; input.intensity = point->intensity.value.get(); input.free = point->intensity.free.get();
+    return applyDefined(input).value("applied").toBool();
 }
-
 void BackgroundListModel::append() {
-    edi::ExperimentBase& experiment = experiment_;
-    edi::LineSegment point;
-    if (experiment.background.size() > 0) {
-        const edi::LineSegment& last = *experiment.background[experiment.background.size() - 1];
-        point.position = last.position;
-        point.intensity.value = last.intensity.value;
+    const QPointer<BackgroundListModel> self(this);
+    try { (void)applyDefined(background_append_input(experiment_)); }
+    catch (...) {
+        if (!self) return;
+        const QString message = tr("A background point could not be appended");
+        if (operation_error_ != message) { operation_error_ = message; emit operationErrorChanged(); }
     }
-    editor_.apply(edi::Edit::append(experiment.background, std::move(point)), true);
 }
-
+QVariantMap BackgroundListModel::changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free) {
+    std::optional<edi::BackgroundPointInput> input;
+    try { input = background_input(operation, id, position, intensity, free, false); }
+    catch (...) { return {{"applied", false}, {"published", false}, {"message", tr("The background input is invalid or exceeds its admitted capacity")}}; }
+    return applyDefined(*input);
+}
+QVariantMap BackgroundListModel::applyDefined(const edi::BackgroundPointInput& input) {
+    const QPointer<BackgroundListModel> self(this);
+    ProjectEditor::BackgroundOutcome result;
+    try { result = editor_.edit_background_point(experiment_, input); }
+    catch (...) { result.message = tr("The background input is invalid or exceeds its admitted capacity"); }
+    const QVariantMap outcome{{"applied", result.applied}, {"published", result.published}, {"message", result.message}};
+    if (self && operation_error_ != result.message) { operation_error_ = result.message; emit operationErrorChanged(); }
+    return outcome;
+}
 void BackgroundListModel::remove(int row) {
-    if (keyAt(row) == nullptr) {
-        return;
-    }
-    edi::ExperimentBase& experiment = experiment_;
-    editor_.apply(edi::Edit::erase(experiment.background, static_cast<std::size_t>(row)), true);
+    auto* point = static_cast<const edi::LineSegment*>(keyAt(row));
+    if (!point) return;
+    edi::BackgroundPointInput input;
+    input.action = edi::BackgroundPointInput::Action::Remove; input.id = point->id.value();
+    (void)applyDefined(input);
 }
 
 BackgroundTermListModel::BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,

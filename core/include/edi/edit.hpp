@@ -29,12 +29,15 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <type_traits>
+#include <tuple>
 #include <vector>
 
 #include "edi/edits.hpp"
@@ -46,6 +49,43 @@
 #include "edi/categories.hpp"
 
 namespace edi {
+
+namespace detail {
+struct ScanViewValue {
+    std::string unique_name;
+    double value = 0.0;
+    std::optional<double> uncertainty;
+};
+// The existing scan-view operation split at its real write boundary. Scan Undo
+// prepares it before reversing files; ordinary Edit still resolves at execution.
+struct PreparedScanView {
+    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; };
+    ExperimentBase* experiment;
+    std::optional<PdDataBase> data;
+    std::vector<Target> targets;
+    void commit() noexcept {
+        static_assert(std::is_nothrow_move_assignable_v<std::optional<PdDataBase>>);
+        experiment->data = std::move(data);
+        experiment->calculation_only = false;
+        for (const auto& target : targets) {
+            target.parameter->value = target.value;
+            target.parameter->uncertainty = target.uncertainty;
+        }
+    }
+};
+inline PreparedScanView prepare_scan_view(Project& project, ExperimentBase& experiment,
+                                         const std::vector<ScanViewValue>& values, PdDataBase data) {
+    PreparedScanView prepared{&experiment, std::move(data), {}};
+    std::map<std::string, Parameter*> by_name;
+    for (const NamedSlot& slot : named_slots(project)) by_name.emplace(slot.unique_name, slot.parameter);
+    prepared.targets.reserve(values.size());
+    for (const auto& value : values) {
+        if (const auto found = by_name.find(value.unique_name); found != by_name.end())
+            prepared.targets.push_back({found->second, value.value, value.uncertainty});
+    }
+    return prepared;
+}
+} // namespace detail
 
 // edi ADR-0024: an edit of the declared relations, as undo restores it. The alias and constraint rows
 // before the edit, and the state then of every parameter the edit changed (a dependent's implied value,
@@ -138,8 +178,227 @@ inline ReportSettingsState report_settings_state(const Project& project) {
             project.report_excluded, project.correlation_threshold, project.pattern_x_axis};
 }
 
+// Same-owner completion is deliberately not a general merge/replacement. These
+// borrowed checks allocate no scientific copy and preserve all metadata/settings/path.
+inline bool empty_population_fit(const FitResultRecord& fit) {
+    const FitResultRecord pristine;
+    static_assert(std::tuple_size_v<decltype(FitResultCategory::columns)> > 0);
+    return std::apply([&](auto... field) { return ((fit.*field == pristine.*field) && ...); },
+        FitResultCategory::columns) && fit.correlations.empty() && fit.scan_results.empty();
+}
+inline bool empty_for_population(const Project& project) {
+    const auto& scan = project.sequential_fit;
+    return project.structures.empty() && project.experiments.empty() && project.aliases.empty() &&
+        project.constraints.empty() && project.report_files.empty() && project.scan_data_root.empty() &&
+        (project.fitting_mode.empty() || project.fitting_mode == "single" || project.fitting_mode == "joint") &&
+        scan.data_dir.empty() && scan.file_pattern == "*" && !scan.reverse && scan.template_file.empty() && scan.extract.empty() &&
+        empty_population_fit(project.fit_result);
+}
+
+// Owned complete scientific addition prepared before either live collection is
+// touched. No metadata, project assignment or observer runs in the dual commit.
+class EmptyProjectPopulation {
+ public:
+    static std::shared_ptr<EmptyProjectPopulation> prepare(Project candidate) {
+        if (candidate.structures.size() != 1 || candidate.experiments.size() != 1 ||
+            !candidate.aliases.empty() || !candidate.constraints.empty())
+            throw std::invalid_argument("empty-project completion requires one validated phase and measured bank");
+        auto result = std::make_shared<EmptyProjectPopulation>();
+        result->structures_ = std::move(candidate.structures);
+        result->experiments_ = std::move(candidate.experiments);
+        result->structure_ = result->structures_.front();
+        result->experiment_ = result->experiments_.front();
+        return result;
+    }
+    bool committed() const noexcept { return committed_; }
+ private:
+    friend class Edit;
+    ItemVec<Structure> structures_;
+    ItemVec<BraggPdExperiment> experiments_;
+    std::shared_ptr<Structure> structure_;
+    std::shared_ptr<BraggPdExperiment> experiment_;
+    bool committed_ = false, undone_ = false;
+};
+
+/// An explicit operation on one line-segment anchor in native measured-axis units.
+/// App callers admit IDs/rows before constructing this input; it never selects a bank.
+struct BackgroundPointInput {
+    enum class Action { Add, Update, Remove } action = Action::Add;
+    std::string id;
+    double position = 0, intensity = 0;
+    bool free = false;
+};
+/// Exact shared rows before/after one background operation, retained for ordinary Undo.
+/// Only the updated/new row is copied. Other rows and all project data retain identity.
+struct BackgroundPointChange {
+    ExperimentBase* experiment = nullptr;
+    std::vector<ItemVec<LineSegment>::Ptr> before, after;
+    const PdDataBase* data = nullptr;
+    std::uint64_t stamp = 0, data_stamp = 0, alias_stamp = 0, constraint_stamp = 0;
+    std::uint64_t theta_stamp = 0, tof_stamp = 0, intensity_stamp = 0, sigma_stamp = 0;
+    BeamModeEnum mode = BeamModeEnum::CONSTANT_WAVELENGTH;
+    double low = 0, high = 0;
+    std::optional<LineSegment> original, replacement;
+    static bool same_point(const LineSegment& a, const LineSegment& b) noexcept {
+        const auto& x = a.intensity; const auto& y = b.intensity;
+        return a.id.value() == b.id.value() && a.position.get() == b.position.get() && x.value.get() == y.value.get() &&
+            x.uncertainty.get() == y.uncertainty.get() && x.free.get() == y.free.get() && x.spec == y.spec &&
+            x.start_value.get() == y.start_value.get() && x.start_uncertainty.get() == y.start_uncertainty.get() && x.dependence == y.dependence;
+    }
+    bool native_request = false, calculation_only = false;
+    bool same_source(const ExperimentBase& bank) const noexcept {
+        if (bank.background_type != "line-segment" || bank.calculation_only != calculation_only ||
+            bank.effective_beam_mode() != mode || bool(bank.data) != (data != nullptr)) return false;
+        if (!bank.data) return !native_request;
+        return (!native_request || !bank.calculation_only) && &*bank.data == data && bank.data->written.value() == data_stamp &&
+            bank.data->two_theta.written() == theta_stamp && bank.data->time_of_flight.written() == tof_stamp &&
+            bank.data->intensity_meas.written() == intensity_stamp && bank.data->intensity_meas_su.written() == sigma_stamp;
+    }
+    bool committed = false, undone = false;
+};
+/// Prepare a bounded, validated line-segment add/update/remove without live writes.
+/// Native callers require a measured bank and finite, distinct in-domain anchors.
+/// Ordinary manual callers retain simulation, extrapolation and stored-row ordering.
+/// Removing an alias target refuses; changing dependent intensity/free flags refuses.
+/// @param project Borrowed live owner; it must outlive execution and Undo.
+/// @param experiment Borrowed bank owned by project; measured data is required for native callers.
+/// @param input Caller-owned exact operation/ID and native-axis scientific values.
+/// @param max_points Inclusive caller admission for the complete result collection.
+/// @param max_text Inclusive caller byte admission for IDs and named relation targets.
+/// @param max_samples Inclusive borrowed-axis traversal admission.
+/// @param max_aliases Inclusive borrowed alias collection admission.
+/// @param native_request Apply native measured/domain policy; false preserves ordinary manual semantics.
+/// @return Owned preparation retaining the original shared rows; no live values change.
+/// Call on the model's owner thread without concurrent model mutation.
+/// @throws std::invalid_argument Invalid source, shape or scientific input.
+/// @throws std::length_error A declared caller capacity was exceeded.
+inline std::shared_ptr<BackgroundPointChange> prepare_background_point(
+    Project& project, ExperimentBase& experiment, const BackgroundPointInput& input, std::size_t max_points, std::size_t max_text, std::size_t max_samples, std::size_t max_aliases, bool native_request) {
+    if (input.action != BackgroundPointInput::Action::Add && input.action != BackgroundPointInput::Action::Update &&
+        input.action != BackgroundPointInput::Action::Remove) throw std::invalid_argument("unknown background operation");
+    const auto owned = std::find_if(project.experiments.begin(), project.experiments.end(),
+        [&](const auto& e) { return e.get() == &experiment; });
+    if (owned == project.experiments.end() || experiment.background_type != "line-segment")
+        throw std::invalid_argument("background editing requires an owned line-segment experiment");
+    if (native_request && (!experiment.data || experiment.calculation_only))
+        throw std::invalid_argument("native background editing requires measured data");
+    if (!max_points || experiment.background.size() > max_points ||
+        (input.action == BackgroundPointInput::Action::Add && experiment.background.size() == max_points))
+        throw std::length_error("background collection exceeds its admitted capacity");
+    if (!max_text || input.id.size() > max_text || experiment.name.value().size() > max_text)
+        throw std::length_error("background identity exceeds its admitted capacity");
+    for (const auto& row : experiment.background) if (row->id.value().size() > max_text)
+        throw std::length_error("background identity exceeds its admitted capacity");
+    (void)KeyTraits<LineSegment>::canonical(input.id);
+    if (project.aliases.size() > max_aliases)
+        throw std::length_error("background relation collection exceeds its admitted capacity");
+    for (const auto& alias : project.aliases) if (alias->parameter_unique_name.value().size() > max_text)
+        throw std::length_error("background relation identity exceeds its admitted capacity");
+    double low = 0, high = 0;
+    if (native_request) {
+        const auto& axis = experiment.data->axis();
+        if (axis.size() > max_samples) throw std::length_error("background source exceeds its admitted capacity");
+        if (bool(experiment.data->two_theta) != (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH))
+            throw std::invalid_argument("the measured axis does not match this experiment's mode");
+        if (axis.empty() || axis.size() != experiment.data->intensity_meas.size())
+            throw std::invalid_argument("the measured background axis is unavailable");
+        low = high = axis.front();
+        for (const double x : axis) {
+            if (!std::isfinite(x)) throw std::invalid_argument("the measured axis is nonfinite");
+            low = std::min(low, x); high = std::max(high, x);
+        }
+    }
+    const auto found = std::find_if(experiment.background.begin(), experiment.background.end(),
+        [&](const auto& p) { return p->id.value() == input.id; });
+    if ((input.action == BackgroundPointInput::Action::Add) != (found == experiment.background.end()))
+        throw std::invalid_argument("the background ID is already present or no longer exists");
+    if (input.action != BackgroundPointInput::Action::Remove &&
+        (!std::isfinite(input.position) || !std::isfinite(input.intensity) ||
+         (native_request && (input.position < low || input.position > high))))
+        throw std::invalid_argument("the background point is nonfinite or outside its native measured domain");
+    if (input.action == BackgroundPointInput::Action::Remove) {
+        const auto name = detail::background_parameter_name(experiment, input.id);
+        for (const auto& alias : project.aliases) if (alias->parameter_unique_name.value() == name)
+            throw std::invalid_argument("a declared alias still names this background intensity");
+    } else if (input.action == BackgroundPointInput::Action::Update && (*found)->intensity.dependence != Dependence::Independent &&
+        ((*found)->intensity.value.get() != input.intensity || (*found)->intensity.free.get() != input.free))
+        throw std::invalid_argument("a relation owns this background intensity or free flag");
+    auto prepared = std::make_shared<BackgroundPointChange>();
+    prepared->experiment = &experiment; prepared->stamp = experiment.background.category_stamp();
+    prepared->native_request = native_request; prepared->calculation_only = experiment.calculation_only;
+    if (experiment.data) {
+        prepared->data = &*experiment.data; prepared->data_stamp = experiment.data->written.value();
+        prepared->theta_stamp = experiment.data->two_theta.written(); prepared->tof_stamp = experiment.data->time_of_flight.written();
+        prepared->intensity_stamp = experiment.data->intensity_meas.written(); prepared->sigma_stamp = experiment.data->intensity_meas_su.written();
+    }
+    prepared->mode = experiment.effective_beam_mode(); prepared->low = low; prepared->high = high;
+    if (found != experiment.background.end()) prepared->original.emplace(**found);
+    prepared->alias_stamp = project.aliases.category_stamp(); prepared->constraint_stamp = project.constraints.category_stamp();
+    prepared->before.assign(experiment.background.begin(), experiment.background.end());
+    prepared->after.reserve(prepared->before.size() + (input.action == BackgroundPointInput::Action::Add ? 1 : 0));
+    for (const auto& point : prepared->before) if (point->id.value() != input.id) prepared->after.push_back(point);
+    if (input.action != BackgroundPointInput::Action::Remove) {
+        auto point = input.action == BackgroundPointInput::Action::Update ? std::make_shared<LineSegment>(**found) : std::make_shared<LineSegment>();
+        point->id = input.id; point->position = input.position;
+        if (input.action == BackgroundPointInput::Action::Add || point->intensity.value.get() != input.intensity)
+            assign_value(point->intensity, input.intensity);
+        point->intensity.free = input.free;
+        prepared->replacement.emplace(*point);
+        if (!native_request && input.action == BackgroundPointInput::Action::Update)
+            prepared->after.insert(prepared->after.begin() + std::distance(experiment.background.begin(), found), std::move(point));
+        else prepared->after.push_back(std::move(point));
+    }
+    for (const auto& point : prepared->after) if (!std::isfinite(point->position.get()) || !std::isfinite(point->intensity.value.get()))
+        throw std::invalid_argument("background anchors must be finite");
+    if (native_request) {
+        std::sort(prepared->after.begin(), prepared->after.end(), [](const auto& a, const auto& b) { return a->position.get() < b->position.get(); });
+        std::optional<double> previous;
+        for (const auto& point : prepared->after) {
+            const double x = point->position.get();
+            if (x < low || x > high || (previous && x <= *previous))
+                throw std::invalid_argument("background points need distinct finite ordered measured positions");
+            previous = x;
+        }
+    }
+    return prepared;
+}
+
 class Edit {
    public:
+    /// Add one prepared scientific graph to the SAME empty project. Collection
+    /// moves are nonthrowing and keep target host linkage. All other fields stay.
+    static Edit populate_empty_project(Project& project, std::shared_ptr<EmptyProjectPopulation> prepared) {
+        return Edit([&project, prepared = std::move(prepared)] {
+            if (!prepared || prepared->committed_ || !empty_for_population(project) ||
+                prepared->structures_.size() != 1 || prepared->experiments_.size() != 1)
+                throw std::invalid_argument("the original current project is no longer empty");
+            static_assert(std::is_nothrow_move_assignable_v<ItemVec<Structure>>);
+            static_assert(std::is_nothrow_move_assignable_v<ItemVec<BraggPdExperiment>>);
+            project.structures = std::move(prepared->structures_);
+            project.experiments = std::move(prepared->experiments_);
+            project.adopt_experiments();
+            prepared->committed_ = true; // adjacent actual latch, before any preview/UI callback
+        });
+    }
+    /// Undo only this addition, with exact row identity; never restore a whole
+    /// old Project over unrelated metadata/settings or a later scientific owner.
+    static Edit undo_empty_population(Project& project, std::shared_ptr<EmptyProjectPopulation> prepared) {
+        return Edit([&project, prepared = std::move(prepared)] {
+            if (!prepared || !prepared->committed_ || prepared->undone_ ||
+                project.structures.size() != 1 || project.experiments.size() != 1 ||
+                project.structures.front() != prepared->structure_ || project.experiments.front() != prepared->experiment_ ||
+                !project.aliases.empty() || !project.constraints.empty() || !project.report_files.empty() ||
+                !empty_population_fit(project.fit_result))
+                throw std::invalid_argument("undo: the added scientific graph has been replaced or has dependent results/relations");
+            ItemVec<Structure> structures;
+            ItemVec<BraggPdExperiment> experiments;
+            project.structures = std::move(structures);
+            project.experiments = std::move(experiments);
+            project.adopt_experiments();
+            prepared->undone_ = true;
+        });
+    }
+
     // Runs the operation: its refusal, with nothing written, or the whole write.
     void operator()() const { operation_(); }
 
@@ -214,9 +473,109 @@ class Edit {
     static Edit value(Parameter& parameter, double value) {
         return Edit([&parameter, value] { assign_value(parameter, value); });
     }
+    /// Assign a whole validated assistant batch, resolving and checking every path before the first write.
+    static Edit parameter_values(Project& project, std::vector<std::pair<std::string, double>> values) {
+        return Edit([&project, values = std::move(values)] {
+            std::map<std::string, Parameter*> by_name;
+            for (const NamedSlot& slot : named_slots(project)) by_name.emplace(slot.unique_name, slot.parameter);
+            std::vector<std::pair<Parameter*, double>> targets;
+            std::set<std::string> seen;
+            for (const auto& [name, value] : values) {
+                const auto found = by_name.find(name);
+                if (found == by_name.end() || !seen.insert(name).second || !std::isfinite(value))
+                    throw std::invalid_argument("Invalid or duplicate parameter: " + name);
+                Parameter copy = *found->second;
+                assign_value(copy, value);
+                targets.emplace_back(found->second, value);
+            }
+            for (const auto& [parameter, value] : targets) parameter->value = value;
+        });
+    }
+    /// Adopt an isolated fit's parameter/result state without replacing the live model's identity-bearing rows.
+    static Edit assistant_result(Project& project, std::shared_ptr<const Project> fitted) {
+        return Edit([&project, fitted = std::move(fitted)] {
+            const auto targets = named_slots(project);
+            auto source = std::make_shared<Project>(*fitted);
+            const auto sources = named_slots(*source);
+            if (targets.size() != sources.size() || project.experiments.size() != source->experiments.size())
+                throw std::invalid_argument("The trial no longer names this project's parameters");
+            for (std::size_t i = 0; i < targets.size(); ++i) {
+                if (targets[i].unique_name != sources[i].unique_name)
+                    throw std::invalid_argument("The trial's parameter identities changed");
+                Parameter checked = *sources[i].parameter;
+                assign_value(checked, checked.value.get());
+            }
+            for (std::size_t i = 0; i < targets.size(); ++i) {
+                Parameter& to = *targets[i].parameter;
+                const Parameter& from = *sources[i].parameter;
+                to.value = from.value.get(); to.uncertainty = from.uncertainty.get();
+                to.free = from.free.get(); to.start_value = from.start_value.get();
+                to.start_uncertainty = from.start_uncertainty.get();
+            }
+            static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+            project.fit_result = std::move(source->fit_result);
+            for (std::size_t i = 0; i < project.experiments.size(); ++i)
+                copy_fit_share(*project.experiments[i], *source->experiments[i]);
+        });
+    }
     // A background point's fixed position: one recorded assignment, which cannot fail.
     static Edit background_position(LineSegment& point, double position) {
         return Edit([&point, position] { point.position = position; });
+    }
+
+    /// Commit one exact preparation, or restore its shared-row Undo, on the owner thread.
+    /// Project and its original bank are borrowed and must outlive execution.
+    /// The Edit owns prepared; no callbacks run inside its closed model mutation.
+    /// Throws invalid_argument for stale/conflicting input; allocation may throw
+    /// before ItemVec's all-or-none commit. A committed latch precedes publication.
+    static Edit background_point(Project& project, std::shared_ptr<BackgroundPointChange> prepared, bool undo = false) {
+        return Edit([&project, prepared = std::move(prepared), undo] {
+            if (!prepared || !prepared->experiment || (undo ? !prepared->committed || prepared->undone : prepared->committed))
+                throw std::invalid_argument("the background operation is no longer current");
+            const auto owner = std::find_if(project.experiments.begin(), project.experiments.end(),
+                [&](const auto& e) { return e.get() == prepared->experiment; });
+            if (owner == project.experiments.end()) throw std::invalid_argument("the background experiment was replaced");
+            auto& rows = (*owner)->background;
+            if (!prepared->same_source(**owner) || (!undo && (rows.category_stamp() != prepared->stamp ||
+                project.aliases.category_stamp() != prepared->alias_stamp || project.constraints.category_stamp() != prepared->constraint_stamp)))
+                throw std::invalid_argument("the prepared background input changed before its edit");
+            const auto& expected = undo ? prepared->after : prepared->before;
+            if (rows.size() != expected.size() || !std::equal(rows.begin(), rows.end(), expected.begin()))
+                throw std::invalid_argument("the exact background rows were replaced");
+            // The affected detached/live row must still have the exact prepared state;
+            // unrelated surviving rows are shared and never copied back by Undo.
+            const auto matches = [](const auto& rows, const auto& state) {
+                if (!state) return true;
+                const auto row = std::find_if(rows.begin(), rows.end(), [&](const auto& p) { return p->id.value() == state->id.value(); });
+                return row != rows.end() && BackgroundPointChange::same_point(**row, *state);
+            };
+            if (!matches(prepared->before, prepared->original) || !matches(prepared->after, prepared->replacement))
+                throw std::invalid_argument("the affected background row changed outside its prepared edit");
+            if (undo && !prepared->original && prepared->replacement) {
+                const auto name = detail::background_parameter_name(**owner, prepared->replacement->id.value());
+                for (const auto& alias : project.aliases) if (alias->parameter_unique_name.value() == name)
+                    throw std::invalid_argument("a current alias still names the added background point");
+            }
+            // A new native result is strict, but Undo restores the captured
+            // lawful manual arrangement, including its order/extrapolation.
+            // Surviving unrelated rows stay shared, never copied back.
+            auto candidate = undo ? prepared->before : prepared->after;
+            for (const auto& point : candidate) if (!std::isfinite(point->position.get()) || !std::isfinite(point->intensity.value.get()))
+                throw std::invalid_argument("background anchors must be finite");
+            if (prepared->native_request && !undo) {
+                std::sort(candidate.begin(), candidate.end(), [](const auto& a, const auto& b) { return a->position.get() < b->position.get(); });
+                std::optional<double> previous;
+                for (const auto& point : candidate) {
+                    const auto x = point->position.get();
+                    if (x < prepared->low || x > prepared->high || (previous && x <= *previous))
+                        throw std::invalid_argument("background positions must remain distinct and in the measured domain");
+                    previous = x;
+                }
+            }
+            // Copies/admission precede the single live collection commit.
+            rows.assign(std::move(candidate));
+            if (undo) prepared->undone = true; else prepared->committed = true;
+        });
     }
 
     // --- Validated settings -----------------------------------------------------------------------
@@ -687,37 +1046,21 @@ class Edit {
     // dataset's, and each named parameter given its value and uncertainty (a fitted dataset's results row, or the
     // template's). Every name is resolved first; one the model does not have is left out, as a results column of
     // a parameter the template no longer has. The writes are assignments, which cannot fail.
-    struct ScanValue {
-        std::string unique_name;
-        double value = 0.0;
-        std::optional<double> uncertainty;
-    };
+    using ScanValue = detail::ScanViewValue;
     static Edit scan_view(Project& project, ExperimentBase& experiment, std::vector<ScanValue> values, PdDataBase data) {
         auto shown = std::make_shared<PdDataBase>(std::move(data));
         return Edit([&project, &experiment, values = std::move(values), shown] {
-            std::map<std::string, Parameter*> by_name;
-            for (const NamedSlot& slot : named_slots(project)) {
-                by_name.emplace(slot.unique_name, slot.parameter);
-            }
-            std::vector<std::pair<Parameter*, const ScanValue*>> targets;
-            for (const ScanValue& value : values) {
-                if (const auto found = by_name.find(value.unique_name); found != by_name.end()) {
-                    targets.emplace_back(found->second, &value);
-                }
-            }
-            experiment.data = *shown;
-            experiment.calculation_only = false;
-            for (const auto& [parameter, value] : targets) {
-                parameter->value = value->value;
-                parameter->uncertainty = value->uncertainty;
-            }
+            auto prepared = detail::prepare_scan_view(project, experiment, values, *shown);
+            prepared.commit();
         });
     }
 
     // An edit of the relations undone (edi ADR-0024): the alias and constraint rows as they were, and each
     // parameter the edit changed back to its state then. Every parameter is resolved first, so one whose
-    // row was removed since refuses with nothing written; the rows were admitted before, so the
-    // assignments cannot refuse. The door's completion then re-derives every mark and implied value.
+    // row was removed since refuses with nothing written. Both complete ItemVec replacements
+    // (keys, table columns and memberships) are admitted before either live move commit;
+    // numeric/optional/flag writes and those moves cannot fail. The door's completion then
+    // re-derives every mark and implied value.
     static Edit restore_relations(Project& project, RelationsUndo before) {
         return Edit([&project, before = std::move(before)] {
             std::map<std::string, Parameter*> by_name;
@@ -741,8 +1084,12 @@ class Edit {
             for (const ParameterConstraint& row : before.constraints) {
                 constraints.push_back(std::make_shared<ParameterConstraint>(row));
             }
-            project.aliases.assign(std::move(aliases));
-            project.constraints.assign(std::move(constraints));
+            // ItemVec admission builds the columns, keys and memberships. Prepare BOTH
+            // collections before either live write; their move commits cannot throw.
+            ItemVec<ParameterAlias> prepared_aliases(std::move(aliases));
+            ItemVec<ParameterConstraint> prepared_constraints(std::move(constraints));
+            project.aliases = std::move(prepared_aliases);
+            project.constraints = std::move(prepared_constraints);
             for (const auto& [parameter, state] : targets) {
                 parameter->value = state->value;
                 parameter->uncertainty = state->uncertainty;

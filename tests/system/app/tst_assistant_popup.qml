@@ -1,0 +1,5293 @@
+import QtQuick
+import QtQuick.Controls
+import QtTest
+import edi.app
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Elements as EaElements
+import EdiAcceptance 1.0
+import EdiChartReference 1.0
+import "../../unit/app/UiInteraction.js" as Ui
+
+// Owner 99d50f71f supersedes the former second-dock and alternate-entry tests.
+// Real Main/Session only. No provider, seeded message model or synthetic busy state.
+TestCase {
+    name: "AssistantPopup"
+    when: windowShown
+    property var window
+    property var popup
+    property var assistant
+    property var oldSide
+    property var oldTheme
+    property var oldToolTips
+    Component {
+        id: application
+        Main {}
+    }
+
+    // Existing Probe.watch owns a QPointer and signal spies; retain only its
+    // integer handle and a scalar identity captured while the QObject is alive.
+    function lifetime313(object) {
+        if (object === null) return null;
+        const handle = Probe.watch(object);
+        verify(handle >= 0 && Probe.watchedAlive(handle),
+            "OBS313 SETUP: original QObject lifetime is captured while alive");
+        return {handle: handle, identity: String(object)};
+    }
+    function alive313(receipt) {
+        return receipt !== null && Probe.watchedAlive(receipt.handle);
+    }
+    function identity313(receipt) { return receipt === null ? "null" : receipt.identity; }
+    function disconnect313(receipt, object, signal, callback) {
+        // QObject destruction already disconnects its signals. Never access a
+        // dead wrapper merely to ask whether its old signal property exists.
+        if (alive313(receipt)) object[signal].disconnect(callback);
+    }
+
+    function item(name) {
+        const found = findChild(window, name);
+        verify(found !== null, "I16/popup: the actual application owns " + name);
+        return found;
+    }
+    function rendered() {
+        tryVerify(() => {
+            if (Ui.moving(window.contentItem) || !window.contentArea) return false;
+            const page = window.contentArea[AppState.Page.Project];
+            const view = page ? page.SwipeView.view : null;
+            const viewport = view ? view.contentItem : null;
+            if (!viewport || !viewport.currentItem
+                || viewport.currentIndex !== window.appBarCentralTabs.currentIndex) return false;
+            // Qt Basic SwipeView uses ListView's strict preferred-highlight anchor.
+            // Highlight auto-scroll can continue with Flickable.moving === false.
+            // This observes actual selected-item placement, independent of Assistant geometry.
+            const selected = viewport.currentItem.mapToItem(viewport, 0, 0);
+            const position = view.orientation === Qt.Horizontal ? selected.x : selected.y;
+            return Math.abs(position - viewport.preferredHighlightBegin) < 0.5;
+        }, 2000, "I16/popup: actual navigation finishes before geometry observations");
+        verify(waitForPolish(window, 2000), "I16/popup: queued layout settles before geometry observations");
+        window.update();
+        verify(waitForRendering(window.contentItem), "I16/popup: actual window renders after interaction");
+    }
+    function rect(control) {
+        const point = control.mapToItem(window.contentItem, 0, 0);
+        return [point.x, point.y, control.width, control.height];
+    }
+    function sameRect(actual, expected) {
+        for (let i = 0; i < 4; ++i)
+            verify(Math.abs(actual[i] - expected[i]) < 0.5, "I16/popup: actual sidebar/main rectangle stays aligned");
+    }
+    function toggle() {
+        const control = item("assistant.toggle");
+        verify(control.visible && control.enabled, "I16/popup: existing appbar button remains actionable");
+        const requested = !Preferences.assistantShown;
+        pointerObservation("before-toggle", control, requested);
+        const receipts = [];
+        function receipt(name) {
+            receipts.push(name);
+            pointerObservation("button-" + name, control, requested);
+        }
+        function pressedChanged() { receipt("pressedChanged=" + control.pressed); }
+        function released() { receipt("released"); }
+        function clicked() { receipt("clicked"); }
+        function canceled() { receipt("canceled"); }
+        control.pressedChanged.connect(pressedChanged);
+        control.released.connect(released);
+        control.clicked.connect(clicked);
+        control.canceled.connect(canceled);
+        try {
+            pointerObservation("before-pointer-move", control, requested);
+            mouseMove(control, control.width / 2, control.height / 2);
+            pointerObservation("after-pointer-move", control, requested);
+            mouseClick(control);
+        } finally {
+            control.pressedChanged.disconnect(pressedChanged);
+            control.released.disconnect(released);
+            control.clicked.disconnect(clicked);
+            control.canceled.disconnect(canceled);
+            console.log("APPBAR_CONTROL_RECEIPTS", JSON.stringify(receipts));
+        }
+        pointerObservation("after-toggle", control, requested);
+        try {
+            tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
+        } finally {
+            pointerObservation("after-toggle-wait", control, requested);
+        }
+        if (requested)
+            tryCompare(popup, "opened", true, 2000, "I16/slide: settled opening waits for actual enter completion");
+        rendered();
+    }
+    function pointerObservation(stage, control, requested) {
+        const center = control.mapToItem(window.contentItem, control.width / 2, control.height / 2);
+        const path = [];
+        let parent = window.contentItem;
+        let point = center;
+        for (let depth = 0; parent && depth < 32; ++depth) {
+            const hit = parent.childAt(point.x, point.y);
+            if (!hit) break;
+            path.push({name: hit.objectName, type: String(hit), visible: hit.visible,
+                enabled: hit.enabled, z: hit.z, geometry: rect(hit)});
+            point = hit.mapFromItem(parent, point.x, point.y);
+            parent = hit;
+        }
+        const popups = Probe.objectsWithProperty(window, "closePolicy");
+        const visibleScopes = [];
+        for(let i=0;i<popups.length;++i) {
+            const candidate = popups[i];
+            if(!candidate.visible)continue;
+            visibleScopes.push({type: String(candidate), name: candidate.objectName,
+                parent: candidate.parent ? candidate.parent.objectName : null,
+                opened: candidate.opened, modal: candidate.modal, focus: candidate.focus,
+                closePolicy: candidate.closePolicy,
+                popupWidth: candidate.width, popupHeight: candidate.height,
+                leftPadding: candidate.leftPadding, rightPadding: candidate.rightPadding,
+                topPadding: candidate.topPadding, bottomPadding: candidate.bottomPadding,
+                contentRect: candidate.contentItem ? rect(candidate.contentItem) : null,
+                actualPopupItemRect: candidate.contentItem && candidate.contentItem.parent
+                    ? rect(candidate.contentItem.parent) : null,
+                actualPopupItemWidth: candidate.contentItem && candidate.contentItem.parent
+                    ? candidate.contentItem.parent.width : null,
+                actualPopupItemHeight: candidate.contentItem && candidate.contentItem.parent
+                    ? candidate.contentItem.parent.height : null});
+        }
+        console.log("APPBAR_POINTER", stage, JSON.stringify({
+            requested: requested, shown: Preferences.assistantShown, popupVisible: popup.visible,
+            popupOpened: popup.opened, page: window.appBarCentralTabs.currentIndex,
+            windowActive: window.active, windowVisible: window.visible,
+            buttonVisible: control.visible, buttonEnabled: control.enabled,
+            buttonFocus: control.activeFocus, buttonDown: control.down,
+            buttonHovered: control.hovered, buttonRect: rect(control),
+            clickPoint: [center.x, center.y], visualHitPath: path, visiblePopupScopes: visibleScopes
+        }));
+        // childAt reports the actual visual stacking path, not a claim about
+        // event acceptance by a handler or passive decorative item.
+    }
+    function scopeObservation(stage) {
+        const button = item("assistant.toggle");
+        const parent = popup.parent;
+        const host = window.activeAssistantHost;
+        const focus = window.activeFocusItem;
+        console.log("POPUP_SCOPE", stage, JSON.stringify({
+            shown: Preferences.assistantShown,
+            visible: popup.visible,
+            opened: popup.opened,
+            page: window.appBarCentralTabs.currentIndex,
+            projectPresent: Session.project !== null,
+            parentName: parent ? parent.objectName : null,
+            parentVisible: parent ? parent.visible : null,
+            parentEnabled: parent ? parent.enabled : null,
+            parentRect: parent ? rect(parent) : null,
+            hostName: host ? host.objectName : null,
+            parentIsHost: parent === host,
+            windowActive: window.active,
+            focusName: focus ? focus.objectName : null,
+            focusClass: focus ? String(focus) : null,
+            buttonFocus: button.activeFocus,
+            buttonDown: button.down,
+            buttonEnabled: button.enabled,
+            buttonVisible: button.visible
+        }));
+    }
+    function capture(stem) {
+        scopeObservation("capture-" + stem);
+        // QtTest's actual framebuffer adapter supports the C++-created window root.
+        // Item.grabToImage requires a QML engine on that root; this root has none.
+        const image = grabImage(window.contentItem);
+        verify(image.width > 0 && image.height > 0, "I16/popup: actual full-window framebuffer has nonempty dimensions");
+        // The documented QtTest save method throws on failure; it returns no bool.
+        image.save(stem + ".png");
+        console.log("POPUP_CAPTURE", stem, image.width, image.height);
+    }
+    function eligibleProject() {
+        if (Session.project === null)
+            verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/popup SETUP: real original project supplies an eligible workflow");
+        const tab = item("appBar.tab.project");
+        verify(tab.visible && tab.enabled, "I16/popup SETUP: genuine Project navigation is eligible");
+        mouseClick(tab);
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000, "I16/popup: real Project action activates the workflow");
+        rendered();
+    }
+    function init() {
+        eligibleProject();
+        compare(Preferences.assistantShown, false, "I16/popup: each isolated row starts without an inherited open request");
+        compare(popup.visible, false, "I16/popup: each isolated row starts with the actual popup closed");
+    }
+    function initTestCase() {
+        oldSide = Preferences.sideBarSide;
+        oldTheme = EaStyle.Colors.theme;
+        oldToolTips = Preferences.toolTips;
+        window = application.createObject(null);
+        verify(window !== null, "I16/popup: production Main instantiates in the normal native runner");
+        rendered();
+        popup = item("assistant.popup");
+        assistant = Session.assistant;
+        compare(popup.visible, false, "I16/popup: a fresh session starts with chat closed");
+        compare(assistant.connected, false, "I12/popup: native availability does not imply provider connection");
+    }
+    function cleanup() {
+        Preferences.dialogShown = false;
+        // Home deliberately disables the opener but retains requested visibility.
+        // Return through genuine workflow navigation before clearing that request.
+        eligibleProject();
+        if (popup && Preferences.assistantShown)
+            toggle();
+    }
+    function cleanupTestCase() {
+        eligibleProject();
+        if (Preferences.assistantShown)
+            toggle();
+        Session.closeProject();
+        Preferences.sideBarSide = oldSide;
+        EaStyle.Colors.theme = oldTheme;
+        Preferences.toolTips = oldToolTips;
+        window.destroy();
+    }
+    function test_home_appbar_only_and_no_auto_dismiss() {
+        const main = item("workflow.project.mainContent");
+        const before = rect(main);
+        const project = Session.project;
+        const messages = assistant.messages;
+        window.contentItem.forceActiveFocus();
+        keyClick(Qt.Key_A, Qt.ControlModifier | Qt.ShiftModifier);
+        compare(popup.visible, false, "I16/popup: retired global shortcut cannot open chat");
+        const button = item("assistant.toggle");
+        button.forceActiveFocus();
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "opened", true, 2000, "I16/popup: actual eligible appbar keyboard activation opens chat");
+        compare(popup.modal, false, "I16/popup: sidebar popup does not block the whole window");
+        compare(popup.dim, false, "I16/popup: sidebar popup does not dim scientific content");
+        compare(popup.closePolicy, Popup.NoAutoClose, "I16/popup: outside and Escape are not dismissal routes");
+        sameRect(rect(popup.contentItem), rect(item("workflow.project.sidebarHost")));
+        sameRect(rect(main), before);
+        keyClick(Qt.Key_Escape);
+        compare(popup.visible, true, "I16/popup: Escape leaves eligible workflow chat open");
+        const point = main.mapToItem(window.contentItem, main.width / 2, main.height / 2);
+        mouseClick(window.contentItem, point.x, point.y);
+        compare(popup.visible, true, "I16/popup: genuine outside click leaves eligible workflow chat open");
+        const editor = item("assistant.composer");
+        editor.insert(0, "Original Home-hidden draft");
+        editor.select(2, 9);
+        const draft = editor.text;
+        const selection = [editor.selectionStart, editor.selectionEnd];
+        verify(findChild(window, "assistant.close") === null, "I16/popup: no separate close control remains");
+        Preferences.dialogShown = true;
+        rendered();
+        verify(findChild(window, "preferences.assistantShown") === null, "I16/popup: Preferences has no alternate chat opener");
+        Preferences.dialogShown = false;
+        mouseClick(item("appBar.tab.home"));
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Home, 2000, "HOME: actual appbar navigates to Home");
+        tryCompare(popup, "visible", false, 2000, "HOME: Assistant fully slides out on Home");
+        rendered();
+        compare(button.enabled, false, "HOME: appbar Assistant is deliberately disabled on Home");
+        compare(Preferences.assistantShown, true, "HOME: Home keeps the actual stored open request");
+        verify(!editor.activeFocus, "HOME: hidden chat does not retain input focus");
+        mouseClick(button);
+        keyClick(Qt.Key_A, Qt.ControlModifier | Qt.ShiftModifier);
+        compare(popup.visible, false, "HOME: disabled appbar/retired shortcut cannot reopen chat");
+        compare(Session.project, project, "HOME: hiding chat does not replace the real project");
+        compare(assistant.messages, messages, "HOME: hiding chat retains the actual conversation owner");
+        eligibleProject();
+        tryCompare(popup, "opened", true, 2000, "HOME: eligible return restores the stored request");
+        compare(button.enabled, true, "HOME: eligible workflow restores the real appbar action");
+        sameRect(rect(popup.contentItem), rect(item("workflow.project.sidebarHost")));
+        sameRect(rect(main), before);
+        compare(editor.text, draft, "HOME: unsent original survives hidden Home and return");
+        compare(editor.selectionStart, selection[0], "HOME: original selection start survives");
+        compare(editor.selectionEnd, selection[1], "HOME: original selection end survives");
+        capture("assistant-popup-returned-from-home");
+        toggle();
+        editor.clear();
+    }
+    function focusWithinManual(manual) {
+        for (let current = window.activeFocusItem; current; current = current.parent)
+            if (current === manual) return true;
+        return false;
+    }
+    function coveredManualInput(manual, target) {
+        verify(target !== null && target.visible && typeof target.checked === "boolean" && !target.checked,
+            "I16/popup SETUP: original covered target is a genuine unchecked visible manual tab");
+        const point = target.mapToItem(window.contentItem, target.width / 2, target.height / 2);
+        const connection = item("assistant.connection");
+        if (connection.visible) {
+            const accountRect = rect(connection);
+            verify(!(point.x >= accountRect[0] && point.x <= accountRect[0] + accountRect[2]
+                && point.y >= accountRect[1] && point.y <= accountRect[1] + accountRect[3]),
+                "I12/popup SETUP: covered manual click never targets the genuine Sign in action");
+        }
+        mouseClick(window.contentItem, point.x, point.y);
+        compare(target.checked, false, "I16/popup: covered real pointer input cannot change the manual tab");
+        verify(!focusWithinManual(manual), "I16/popup: covered pointer cannot acquire manual focus");
+        for (const backwards of [false, true]) {
+            for (let step = 0; step < 32; ++step) {
+                keyClick(Qt.Key_Tab, backwards ? Qt.ShiftModifier : Qt.NoModifier);
+                verify(!focusWithinManual(manual), "I16/popup: actual Tab/Backtab traversal excludes covered manual input");
+            }
+        }
+        compare(target.checked, false, "I16/popup: keyboard traversal never activates the covered manual tab");
+    }
+    function test_workflow_same_sidebar_and_live_state_data() {
+        return [
+            {
+                tag: "left-light",
+                side: "Left",
+                dark: false
+            },
+            {
+                tag: "right-dark",
+                side: "Right",
+                dark: true
+            }
+        ];
+    }
+    function test_workflow_same_sidebar_and_live_state(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I4/popup: real Session opens existing independent project fixture");
+        Preferences.sideBarSide = data.side;
+        EaStyle.Colors.theme = data.dark ? EaStyle.Colors.DarkTheme : EaStyle.Colors.LightTheme;
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        const main = item("workflow.project.mainContent");
+        const host = item("workflow.project.sidebarHost");
+        const manual = item("workflow.project.manualSidebar");
+        const before = rect(main);
+        const sidebarBefore = rect(host);
+        const project = Session.project;
+        const tab = findChild(manual, "sideBar.tab.extras");
+        verify(tab !== null, "I16/popup: tab belongs to the active real manual sidebar");
+        verify(tab.enabled, "I16/popup: preserved manual tab is genuinely available");
+        mouseClick(tab);
+        const tabIndex = manual.currentIndex;
+        compare(tab.checked, true, "I16/popup: manual tab state is established by real input");
+        const coveredTab = findChild(manual, "sideBar.tab.basic");
+        verify(coveredTab !== null && !coveredTab.checked, "I16/popup SETUP: actual opposite tab can expose click-through");
+        const painted = {visible: manual.visible, opacity: manual.opacity};
+        toggle();
+        compare(popup.visible, true, "I16/popup: existing toolbar opens workflow overlay");
+        compare(popup.assistant, assistant, "I16/popup: same real Session VM owns the single popup");
+        sameRect(rect(popup.contentItem), sidebarBefore);
+        sameRect(rect(main), before);
+        compare(manual.visible, painted.visible, "I16/popup: covered manual stays painted rather than disappearing");
+        compare(manual.opacity, painted.opacity, "I16/popup: covering never fades the ordinary manual colors");
+        coveredManualInput(manual, coveredTab);
+        compare(window.appBarCentralTabs.currentIndex, 1, "I16/popup: covered input never navigates the workflow");
+        const composer = item("assistant.composer");
+        composer.forceActiveFocus();
+        composer.insert(0, "PbSO4 — unsent\ncell 5.43");
+        composer.select(2, 8);
+        const draft = composer.text;
+        const start = composer.selectionStart;
+        const end = composer.selectionEnd;
+        const messages = assistant.messages;
+        capture("assistant-popup-" + data.tag);
+        toggle();
+        compare(manual.visible, painted.visible, "I16/popup: original painted manual survives hiding");
+        compare(manual.opacity, painted.opacity, "I16/popup: hiding preserves the ordinary manual opacity");
+        compare(manual.currentIndex, tabIndex, "I16/popup: actual manual tab survives covering");
+        mouseClick(coveredTab);
+        tryCompare(coveredTab, "checked", true, 500, "I16/popup: the same real manual action works after full close");
+        mouseClick(tab);
+        tryCompare(tab, "checked", true, 500, "I16/popup: normal manual input restores its original selected tab");
+        sameRect(rect(main), before);
+        toggle();
+        compare(item("assistant.popup"), popup, "I16/popup: hide/show retains the same popup instance");
+        compare(item("assistant.composer"), composer, "I16/popup: hide/show retains the actual draft editor");
+        compare(composer.text, draft, "I16/popup: unsent multiline Unicode draft survives");
+        compare(composer.selectionStart, start, "I16/popup: draft selection start survives");
+        compare(composer.selectionEnd, end, "I16/popup: draft selection end survives");
+        compare(assistant.messages, messages, "I16/popup: hiding does not replace the conversation model");
+        compare(Session.project, project, "I16/popup: toggling does not replace the open project");
+        sameRect(rect(main), before);
+        toggle();
+        composer.clear();
+    }
+    function test_navigation_keeps_visible_popup_fixed_data() {
+        return [{tag: "left", side: "Left"}, {tag: "right", side: "Right"}];
+    }
+    function test_navigation_keeps_visible_popup_fixed(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "NAV1 SETUP: original complete project enables genuine workflow navigation");
+        Preferences.sideBarSide = data.side;
+        const analysis = item("appBar.tab.analysis");
+        verify(analysis.visible && analysis.enabled, "NAV1 SETUP: actual Analysis tab is available without forcing eligibility");
+        mouseClick(analysis);
+        tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Analysis, 2000, "NAV1: genuine appbar action reaches Analysis");
+        rendered();
+        const button = item("assistant.toggle");
+        const closedIcon = button.fontIcon;
+        toggle();
+        verify(/manual|sidebar|controls/i.test(button.Accessible.name), "NAV1: shown-state appbar action truthfully names return to manual controls");
+        verify(button.fontIcon !== closedIcon, "NAV1: shown-state real appbar icon distinguishes returning from opening Assistant");
+        Preferences.toolTips = true;
+        const tooltip = button.ToolTip.text;
+        verify(/manual|sidebar|controls/i.test(tooltip), "NAV1: shown-state tooltip describes the actual sidebar-return action");
+        const candidates = Probe.objectsWithProperty(button, "closePolicy");
+        const ownedToolTips = [];
+        for(let i=0;i<candidates.length;++i)
+            if(candidates[i] instanceof EaElements.ToolTip)ownedToolTips.push(candidates[i]);
+        compare(ownedToolTips.length, 1, "NAV1 SETUP: actual Ea ToolButton owns one painted custom tooltip");
+        const toolTipPopup = ownedToolTips[0];
+        function hoverObservation(stage) {
+            const handlers = Probe.objectsWithProperty(button, "hovered");
+            const realHandlers = [];
+            for(let i=0;i<handlers.length;++i)
+                if(String(handlers[i]).includes("HoverHandler"))realHandlers.push({
+                    type: String(handlers[i]), hovered: handlers[i].hovered,
+                    parent: handlers[i].parent ? String(handlers[i].parent) : null});
+            console.info("NAV_HOVER", stage, JSON.stringify({
+                hoverEnabled: button.hoverEnabled, hovered: button.hovered,
+                showToolTips: EaGlobals.Vars.showToolTips, toolTipsPreference: Preferences.toolTips,
+                buttonRect: rect(button), buttonVisible: button.visible, buttonEnabled: button.enabled,
+                tooltipVisible: toolTipPopup.visible, tooltipOpened: toolTipPopup.opened,
+                tooltipText: toolTipPopup.text,
+                contentText: toolTipPopup.contentItem ? Ui.text(toolTipPopup.contentItem) : null,
+                contentRendered: toolTipPopup.contentItem ? Ui.rendered(toolTipPopup.contentItem) : false,
+                contentRect: toolTipPopup.contentItem ? rect(toolTipPopup.contentItem) : null,
+                outerRect: toolTipPopup.contentItem && toolTipPopup.contentItem.parent
+                    ? rect(toolTipPopup.contentItem.parent) : null,
+                hoverHandlers: realHandlers}));
+        }
+        hoverObservation("before-away");
+        mouseMove(window.contentItem, window.width / 2, window.height - 2);
+        hoverObservation("after-away");
+        mouseMove(button, button.width / 2, button.height / 2);
+        hoverObservation("after-return");
+        try {
+            tryVerify(() => toolTipPopup.visible && toolTipPopup.contentItem !== null
+                && Ui.rendered(toolTipPopup.contentItem) && Ui.text(toolTipPopup.contentItem).includes(tooltip),
+                2000, "NAV1: actual hovered tooltip popup renders its action text, not merely attached metadata");
+        } finally {
+            hoverObservation("after-hover-wait");
+        }
+        const editor = item("assistant.composer");
+        editor.insert(0, "Original navigation draft");
+        editor.select(2, 9);
+        const draft = editor.text;
+        const selection = [editor.selectionStart, editor.selectionEnd];
+        const project = Session.project;
+        const messages = assistant.messages;
+        const viewport = window.contentArea[AppState.Page.Project].SwipeView.view.contentItem;
+        verify(viewport !== null && typeof viewport.contentX === "number", "NAV1 SETUP: actual outer workflow viewport exposes rendered navigation progress");
+        for (const destination of [{name: "project", index: AppState.Page.Project}, {name: "analysis", index: AppState.Page.Analysis}]) {
+            const before = rect(popup.contentItem);
+            const firstX = viewport.contentX;
+            const target = item("appBar.tab." + destination.name);
+            verify(target.visible && target.enabled, "NAV1 SETUP: real destination appbar control remains eligible");
+            mouseClick(target);
+            const samples = [];
+            for (let frame = 0; frame < 12; ++frame) {
+                window.update();
+                verify(waitForRendering(window.contentItem, 500), "NAV1: global geometry samples follow actual rendered frames");
+                samples.push({x: viewport.contentX, moving: viewport.moving, rectangle: rect(popup.contentItem)});
+            }
+            tryCompare(window.appBarCentralTabs, "currentIndex", destination.index, 2000, "NAV1: real navigation reaches the requested destination");
+            rendered();
+            const lastX = viewport.contentX;
+            const positions = [];
+            for (const sample of samples)
+                if (sample.x > Math.min(firstX, lastX) + 0.5 && sample.x < Math.max(firstX, lastX) - 0.5 && !positions.some(value => Math.abs(value - sample.x) < 0.5))
+                    positions.push(sample.x);
+            console.info("NAVIGATION_GEOMETRY", data.side, destination.name, JSON.stringify({before: before, firstX: firstX, lastX: lastX, samples: samples}));
+            verify(positions.length >= 2, "NAV1 SETUP: genuine workflow animation visits distinct intermediate rendered positions, not immediate endpoints");
+            for (const sample of samples)
+                sameRect(sample.rectangle, before);
+            sameRect(rect(popup.contentItem), before);
+            sameRect(rect(popup.contentItem), rect(item("workflow." + destination.name + ".sidebarHost")));
+            compare(Session.project, project, "NAV1: navigation preserves the real project owner");
+            compare(assistant.messages, messages, "NAV1: navigation preserves the actual retained conversation model");
+            compare(editor.text, draft, "NAV1: navigation preserves the actual unsent draft");
+            compare(editor.selectionStart, selection[0], "NAV1: navigation preserves draft selection start");
+            compare(editor.selectionEnd, selection[1], "NAV1: navigation preserves draft selection end");
+        }
+        button.forceActiveFocus();
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", false, 2000, "NAV1: normal keyboard activation of the real return button reveals manual controls");
+        rendered();
+        verify(/assistant/i.test(button.Accessible.name), "NAV1: closed-state action truthfully offers Assistant again");
+        editor.clear();
+    }
+    // POP1: actual traversal must escape Qt's Popup tab fence to the sole hide button.
+    function test_keyboard_can_return_to_appbar_data() {
+        return [
+            {
+                tag: "tab",
+                backwards: false
+            },
+            {
+                tag: "backtab",
+                backwards: true
+            }
+        ];
+    }
+    function keyboardObservation(stage, button) {
+        const focus = window.activeFocusItem;
+        console.log("KEYBOARD_OBSERVATION", stage, JSON.stringify({
+            windowActive: window.active,
+            windowVisible: window.visible,
+            popupVisible: popup.visible,
+            shown: Preferences.assistantShown,
+            focusName: focus ? focus.objectName : null,
+            focusClass: focus ? String(focus) : null,
+            buttonFocus: button.activeFocus,
+            buttonVisible: button.visible,
+            buttonEnabled: button.enabled,
+            buttonDown: button.down
+        }));
+    }
+    function test_keyboard_can_return_to_appbar(data) {
+        if (popup.visible)
+            toggle();
+        const button = item("assistant.toggle");
+        keyboardObservation("before-focus-" + data.tag, button);
+        button.forceActiveFocus();
+        keyboardObservation("after-focus-" + data.tag, button);
+        keyClick(Qt.Key_Space);
+        keyboardObservation("after-space-" + data.tag, button);
+        tryCompare(popup, "visible", true, 500, "I16/POP1: real keyboard appbar activation opens chat");
+        const composer = item("assistant.composer");
+        tryVerify(() => composer.activeFocus, 500, "I16/POP1: traversal starts from the actual focused composer");
+        const visited = [];
+        // Finite fixture traversal bound, not a production resource or focus-policy limit.
+        for (let i = 0; i < 32 && !button.activeFocus; ++i) {
+            keyClick(Qt.Key_Tab, data.backwards ? Qt.ShiftModifier : Qt.NoModifier);
+            const focus = window.activeFocusItem;
+            if (focus && visited.indexOf(focus) < 0)
+                visited.push(focus);
+        }
+        verify(visited.length > 0, "I16/POP1: real key events traverse actual focusable objects");
+        verify(button.activeFocus, "I16/POP1: Tab and Backtab can reach the sole external appbar hide control");
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", false, 500, "I16/POP1: keyboard activation hides through the same appbar button");
+    }
+    function test_focus_restore_uses_current_scope_data() {
+        return [
+            {
+                tag: "page",
+                replacement: false
+            },
+            {
+                tag: "project-replacement",
+                replacement: true
+            }
+        ];
+    }
+    function test_focus_restore_uses_current_scope(data) {
+        if (popup.visible)
+            toggle();
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/POP2: real project establishes a live workflow scope");
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        const oldField = item("project.name");
+        const oldFieldLife313 = lifetime313(oldField);
+        mouseClick(oldField);
+        verify(oldField.activeFocus, "I16/POP2: real manual field owns focus before pointer opening");
+        toggle();
+        verify(popup.visible, "I16/POP2: pointer opens the actual popup without changing widget focus policy");
+        scopeObservation("scope-before-replacement-" + data.tag);
+        if (data.replacement) {
+            Session.closeProject();
+            scopeObservation("scope-after-close");
+            verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/POP2: real replacement creates the next project scope");
+            scopeObservation("scope-after-open");
+        }
+        const tab = item("appBar.tab.home");
+        scopeObservation("scope-before-home-" + data.tag);
+        mouseClick(tab);
+        scopeObservation("scope-after-home-" + data.tag);
+        tryCompare(window.appBarCentralTabs, "currentIndex", 0, 500, "I16/POP2: real outside navigation changes the current page while chat is open");
+        tryCompare(popup, "visible", false, 2000, "I16/POP2: Home retires visible chat under the latest owner rule");
+        compare(item("assistant.toggle").enabled, false, "I16/POP2: Home disables chat while preserving its request");
+        compare(Preferences.assistantShown, true, "I16/POP2: Home preserves the intentional open request");
+        tryVerify(() => {
+            const current = window.activeFocusItem;
+            return current !== null && Ui.rendered(current);
+        }, 500, "I16/POP2: deferred close restores only a genuinely rendered current target");
+        verify(!alive313(oldFieldLife313) || !oldField.activeFocus, "I16/POP2: retained or replaced offscreen field cannot receive restored focus");
+        const current = window.activeFocusItem;
+        keyClick(Qt.Key_Tab);
+        verify(window.activeFocusItem !== oldField, "I16/POP2: following real keyboard traversal stays outside the retired field");
+        verify(current !== null, "I16/POP2: close retains a usable visible keyboard target");
+    }
+    // Owner decision26630 removes Home chat coverage entirely: no Home strip
+    // may cover a target. Old POP3 Home-under-popup geometry cases are superseded;
+    // genuine workflow manual exclusion/current-scope focus cases remain above.
+    function test_connection_header_reachable_by_real_keyboard_data() {
+        return [
+            {
+                tag: "tab",
+                backwards: false
+            },
+            {
+                tag: "backtab",
+                backwards: true
+            }
+        ];
+    }
+    function test_connection_header_reachable_by_real_keyboard(data) {
+        eligibleProject();
+        compare(assistant.connected, false, "I12/HDR1: this real native owner is genuinely disconnected, not a fabricated account state");
+        toggle();
+        const button = item("assistant.toggle");
+        const editor = item("assistant.composer");
+        tryVerify(() => editor.activeFocus, 500, "I16/HDR1: normal opening places real input focus in the actual composer");
+        // Establish keyboard-only entry through the existing actual opener, without forceFocus.
+        for (let step = 0; step < 32 && !button.activeFocus; ++step)
+            keyClick(Qt.Key_Tab, Qt.ShiftModifier);
+        verify(button.activeFocus, "I16/HDR1: genuine reverse traversal reaches the sole appbar control");
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "visible", false, 2000, "I16/HDR1: actual keyboard opener also closes the popup");
+        keyClick(Qt.Key_Space);
+        tryCompare(popup, "opened", true, 2000, "I16/HDR1: genuine appbar keyboard activation completes actual popup opening");
+        const connection = item("assistant.connection");
+        verify(connection.visible && connection.enabled, "I12/HDR1: actual Sign in is available to a disconnected user");
+        const visited = [];
+        for (let step = 0; step < 32 && !connection.activeFocus; ++step) {
+            keyClick(Qt.Key_Tab, data.backwards ? Qt.ShiftModifier : Qt.NoModifier);
+            const focus = window.activeFocusItem;
+            if (focus && visited.indexOf(focus.objectName) < 0)
+                visited.push(focus.objectName);
+        }
+        console.log("HEADER_KEYBOARD", data.tag, JSON.stringify(visited));
+        verify(connection.activeFocus, "I12/I16/HDR1: normal forward and reverse keyboard routes reach the genuine Sign in action");
+        compare(assistant.connected, false, "I12/HDR1: keyboard reachability does not fabricate authentication");
+    }
+    function test_project_close_during_actual_enter_preserves_requested_chat() {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I4/slide: actual project supplies the entering workflow owner");
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        mouseClick(item("assistant.toggle"));
+        compare(Preferences.assistantShown, true, "I16/slide: real appbar establishes the open request before retirement");
+        verify(popup.visible && !popup.opened, "I16/slide: retirement genuinely interrupts actual enter rather than a settled or hidden popup");
+        scopeObservation("enter-before-project-close");
+        Session.closeProject();
+        mouseClick(item("appBar.tab.home"));
+        rendered();
+        scopeObservation("enter-after-project-close-render");
+        compare(Preferences.assistantShown, true, "I16/slide: project retirement does not cancel the intentional open request");
+        tryCompare(popup, "visible", false, 2000, "I16/slide: Home fully hides an interrupted entering chat");
+        compare(item("assistant.toggle").enabled, false, "I16/slide: closed-project Home cannot reopen Assistant");
+        compare(Session.project, null, "I4/slide: hiding chat never recreates the retired project");
+        verify(!item("assistant.composer").activeFocus, "I16/slide: retired hidden scope cannot keep composer input focus");
+        eligibleProject();
+        tryCompare(popup, "opened", true, 2000, "I16/slide: ordinary eligible return restores requested chat after retirement");
+        compare(popup.parent, item("workflow.project.sidebarHost"), "I16/slide: recovered chat uses the actual new current workflow host");
+        sameRect(rect(popup.contentItem), rect(item("workflow.project.sidebarHost")));
+    }
+    function test_rapid_slide_keeps_actual_plot_and_input_scope() {
+        if (popup.visible)
+            toggle();
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/slide: actual independent project anchors the live sidebar/plot");
+        Preferences.sideBarSide = "Right";
+        window.appBarCentralTabs.currentIndex = 1;
+        rendered();
+        const main = item("workflow.project.mainContent");
+        const host = item("workflow.project.sidebarHost");
+        const manual = item("workflow.project.manualSidebar");
+        const plotBefore = rect(main);
+        const hostBefore = rect(host);
+        const projectBefore = Session.project;
+        const cancelBefore = assistant.canCancel;
+        const manualPaint = {visible: manual.visible, opacity: manual.opacity};
+        const basicBefore = findChild(manual, "sideBar.tab.basic");
+        verify(basicBefore !== null && typeof basicBefore.checked === "boolean", "I16/slide SETUP: real manual tab has checked state");
+        const coveredTab = findChild(manual, basicBefore.checked ? "sideBar.tab.extras" : "sideBar.tab.basic");
+        const button = item("assistant.toggle");
+        // Raw appbar input deliberately does not wait for the new transition to finish.
+        mouseClick(button);
+        const editor = item("assistant.composer");
+        const positions = [];
+        let visibleExit = false;
+        function sample() {
+            window.update();
+            verify(waitForRendering(window.contentItem, 500), "I16/slide: observations follow an actual rendered frame");
+            sameRect(rect(main), plotBefore);
+            sameRect(rect(host), hostBefore);
+            if (popup.visible) {
+                compare(manual.visible, manualPaint.visible, "I16/slide: entering/exiting preserves the painted manual subtree");
+                compare(manual.opacity, manualPaint.opacity, "I16/slide: every observed transition frame preserves manual opacity");
+                if (!Preferences.assistantShown)
+                    visibleExit = true;
+            }
+            if (popup.visible && Ui.rendered(editor)) {
+                const position = rect(editor);
+                if (!positions.some(previous => Math.abs(previous[0] - position[0]) < 0.5 && Math.abs(previous[1] - position[1]) < 0.5)) {
+                    positions.push(position);
+                    if (positions.length <= 3)
+                        capture("assistant-slide-frame-" + positions.length);
+                }
+            }
+        }
+        // Finite renderer samples are a fixture bound, not the producer's duration/transition state.
+        for (let frame = 0; frame < 12; ++frame)
+            sample();
+        verify(positions.length >= 3, "I16/slide: actual rendered content visits distinct intermediate moving positions, not an instantaneous/fade-only toggle");
+        tryCompare(popup, "opened", true, 2000, "I16/slide: after real moving frames, enter settles before covered input proof");
+        coveredManualInput(manual, coveredTab);
+        editor.insert(0, "Unsent slide — Å cell 5.43");
+        editor.select(2, 9);
+        const draft = editor.text;
+        const selectedStart = editor.selectionStart;
+        const selectedEnd = editor.selectionEnd;
+        for (let action = 0; action < 3; ++action) {
+            mouseClick(button);
+            sample();
+        }
+        verify(visibleExit, "I16/slide: interrupted/reversed actions genuinely exercise a still-visible exit frame");
+        tryCompare(popup, "visible", false, 2000, "I16/slide: final hide fully exits before manual controls become actionable");
+        compare(manual.visible, manualPaint.visible, "I16/slide: fully exited popup retains the actual painted manual");
+        compare(manual.opacity, manualPaint.opacity, "I16/slide: fully exited popup preserves manual opacity");
+        sameRect(rect(main), plotBefore);
+        sameRect(rect(host), hostBefore);
+        compare(editor.text, draft, "I16/slide: reversing/hiding retains the actual unsent draft");
+        compare(Session.project, projectBefore, "I16/slide: transitions never replace the real project");
+        compare(assistant.canCancel, cancelBefore, "I16/slide: visibility alone does not alter the observed operation state");
+        toggle();
+        compare(editor.selectionStart, selectedStart, "I16/slide: interrupted show/hide restores actual selection start");
+        compare(editor.selectionEnd, selectedEnd, "I16/slide: interrupted show/hide restores actual selection end");
+        toggle();
+        // Continue is intentionally hidden by the existing owner rule. Exercise a
+        // genuine visible manual tab instead of requiring a retired action to appear.
+        const basicTab = findChild(manual, "sideBar.tab.basic");
+        verify(basicTab !== null && typeof basicTab.checked === "boolean", "I16/slide: actual Qt TabButton exposes the checked observer before choosing its opposite");
+        const manualTab = findChild(manual, basicTab.checked ? "sideBar.tab.extras" : "sideBar.tab.basic");
+        verify(manualTab !== null && typeof manualTab.checked === "boolean" && !manualTab.checked, "I16/slide: opposite real tab is initially unchecked before physical input");
+        verify(manualTab !== null && manualTab.visible && manualTab.enabled, "I16/slide: genuine visible manual tab is restored after full exit");
+        mouseClick(manualTab);
+        tryCompare(manualTab, "checked", true, 500, "I16/slide: actual manual action works after exit without an invisible input blocker");
+        editor.clear();
+    }
+    // Real retained transcript, no fixture row/model mutation or direct page handler call.
+    function report187_state(stage) {
+        console.log("REPORT187_STATE", stage, JSON.stringify({
+            connected: assistant.connected, state: assistant.state, canCancel: assistant.canCancel,
+            contextConsentRequired: assistant.contextConsentRequired, lastError: assistant.lastError,
+            pendingQuestion: assistant.pendingQuestion, pendingPlan: assistant.pendingPlan,
+            projectPresent: Session.project !== null,
+            calculating: Session.project ? Session.project.calculating : null,
+            models: assistant.models.count,
+            focusedControl: window.activeFocusItem ? window.activeFocusItem.objectName : null,
+            rows: Probe.rows(assistant.messages).map(row => ({id: row.id, kind: row.kind,
+                status: row.status, text: row.text}))
+        }));
+    }
+    function report187_ready(stage, approved) {
+        try {
+            tryVerify(() => assistant.connected && assistant.state === "idle" && !assistant.canCancel
+                && (!approved || !assistant.contextConsentRequired), 2000,
+                "REPORT171 SETUP: actual current thread is idle and disclosed before original Send");
+        } finally { report187_state(stage); }
+    }
+    function test_report171_chat_anchor_uses_existing_current_report_page_data() {
+        return [{tag: "current"}, {tag: "replacement"}, {tag: "missing"},
+            {tag: "disabled"}, {tag: "protected-other"}];
+    }
+    function test_report171_chat_anchor_uses_existing_current_report_page(data) {
+        const original = "[Open Report page](edi:report)\n\n[Unknown protected report](not-a-report:original)";
+        toggle();
+        // Ordinary public bootstrap uses the deliberate absolute owned peer;
+        // it is not proof of physical Sign in delivery or provider entitlement.
+        assistant.signIn();
+        tryCompare(assistant, "connected", true, 2000, "REPORT171 SETUP: genuine managed account/catalog bootstrap");
+        verify(assistant.models.count > 0, "REPORT171 SETUP: real catalog is admitted");
+        report187_ready("before-approval-" + data.tag, false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("before-send-" + data.tag, true);
+        verify(!assistant.contextConsentRequired, "REPORT171 SETUP: actual current disclosure is approved");
+        const draft = "Original Main report navigation " + data.tag;
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        assistant.send(draft);
+        try {
+        tryVerify(() => Probe.rows(assistant.messages).some(row => !previousIds.has(row.id) && row.kind === "assistant"
+            && row.status === "completed" && row.text === original), 2000,
+            "REPORT171 SETUP: genuine original completed transcript row exists before pointer input");
+        } finally { report187_state("after-row-wait-" + data.tag); }
+        const retained = Probe.rows(assistant.messages).find(row => !previousIds.has(row.id) && row.kind === "assistant"
+            && row.status === "completed" && row.text === original);
+        verify(retained.id.length > 0, "REPORT171: actual immutable source row has a real identity");
+        compare(Probe.rows(assistant.messages).filter(row => !previousIds.has(row.id) && row.kind === "user" && row.text === draft).length,
+            1, "REPORT171: ordinary original input is admitted once");
+        if (data.tag === "replacement") {
+            verify(Session.openProject(Probe.repoUrl("tests/fixtures/report_options/pairs")),
+                "REPORT171 SETUP: genuine different current project replaces original row owner");
+        } else if (data.tag === "missing") {
+            Session.closeProject();
+        } else if (data.tag === "disabled") {
+            Session.project.removeStructure(0);
+            compare(Session.project.structures.count, 0, "REPORT171 SETUP: actual model removal disables Report");
+        }
+        // Home hides Assistant by policy; use the real eligible workflow action,
+        // never force a page/enable property to make the anchor reachable.
+        function observeMissingOpener(stage) {
+            if (data.tag !== "missing") return;
+            try {
+                const opener = findChild(window, "assistant.toggle");
+                const projectTab = findChild(window, "appBar.tab.project");
+                console.log("REPORT193_OPENER", stage, JSON.stringify({
+                    page: window.appBarCentralTabs.currentIndex,
+                    requested: Preferences.assistantShown, shown: popup.shown,
+                    visible: popup.visible, opened: popup.opened,
+                    showingActions: assistant.showingActions,
+                    manualTakeover: window.assistantManualTakeover,
+                    popupParent: popup.parent ? popup.parent.objectName : null,
+                    projectPresent: Session.project !== null, hasProject: Session.hasProject,
+                    projectPageEnabled: AppState.projectPageEnabled,
+                    workflowPagePresent: window.assistantWorkflowPage != null,
+                    activeHostPresent: window.activeAssistantHost != null,
+                    activeHostName: window.activeAssistantHost ? window.activeAssistantHost.objectName : null,
+                    projectTab: projectTab ? {visible: projectTab.visible, enabled: projectTab.enabled} : null,
+                    toggle: opener ? {visible: opener.visible, enabled: opener.enabled} : null,
+                    connected: assistant.connected, state: assistant.state,
+                    canCancel: assistant.canCancel, sessionLastError: Session.lastError
+                }));
+            } catch (error) { console.log("REPORT193_OPENER_DIAGNOSTIC_ERROR", stage, String(error)); }
+        }
+        observeMissingOpener("before-original-project-click");
+        try {
+            mouseClick(item("appBar.tab.project"));
+            tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000,
+                "REPORT171 SETUP: genuine Project action exposes the retained chat");
+            rendered();
+            tryCompare(popup, "opened", true, 2000, "REPORT171 SETUP: retained Assistant is actually visible");
+        } finally { observeMissingOpener("after-original-opener-wait"); }
+        const current = Session.project;
+        const history = JSON.stringify(Probe.rows(assistant.messages));
+        const parameters = current ? JSON.stringify(Probe.rows(current.parameters)) : "";
+        const row = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(item => item.rowId === retained.id
+            && item.kind === "assistant" && item.status === "completed");
+        compare(row.length, 1, "REPORT171: real production delegate belongs to the retained row");
+        const bodies = Ui.itemsWithProperty(row[0], "readOnly").filter(item => item.visible
+            && typeof item.linkAt === "function" && item.readOnly);
+        compare(bodies.length, 1, "REPORT171: actual rendered message owns its real selectable anchor");
+        const body = bodies[0];
+        const label = data.tag === "protected-other" ? "Unknown protected report" : "Open Report page";
+        const href = data.tag === "protected-other" ? "not-a-report:original" : "edi:report";
+        const plain = body.getText(0, body.length);
+        const start = plain.indexOf(label);
+        verify(start >= 0, "REPORT171: original visible link label survives actual Markdown rendering");
+        const bounds = body.positionToRectangle(start + 2);
+        const x = bounds.x + Math.max(1, bounds.width / 2);
+        const y = bounds.y + bounds.height / 2;
+        compare(body.linkAt(x, y), href, "REPORT171: physical point belongs to the exact original URI");
+        mouseMove(window.contentItem, 1, window.height - 1);
+        mouseMove(body, x, y);
+        tryCompare(body, "hoveredLink", href, 2000, "REPORT171: actual pointer enters the rendered anchor");
+        verify(Probe.objectsWithProperty(row[0], "cursorShape").some(handler => handler.cursorShape === Qt.PointingHandCursor),
+            "REPORT171: live production anchor offers its actual pointing-hand cursor role");
+        const pageBefore = window.appBarCentralTabs.currentIndex;
+        mouseClick(body, x, y);
+        if (data.tag === "missing" || data.tag === "disabled") {
+            verify(!AppState.reportPageEnabled, "REPORT171 SETUP: normal project guard genuinely forbids Report");
+            compare(window.appBarCentralTabs.currentIndex, pageBefore,
+                "REPORT171: unavailable Report does not navigate a stale page");
+            const dialog = findChild(window, "assistant.reportPageUnavailable");
+            verify(dialog !== null, "REPORT171: actual unavailable dialog belongs to real Main");
+            tryCompare(dialog, "opened", true, 2000, "REPORT171: unavailable navigation has a visible honest explanation");
+            compare(dialog.title, "Report page unavailable", "REPORT171: report refusal is ordinary user-facing guidance");
+            const close = dialog.standardButton(Dialog.Close);
+            verify(close !== null && close.visible && close.enabled, "REPORT171: real refusal dialog can be acknowledged");
+            mouseClick(close);
+        } else if (data.tag === "protected-other") {
+            compare(window.appBarCentralTabs.currentIndex, pageBefore,
+                "REPORT171: only exact edi:report URI receives internal navigation authority");
+            tryVerify(() => assistant.lastError.length > 0, 2000,
+                "REPORT171: unchanged protected report guard refuses an untrusted unrelated scheme");
+        } else {
+            tryCompare(window.appBarCentralTabs, "currentIndex", AppState.Page.Report, 2000,
+                "REPORT171: real anchor click reaches existing Main Report page");
+            rendered();
+            const preview = Ui.control(Probe, window, "report.preview");
+            verify(preview !== null && Ui.rendered(preview), "REPORT171: existing live preview is actually exposed");
+            compare(preview.report, current.report, "REPORT171: link means actual current report, including after replacement");
+            tryCompare(current.report, "active", true, 2000, "REPORT171: existing Report model follows real selected page");
+            verify(Ui.control(Probe, window, "group.reportExport") !== null,
+                "REPORT171: existing export controls are reused rather than duplicated");
+            verify(findChild(window, "assistant.reportPageUnavailable") === null
+                || !findChild(window, "assistant.reportPageUnavailable").opened,
+                "REPORT171: valid current navigation does not report unavailable");
+        }
+        compare(Session.project, current, "REPORT171: navigation alone never replaces project ownership");
+        if (current) compare(JSON.stringify(Probe.rows(current.parameters)), parameters,
+            "REPORT171: navigation cannot edit current native values/free/SU");
+        compare(JSON.stringify(Probe.rows(assistant.messages)), history,
+            "REPORT171: clicking a link preserves actual original conversation bytes/identities");
+        verify(assistant.connected, "REPORT171: page navigation/refusal preserves genuine managed account");
+        assistant.signOut();
+        tryCompare(assistant, "connected", false, 2000, "REPORT171: owned fixture teardown actually settles");
+    }
+
+    // Genuine Main/default Session and ordinary native script. No fake account,
+    // scientific model, busy state, pointer flag or worker is assigned here.
+    function visible185_parameters(project) {
+        return Probe.rows(project.parameters).map(row => row.parameter);
+    }
+    function visible185_parameter(project, label, name) {
+        const found = visible185_parameters(project).filter(parameter =>
+            parameter.rowLabel === label && parameter.name === name);
+        compare(found.length, 1, "VA SETUP: independent original parameter metadata is unique");
+        return found[0];
+    }
+    function visible185_inputs(project) {
+        const experiment = project.currentExperiment;
+        const observations = Probe.rows(experiment.pattern).map(row => [row.x, row.intensityMeas, row.intensityMeasSu]);
+        verify(observations.length > 0 && observations.every(row => row.every(Number.isFinite) && row[2] > 0),
+            "VA SETUP: genuine measured observations and positive supplied sigmas exist before preservation is asserted");
+        return JSON.stringify({
+            observations: observations,
+            weight: experiment.datasetWeight,
+            exclusions: Probe.rows(experiment.excludedRegions),
+            links: Probe.rows(experiment.linkedStructures).map(row => [row.structureId, row.enabled])
+        });
+    }
+    function visible185_values(project) {
+        return JSON.stringify(visible185_parameters(project).map(parameter =>
+            [parameter.path, parameter.value, parameter.free, parameter.hasUncertainty, parameter.uncertainty]));
+    }
+    function visible185_type(text) {
+        keySequence(StandardKey.SelectAll);
+        keyClick(Qt.Key_Backspace);
+        for (const character of text)
+            keyClick(character);
+    }
+    function visible185_page(name) {
+        Ui.click(this, Probe, window, "appBar.tab." + name);
+        rendered();
+    }
+    function visible185_field(parameter) {
+        const fields = Ui.itemsWithProperty(Ui.page(window), "item").filter(candidate =>
+            candidate.objectName.startsWith("parameters.value.")
+            && candidate.item === parameter && candidate.visible && Ui.exposed(candidate));
+        compare(fields.length, 1, "VA1 SETUP: genuine exposed visual Analysis cell belongs to exact ParameterItem");
+        return fields[0];
+    }
+    function visible185_free(parameter) {
+        const found = Ui.itemsWithProperty(Ui.page(window), "objectName").filter(candidate => {
+            if (!candidate.objectName.startsWith("parameters.free.") || !Ui.exposed(candidate)) return false;
+            for (let parent = candidate.parent; parent; parent = parent.parent)
+                if (parent.parameter === parameter) return true;
+            return false;
+        });
+        compare(found.length, 1, "VA1 SETUP: genuine exposed free checkbox belongs to exact visual row parameter");
+        return found[0];
+    }
+    function visible185_outcome(callId, previousIds) {
+        const rows = Probe.rows(assistant.messages).filter(value => !previousIds.has(value.id)
+            && value.kind === "activity" && value.payload
+            && value.payload.id === callId && value.payload.nativeOutcome);
+        verify(rows.length <= 1, "VA: one new retained row owns the original current native call");
+        return rows.length ? rows[0].payload.nativeOutcome : null;
+    }
+    function visible185_ready(stage) {
+        try {
+            tryVerify(() => assistant.connected && assistant.state === "idle" && !assistant.canCancel,
+                2000, "VA SETUP: actual current managed context is idle before original admission");
+        } finally { report187_state("visible-" + stage); }
+    }
+    function visible185_capture(stage) {
+        // Optional actual frame receipt; no extra sleep/render wait or pixel oracle.
+        try {
+            const image = grabImage(window.contentItem);
+            if (image.width > 0 && image.height > 0) {
+                image.save("visible185-" + stage + ".png");
+                console.log("VISIBLE185_FRAME", stage, image.width, image.height);
+            }
+        } catch (error) { console.log("VISIBLE185_FRAME_UNAVAILABLE", stage, String(error)); }
+    }
+    function visible237_observationMs(actions) {
+        // Public de82 helper: move500/press100/relax-or-stage500; character100.
+        // A complete parameter action has at most page/Main/reset/filter/target,
+        // two select/delete pairs and literal path/value Unicode scalar spelling.
+        // Keep the original10000 observation allowance and add the actual finite
+        // serialized presentation workload; do not accelerate input or relax outcomes.
+        return 10000 + actions.reduce((total, action) => total + 5 * (500 + 100 + 500)
+            + 100 * (4 + [...action.path].length + [...action.text].length) + 2 * 500, 0);
+    }
+    function test_visible185_actual_native_manual_interaction_data() {
+        return ["default-off", "analysis-value-free", "wavelength", "manual-override",
+            "dirty-valid-value", "dirty-invalid-value", "dirty-valid-free", "dirty-invalid-free",
+            "dirty-valid-fit", "dirty-invalid-fit", "real-fit", "fit-stop", "close-owner",
+            "unsupported-values", "unsupported-free", "unsupported-relations", "normal-relations"].map(tag => ({tag: tag}));
+    }
+    function test_visible185_actual_native_manual_interaction(data) {
+        const fitCase = ["real-fit", "fit-stop"].includes(data.tag) || data.tag.endsWith("-fit");
+        const fixture = fitCase ? "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project"
+            : "tests/fixtures/e04_t1/editable-project";
+        verify(Session.openProject(Probe.repoUrl(fixture)), "VA SETUP: genuine independent complete project opens normally");
+        const project = Session.project;
+        const parameters = visible185_parameters(project);
+        const cell = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+        compare(cell.length, 1, "VA SETUP: original independent cell scalar is unique");
+        const la = fitCase ? cell[0] : visible185_parameter(project, "La", "adp_iso");
+        const ba = fitCase ? null : visible185_parameter(project, "Ba", "adp_iso");
+        if (fitCase) {
+            for (const parameter of parameters) parameter.free = false;
+            cell[0].free = true;
+            project.currentExperiment.scale.free = true;
+            project.analysis.maxIterations = 8; // Existing bounded real-fit prior art; no optimum oracle.
+        } else {
+            // The independent editable fixture deliberately supplies only La in a complete-replacement
+            // custom table. Restore the public built-in-table mode before this nonfit setup calculates.
+            const lengths = project.currentStructure.scatteringLengths;
+            const originalLengths = Probe.rows(lengths);
+            compare(originalLengths.length, 1, "VA SETUP: original fixture has its one declared custom neutron length");
+            compare(originalLengths[0].typeSymbol, "La", "VA SETUP: original custom table is the literal fixture La entry");
+            compare(originalLengths[0].lengthFm, 8.24, "VA SETUP: original custom length matches independent fixture bytes");
+            for (let index = originalLengths.length - 1; index >= 0; --index) lengths.remove(index);
+            compare(lengths.count, 0, "VA SETUP: public custom model is empty so the existing built-in table applies");
+            compare(Probe.rows(lengths).length, 0, "VA SETUP: actual model readback confirms custom replacement was removed");
+            la.free = false;
+            ba.free = false;
+        }
+        try {
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+                10000, "VA SETUP: real original calculation and ordinary free-subset edits settle");
+        } finally {
+            try {
+                const experiment = project ? project.currentExperiment : null;
+                const pattern = experiment ? experiment.pattern : null;
+                console.log("VISIBLE193_SETUP", data.tag, JSON.stringify({
+                    currentOwner: Session.project === project, projectPresent: Session.hasProject,
+                    calculating: project ? project.calculating : null,
+                    computedCurrent: experiment ? Probe.computedCurrent(experiment) : null,
+                    patternCalculationError: pattern ? pattern.calculationError : null,
+                    patternStale: pattern ? pattern.stale : null,
+                    patternCount: pattern ? pattern.count : null,
+                    projectLastError: project ? project.lastError : null,
+                    sessionLastError: Session.lastError,
+                    sessionMessagesModel: "Session.loadWarnings",
+                    sessionMessages: Probe.rows(Session.loadWarnings),
+                    page: window.appBarCentralTabs.currentIndex
+                }));
+            } catch (error) { console.log("VISIBLE193_SETUP_DIAGNOSTIC_ERROR", String(error)); }
+        }
+        if (fitCase) verify(project.fit.available, "VA SETUP: actual installed native backend admits this real single fit");
+        const inputs = visible185_inputs(project);
+        const originalValues = visible185_values(project);
+        const originalValue = la.value;
+        const originalFlag = la.free;
+        const wavelength = parameters.filter(parameter => parameter.name === "setup_wavelength");
+        compare(wavelength.length, 1, "VA SETUP: genuine original wavelength scalar exists");
+        const originalWavelength = wavelength[0].value;
+        const declarationRows = [Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)];
+        const originalDeclarations = JSON.stringify(declarationRows);
+        compare(typeof assistant.showActions, "boolean", "VA SETUP: real production mode property is available");
+        compare(assistant.showActions, false, "VA: every actual new Session mode starts OFF, not fabricated enabled");
+        toggle();
+        assistant.signIn();
+        visible185_ready("bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("disclosed");
+        verify(!assistant.contextConsentRequired, "VA SETUP: genuine current disclosed context is approved");
+        const accountRows = Probe.rows(assistant.models).map(row => row.id);
+        if (!["default-off", "normal-relations"].includes(data.tag)) {
+            const checkbox = item("assistant.showActions");
+            verify(checkbox.visible && checkbox.enabled, "VA SETUP: actual Show actions control is actionable");
+            mouseClick(checkbox);
+            compare(assistant.showActions, true, "VA: real checkbox enables the nonpersistent mode");
+        }
+        toggle(); // Actual original toggle exposes manual controls before setup input.
+        visible185_page("analysis");
+        if (!fitCase) {
+            const filter = Ui.control(Probe, window, "parameters.nameFilter");
+            verify(filter !== null && Ui.exposed(filter), "VA SETUP: actual Analysis filter is exposed");
+            mouseClick(filter);
+            visible185_type("adp_iso");
+            rendered();
+        }
+        let field = fitCase ? null : visible185_field(la);
+        let free = fitCase ? null : visible185_free(la);
+        if (data.tag === "wavelength") {
+            visible185_page("experiment");
+            function wavelength243(stage) {
+                try {
+                    const candidates = Ui.itemsWithProperty(Ui.page(window), "objectName")
+                        .filter(control => control.objectName === "instrument.setup_wavelength");
+                    console.log("WAVELENGTH243_PREMISE", stage, JSON.stringify({
+                        page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
+                        expectedItem: String(wavelength[0]),
+                        groups: Ui.itemsWithProperty(Ui.page(window), "objectName")
+                            .filter(control => control.objectName === "group.instrument")
+                            .map(group => ({identity: String(group), visible: group.visible,
+                                enabled: group.enabled, collapsed: group.collapsed})),
+                        candidates: candidates.map(control => {
+                            const point = control.mapToItem(window.contentItem, 0, 0);
+                            return {identity: String(control), item: String(control.item),
+                                exactItem: control.item === wavelength[0], visible: control.visible,
+                                enabled: control.enabled, inPane: Ui.inPane(control),
+                                rect: [point.x, point.y, control.width, control.height],
+                                clickPoint: Ui.clickPoint(control), exposed: Ui.exposed(control)};
+                        }), sameOwner: Session.project === project, connected: assistant.connected,
+                        lastError: assistant.lastError}));
+                } catch (error) { console.log("WAVELENGTH243_PREMISE_ERROR", stage, String(error)); }
+            }
+            wavelength243("before-reveal");
+            try {
+                Ui.click(this, Probe, window, "sideBar.tab.basic");
+                Ui.expandGroup(this, Probe, window, "group.instrument");
+                field = Ui.control(Probe, window, "instrument.setup_wavelength");
+                if (field !== null) {
+                    Ui.scrollIntoView(field);
+                    rendered();
+                }
+                verify(field !== null && field.item === wavelength[0] && Ui.exposed(field),
+                    "VA SETUP: original supplied wavelength has its genuine current field");
+            } finally { wavelength243("after-reveal-check"); }
+            free = null;
+        }
+        const fitButton = fitCase ? Ui.control(Probe, window, "fitting.start") : null;
+        if (fitCase) verify(fitButton !== null && Ui.exposed(fitButton), "VA FIT SETUP: genuine normal Start fitting button is exposed");
+        let typed = 0, toggled = 0, activeStarts = 0, fitStarted = 0, finished = 0;
+        let capturedTyping = false;
+        let spellings = [], writes = [], fitClicks = 0;
+        const editedParameter = data.tag === "wavelength" ? wavelength[0] : la;
+        const pacedObservation = data.tag === "unsupported-relations"
+            ? relation246_observationMs({aliases: [
+                {id: "visible_original_la", path: la.path}, {id: "visible_original_ba", path: ba.path}],
+                constraints: [{id: "visible_original_shared", expression: "visible_original_ba = visible_original_la", enabled: true}]})
+            : assistant.showActions ? visible237_observationMs(
+            data.tag === "analysis-value-free"
+                ? [{path: la.path, text: "0.6"}, {path: la.path, text: ""}]
+                : [{path: editedParameter.path, text: data.tag === "wavelength" ? "1.49" : "0.6"}]) : 10000;
+        function valueReceipt() { writes.push(editedParameter.value); }
+        function fitClickReceipt() { ++fitClicks; }
+        function typedReceipt() {
+            ++typed;
+            spellings.push(field.text);
+            if (data.tag === "analysis-value-free" && !capturedTyping) {
+                capturedTyping = true;
+                visible185_capture("typing");
+            }
+        }
+        function freeReceipt() { ++toggled; }
+        function activeReceipt() { if (assistant.showingActions) ++activeStarts; }
+        function fitReceipt() { if (alive313(fitLife313) && fitOwner313.running) ++fitStarted; }
+        function finishedReceipt() {
+            ++finished;
+            console.log("VISIBLE185_FINISHED", data.tag, JSON.stringify({finished: finished,
+                actualOutcome: alive313(fitLife313) ? fitOwner313.outcome : null,
+                running: alive313(fitLife313) ? fitOwner313.running : null,
+                currentOwner: Session.project === project}));
+        }
+        const fieldLife313 = lifetime313(field), freeLife313 = lifetime313(free);
+        const parameterLife313 = lifetime313(editedParameter), fitButtonLife313 = lifetime313(fitButton);
+        const fitOwner313 = project.fit, fitLife313 = lifetime313(fitOwner313);
+        if (field) field.textEdited.connect(typedReceipt);
+        if (free) free.toggled.connect(freeReceipt);
+        editedParameter.valueChanged.connect(valueReceipt);
+        if (fitButton) fitButton.clicked.connect(fitClickReceipt);
+        assistant.showingActionsChanged.connect(activeReceipt);
+        project.fit.runningChanged.connect(fitReceipt);
+        project.fit.finished.connect(finishedReceipt);
+        let draftField = null, draft = "", draftFocus = null, draftSelection = null, draftPage = -1;
+        const call = "visible185-action-" + data.tag;
+        const requestPreviousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const timelineEnabled = data.tag === "analysis-value-free";
+        const timelinePriorIds = timelineEnabled ? new Set(Probe.rows(assistant.messages).map(row => row.id)) : null;
+        let timelineCount = 0;
+        const timelineLimit = 64; // Observer-only record budget; never a behavior assertion or runtime bound.
+        function timelineControl(control) {
+            if (!control) return null;
+            try {
+                const ancestry = [];
+                let belongsToMain = control === window.contentItem;
+                for (let parent = control.parent; parent; parent = parent.parent) {
+                    if (parent === window.contentItem) belongsToMain = true;
+                    ancestry.push({identity: String(parent), name: parent.objectName,
+                        visible: parent.visible, enabled: parent.enabled, opacity: parent.opacity,
+                        clip: parent.clip, rect: rect(parent)});
+                }
+                return {identity: String(control), name: control.objectName, belongsToMain: belongsToMain,
+                    visible: control.visible, enabled: control.enabled, opacity: control.opacity,
+                    activeFocus: control.activeFocus, clip: control.clip, rect: rect(control),
+                    clickPoint: Ui.clickPoint(control), rendered: Ui.rendered(control),
+                    text: typeof control.text === "string" ? control.text : null,
+                    checked: typeof control.checked === "boolean" ? control.checked : null,
+                    ancestry: ancestry};
+            } catch (error) { return {observationError: String(error)}; }
+        }
+        function timeline(event, argument) {
+            if (!timelineEnabled) return;
+            const sequence = ++timelineCount;
+            if (sequence > timelineLimit) return;
+            try {
+                const table = Ui.control(Probe, window, "parameters.list");
+                const filter = table ? table.sourceModel : null;
+                const rows = Probe.rows(assistant.messages).filter(row => !timelinePriorIds.has(row.id)
+                    && row.payload && [call, "visible185-value-" + data.tag, "visible185-read-" + data.tag].includes(row.payload.id));
+                console.log("VISIBLE199_TIMELINE", data.tag, JSON.stringify({
+                    sequence: sequence, epochMs: Date.now(), event: event, argument: argument || null,
+                    page: window.appBarCentralTabs.currentIndex, pageIdentity: String(Ui.page(window)),
+                    windowIdentity: String(window), windowVisible: window.visible, windowActive: window.active,
+                    actionWindow: String(assistant.actionWindow), actionWindowIsMain: assistant.actionWindow === window,
+                    showingActions: assistant.showingActions, manualTakeover: window.assistantManualTakeover,
+                    canCancel: assistant.canCancel, state: assistant.state, lastError: assistant.lastError,
+                    requested: Preferences.assistantShown, shown: popup.shown, opened: popup.opened,
+                    filter: filter ? {name: filter.nameFilter, category: filter.categoryFilter,
+                        variability: filter.variability, targetRow: filter.rowOf(la), targetShown: filter.shows(la)} : null,
+                    focus: timelineControl(window.activeFocusItem), field: timelineControl(field), free: timelineControl(free),
+                    pointer: timelineControl(findChild(window, "assistant.actionPointer")),
+                    target: {identity: String(la), path: la.path, value: la.value, free: la.free},
+                    typed: typed, toggled: toggled, currentOwner: Session.project === project,
+                    connected: assistant.connected, connectionLabel: assistant.connectionLabel,
+                    models: Probe.rows(assistant.models).map(row => row.id), outcome: visible185_outcome(call, requestPreviousIds),
+                    newNativeRows: rows.map(row => ({id: row.id, kind: row.kind, status: row.status,
+                        payload: {id: row.payload.id, tool: row.payload.tool, namespace: row.payload.namespace,
+                            arguments: row.payload.arguments, status: row.payload.status,
+                            success: row.payload.success, error: row.payload.error,
+                            nativeOutcome: row.payload.nativeOutcome}}))
+                }));
+            } catch (error) { console.log("VISIBLE199_TIMELINE_ERROR", sequence, event, String(error)); }
+        }
+        const timelineSlots = timelineEnabled ? [
+            [assistant.actionPointerShown, () => timeline("pointer-shown")],
+            [assistant.actionPointerMoved, position => timeline("pointer-moved", {x: position.x, y: position.y})],
+            [assistant.actionPointerPressed, () => timeline("pointer-pressed")],
+            [assistant.actionPointerHidden, () => timeline("pointer-hidden")],
+            [assistant.showingActionsChanged, () => timeline("showing-actions")],
+            [assistant.actionManualTakeover, () => timeline("manual-takeover")],
+            [window.activeFocusItemChanged, () => timeline("focus")],
+            [window.appBarCentralTabs.currentIndexChanged, () => timeline("page")],
+            [assistant.messages.rowsInserted, () => timeline("rows-inserted")],
+            [assistant.messages.rowsRemoved, () => timeline("rows-removed")],
+            [assistant.messages.dataChanged, () => timeline("rows-data")],
+            [assistant.messages.modelReset, () => timeline("rows-reset")]
+        ] : [];
+        for (const slot of timelineSlots) slot[0].connect(slot[1]);
+        timeline("armed-before-original-events");
+        try {
+            if (data.tag === "analysis-value-free") {
+                verify(!Probe.objectsWithProperty(window, "item").includes(field),
+                    "VA1 SETUP: actual value delegate is visual-only relative to QObject root traversal");
+                verify(!Probe.objectsWithProperty(window, "checked").includes(free),
+                    "VA1 SETUP: actual free delegate is visual-only relative to QObject root traversal");
+            }
+            if (data.tag.startsWith("dirty-")) {
+                visible185_page("structure");
+                Ui.click(this, Probe, window, "sideBar.tab.basic");
+                Ui.expandGroup(this, Probe, window, "group.cell");
+                draftField = Ui.control(Probe, window, "cell.length_a");
+                if (draftField !== null) {
+                    Ui.scrollIntoView(draftField);
+                    rendered();
+                }
+                console.log("DRAFT253_PREMISE", data.tag, JSON.stringify({
+                    page: window.appBarCentralTabs.currentIndex,
+                    group: {identity: String(Ui.control(Probe, window, "group.cell")),
+                        collapsed: Ui.control(Probe, window, "group.cell").collapsed},
+                    basicChecked: Ui.control(Probe, window, "sideBar.tab.basic").checked,
+                    field: draftField ? {identity: String(draftField), item: String(draftField.item),
+                        exactItem: draftField.item === cell[0], visible: draftField.visible,
+                        enabled: draftField.enabled, activeFocus: draftField.activeFocus,
+                        readOnly: draftField.readOnly === undefined ? null : draftField.readOnly,
+                        rect: rect(draftField),
+                        clickPoint: Ui.clickPoint(draftField), exposed: Ui.exposed(draftField)} : null,
+                    currentOwner: Session.project === project, connected: assistant.connected}));
+                verify(draftField !== null && draftField.item === cell[0] && draftField.enabled && Ui.exposed(draftField),
+                    "VA3 SETUP: genuine editable manual field is exposed before delegated work");
+                Ui.click(this, Probe, window, draftField.objectName);
+                draft = data.tag.startsWith("dirty-invalid") ? "invalid-partial" : String(cell[0].value + 0.02);
+                visible185_type(draft);
+                verify(draftField.activeFocus && draftField.text === draft,
+                    "VA3 SETUP: original genuine keyboard draft is still active and uncommitted");
+                compare(visible185_values(project), originalValues,
+                    "VA3 SETUP: typing without Return has not committed a scientific change");
+                draftFocus = window.activeFocusItem;
+                draftSelection = [draftField.selectionStart, draftField.selectionEnd];
+                draftPage = window.appBarCentralTabs.currentIndex;
+            }
+            if (["analysis-value-free", "wavelength", "manual-override", "close-owner", "real-fit", "fit-stop"].includes(data.tag)) {
+                toggle();
+                compare(Preferences.assistantShown, true, "VA SETUP: actual stored request covers manual controls before temporary action reveal");
+            }
+            visible185_ready("before-original-send");
+            // Direct public Send is setup only: it intentionally does not blur a manual draft.
+            assistant.send("Original delegated visible operation " + data.tag);
+            if (["manual-override", "close-owner"].includes(data.tag)) {
+                tryVerify(() => assistant.showingActions && field.activeFocus && field.text !== field.editText,
+                    pacedObservation, "VA2/VA4 SETUP: genuine paced original draft is active before intervention");
+                const pointer = item("assistant.actionPointer");
+                verify(Ui.rendered(pointer), "VA SETUP: actual accent pointer is rendered during real input");
+                if (data.tag === "manual-override") {
+                    // The exact original La path is now the genuine displayed filter.
+                    // Ba exposure under that filter remains explicitly unqualified.
+                    verify(la.refinable && la.fittable,
+                        "VA2 SETUP: original same-row manual target is independently fittable, never a derived alias");
+                    const manual = visible185_free(la);
+                    const beforeFree = la.free;
+                    const beforeManualUndo = project.canUndo;
+                    const manualValues = JSON.parse(originalValues).map(row =>
+                        row[0] === la.path ? [row[0], row[1], !beforeFree, row[3], row[4]] : row);
+                    const filter = Ui.control(Probe, window, "parameters.list").sourceModel;
+                    console.log("MANUAL253_PREMISE", JSON.stringify({target: la.path,
+                        value: la.value, free: beforeFree, page: window.appBarCentralTabs.currentIndex,
+                        filter: {name: filter.nameFilter, category: filter.categoryFilter,
+                            variability: filter.variability, targetShown: filter.shows(la), targetRow: filter.rowOf(la),
+                            otherShown: filter.shows(ba), otherRow: filter.rowOf(ba)},
+                        rect: rect(manual), clickPoint: Ui.clickPoint(manual),
+                        currentOwner: Session.project === project, connected: assistant.connected}));
+                    let manualToggles = 0;
+                    function manualReceipt() { ++manualToggles; }
+                    manual.toggled.connect(manualReceipt);
+                    try {
+                        const point = Ui.clickPoint(manual);
+                        verify(point !== null, "VA2 SETUP: original manual event has a genuine exposed target");
+                        Ui.click(this, Probe, window, manual.objectName);
+                        tryCompare(la, "free", !beforeFree, 2000,
+                            "VA2: original user checkbox event reaches its original target while cancellation restores view");
+                        compare(manualToggles, 1, "VA2: user input is delivered once, never retargeted or replayed");
+                    } finally { manual.toggled.disconnect(manualReceipt); }
+                    tryCompare(assistant, "showingActions", false, 10000,
+                        "VA2: original visible input retires after real manual takeover");
+                    compare(la.value, originalValue, "VA2: cancelled uncommitted agent draft cannot write scientific state");
+                    rendered();
+                    compare(visible185_values(project), JSON.stringify(manualValues),
+                        "VA2: only the genuine original manual free action changes state; no late numeric/other write");
+                    compare(visible185_inputs(project), inputs,
+                        "VA2: original manual receiver preserves every measured sigma/weight/mask/link");
+                    compare(project.canUndo, beforeManualUndo,
+                        "VA2: cancellation consumes no prior Undo and creates no phantom native step");
+                    verify(Ui.rendered(manual), "VA2: manual controls stay exposed after genuine user takeover");
+                    compare(Preferences.assistantShown, true, "VA2: takeover preserves the actual stored assistant request");
+                    tryCompare(popup, "visible", false, 2000, "VA2: no sheet reopens between user press/release or subsequent input");
+                } else {
+                    Session.closeProject();
+                    tryCompare(assistant, "showingActions", false, 10000,
+                        "VA4: ordinary Session retirement cancels real presentation without stale owner continuation");
+                    compare(Session.project, null, "VA4: late original input cannot resurrect the closed owner");
+                }
+            }
+            if (data.tag === "fit-stop") {
+                tryVerify(() => project.fit.running && assistant.showingActions, pacedObservation,
+                    "VA FIT SETUP: actual worker is running before real Stop, never a fake pending interval");
+                const stop = item("assistant.stopVisibleAction");
+                verify(stop.visible && stop.enabled && Ui.exposed(stop), "VA FIT SETUP: real appbar Stop is available");
+                mouseClick(stop);
+            }
+            if (data.tag !== "close-owner") {
+                try {
+                    tryVerify(() => visible185_outcome(call, requestPreviousIds) !== null && !assistant.canCancel && !assistant.showingActions,
+                        pacedObservation, "VA: actual original native outcome settles after its own input/worker owner");
+                } finally {
+                    try {
+                        function controlFact(control) {
+                            if (!control) return null;
+                            try {
+                                const ancestors = [];
+                                for (let parent = control.parent; parent; parent = parent.parent)
+                                    ancestors.push({identity: String(parent), name: parent.objectName,
+                                        visible: parent.visible, enabled: parent.enabled, clip: parent.clip, rect: rect(parent)});
+                                return {identity: String(control), name: control.objectName,
+                                    visible: control.visible, enabled: control.enabled,
+                                    activeFocus: control.activeFocus, clip: control.clip, rect: rect(control),
+                                    clickPoint: Ui.clickPoint(control), rendered: Ui.rendered(control),
+                                    text: typeof control.text === "string" ? control.text : null,
+                                    checked: typeof control.checked === "boolean" ? control.checked : null,
+                                    targetItem: control.item === la, ancestors: ancestors};
+                            } catch (error) { return {observationError: String(error)}; }
+                        }
+                        const page = Ui.page(window);
+                        const table = Ui.control(Probe, window, "parameters.list");
+                        const group = Ui.control(Probe, window, "group.parameters");
+                        const filter = table ? table.sourceModel : null;
+                        const outcome = visible185_outcome(call, requestPreviousIds);
+                        const visual = Ui.itemsWithProperty(page, "item").filter(control => control.item === la);
+                        const owned = Probe.objectsWithProperty(window, "item").filter(control => control.item === la);
+                        const nativeRows = Probe.rows(assistant.messages).filter(row => !requestPreviousIds.has(row.id) && row.payload
+                            && [call, "visible185-value-" + data.tag, "visible185-read-" + data.tag].includes(row.payload.id));
+                        console.log("VISIBLE197_OUTCOME", data.tag, JSON.stringify({
+                            outcome: outcome, outcomePresent: outcome !== null,
+                            canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                            state: assistant.state, lastError: assistant.lastError,
+                            pageIndex: window.appBarCentralTabs.currentIndex, pageIdentity: String(page),
+                            showActions: assistant.showActions, manualTakeover: window.assistantManualTakeover,
+                            requested: Preferences.assistantShown, popupShown: popup.shown,
+                            popupVisible: popup.visible, popupOpened: popup.opened,
+                            focus: controlFact(window.activeFocusItem), field: controlFact(field), free: controlFact(free),
+                            nameFilter: controlFact(Ui.control(Probe, window, "parameters.nameFilter")),
+                            category: controlFact(Ui.control(Probe, window, "parameters.category")),
+                            variability: controlFact(Ui.control(Probe, window, "parameters.variability")),
+                            modelFilters: filter ? {name: filter.nameFilter, category: filter.categoryFilter,
+                                variability: filter.variability, targetRow: filter.rowOf(la), targetShown: filter.shows(la)} : null,
+                            selected: group ? {row: group.selectedRow,
+                                path: group.selected ? group.selected.path : null, target: group.selected === la} : null,
+                            visualMatches: visual.map(controlFact), ownedMatches: owned.map(controlFact),
+                            target: {path: la.path, value: la.value, free: la.free},
+                            typed: typed, toggled: toggled, spellings: spellings, writes: writes,
+                            currentOwner: Session.project === project, projectPresent: Session.hasProject,
+                            connected: assistant.connected, connectionLabel: assistant.connectionLabel,
+                            models: Probe.rows(assistant.models).map(row => row.id),
+                            nativeRows: nativeRows.map(row => ({id: row.id, status: row.status, text: row.text,
+                                payload: {id: row.payload.id, type: row.payload.type, tool: row.payload.tool,
+                                    namespace: row.payload.namespace, arguments: row.payload.arguments,
+                                    status: row.payload.status, success: row.payload.success,
+                                    error: row.payload.error, nativeOutcome: row.payload.nativeOutcome}}))
+                        }));
+                    } catch (error) { console.log("VISIBLE197_OUTCOME_DIAGNOSTIC_ERROR", data.tag, String(error)); }
+                }
+                const outcome = visible185_outcome(call, requestPreviousIds);
+                if (data.tag.startsWith("dirty-")) {
+                    verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
+                        "VA3: original draft receives a truthful before-write refusal, never successful admission");
+                    compare(visible185_values(project), originalValues, "VA3: refusal preserves every original value/free/SU");
+                    compare(draftField.text, draft, "VA3: refusal preserves exact original uncommitted spelling");
+                    compare(window.activeFocusItem, draftFocus, "VA3: preflight does not blur the original manual input");
+                    compare(draftField.selectionStart, draftSelection[0], "VA3: original draft selection start survives");
+                    compare(draftField.selectionEnd, draftSelection[1], "VA3: original draft selection end survives");
+                    compare(window.appBarCentralTabs.currentIndex, draftPage, "VA3: refusal precedes navigation");
+                    compare(fitStarted, 0, "VA3: a blocked draft never admits a hidden worker");
+                } else if (data.tag.startsWith("unsupported-") && data.tag !== "unsupported-relations") {
+                    verify(["refused", "unavailable"].includes(outcome.status) && typeof outcome.message === "string" && outcome.message.length > 0,
+                        "VA: unsupported visible operations fail honestly before write without hidden fallback");
+                    compare(visible185_values(project), originalValues, "VA: unsupported batch/relation cannot partly mutate the owner");
+                    compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                        originalDeclarations, "VA: unsupported relation preserves every original declaration");
+                    compare(typed + toggled, 0, "VA: refusal cannot be a decorative event sequence over a hidden write");
+                } else if (["normal-relations", "unsupported-relations"].includes(data.tag)) {
+                    compare(outcome.status, "edited", "REL SUPPORTED-STAGE: same original valid relation is confirmed by normal OFF or actual supported visible form");
+                    verify(project.analysis.aliases.count === declarationRows[0].length + 2
+                        && project.analysis.constraints.count === declarationRows[1].length + 1,
+                        "VA SETUP CONTROL: genuine valid relation append proves unsupported-visible payload is not a malformed refusal");
+                    if (data.tag === "normal-relations")
+                        compare(activeStarts, 0, "VA: normal relation control does not invent visible activity");
+                    else verify(activeStarts > 0, "REL SUPPORTED-STAGE: original visible relation actually uses the real helper/form");
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                    compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                        originalDeclarations, "VA: complete normal Undo restores original declarations");
+                    compare(visible185_values(project), originalValues, "VA: complete relation Undo restores all original values/free/SU");
+                } else if (fitCase) {
+                    verify(fitStarted > 0 && finished === 1, "VA FIT: genuine worker admission and one actual completion precede result");
+                    verify(!project.fit.running && project.fit.outcome.length > 0 && fitClicks > 0,
+                        "VA FIT: actual Start click and normal final report publication precede original RPC settlement");
+                    if (outcome.adopted) verify(project.fit.canUndo && Probe.rows(project.fit.results).length > 0,
+                        "VA FIT: actual adopted report exposes ordinary result rows and normal Undo");
+                    if (data.tag === "fit-stop") {
+                        verify(["cancelled", "interrupted", "superseded"].includes(outcome.status),
+                            "VA FIT: genuine Stop is a truthful partial/cancel outcome, not convergence");
+                    } else {
+                        verify(["done", "max_iterations", "no_step"].includes(outcome.status),
+                            "VA FIT SETUP: actual supported backend finishes a real attempt, not unavailable/error substitute");
+                        compare(typeof outcome.iterations, "number", "VA FIT: actual iteration count is reported");
+                        verify(Number.isFinite(outcome.iterations) && outcome.iterations >= 0,
+                            "VA FIT: actual iteration report is finite without an invented optimum");
+                        if (outcome.reduced_chi_square !== undefined)
+                            verify(Number.isFinite(outcome.reduced_chi_square) && outcome.reduced_chi_square >= 0,
+                                "VA FIT: reported actual objective is finite, not an expected golden");
+                    }
+                } else if (data.tag !== "manual-override") {
+                    compare(outcome.status, "edited", "VA: actual ordinary native edit is committed truthfully");
+                    if (data.tag === "wavelength") {
+                        compare(wavelength[0].value, 1.49, "VA: actual supplied wavelength is typed exactly, no guessed intermediate");
+                        verify(typed > 0 && spellings.includes("1.49"), "VA: real field receives original numeric spelling through actual key events");
+                        compare(JSON.stringify(writes), JSON.stringify([1.49]), "VA: incomplete numeric drafts never become scientific intermediate writes");
+                    } else {
+                        compare(la.value, 0.6, "VA1: genuine original Analysis parameter changes through actual input");
+                        if (data.tag === "analysis-value-free") {
+                            compare(la.free, true, "VA1: actual visual-only free checkbox changes its own ParameterItem");
+                            verify(typed > 0 && toggled === 1, "VA1: actual typing and one real checkbox toggle accompany scientific edits");
+                        }
+                    }
+                    if (data.tag === "default-off") compare(activeStarts, 0, "VA: default OFF keeps normal native behavior without fake pointer activity");
+                    else verify(activeStarts > 0, "VA: enabled supported operation has an actual presentation interval");
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                    if (data.tag === "analysis-value-free") {
+                        compare(la.free, originalFlag, "VA: first normal Undo restores actual checkbox edit");
+                        Ui.click(this, Probe, window, "appBar.button.undo");
+                    }
+                    if (data.tag === "wavelength") compare(wavelength[0].value, originalWavelength, "VA: normal Undo restores actual original wavelength");
+                    else compare(la.value, originalValue, "VA: normal Undo restores actual original edited value");
+                    compare(visible185_values(project), originalValues,
+                        "VA: normal Undo restores every original parameter value/free/SU, including unrelated state");
+                }
+                if (!fitCase) compare(project.currentStructure.scatteringLengths.count, 0,
+                    "VA: nonfit actions and normal Undo preserve the selected built-in-table mode");
+                compare(visible185_inputs(project), inputs, "VA: actual input never changes measured observations/sigmas/exclusions/weights/links");
+                compare(Session.project, project, "VA: final action/report belongs to the same actual native owner");
+            }
+            verify(assistant.connected, "VA: genuine account survives own native input, Stop or project retirement");
+            compare(JSON.stringify(Probe.rows(assistant.models).map(row => row.id)), JSON.stringify(accountRows),
+                "VA: genuine managed catalog remains without login repair");
+            if (data.tag === "manual-override") {
+                mouseClick(item("assistant.toggle"));
+                tryCompare(popup, "opened", true, 2000, "VA2: only the next real opener restores assistant after takeover");
+                compare(Preferences.assistantShown, true, "VA2: explicit opener does not corrupt stored request");
+            }
+            if (data.tag === "analysis-value-free") visible185_capture("restored");
+            console.log("VISIBLE185_RESULT", data.tag, JSON.stringify({typed: typed, toggled: toggled,
+                activeStarts: activeStarts, fitStarted: fitStarted, finished: finished, fitClicks: fitClicks,
+                currentOwner: Session.project === project, connected: assistant.connected}));
+        } finally {
+            disconnect313(fieldLife313, field, "textEdited", typedReceipt);
+            disconnect313(freeLife313, free, "toggled", freeReceipt);
+            disconnect313(parameterLife313, editedParameter, "valueChanged", valueReceipt);
+            disconnect313(fitButtonLife313, fitButton, "clicked", fitClickReceipt);
+            assistant.showingActionsChanged.disconnect(activeReceipt);
+            if (alive313(fitLife313)) {
+                fitOwner313.runningChanged.disconnect(fitReceipt);
+                fitOwner313.finished.disconnect(finishedReceipt);
+                if (Session.project === project && fitOwner313.running) fitOwner313.cancel();
+            }
+            if (assistant.canCancel) assistant.cancel();
+            for (const slot of timelineSlots) slot[0].disconnect(slot[1]);
+            if (timelineEnabled) console.log("VISIBLE199_TIMELINE_SUMMARY", JSON.stringify({
+                observedSignalsAndSamples: timelineCount, emittedBudget: timelineLimit,
+                omitted: Math.max(0, timelineCount - timelineLimit)}));
+        }
+    }
+
+    // GUI-DRAFT1: actual common controls and normal native request; no guard-property oracle.
+    function draft226_core(project) {
+        return JSON.stringify({values: visible185_values(project),
+            labels: Probe.rows(project.currentStructure.atomSites).map(row => row.label),
+            background: Probe.rows(project.currentExperiment.background).map(row => [row.id, row.position]),
+            maxIterations: project.analysis.maxIterations,
+            tolerance: project.analysis.chiSquareTolerance,
+            aliases: Probe.rows(project.analysis.aliases),
+            constraints: Probe.rows(project.analysis.constraints)});
+    }
+    function test_draft226_common_editor_preserves_user_work_data() {
+        return ["normal-text-id", "visible-text-id", "normal-integer", "visible-integer",
+            "normal-number", "visible-number", "normal-partial", "visible-partial",
+            "normal-formatted", "visible-formatted",
+            "normal-text-formatted", "visible-text-formatted"].map(tag => ({tag: tag}));
+    }
+    function test_draft226_common_editor_preserves_user_work(data) {
+        verify(Session.openProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project")),
+            "DRAFT1 SETUP: genuine original complete measured project opens normally");
+        const project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "DRAFT1 SETUP: actual native calculation settles, never a fake current flag");
+        const wavelength = visible185_parameters(project).filter(row => row.name === "setup_wavelength");
+        compare(wavelength.length, 1, "DRAFT1 SETUP: actual native request has one original wavelength");
+        const textFormatted = data.tag.endsWith("text-formatted");
+        const cell = visible185_parameters(project).filter(row => row.category === "cell" && row.name === "length_a");
+        compare(cell.length, 1, "DRAFT1 SETUP: independent original cell target is unique");
+        const target = textFormatted ? cell[0] : wavelength[0];
+        const originalValue = target.value;
+        const requestedValue = textFormatted ? 10.4 : 1.49;
+        verify(originalValue !== requestedValue, "DRAFT1 SETUP: positive control must cause a real edit");
+        compare(assistant.showActions, false, "DRAFT1: fresh process has actual default-OFF mode");
+        toggle();
+        assistant.signIn();
+        visible185_ready("draft226-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("draft226-current-context");
+        verify(!assistant.contextConsentRequired, "DRAFT1 SETUP: actual disclosed current input is approved");
+        if (data.tag.startsWith("visible-")) {
+            const show = item("assistant.showActions");
+            verify(show.visible && show.enabled, "DRAFT1 SETUP: actual mode checkbox receives pointer input");
+            mouseClick(show);
+            compare(assistant.showActions, true, "DRAFT1 SETUP: visible route is genuinely enabled");
+        }
+        toggle();
+        const textCase = data.tag.endsWith("text-id");
+        visible185_page(textCase ? "structure" : textFormatted ? "experiment" : "analysis");
+        if (textCase) {
+            Ui.click(this, Probe, window, "sideBar.tab.basic");
+            Ui.expandGroup(this, Probe, window, "group.atom_site");
+        }
+        if (!textCase && !textFormatted) {
+            Ui.click(this, Probe, window, "sideBar.tab.extras");
+            rendered();
+            const group = Ui.control(Probe, window, "group.minimizer");
+            verify(group !== null, "DRAFT1 SETUP: real minimizer group exists in Analysis Extra");
+            if (group.collapsed) Ui.click(this, Probe, window, "group.minimizer");
+        }
+        if (textFormatted) {
+            const background = Ui.control(Probe, window, "group.background");
+            verify(background !== null, "DRAFT1 SETUP: actual existing line-segment background is available");
+            if (background.collapsed) Ui.click(this, Probe, window, "group.background");
+        }
+        const name = textCase ? "atomSite.label.0" : textFormatted ? "background.position.0"
+            : data.tag.endsWith("integer")
+            ? "minimizer.maxIterations" : "minimizer.chiSquareTolerance";
+        const candidates = [...new Set(Ui.itemsWithProperty(Ui.page(window), "objectName"))]
+            .filter(control => control.objectName === name && Ui.inPane(control)
+                && typeof control.text === "string" && typeof control.cursorPosition === "number"
+                && control.editingFinished !== undefined && control.textEdited !== undefined
+                && control.committed !== undefined);
+        compare(candidates.length, 1, "DRAFT1 SETUP: genuine visual common editor identity is unique");
+        const field = candidates[0];
+        function premise237(stage) {
+            try {
+                const origin = field.mapToItem(window.contentItem, 0, 0);
+                const ancestry = [];
+                for (let parent = field.parent; parent; parent = parent.parent) {
+                    const point = parent.mapToItem(window.contentItem, 0, 0);
+                    ancestry.push({identity: String(parent), name: parent.objectName,
+                        visible: parent.visible, enabled: parent.enabled, clip: parent.clip,
+                        rect: [point.x, point.y, parent.width, parent.height],
+                        collapsed: parent.collapsed === undefined ? null : parent.collapsed});
+                }
+                console.log("DRAFT237_PREMISE", data.tag, stage, JSON.stringify({
+                    identity: String(field), name: field.objectName, candidates: candidates.length,
+                    visible: field.visible, enabled: field.enabled, readOnly: field.readOnly,
+                    text: field.text, activeFocus: field.activeFocus, inPane: Ui.inPane(field),
+                    focusIdentity: String(window.activeFocusItem), focusIsField: window.activeFocusItem === field,
+                    rect: [origin.x, origin.y, field.width, field.height],
+                    clickPoint: Ui.clickPoint(field), ancestry: ancestry,
+                    page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
+                    tabs: Ui.itemsWithProperty(Ui.page(window), "objectName")
+                        .filter(control => control.objectName.startsWith("sideBar.tab."))
+                        .map(control => ({name: control.objectName, checked: control.checked,
+                            visible: control.visible, enabled: control.enabled})),
+                    sameOwner: Session.project === project, connected: assistant.connected,
+                    lastError: assistant.lastError}));
+            } catch (error) { console.log("DRAFT237_PREMISE_ERROR", stage, String(error)); }
+        }
+        premise237("before-scroll");
+        try {
+            Ui.scrollIntoView(field);
+            rendered();
+            verify(field.visible && field.enabled && !field.readOnly && Ui.exposed(field),
+                "DRAFT1 SETUP: actual common editor is actionable inside the real viewport");
+        } finally { premise237("after-viewport-check"); }
+        const cleanControl = data.tag.endsWith("formatted");
+        if (cleanControl) {
+            Ui.click(this, Probe, window, name);
+            premise237("post-click-before-keys");
+            verify(field.activeFocus && window.activeFocusItem === field,
+                "DRAFT1 SETUP: real delayed click focuses the exact original common editor before keys");
+            visible185_type("0.3333333333333333");
+            keyClick(Qt.Key_Return);
+            const actual = textFormatted ? Probe.rows(project.currentExperiment.background)[0].position
+                : project.analysis.chiSquareTolerance;
+            compare(actual, 1 / 3,
+                "DRAFT1 SETUP: real typing/Return establishes the explicit full-precision control");
+            Ui.click(this, Probe, window, name);
+            premise237("post-click-before-keys");
+            verify(field.activeFocus && window.activeFocusItem === field,
+                "DRAFT1 SETUP: real delayed click focuses the exact original common editor before keys");
+            verify(field.text !== String(actual),
+                "DRAFT1 SETUP: unedited formatted spelling actually differs from the core number");
+        } else {
+            Ui.click(this, Probe, window, name);
+            premise237("post-click-before-keys");
+            verify(field.activeFocus && window.activeFocusItem === field,
+                "DRAFT1 SETUP: real delayed click focuses the exact original common editor before keys");
+            const originalText = field.text;
+            const draft = textCase ? "original_manual_site" : data.tag.endsWith("integer")
+                ? "19" : data.tag.endsWith("partial") ? "-" : "0.25";
+            verify(draft !== originalText, "DRAFT1 SETUP: actual dirty spelling differs from displayed value");
+            const beforeTyping = draft226_core(project);
+            visible185_type(draft);
+            compare(field.text, draft, "DRAFT1 SETUP: real key input reaches the common editor");
+            compare(draft226_core(project), beforeTyping,
+                "DRAFT1 SETUP: typed text/id/integer/number remains genuinely uncommitted");
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "DRAFT1 SETUP: any genuine manual control edit has a current real calculation");
+        // Public connected-context approval is setup, never an account repair or focus setter.
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("draft226-before-send");
+        verify(!assistant.contextConsentRequired && field.activeFocus,
+            "DRAFT1 SETUP: real current account/input and original editor focus coexist");
+        const core = draft226_core(project);
+        const inputs = visible185_inputs(project);
+        const beforeText = field.text;
+        const beforeFocus = window.activeFocusItem;
+        const selection = [field.selectionStart, field.selectionEnd];
+        const beforePage = window.appBarCentralTabs.currentIndex;
+        const beforeTier = ["basic", "extras", "text", "settings"].map(tier => {
+            const button = Ui.control(Probe, window, "sideBar.tab." + tier);
+            return button ? button.checked : null;
+        });
+        const beforeUndo = item("appBar.button.undo").enabled;
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const requestPreviousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        let finished = 0, committed = 0, navigated = 0, tiersChanged = 0;
+        function finishReceipt() { ++finished; }
+        function commitReceipt() { ++committed; }
+        function pageReceipt() { ++navigated; }
+        function tierReceipt() { ++tiersChanged; }
+        const tierButtons = ["basic", "extras", "text", "settings"].map(tier =>
+            Ui.control(Probe, window, "sideBar.tab." + tier)).filter(button => button !== null);
+        field.editingFinished.connect(finishReceipt);
+        field.committed.connect(commitReceipt);
+        window.appBarCentralTabs.currentIndexChanged.connect(pageReceipt);
+        for (const button of tierButtons) button.checkedChanged.connect(tierReceipt);
+        try {
+            assistant.send("Change " + (textFormatted ? "cell a" : "wavelength") + " to "
+                + requestedValue + " while preserving my unrelated manual editor, " + data.tag);
+            tryVerify(() => visible185_outcome("draft226-action-" + data.tag, requestPreviousIds) !== null
+                && !assistant.canCancel && !assistant.showingActions,
+                cleanControl && assistant.showActions
+                    ? visible237_observationMs([{path: target.path, text: String(requestedValue)}]) : 10000,
+                "DRAFT1: genuine original native request publishes and settles its own outcome");
+            const outcome = visible185_outcome("draft226-action-" + data.tag, requestPreviousIds);
+            if (cleanControl) {
+                compare(outcome.status, "edited", "DRAFT1: unedited formatted value never blocks valid navigation/work");
+                compare(target.value, requestedValue, "DRAFT1: actual requested native edit lands");
+                compare(committed, 0, "DRAFT1: navigation cannot commit an unedited formatted number");
+                compare(textFormatted ? Probe.rows(project.currentExperiment.background)[0].position
+                    : project.analysis.chiSquareTolerance, 1 / 3,
+                    "DRAFT1: formatting never silently rounds or rewrites the unrelated core value");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(target.value, originalValue,
+                    "DRAFT1: one normal Undo restores the original actual request value");
+                compare(draft226_core(project), core, "DRAFT1: one Undo restores every baseline field/declaration");
+            } else {
+                verify(["refused", "unavailable"].includes(outcome.status)
+                    && typeof outcome.message === "string" && outcome.message.length > 0,
+                    "DRAFT1: original dirty common editor causes an honest before-write refusal");
+                compare(draft226_core(project), core, "DRAFT1: no unrelated draft or native edit reaches core");
+                compare(item("appBar.button.undo").enabled, beforeUndo,
+                    "DRAFT1: blocked work neither consumes nor creates the ordinary Undo record");
+                compare(field.text, beforeText, "DRAFT1: exact original uncommitted spelling survives");
+                compare(window.activeFocusItem, beforeFocus, "DRAFT1: original real input is never blurred");
+                compare(field.selectionStart, selection[0], "DRAFT1: original selection start survives");
+                compare(field.selectionEnd, selection[1], "DRAFT1: original selection end survives");
+                compare(finished, 0, "DRAFT1: no editingFinished event escapes before refusal");
+                compare(committed, 0, "DRAFT1: no commit escapes before refusal");
+                compare(navigated, 0, "DRAFT1: no transient page navigation precedes refusal");
+                compare(tiersChanged, 0, "DRAFT1: no transient Main/Extra change precedes refusal");
+                compare(window.appBarCentralTabs.currentIndex, beforePage, "DRAFT1: original page remains current");
+                compare(JSON.stringify(["basic", "extras", "text", "settings"].map(tier => {
+                    const button = Ui.control(Probe, window, "sideBar.tab." + tier);
+                    return button ? button.checked : null;
+                })), JSON.stringify(beforeTier), "DRAFT1: actual Main/Extra choice is unchanged");
+            }
+            verify(assistant.connected, "DRAFT1: native refusal/work preserves genuine managed account");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "DRAFT1: genuine catalog remains unchanged");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "DRAFT1: original retained conversation is not discarded to protect a draft");
+            compare(visible185_inputs(project), inputs, "DRAFT1: original measured data/sigmas/masks/weights/links survive");
+            compare(Session.project, project, "DRAFT1: outcome remains owned by the actual original Session project");
+        } finally {
+            console.log("DRAFT226_STATE", data.tag, JSON.stringify({
+                currentOwner: Session.project === project, connected: assistant.connected,
+                text: field.text, activeFocus: field.activeFocus, page: window.appBarCentralTabs.currentIndex,
+                finished: finished, committed: committed, navigated: navigated, tiersChanged: tiersChanged,
+                beforeUndo: beforeUndo, afterUndo: item("appBar.button.undo").enabled,
+                lastError: assistant.lastError, showingActions: assistant.showingActions,
+                outcome: visible185_outcome("draft226-action-" + data.tag, requestPreviousIds)}));
+            field.editingFinished.disconnect(finishReceipt);
+            field.committed.disconnect(commitReceipt);
+            window.appBarCentralTabs.currentIndexChanged.disconnect(pageReceipt);
+            for (const button of tierButtons) button.checkedChanged.disconnect(tierReceipt);
+        }
+    }
+    function exposure229_pick(combo, index) {
+        verify(combo !== null && combo.enabled && Ui.exposed(combo),
+            "EXPOSURE SETUP: actual filter control receives the original mouse event");
+        mouseClick(combo);
+        tryCompare(combo.popup, "opened", true, 2000,
+            "EXPOSURE SETUP: genuine filter popup opens before keyboard selection");
+        keyClick(Qt.Key_Home);
+        for (let row = 0; row < index; ++row) keyClick(Qt.Key_Down);
+        keyClick(Qt.Key_Return);
+        tryCompare(combo, "currentIndex", index, 2000,
+            "EXPOSURE SETUP: actual keyboard selection reaches the requested existing option");
+    }
+    function test_exposure229_existing_manual_controls_data() {
+        return ["visible-extra", "visible-filtered", "visible-offscreen", "normal-page",
+            "assistant-fit-modal", "manual-fit-modal"].map(tag => ({tag: tag}));
+    }
+    function test_exposure229_existing_manual_controls(data) {
+        const fitCase = data.tag.endsWith("fit-modal");
+        const manualFit = data.tag === "manual-fit-modal";
+        const visible = data.tag.startsWith("visible-");
+        const fixture = fitCase ? "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project"
+            : "tests/fixtures/e04_t1/editable-project";
+        verify(Session.openProject(Probe.repoUrl(fixture)),
+            "EXPOSURE SETUP: independent original complete measured project opens");
+        const project = Session.project;
+        const parameters = visible185_parameters(project);
+        let target = null;
+        if (fitCase) {
+            const cells = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+            compare(cells.length, 1, "EXPOSURE FIT SETUP: original independent cell is unique");
+            target = cells[0];
+            for (const parameter of parameters) parameter.free = false;
+            target.free = true;
+            project.currentExperiment.scale.free = true;
+            project.analysis.maxIterations = 8; // Existing original bounded real-fit setup, not an optimum oracle.
+        } else {
+            const lengths = project.currentStructure.scatteringLengths;
+            const custom = Probe.rows(lengths);
+            compare(custom.length, 1, "EXPOSURE SETUP: literal original custom table has its one entry");
+            compare(custom[0].typeSymbol, "La", "EXPOSURE SETUP: original custom entry is the fixture La row");
+            compare(custom[0].lengthFm, 8.24, "EXPOSURE SETUP: fixture bytes retain their declared neutron length");
+            for (let index = custom.length - 1; index >= 0; --index) lengths.remove(index);
+            compare(lengths.count, 0, "EXPOSURE SETUP: genuine public empty custom map restores built-in data");
+            if (data.tag === "visible-offscreen") {
+                const matches = parameters.filter(parameter => parameter.name === "march_r");
+                compare(matches.length, 1, "EXPOSURE SETUP: original declared orientation scalar is unique");
+                target = matches[0];
+            } else target = visible185_parameter(project, "La", "adp_iso");
+            target.free = false;
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "EXPOSURE SETUP: actual original calculation and ordinary subset setup settle");
+        if (fitCase) verify(project.fit.available,
+            "EXPOSURE FIT SETUP: genuine current installed backend must admit the real worker");
+        const beforeValues = visible185_values(project);
+        const beforeInputs = visible185_inputs(project);
+        const beforeDeclarations = JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]);
+        const beforeValue = target.value;
+        const requested = data.tag === "visible-offscreen" ? 0.9 : 0.6;
+        if (!fitCase) verify(beforeValue !== requested,
+            "EXPOSURE SETUP: original user request changes the actual current scalar");
+        compare(assistant.showActions, false, "EXPOSURE: fresh real process keeps default OFF");
+        toggle();
+        assistant.signIn();
+        visible185_ready("exposure-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("exposure-disclosed");
+        verify(!assistant.contextConsentRequired, "EXPOSURE SETUP: genuine current disclosed context is approved");
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        if (visible) {
+            const show = item("assistant.showActions");
+            verify(show.visible && show.enabled, "EXPOSURE SETUP: real checkbox is actionable");
+            mouseClick(show);
+            compare(assistant.showActions, true, "EXPOSURE SETUP: genuine pointer enables visible mode");
+        }
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        const table = Ui.control(Probe, window, "parameters.list");
+        const group = Ui.control(Probe, window, "group.parameters");
+        verify(table !== null && group !== null && table.sourceModel !== null,
+            "EXPOSURE SETUP: original current Analysis table/filter model exists");
+        const filter = table.sourceModel;
+        const actualNameFilter = Ui.control(Probe, window, "parameters.nameFilter");
+        verify(actualNameFilter !== null, "EXPOSURE SETUP: actual current Analysis name input is retained");
+        if (data.tag === "visible-filtered") {
+            const cellCategory = filter.categories.indexOf("cell");
+            verify(cellCategory > 0, "EXPOSURE SETUP: actual public category list has the independent cell category");
+            exposure229_pick(Ui.control(Probe, window, "parameters.category"), cellCategory);
+            exposure229_pick(Ui.control(Probe, window, "parameters.variability"), 1);
+            const name = Ui.control(Probe, window, "parameters.nameFilter");
+            verify(name !== null && Ui.exposed(name), "EXPOSURE SETUP: genuine name filter is exposed");
+            mouseClick(name);
+            visible185_type("length_a");
+            compare(filter.nameFilter, "length_a", "EXPOSURE SETUP: actual typed name filter is active");
+            compare(filter.categoryFilter, "cell", "EXPOSURE SETUP: real category menu changed the filter");
+            compare(filter.variability, 1, "EXPOSURE SETUP: real free-only menu changed the filter");
+            verify(!filter.shows(target), "EXPOSURE SETUP: original requested target is genuinely excluded");
+        }
+        if (data.tag === "visible-offscreen") {
+            // Establish the original matching/all-rows viewport through genuine existing controls.
+            exposure229_pick(Ui.control(Probe, window, "parameters.category"), 0);
+            exposure229_pick(Ui.control(Probe, window, "parameters.variability"), 0);
+            const name = Ui.control(Probe, window, "parameters.nameFilter");
+            mouseClick(name);
+            visible185_type("");
+            mouseWheel(table, table.width / 2, table.height / 2, 0, 120 * parameters.length);
+            rendered();
+            compare(filter.nameFilter, "", "EXPOSURE SETUP: offscreen witness has no name exclusion");
+            compare(filter.categoryFilter, "", "EXPOSURE SETUP: offscreen witness has no category exclusion");
+            compare(filter.variability, 0, "EXPOSURE SETUP: offscreen witness has no free-only exclusion");
+            verify(filter.shows(target), "EXPOSURE SETUP: target actually belongs to the current filtered set");
+            const exposed = Ui.itemsWithProperty(Ui.page(window), "item").filter(control =>
+                control.item === target && control.objectName.startsWith("parameters.value.") && Ui.exposed(control));
+            compare(exposed.length, 0, "EXPOSURE SETUP: requested genuine row is initially outside the actual viewport");
+        }
+        if (data.tag === "visible-extra" || data.tag === "normal-page" || data.tag === "assistant-fit-modal") {
+            Ui.click(this, Probe, window, "sideBar.tab.extras");
+            verify(Ui.control(Probe, window, "sideBar.tab.extras").checked,
+                "EXPOSURE SETUP: actual manual Extra tier is selected before original work");
+        }
+        if (data.tag === "normal-page" || data.tag === "assistant-fit-modal") visible185_page("structure");
+        let typed = 0, toggled = 0, filterTyped = 0, started = 0, finished = 0, automatic = 0, active = 0;
+        let filterSpellings = [];
+        function filterReceipt() { ++filterTyped; filterSpellings.push(actualNameFilter.text); }
+        let observedFields = [], observedFree = [];
+        function typedReceipt() { ++typed; }
+        function freeReceipt() { ++toggled; }
+        function observeControls() {
+            for (const field of Ui.itemsWithProperty(Ui.page(window), "item")) {
+                if (field.item !== target || !field.objectName.startsWith("parameters.value.")
+                    || !Ui.exposed(field) || observedFields.includes(field)) continue;
+                field.textEdited.connect(typedReceipt);
+                observedFields.push(field);
+            }
+            for (const control of Ui.itemsWithProperty(Ui.page(window), "objectName")) {
+                if (!control.objectName.startsWith("parameters.free.") || !Ui.exposed(control)
+                    || observedFree.includes(control)) continue;
+                for (let parent = control.parent; parent; parent = parent.parent) {
+                    if (parent.parameter !== target) continue;
+                    control.toggled.connect(freeReceipt);
+                    observedFree.push(control);
+                    break;
+                }
+            }
+        }
+        function startReceipt() { if (project.fit.running) ++started; }
+        function finishedReceipt() { ++finished; }
+        function automaticReceipt() { ++automatic; }
+        function activeReceipt() { if (assistant.showingActions) ++active; observeControls(); }
+        const slots = [[assistant.actionPointerShown, observeControls], [assistant.actionPointerMoved, observeControls],
+            [assistant.actionPointerPressed, observeControls], [window.activeFocusItemChanged, observeControls],
+            [assistant.showingActionsChanged, activeReceipt], [project.fit.runningChanged, startReceipt],
+            [project.fit.finished, finishedReceipt], [project.fit.automaticResultsRequested, automaticReceipt],
+            [actualNameFilter.textEdited, filterReceipt]];
+        for (const slot of slots) slot[0].connect(slot[1]);
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const call = "exposure229-action-" + data.tag;
+        // Passive receipts on the original actual buttons; never navigate or retarget input here.
+        const navSlots240 = [];
+        let navCount240 = 0;
+        const expectedPage240 = Ui.page(window);
+        const pageButton240 = Ui.control(Probe, window, "appBar.tab.analysis");
+        const mainButtons240 = Ui.itemsWithProperty(expectedPage240, "objectName")
+            .filter(control => control.objectName === "sideBar.tab.basic");
+        function nav240(stage, source) {
+            if (data.tag !== "visible-extra" || navCount240 >= 48) return;
+            ++navCount240;
+            try {
+                function fact(control) {
+                    if (!control) return null;
+                    const point = control.mapToItem(window.contentItem, 0, 0);
+                    return {identity: String(control), name: control.objectName,
+                        visible: control.visible, enabled: control.enabled, activeFocus: control.activeFocus,
+                        pressed: control.pressed, down: control.down, checked: control.checked,
+                        rect: [point.x, point.y, control.width, control.height], clickPoint: Ui.clickPoint(control)};
+                }
+                console.log("EXPOSURE240_NAV", data.tag, JSON.stringify({sequence: navCount240,
+                    stage: stage, source: source, epochMs: Date.now(),
+                    page: window.appBarCentralTabs.currentIndex, currentPage: String(Ui.page(window)),
+                    expectedPage: String(expectedPage240), pageIsExpected: Ui.page(window) === expectedPage240,
+                    pageButton: fact(pageButton240), mainButtons: mainButtons240.map(fact),
+                    currentSidebarTabs: Ui.itemsWithProperty(Ui.page(window), "objectName")
+                        .filter(control => control.objectName.startsWith("sideBar.tab."))
+                        .map(fact), showActions: assistant.showActions,
+                    showingActions: assistant.showingActions, canCancel: assistant.canCancel,
+                    sameOwner: Session.project === project, connected: assistant.connected,
+                    lastError: assistant.lastError}));
+            } catch (error) { console.log("EXPOSURE240_NAV_ERROR", stage, String(error)); }
+        }
+        if (data.tag === "visible-extra") {
+            for (const button of [pageButton240, ...mainButtons240]) {
+                if (!button) continue;
+                for (const name of ["pressedChanged", "released", "clicked", "checkedChanged"]) {
+                    const signal = button[name];
+                    if (!signal || !signal.connect) continue;
+                    const label = String(button) + ":" + name;
+                    const callback = () => nav240(name, label);
+                    signal.connect(callback);
+                    navSlots240.push([signal, callback]);
+                }
+            }
+        }
+        const results = item("fit.results");
+        const error = item("fit.error");
+        verify(!results.visible && !error.visible, "EXPOSURE SETUP: original fit dialogs are initially closed");
+        try {
+            nav240("before-original-action", null);
+            if (visible) toggle();
+            observeControls();
+            if (manualFit) {
+                Ui.click(this, Probe, window, "fitting.start");
+                tryVerify(() => finished === 1 && !project.fit.running, 10000,
+                    "EXPOSURE FIT: original manual Start produces one actual Worker completion");
+            } else {
+                visible185_ready("exposure-before-send");
+                assistant.send(fitCase
+                    ? "Run the actual current fit and retain assistant results in the conversation, " + data.tag
+                    : "Set " + (data.tag === "visible-offscreen" ? "orientation march_r" : "La isotropic ADP")
+                        + " to " + requested + " and make that same parameter free; reveal its existing controls, " + data.tag);
+                tryVerify(() => visible185_outcome(call, previousIds) !== null
+                    && !assistant.canCancel && !assistant.showingActions,
+                    visible && !fitCase ? visible237_observationMs([
+                        {path: target.path, text: String(requested)}, {path: target.path, text: ""}]) : 10000,
+                    "EXPOSURE: original current RPC and actual owner settle without a stale historical substitute");
+                const outcome = visible185_outcome(call, previousIds);
+                if (fitCase) verify(["done", "max_iterations", "no_step"].includes(outcome.status),
+                    "EXPOSURE FIT: real native attempt finishes honestly, without invented optimum or unavailable substitute");
+                else compare(outcome.status, "edited", "EXPOSURE: original native operation is genuinely applied and confirmed");
+            }
+            compare(window.appBarCentralTabs.currentIndex, 4,
+                "EXPOSURE: original parameter/free/fit action follows the existing Analysis page");
+            verify(Ui.control(Probe, window, "sideBar.tab.basic").checked,
+                "EXPOSURE: the genuine requested current Analysis Main tier is selected");
+            if (fitCase) {
+                verify(started > 0 && finished === 1 && !project.fit.running,
+                    "EXPOSURE FIT: actual worker start and final report precede presentation assertions");
+                verify(Probe.rows(project.fit.results).length > 0,
+                    "EXPOSURE FIT SETUP: actual supported final report has real ordinary result rows");
+                if (manualFit) {
+                    compare(automatic, 1, "EXPOSURE MODAL: genuine manual fitting retains one automatic result notification");
+                    tryCompare(results, "opened", true, 2000,
+                        "EXPOSURE MODAL: genuine manual result opens the existing actual dialog");
+                    const ok = results.standardButton(Dialog.Ok);
+                    verify(ok !== null && ok.visible && ok.enabled, "EXPOSURE MODAL: actual dialog acknowledgement exists");
+                    mouseClick(ok);
+                    tryCompare(results, "visible", false, 2000, "EXPOSURE MODAL: real acknowledgement closes the dialog");
+                } else {
+                    compare(automatic, 0, "EXPOSURE MODAL: assistant-owned fit does not emit a manual automatic popup request");
+                    verify(!results.visible && !error.visible,
+                        "EXPOSURE MODAL: actual assistant fit settles without either automatic result/error dialog");
+                }
+                if (project.fit.canUndo) {
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                    compare(visible185_values(project), beforeValues,
+                        "EXPOSURE FIT: ordinary actual fit Undo restores the complete original subset/state");
+                }
+            } else {
+                compare(target.value, requested, "EXPOSURE: original requested value reaches exact current ParameterItem");
+                compare(target.free, true, "EXPOSURE: actual original free flag reaches the same current ParameterItem");
+                if (visible) {
+                    verify(active > 0 && typed > 0 && toggled === 1,
+                        "EXPOSURE: genuine visible typing and one real checkbox toggle accompany the scientific edits");
+                    const currentField = visible185_field(target);
+                    const currentFree = visible185_free(target);
+                    verify(currentField.item === target && Ui.exposed(currentFree),
+                        "EXPOSURE: actual final visible controls bind the exact original requested owner");
+                    compare(filter.nameFilter, target.path,
+                        "EXPOSURE: the real name filter contains the exact original requested ParameterItem path");
+                    compare(actualNameFilter.text, target.path,
+                        "EXPOSURE: actual displayed filter and public model agree on that exact path");
+                    verify(filterTyped > 0 && filterSpellings.includes(target.path),
+                        "EXPOSURE: genuine original filter key input reaches the exact requested path");
+                    compare(filter.categoryFilter, "", "EXPOSURE: genuine category filter is cleared to reveal requested row");
+                    compare(filter.variability, 0, "EXPOSURE: genuine free-only filter is cleared to reveal requested row");
+                } else compare(active, 0, "EXPOSURE: normal OFF page following does not manufacture pointer presentation");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(target.free, false, "EXPOSURE: first real normal Undo restores the original free flag");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(target.value, beforeValue, "EXPOSURE: second real normal Undo restores the requested value");
+                compare(visible185_values(project), beforeValues,
+                    "EXPOSURE: complete actual Undo preserves every unrelated value/free/SU");
+            }
+            compare(visible185_inputs(project), beforeInputs,
+                "EXPOSURE: original observations/sigmas/masks/weights/links are unchanged");
+            compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                beforeDeclarations, "EXPOSURE: original scientific declarations are preserved");
+            verify(Session.project === project && assistant.connected,
+                "EXPOSURE: genuine actual current owner and managed account survive");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "EXPOSURE: genuine catalog survives without login repair");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "EXPOSURE: original retained history is not discarded during navigation/work");
+        } finally {
+            nav240("after-original-action", null);
+            for (const slot of navSlots240) {
+                try { slot[0].disconnect(slot[1]); }
+                catch (error) { console.log("EXPOSURE240_NAV_DISCONNECT", String(error)); }
+            }
+            console.log("EXPOSURE229_STATE", data.tag, JSON.stringify({
+                currentOwner: Session.project === project, connected: assistant.connected,
+                page: window.appBarCentralTabs.currentIndex, showingActions: assistant.showingActions,
+                canCancel: assistant.canCancel, lastError: assistant.lastError,
+                target: {path: target.path, value: target.value, free: target.free},
+                typed: typed, toggled: toggled, filterTyped: filterTyped, filterSpellings: filterSpellings,
+                active: active, started: started, finished: finished,
+                automatic: automatic, resultsVisible: results.visible, errorVisible: error.visible,
+                filter: {name: filter.nameFilter, category: filter.categoryFilter, variability: filter.variability},
+                originalOutcome: manualFit ? null : visible185_outcome(call, previousIds)}));
+            for (const slot of slots) slot[0].disconnect(slot[1]);
+            for (const field of observedFields) if (field) field.textEdited.disconnect(typedReceipt);
+            for (const control of observedFree) if (control) control.toggled.disconnect(freeReceipt);
+        }
+    }
+    function slider231_curves(project) {
+        const chart = ChartOracle.object(Ui.page(window), "chart");
+        const rows = Probe.rows(project.currentExperiment.pattern);
+        const byX = new Map(rows.map(row => [row.x, row]));
+        const roles = {calc: "intensityCalc", bkg: "intensityBkg", resid: "residual"};
+        const curves = {};
+        for (const kind of ["calc", "bkg", "resid"]) {
+            const points = ChartOracle.points(ChartOracle.object(chart, "chart.series." + kind));
+            let finite = 0;
+            for (const point of points) {
+                if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
+                const row = byX.get(point.x);
+                if (!row || row[roles[kind]] !== point.y)
+                    return {consistent: false, kind: kind, x: point.x, points: points.length};
+                ++finite;
+            }
+            if (!finite) return {consistent: false, kind: kind, points: points.length};
+            curves[kind] = points;
+        }
+        return {consistent: true, signature: JSON.stringify(curves),
+            counts: Object.keys(curves).map(kind => curves[kind].length)};
+    }
+    function test_slider231_real_manual_publication_persists_data() {
+        return ["native-platform", "clean-tab-focus", "full-precision", "dirty-valid", "dirty-invalid"].map(tag => ({tag: tag}));
+    }
+    function test_slider231_real_manual_publication_persists(data) {
+        const fixture = "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project";
+        verify(Session.openProject(Probe.repoUrl(fixture)),
+            "SLIDER SETUP: actual original complete measured project opens");
+        const project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "SLIDER SETUP: actual original native calculation settles");
+        compare(assistant.showActions, false, "SLIDER: genuine fresh process keeps assistant mode OFF");
+        toggle();
+        assistant.signIn();
+        visible185_ready("slider-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("slider-disclosed");
+        verify(!assistant.contextConsentRequired, "SLIDER SETUP: genuine current context is approved");
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        const name = Ui.control(Probe, window, "parameters.nameFilter");
+        verify(name !== null && Ui.exposed(name), "SLIDER SETUP: actual name filter is exposed");
+        mouseClick(name);
+        visible185_type("length_");
+        rendered();
+        const parameters = visible185_parameters(project);
+        const matches = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+        const others = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_b");
+        compare(matches.length, 1, "SLIDER SETUP: original requested cell-a identity is unique");
+        compare(others.length, 1, "SLIDER SETUP: a genuine different current row exists");
+        const target = matches[0];
+        const other = others[0];
+        const originalValue = target.value;
+        const group = Ui.control(Probe, window, "group.parameters");
+        const field = visible185_field(target);
+        const slider = Ui.control(Probe, window, "parameters.slider");
+        verify(slider !== null && slider.enabled && Ui.exposed(slider),
+            "SLIDER SETUP: original selected row has its actual exposed slider");
+        const nativeFocusPolicy = slider.focusPolicy;
+        // Pinned Qt6.11.2 QQuickSlider constructor: macOS TabFocus; other platforms StrongFocus.
+        // Declare that public focus policy BEFORE input; never force the field after a slider event.
+        if (data.tag !== "native-platform") slider.focusPolicy = Qt.TabFocus;
+        const declaredFocusPolicy = slider.focusPolicy;
+        if (data.tag !== "native-platform") compare(declaredFocusPolicy, Qt.TabFocus,
+            "SLIDER SETUP: explicit pinned macOS focus contract is declared before genuine input");
+        verify(field.enabled && !field.readOnly, "SLIDER SETUP: original current numeric cell is editable");
+        const originalUndo = {project: project.canUndo, button: item("appBar.button.undo").enabled};
+        let draftEdits = 0;
+        function draftReceipt() { ++draftEdits; }
+        field.textEdited.connect(draftReceipt);
+        try {
+            mouseClick(field);
+            verify(field.activeFocus && group.selected === target,
+                "SLIDER SETUP: original actual row selection has real editor focus");
+            if (data.tag === "full-precision") {
+                visible185_type("10.333333333333334");
+                keyClick(Qt.Key_Return);
+                compare(target.value, 10.333333333333334,
+                    "SLIDER SETUP: real original user typing establishes its full-precision value");
+                verify(Number(field.value) !== target.value,
+                    "SLIDER SETUP: actual rounded display genuinely differs from full stored value");
+            } else if (data.tag.startsWith("dirty-")) {
+                const draft = data.tag === "dirty-valid" ? "10.32" : "not-a-number";
+                const beforeTyping = visible185_values(project);
+                visible185_type(draft);
+                compare(field.text, draft, "SLIDER DRAFT: actual user spelling reaches the original field");
+                compare(visible185_values(project), beforeTyping,
+                    "SLIDER DRAFT: genuine typing is still uncommitted before original manual focus handoff");
+                verify(draftEdits > 0, "SLIDER DRAFT: real textEdited distinguishes a user draft from formatting");
+                verify(field.activeFocus && !slider.enabled,
+                    "SLIDER DRAFT: actual pending same-parameter user draft disables the real slider without discarding text");
+                compare(field.text, draft, "SLIDER DRAFT: displayed typed spelling remains owned until ordinary commit/refusal");
+                keyClick(Qt.Key_Tab);
+                tryCompare(slider, "enabled", true, 2000,
+                    "SLIDER DRAFT: ordinary explicit focus handoff resolves the draft and restores the real control");
+                if (data.tag === "dirty-valid") {
+                    compare(target.value, 10.32,
+                        "SLIDER DRAFT: ordinary genuine manual Tab commits a valid typed draft");
+                    compare(field.refusal, "", "SLIDER DRAFT: valid actual input is not falsely refused");
+                } else {
+                    compare(target.value, originalValue,
+                        "SLIDER DRAFT: invalid original user text never becomes a scientific value");
+                    verify(typeof field.refusal === "string" && field.refusal.length > 0,
+                        "SLIDER DRAFT: invalid input retains an actual honest refusal");
+                }
+            }
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment)
+                && slider231_curves(project).consistent, 10000,
+                "SLIDER SETUP: genuine committed input and actual plotted/model columns agree");
+            rendered();
+            mouseClick(field);
+            verify(field.activeFocus && group.selected === target,
+                "SLIDER SETUP: clean original full-value editor focus is genuine, never forced");
+            compare(Number(field.text), target.value,
+                "SLIDER SETUP: focused clean text is the authoritative full-precision current number");
+            compare(project.canUndo, originalUndo.project,
+                "SLIDER HISTORY: ordinary typed commit/refusal preserves the prior public Undo availability");
+            compare(item("appBar.button.undo").enabled, originalUndo.button,
+                "SLIDER HISTORY: ordinary typed input cannot manufacture a recorded Undo step");
+            const beforeSliderValues = visible185_values(project);
+            const beforeSlider = target.value;
+            const beforeCurves = slider231_curves(project);
+            const inputs = visible185_inputs(project);
+            const models = JSON.stringify(Probe.rows(assistant.models));
+            const history = JSON.stringify(Probe.rows(assistant.messages));
+            const declarations = JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]);
+            verify(slider.enabled && Ui.exposed(slider),
+                "SLIDER SETUP: resolved clean focus keeps the actual slider enabled");
+            compare(slider.value, beforeSlider, "SLIDER SETUP: real slider belongs to the original selected parameter");
+            let moved = 0, edited = 0;
+            let writes = [];
+            function moveReceipt() { ++moved; }
+            function textReceipt() { ++edited; }
+            function valueReceipt() {
+                writes.push(target.value);
+            }
+            slider.moved.connect(moveReceipt);
+            field.textEdited.connect(textReceipt);
+            target.valueChanged.connect(valueReceipt);
+            try {
+                const startX = slider.handle.x + slider.handle.width / 2;
+                const endX = slider.leftPadding + slider.handle.width / 2
+                    + 0.7 * (slider.availableWidth - slider.handle.width);
+                verify(Math.abs(startX - endX) > 1,
+                    "SLIDER SETUP: actual original handle and requested drag end are distinct screen points");
+                mousePress(slider, startX, slider.height / 2);
+                try {
+                    if (data.tag !== "native-platform") verify(field.activeFocus,
+                        "SLIDER FOCUS SETUP: declared TabFocus press genuinely retains original clean field focus");
+                    mouseMove(slider, endX, slider.height / 2);
+                    if (data.tag !== "native-platform") verify(field.activeFocus,
+                        "SLIDER FOCUS SETUP: original clean editor remains focused during genuine slider publication");
+                } finally {
+                    mouseRelease(slider, endX, slider.height / 2);
+                }
+                const changed = target.value;
+                verify(moved > 0 && writes.length > 0 && changed !== beforeSlider,
+                    "SLIDER: genuine pointer slider input actually changes the selected scientific parameter");
+                compare(changed, slider.value, "SLIDER: actual selected core value agrees with the real moved control");
+                if (field.activeFocus) compare(Number(field.text), changed,
+                    "SLIDER: focused clean numeric display immediately follows authoritative slider publication");
+                else compare(field.text, field.value,
+                    "SLIDER: actual native platform focus handoff keeps the normal current display binding");
+                compare(edited, 0, "SLIDER: programmatic publication/formatting is not fabricated user text input");
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment)
+                    && slider231_curves(project).consistent, 10000,
+                    "SLIDER: actual current model columns and rendered calc/background/residual agree after input");
+                const afterCurves = slider231_curves(project);
+                verify(afterCurves.signature !== beforeCurves.signature,
+                    "SLIDER: original cell change genuinely publishes a changed plotted calculation");
+                const writesAfterDrag = writes.length;
+                keyClick(Qt.Key_Tab);
+                verify(!field.activeFocus, "SLIDER: actual Tab leaves the original numeric editor");
+                compare(target.value, changed, "SLIDER: Tab cannot submit stale clean text over the changed core value");
+                compare(field.text, field.value, "SLIDER: unfocused row uses its actual current formatted display");
+                compare(writes.length, writesAfterDrag, "SLIDER: clean focus loss creates no second scientific edit");
+                const otherField = visible185_field(other);
+                verify(otherField.enabled && Ui.exposed(otherField),
+                    "SLIDER SETUP: real different row is actionable before the original row switch");
+                mouseClick(otherField);
+                compare(group.selected, other, "SLIDER: actual pointer selects a genuinely different parameter row");
+                compare(target.value, changed, "SLIDER: switching rows cannot restore the obsolete original value");
+                compare(field.text, field.value, "SLIDER: old row still displays its authoritative current value");
+                compare(writes.length, writesAfterDrag, "SLIDER: row switch does not invent an old-value write");
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment)
+                    && slider231_curves(project).consistent, 10000,
+                    "SLIDER: retained current plotted/model result survives actual Tab and row navigation");
+                compare(slider231_curves(project).signature, afterCurves.signature,
+                    "SLIDER: original changed chart persists instead of reverting after focus/selection changes");
+                const expectedValues = JSON.parse(beforeSliderValues);
+                const expectedTarget = expectedValues.find(row => row[0] === target.path);
+                verify(expectedTarget !== undefined, "SLIDER SETUP: captured exact target belongs to the public prestate");
+                expectedTarget[1] = changed;
+                compare(visible185_values(project), JSON.stringify(expectedValues),
+                    "SLIDER: only the actual selected scalar changes; unrelated values/free/SUs stay intact");
+                compare(project.canUndo, originalUndo.project,
+                    "SLIDER HISTORY: ordinary unrecorded slider input preserves prior public Undo availability");
+                compare(item("appBar.button.undo").enabled, originalUndo.button,
+                    "SLIDER HISTORY: actual pointer input/Tab/row switch creates no phantom recorded Undo step");
+                compare(visible185_inputs(project), inputs,
+                    "SLIDER: original observations/sigmas/masks/weights/links are preserved");
+                compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                    declarations, "SLIDER: original scientific declarations are not changed by manual input");
+                verify(Session.project === project && assistant.connected,
+                    "SLIDER: original actual owner and genuine managed account survive all manual actions");
+                compare(JSON.stringify(Probe.rows(assistant.models)), models, "SLIDER: genuine catalog is preserved");
+                compare(JSON.stringify(Probe.rows(assistant.messages)), history,
+                    "SLIDER: ordinary manual input does not rewrite retained conversation history");
+            } finally {
+                console.log("SLIDER231_STATE", data.tag, JSON.stringify({
+                    currentOwner: Session.project === project, connected: assistant.connected,
+                    nativeFocusPolicy: nativeFocusPolicy, declaredFocusPolicy: declaredFocusPolicy,
+                    originalUndo: originalUndo, currentUndo: {project: project.canUndo, button: item("appBar.button.undo").enabled},
+                    fieldText: field.text, fieldDisplay: field.value, fieldFocused: field.activeFocus,
+                    selectedPath: group.selected ? group.selected.path : null, targetPath: target.path,
+                    targetValue: target.value, beforeSlider: beforeSlider, sliderValue: slider.value,
+                    moved: moved, writes: writes, userTextEditsDuringDrag: edited, draftTextEdits: draftEdits,
+                    calculating: project.calculating, computedCurrent: Probe.computedCurrent(project.currentExperiment),
+                    chart: slider231_curves(project).counts, lastError: project.lastError}));
+                slider.moved.disconnect(moveReceipt);
+                field.textEdited.disconnect(textReceipt);
+                target.valueChanged.disconnect(valueReceipt);
+            }
+        } finally { field.textEdited.disconnect(draftReceipt); }
+    }
+    function test_sl1_233_focus_targeted_input_retires_original_work_data() {
+        return ["helper-preedit", "helper-commit", "helper-key", "helper-query",
+            "gap-preedit", "gap-commit", "gap-key", "gap-query"].map(tag => ({tag: tag}));
+    }
+    function test_sl1_233_focus_targeted_input_retires_original_work(data) {
+        const gap = data.tag.startsWith("gap-");
+        const query = data.tag.endsWith("query");
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")),
+            "SL1 SETUP: original complete measured native project opens");
+        const project = Session.project;
+        const lengths = project.currentStructure.scatteringLengths;
+        const custom = Probe.rows(lengths);
+        compare(custom.length, 1, "SL1 SETUP: original fixture retains its literal custom table");
+        compare(custom[0].typeSymbol, "La", "SL1 SETUP: original custom replacement is the La entry");
+        compare(custom[0].lengthFm, 8.24, "SL1 SETUP: independent fixture literal is unchanged");
+        for (let index = custom.length - 1; index >= 0; --index) lengths.remove(index);
+        compare(lengths.count, 0, "SL1 SETUP: genuine public empty custom map selects full built-in data");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "SL1 SETUP: actual original native calculation settles");
+        const target = visible185_parameter(project, "La", "adp_iso");
+        const originalValue = target.value;
+        verify(originalValue !== 0.6, "SL1 SETUP: delegated original value would cause a distinct real edit");
+        const inputs = visible185_inputs(project);
+        const values = visible185_values(project);
+        const declarations = JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]);
+        toggle();
+        assistant.signIn();
+        visible185_ready("sl1-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("sl1-disclosed");
+        verify(!assistant.contextConsentRequired, "SL1 SETUP: genuine current disclosed context is approved");
+        const show = item("assistant.showActions");
+        verify(show.visible && show.enabled, "SL1 SETUP: actual Show actions checkbox receives input");
+        mouseClick(show);
+        compare(assistant.showActions, true, "SL1 SETUP: genuine visible mode is enabled");
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        const name = Ui.control(Probe, window, "parameters.nameFilter");
+        verify(name !== null && Ui.exposed(name), "SL1 SETUP: original manual name input is exposed");
+        mouseClick(name);
+        visible185_type("adp_iso");
+        rendered();
+        const field = visible185_field(target);
+        mouseClick(field);
+        verify(field.activeFocus && window.activeFocusItem === field,
+            "SL1 SETUP: actual original Quick input has genuine current Main focus");
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        const call = "sl1-233-original-" + data.tag;
+        const pointer = item("assistant.actionPointer");
+        let takeovers = 0, userEdits = 0, preedits = 0, ownStarts = 0;
+        function takeoverReceipt() { ++takeovers; }
+        function editedReceipt() { ++userEdits; }
+        function preeditReceipt() { ++preedits; }
+        function pointerReceipt() { ++ownStarts; }
+        assistant.actionManualTakeover.connect(takeoverReceipt);
+        assistant.actionPointerShown.connect(pointerReceipt);
+        field.textEdited.connect(editedReceipt);
+        field.preeditTextChanged.connect(preeditReceipt);
+        let receipt = null, retainedText = null, retainedPreedit = null;
+        try {
+            visible185_ready("sl1-before-send");
+            assistant.send(gap ? "Inspect original current parameters, then wait for my next instruction"
+                : "Change original La isotropic ADP to 0.6 through its actual manual controls");
+            if (gap) {
+                tryVerify(() => visible185_outcome(call, previousIds) !== null
+                    && assistant.canCancel && !assistant.showingActions && ownStarts === 0
+                    && pointer.opacity === 0, 10000,
+                    "SL1 GAP SETUP: genuine original read reply is retained while the real request waits without helper pointer");
+                compare(ownStarts, 0, "SL1 GAP SETUP: no helper ran during this actual read-only request interval");
+            } else {
+                tryVerify(() => assistant.canCancel && assistant.showingActions && field.activeFocus
+                    && field.text !== field.editText && field.text !== field.value, visible237_observationMs([{path: target.path, text: "0.6"}]),
+                    "SL1 HELPER SETUP: original actual paced partial input is active before the user event");
+                verify(assistant.showingActions && ownStarts > 0 && pointer.opacity > 0 && Ui.rendered(pointer),
+                    "SL1 HELPER SETUP: actual painted pointer/helper interval is genuinely reached");
+            }
+            verify(window.activeFocusItem === field && field.activeFocus,
+                "SL1 SETUP: sender addresses original focused Quick item, not its window substitute");
+            compare(target.value, originalValue, "SL1 SETUP: helper final Return has not written before intervention");
+            const beforeText = field.text;
+            const beforePreedit = field.preeditText;
+            const beforeEdits = userEdits;
+            const beforePreedits = preedits;
+            const gapOutcome = gap ? JSON.stringify(visible185_outcome(call, previousIds)) : null;
+            if (query) receipt = Probe.focusedInputMethodQuery233(window, field);
+            else if (data.tag.endsWith("preedit")) receipt = Probe.focusedInputMethod233(window, field, "733", "");
+            else if (data.tag.endsWith("commit")) receipt = Probe.focusedInputMethod233(window, field, "", "7");
+            else receipt = Probe.focusedForwardedDigit233(window, field, "8");
+            verify(receipt.delivered && receipt.targetAlive,
+                "SL1 SETUP: actual bounded Qt event was delivered to original live focused input");
+            if (query) {
+                compare(takeovers, 0, "SL1 QUERY: nonediting query cannot become manual takeover");
+                verify(assistant.canCancel, "SL1 QUERY: actual original request remains active after inert query");
+                compare(field.text, beforeText, "SL1 QUERY: original text is untouched");
+                compare(field.preeditText, beforePreedit, "SL1 QUERY: query neither starts nor clears composition");
+                compare(target.value, originalValue, "SL1 QUERY: query cannot write a scientific value");
+                assistant.cancel(); // Explicit ordinary cleanup AFTER the inertness assertions.
+            } else {
+                if (!gap) {
+                    verify(takeovers > 0, "SL1 HELPER: original focused input invokes active-helper manual takeover");
+                    verify(window.assistantManualTakeover,
+                        "SL1 HELPER: actual Main retains manual controls for original user event");
+                }
+                if (data.tag.endsWith("preedit")) {
+                    compare(field.preeditText, "733", "SL1: exact original composition reaches the actual field");
+                    verify(preedits > beforePreedits, "SL1: original Qt preedit notification is genuinely new");
+                } else verify(field.text.includes(data.tag.endsWith("commit") ? "7" : "8") && userEdits > beforeEdits,
+                    "SL1: exact original commit/forwarded key reaches genuine user text signal");
+                retainedText = field.text;
+                retainedPreedit = field.preeditText;
+            }
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
+                "SL1: actual original request/helper retires before final observation");
+            rendered();
+            if (!query) {
+                compare(field.text, retainedText, "SL1: no later helper cleanup/typing overwrites genuine user text");
+                compare(field.preeditText, retainedPreedit, "SL1: original composition survives retirement/rendering");
+                verify(field.activeFocus && window.activeFocusItem === field,
+                    "SL1: original event keeps its original focused target after cancellation/restore");
+                if (!gap) {
+                    const outcome = visible185_outcome(call, previousIds);
+                    verify(outcome !== null && outcome.status !== "edited",
+                        "SL1: cancelled helper never claims its scientific edit completed");
+                }
+            }
+            if (gap) compare(JSON.stringify(visible185_outcome(call, previousIds)), gapOutcome,
+                "SL1 GAP: already completed original read stays truthful through request retirement");
+            compare(visible185_values(project), values,
+                "SL1: focused user input without Return and cancelled original work make no scientific mutation");
+            compare(visible185_inputs(project), inputs, "SL1: original observations/sigmas/masks/weights/links survive");
+            compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
+                declarations, "SL1: original scientific declarations remain intact");
+            verify(Session.project === project && assistant.connected,
+                "SL1: original current owner and genuine account survive input takeover/query");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "SL1: genuine catalog survives without login repair");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "SL1: retained conversation is not discarded during input retirement");
+        } finally {
+            console.log("SL1_233_STATE", data.tag, JSON.stringify({receipt: receipt,
+                currentOwner: Session.project === project, connected: assistant.connected,
+                focusIsOriginal: window.activeFocusItem === field, activeFocus: field.activeFocus,
+                text: field.text, preedit: field.preeditText, value: target.value,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                takeovers: takeovers, userEdits: userEdits, preeditSignals: preedits, pointerStarts: ownStarts,
+                pointerOpacity: pointer.opacity, pointerVisible: pointer.visible,
+                pointerRendered: Ui.rendered(pointer), pointerSize: [pointer.width, pointer.height],
+                lastError: assistant.lastError, originalOutcome: visible185_outcome(call, previousIds)}));
+            assistant.actionManualTakeover.disconnect(takeoverReceipt);
+            assistant.actionPointerShown.disconnect(pointerReceipt);
+            field.textEdited.disconnect(editedReceipt);
+            field.preeditTextChanged.disconnect(preeditReceipt);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
+    // PRIVATE candidate. Public214 form contract and original affine145 invariants;
+    // no production candidate body, calculated optimum or new test interface.
+    function relation245_declarations(project) {
+        return JSON.stringify([Probe.rows(project.analysis.aliases),
+            Probe.rows(project.analysis.constraints)]);
+    }
+    function relation245_text(name, text) {
+        const control = Ui.control(Probe, window, name);
+        verify(control !== null, "REL SETUP: ordinary named form editor exists");
+        Ui.scrollIntoView(control);
+        rendered();
+        Ui.click(this, Probe, window, name);
+        compare(window.activeFocusItem, control, "REL: real click focuses the original form editor");
+        visible185_type(text);
+        compare(control.text, text, "REL: actual keys preserve exact original declaration spelling");
+        return control;
+    }
+    function relation245_stage(project, aliases, constraints) {
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.extras");
+        const science = visible185_values(project);
+        const declarations = relation245_declarations(project);
+        for (const [kind, rows] of [["aliases", aliases], ["constraints", constraints]]) {
+            Ui.click(this, Probe, window, "relations.stage." + kind);
+            for (const row of rows) {
+                Ui.click(this, Probe, window, "relations.stage.add");
+                relation245_text("relations.stage.id", row.id);
+                relation245_text("relations.stage.definition", row.path === undefined ? row.expression : row.path);
+                if (row.enabled !== undefined) {
+                    const enabled = Ui.control(Probe, window, "relations.stage.enabled");
+                    verify(enabled !== null && Ui.exposed(enabled), "REL: ordinary enabled checkbox is exposed");
+                    if (enabled.checked !== row.enabled)
+                        Ui.click(this, Probe, window, "relations.stage.enabled");
+                    compare(enabled.checked, row.enabled, "REL: actual checkbox represents the requested declaration flag");
+                }
+                compare(visible185_values(project), science, "REL: staged typing/row/tab changes never publish science");
+                compare(relation245_declarations(project), declarations,
+                    "REL: stage remains presentation until one genuine Apply");
+            }
+        }
+    }
+    function test_relation245_actual_shared_manual_append_data() {
+        return ["manual-shared", "manual-varied", "zero-new-aliases"].map(tag => ({tag: tag}));
+    }
+    function test_relation245_actual_shared_manual_append(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")),
+            "REL SETUP: independent complete mixed-site fixture opens through real Session");
+        const project = Session.project;
+        const lengths = project.currentStructure.scatteringLengths;
+        const originalLengths = Probe.rows(lengths);
+        compare(originalLengths.length, 1, "REL SETUP: original fixture explicitly supplies one replacement-table entry");
+        compare(originalLengths[0].typeSymbol, "La", "REL SETUP: literal source fixture declares La");
+        compare(originalLengths[0].lengthFm, 8.24, "REL SETUP: original neutron length follows source bytes");
+        lengths.remove(0);
+        compare(lengths.count, 0, "REL SETUP: public empty custom map restores the ordinary complete built-in table");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL SETUP: real initial calculation settles before preservation snapshot");
+        const la = visible185_parameter(project, "La", "adp_iso");
+        const ba = visible185_parameter(project, "Ba", "adp_iso");
+        const co = visible185_parameter(project, "Co", "adp_iso");
+        // A non-identity equality: ordinary real typing changes Ba before the
+        // relation; manual scalar preparation itself promises no recorded Undo.
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "parameters.nameFilter");
+        visible185_type("adp_iso");
+        rendered();
+        const baField = visible185_field(ba);
+        Ui.click(this, Probe, window, baField.objectName);
+        visible185_type("0.8");
+        keyClick(Qt.Key_Return);
+        compare(ba.value, 0.8, "REL SETUP: actual ordinary input makes the shared-site equality nontrivial");
+        compare(la.value, 0.5, "REL SETUP: literal original independent La value is unchanged by Ba preparation");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL SETUP: genuine manual preparation calculation settles before baseline");
+        const inputs = visible185_inputs(project);
+        const original = visible185_values(project);
+        const initial = relation245_declarations(project);
+        const aliases = [{id: "rel245_la", path: la.path}, {id: "rel245_ba", path: ba.path}];
+        const shared = {id: "rel245_shared", expression: "rel245_ba = rel245_la", enabled: true};
+        let addedAliases = aliases;
+        let constraints = [shared];
+        if (data.tag === "manual-varied") {
+            addedAliases = aliases.concat([{id: "rel245_co", path: co.path}]);
+            constraints = [shared, {id: "rel245_disabled", expression: "rel245_co = 0.8", enabled: false}];
+        }
+        toggle();
+        assistant.signIn();
+        visible185_ready("relation245-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("relation245-disclosed");
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        toggle();
+        if (data.tag === "zero-new-aliases") {
+            // First real ordinary Apply establishes addresses. The second append
+            // adds zero aliases and references those existing original IDs.
+            relation245_stage(project, aliases, [{id: "rel245_prior", expression: "rel245_ba = rel245_la", enabled: false}]);
+            Ui.click(this, Probe, window, "relations.stage.apply");
+            compare(project.analysis.aliases.count, 2, "REL SETUP: actual prior ordinary aliases were published");
+            addedAliases = [];
+        }
+        const beforeValues = visible185_values(project);
+        const beforeDeclarations = relation245_declarations(project);
+        const beforeAliases = Probe.rows(project.analysis.aliases);
+        const beforeConstraints = Probe.rows(project.analysis.constraints);
+        relation245_stage(project, addedAliases, constraints);
+        Ui.click(this, Probe, window, "relations.stage.apply");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL: genuine shared editor publication/calculation completes before readback");
+        const actualAliases = Probe.rows(project.analysis.aliases);
+        const actualConstraints = Probe.rows(project.analysis.constraints);
+        compare(actualAliases.length, beforeAliases.length + addedAliases.length,
+            "REL: complete ordinary append preserves old aliases and adds exactly the requested count");
+        for (const row of addedAliases)
+            verify(actualAliases.some(value => value.id === row.id),
+                "REL: every actual requested alias identity is published, not just an arbitrary count");
+        compare(actualConstraints.length, beforeConstraints.length + constraints.length,
+            "REL: complete ordinary append preserves old constraints and adds the entire batch");
+        for (const row of beforeAliases)
+            verify(actualAliases.some(value => JSON.stringify(value) === JSON.stringify(row)),
+                "REL: prior alias declarations survive intact");
+        for (const row of beforeConstraints.concat(constraints))
+            verify(actualConstraints.some(value => value.id === row.id && value.expression === row.expression
+                && value.enabled === row.enabled), "REL: exact enabled/disabled expression declarations survive Apply");
+        compare(ba.value, la.value, "REL: independently requested equality applies to the mixed same-site ADPs");
+        compare(co.value, 0.5, "REL: disabled unrelated Co declaration does not change its literal original fixture value");
+        compare(visible185_inputs(project), inputs, "REL: complete measured data/sigma/weights/masks/links are preserved");
+        Ui.click(this, Probe, window, "appBar.button.undo");
+        compare(visible185_values(project), beforeValues, "REL: ONE real recorded Undo restores every value/free/SU");
+        compare(relation245_declarations(project), beforeDeclarations,
+            "REL: the same ONE Undo restores all prior declarations, never a partial batch");
+        if (data.tag === "zero-new-aliases") {
+            Ui.click(this, Probe, window, "appBar.button.undo");
+            compare(relation245_declarations(project), initial, "REL: separate original Apply retains its own complete Undo");
+        }
+        compare(visible185_values(project), original, "REL: complete manual control leaves original independent parameter state");
+        compare(Session.project, project, "REL: real Apply/Undo retains the actual current Session owner");
+        compare(JSON.stringify(Probe.rows(assistant.models)), models, "REL: ordinary form never repairs/resets account catalog");
+        verify(assistant.connected, "REL: actual managed account survives ordinary form Apply/Undo");
+    }
+
+    function relation246_parameters() {
+        return {
+            aliases: [{id: "rel246_la", path: "structure.atom_sites[La].adp_iso"},
+                {id: "rel246_ba", path: "structure.atom_sites[Ba].adp_iso"}],
+            constraints: [{id: "rel246_shared", expression: "rel246_ba = rel246_la", enabled: true}]
+        };
+    }
+    function relation246_observationMs(args) {
+        const texts = [];
+        args.aliases.forEach(row => texts.push(row.id, row.path));
+        args.constraints.forEach(row => texts.push(row.id, row.expression));
+        // Original10000 observation plus public paced key100/move500/press100/
+        // relax500 for actual tab/Add/two editors/optional flag per requested row.
+        return 10000 + 1100 * (3 + 5 * (args.aliases.length + args.constraints.length))
+            + 100 * texts.reduce((total, text) => total + [...text].length + 4, 0);
+    }
+    function relation246_shape(project) {
+        return JSON.stringify(Probe.rows(project.currentStructure.atomSites).map(row =>
+            [row.label, row.typeSymbol, row.wyckoffLetter, row.adpType, row.fractX.value,
+                row.fractY.value, row.fractZ.value, row.occupancy.value]));
+    }
+    function test_relation246_original_rpc_full_gui_data() {
+        return ["owner-fit", "varied-batch", "zero-new-aliases", "staged-draft",
+            "stop", "manual-takeover", "resolved", "cleanup-successor"].map(tag => ({tag: tag}));
+    }
+    function test_relation246_original_rpc_full_gui(data) {
+        verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")),
+            "REL RPC SETUP: original independent complete mixed-site project opens normally");
+        const project = Session.project;
+        const lengths = project.currentStructure.scatteringLengths;
+        const originalLengths = Probe.rows(lengths);
+        compare(originalLengths.length, 1, "REL RPC SETUP: source fixture has its one declared custom entry");
+        compare(originalLengths[0].typeSymbol, "La", "REL RPC SETUP: literal custom entry is La");
+        compare(originalLengths[0].lengthFm, 8.24, "REL RPC SETUP: independent source neutron length remains exact");
+        lengths.remove(0);
+        compare(lengths.count, 0, "REL RPC SETUP: normal public built-in-table mode is restored");
+        const la = visible185_parameter(project, "La", "adp_iso");
+        const ba = visible185_parameter(project, "Ba", "adp_iso");
+        const co = visible185_parameter(project, "Co", "adp_iso");
+        if (data.tag === "owner-fit") {
+            // Scientific fixture preparation through the existing public model,
+            // explicitly NOT credited as input/visible free-helper delivery.
+            for (const parameter of visible185_parameters(project)) parameter.free = false;
+            project.analysis.maxIterations = 8; // Same bounded real FitJob prior art as VA185.
+        }
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "parameters.nameFilter");
+        visible185_type("adp_iso");
+        rendered();
+        for (const parameter of data.tag === "owner-fit" ? [la, ba] : [ba]) {
+            const field = visible185_field(parameter);
+            Ui.click(this, Probe, window, field.objectName);
+            visible185_type(data.tag === "owner-fit" ? "0" : "0.8");
+            keyClick(Qt.Key_Return);
+            compare(parameter.value, data.tag === "owner-fit" ? 0 : 0.8,
+                "REL RPC SETUP: ordinary actual input prepares the disclosed original mixed-site values");
+        }
+        if (data.tag === "owner-fit") {
+            verify(!la.free && !ba.free, "REL OWNER SETUP: original zero ADPs are genuinely fixed before delegation");
+            visible185_page("experiment");
+            Ui.click(this, Probe, window, "sideBar.tab.basic");
+            Ui.expandGroup(this, Probe, window, "group.instrument");
+            Ui.click(this, Probe, window, "instrument.setup_wavelength");
+            visible185_type("1.49");
+            keyClick(Qt.Key_Return);
+            const wavelength = visible185_parameters(project).filter(row => row.name === "setup_wavelength");
+            compare(wavelength.length, 1, "REL OWNER SETUP: original physical wavelength is unique");
+            compare(wavelength[0].value, 1.49, "REL OWNER: user's explicit wavelength is genuinely typed and committed");
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL RPC SETUP: actual original science settles before admission baseline");
+        const args = relation246_parameters();
+        if (data.tag === "varied-batch") {
+            args.aliases.push({id: "rel246_co", path: co.path});
+            args.constraints.push({id: "rel246_disabled", expression: "rel246_co = 0.8", enabled: false});
+        }
+        if (data.tag === "zero-new-aliases") {
+            relation245_stage(project, args.aliases,
+                [{id: "rel246_prior", expression: "rel246_ba = rel246_la", enabled: false}]);
+            Ui.click(this, Probe, window, "relations.stage.apply");
+            args.aliases = [];
+        } else {
+            // Preserve a genuine unrelated prior declaration across native append.
+            relation245_stage(project, [{id: "rel246_prior_co", path: co.path}],
+                [{id: "rel246_prior", expression: "rel246_prior_co = 0.5", enabled: false}]);
+            Ui.click(this, Probe, window, "relations.stage.apply");
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+            10000, "REL RPC SETUP: actual prior manual Apply is settled before native context disclosure");
+        const values = visible185_values(project);
+        const declarations = relation245_declarations(project);
+        const inputs = visible185_inputs(project);
+        console.log("RELATION246_INPUT", JSON.stringify({observations: JSON.parse(inputs).observations}));
+        const structure = relation246_shape(project);
+        const oldAliases = Probe.rows(project.analysis.aliases);
+        const oldConstraints = Probe.rows(project.analysis.constraints);
+        const beforeUndo = item("appBar.button.undo").enabled;
+        toggle();
+        assistant.signIn();
+        visible185_ready("relation246-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("relation246-disclosed");
+        compare(visible185_values(project), values, "REL RPC SETUP: genuine managed bootstrap cannot change science");
+        const modeControl = item("assistant.showActions");
+        verify(modeControl.enabled && modeControl.visible, "REL RPC SETUP: genuine mode checkbox is actionable");
+        mouseClick(modeControl);
+        verify(assistant.showActions, "REL RPC: original real Show actions checkbox enables the mode");
+        toggle();
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.extras");
+        const models = JSON.stringify(Probe.rows(assistant.models));
+        const history = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const call = "relation246-" + data.tag;
+        let textEvents = 0, applies = 0, starts = 0, finished = 0, running = 0;
+        let cleanupSends = 0, cleanupCallbackActive = false, requestPresentationStartedInside = false;
+        const stage = Ui.control(Probe, window, "relations.stage");
+        const editor = Ui.control(Probe, window, "relations.stage.id");
+        const definition = Ui.control(Probe, window, "relations.stage.definition");
+        const apply = Ui.control(Probe, window, "relations.stage.apply");
+        verify(stage !== null && editor !== null && definition !== null && apply !== null,
+            "REL RPC SETUP: existing current ordinary staged form owns its real controls");
+        const editorLife313 = lifetime313(editor), definitionLife313 = lifetime313(definition);
+        const applyLife313 = lifetime313(apply), stageLife313 = lifetime313(stage);
+        const fitOwner313 = project.fit, fitLife313 = lifetime313(fitOwner313);
+        function typed() { ++textEvents; }
+        function applied() { ++applies; }
+        function active() { if (assistant.showingActions) { ++starts; if (cleanupCallbackActive) requestPresentationStartedInside = true; } }
+        function fitFinished() { ++finished; }
+        function fitRunning() { if (alive313(fitLife313) && fitOwner313.running) ++running; }
+        let cleanupArmed = false;
+        function resetBoundary() {
+            if (!cleanupArmed || cleanupSends || !alive313(stageLife313) || stage.aliasCount !== 0) return;
+            ++cleanupSends;
+            cleanupCallbackActive = true;
+            try { assistant.send("Apply the genuinely new relation246 successor request now"); }
+            finally { cleanupCallbackActive = false; }
+        }
+        editor.textEdited.connect(typed);
+        definition.textEdited.connect(typed);
+        apply.clicked.connect(applied);
+        assistant.showingActionsChanged.connect(active);
+        project.fit.finished.connect(fitFinished);
+        project.fit.runningChanged.connect(fitRunning);
+        stage.aliasCountChanged.connect(resetBoundary);
+        let draft = null, originalStage = null;
+        const pointer = item("assistant.actionPointer");
+        let phase = "armed", lastAggregateConjuncts = "";
+        function phase253(name) {
+            phase = name;
+            if (data.tag !== "owner-fit") return;
+            try {
+                const diagnostic = visible185_outcome("relation246-diagnostics", previousIds);
+                console.log("RELATION253_PHASE", JSON.stringify({phase: phase, observedAtMs: Date.now(),
+                    diagnosticsOutcomePresent: diagnostic !== null,
+                    canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                    currentOwner: Session.project === project, calculating: project.calculating,
+                    computedCurrent: Probe.computedCurrent(project.currentExperiment),
+                    fitRunning: project.fit.running, fitOutcome: project.fit.outcome,
+                    fitStarts: running, fitFinished: finished, textEvents: textEvents, applies: applies,
+                    originalOutcome: visible185_outcome(call, previousIds),
+                    freeOutcome: visible185_outcome("relation246-free", previousIds),
+                    fitOutcomeRecord: visible185_outcome("relation246-fit", previousIds),
+                    diagnosticOutcome: diagnostic, connected: assistant.connected,
+                    lastError: assistant.lastError}));
+            } catch (error) { console.log("RELATION253_PHASE_ERROR", phase, String(error)); }
+        }
+        phase253("before-original-send");
+        try {
+            if (data.tag === "staged-draft") {
+                relation245_stage(project, [{id: "manual246_co", path: co.path}],
+                    [{id: "manual246_preserved", expression: "manual246_co = 0.8", enabled: false}]);
+                draft = {id: editor.text, expression: definition.text, focus: window.activeFocusItem,
+                    start: definition.selectionStart, end: definition.selectionEnd,
+                    page: window.appBarCentralTabs.currentIndex, textEvents: textEvents, stage: stage.assistantStage};
+            }
+            assistant.send("Original complete relation request " + data.tag);
+            if (data.tag === "owner-fit") {
+                for (const editId of [call, "relation246-free"]) {
+                    phase253("wait-edit-" + editId);
+                    tryVerify(() => {
+                        const edited = visible185_outcome(editId, previousIds);
+                        return edited !== null && edited.status === "edited" && !project.calculating
+                            && Probe.computedCurrent(project.currentExperiment) && Session.project === project;
+                    }, relation246_observationMs(args),
+                    "REL OWNER SETUP: exact original edit and real calculation settle before next original call");
+                    verify(assistant.canCancel && assistant.showingActions,
+                        "REL OWNER: per-tool settlement retains presentation across the genuine active objective");
+                    console.log("RELATION246_SETTLED", JSON.stringify({callId: editId, observedAtMs: Date.now(),
+                        canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                        calculating: project.calculating, computedCurrent: Probe.computedCurrent(project.currentExperiment),
+                        currentOwner: Session.project === project, value: la.value, free: la.free}));
+                    phase253("settled-edit-" + editId);
+                    assistant.refreshUsage(); // Actual public event, no new objective/steer or timer.
+                }
+            }
+            if (["stop", "manual-takeover", "resolved", "cleanup-successor"].includes(data.tag)) {
+                tryVerify(() => assistant.showingActions && assistant.canCancel && textEvents > 0
+                    && editor.text.length > 0 && editor.text !== args.aliases[0].id,
+                    relation246_observationMs(args), "REL INTERVAL SETUP: genuine partial original staging is reached before intervention");
+                compare(visible185_values(project), values, "REL: partial original stage has not edited science");
+                compare(relation245_declarations(project), declarations, "REL: no declaration is published before actual Apply");
+                if (data.tag === "stop") {
+                    const stop = item("assistant.stopVisibleAction");
+                    verify(stop.enabled && Ui.exposed(stop), "REL STOP SETUP: actual original appbar Stop is exposed");
+                    mouseClick(stop);
+                }
+                else if (data.tag === "manual-takeover") {
+                    const target = Ui.control(Probe, window, "relations.stage.definition");
+                    Ui.scrollIntoView(target);
+                    rendered();
+                    const point = Ui.clickPoint(target);
+                    verify(point !== null, "REL TAKEOVER SETUP: original user's actual form input is exposed");
+                    mouseClick(target, point.x, point.y);
+                    verify(window.activeFocusItem === target, "REL: same surviving genuine manual receiver owns focus");
+                    keyClick("x");
+                    verify(target.text.includes("x"), "REL: original actual manual key survives helper retirement");
+                    draft = {id: editor.text, expression: target.text};
+                } else if (data.tag === "resolved") {
+                    // Existing ordinary optional read causes the owned peer to emit
+                    // real original serverRequest/resolved. It does not steer/change
+                    // objective or synthesize any app/helper/model state.
+                    originalStage = stage.assistantStage;
+                    verify(originalStage !== undefined && originalStage !== null
+                        && String(originalStage).length > 0 && pointer.opacity > 0,
+                        "REL RESOLVED SETUP: actual original keyed stage and painted pointer are captured");
+                    assistant.refreshUsage();
+                } else {
+                    cleanupArmed = true;
+                    assistant.cancel();
+                }
+            }
+            if (data.tag === "resolved") {
+                tryVerify(() => stage.assistantStage !== originalStage && pointer.opacity === 0, 10000,
+                    "REL RESOLVED: matching original stage retires and actual pointer paint ends");
+                verify(assistant.canCancel && assistant.showingActions,
+                    "REL RESOLVED: original held objective retains whole-request presentation after per-tool retirement");
+                const stoppedEvents = textEvents;
+                const stopped = [editor.text, definition.text];
+                rendered();
+                compare(textEvents, stoppedEvents, "REL RESOLVED: later rendering never continues original typing");
+                compare(JSON.stringify([editor.text, definition.text]), JSON.stringify(stopped),
+                    "REL RESOLVED: no late original staging cleanup rewrites current form");
+                compare(applies, 0, "REL RESOLVED: original resolved RPC can never reach a late Apply");
+                assistant.cancel(); // Explicit ordinary turn cleanup after stage-retirement facts.
+                tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
+                    "REL RESOLVED: whole presentation ends only after genuine explicit turn retirement");
+            } else {
+                const expected = data.tag === "cleanup-successor" ? "relation246-successor"
+                    : data.tag === "owner-fit" ? "relation246-diagnostics" : call;
+                phase253("aggregate-wait");
+                tryVerify(() => {
+                    const present = visible185_outcome(expected, previousIds) !== null;
+                    const conjuncts = JSON.stringify([present, assistant.canCancel, assistant.showingActions]);
+                    if (data.tag === "owner-fit" && conjuncts !== lastAggregateConjuncts) {
+                        lastAggregateConjuncts = conjuncts;
+                        phase253("aggregate-conjunct-change");
+                    }
+                    return present
+                        && (data.tag === "cleanup-successor" || (!assistant.canCancel && !assistant.showingActions));
+                },
+                    relation246_observationMs(args) + (data.tag === "owner-fit" ? visible237_observationMs([
+                        {path: la.path, text: ""}]) + 10000 : 0),
+                    "REL RPC: real original operation and its publication settle with an actual retained outcome");
+                phase253("aggregate-passed");
+                const outcome = visible185_outcome(data.tag === "cleanup-successor" ? expected : call, previousIds);
+                if (data.tag === "staged-draft") {
+                    verify(["refused", "unavailable"].includes(outcome.status) && outcome.message.length > 0,
+                        "REL DRAFT: existing original form draft causes honest before-write refusal");
+                    compare(editor.text, draft.id, "REL DRAFT: exact original ID remains untouched");
+                    compare(stage.assistantStage, draft.stage,
+                        "REL DRAFT: native refusal never replaces the original manual form stage");
+                    compare(applies, 0, "REL DRAFT: existing manual stage is never automatically applied");
+                    compare(textEvents, draft.textEvents, "REL DRAFT: no helper typing touches the original manual form");
+                    compare(definition.selectionStart, draft.start, "REL DRAFT: original selection start survives");
+                    compare(definition.selectionEnd, draft.end, "REL DRAFT: original selection end survives");
+                    compare(definition.text, draft.expression, "REL DRAFT: exact multiline original spelling survives");
+                    compare(window.activeFocusItem, draft.focus, "REL DRAFT: no preflight blur commits the original stage");
+                    compare(window.appBarCentralTabs.currentIndex, draft.page, "REL DRAFT: refusal precedes navigation");
+                    compare(item("appBar.button.undo").enabled, beforeUndo, "REL DRAFT: original Undo history is neither consumed nor extended");
+                } else if (["stop", "manual-takeover"].includes(data.tag)) {
+                    verify(outcome.status !== "edited" && outcome.message.length > 0,
+                        "REL CANCEL: truthful original cancellation never claims science was edited");
+                    compare(applies, 0, "REL CANCEL: no late original Apply after Stop/manual takeover");
+                    if (draft) {
+                        rendered();
+                        compare(editor.text, draft.id, "REL TAKEOVER: original handed-over staged ID survives late cleanup");
+                        compare(definition.text, draft.expression, "REL TAKEOVER: exact original user's text remains");
+                    }
+                } else {
+                    compare(outcome.status, "edited", "REL RPC: actual shared form/editor must confirm the complete native append");
+                    if (data.tag === "cleanup-successor") {
+                        compare(cleanupSends, 1, "REL REENTRY SETUP: one genuine old-stage reset signal admits the user's successor attempt");
+                        verify(assistant.canCancel && assistant.showingActions,
+                            "REL REENTRY: confirmed B operation retains whole presentation while its objective is held");
+                        assistant.cancel();
+                        tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
+                            "REL REENTRY: actual explicit turn cleanup ends the held whole-request presentation");
+                        // This flag observes only requestwide presentation, not an individual B start.
+                        // Exact B-inside-A admission remains an explicitly unqualified interval.
+                    }
+                    const aliases = Probe.rows(project.analysis.aliases);
+                    const constraints = Probe.rows(project.analysis.constraints);
+                    compare(aliases.length, oldAliases.length + args.aliases.length,
+                        "REL RPC: all requested aliases append once while prior declarations remain");
+                    compare(constraints.length, oldConstraints.length + args.constraints.length,
+                        "REL RPC: complete enabled/disabled constraint batch appends once");
+                    for (const row of args.aliases)
+                        verify(aliases.some(value => value.id === row.id && value.parameter
+                            === "lbco.atom_site." + (row.path.includes("[La]") ? "La"
+                                : row.path.includes("[Ba]") ? "Ba" : "Co") + ".adp_iso"),
+                            "REL RPC: native paths resolve to the independently declared fixture atom/site parameter");
+                    for (const row of oldAliases)
+                        verify(aliases.some(value => JSON.stringify(value) === JSON.stringify(row)),
+                            "REL RPC: prior original alias declarations survive intact");
+                    for (const row of oldConstraints.concat(args.constraints))
+                        verify(constraints.some(value => value.id === row.id && value.expression === row.expression
+                            && value.enabled === row.enabled), "REL RPC: exact prior and new constraint declarations survive");
+                    compare(ba.value, la.value, "REL RPC: actual mixed-site ADPs satisfy the independently requested equality");
+                    compare(co.value, 0.5, "REL RPC: disabled or unrelated Co remains the independent fixture value");
+                    if (data.tag === "owner-fit") {
+                        const free = visible185_outcome("relation246-free", previousIds);
+                        const fit = visible185_outcome("relation246-fit", previousIds);
+                        const diagnostic = visible185_outcome("relation246-diagnostics", previousIds);
+                        verify(free !== null && free.status === "edited" && la.free && !ba.free,
+                            "REL OWNER: genuine native free checkbox owns only the independent member of the equality");
+                        verify(running > 0 && finished === 1 && !project.fit.running && project.fit.outcome.length > 0,
+                            "REL OWNER: actual native FitJob/report completion precedes scientific acceptance");
+                        verify(fit !== null && ["done", "max_iterations", "no_step"].includes(fit.status),
+                            "REL OWNER: real supported fit attempt is not an unavailable/error substitute or fictitious success");
+                        verify(Number.isFinite(fit.iterations) && fit.iterations >= 0,
+                            "REL OWNER: actual iteration report is finite without an optimum golden");
+                        if (fit.reduced_chi_square !== undefined)
+                            verify(Number.isFinite(fit.reduced_chi_square) && fit.reduced_chi_square >= 0,
+                                "REL OWNER: genuine reported fit statistic is finite; improvement is not invented");
+                        verify(diagnostic !== null && diagnostic.diagnostics !== null
+                            && typeof diagnostic.diagnostics === "object",
+                            "REL OWNER: original native diagnostics returns after the real fit publication");
+                        phase253("post-fit-science");
+                        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),
+                            10000, "REL OWNER: real post-fit calculated profile is current before observation");
+                        const modeled = Probe.rows(project.currentExperiment.pattern);
+                        compare(modeled.length, JSON.parse(inputs).observations.length,
+                            "REL OWNER: actual fit keeps the complete measured grid");
+                        verify(modeled.every(row => Number.isFinite(row.intensityCalc)),
+                            "REL OWNER: actual native modeled intensity is finite at every original observation");
+                        for (const parameter of visible185_parameters(project))
+                            if (parameter.hasUncertainty)
+                                verify(Number.isFinite(parameter.uncertainty) && parameter.uncertainty >= 0,
+                                    "REL OWNER: actual reported scientific uncertainty is finite and nonnegative");
+                        // Native fit may produce its own result Undo; ordinary appbar Undo
+                        // restores its adopted values before the two original native edits.
+                        if (fit.adopted) {
+                            verify(project.fit.canUndo, "REL OWNER: adopted actual fit exposes its ordinary result Undo");
+                            phase253("fit-undo");
+                            Ui.click(this, Probe, window, "appBar.button.undo");
+                        }
+                        phase253("free-undo");
+                        Ui.click(this, Probe, window, "appBar.button.undo");
+                        compare(la.free, false, "REL OWNER: one native free Undo restores original fixed independent ADP");
+                    }
+                    phase253("relation-undo");
+                    Ui.click(this, Probe, window, "appBar.button.undo");
+                }
+            }
+            phase253("final-preservation");
+            compare(visible185_values(project), values, "REL: complete Undo/refusal/retirement preserves all original values/free/SUs");
+            compare(relation245_declarations(project), declarations, "REL: original full declarations survive exactly");
+            compare(visible185_inputs(project), inputs, "REL: unchanged actual observations/sigmas/masks/weights/links survive");
+            compare(relation246_shape(project), structure, "REL: original composition/site coordinates/Wyckoff geometry survive");
+            verify(Session.project === project && assistant.connected, "REL: current owner and actual account remain genuine");
+            compare(JSON.stringify(Probe.rows(assistant.models)), models, "REL: no account/catalog repair substitutes for completion");
+            verify(history.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                "REL: retained original history survives native work and cancellation");
+        } finally {
+            phase253("finally-after-" + phase);
+            console.log("RELATION246_STATE", data.tag, JSON.stringify({showingActions: assistant.showingActions,
+                canCancel: assistant.canCancel, textEvents: textEvents, applies: applies, starts: starts,
+                fitStarts: running, fitFinished: finished, currentOwner: Session.project === project,
+                connected: assistant.connected, lastError: assistant.lastError,
+                stagedId: alive313(editorLife313) ? editor.text : null,
+                stagedDefinition: alive313(definitionLife313) ? definition.text : null,
+                stageAlive: alive313(stageLife313), editorAlive: alive313(editorLife313),
+                definitionAlive: alive313(definitionLife313), cleanupSends: cleanupSends,
+                requestPresentationStartedInside: requestPresentationStartedInside,
+                originalStage: originalStage === null ? null : String(originalStage),
+                currentStage: alive313(stageLife313) ? String(stage.assistantStage) : null, pointerOpacity: pointer.opacity, outcome: visible185_outcome(call, previousIds)}));
+            disconnect313(editorLife313, editor, "textEdited", typed);
+            disconnect313(definitionLife313, definition, "textEdited", typed);
+            disconnect313(applyLife313, apply, "clicked", applied);
+            assistant.showingActionsChanged.disconnect(active);
+            disconnect313(fitLife313, fitOwner313, "finished", fitFinished);
+            disconnect313(fitLife313, fitOwner313, "runningChanged", fitRunning);
+            disconnect313(stageLife313, stage, "aliasCountChanged", resetBoundary);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
+
+
+    // Public226/231 actual import form; no producer-private counter or expected fit output.
+    function import265_recipe() {
+        return {project_name: "Original measured PbSO4", description: "Original typed independent import",
+            experiment_name: "d1a", sample_form: "powder", beam_mode: "constant wavelength",
+            radiation_probe: "neutron", scattering_type: "bragg", peak_profile: "cwl-tch-pseudo-voigt",
+            wavelength: 1.909, zero_offset: -0.001, phase_scale: 1,
+            background: [{position: 10, intensity: 200}, {position: 155.85, intensity: 200}],
+            exclusions: [{first: 10, second: 11}, {first: 155, second: 155.85}],
+            initial_parameters: [{path: "experiment.peak.broad_gauss_u", value: 0.1},
+                {path: "experiment.peak.broad_gauss_v", value: 0},
+                {path: "experiment.peak.broad_gauss_w", value: 0.1},
+                {path: "experiment.peak.broad_lorentz_x", value: 0},
+                {path: "experiment.peak.broad_lorentz_y", value: 0.1}]};
+    }
+    function import265_observationMs(recipe) {
+        // Existing public237 pacing model: move500/press100/relax500, scalar100.
+        // Count this complete original recipe's actual form fields/rows, never a producer counter.
+        let texts = [recipe.project_name, recipe.experiment_name, recipe.description,
+            String(recipe.wavelength), String(recipe.zero_offset), String(recipe.phase_scale)];
+        recipe.background.forEach(row => texts.push(String(row.position), String(row.intensity)));
+        recipe.exclusions.forEach(row => texts.push(String(row.first), String(row.second)));
+        recipe.initial_parameters.forEach(row => texts.push(row.path, String(row.value)));
+        const rows = recipe.background.length + recipe.exclusions.length + recipe.initial_parameters.length;
+        const clicks = 3 + 1 + 3 + 3 + texts.length + rows + 1;
+        const scalarKeys = texts.reduce((count, text) => count + [...text].length + 2, 0);
+        const comboKeys = (2 + 1) + (2 + 1) + (2 + 5); // two sources, six public profiles maximum.
+        return 10000 + clicks * (500 + 100 + 500) + 100 * (scalarKeys + comboKeys);
+    }
+    function import265_control(name) {
+        const found = Ui.itemsWithProperty(Ui.windowRoot(window), "objectName")
+            .filter(control => control.objectName === name && control.visible);
+        compare(found.length, 1, "IMPORT265 SETUP: one real visible import control owns " + name);
+        Ui.scrollIntoView(found[0]);
+        verify(Ui.exposed(found[0]) && found[0].enabled,
+            "IMPORT265 SETUP: the genuine import input is exposed and enabled: " + name);
+        return found[0];
+    }
+    function import265_click(name) {
+        const control = import265_control(name);
+        let delay = 0;
+        for (let parent = control.parent; parent; parent = parent.parent)
+            if (typeof parent.pressDelay === "number") delay = Math.max(delay, parent.pressDelay + 1);
+        const point = Ui.clickPoint(control);
+        mouseClick(control, point.x, point.y, Qt.LeftButton, Qt.NoModifier, delay);
+        window.update();
+        verify(waitForRendering(window.contentItem), "IMPORT265: actual form input has a real rendered receipt");
+        return control;
+    }
+    function import265_text(name, text) {
+        const control = import265_click(name);
+        tryVerify(() => control.activeFocus || (window.activeFocusItem &&
+            Probe.objectsWithProperty(control, "activeFocus").includes(window.activeFocusItem)),
+            2000, "IMPORT265 SETUP: real pointer focuses the actual form editor before typing");
+        visible185_type(String(text));
+        compare(control.text, String(text), "IMPORT265: actual form retains exact original typed text");
+    }
+    // Passive276: bounded public control/focus receipts; no Keys handler or event acceptance changes.
+    function import276_identity(object) {
+        if (!object) return null;
+        const properties = ["objectName", "visible", "enabled", "opacity", "clip", "x", "y",
+            "width", "height", "focus", "activeFocus", "visualFocus", "currentIndex",
+            "highlightedIndex", "currentText", "displayText", "textRole", "valueRole",
+            "count", "down", "pressed", "editable", "opened", "modal"];
+        const result = {identity: String(object).slice(0, 200)};
+        properties.forEach(property => {
+            try {
+                const value = object[property];
+                if (["string", "number", "boolean"].includes(typeof value))
+                    result[property] = typeof value === "string" ? value.slice(0, 200) : value;
+            } catch (error) { result[property] = "<unreadable>"; }
+        });
+        try {
+            const point = object.mapToItem(window.contentItem, 0, 0);
+            result.scene = {x: point.x, y: point.y};
+        } catch (error) { result.scene = null; }
+        return result;
+    }
+    function import276_ancestors(object) {
+        const result = [];
+        for (let current = object, count = 0; current && count < 12; current = current.parent, ++count)
+            result.push(import276_identity(current));
+        return result;
+    }
+    function import276_comboReceipt(stage, control, name, label, matches, detail) {
+        try {
+            const choices = [];
+            for (let i = 0; i < Math.min(control.count, 8); ++i)
+                choices.push({index: i, text: String(control.textAt(i)).slice(0, 200)});
+            const actualPopup = control.popup;
+            const content = actualPopup ? actualPopup.contentItem : null;
+            console.log("IMPORT276_COMBO", JSON.stringify({stage: stage, name: name,
+                requestedLabel: label, matchingIndices: matches, detail: detail || null,
+                page: window.appBarCentralTabs.currentIndex, pageItem: import276_identity(Ui.page(window)),
+                control: import276_identity(control), controlAncestors: import276_ancestors(control),
+                model: String(control.model).slice(0, 200), choices: choices, choicesTruncated: control.count > 8,
+                popup: import276_identity(actualPopup), popupParent: actualPopup ? import276_identity(actualPopup.parent) : null,
+                popupContent: import276_identity(content), popupCurrentItem: content ? import276_identity(content.currentItem) : null,
+                focusItem: import276_identity(window.activeFocusItem),
+                focusAncestors: import276_ancestors(window.activeFocusItem), window: String(window).slice(0, 200)}));
+        } catch (error) { console.log("IMPORT276_DIAGNOSTIC_ERROR", stage, String(error).slice(0, 240)); }
+    }
+    function import265_combo(name, label) {
+        const control = import265_control(name);
+        const matches = [];
+        for (let i = 0; i < control.count; ++i) if (control.textAt(i) === label) matches.push(i);
+        compare(matches.length, 1, "IMPORT265 SETUP: exact displayed original choice is uniquely offered");
+        const observations = [];
+        let signalCount = 0;
+        function observe(object, signalName) {
+            if (!object || !object[signalName] || !object[signalName].connect) return;
+            const receive = function(value) {
+                if (signalCount++ < 48)
+                    import276_comboReceipt("signal:" + signalName, control, name, label, matches,
+                        {value: typeof value === "number" || typeof value === "boolean" ? value : null});
+            };
+            object[signalName].connect(receive);
+            observations.push({signal: object[signalName], receive: receive});
+        }
+        try {
+            ["activated", "highlighted", "currentIndexChanged", "highlightedIndexChanged", "activeFocusChanged"]
+                .forEach(signal => observe(control, signal));
+            ["opened", "closed", "visibleChanged"].forEach(signal => observe(control.popup, signal));
+            observe(window, "activeFocusItemChanged");
+            import276_comboReceipt("before-click", control, name, label, matches);
+            import265_click(name);
+            import276_comboReceipt("after-click/before-Home", control, name, label, matches);
+            keyClick(Qt.Key_Home);
+            import276_comboReceipt("after-Home", control, name, label, matches);
+            for (let i = 0; i < matches[0]; ++i) {
+                import276_comboReceipt("before-Down", control, name, label, matches, {ordinal: i});
+                keyClick(Qt.Key_Down);
+                import276_comboReceipt("after-Down", control, name, label, matches, {ordinal: i});
+            }
+            import276_comboReceipt("before-Return", control, name, label, matches);
+            keyClick(Qt.Key_Return);
+            import276_comboReceipt("after-Return", control, name, label, matches);
+            compare(control.currentIndex, matches[0], "IMPORT265: real ComboBox keyboard selects original choice");
+            compare(control.currentText, label, "IMPORT265: actual displayed source/profile matches original choice");
+            // Existing2000ms form-focus setup bound; wait on the real popup, not elapsed animation time.
+            tryVerify(() => !control.popup.visible && !control.popup.opened, 2000,
+                "IMPORT278 SETUP: original selected ComboBox popup is closed before the next physical input");
+            import276_comboReceipt("after-popup-closed", control, name, label, matches);
+        } finally {
+            import276_comboReceipt("finally", control, name, label, matches, {observedSignals: signalCount});
+            observations.forEach(observation => observation.signal.disconnect(observation.receive));
+        }
+    }
+    function import265_owner(project) {
+        return project ? JSON.stringify({name: project.name, title: project.title,
+            description: project.description, authors: project.authors, path: project.path,
+            suRule: project.suRule, embedLibraries: project.report.embedLibraries}) : null;
+    }
+    function import265_science(project) {
+        compare(project.structures.count, 1, "IMPORT265: actual import creates one original phase");
+        compare(project.experiments.count, 1, "IMPORT265: actual import creates one measured experiment");
+        compare(project.currentStructure.spaceGroup.nameHM, "P n m a", "IMPORT265: original CIF symmetry is retained");
+        compare(project.currentExperiment.name, "d1a", "IMPORT267: explicit original experiment name is retained");
+        compare(project.currentExperiment.sampleFormToken, "powder", "IMPORT267: actual imported model has original powder type");
+        compare(project.currentExperiment.beamModeToken, "constant wavelength", "IMPORT267: actual imported model has original CW geometry");
+        compare(project.currentExperiment.radiationProbeToken, "neutron", "IMPORT267: actual imported model has original neutron probe");
+        compare(project.currentExperiment.scatteringTypeToken, "bragg", "IMPORT267: actual imported model has original Bragg scattering");
+        compare(project.currentExperiment.peakType, "cwl-tch-pseudo-voigt", "IMPORT267: actual selected canonical peak profile survives");
+        compare(project.fit.running, false, "IMPORT267: creation alone never claims or launches refinement");
+        compare(JSON.stringify(Probe.rows(project.currentExperiment.background).map(row => [row.position, row.intensity.value])),
+            JSON.stringify([[10, 200], [155.85, 200]]), "IMPORT267: every original supplied background point survives");
+        for (const pair of [["length_a", 8.48], ["length_b", 5.398], ["length_c", 6.958]]) {
+            const parameters = visible185_parameters(project).filter(parameter => parameter.name === pair[0]);
+            compare(parameters.length, 1, "IMPORT267 SETUP: original cell scalar is unique");
+            compare(parameters[0].value, pair[1], "IMPORT267: bare original cell value survives import");
+            compare(parameters[0].free, false, "IMPORT267: original fixed cell does not become free");
+            compare(parameters[0].uncertainty, 0, "IMPORT267: public cell uncertainty view retains numeric zero");
+        }
+        const siteRows = Probe.rows(project.currentStructure.atomSites);
+        const sites = siteRows.map(row => [row.label, row.typeSymbol])
+            .sort((a, b) => a[0].localeCompare(b[0]));
+        compare(JSON.stringify(sites), JSON.stringify([["O1", "O"], ["O2", "O"], ["O3", "O"], ["Pb", "Pb"], ["S", "S"]]),
+            "IMPORT265: every original independent site/species is retained");
+        const positions = {Pb: [0.1882, 0.25, 0.167], S: [0.063, 0.25, 0.686],
+            O1: [-0.095, 0.25, 0.6], O2: [0.181, 0.25, 0.543], O3: [0.085, 0.026, 0.806]};
+        for (const label of Object.keys(positions)) {
+            const matchingSites = siteRows.filter(site => site.label === label);
+            compare(matchingSites.length, 1, "IMPORT281: each original physical site has one public owning-model row");
+            const site = matchingSites[0];
+            for (let index = 0; index < 3; ++index)
+                compare(site[["fractX", "fractY", "fractZ"][index]].value,
+                    positions[label][index], "IMPORT265: original fractional coordinates retain literal source values");
+            compare(site.occupancy.value, 1,
+                "IMPORT265: original occupancies are unchanged");
+            compare(site.adpIso.value, 0.01,
+                "IMPORT265: original isotropic ADP retains source Uiso convention/value");
+            compare(site.adpType, "Uiso", "IMPORT281: every original site retains the literal CIF displacement convention");
+        }
+        // Original CIF block data_pbso4-phase; public nonempty datablock keys retain that spelling.
+        compare(project.currentStructure.name, "pbso4-phase", "IMPORT281: sole phase retains its original canonical datablock key");
+        compare(JSON.stringify(Probe.rows(project.currentExperiment.linkedStructures)
+            .map(row => [row.structureId, row.enabled])), JSON.stringify([["pbso4-phase", true]]),
+            "IMPORT281: the sole original canonical phase is actually linked and enabled");
+        const wavelengths = visible185_parameters(project).filter(parameter => parameter.name === "setup_wavelength");
+        compare(wavelengths.length, 1, "IMPORT265 SETUP: original wavelength parameter is unique");
+        compare(wavelengths[0].value, 1.909, "IMPORT265: explicit supplied original wavelength is retained");
+        const offsets = visible185_parameters(project).filter(parameter => parameter.name === "calib_twotheta_offset");
+        compare(offsets.length, 1, "IMPORT267 SETUP: public two-theta offset scalar is unique");
+        compare(offsets[0].value, -0.001, "IMPORT267: original explicit zero offset survives typed form input");
+        compare(project.currentExperiment.scale.value, 1, "IMPORT267: original explicit single-phase scale survives");
+        for (const requested of import265_recipe().initial_parameters) {
+            const name = requested.path.split(".").slice(-1)[0];
+            const parameters = visible185_parameters(project).filter(parameter => parameter.name === name);
+            compare(parameters.length, 1, "IMPORT267 SETUP: original requested physical parameter is unique");
+            compare(parameters[0].value, requested.value, "IMPORT267: every explicit initial physical value survives real form reconstruction");
+        }
+        compare(JSON.stringify(Probe.rows(project.currentExperiment.excludedRegions).map(row => [row.start, row.end])),
+            JSON.stringify([[10, 11], [155, 155.85]]), "IMPORT267: original explicit exclusion intervals survive");
+        console.log("IMPORT265_INPUT", visible185_inputs(project));
+    }
+    function test_import265_actual_manual_and_visible_creation_data() {
+        return ["manual-no-owner", "manual-saved-empty", "visible-no-owner", "visible-saved-empty",
+            "visible-stop", "visible-manual-input", "visible-close", "visible-new-owner",
+            "visible-source-refusal-close"].map(tag => ({tag: tag}));
+    }
+    function test_import265_actual_manual_and_visible_creation(data) {
+        const manual = ["manual-no-owner", "manual-saved-empty"].includes(data.tag);
+        const same = data.tag.endsWith("saved-empty");
+        const cancelled = !manual && !["visible-no-owner", "visible-saved-empty"].includes(data.tag);
+        const recipe = import265_recipe();
+        Session.closeProject();
+        compare(Session.project, null, "IMPORT265 SETUP: genuine normal Session closes the initial fixture");
+        if (same) {
+            const url = String(Probe.scratchProjectUrl());
+            verify(url.startsWith("file:///"), "IMPORT265 SETUP: actual scratch project URL is local");
+            const directory = decodeURIComponent(url.slice(7));
+            verify(Session.createProject("Original saved empty owner", "Original preserved description", directory,
+                "iucr_99", "Original preserved title", "Original preserved author", true),
+                "IMPORT265 SETUP: actual Session normally saves the real named empty owner");
+        }
+        const original = Session.project;
+        const originalLife313 = lifetime313(original);
+        let replacementLife313 = null, fieldLife313 = null, applyLife313 = null;
+        const metadata = import265_owner(original);
+        const originalUndo = original ? original.canUndo : null;
+        const originalSavedText = original ? Probe.readFile(original.path + "/project.edi") : null;
+        const token = assistant.beginFileSelection();
+        verify(token.length > 0 && assistant.addSelectedFiles(token, [
+            Probe.repoUrl("tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif"),
+            Probe.repoUrl("/tmp/relay-e11-t5-tests/seq85-private/inputs/observed.xye")]),
+            "IMPORT265 SETUP: genuine existing chooser admission owns both original immutable sources");
+        tryCompare(assistant.selectedFiles, "count", 2, 2000, "IMPORT265 SETUP: source rows finish admission");
+        const selected = Probe.rows(assistant.selectedFiles);
+        if (Session.project === null) {
+            visible185_page("home");
+            compare(window.appBarCentralTabs.currentIndex, AppState.Page.Home,
+                "IMPORT270 SETUP: genuine Home page is selected before exposed Start");
+            Ui.click(this, Probe, window, "home.start");
+            compare(window.appBarCentralTabs.currentIndex, AppState.Page.Project,
+                "IMPORT270 SETUP: actual Home Start selects the normal Project workflow");
+        } else visible185_page("project");
+        rendered();
+        const cif = selected.filter(row => row.name === "PbSO4-Wyckoff.cif");
+        const measurement = selected.filter(row => row.name === "observed.xye");
+        compare(cif.length, 1, "IMPORT265 SETUP: actual original CIF ID is unique");
+        compare(measurement.length, 1, "IMPORT265 SETUP: actual original measurement ID is unique");
+        verify(cif[0].id !== measurement[0].id, "IMPORT265 SETUP: actual source IDs are distinct");
+        let ownStarts = 0, edits = 0, applyClicks = 0, field = null, form = null, retained = null, applyTarget = null;
+        function pointerReceipt() { ++ownStarts; }
+        function editReceipt() { ++edits; }
+        function applyReceipt() { ++applyClicks; }
+        assistant.actionPointerShown.connect(pointerReceipt);
+        let previous = new Set(), models = null, accountWasConnected = false, replacement = null;
+        const callId = "import265-create-" + data.tag;
+        try {
+            if (manual) {
+                compare(assistant.connected, false, "IMPORT265: ordinary import works offline without provider setup");
+                Ui.click(this, Probe, window, "sideBar.tab.basic");
+                Ui.click(this, Probe, window, "project.importNativeCwl");
+                form = item("nativeImport.dialog");
+                tryCompare(form, "opened", true, 2000, "IMPORT265: actual ordinary Import button opens its form");
+                compare(assistant.nativeImport.state, "draft", "IMPORT265: manual form owns an actual fresh draft");
+                compare(import265_control("nativeImport.cif").currentIndex, -1,
+                    "IMPORT267 SETUP: fresh source choices contain no invented default selection");
+                compare(import265_control("nativeImport.measurement").currentIndex, -1,
+                    "IMPORT267 SETUP: measurement starts genuinely unselected");
+                for (const name of ["projectName", "experimentName", "description"])
+                    compare(import265_control("nativeImport." + name).text, "",
+                        "IMPORT267 SETUP: original manual text fields begin empty");
+                import265_combo("nativeImport.cif", "PbSO4-Wyckoff.cif");
+                import265_combo("nativeImport.measurement", "observed.xye");
+                compare(assistant.selectedFiles.text(import265_control("nativeImport.cif").currentIndex, "id"), cif[0].id,
+                    "IMPORT265: actual source row index grants its original CIF ID, not currentValue");
+                compare(assistant.selectedFiles.text(import265_control("nativeImport.measurement").currentIndex, "id"), measurement[0].id,
+                    "IMPORT265: actual measurement row index grants its original source ID");
+                import265_text("nativeImport.projectName", recipe.project_name);
+                import265_text("nativeImport.experimentName", recipe.experiment_name);
+                import265_text("nativeImport.description", recipe.description);
+                import265_click("nativeImport.tab.instrument");
+                import265_combo("nativeImport.profile", recipe.peak_profile);
+                import265_text("nativeImport.wavelength", recipe.wavelength);
+                import265_text("nativeImport.zero", recipe.zero_offset);
+                import265_text("nativeImport.scale", recipe.phase_scale);
+                for (const section of ["background", "exclusions", "parameters"]) {
+                    import265_click("nativeImport.tab." + section);
+                    const rows = section === "background" ? recipe.background : section === "exclusions"
+                        ? recipe.exclusions : recipe.initial_parameters;
+                    for (const row of rows) {
+                        import265_click("nativeImport.row.add");
+                        import265_text("nativeImport.row.first", section === "background" ? row.position
+                            : section === "exclusions" ? row.first : row.path);
+                        import265_text("nativeImport.row.second", section === "background" ? row.intensity
+                            : section === "exclusions" ? row.second : row.value);
+                    }
+                }
+                applyTarget = import265_control("nativeImport.apply");
+                applyLife313 = lifetime313(applyTarget); applyTarget.clicked.connect(applyReceipt);
+                import265_click("nativeImport.apply");
+                compare(applyClicks, 1, "IMPORT265: ordinary real Apply is clicked exactly once");
+                tryVerify(() => assistant.nativeImport.state === "created", 10000,
+                    "IMPORT265: ordinary real Worker completes genuine adoption before success is observed");
+                verify(assistant.nativeImport.outcome && assistant.nativeImport.outcome.adopted === true
+                    && (same ? assistant.nativeImport.outcome.presentation_complete
+                        : assistant.nativeImport.presentation_complete) === true,
+                    "IMPORT267: ordinary success requires complete actual adoption, not partial committed presentation");
+            } else {
+                toggle(); assistant.signIn(); visible185_ready("import265-bootstrap");
+                if (assistant.contextConsentRequired) assistant.signIn();
+                visible185_ready("import265-disclosed");
+                verify(!assistant.contextConsentRequired, "IMPORT265 SETUP: original exact disclosed context is approved");
+                const show = item("assistant.showActions");
+                verify(show.visible && show.enabled, "IMPORT265 SETUP: actual Show actions checkbox is available");
+                mouseClick(show); compare(assistant.showActions, true, "IMPORT265: actual mode checkbox enables visible creation");
+                accountWasConnected = assistant.connected; models = JSON.stringify(Probe.rows(assistant.models));
+                previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+                assistant.send("Import the actual selected PbSO4 CIF and measured XYE with the original explicit recipe");
+                tryVerify(() => {
+                        form = findChild(window, "nativeImport.dialog");
+                        if (!form || !form.opened) return false;
+                        const fields = Ui.itemsWithProperty(form.contentItem, "objectName")
+                            .filter(control => control.objectName === "nativeImport.projectName");
+                        field = fields.length === 1 ? fields[0] : null;
+                        return assistant.showingActions && ownStarts > 0 && field && field.activeFocus
+                            && field.text.length > 0 && field.text !== recipe.project_name;
+                }, import265_observationMs(recipe), "IMPORT265 SETUP: actual original paced form text is partially typed before intervention");
+                compare(Session.project, original, "IMPORT265 SETUP: real form staging has made no scientific owner commit");
+                const applyCandidates = Ui.itemsWithProperty(form.contentItem, "objectName")
+                    .filter(control => control.objectName === "nativeImport.apply");
+                compare(applyCandidates.length, 1, "IMPORT267 SETUP: one real actual form Apply owns the native stage");
+                applyTarget = applyCandidates[0];
+                applyLife313 = lifetime313(applyTarget); applyTarget.clicked.connect(applyReceipt);
+                if (cancelled) {
+                    if (data.tag === "visible-stop") {
+                        const stop = item("assistant.stopVisibleAction");
+                        verify(stop.visible && stop.enabled && Ui.exposed(stop), "IMPORT265 SETUP: real Stop is exposed");
+                        let stopped = 0;
+                        function stopReceipt() { ++stopped; }
+                        stop.clicked.connect(stopReceipt);
+                        try {
+                            mouseClick(stop);
+                            compare(stopped, 1, "IMPORT267 SETUP: original genuine Stop click reaches its actual receiver");
+                        } finally { stop.clicked.disconnect(stopReceipt); }
+                    } else if (data.tag === "visible-manual-input") {
+                        fieldLife313 = lifetime313(field); field.textEdited.connect(editReceipt);
+                        keyClick(Qt.Key_Z);
+                        compare(edits, 1, "IMPORT265: original genuine user key reaches its actual focused form receiver once");
+                        verify(field.text.includes("z") || field.text.includes("Z"), "IMPORT265: the original user's key text is retained");
+                        retained = field.text;
+                    } else if (data.tag === "visible-close") {
+                        // Actual Qt close/hide lifecycle, no invented inherited Escape policy.
+                        let hides = 0;
+                        function hideReceipt() { ++hides; }
+                        form.aboutToHide.connect(hideReceipt);
+                        try {
+                            form.close();
+                            tryCompare(form, "opened", false, 2000, "IMPORT267: actual original Qt form closes");
+                            compare(hides, 1, "IMPORT267: the genuine original form hide boundary is reached once");
+                        } finally { form.aboutToHide.disconnect(hideReceipt); }
+                    } else if (data.tag === "visible-source-refusal-close") {
+                        verify(!assistant.removeSelectedFile(cif[0].id),
+                            "IMPORT270: active original staging honestly refuses a busy source removal");
+                        compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), JSON.stringify(selected),
+                            "IMPORT270: refused active removal preserves every original source grant");
+                        compare(Session.project, original,
+                            "IMPORT270: refused source maintenance cannot change the original owner");
+                        compare(applyClicks, 0,
+                            "IMPORT270: active source refusal precedes any scientific Apply");
+                        form.close();
+                        tryCompare(form, "opened", false, 2000,
+                            "IMPORT270: actual supported Qt form close then cancels the original stage");
+                    } else {
+                        Session.closeProject();
+                        verify(Session.createProject("Original replacement owner", "Original replacement metadata"),
+                            "IMPORT265: genuine Session action installs the independent replacement owner");
+                        replacement = Session.project;
+                        replacementLife313 = lifetime313(replacement);
+                    }
+                    tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                        && (data.tag === "visible-new-owner"
+                            || visible185_outcome(callId, previous) !== null), 10000,
+                        "IMPORT265: original staged request actually retires after real user/owner/source action");
+                    rendered();
+                    if (retained !== null) compare(field.text, retained, "IMPORT265: no later stage cleanup overwrites original manual text");
+                    compare(Session.project, replacement || original, "IMPORT265: retired original staging cannot install a late owner");
+                    if (original) compare(import265_owner(original), metadata, "IMPORT265: cancelled stage preserves original metadata/settings/path");
+                    const outcome = visible185_outcome(callId, previous);
+                    verify((data.tag === "visible-new-owner" && outcome === null)
+                        || (outcome !== null && !outcome.adopted
+                            && !["completed", "created"].includes(outcome.status)),
+                        "IMPORT265: retired before-Apply work cannot claim real scientific adoption");
+                    compare(applyClicks, 0, "IMPORT267: real staged retirement precedes any Apply click");
+                    verify(assistant.connected && JSON.stringify(Probe.rows(assistant.models)) === models,
+                        "IMPORT267: real staging retirement preserves the original genuine account/catalog");
+                    if (data.tag === "visible-new-owner") {
+                        compare(Probe.rows(assistant.selectedFiles).length, 0,
+                            "IMPORT270: genuine replacement owner has fresh scope without old source grants");
+                        compare(replacement.structures.count, 0,
+                            "IMPORT270: cancelled original cannot populate the new empty owner's structures");
+                        compare(replacement.experiments.count, 0,
+                            "IMPORT270: cancelled original cannot populate the new empty owner's experiments");
+                    } else compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), JSON.stringify(selected),
+                        "IMPORT267: same-owner retirement actions preserve original source grants");
+                    return;
+                }
+                tryVerify(() => {
+                    const outcome = visible185_outcome(callId, previous);
+                    return outcome !== null && outcome.adopted === true && outcome.presentation_complete === true
+                        && outcome.status === (same ? "completed" : "created")
+                        && !assistant.canCancel && !assistant.showingActions;
+                }, import265_observationMs(recipe), "IMPORT265: original once-only native result confirms real visible adoption and complete presentation");
+                compare(applyClicks, 1, "IMPORT267: visible helper clicks the same actual Apply exactly once");
+                verify(ownStarts > 0, "IMPORT267: supported visible import has an actual pointer presentation");
+                form = item("nativeImport.dialog");
+            }
+            if (form.opened) {
+                form.close();
+                tryCompare(form, "opened", false, 2000, "IMPORT267: actual postcommit form hides before ordinary Undo");
+            }
+            const project = Session.project;
+            verify(project !== null, "IMPORT265: successful real import supplies an actual project");
+            if (original) {
+                compare(project, original, "IMPORT265: saved scientifically empty PVM owner is populated in place");
+                compare(import265_owner(project), metadata, "IMPORT265: original user metadata/settings/saved path survive recipe defaults");
+                verify(project.modified, "IMPORT265: same-owner scientific completion is modified, never silently saved");
+            } else {
+                compare(project.name, recipe.project_name, "IMPORT265: no-owner adoption uses the original supplied name");
+                compare(project.description, recipe.description, "IMPORT265: no-owner adoption retains exact original description");
+                compare(project.path, "", "IMPORT265: creation alone never invents a saved destination");
+            }
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                "IMPORT265: the actual same native calculation finishes and is genuinely current");
+            import265_science(project);
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), JSON.stringify(selected),
+                "IMPORT267: genuine selected IDs/source grants survive actual creation");
+            if (original) compare(Probe.readFile(original.path + "/project.edi"), originalSavedText,
+                "IMPORT267: model completion does not silently overwrite the independent saved empty source");
+            if (original) {
+                verify(project.canUndo, "IMPORT265: actual same-owner completion owns one recorded science Undo");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                tryVerify(() => project.structures.count === 0 && project.experiments.count === 0 && !project.calculating,
+                    10000, "IMPORT265: one real appbar Undo restores original empty science");
+                compare(Session.project, original, "IMPORT265: one Undo retains original owner");
+                compare(import265_owner(original), metadata, "IMPORT265: complete Undo retains original metadata/settings/path");
+                compare(original.canUndo, originalUndo, "IMPORT265: one Undo restores original recorded-history availability");
+                compare(Probe.readFile(original.path + "/project.edi"), originalSavedText,
+                    "IMPORT267: genuine model Undo never rewrites the original saved empty file");
+            }
+            if (manual) compare(assistant.connected, false, "IMPORT265: manual form success never silently signs in");
+            else verify(accountWasConnected && assistant.connected && JSON.stringify(Probe.rows(assistant.models)) === models,
+                "IMPORT265: original managed account/catalog survive actual visible import and Undo");
+        } finally {
+            console.log("IMPORT265_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
+                originalOwner: identity313(originalLife313), replacementOwner: identity313(replacementLife313),
+                connected: assistant.connected, canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                nativeImport: assistant.nativeImport, pointerStarts: ownStarts, userEdits: edits,
+                applyClicks: applyClicks, originalOutcome: visible185_outcome(callId, previous)}));
+            disconnect313(fieldLife313, field, "textEdited", editReceipt);
+            disconnect313(applyLife313, applyTarget, "clicked", applyReceipt);
+            assistant.actionPointerShown.disconnect(pointerReceipt);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
+
+    // BG285 public-stage tests: actual Main/default Session, real Qt input and
+    // original native envelopes. Numeric expectations are declared fixture inputs.
+    function background285_rows(project) {
+        return Probe.rows(project.currentExperiment.background).map(row => ({
+            id: row.id, position: row.position, intensity: row.intensity.value,
+            free: row.intensity.free, hasUncertainty: row.intensity.hasUncertainty,
+            uncertainty: row.intensity.uncertainty, uid: row.intensity.uid,
+            minimum: row.intensity.minimum, maximum: row.intensity.maximum,
+            name: row.intensity.name, units: row.intensity.displayUnits
+        }));
+    }
+    function background285_unrelated(project) {
+        return JSON.stringify(visible185_parameters(project).filter(p => !p.path.includes(".background["))
+            .map(p => [p.path, p.value, p.free, p.hasUncertainty, p.uncertainty]));
+    }
+    // Observe the selected public sidebar pane and its original source-bound form.
+    // Basic/Extra retain separate component trees; a page-wide name is not ownership.
+    function background294_under(control, owner) {
+        for (let current = control; current; current = current.parent)
+            if (current === owner) return true;
+        return false;
+    }
+    function background294_fact(control) {
+        if (!control) return null;
+        try {
+            const ancestors = [];
+            for (let parent = control.parent; parent && ancestors.length < 14; parent = parent.parent)
+                ancestors.push({identity: String(parent), name: parent.objectName,
+                    visible: parent.visible, enabled: parent.enabled, clip: parent.clip,
+                    shownTier: parent.shownTier === undefined ? null : parent.shownTier,
+                    categoryId: parent.categoryId === undefined ? null : parent.categoryId,
+                    currentIndex: parent.currentIndex === undefined ? null : parent.currentIndex,
+                    currentItem: parent.currentItem === undefined ? null : String(parent.currentItem),
+                    interactive: parent.interactive === undefined ? null : parent.interactive,
+                    hasItemAt: typeof parent.itemAt === "function"});
+            return {identity: String(control), name: control.objectName,
+                visible: control.visible, enabled: control.enabled, opacity: control.opacity,
+                geometry: rect(control), inPane: Ui.inPane(control), exposed: Ui.exposed(control),
+                activeFocus: control.activeFocus,
+                readOnly: control.readOnly === undefined ? null : control.readOnly,
+                text: typeof control.text === "string" ? control.text.slice(0, 80) : null,
+                hasTextEdited: typeof control.textEdited === "function",
+                hasClicked: typeof control.clicked === "function",
+                currentIndex: control.currentIndex === undefined ? null : control.currentIndex,
+                currentItem: control.currentItem === undefined ? null : String(control.currentItem),
+                interactive: control.interactive === undefined ? null : control.interactive,
+                hasItemAt: typeof control.itemAt === "function",
+                sourceModel: control.sourceModel === undefined ? null : String(control.sourceModel),
+                ancestors: ancestors};
+        } catch (error) { return {observationError: String(error)}; }
+    }
+    function background313_lives(scope) {
+        const alive = {};
+        for (const key of Object.keys(scope.lifetimes)) alive[key] = alive313(scope.lifetimes[key]);
+        return alive;
+    }
+    function background313_candidates(scope, controls) {
+        scope.ownershipCandidates = controls;
+        scope.ownershipCandidateLives = controls.map(lifetime313);
+        scope.ownershipCandidateFacts = controls.map(background294_fact);
+    }
+    function background294_observe(stage, scope) {
+        try {
+            const slot = Ui.page(window);
+            const page = window.assistantWorkflowPage;
+            const originalViewAlive = scope && alive313(scope.lifetimes.view);
+            const names = ["background.stage", "background.stage.id", "background.stage.apply"];
+            const candidates = Ui.itemsWithProperty(slot, "objectName")
+                .filter(control => names.includes(control.objectName));
+            console.log("BACKGROUND294_CANDIDATES", stage, JSON.stringify({
+                page: String(slot), pageIndex: window.appBarCentralTabs.currentIndex,
+                selectedSlotItem: slot && slot.item !== undefined ? String(slot.item) : null,
+                workflowPage: String(page), pageCurrent: page ? page.current : null,
+                pageName: page ? page.pageName : null,
+                pageProject: page ? String(page.project) : null,
+                pageHasExperiment: page ? page.experiment !== undefined : false,
+                pageExperiment: page && page.experiment !== undefined ? String(page.experiment) : null,
+                currentOwner: String(Session.project), expectedOwner: scope ? identity313(scope.lifetimes.project) : null,
+                originalSlot: scope ? identity313(scope.lifetimes.slot) : null,
+                originalPage: scope ? identity313(scope.lifetimes.page) : null,
+                originalExperiment: scope ? identity313(scope.lifetimes.experiment) : null,
+                sidebar: scope ? identity313(scope.lifetimes.sidebar) : null,
+                view: scope ? identity313(scope.lifetimes.view) : null,
+                viewIndex: originalViewAlive ? scope.view.currentIndex : null,
+                selectedPane: originalViewAlive ? String(scope.view.currentItem) : null,
+                originalPane: scope ? identity313(scope.lifetimes.pane) : null,
+                selectedPaneContent: originalViewAlive && scope.view.currentItem
+                    ? String(scope.view.currentItem.item) : null,
+                originalPaneContent: scope ? identity313(scope.lifetimes.content) : null,
+                originalForm: scope ? identity313(scope.lifetimes.form) : null,
+                focused: String(window.activeFocusItem), candidateCount: candidates.length,
+                candidates: candidates.slice(0, 12).map(background294_fact),
+                originalLifetimesAlive: scope ? background313_lives(scope) : {},
+                ownershipCandidates: scope && scope.ownershipCandidateFacts
+                    ? scope.ownershipCandidateFacts.slice(0, 8) : [],
+                ownershipCandidateAlive: scope && scope.ownershipCandidateLives
+                    ? scope.ownershipCandidateLives.slice(0, 8).map(alive313) : [],
+                ownershipCandidateCount: scope && scope.ownershipCandidates ? scope.ownershipCandidates.length : 0}));
+        } catch (error) { console.log("BACKGROUND294_OBSERVATION_ERROR", stage, String(error)); }
+    }
+    function background294_scope(project, stage) {
+        // Ui.page is the contentArea Loader. Main's public alias is its loaded
+        // WorkflowPage; only that declared owner has current/project/experiment.
+        const scope = {project: project, experiment: project.currentExperiment,
+            slot: Ui.page(window), page: window.assistantWorkflowPage,
+            sidebar: null, view: null, pane: null, content: null, form: null};
+        scope.lifetimes = {};
+        for (const key of ["project", "experiment", "slot", "page", "sidebar", "view", "pane", "content", "group", "form", "source"])
+            scope.lifetimes[key] = lifetime313(scope[key] === undefined ? null : scope[key]);
+        background294_observe(stage + "-before-ownership", scope);
+        const page = scope.page;
+        verify(Session.project === project && scope.slot !== null && page !== null
+            && window.appBarCentralTabs.currentIndex === AppState.Page.Experiment
+            && scope.slot === window.contentArea[AppState.Page.Experiment]
+            && scope.slot.item === page && window.assistantWorkflowPage === page
+            && page.current && page.project === project
+            && scope.experiment !== null && page.experiment === scope.experiment
+            && project.currentExperiment === scope.experiment,
+            "BG294 SETUP: operative current Experiment page belongs to the exact original project/experiment");
+        const sidebars = Ui.itemsWithProperty(page, "objectName").filter(control =>
+            control.objectName === "workflow.experiment.manualSidebar");
+        background313_candidates(scope, sidebars);
+        background294_observe(stage + "-sidebar-candidates", scope);
+        compare(sidebars.length, 1, "BG294 SETUP: current Experiment page owns exactly one ordinary sidebar");
+        scope.sidebar = sidebars[0];
+        scope.lifetimes.sidebar = lifetime313(scope.sidebar);
+        // Public EA SideBar: its direct-child SwipeView owns retained Loader items;
+        // TabBar's internal view is not a direct child with this Container contract.
+        const views = Ui.itemsWithProperty(scope.sidebar, "interactive").filter(control =>
+            control.parent === scope.sidebar && typeof control.itemAt === "function"
+            && control.currentIndex !== undefined && control.currentItem !== undefined);
+        background313_candidates(scope, views);
+        background294_observe(stage + "-view-candidates", scope);
+        compare(views.length, 1, "BG294 SETUP: actual ordinary sidebar owns one direct selected-pane view");
+        scope.view = views[0];
+        scope.lifetimes.view = lifetime313(scope.view);
+        scope.pane = scope.view.currentItem;
+        scope.lifetimes.pane = lifetime313(scope.pane);
+        const basic = Ui.itemsWithProperty(scope.sidebar, "objectName").filter(control =>
+            control.objectName === "sideBar.tab.basic" && typeof control.checked === "boolean");
+        background294_observe(stage + "-selected-pane", scope);
+        compare(basic.length, 1, "BG294 SETUP: exact sidebar has one genuine Main tab control");
+        verify(basic[0].checked && scope.view.currentIndex === 0 && scope.pane !== null
+            && scope.pane === scope.view.itemAt(0)
+            && scope.pane.item !== undefined && scope.pane.item !== null,
+            "BG294 SETUP: original real Main click selects the actual Basic Loader, not retained Extras content");
+        // WorkflowPage declares Basic/Extras as Loader items of the sidebar view.
+        // Category properties belong to their loaded content, never the Loader.
+        scope.content = scope.pane.item;
+        scope.lifetimes.content = lifetime313(scope.content);
+        const groups = Ui.itemsWithProperty(scope.content, "categoryId").filter(control =>
+            control.objectName === "group.background" && control.categoryId === "background"
+            && control.shownTier === "Basic");
+        background313_candidates(scope, groups);
+        background294_observe(stage + "-category-candidates", scope);
+        compare(groups.length, 1, "BG294 SETUP: actual current Basic pane owns exactly one Background category");
+        scope.group = groups[0];
+        scope.lifetimes.group = lifetime313(scope.group);
+        const forms = Ui.itemsWithProperty(scope.group, "objectName").filter(control =>
+            control.objectName === "background.stage"
+            && control.sourceModel === scope.experiment.background);
+        background313_candidates(scope, forms);
+        background294_observe(stage + "-form-candidates", scope);
+        compare(forms.length, 1, "BG294 SETUP: original category owns exactly one stage for the original background model");
+        scope.form = forms[0];
+        scope.lifetimes.form = lifetime313(scope.form);
+        scope.source = scope.experiment.background;
+        scope.lifetimes.source = lifetime313(scope.source);
+        background294_observe(stage + "-owned-form", scope);
+        return scope;
+    }
+    function background294_control(scope, name, stage) {
+        background294_observe(stage + "-before-control", scope);
+        verify(Object.keys(scope.lifetimes).every(key => alive313(scope.lifetimes[key])),
+            "BG313 SETUP: all original scoped QObject receivers remain alive before property access");
+        verify(Session.project === scope.project && Ui.page(window) === scope.slot
+            && scope.slot === window.contentArea[AppState.Page.Experiment]
+            && window.appBarCentralTabs.currentIndex === AppState.Page.Experiment
+            && scope.slot.item === scope.page && window.assistantWorkflowPage === scope.page
+            && scope.page.current && scope.page.project === scope.project
+            && scope.page.experiment === scope.experiment
+            && scope.project.currentExperiment === scope.experiment
+            && scope.view.currentItem === scope.pane && scope.view.currentIndex === 0
+            && scope.pane === scope.view.itemAt(0) && scope.pane.item === scope.content
+            && background294_under(scope.group, scope.content)
+            && background294_under(scope.form, scope.group)
+            && scope.form.sourceModel === scope.source
+            && scope.experiment.background === scope.source,
+            "BG294 SETUP: exact original current form/pane/source ownership remains valid before accessing its receiver");
+        const found = Ui.itemsWithProperty(scope.form, "objectName")
+            .filter(control => control.objectName === name);
+        background313_candidates(scope, found);
+        background294_observe(stage + "-receiver-candidates", scope);
+        compare(found.length, 1, "BG294 SETUP: exactly one original named receiver belongs to the operative source-bound form: " + name);
+        return found[0];
+    }
+    function background294_expose(scope, name) {
+        const control = background294_control(scope, name, "expose-" + name);
+        // Existing genuine viewport reveal, followed by original Ui input. No
+        // visibility/focus/model write, alternate click executor or hidden opener.
+        Ui.scrollIntoView(control); rendered();
+        background294_observe("exposed-" + name, scope);
+        verify(Ui.control(Probe, window, name) === control && control.enabled && Ui.exposed(control),
+            "BG294 SETUP: existing physical input lookup resolves the exact exposed original form receiver: " + name);
+        return control;
+    }
+    function background294_text(scope, name, text) {
+        const original = background294_expose(scope, name);
+        verify(typeof original.textEdited === "function" && original.readOnly === false,
+            "BG294 SETUP: original scoped editor is the actual editable TextField signal receiver");
+        compare(relation245_text(name, text), original,
+            "BG294: unchanged real input helper types into the exact original scoped editor");
+    }
+    function background285_operation(operation, scope) {
+        const combo = background294_control(scope, "background.stage.operation", "operation");
+        verify(combo !== null, "BG SETUP: actual ordinary operation ComboBox exists");
+        Ui.scrollIntoView(combo); rendered();
+        verify(Ui.control(Probe, window, "background.stage.operation") === combo,
+            "BG294 SETUP: actual operation input resolves the original form ComboBox");
+        Ui.click(this, Probe, window, "background.stage.operation");
+        keyClick(Qt.Key_Home);
+        const index = ["add", "update", "remove"].indexOf(operation);
+        verify(index >= 0, "BG SETUP: operation belongs to the public ordered three-value selector");
+        for (let i = 0; i < index; ++i) keyClick(Qt.Key_Down);
+        keyClick(Qt.Key_Return);
+        tryCompare(combo, "currentValue", operation, 2000,
+            "BG: real keys select the exact original requested operation");
+        tryVerify(() => !combo.popup.visible && !combo.popup.opened, 2000,
+            "BG SETUP: original operation popup actually closes before next real input");
+    }
+    function background285_stage(operation, id, position, intensity, free, scope) {
+        visible185_page("experiment");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        Ui.expandGroup(this, Probe, window, "group.background");
+        if (Ui.control(Probe, window, "background.stage.id") === null) {
+            Ui.click(this, Probe, window, "background.append");
+            tryVerify(() => Ui.control(Probe, window, "background.stage.id") !== null, 2000,
+                "BG SETUP: genuine ordinary Add point opens the original staged form before input");
+        }
+        background285_operation(operation, scope);
+        background294_text(scope, "background.stage.id", id);
+        if (operation !== "remove") {
+            background294_text(scope, "background.stage.position", String(position));
+            background294_text(scope, "background.stage.intensity", String(intensity));
+            const flag = background294_control(scope, "background.stage.free", "free");
+            verify(flag !== null, "BG SETUP: genuine staged free checkbox exists");
+            Ui.scrollIntoView(flag); rendered();
+            verify(Ui.control(Probe, window, "background.stage.free") === flag,
+                "BG294 SETUP: actual free input resolves the original form checkbox");
+            if (flag.checked !== free) Ui.click(this, Probe, window, "background.stage.free");
+            compare(flag.checked, free, "BG: actual ordinary free control stores only requested draft flag");
+        }
+    }
+    function background285_observationMs(operation, id, position, intensity) {
+        // Same public input pacing as prior relation/import actors: movement500,
+        // press100, relaxation500, key100. Eight possible real stage actions plus
+        // three declared text entries, SelectAll/Backspace/Return (4 extra keys).
+        const texts = operation === "remove" ? [id] : [id, String(position), String(intensity)];
+        return 10000 + 1100 * 8 + 100 * texts.reduce((n, text) => n + [...text].length + 4, 0);
+    }
+    function test_background285_real_stage_and_original_rpc_data() {
+        return ["manual-add", "manual-update", "manual-remove", "visible-add-cw",
+            "visible-update-tof", "visible-remove", "stop", "manual-takeover",
+            "preexisting-draft", "new-owner"].map(tag => ({tag: tag}));
+    }
+    function test_background285_real_stage_and_original_rpc(data) {
+        verify(Session.openProject(Probe.referenceUrl("Original declared background input")),
+            "BG SETUP: independently generated original scientific source opens through real Session");
+        const project = Session.project;
+        const projectLife313 = lifetime313(project);
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "BG SETUP: original actual calculation is current before staging/input baselines");
+        const manual = ["manual-add", "manual-update", "manual-remove"].includes(data.tag);
+        const operation = data.tag === "manual-remove" || data.tag === "visible-remove" ? "remove"
+            : data.tag === "manual-update" || data.tag === "visible-update-tof" ? "update" : "add";
+        const id = operation === "add" ? "native-bg-original" : "p1";
+        const position = data.tag === "visible-update-tof" ? 4200 : operation === "update" ? 21.5 : 32.5;
+        const intensity = 19.75;
+        const original = background285_rows(project);
+        compare(original.length, 3, "BG SETUP: independent fixture carries all three declared anchors");
+        const inputs = visible185_inputs(project);
+        const unrelated = background285_unrelated(project);
+        const declarations = relation245_declarations(project);
+        const shape = relation246_shape(project);
+        const previousUndo = item("appBar.button.undo").enabled;
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const oldHistory = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        let models = null;
+        if (!manual) {
+            toggle(); assistant.signIn(); visible185_ready("background285-bootstrap");
+            if (assistant.contextConsentRequired) assistant.signIn();
+            visible185_ready("background285-current-context");
+            verify(!assistant.contextConsentRequired, "BG SETUP: actual current original scope is disclosed once");
+            compare(assistant.showActions, false, "BG: fresh actual Session begins in default normal mode");
+            const show = item("assistant.showActions");
+            verify(show.enabled && show.visible, "BG SETUP: genuine mode checkbox is actionable");
+            mouseClick(show); compare(assistant.showActions, true, "BG: real checkbox enables visible route");
+            models = JSON.stringify(Probe.rows(assistant.models));
+            toggle();
+        }
+        visible185_page("experiment");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        Ui.expandGroup(this, Probe, window, "group.background");
+        if (manual || data.tag === "preexisting-draft") {
+            Ui.click(this, Probe, window, "background.append");
+            tryVerify(() => Ui.control(Probe, window, "background.stage.id") !== null, 2000,
+                "BG SETUP: original ordinary Add action exposes the real form before controls/input");
+        }
+        // Passive original handles belong to the actual current pane/category/form,
+        // including a still-hidden native stage. Exposure follows its genuine opener.
+        const scope = background294_scope(project, data.tag);
+        const idField = background294_control(scope, "background.stage.id", "original-id");
+        const apply = background294_control(scope, "background.stage.apply", "original-apply");
+        verify(typeof idField.textEdited === "function" && idField.readOnly === false
+            && typeof apply.clicked === "function",
+            "BG294 SETUP: unique original ID/Apply are the real editable/clickable signal receivers");
+        let edits = 0, applies = 0, starts = 0, takeovers = 0;
+        function edited() { ++edits; }
+        function applied() { ++applies; }
+        function pointerStarted() { ++starts; }
+        function tookOver() { ++takeovers; }
+        idField.textEdited.connect(edited); apply.clicked.connect(applied);
+        assistant.actionPointerShown.connect(pointerStarted);
+        assistant.actionManualTakeover.connect(tookOver);
+        const idLife313 = lifetime313(idField), applyLife313 = lifetime313(apply);
+        let replacementLife313 = null;
+        let manualText = null, replacement = null, draft = null;
+        const call = "background285-" + data.tag;
+        try {
+            if (manual || data.tag === "preexisting-draft") {
+                background285_stage(operation, id, position, intensity, true, scope);
+                compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                    "BG: real staged typing/free selection and ordinary focus changes never mutate before Apply");
+                if (data.tag === "preexisting-draft") {
+                    draft = {id: idField.text, focus: window.activeFocusItem,
+                        start: window.activeFocusItem.selectionStart, end: window.activeFocusItem.selectionEnd};
+                }
+            }
+            if (manual) {
+                compare(background294_expose(scope, "background.stage.apply"), apply,
+                    "BG294 SETUP: actual ordinary Apply belongs to the same original retained form");
+                Ui.click(this, Probe, window, "background.stage.apply");
+            }
+            else {
+                assistant.send("Perform the original defined background operation " + data.tag);
+                if (data.tag !== "preexisting-draft") {
+                    tryVerify(() => Ui.control(Probe, window, "background.stage.id") === idField
+                        && Ui.control(Probe, window, "background.stage.apply") === apply,
+                        background285_observationMs(operation, id, position, intensity),
+                        "BG SETUP: original native helper actually opens its genuine form before input/exposure assertions");
+                }
+            }
+            if (["stop", "manual-takeover", "new-owner"].includes(data.tag)) {
+                tryVerify(() => assistant.showingActions && assistant.canCancel && starts > 0
+                    && edits > 0 && idField.text.length > 0 && idField.text !== id,
+                    background285_observationMs(operation, id, position, intensity),
+                    "BG INTERVAL SETUP: actual original partial staged text and real painted-helper route are reached");
+                verify(item("assistant.actionPointer").opacity > 0,
+                    "BG INTERVAL SETUP: current helper actually paints its original pointer");
+                compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                    "BG: partial native form has zero scientific effect before original Apply");
+                if (data.tag === "stop") {
+                    const stop = item("assistant.stopVisibleAction");
+                    verify(stop.enabled && Ui.exposed(stop), "BG SETUP: genuine original Stop is exposed");
+                    mouseClick(stop);
+                } else if (data.tag === "manual-takeover") {
+                    compare(background294_expose(scope, "background.stage.id"), idField,
+                        "BG294 SETUP: original manual takeover targets the same actually exposed current-form editor");
+                    Ui.click(this, Probe, window, "background.stage.id");
+                    compare(window.activeFocusItem, idField, "BG: original actual manual receiver gains focus normally");
+                    keyClick("x");
+                    verify(idField.text.includes("x"), "BG: original genuine manual key survives native retirement");
+                    manualText = idField.text;
+                } else {
+                    Session.closeProject();
+                    verify(Session.createProject("BG-new-owner", "Original real replacement"),
+                        "BG SETUP: actual Session creates a distinct genuinely empty replacement owner");
+                    replacement = Session.project;
+                    replacementLife313 = lifetime313(replacement);
+                    verify(replacement !== project, "BG: original A cannot acquire the new B owner");
+                }
+            }
+            const retired = ["stop", "manual-takeover", "new-owner", "preexisting-draft"].includes(data.tag);
+            if (!manual) {
+                tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                    && (data.tag === "new-owner" || visible185_outcome(call, previousIds) !== null),
+                    background285_observationMs(operation, id, position, intensity),
+                    "BG: same-owner original retained outcome and real terminal presentation settle within the existing bound");
+                const outcome = visible185_outcome(call, previousIds);
+                if (data.tag === "new-owner") {
+                    if (outcome !== null) verify(!["edited", "applied_unconfirmed"].includes(outcome.status),
+                        "BG: any surviving old-A row cannot claim an edit of the new owner");
+                    compare(Session.project, replacement, "BG: later original cleanup cannot replace B");
+                    compare(replacement.structures.count, 0, "BG: stale A never injects old science into new empty owner");
+                    compare(replacement.experiments.count, 0, "BG: old staged Apply cannot create a bank in B");
+                    compare(applies, 0, "BG: retired original A never clicks a late Apply");
+                    return;
+                }
+                verify(outcome !== null, "BG: same-owner original native outcome is actually retained");
+                if (retired) {
+                    verify(!["edited", "applied_unconfirmed"].includes(outcome.status),
+                        "BG: pre-Apply draft/Stop/manual retirement honestly refuses without scientific success");
+                    compare(applies, 0, "BG: genuine retirement/draft refusal cannot click original Apply later");
+                    if (draft !== null) {
+                        compare(idField.text, draft.id, "BG: preexisting genuine draft text remains intact");
+                        compare(window.activeFocusItem, draft.focus, "BG: refusal never blurs/commits existing draft");
+                        compare(draft.focus.selectionStart, draft.start, "BG: original draft selection start survives");
+                        compare(draft.focus.selectionEnd, draft.end, "BG: original draft selection end survives");
+                    }
+                    if (manualText !== null) {
+                        verify(takeovers > 0, "BG: actual manual event is recognized in the reached helper interval");
+                        compare(idField.text, manualText, "BG: no late helper typing overwrites original manual text");
+                    }
+                } else {
+                    compare(outcome.status, "edited", "BG: actual visible edit is confirmed, never normalized from uncertainty");
+                    compare(applies, 1, "BG: the genuine native prearm reaches exactly one ordinary Apply click");
+                    verify(starts > 0 && edits > 0, "BG: real pointer and typed controls perform native work");
+                }
+            }
+            if (!retired) {
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                    "BG: real post-edit calculation becomes current before scientific readback");
+                const rows = background285_rows(project);
+                let expected = original.map(row => Object.assign({}, row));
+                if (operation === "remove") expected = expected.filter(row => row.id !== id);
+                else if (operation === "add") expected.push({id: id, position: position, intensity: intensity, free: true});
+                else expected = expected.map(row => row.id === id ? Object.assign({}, row,
+                    {position: position, intensity: intensity, free: true}) : row);
+                compare(JSON.stringify(rows.map(row => [row.id, row.position, row.intensity, row.free])),
+                    JSON.stringify(expected.map(row => [row.id, row.position, row.intensity, row.free])),
+                    "BG: actual ordinary/visible Apply publishes the complete exact requested arrangement");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                    "BG: ONE actual appbar Undo restores all original ordered keys/values/SU/free/spec metadata");
+            } else compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                "BG: refusal/retirement preserves every original background parameter");
+            compare(item("appBar.button.undo").enabled, previousUndo,
+                "BG: one Apply/Undo or refusal preserves actual prior Undo availability");
+            compare(background285_unrelated(project), unrelated, "BG: all unrelated scientific parameters/SUs/free flags survive");
+            compare(visible185_inputs(project), inputs, "BG: every actual observation/sigma/mask/phase/weight is unchanged");
+            compare(relation245_declarations(project), declarations, "BG: all preexisting relation declarations survive");
+            compare(relation246_shape(project), shape, "BG: complete original composition/fractional coordinates survive");
+            compare(Session.project, project, "BG: ordinary/visible transaction retains exact original owner");
+            if (!manual) {
+                verify(assistant.connected, "BG: genuine managed account survives scientific work and Undo");
+                compare(JSON.stringify(Probe.rows(assistant.models)), models, "BG: real catalog never repaired by signing in again");
+                verify(oldHistory.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                    "BG: original history remains intact through shared editor execution");
+            }
+        } finally {
+            background294_observe("finally-" + data.tag, scope);
+            console.log("BACKGROUND285_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
+                originalOwner: identity313(projectLife313), replacementOwner: identity313(replacementLife313), connected: assistant.connected,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions, edits: edits,
+                applies: applies, starts: starts, takeovers: takeovers,
+                originalOutcome: visible185_outcome(call, previousIds)}));
+            disconnect313(idLife313, idField, "textEdited", edited);
+            disconnect313(applyLife313, apply, "clicked", applied);
+            assistant.actionPointerShown.disconnect(pointerStarted);
+            assistant.actionManualTakeover.disconnect(tookOver);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
+    function ux289_descendantText(root) {
+        return Ui.itemsWithProperty(root, "text").filter(value => value.visible)
+            .map(value => String(value.text));
+    }
+    function test_ux289_original_ack_consumes_only_submitted_presentation_data() {
+        return [{tag: "unchanged-draft"}, {tag: "new-identical-draft"}, {tag: "active-ime"},
+            {tag: "server-refusal"}, {tag: "new-file-sent-revoke"}];
+    }
+    function test_ux289_original_ack_consumes_only_submitted_presentation(data) {
+        const project = Session.project;
+        const source = "tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif";
+        const beforeBytes = Probe.readFile(source);
+        const intent = assistant.beginFileSelection();
+        verify(intent.length > 0 && assistant.addSelectedFiles(intent, [Probe.repoUrl(source)]),
+            "UX289 SETUP: genuine selected-file intent admits unchanged committed source bytes");
+        tryCompare(assistant.selectedFiles, "count", 1, 2000,
+            "UX289 SETUP: real selected model publishes the original file");
+        function canonicalSelected() {
+            return JSON.stringify(Probe.rows(assistant.selectedFiles).map(row => ({id: row.id,
+                name: row.name, bytes: row.bytes, textReadable: row.textReadable, format: row.format})));
+        }
+        const selected = canonicalSelected();
+        compare(Probe.rows(assistant.selectedFiles)[0].pending, true,
+            "UX289: newly admitted original selected file is pending before any completed input");
+        const selectedId = assistant.selectedFiles.text(0, "id");
+        verify(selectedId.length > 0, "UX289 SETUP: original selected identity is app-issued");
+        toggle();
+        assistant.signIn();
+        report187_ready("ux289-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux289-disclosed", true);
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const editor = item("assistant.composer");
+        const composer = Probe.objectsWithProperty(window, "textRevision").filter(object =>
+            object.firstFocusItem === editor);
+        compare(composer.length, 1, "UX289 SETUP: exact original editor has one owning composer revision");
+        const text = "Original sent source " + data.tag;
+        Ui.click(this, Probe, window, editor.objectName);
+        visible185_type(text);
+        const beforeRefusal = JSON.stringify(Probe.rows(assistant.messages));
+        compare(assistant.submitDraft("   "), "", "UX289: actual empty-input admission returns no original row authority");
+        compare(editor.text, text, "UX289: real pre-admission refusal preserves the original editor spelling");
+        compare(JSON.stringify(Probe.rows(assistant.messages)), beforeRefusal,
+            "UX289: refused admission cannot fabricate a successfully submitted user row");
+        compare(Probe.rows(assistant.selectedFiles)[0].pending, true,
+            "UX289: refused admission cannot consume a pending selected-file presentation");
+        const submittedRevision = composer[0].textRevision;
+        const previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        Ui.click(this, Probe, window, "assistant.send");
+        let original = null;
+        tryVerify(() => {
+            const matches = Probe.rows(assistant.messages).filter(row => !previous.has(row.id)
+                && row.kind === "user" && row.text === text);
+            if (matches.length !== 1 || matches[0].status !== "pending") return false;
+            original = matches[0]; return true;
+        }, 2000, "UX289 SETUP: actual once-only original admitted row is pending before wire ACK");
+        compare(editor.text, text, "UX289: pre-ACK row publication must preserve the submitted editor spelling");
+        compare(canonicalSelected(), selected,
+            "UX289: pending presentation cannot revoke original selected identities or authority");
+        const popupContent = popup.contentItem;
+        verify(popupContent !== null, "UX345 SETUP: original popup has its actual visual content root");
+        const originalPreAckChipCandidates345 = Ui.itemsWithProperty(popupContent, "objectName").filter(value =>
+            value.objectName === "assistant.file." + selectedId);
+        console.info("UX345_DRAFT_CHIP", JSON.stringify({selectedId: selectedId,
+            popup: String(popup), content: String(popupContent), candidateCount: originalPreAckChipCandidates345.length,
+            candidates: originalPreAckChipCandidates345.slice(0, 4).map(value => ({identity: String(value),
+                name: value.objectName, visible: value.visible, rendered: Ui.rendered(value),
+                exposed: Ui.exposed(value), width: value.width, height: value.height}))}));
+        compare(originalPreAckChipCandidates345.length, 1, "UX345: exactly one draft chip owns the original selected source ID");
+        const draftChip = originalPreAckChipCandidates345[0];
+        let inComposer = false, inPopup = false, inWindow = false;
+        for (let parent = draftChip; parent; parent = parent.parent) {
+            inComposer = inComposer || parent === composer[0];
+            inPopup = inPopup || parent === popupContent;
+            inWindow = inWindow || parent === Ui.windowRoot(window);
+        }
+        console.info("UX345_DRAFT_ANCESTRY", JSON.stringify({selectedId: selectedId,
+            inComposer: inComposer, inPopup: inPopup, inWindow: inWindow}));
+        verify(inComposer && inPopup && inWindow,
+            "UX345: original draft chip belongs to the original composer, popup content and window");
+        compare(Ui.control(Probe, window, draftChip.objectName), draftChip,
+            "UX345: original draft chip satisfies the existing current-popup and physical-window exposure contract");
+        verify(draftChip.visible && Ui.rendered(draftChip) && Ui.exposed(draftChip),
+            "UX289: original pre-ACK draft chip is genuinely rendered inside the visible viewport");
+        const filenames = Ui.itemsWithProperty(draftChip, "text").filter(value =>
+            value.visible && Ui.rendered(value) && Ui.exposed(value)
+                && String(value.text).indexOf("PbSO4-Wyckoff.cif") >= 0);
+        console.info("UX345_DRAFT_TEXT", JSON.stringify({selectedId: selectedId,
+            inComposer: inComposer, inPopup: inPopup, inWindow: inWindow,
+            visibleFilenameCount: filenames.length,
+            labels: filenames.slice(0, 4).map(value => ({identity: String(value), text: String(value.text),
+                visible: value.visible, rendered: Ui.rendered(value), exposed: Ui.exposed(value)}))}));
+        compare(filenames.length, 1, "UX289: pending original attachment stays visibly presented before its ACK");
+        if (data.tag === "new-identical-draft") {
+            Ui.click(this, Probe, window, editor.objectName);
+            visible185_type("New original draft");
+            visible185_type(text);
+            verify(composer[0].textRevision > submittedRevision,
+                "UX289 SETUP: real keyboard edits created a newer revision with identical text");
+        }
+        if (data.tag === "active-ime") {
+            Ui.click(this, Probe, window, editor.objectName);
+            const input = Probe.focusedInputMethod233(window, window.activeFocusItem, "原稿", "");
+            verify(input.delivered && input.accepted && input.preeditAfter === "原稿",
+                "UX289 SETUP: actual focused composer receives genuine uncommitted InputMethod preedit");
+            compare(editor.text, text, "UX289 SETUP: genuine preedit precedes committed-text revision");
+        }
+        const revisionBeforeAck = composer[0].textRevision;
+        // Existing public optional read releases the exact real received input in the
+        // owned peer. It grants no turn/native authority and mutates no UI/model state.
+        assistant.refreshUsage();
+        if (data.tag === "server-refusal") {
+            tryVerify(() => Probe.rows(assistant.messages).some(row => row.id === original.id
+                && row.kind === "user" && row.text === text && row.status !== "pending" && row.status !== "completed")
+                && !assistant.canCancel && assistant.connected, 10000,
+                "UX295: real original server refusal settles without completed input acknowledgement");
+            compare(editor.text, text, "UX295: refused original RPC retains exact submitted editor text");
+            compare(composer[0].textRevision, revisionBeforeAck,
+                "UX295: refusal does not replace or consume the original editor revision");
+            compare(Probe.rows(assistant.selectedFiles)[0].pending, true,
+                "UX295: refused original input cannot consume pending selected presentation");
+            compare(canonicalSelected(), selected, "UX295: refusal preserves original selected IDs and descriptors");
+            const refused = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(refused.length, 1, "UX295: failed original row identity remains unique");
+            verify(!refused.some(row => row.status === "completed"),
+                "UX295: refusal cannot fabricate durable original completed acknowledgement");
+            verify(findChild(window, "assistant.sentFile." + selectedId) === null,
+                "UX295: failed original row cannot fabricate a sent-file snapshot chip");
+            compare(Probe.readFile(source), beforeBytes, "UX295: refusal leaves original scientific file untouched");
+            compare(Session.project, project, "UX295: refusal preserves original displayed project owner");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account,
+                "UX295: input refusal does not revoke genuine managed account/catalog");
+            visible185_capture("ux295-original-refusal");
+            return;
+        }
+        tryVerify(() => Probe.rows(assistant.messages).some(row => row.id === original.id
+            && row.kind === "user" && row.text === text && row.status === "completed")
+            && !assistant.canCancel && assistant.connected, 10000,
+            "UX289: original exact row receives a real ACK and original native turn completes");
+        compare(editor.text, ["new-identical-draft", "active-ime"].includes(data.tag) ? text : "",
+            "UX289: original ACK consumes only its original editor revision, preserving newer identical draft");
+        if (data.tag === "new-identical-draft") compare(composer[0].textRevision, revisionBeforeAck,
+            "UX289: old ACK must not edit the newer editor revision");
+        if (data.tag === "active-ime") {
+            compare(editor.preeditText, "原稿", "UX289: original ACK cannot clear an active original composition");
+            verify(window.activeFocusItem === editor || focusWithinManual(editor),
+                "UX289: ACK cannot steal the actual composition target");
+        }
+        const completed = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+        compare(completed.length, 1, "UX289: exact original completed user identity remains unique");
+        compare(completed[0].payload.type, "ediInput", "UX289: completed input uses the declared bounded descriptor payload");
+        const expectedDescriptors = JSON.parse(selected);
+        compare(completed[0].payload.files.length, expectedDescriptors.length,
+            "UX289: actual submitted descriptor cardinality matches the original selected snapshot");
+        for (let index = 0; index < expectedDescriptors.length; ++index)
+            for (const key of ["id", "name", "bytes", "textReadable", "format"])
+                compare(completed[0].payload.files[index][key], expectedDescriptors[index][key],
+                    "UX289: every bounded descriptor field retains the exact original selected snapshot");
+        compare(Probe.rows(assistant.selectedFiles)[0].pending, false,
+            "UX289: only acknowledged selected identity changes its pending presentation role");
+        const rows = Ui.itemsWithProperty(window.contentItem, "rowId").filter(row => row.rowId === original.id);
+        compare(rows.length, 1, "UX289: exactly one actual original user bubble owns the sent attachment presentation");
+        const sent = findChild(rows[0], "assistant.sentFile." + selectedId);
+        verify(sent !== null && sent.visible, "UX289: exact acknowledged user bubble owns the actual original sent-chip ID");
+        verify(ux289_descendantText(rows[0]).some(value => value.indexOf("PbSO4-Wyckoff.cif") >= 0),
+            "UX289: actual acknowledged user bubble displays the original sent filename");
+        const draftChips = findChild(window, "assistant.file." + selectedId);
+        verify(draftChips === null || !draftChips.visible,
+            "UX289: consumed sent chip is absent from unsent presentation after ACK");
+        compare(canonicalSelected(), selected,
+            "UX289: presentation consumption preserves canonical file IDs, descriptors and native usability");
+        compare(Probe.readFile(source), beforeBytes, "UX289: original scientific input bytes remain untouched");
+        compare(Session.project, project, "UX289: sent presentation does not replace the project owner");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account,
+            "UX289: exact original managed account and model catalog remain admitted");
+        compare(Probe.rows(assistant.messages).filter(row => !previous.has(row.id)
+            && row.kind === "user" && row.text === text).length, 1,
+            "UX289: original Send has one retained identity, never a second synthetic user input");
+        if (data.tag === "new-file-sent-revoke") {
+            const extraSource = "tests/fixtures/assistant/reference/inst_d1a.prm";
+            const extraBytes = Probe.readFile(extraSource);
+            const extraIntent = assistant.beginFileSelection();
+            verify(extraIntent.length > 0 && assistant.addSelectedFiles(extraIntent, [Probe.repoUrl(extraSource)]),
+                "UX295: later genuine picker admission adds an independent original source ID");
+            tryCompare(assistant.selectedFiles, "count", 2, 2000,
+                "UX295: both canonical selected sources remain independently represented");
+            const later = Probe.rows(assistant.selectedFiles).filter(row => row.id !== selectedId);
+            compare(later.length, 1, "UX295: exactly one newly selected identity differs from old ACK snapshot");
+            compare(later[0].pending, true, "UX295: earlier completed input cannot consume later selected source");
+            compare(Probe.rows(assistant.selectedFiles).filter(row => row.id === selectedId)[0].pending, false,
+                "UX295: acknowledged original identity remains consumed independently of later file");
+            const retained = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(JSON.stringify(retained[0].payload), JSON.stringify(completed[0].payload),
+                "UX295: later selection cannot rewrite historical acknowledged descriptor payload");
+            const remove = Ui.itemsWithProperty(window.contentItem, "objectName").filter(control =>
+                control.objectName === "assistant.sentFile.remove." + selectedId && control.visible);
+            compare(remove.length, 1, "UX295: original sent source owns one real idle revoke control");
+            verify(remove[0].enabled, "UX295: actual idle sent-source revoke is enabled before genuine click");
+            Ui.scrollIntoView(remove[0]); rendered();
+            verify(Ui.exposed(remove[0]), "UX295: actual original sent revoke is physically exposed");
+            Ui.click(this, Probe, window, remove[0].objectName);
+            tryCompare(assistant.selectedFiles, "count", 1, 2000,
+                "UX295: actual original sent revoke removes only original current source authority");
+            const remaining = Probe.rows(assistant.selectedFiles);
+            compare(remaining[0].id, later[0].id, "UX295: sent revoke cannot remove later selected authority");
+            compare(remaining[0].pending, true, "UX295: unrelated later pending chip remains pending");
+            const historical = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(historical.length, 1, "UX295: authority revoke retains exact original user history identity");
+            compare(JSON.stringify(historical[0].payload), JSON.stringify(completed[0].payload),
+                "UX295: current read-grant revoke cannot erase historical sent descriptor snapshot");
+            verify(findChild(window, "assistant.sentFile." + selectedId) !== null,
+                "UX295: removed current authority remains truthfully represented as historical sent input");
+            compare(Probe.readFile(extraSource), extraBytes, "UX295: later source bytes remain immutable after revoke");
+            compare(Probe.readFile(source), beforeBytes, "UX295: sent revoke never deletes original source bytes");
+            compare(Session.project, project, "UX295: source presentation/revoke preserves scientific owner");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account,
+                "UX295: sent revoke preserves original genuine account and model catalog");
+        }
+        visible185_capture("ux289-" + data.tag);
+    }
+
+
+    function test_ux289_hidden_activity_uses_real_original_request() {
+        const project = Session.project;
+        const values = visible185_values(project);
+        toggle();
+        assistant.signIn();
+        report187_ready("ux289-working-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux289-working-disclosed", true);
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        Ui.click(this, Probe, window, "assistant.composer");
+        visible185_type("Original two-tool activity retained across public observation");
+        Ui.click(this, Probe, window, "assistant.send");
+        tryVerify(() => visible185_outcome("ux289-working-first", previous) !== null
+            && assistant.state === "agent_active" && assistant.canCancel, 10000,
+            "UX289 SETUP: real first original native read completed while original objective is still active");
+        const panelWorking = item("assistant.working");
+        verify(panelWorking.visible, "UX289: genuine active objective displays existing panel Working");
+        toggle(); // Genuine explicit user hide must retain precedence after terminal.
+        const status = item("statusBar.assistant.working");
+        tryCompare(status, "visible", true, 2000,
+            "UX289: hidden chat displays shared Working during real request gap, not synthetic busy");
+        compare(panelWorking.visible, false, "UX289: covered panel and hidden-chat status do not duplicate painted activity");
+        verify(Ui.exposed(status) && status.width > 0 && status.height > 0,
+            "UX289: actual hidden-chat activity owns nonzero unobscured status geometry");
+        visible185_capture("ux289-hidden-working");
+        assistant.refreshUsage();
+        tryVerify(() => visible185_outcome("ux289-working-second", previous) !== null
+            && Probe.rows(assistant.messages).some(row => !previous.has(row.id)
+                && row.kind === "assistant" && row.status === "completed")
+            && assistant.state === "idle" && !assistant.canCancel, 10000,
+            "UX289: both original native replies and actual retained assistant completion settle before activity ends");
+        tryCompare(status, "visible", false, 2000, "UX289: whole original completion retires genuine Working once");
+        compare(Preferences.assistantShown, false, "UX289: explicit later hide survives original objective completion");
+        compare(popup.visible, false, "UX289: terminal cannot reopen over the user's later explicit hide");
+        compare(Session.project, project, "UX289: activity presentation keeps original project ownership");
+        compare(visible185_values(project), values, "UX289: two read-only native tools preserve all actual scientific scalars/free/SU");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account,
+            "UX289: activity presentation preserves genuine managed account/model admission");
+    }
+    function test_ux289_folder_caption_preserves_actual_grant() {
+        const project = Session.project;
+        const directory = Probe.scratchProjectUrl();
+        const path = ApplicationInfo.localPath(directory);
+        verify(path.length > 0, "UX289 SETUP: actual owned scratch directory has a physical filesystem path");
+        toggle();
+        assistant.signIn();
+        report187_ready("ux289-folder-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux289-folder-disclosed", true);
+        const history = JSON.stringify(Probe.rows(assistant.messages));
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const intent = assistant.beginWorkingFolderSelection();
+        verify(intent.length > 0 && assistant.completeWorkingFolderSelection(intent, directory),
+            "UX289 SETUP: original real picker intent consumes its actual local directory callback");
+        compare(assistant.workingFolder, path, "UX289: caption never replaces actual selected physical folder authority");
+        const caption = item("assistant.workingFolder.caption");
+        const show = item("assistant.showActions");
+        const basename = path.replace(/\\/g, "/").split("/").filter(part => part.length).slice(-1)[0];
+        compare(caption.text, basename, "UX289: actual compact caption spells the independent real folder basename");
+        compare(caption.elide, Text.ElideMiddle, "UX289: long actual folder text uses middle elision");
+        compare(caption.ToolTip.text, path, "UX289: full original physical scope remains available in tooltip");
+        compare(caption.Accessible.name, path, "UX289: actual full original scope remains accessible");
+        verify(Ui.exposed(caption) && Ui.exposed(show), "UX289: compact scope and mode control are actually exposed");
+        const cr = rect(caption), sr = rect(show);
+        verify(Math.abs((cr[1] + cr[3] / 2) - (sr[1] + sr[3] / 2)) <= Math.max(cr[3], sr[3]) / 2
+            && cr[0] >= sr[0] + sr[2], "UX289: scope occupies the same row to the right without covering Show actions");
+        const oldWidth = window.width;
+        try {
+            window.width = Math.max(window.minimumWidth, 800);
+            rendered();
+            verify(Ui.exposed(caption) && Ui.exposed(show),
+                "UX289: actual narrow viewport preserves usable caption and mode-control hit areas");
+            verify(rect(caption)[0] + caption.width <= window.contentItem.width,
+                "UX289: actual scope caption cannot expand outside the narrow application viewport");
+            compare(assistant.workingFolder, path, "UX289: layout changes cannot create or replace a grant");
+            visible185_capture("ux289-folder-narrow");
+        } finally { window.width = oldWidth; }
+        verify(!assistant.completeWorkingFolderSelection(intent, directory),
+            "UX289: consumed picker callback cannot acquire a second authority from caption presentation");
+        Ui.click(this, Probe, window, "assistant.temporaryWorkingFolder");
+        tryCompare(assistant, "workingFolder", "", 2000,
+            "UX289: genuine existing temporary action restores actual app-owned temporary scope");
+        compare(caption.text, "Temporary workspace", "UX289: temporary mode has an honest compact caption");
+        compare(Session.project, project, "UX289: scope presentation and ordinary picker/temp controls preserve project owner");
+        compare(JSON.stringify(Probe.rows(assistant.messages)), history, "UX289: scope presentation retains actual original history");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account, "UX289: picker/temp presentation retains original managed account");
+    }
+
+    function test_ux300_real_selection_notification_keeps_original_authority_data() {
+        return ["add-refused-input", "remove-refused-input", "add-new-owner", "remove-new-owner",
+            "add-nested-add", "remove-nested-add"]
+            .map(tag => ({tag: tag}));
+    }
+    function test_ux300_real_selection_notification_keeps_original_authority(data) {
+        const original = Session.project;
+        const originalLifetime = lifetime313(original);
+        const originalIdentity = identity313(originalLifetime);
+        const selectedModel = assistant.selectedFiles;
+        const selectedLifetime = lifetime313(selectedModel);
+        verify(original !== null && !assistant.connected && !assistant.canCancel,
+            "UX300 SETUP: actual ordinary project and signed-out idle selection are genuine");
+        const source = "tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif";
+        const bytes = Probe.readFile(source);
+        const beforeInputs = visible185_inputs(original);
+        const beforeShape = relation246_shape(original);
+        const beforeRelations = relation245_declarations(original);
+        const beforeUndo = item("appBar.button.undo").enabled;
+        compare(assistant.selectedFiles.count, 0, "UX300 SETUP: real fresh selected authority starts empty");
+        const removal = data.tag.startsWith("remove-");
+        const nested = data.tag.endsWith("nested-add");
+        const laterSource = "tests/fixtures/assistant/reference/inst_d1a.prm";
+        const laterBytes = nested ? Probe.readFile(laterSource) : null;
+        let laterReference = null;
+        if (nested) {
+            // This separate ordinary admission establishes only the public format
+            // label; basename/ASCII-byte count/readability come from the fixture.
+            const referenceIntent = assistant.beginFileSelection();
+            verify(referenceIntent.length > 0 && assistant.addSelectedFiles(referenceIntent,
+                [Probe.repoUrl(laterSource)]), "UX334 SETUP: real independent ordinary later-file admission succeeds before callback setup");
+            tryCompare(assistant.selectedFiles, "count", 1, 2000,
+                "UX334 SETUP: independent ordinary admission settles before its descriptor reference");
+            const referenceRows = Probe.rows(assistant.selectedFiles);
+            compare(referenceRows.length, 1, "UX334 SETUP: ordinary reference has exactly the one independently supplied fixture");
+            const referenceRow = referenceRows[0];
+            verify(typeof referenceRow.id === "string" && referenceRow.id.length > 0,
+                "UX334 SETUP: independent ordinary admission has an actual opaque app ID");
+            compare(referenceRow.name, "inst_d1a.prm", "UX334: expected basename comes from the committed fixture path");
+            compare(referenceRow.bytes, laterBytes.length,
+                "UX334: committed ASCII fixture length independently specifies its exact UTF8 byte count");
+            compare(referenceRow.textReadable, true, "UX334: actual complete ASCII fixture is independently readable UTF8 without NUL");
+            compare(referenceRow.pending, true, "UX334: genuinely new ordinary source is unacknowledged");
+            verify(typeof referenceRow.format === "string", "UX334 SETUP: ordinary reference supplies the unspecified public format label");
+            laterReference = {name: "inst_d1a.prm", bytes: laterBytes.length,
+                textReadable: true, format: referenceRow.format, pending: true};
+            console.log("UX334_ORDINARY_REFERENCE", JSON.stringify({fixture: laterSource,
+                descriptor: laterReference, referenceID: referenceRow.id}));
+            verify(assistant.removeSelectedFile(referenceRow.id),
+                "UX334 SETUP: genuine reference cleanup removes only its ordinary source authority");
+            tryCompare(assistant.selectedFiles, "count", 0, 2000,
+                "UX334 SETUP: ordinary reference is removed before original outer admission/removal");
+        }
+        let originalId = null;
+        if (removal) {
+            const initial = assistant.beginFileSelection();
+            verify(initial.length > 0 && assistant.addSelectedFiles(initial, [Probe.repoUrl(source)]),
+                "UX300 SETUP: normal public picker first admits the real removable source");
+            compare(assistant.selectedFiles.count, 1, "UX300 SETUP: original source exists before removal observer");
+            originalId = assistant.selectedFiles.text(0, "id");
+        }
+        let armed = true, outerReturned = false, observations = [], replacement = null;
+        function notified() {
+            if (!armed || assistant.selectedFiles.count !== (removal ? 0 : 1)) return;
+            armed = false;
+            const record = {beforeOuterReturn: !outerReturned, count: assistant.selectedFiles.count, enteringOwner: String(Session.project),
+                enteringConnected: assistant.connected, enteringFiles: Probe.rows(assistant.selectedFiles)};
+            observations.push(record);
+            if (data.tag.endsWith("refused-input")) {
+                record.refusedRow = assistant.submitDraft("   ");
+                record.returningOwner = String(Session.project);
+            } else if (data.tag.endsWith("nested-add")) {
+                const nestedIntent = assistant.beginFileSelection();
+                record.nestedIntent = nestedIntent;
+                record.nestedAccepted = nestedIntent.length > 0 && assistant.addSelectedFiles(nestedIntent,
+                    [Probe.repoUrl("tests/fixtures/assistant/reference/inst_d1a.prm")]);
+                record.nestedRows = Probe.rows(assistant.selectedFiles);
+            } else {
+                Session.closeProject();
+                record.created = Session.createProject("UX300 replacement", "Real owner from selected model notification");
+                replacement = Session.project;
+                record.returningOwner = String(replacement);
+            }
+            record.callbackActionReturned = true;
+        }
+        selectedModel.countChanged.connect(notified);
+        let accepted;
+        try {
+            if (removal) accepted = assistant.removeSelectedFile(originalId);
+            else {
+                const intent = assistant.beginFileSelection();
+                verify(intent.length > 0, "UX300 SETUP: genuine original file-selection intent is issued before admission");
+                accepted = assistant.addSelectedFiles(intent, [Probe.repoUrl(source)]);
+            }
+            outerReturned = true;
+            compare(observations.length, 1,
+                "UX300 SETUP: exact genuine selected-model notification reached the original synchronous owner action");
+            verify(observations[0].beforeOuterReturn && observations[0].callbackActionReturned,
+                "UX332 SETUP: real model signal and original public action both return synchronously inside original Add/Remove");
+            compare(observations[0].enteringOwner, originalIdentity,
+                "UX300: notification belongs to the original actual displayed project");
+            compare(observations[0].enteringConnected, false,
+                "UX300: ordinary file authority never requires a fabricated authenticated provider");
+            verify(accepted, "UX300: already admitted original selection/removal remains a truthful admitted fact");
+            if (data.tag.endsWith("refused-input")) {
+                compare(observations[0].refusedRow, "", "UX300: actual nested whitespace input is refused without a user authority");
+                compare(Session.project, original, "UX300: same-owner refusal cannot strand original ordinary selection continuation");
+                compare(assistant.selectedFiles.count, removal ? 0 : 1,
+                    "UX300: actual offline Add/Remove publishes its complete requested canonical selection");
+                if (!removal) {
+                    const rows = Probe.rows(assistant.selectedFiles);
+                    verify(rows[0].id.length > 0 && rows[0].name === "PbSO4-Wyckoff.cif" && rows[0].pending === true,
+                        "UX300: ordinary original source has real canonical identity/name and remains unacknowledged");
+                }
+                compare(visible185_inputs(original), beforeInputs, "UX300: reentrant refusal leaves every original measured input unchanged");
+                compare(relation246_shape(original), beforeShape, "UX300: ordinary admission leaves original structure/composition unchanged");
+                compare(relation245_declarations(original), beforeRelations, "UX300: selection/refusal cannot rewrite scientific relations");
+                compare(item("appBar.button.undo").enabled, beforeUndo, "UX300: selection/refusal adds no scientific Undo record");
+            } else if (data.tag.endsWith("nested-add")) {
+                verify(observations[0].nestedIntent.length > 0 && observations[0].nestedAccepted,
+                    "UX303 SETUP: real same-owner model notification admits a distinct nested source through its genuine picker");
+                compare(Session.project, original, "UX303: nested same-owner source publication preserves scientific owner");
+                const expectedSurvivors = observations[0].enteringFiles;
+                compare(expectedSurvivors.length, removal ? 0 : 1,
+                    "UX334 SETUP: exact pre-nested projection identifies every original surviving source");
+                const originalIDs = expectedSurvivors.map(row => row.id);
+                compare(new Set(originalIDs).size, expectedSurvivors.length,
+                    "UX334 SETUP: original pre-nested surviving IDs are unique before nested publication");
+                if (!removal) verify(expectedSurvivors[0].id.length > 0
+                    && expectedSurvivors[0].name === "PbSO4-Wyckoff.cif"
+                    && expectedSurvivors[0].pending === true,
+                    "UX334 SETUP: original surviving selection has its real pre-nested ID and remains unacknowledged");
+                let rows = [], later = [];
+                tryVerify(() => {
+                    rows = Probe.rows(assistant.selectedFiles);
+                    later = rows.filter(row => row.name === laterReference.name);
+                    if (rows.length !== expectedSurvivors.length + 1 || later.length !== 1)
+                        return false;
+                    const row = later[0];
+                    if (typeof row.id !== "string" || row.id.length === 0
+                        || originalIDs.includes(row.id) || (removal && row.id === originalId))
+                        return false;
+                    for (const key of ["name", "bytes", "textReadable", "format", "pending"])
+                        if (row[key] !== laterReference[key]) return false;
+                    const survivors = rows.filter(value => value.id !== row.id);
+                    return JSON.stringify(survivors) === JSON.stringify(expectedSurvivors)
+                        && new Set(rows.map(value => value.id)).size === rows.length
+                        && (!removal || !rows.some(value => value.id === originalId));
+                }, 2000, "UX334: outer-return settlement preserves exact original descriptors/IDs and independently admitted later-file facts");
+                compare(rows.length, removal ? 1 : 2,
+                    "UX303: old publisher continuation cannot erase or resurrect canonical nested selected rows");
+                compare(later.length, 1, "UX303: exact independently selected later source remains unique after old cleanup");
+                verify(typeof later[0].id === "string" && later[0].id.length > 0
+                    && later[0].pending === true && !originalIDs.includes(later[0].id),
+                    "UX334: genuine nested source has a unique nonempty opaque ID distinct from every surviving original authority");
+                for (const key of ["name", "bytes", "textReadable", "format", "pending"])
+                    compare(later[0][key], laterReference[key],
+                        "UX334: final later-file descriptor equals independent fixture/ordinary-reference facts");
+                compare(JSON.stringify(rows.filter(row => row.id !== later[0].id)),
+                    JSON.stringify(expectedSurvivors),
+                    "UX334: final surviving original descriptors and IDs equal the pre-nested snapshot exactly");
+                if (removal) verify(!rows.some(row => row.id === originalId),
+                    "UX303: admitted original removal is never undone by nested source publication");
+                compare(Probe.readFile(laterSource), laterBytes,
+                    "UX334: ordinary reference and nested admission never rewrite the independent later-file bytes");
+                compare(visible185_inputs(original), beforeInputs, "UX303: nested file publication leaves all original observations unchanged");
+                compare(relation246_shape(original), beforeShape, "UX303: nested file publication leaves original composition unchanged");
+                compare(relation245_declarations(original), beforeRelations, "UX303: nested file publication leaves all scientific relations unchanged");
+                compare(item("appBar.button.undo").enabled, beforeUndo, "UX303: nested selection creates no scientific Undo step");
+            } else {
+                verify(observations[0].created && replacement !== null
+                    && String(replacement) !== originalIdentity,
+                    "UX300 SETUP: actual public callback really created a distinct replacement owner");
+                compare(Session.project, replacement, "UX300: original selection continuation cannot recapture or replace B");
+                compare(assistant.selectedFiles.count, 0, "UX300: A selection cannot publish old input authority into replacement B");
+                compare(replacement.structures.count, 0, "UX300: old selection never creates stale structure in genuine empty B");
+                compare(replacement.experiments.count, 0, "UX300: old selection never creates stale dataset in genuine empty B");
+                compare(replacement.canUndo, false, "UX300: selection from A cannot create a hidden edit record in B");
+            }
+            compare(Probe.readFile(source), bytes, "UX300: actual model notification/reentry never rewrites original scientific file");
+            compare(assistant.connected, false, "UX300: offline selection remains genuinely signed out");
+            verify(!assistant.canCancel && !assistant.showingActions,
+                "UX300: source selection/refused input cannot fabricate active work or visible execution");
+            compare(Probe.rows(assistant.messages).filter(row => row.kind === "user").length, 0,
+                "UX300: rejected nested draft and selection never fabricate a successfully admitted user request");
+        } finally {
+            disconnect313(selectedLifetime, selectedModel, "countChanged", notified);
+            console.log("UX300_SELECTION", data.tag, JSON.stringify({observations: observations,
+                accepted: accepted, originalOwner: originalIdentity, originalAlive: alive313(originalLifetime), currentOwner: String(Session.project),
+                selected: Probe.rows(assistant.selectedFiles), connected: assistant.connected,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions}));
+        }
+    }
+    function test_ux300_real_signout_retires_despite_same_owner_notification_data() {
+        return [{tag: "refused-input"}, {tag: "picker"}];
+    }
+    function test_ux300_real_signout_retires_despite_same_owner_notification(data) {
+        const project = Session.project;
+        const projectLifetime = lifetime313(project);
+        const projectIdentity = identity313(projectLifetime);
+        const assistantLifetime = lifetime313(assistant);
+        const inputs = visible185_inputs(project), shape = relation246_shape(project);
+        const relations = relation245_declarations(project);
+        const undo = item("appBar.button.undo").enabled;
+        const source = "tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif";
+        const sourceBytes = Probe.readFile(source), selectedIntent = assistant.beginFileSelection();
+        verify(selectedIntent.length > 0 && assistant.addSelectedFiles(selectedIntent, [Probe.repoUrl(source)]),
+            "UX303 SETUP: original source is genuinely admitted before account retirement");
+        const originalSelected = JSON.stringify(Probe.rows(assistant.selectedFiles));
+        toggle(); assistant.signIn(); report187_ready("ux300-signout-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux300-signout-disclosed", true);
+        verify(assistant.connected && !assistant.canCancel, "UX300 SETUP: real owned authenticated process is idle before logout");
+        let armed = true, callerReturned = false, observations = [];
+        function retired() {
+            if (!armed) return;
+            armed = false;
+            const record = {beforeCallerReturn: !callerReturned, owner: String(Session.project), connectedAtEntry: assistant.connected,
+                rowCount: assistant.messages.count};
+            observations.push(record);
+            if (data.tag === "refused-input") record.row = assistant.submitDraft("   ");
+            else record.picker = assistant.beginFileSelection();
+            record.ownerAfter = String(Session.project);
+            record.callbackActionReturned = true;
+        }
+        assistant.conversationRetired.connect(retired);
+        try {
+            assistant.signOut();
+            callerReturned = true;
+            tryVerify(() => !assistant.connected && !assistant.canCancel && assistant.models.count === 0, 10000,
+                "UX300: genuine explicit sign-out completes original account retirement despite same-owner nested presentation action");
+            compare(observations.length, 1, "UX300 SETUP: real conversation retirement delivered original callback before caller completed");
+            verify(observations[0].beforeCallerReturn && observations[0].callbackActionReturned,
+                "UX332 SETUP: original public retirement signal really encloses the nested action before signOut returns");
+            compare(observations[0].owner, projectIdentity, "UX300: logout notification belongs to original unchanged scientific owner");
+            compare(observations[0].ownerAfter, projectIdentity, "UX300: nested refused input/picker cannot replace scientific owner");
+            if (data.tag === "refused-input") compare(observations[0].row, "",
+                "UX300: actual logout-interval empty input is refused without durable ACK");
+            else {
+                verify(typeof observations[0].picker === "string", "UX300: nested ordinary picker call returns its actual public intent result");
+                if (observations[0].picker.length) assistant.cancelFileSelection(observations[0].picker);
+            }
+            compare(Session.project, project, "UX300: original logout leaves displayed project owner intact");
+            compare(visible185_inputs(project), inputs, "UX300: genuine account retirement preserves all original measured inputs");
+            compare(relation246_shape(project), shape, "UX300: logout/reentrant presentation preserves original structure/composition");
+            compare(relation245_declarations(project), relations, "UX300: logout/reentrant presentation preserves scientific relations");
+            compare(item("appBar.button.undo").enabled, undo, "UX300: logout/refusal creates no scientific Undo step");
+            verify(!assistant.showingActions, "UX303: original logout cannot fabricate visible active work");
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), originalSelected,
+                "UX303: genuine account retirement preserves actual earlier admitted immutable file authority");
+            compare(Probe.readFile(source), sourceBytes, "UX303: logout notification never rewrites admitted original source bytes");
+            compare(Probe.rows(assistant.messages).filter(row => row.kind === "user").length, 0,
+                "UX300: same-owner rejected input cannot survive as fabricated completed logout-interval Send");
+        } finally {
+            disconnect313(assistantLifetime, assistant, "conversationRetired", retired);
+            console.log("UX300_SIGNOUT", data.tag, JSON.stringify({observations: observations,
+                currentOwner: String(Session.project), connected: assistant.connected, state: assistant.state,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                modelCount: assistant.models.count, lastError: assistant.lastError}));
+        }
+    }
+
+    function save349_science(project) {
+        return JSON.stringify({values: JSON.parse(visible185_values(project)),
+            inputs: JSON.parse(visible185_inputs(project)),
+            declarations: JSON.parse(relation245_declarations(project)),
+            sites: Probe.rows(project.currentStructure.atomSites).map(row => [row.label, row.typeSymbol,
+                row.adpType, row.fractX.value, row.fractY.value, row.fractZ.value, row.occupancy.value]),
+            results: Probe.rows(project.fit.results), outcome: project.fit.outcome,
+            iterations: project.fit.iterations, goodnessOfFit: project.fit.goodnessOfFit});
+    }
+    function save380_preAdmissionRefusal(callId, previousIds, expectedArguments) {
+        const rows = Probe.rows(assistant.messages).filter(row => !previousIds.has(row.id)
+            && row.kind === "activity" && row.payload && row.payload.id === callId);
+        verify(rows.length <= 1, "SAVE380: only one new original activity owns the exact refused call");
+        if (!rows.length) return null;
+        const row = rows[0], payload = row.payload;
+        verify(typeof row.id === "string" && row.id.length > 0,
+            "SAVE380: original refused activity has a genuine nonempty public identity");
+        compare(payload.type, "dynamicToolCall", "SAVE380: original result is a real dynamic tool activity");
+        compare(payload.tool, "save_project", "SAVE380: exact original Save tool owns the refusal");
+        compare(payload.namespace, null, "SAVE380: original Save namespace is unchanged");
+        verify(payload.arguments && typeof payload.arguments === "object",
+            "SAVE380: original full Save arguments remain available");
+        compare(Object.keys(payload.arguments).sort(), Object.keys(expectedArguments).sort(),
+            "SAVE380: refused original arguments have exactly the independently requested fields");
+        for (const key of Object.keys(expectedArguments))
+            compare(payload.arguments[key], expectedArguments[key],
+                "SAVE380: each refused original argument equals the independent requested operand");
+        if (row.status !== "failed") return null;
+        compare(payload.status, "failed", "SAVE380: original generic activity truthfully records failure");
+        compare(payload.success, false, "SAVE380: original pre-admission result cannot claim success");
+        verify(!Object.prototype.hasOwnProperty.call(payload, "nativeOutcome"),
+            "SAVE380: pre-admission refusal does not fabricate an admitted native record");
+        // Existing retained-public-JSON convention: QVariantList proxies are
+        // JSON arrays without necessarily being native JavaScript Array objects.
+        const contentItems384 = JSON.parse(JSON.stringify(payload.contentItems));
+        verify(Array.isArray(contentItems384) && contentItems384.length === 1,
+            "SAVE380: original refusal retains exactly one typed result item");
+        const content = contentItems384[0];
+        compare(content.type, "inputText", "SAVE380: original refused result uses the public text item type");
+        verify(typeof content.text === "string", "SAVE380: original typed refusal contains actual JSON text");
+        const result = JSON.parse(content.text);
+        compare(Object.keys(result).sort(), ["message", "status"],
+            "SAVE380: original validation refusal has the exact public result fields");
+        compare(result.status, "refused", "SAVE380: no-grant Save explicitly refuses before admission");
+        verify(typeof result.message === "string"
+            && result.message.endsWith("[save_project:WORKING_OWNER/VALIDATION]"),
+            "SAVE380: deliberate absent authority refuses at the exact expected validation phase");
+        return {activityId: row.id, result: result};
+    }
+    function test_save349_visible_real_save_and_retirement_data() {
+        return ["fresh", "current", "no-grant", "collision", "stop", "close-owner", "current-ten-refit"].map(tag => ({tag: tag}));
+    }
+    function test_save349_visible_real_save_and_retirement(data) {
+        const leaf = "Original μ 🧪 saved project";
+        verify(Session.openProject(Probe.referenceUrl("input")),
+            "SAVE349 SETUP: actual independently owned complete native input opens");
+        let project = Session.project;
+        const parameters = visible185_parameters(project);
+        const cell = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+        compare(cell.length, 1, "SAVE349 SETUP: independent original fit cell is unique");
+        // Existing VA185 lawful fit-subset setup, never credited as visible editing/Save delivery.
+        for (const parameter of parameters) parameter.free = false;
+        cell[0].free = true;
+        project.currentExperiment.scale.free = true;
+        project.analysis.maxIterations = 8;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE349 SETUP: actual complete native science is current before real fitting");
+        const beforeFit = visible185_values(project), originalInputs = visible185_inputs(project);
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        let fitStarts = 0, fitFinishes = 0;
+        const fit = project.fit, fitLife = lifetime313(fit);
+        function started() { if (alive313(fitLife) && fit.running) ++fitStarts; }
+        function finished() { ++fitFinishes; }
+        fit.runningChanged.connect(started);
+        fit.finished.connect(finished);
+        try {
+            Ui.click(this, Probe, window, "fitting.start");
+            tryVerify(() => fitFinishes === 1 && !fit.running && !project.calculating
+                && Probe.computedCurrent(project.currentExperiment), 10000,
+                "SAVE349 SETUP: genuine ordinary FitJob finishes and publishes actual current science");
+            compare(fitStarts, 1, "SAVE349 SETUP: the real manual Fit button starts exactly one worker");
+            verify(["success", "maxIterations"].includes(fit.outcome),
+                "SAVE349 SETUP: actual fitted outcome is successful or bounded max-iterations, never stopped/failed");
+            verify(visible185_values(project) !== beforeFit && Probe.rows(fit.results).length > 0,
+                "SAVE349 SETUP: moving real fitted result, never no-step/cached/fabricated success");
+            verify(visible185_parameters(project).some(parameter => parameter.free && parameter.hasUncertainty && parameter.uncertainty > 0),
+                "SAVE349 SETUP: genuine fitted uncertainties exercise ordinary writer rounding");
+            compare(visible185_inputs(project), originalInputs,
+                "SAVE349: actual fit retains every measured coordinate/intensity/sigma/weight/exclusion/phase link");
+        } finally {
+            disconnect313(fitLife, fit, "runningChanged", started);
+            disconnect313(fitLife, fit, "finished", finished);
+        }
+        // Ordinary public writer/readback is the independent pre-existing SU-rounding control.
+        // Neither call is credited as delegated visible Save.
+        verify(Session.saveAs(Probe.referenceUrl("ordinary")), "SAVE349 SETUP: ordinary fitted writer establishes reference tree");
+        verify(Session.saveAs(Probe.referenceUrl("current")), "SAVE349 SETUP: separate genuinely owned current directory exists");
+        verify(Session.openProject(Probe.referenceUrl("current")), "SAVE349 SETUP: normal reader establishes rounded current model");
+        project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE349 SETUP: ordinary real readback is current before Save admission");
+        if (data.tag === "current-ten-refit") { save359_current_ten_refit(project); return; }
+        const science = save349_science(project), owner = lifetime313(project);
+        const currentPath = project.path;
+        const sourceDocuments = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
+        const currentBytes = sourceDocuments.map(name => Probe.readReferenceFile("current/" + name));
+        visible185_page("project");
+        Ui.click(this, Probe, window, "mainArea.project.tab.description");
+        Ui.click(this, Probe, window, "project.title");
+        visible185_type("Original visible Save " + data.tag);
+        keyClick(Qt.Key_Return);
+        compare(project.title, "Original visible Save " + data.tag, "SAVE349 SETUP: genuine user title edit makes current model dirty");
+        verify(project.modified && !Session.needsSaveAs,
+            "SAVE349 SETUP: ordinary current Save is eligible for the real fitted owned project");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE349 SETUP: genuine title commit is settled before native Save admission");
+        compare(save349_science(project), science, "SAVE349 SETUP: title edit changes no fitted scientific fact");
+        const metadata = JSON.parse(import265_owner(project));
+        delete metadata.path;
+        const undoBefore = item("appBar.button.undo").enabled;
+        toggle();
+        assistant.signIn();
+        visible185_ready("save349-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("save349-disclosed");
+        if (!["no-grant", "current"].includes(data.tag)) {
+            const intent = assistant.beginWorkingFolderSelection();
+            verify(intent.length > 0 && assistant.completeWorkingFolderSelection(intent, Probe.referenceUrl("selected")),
+                "SAVE349 SETUP: real original picker intent grants exactly the owned parent");
+            compare(assistant.workingFolder, ApplicationInfo.localPath(Probe.referenceUrl("selected")),
+                "SAVE349 SETUP: native grant is the independently selected physical parent");
+            if (assistant.contextConsentRequired) assistant.signIn();
+            visible185_ready("save349-folder-disclosed");
+        } else compare(assistant.workingFolder, "", "SAVE349 SETUP: current/no-grant cases have no unrelated fresh-parent grant");
+        const show = item("assistant.showActions");
+        verify(show.enabled && show.visible, "SAVE349 SETUP: actual Show actions control is actionable");
+        mouseClick(show);
+        verify(assistant.showActions, "SAVE349 SETUP: real checkbox admits visible mode");
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const beforeIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const save = Ui.control(Probe, window, "appBar.button.save");
+        verify(save !== null && save.enabled && Ui.exposed(save), "SAVE349 SETUP: genuine ordinary Save button is physically enabled");
+        let saveClicks = 0, finalClicks = 0, typed = 0, finalName = null;
+        let editor = null, finalSave = null, editorLife = null, finalLife = null;
+        let originalDialog = null, dialogLife = null, originalFooter = null, openedEvents = 0;
+        const saveLife370 = lifetime313(save);
+        const connected370 = {save: false, text: false, press: false, click: false, opened: false};
+        function savedClicked() { ++saveClicks; }
+        function finalPressed() {
+            verify(alive313(dialogLife) && alive313(editorLife) && alive313(finalLife),
+                "SAVE352: original dialog/editor/footer receiver remain alive at real final press");
+            if (!finalSave.pressed) return; // pressedChanged also notifies release; only the true edge is precommit.
+            verify(originalDialog.opened && originalDialog.visible && finalSave.enabled
+                && Ui.rendered(finalSave) && Ui.exposed(finalSave),
+                "SAVE352: genuine final Save is physically exposed in its actual opened original form");
+            let parent = finalSave;
+            while (parent && parent !== originalFooter) parent = parent.parent;
+            compare(parent, originalFooter, "SAVE352: pressed Save belongs to the exact original Dialog.footer");
+            let windowParent = finalSave;
+            while (windowParent && windowParent !== Ui.windowRoot(window)) windowParent = windowParent.parent;
+            compare(windowParent, Ui.windowRoot(window), "SAVE352: final receiver belongs to the original physical window");
+            const point = Ui.clickPoint(finalSave);
+            verify(point !== null, "SAVE352: actual footer button has an unclipped click point");
+            const position = finalSave.mapToItem(window.contentItem, point.x, point.y);
+            verify(position.x >= 0 && position.y >= 0 && position.x < window.contentItem.width
+                && position.y < window.contentItem.height, "SAVE352: original final press lies inside the actual window");
+            finalName = editor.text;
+        }
+        function openedChanged() {
+            if (alive313(dialogLife) && originalDialog.opened) ++openedEvents;
+        }
+        function finalClicked() { ++finalClicks; }
+        function textEdited() { ++typed; }
+        const call = "save349-" + data.tag;
+        const observation = visible237_observationMs([{path: "", text: leaf}]);
+        try {
+            save.clicked.connect(savedClicked); connected370.save = true;
+            if (["fresh", "collision", "stop", "close-owner"].includes(data.tag)) {
+                // Passive original receiver binding, including collision. A closed
+                // form need not be rendered/exposed and no open interval is forced.
+                const forms = Probe.objectsWithProperty(window, "opened").filter(object =>
+                    object.objectName === "assistant.resultSaveAs");
+                compare(forms.length, 1, "SAVE352 SETUP: exact original window owns one Save dialog receiver");
+                originalDialog = forms[0]; dialogLife = lifetime313(originalDialog);
+                const content = originalDialog.contentItem;
+                originalFooter = originalDialog.footer;
+                verify(content !== null && originalFooter !== null,
+                    "SAVE352 SETUP: original dialog has its distinct content and footer owners");
+                const names = Ui.itemsWithProperty(content, "objectName").filter(object =>
+                    object.objectName === "assistant.resultFolderName");
+                const buttons = Ui.itemsWithProperty(originalFooter, "objectName").filter(object =>
+                    object.objectName === "assistant.resultFolderSave");
+                compare(names.length, 1, "SAVE352 SETUP: exact content owns one original name editor");
+                compare(buttons.length, 1, "SAVE352 SETUP: exact footer owns one original final Save receiver");
+                editor = names[0]; finalSave = buttons[0];
+                editorLife = lifetime313(editor); finalLife = lifetime313(finalSave);
+                verify(typeof finalSave.pressed === "boolean" && typeof finalSave.pressedChanged === "function",
+                    "SAVE370 SETUP: actual original Qt Button exposes pressed STATE and its pressedChanged SIGNAL");
+                editor.textEdited.connect(textEdited); connected370.text = true;
+                finalSave.pressedChanged.connect(finalPressed); connected370.press = true;
+                finalSave.clicked.connect(finalClicked); connected370.click = true;
+                originalDialog.openedChanged.connect(openedChanged); connected370.opened = true;
+                console.log("SAVE352_ORIGINAL_RECEIVERS", JSON.stringify({case: data.tag,
+                    dialog: identity313(dialogLife), editor: identity313(editorLife),
+                    finalSave: identity313(finalLife), originallyOpened: originalDialog.opened}));
+            }
+            assistant.send("Save this actual fitted displayed project using original visible Save " + data.tag);
+            if (!["current", "no-grant", "collision"].includes(data.tag)) {
+                tryVerify(() => {
+                    if (!alive313(dialogLife) || !alive313(editorLife) || !alive313(finalLife)
+                        || !originalDialog.opened || !originalDialog.visible) return false;
+                    const forms = Probe.objectsWithProperty(window, "opened").filter(object =>
+                        object.objectName === "assistant.resultSaveAs");
+                    compare(forms.length, 1, "SAVE352: no second dialog can replace the original Save receiver");
+                    compare(forms[0], originalDialog, "SAVE352: actual opened form is the bound original dialog");
+                    let ancestor = editor;
+                    while (ancestor && ancestor !== Ui.windowRoot(window)) ancestor = ancestor.parent;
+                    if (ancestor !== Ui.windowRoot(window)) return false;
+                    return saveClicks === 1 && assistant.showingActions && assistant.canCancel
+                        && editor.visible && Ui.rendered(editor) && Ui.exposed(editor)
+                        && typed > 0 && editor.text.length > 0 && editor.text !== leaf;
+                }, observation, "SAVE349 INTERVAL: real Save opens its unique form and genuine partial original name typing is reached");
+                console.log("SAVE349_PARTIAL", JSON.stringify({case: data.tag, saveClicks: saveClicks,
+                    typed: typed, text: editor.text, finalClicks: finalClicks, currentOwner: Session.project === project}));
+                if (data.tag === "stop") {
+                    const stop = item("assistant.stopVisibleAction");
+                    verify(stop.enabled && Ui.exposed(stop), "SAVE349 STOP: genuine original Stop is exposed in reached interval");
+                    mouseClick(stop);
+                } else if (data.tag === "close-owner") Session.closeProject();
+            }
+            const refused = ["no-grant", "collision", "stop", "close-owner"].includes(data.tag);
+            const expectedArguments380 = {purpose: "Save original fitted displayed project through actual visible controls",
+                destination: "fresh", name: leaf};
+            let preAdmission380 = null;
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                && (data.tag === "close-owner" ? Session.project === null : data.tag === "no-grant"
+                    ? (preAdmission380 = save380_preAdmissionRefusal(call, beforeIds, expectedArguments380)) !== null
+                    : visible185_outcome(call, beforeIds) !== null),
+                observation, "SAVE349: original whole request settles without a fabricated native receipt");
+            const originalRefusal380 = data.tag === "no-grant"
+                ? save380_preAdmissionRefusal(call, beforeIds, expectedArguments380) : null;
+            if (data.tag === "no-grant") verify(originalRefusal380 !== null,
+                "SAVE380: settled no-grant requires its original typed refusal, never an admitted fallback");
+            if (originalRefusal380 !== null) compare(originalRefusal380.activityId, preAdmission380.activityId,
+                "SAVE380: the same original refused public activity survives whole-turn settlement");
+            const outcome = originalRefusal380 !== null ? originalRefusal380.result : visible185_outcome(call, beforeIds);
+            if (!refused) verify(alive313(owner) && Session.project === project,
+                "SAVE352: successful Save keeps the exact original live displayed owner before any inspection");
+            console.log("SAVE349_TERMINAL", JSON.stringify({case: data.tag, outcome: outcome,
+                saveClicks: saveClicks, finalClicks: finalClicks, typed: typed,
+                originalReceiversBound: dialogLife !== null, openedEvents: openedEvents,
+                originalDialogAlive: alive313(dialogLife),
+                currentPath: Session.project ? Session.project.path : null,
+                modified: Session.project ? Session.project.modified : null,
+                connected: assistant.connected, originalOwnerAlive: alive313(owner)}));
+            if (refused) {
+                if (data.tag !== "close-owner") verify(outcome !== null && outcome.status !== "succeeded" && outcome.committed !== true,
+                    "SAVE349: precommit refusal/cancel truthfully denies disk commit");
+                if (data.tag !== "collision") compare(finalClicks, 0,
+                    "SAVE349: missing authority/retired original helper cannot click final Save later");
+                if (data.tag === "no-grant") compare(saveClicks, 0,
+                    "SAVE352: absent parent authority refuses before ordinary Save action");
+                // Collision is always a negative no-write result, with factual
+                // bound control receipts; no earlier/later discovery point is invented.
+                for (let index = 0; index < sourceDocuments.length; ++index)
+                    compare(Probe.readReferenceFile("current/" + sourceDocuments[index]), currentBytes[index],
+                        "SAVE349: refusal/retirement preserves existing native document bytes");
+                if (data.tag !== "close-owner") {
+                    compare(Session.project, project, "SAVE349: refused Save retains original displayed owner");
+                    compare(save349_science(project), science, "SAVE349: refused Save retains complete fitted science");
+                    compare(project.path, currentPath, "SAVE349: refused Save cannot change owned path");
+                    verify(project.modified, "SAVE349: refused Save cannot falsely clear actual dirty state");
+                }
+            } else {
+                verify(outcome !== null && outcome.status === "succeeded" && outcome.committed === true
+                    && outcome.reopened === true && outcome.active === true && outcome.presentation_complete === true,
+                    "SAVE349: success requires actual commit/verified reopen/displayed adoption and complete UI presentation");
+                compare(saveClicks, 1, "SAVE349: one real ordinary Save action owns the operation");
+                compare(finalClicks, data.tag === "current" ? 0 : 1,
+                    "SAVE349: fresh confirms once through real final Save; current has no invented name form");
+                if (data.tag === "fresh") {
+                    verify(typed > 0, "SAVE349: literal fresh Unicode/spaces name was genuinely typed");
+                    compare(finalName, leaf, "SAVE349: real final Save receives the exact spaces/BMP/non-BMP spelling");
+                }
+                verify(alive313(owner) && Session.project === project && !project.modified, "SAVE349: actual displayed saved owner is unmodified");
+                compare(project.path, data.tag === "current" ? currentPath
+                    : ApplicationInfo.localPath(Probe.referenceUrl("selected/" + leaf)), "SAVE349: active directory is exactly the authorized destination");
+                compare(outcome.destination, project.path, "SAVE349: original outcome tells the exact active saved path");
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                    "SAVE349: actual saved/reopened scientific model is current");
+                compare(save349_science(project), science, "SAVE349: actual visible Save preserves rounded fitted science and declarations");
+                const afterMetadata = JSON.parse(import265_owner(project)); delete afterMetadata.path;
+                compare(JSON.stringify(afterMetadata), JSON.stringify(metadata), "SAVE349: every displayed metadata/settings fact survives actual save/reopen");
+                verify(!Session.needsSaveAs, "SAVE349: real adopted saved directory no longer needs Save As");
+                if (data.tag === "fresh") {
+                    for (let index = 0; index < sourceDocuments.length; ++index)
+                        compare(Probe.readReferenceFile("current/" + sourceDocuments[index]), currentBytes[index],
+                            "SAVE349: fresh-child Save cannot also overwrite the previously owned current native input");
+                }
+            }
+            if (data.tag !== "close-owner") compare(item("appBar.button.undo").enabled, undoBefore,
+                "SAVE349: Save/refusal does not manufacture or consume an ordinary Undo step");
+            verify(assistant.connected, "SAVE349: save/cancel/retirement preserves genuine managed account");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE349: original account/model catalog is unchanged");
+        } finally {
+            if (connected370.save) disconnect313(saveLife370, save, "clicked", savedClicked);
+            if (connected370.opened) disconnect313(dialogLife, originalDialog, "openedChanged", openedChanged);
+            if (connected370.text) disconnect313(editorLife, editor, "textEdited", textEdited);
+            if (connected370.press) disconnect313(finalLife, finalSave, "pressedChanged", finalPressed);
+            if (connected370.click) disconnect313(finalLife, finalSave, "clicked", finalClicked);
+        }
+    }
+    function ux358_acknowledgedPresentation(composer, files) {
+        const selected = Probe.rows(assistant.selectedFiles);
+        compare(JSON.stringify(selected.map(file => ({id: file.id, name: file.name, bytes: file.bytes,
+            textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
+            "UX358: completed original ACK preserves exact canonical source descriptors and order");
+        for (const file of files) {
+            const matches = selected.filter(row => row.id === file.id);
+            compare(matches.length, 1, "UX358: each acknowledged original source retains one exact canonical authority row");
+            compare(matches[0].pending, false,
+                "UX358: matching completed ACK consumes this original source's pending presentation role");
+            const chips = Ui.itemsWithProperty(composer, "objectName").filter(control =>
+                control.objectName === "assistant.file." + file.id);
+            verify(chips.length <= 1 && chips.every(chip => !chip.visible),
+                "UX358: each acknowledged original chip is absent or hidden in its exact original composer subtree");
+        }
+    }
+    function ux356_fullyExposed(control) {
+        verify(control !== null && control.visible && control.width > 0 && control.height > 0,
+            "UX356: original visible control has real positive layout geometry");
+        let inWindow = false;
+        for (let parent = control.parent; parent; parent = parent.parent) {
+            inWindow = inWindow || parent === Ui.windowRoot(window);
+            if (parent.clip) {
+                const bounds = control.mapToItem(parent, 0, 0, control.width, control.height);
+                verify(bounds.x >= -0.5 && bounds.y >= -0.5
+                    && bounds.x + bounds.width <= parent.width + 0.5
+                    && bounds.y + bounds.height <= parent.height + 0.5,
+                    "UX356: complete original primary text/control is inside every actual clipping viewport");
+            }
+        }
+        verify(inWindow && Ui.rendered(control) && Ui.exposed(control),
+            "UX356: original control belongs to the genuine visible Main window");
+        const bounds = control.mapToItem(window.contentItem, 0, 0, control.width, control.height);
+        verify(bounds.x >= -0.5 && bounds.y >= -0.5
+            && bounds.x + bounds.width <= window.contentItem.width + 0.5
+            && bounds.y + bounds.height <= window.contentItem.height + 0.5,
+            "UX356: original primary control/text fits the unchanged normal window viewport");
+    }
+    function ux356_dialog() {
+        const candidates = Probe.objectsWithProperty(window, "disclosedContext").filter(object =>
+            object.assistant === assistant);
+        compare(candidates.length, 1, "UX356: one exact original assistant owns the existing disclosure/sign-in dialog");
+        return candidates[0];
+    }
+    function ux356_dialogControl(dialog, name) {
+        const found = Ui.itemsWithProperty(dialog.contentItem, "objectName").filter(control =>
+            control.objectName === name);
+        compare(found.length, 1, "UX356: exact original dialog owns one " + name);
+        return found[0];
+    }
+    function ux356_compactDialog(dialog) {
+        verify(dialog.opened && dialog.visible, "UX356: actual original consent/sign-in dialog is open");
+        const details = ux356_dialogControl(dialog, "assistant.contextDetailsToggle");
+        const preview = ux356_dialogControl(dialog, "assistant.contextPreview");
+        compare(details.checked, false, "UX356: exact technical payload is collapsed in the primary flow");
+        verify(!preview.visible, "UX356: exact technical JSON is not primary dialog prose");
+        const primary = Ui.itemsWithProperty(dialog.contentItem, "text").filter(control =>
+            control.visible && typeof control.text === "string" && control.text.length > 0);
+        verify(primary.length > 0, "UX356: compact primary flow still presents actual human-readable scope/account information");
+        for (const control of primary) ux356_fullyExposed(control);
+        verify(/ChatGPT|OpenAI/.test(dialog.title) || primary.some(control => /ChatGPT|OpenAI/.test(control.text)),
+            "UX356: compact primary presentation still identifies the real provider/account route");
+        const ok = dialog.standardButton(Dialog.Ok), cancel = dialog.standardButton(Dialog.Cancel);
+        verify(ok !== null && cancel !== null && ok.enabled && cancel.enabled,
+            "UX356: original standard consent/sign-in actions remain genuinely available");
+        ux356_fullyExposed(ok); ux356_fullyExposed(cancel); ux356_fullyExposed(details);
+        const actual = assistant.contextPreview;
+        compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(actual)),
+            "UX356: collapsed primary dialog still owns the exact actual current disclosure");
+        mouseClick(details, Ui.clickPoint(details).x, Ui.clickPoint(details).y);
+        tryCompare(details, "checked", true, 2000, "UX356: real detail control opens exact payload on demand");
+        verify(preview.visible && preview.readOnly, "UX356: actual original technical payload is accessible as read-only text");
+        compare(preview.text, actual, "UX356: on-demand technical text is byte-exact actual outgoing context, not a summary/golden");
+        // Expanded details may legitimately scroll. Close through the same live
+        // original control before measuring/using the compact primary actions.
+        Ui.scrollIntoView(details); rendered();
+        verify(details.enabled && Ui.exposed(details), "UX356: original expanded-details control remains physically reachable");
+        mouseClick(details, Ui.clickPoint(details).x, Ui.clickPoint(details).y);
+        tryCompare(details, "checked", false, 2000, "UX356: genuine detail close restores compact primary flow");
+        rendered(); ux356_fullyExposed(ok); ux356_fullyExposed(cancel);
+    }
+    function ux356_chip(root, file, sent) {
+        const name = (sent ? "assistant.sentFile." : "assistant.file.") + file.id;
+        const chips = Ui.itemsWithProperty(root, "objectName").filter(control => control.objectName === name);
+        compare(chips.length, 1, "UX356: exact original composer/user row owns one canonical attachment chip");
+        const chip = chips[0];
+        Ui.scrollIntoView(chip); rendered(); ux356_fullyExposed(chip);
+        const labels = Ui.itemsWithProperty(chip, "text").filter(control => control.visible
+            && typeof control.text === "string" && control.text.includes(file.name));
+        compare(labels.length, 1, "UX356: original chip has one actual complete filename/size label");
+        const label = labels[0];
+        ux356_fullyExposed(label);
+        verify(label.truncated === false && label.contentHeight <= label.height + 0.5,
+            "UX356: short message cannot collapse ordinary filename/size to ellipses or vertically crop it");
+        verify(/[0-9]/.test(label.text) && /bytes|[KMGT]i?B|[kmgt]B/.test(label.text),
+            "UX356: readable ordinary filename retains its actual size presentation");
+        verify(label.Accessible.name.includes(file.name) && label.Accessible.name.includes(String(file.bytes)),
+            "UX356: accessibility retains the complete original filename and exact admitted byte count");
+        const buttons = Ui.itemsWithProperty(chip, "enabled").filter(control =>
+            typeof control.clicked === "function" && control.Accessible.name.includes(file.name));
+        compare(buttons.length, 1, "UX356: original chip owns one actual named remove action");
+        ux356_fullyExposed(buttons[0]);
+        return {chip: chip, remove: buttons[0]};
+    }
+    function test_ux356_real_send_compact_scope_and_short_files_data() {
+        return ["send-click", "send-keyboard", "cancel-new-draft"].map(tag => ({tag: tag}));
+    }
+    function test_ux356_real_send_compact_scope_and_short_files(data) {
+        verify(Session.openProject(Probe.referenceUrl("project")),
+            "UX356 SETUP: lawful owned default-table scientific input opens through real Session");
+        const project = Session.project, owner = lifetime313(project);
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "UX356 SETUP: original real scientific calculation is actually current");
+        const science = save349_science(project), undo = project.canUndo;
+        const metadata = import265_owner(project), modified = project.modified;
+        compare(Probe.rows(assistant.messages).length, 0,
+            "UX356 SETUP: actual unique Qt test-mode storage starts without unrelated prior user history");
+        toggle();
+        Ui.click(this, Probe, window, "assistant.connection");
+        const dialog = ux356_dialog(), dialogLife = lifetime313(dialog);
+        tryCompare(dialog, "opened", true, 2000, "UX356: genuine connection control opens original sign-in dialog");
+        ux356_compactDialog(dialog);
+        const signIn = dialog.standardButton(Dialog.Ok);
+        mouseClick(signIn, Ui.clickPoint(signIn).x, Ui.clickPoint(signIn).y);
+        report187_ready("ux356-real-signin", false);
+        verify(!dialog.visible, "UX356: original sign-in acceptance closes its actual modal before composer input");
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const token = assistant.beginFileSelection();
+        verify(token.length > 0 && assistant.addSelectedFiles(token, [
+            Probe.referenceUrl("files/Original structure.cif"), Probe.referenceUrl("files/Original measured neutron profile.xye")]),
+            "UX356 SETUP: existing genuine selection door admits the actual independently owned source bytes");
+        tryCompare(assistant.selectedFiles, "count", 2, 2000,
+            "UX356 SETUP: both exact real canonical source IDs are present before Send");
+        const admitted = Probe.rows(assistant.selectedFiles);
+        const files = admitted.map(file => ({id: file.id, name: file.name,
+            bytes: file.bytes, textReadable: file.textReadable, format: file.format}));
+        compare(new Set(files.map(file => file.id)).size, 2, "UX356 SETUP: source IDs are app-issued, nonempty and distinct");
+        verify(admitted.every(file => file.id.length > 0 && file.pending === true),
+            "UX356 SETUP: actual newly admitted sources await original Send acknowledgement");
+        verify(assistant.contextConsentRequired, "UX356 SETUP: genuine changed selected-input scope requires fresh approval");
+        const initialHistory = JSON.stringify(Probe.rows(assistant.messages));
+        const editor = item("assistant.composer");
+        const composers = Probe.objectsWithProperty(window, "textRevision").filter(object => object.firstFocusItem === editor);
+        compare(composers.length, 1, "UX356: exact original editor has one genuine draft-revision owner");
+        const composer = composers[0];
+        for (const file of files) ux356_chip(composer, file, false);
+        verify(!Ui.itemsWithProperty(popup.contentItem, "text").some(control => control.visible
+            && control.text === "Inspect outgoing project context"),
+            "UX356: required approval is reached from actual Send, without the retired separate context link");
+        let opens = 0;
+        function opened() { if (alive313(dialogLife) && dialog.opened) ++opens; }
+        dialog.openedChanged.connect(opened);
+        try {
+            Ui.click(this, Probe, window, editor.objectName); visible185_type("continue");
+            const originalText = editor.text, originalRevision = composer.textRevision;
+            const selectedBefore = JSON.stringify(Probe.rows(assistant.selectedFiles));
+            if (data.tag === "send-keyboard") {
+                compare(window.activeFocusItem, editor, "UX356: real Return Send targets the actual focused original composer");
+                keyClick(Qt.Key_Return);
+            } else Ui.click(this, Probe, window, "assistant.send");
+            tryCompare(dialog, "opened", true, 2000, "UX356: actual click/Return Send directly opens required original disclosure");
+            compare(JSON.stringify(Probe.rows(assistant.messages)), initialHistory,
+                "UX356: requesting approval cannot fabricate an admitted or acknowledged original user row");
+            compare(editor.text, originalText, "UX356: before approval original typed text remains exact");
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selectedBefore,
+                "UX356: before approval all exact pending source identities/descriptors remain unchanged");
+            ux356_compactDialog(dialog);
+            if (data.tag === "cancel-new-draft") {
+                const cancel = dialog.standardButton(Dialog.Cancel);
+                mouseClick(cancel, Ui.clickPoint(cancel).x, Ui.clickPoint(cancel).y);
+                tryCompare(dialog, "visible", false, 2000, "UX356: genuine Cancel closes original disclosure without admission");
+                compare(editor.text, originalText, "UX356: actual Cancel preserves original draft spelling");
+                compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selectedBefore,
+                    "UX356: actual Cancel preserves all original pending source authority/presentation");
+                compare(JSON.stringify(Probe.rows(assistant.messages)), initialHistory,
+                    "UX356: canceled approval has no admitted/completed input or transcript side effect");
+                Ui.click(this, Probe, window, editor.objectName); visible185_type("A genuinely newer draft"); visible185_type("continue");
+                verify(composer.textRevision > originalRevision,
+                    "UX356: real keyboard edits create a distinct newer revision with identical final text");
+                Ui.click(this, Probe, window, "assistant.send");
+                tryCompare(dialog, "opened", true, 2000, "UX356: only new actual Send can reopen a canceled request");
+            }
+            const approvedRevision = composer.textRevision;
+            const expectedOpens = data.tag === "cancel-new-draft" ? 2 : 1;
+            compare(opens, expectedOpens, "UX356: original approval dialog opens once per genuine requested approval");
+            const oldIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+            const ok = dialog.standardButton(Dialog.Ok);
+            ux356_fullyExposed(ok); mouseClick(ok, Ui.clickPoint(ok).x, Ui.clickPoint(ok).y);
+            let original = null;
+            tryVerify(() => {
+                const rows = Probe.rows(assistant.messages).filter(row => !oldIds.has(row.id)
+                    && row.kind === "user" && row.text === "continue");
+                if (rows.length !== 1 || rows[0].status !== "pending") return false;
+                original = rows[0]; return true;
+            }, 2000, "UX356: actual matching approval auto-resumes exactly one original pending input before held ACK");
+            const submissions358 = [{text: "continue", id: original.id, files: files}];
+            compare(editor.text, "continue", "UX356: approval/admission is not an acknowledgement that consumes editor text");
+            compare(composer.textRevision, approvedRevision, "UX356: queued original approval cannot rewrite original admitted draft revision");
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selectedBefore,
+                "UX356: unacknowledged original cannot consume pending selected presentation");
+            assistant.refreshUsage();
+            tryVerify(() => !assistant.canCancel && assistant.connected && Probe.rows(assistant.messages).some(row =>
+                row.id === original.id && row.kind === "user" && row.status === "completed")
+                && Probe.rows(assistant.messages).some(row => !oldIds.has(row.id)
+                    && row.kind === "assistant" && row.status === "completed"), 10000,
+                "UX356: actual original ACK AND original assistant publication settle before history baseline");
+            ux358_acknowledgedPresentation(composer, files);
+            compare(editor.text, "", "UX356: only completed matching ACK consumes original editor revision");
+            const originalRows = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(originalRows.length, 1, "UX356: matching approval/ACK never duplicates original row ID");
+            compare(JSON.stringify(originalRows[0].payload.files.map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
+                "UX356: original completed user snapshot retains every exact submitted source descriptor");
+            const userRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
+            compare(userRows.length, 1, "UX356: exact original user row owns short-message sent chip presentation");
+            for (const file of files) ux356_chip(userRows[0], file, true);
+            verify(!assistant.contextConsentRequired, "UX356: completed approved current scope does not request repeat consent");
+            const retained = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+            const followIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+            const followFiles358 = Probe.rows(assistant.selectedFiles).map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}));
+            Ui.click(this, Probe, window, editor.objectName); visible185_type("continue again");
+            Ui.click(this, Probe, window, "assistant.send");
+            tryVerify(() => Probe.rows(assistant.messages).some(row => !followIds.has(row.id)
+                && row.kind === "user" && row.text === "continue again" && row.status === "pending"), 2000,
+                "UX356: already-approved unchanged scope sends directly without another modal");
+            const followRows358 = Probe.rows(assistant.messages).filter(row => !followIds.has(row.id)
+                && row.kind === "user" && row.text === "continue again" && row.status === "pending");
+            compare(followRows358.length, 1, "UX358: second held original input has one actual pending public user identity");
+            submissions358.push({text: "continue again", id: followRows358[0].id, files: followFiles358});
+            compare(opens, expectedOpens, "UX356: unchanged approved scope never repeats the disclosure");
+            verify(!dialog.visible, "UX356: ordinary approved Send does not reopen approval UI");
+            assistant.refreshUsage();
+            tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => !followIds.has(row.id)
+                && row.kind === "user" && row.text === "continue again" && row.status === "completed")
+                && Probe.rows(assistant.messages).some(row => !followIds.has(row.id)
+                    && row.kind === "assistant" && row.status === "completed"), 10000,
+                "UX356: second original ACK and response settle before removal/readback");
+            ux358_acknowledgedPresentation(composer, followFiles358);
+            const completedFollow358 = Probe.rows(assistant.messages).filter(row => row.id === followRows358[0].id);
+            compare(completedFollow358.length, 1, "UX358: second matching ACK retains exactly its original public row identity");
+            compare(completedFollow358[0].status, "completed", "UX358: second original receipt is its actual completed ACK row");
+            compare(JSON.stringify(completedFollow358[0].payload.files.map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(followFiles358),
+                "UX358: second acknowledged user snapshot retains every exact corresponding submitted source descriptor");
+            verify(retained.every(row => Probe.rows(assistant.messages).some(actual => JSON.stringify(actual) === row)),
+                "UX356: ordinary repeated work retains every completed original message unchanged");
+            const retainedRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
+            compare(retainedRows.length, 1, "UX356: original ID is re-resolved after later delegate/layout publication");
+            const sent = ux356_chip(retainedRows[0], files[0], true);
+            verify(sent.remove.enabled, "UX356: original sent source has a genuine idle remove action");
+            mouseClick(sent.remove, Ui.clickPoint(sent.remove).x, Ui.clickPoint(sent.remove).y);
+            tryCompare(assistant.selectedFiles, "count", 1, 2000, "UX356: actual original remove revokes only that current source ID");
+            compare(Probe.rows(assistant.selectedFiles)[0].id, files[1].id,
+                "UX356: sent remove preserves the other independently selected source identity");
+            const preserved = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(preserved.length, 1, "UX356: source removal preserves the sole original historical row");
+            compare(JSON.stringify(preserved[0].payload.files.map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
+                "UX356: revoking current authority never rewrites historical sent-file snapshot");
+            const context = JSON.parse(assistant.contextPreview);
+            compare(JSON.stringify(context.selected_files.files.map(file => file.id)), JSON.stringify([files[1].id]),
+                "UX356: current outgoing context has no read authority for the removed historical source");
+            verify(alive313(owner) && Session.project === project,
+                "UX356: compact consent/attachment presentation preserves exact original scientific owner");
+            compare(save349_science(project), science, "UX356: input/consent/chip changes preserve all original science/data/SU/relations/metadata");
+            compare(import265_owner(project), metadata, "UX356: original owner metadata/path/settings remain exact");
+            compare(project.modified, modified, "UX356: conversation/file presentation does not dirty the scientific project");
+            verify(!project.calculating && Probe.computedCurrent(project.currentExperiment),
+                "UX356: unchanged actual science remains current without a forced stamp or extra observation window");
+            compare(project.canUndo, undo, "UX356: presentation and permission changes invent no scientific Undo step");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account,
+                "UX356: genuine managed account/catalog remains exact through original admission and removal");
+            console.info("UX356_IDS", JSON.stringify({case: data.tag, first: original.id,
+                files: files, removed: files[0].id, remaining: files[1].id, dialogOpens: opens,
+                submissions: submissions358}));
+            visible185_capture("ux356-" + data.tag);
+        } finally { disconnect313(dialogLife, dialog, "openedChanged", opened); }
+    }
+    // The seven-case family's additional row enters only after the original
+    // four-point fit and ordinary writer/readback establish the saved directory.
+    function save359_current_ten_refit(project) {
+        const owner = lifetime313(project), path = project.path;
+        const inputs = visible185_inputs(project), shape = relation246_shape(project);
+        const declarations = relation245_declarations(project);
+        const beforeRows = Probe.rows(project.currentExperiment.background);
+        compare(JSON.stringify(beforeRows.map(row => [row.id, row.position, row.intensity.value])),
+            JSON.stringify([["1", 8, 0], ["6", 15, 0], ["10", 70, 0], ["14", 150, 0]]),
+            "SAVE359 SETUP: real saved current owner begins with FOUR independently declared original anchors");
+        verify(!project.modified && !Session.needsSaveAs,
+            "SAVE359 SETUP: the four-anchor current folder is genuinely owned and clean before editing");
+        compare(path, ApplicationInfo.localPath(Probe.referenceUrl("current")),
+            "SAVE359 SETUP: original current path is the established four-anchor directory");
+        const names = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
+        const diskBefore = names.map(name => Probe.readReferenceFile("current/" + name));
+        const background = project.currentExperiment.background;
+        const update = background.changeDefined("update", "1", 8, 5.5, false);
+        verify(update.applied === true && update.published === true,
+            "SAVE359 SETUP: lawful original ordinary background update actually applies/publishes");
+        const added = [["save359_9", 9, 10], ["save359_12", 12, 12.5], ["save359_25", 25, 15],
+            ["save359_50", 50, 17.5], ["save359_90", 90, 20], ["save359_130", 130, 22.5]];
+        for (const entry of added) {
+            const outcome = background.changeDefined("add", entry[0], entry[1], entry[2], false);
+            verify(outcome.applied === true && outcome.published === true,
+                "SAVE359 SETUP: each lawful ordinary Add really applies/publishes one independent anchor");
+            verify(alive313(owner) && Session.project === project && project.path === path && project.modified,
+                "SAVE359: background edits retain original current owner/path and genuinely dirty its saved state");
+        }
+        for (const row of Probe.rows(background)) {
+            verify(row.intensity.refinable && row.intensity.fittable,
+                "SAVE362B SETUP: every one of the ten genuine background intensities is actually eligible for fitting");
+            row.intensity.free = true; // Existing ordinary ParameterItem free entrance; never a fabricated fit/currentness stamp.
+            compare(row.intensity.free, true, "SAVE362B SETUP: all TEN actual background intensities are free before refit");
+        }
+        const expected = [["1", 8, 5.5, true], ["6", 15, 0, true], ["10", 70, 0, true], ["14", 150, 0, true]]
+            .concat(added.map(entry => [entry[0], entry[1], entry[2], true]));
+        function anchors() {
+            return Probe.rows(background).map(row => [row.id, row.position, row.intensity.value, row.intensity.free]);
+        }
+        function assertTenMembership() {
+            const actual = anchors();
+            compare(actual.length, 10, "SAVE359: all TEN actual original and newly admitted background rows remain present");
+            for (const row of expected) {
+                const found = actual.filter(value => value[0] === row[0]);
+                compare(found.length, 1, "SAVE359: every independently declared background ID remains unique");
+                compare(JSON.stringify([found[0][0], found[0][1], found[0][3]]), JSON.stringify([row[0], row[1], true]),
+                    "SAVE362B: all ten independent anchor identities/positions and FREE flags survive real refit/Save");
+            }
+        }
+        function assertTenStarts() {
+            assertTenMembership();
+            for (const row of expected) compare(JSON.stringify(anchors().filter(value => value[0] === row[0])[0]), JSON.stringify(row),
+                "SAVE362B SETUP: exact independent starting intensity operands are required BEFORE actual fitting only");
+        }
+        function roundedBackground() {
+            return JSON.stringify(background285_rows(project).map(row => {
+                const su = project.suText(row.intensity, row.uncertainty);
+                return [row.id, row.position, row.free, row.hasUncertainty, row.uid,
+                    row.minimum, row.maximum, row.name, row.units, su.value, su.su, su.bracket];
+            }));
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE359 SETUP: actual ten-anchor edit calculation settles before genuine refit");
+        assertTenStarts();
+        const beforeFit = visible185_values(project);
+        const fit = project.fit, fitLife = lifetime313(fit);
+        let starts = 0, finishes = 0;
+        function started() { if (alive313(fitLife) && fit.running) ++starts; }
+        function finished() { ++finishes; }
+        fit.runningChanged.connect(started); fit.finished.connect(finished);
+        try {
+            visible185_page("analysis"); Ui.click(this, Probe, window, "sideBar.tab.basic");
+            Ui.click(this, Probe, window, "fitting.start");
+            tryVerify(() => finishes === 1 && !fit.running && !project.calculating
+                && Probe.computedCurrent(project.currentExperiment), 10000,
+                "SAVE359 SETUP: real ordinary second FitJob finishes/publishes current ten-anchor science");
+            compare(starts, 1, "SAVE359: actual ten-anchor refit starts precisely one real worker");
+            verify(["success", "maxIterations"].includes(fit.outcome) && fit.iterations > 0
+                && Probe.rows(fit.results).length > 0 && visible185_values(project) !== beforeFit,
+                "SAVE359: refit actually moves parameters with real successful/bounded iterative results");
+            verify(visible185_parameters(project).some(parameter => parameter.free
+                && parameter.hasUncertainty && parameter.uncertainty > 0),
+                "SAVE359: actual positive fitted SUs exercise ordinary writer rounding");
+        } finally {
+            disconnect313(fitLife, fit, "runningChanged", started);
+            disconnect313(fitLife, fit, "finished", finished);
+        }
+        assertTenMembership();
+        const postFitBackground = background285_rows(project);
+        verify(postFitBackground.length === 10 && postFitBackground.every(row => row.free
+            && row.hasUncertainty && Number.isFinite(row.intensity) && Number.isFinite(row.uncertainty) && row.uncertainty > 0),
+            "SAVE362B SETUP: genuine refit publishes positive fitted SUs for ALL TEN actual free background intensities");
+        verify(postFitBackground.some(row => row.intensity !== expected.filter(value => value[0] === row.id)[0][2]),
+            "SAVE362B SETUP: actual background fitting moves at least one declared start, never a fixed/cached substitute");
+        const encodedBackground = roundedBackground();
+        compare(visible185_inputs(project), inputs, "SAVE359: background/refit preserves every original measured triple, mask, weight and phase link");
+        compare(relation246_shape(project), shape, "SAVE359: background/refit preserves actual original sites/composition/coordinates/occupancies");
+        compare(relation245_declarations(project), declarations, "SAVE359: actual original enabled/disabled equations and aliases survive refit");
+        visible185_page("project"); Ui.click(this, Probe, window, "mainArea.project.tab.description");
+        Ui.click(this, Probe, window, "project.title"); visible185_type("Original visible Save current-ten-refit");
+        keyClick(Qt.Key_Return);
+        compare(project.title, "Original visible Save current-ten-refit",
+            "SAVE359: actual original user title is committed before ordinary writer reference and Save");
+        for (let index = 0; index < names.length; ++index)
+            compare(Probe.readReferenceFile("current/" + names[index]), diskBefore[index],
+                "SAVE359: ten-anchor edits/refit have NOT been secretly saved before delegated current Save");
+        // Existing public BlockText is the ordinary writer's lazy Text-tab
+        // output. Reading it creates no destination or replacement owner.
+        const blocks = {"project.edi": project.metadataText, "structures/cosio.edi": project.currentStructure.text,
+            "experiments/d20.edi": project.currentExperiment.text, "analysis/analysis.edi": project.analysis.text};
+        const documents = {};
+        for (const name of names) {
+            documents[name] = blocks[name].text;
+            verify(blocks[name].error === "" && documents[name].length > 0,
+                "SAVE359: each actual pre-Save ordinary writer document is nonempty and has no writer refusal");
+        }
+        const completeText = project.projectText.text;
+        verify(project.projectText.error === "" && completeText.length > 0,
+            "SAVE359: complete original public Project Text is a healthy ordinary-writer document-closure witness");
+        function roundedValues() {
+            return JSON.stringify(visible185_parameters(project).map(parameter => {
+                const su = project.suText(parameter.value, parameter.uncertainty);
+                // Compare encoded ordinary SU spelling here, not an unsupported
+                // raw null-versus-fixed-zero storage promise. The independent
+                // real loader compares every persisted value/free/SU below.
+                return [parameter.path, parameter.free,
+                    su.value.length > 0 ? [su.value, su.su, su.bracket] : [parameter.value, su.su, su.bracket]];
+            }));
+        }
+        const values = roundedValues(), metadata = import265_owner(project);
+        const result = {outcome: fit.outcome, iterations: fit.iterations};
+        const undo = item("appBar.button.undo").enabled;
+        console.info("SAVE359_ORDINARY", JSON.stringify({documents: documents, completeText: completeText,
+            currentPath: path, four: 4, initialTen: expected, ten: anchors(), postFitBackground: postFitBackground,
+            encodedBackground: encodedBackground, dirty: project.modified, refitStarts: starts,
+            fittedOutcome: fit.outcome, fittedIterations: fit.iterations}));
+        verify(alive313(owner) && Session.project === project && project.path === path && project.modified,
+            "SAVE359: public ordinary Text reference leaves original ten-anchor fitted owner/path DIRTY before Save");
+        toggle(); assistant.signIn(); visible185_ready("save359-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("save359-disclosed");
+        compare(assistant.workingFolder, "", "SAVE359: genuine current-directory Save needs no fresh-parent grant workaround");
+        const show = item("assistant.showActions");
+        verify(show.enabled && show.visible && !assistant.showActions,
+            "SAVE359 SETUP: original actionable mode checkbox begins in normal mode");
+        mouseClick(show); verify(assistant.showActions, "SAVE359: real checkbox selects actual visible Save controls");
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const before = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const save = Ui.control(Probe, window, "appBar.button.save"), saveLife = lifetime313(save);
+        verify(save.enabled && Ui.exposed(save), "SAVE359: original ordinary current Save button is physically actionable");
+        let clicks = 0;
+        function clicked() { ++clicks; }
+        save.clicked.connect(clicked);
+        try {
+            assistant.send("Save this actual fitted displayed project using original visible Save current-ten-refit");
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                && visible185_outcome("save349-current-ten-refit", before) !== null,
+                visible237_observationMs([{path: "", text: "Original μ 🧪 saved project"}]),
+                "SAVE359: exact original current Save request actually returns/settles within the existing bound");
+            const outcome = visible185_outcome("save349-current-ten-refit", before);
+            verify(outcome.status === "succeeded" && outcome.committed === true && outcome.reopened === true
+                && outcome.active === true && outcome.presentation_complete === true,
+                "SAVE359: only actual commit/verified reopen/active displayed presentation is current Save success");
+            compare(clicks, 1, "SAVE359: exactly ONE real original ordinary Save control is clicked");
+            verify(alive313(owner) && Session.project === project && project.path === path && !project.modified,
+                "SAVE359: same live original displayed owner/path is saved/unmodified without a fresh directory");
+            verify(alive313(fitLife), "SAVE359: original public real-fit receiver remains alive before outcome readback");
+            compare(outcome.destination, path, "SAVE359: exact original current directory is the truthful actual destination");
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                "SAVE359: original active ten-anchor owner is actually current after saved readback publication");
+            assertTenMembership();
+            compare(roundedBackground(), encodedBackground,
+                "SAVE362B: ALL genuine post-fit background values/free/positive-SU/spec metadata follow ordinary writer rounding after active Save");
+            compare(roundedValues(), values, "SAVE359: all active parameter values/free/SUs follow the ORIGINAL ordinary writer rounding rule");
+            compare(visible185_inputs(project), inputs, "SAVE359: current Save retains ALL original observations/sigmas/masks/weights/links");
+            compare(relation246_shape(project), shape, "SAVE359: current Save retains actual original physical sites/composition");
+            compare(relation245_declarations(project), declarations, "SAVE359: current Save retains exact original scientific declarations");
+            compare(import265_owner(project), metadata, "SAVE359: actual current Save retains every original metadata/path/settings fact");
+            compare(fit.outcome, result.outcome, "SAVE359: original real refit outcome remains factual after Save");
+            compare(fit.iterations, result.iterations, "SAVE359: original actual refit iterations survive Save");
+            compare(item("appBar.button.undo").enabled, undo, "SAVE359: current Save invents/consumes no original Undo availability");
+            verify(!Session.needsSaveAs && assistant.connected, "SAVE359: genuine current Save retains account and current-directory ownership");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE359: original managed account/model catalog stays exact");
+        } finally { disconnect313(saveLife, save, "clicked", clicked); }
+    }
+}

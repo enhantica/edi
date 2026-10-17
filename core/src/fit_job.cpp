@@ -12,6 +12,7 @@
 #include <locale>
 #include <sstream>
 #include <utility>
+#include <type_traits>
 
 #include "edi/calculation.hpp"
 #include "edi/categories.hpp"
@@ -19,6 +20,8 @@
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
+#include "fit_inputs.hpp"
+#include "publication.hpp"
 
 namespace edi {
 namespace {
@@ -31,35 +34,8 @@ std::atomic<WorkerFileObserver> worker_file_observer{nullptr};
 // (Undo's capture). So: every parameter's write identities — value, uncertainty, free flag and fit start, an
 // equal-value write included, which an admitted-write epoch does not see when it goes round the door — and
 // those settings' values. Any difference at the end supersedes the fit.
-struct FitInputs {
-    std::vector<std::uint64_t> identities;
-    std::string settings;
-};
-
-FitInputs inputs_of(Project& project) {
-    FitInputs inputs;
-    for (const Parameter* parameter : project.parameters()) {
-        inputs.identities.push_back(parameter->value.written());
-        inputs.identities.push_back(parameter->uncertainty.written());
-        inputs.identities.push_back(parameter->free.written());
-        inputs.identities.push_back(parameter->start_value.written());
-        inputs.identities.push_back(parameter->start_uncertainty.written());
-    }
-    std::ostringstream settings;
-    settings.imbue(std::locale::classic());
-    settings << std::setprecision(17) << project.fitting_mode << '\x1f' << project.descent << '\x1f'
-             << project.minimizer_max_iterations << '\x1f' << project.minimizer_chi_square_tolerance << '\x1f'
-             << (project.minimizer_type.has_value() ? "T" + *project.minimizer_type : std::string("-"));
-    for (const auto& experiment : project.experiments) {
-        settings << '\x1f' << experiment->dataset_weight;
-    }
-    inputs.settings = settings.str();
-    return inputs;
-}
-
-bool operator!=(const FitInputs& a, const FitInputs& b) {
-    return a.identities != b.identities || a.settings != b.settings;
-}
+using detail::FitInputs;
+using detail::inputs_of;
 
 // What the worker hands back: the fitted copy and what its fit returned, or why there is none.
 struct Outcome {
@@ -127,14 +103,16 @@ FitFrame frame_of(Project& preview, const std::map<std::string, double>& values)
 // Shared with the job and the deliveries on their way, so a delivery that arrives after the FitJob is
 // gone finds `open` false and does nothing.
 struct FitJob::State {
-    State(Project& project, work::Worker& runner, Hooks callbacks, Seams injected)
-        : live(project), worker(runner), hooks(std::move(callbacks)), seams(std::move(injected)) {}
+    State(Project& project, work::Worker& runner, Hooks callbacks, Seams injected, CancelCallback checkpoint)
+        : live(project), worker(runner), hooks(std::move(callbacks)), seams(std::move(injected)), checkpoint(std::move(checkpoint)) {}
 
     Project& live;
     work::Worker& worker;
     Hooks hooks;
     Seams seams;
+    CancelCallback checkpoint;
     bool open = true;
+    std::optional<FitReport> completed;
     work::Ticket ticket = 0;  // the running fit's job, or 0
     // Set by the owner when it has shown a frame, cleared by the worker when it emits one.
     std::atomic<bool> frame_wanted{true};
@@ -153,9 +131,9 @@ struct FitJob::State {
             return;
         }
         self->ticket = 0;
-        FitReport report;
-        report.result = std::move(outcome.result);
-        report.refusal = std::move(outcome.refusal);
+        static_assert(std::is_nothrow_move_constructible_v<FitReport>);
+        FitReport report{FitStatus::ERROR, std::move(outcome.refusal), std::move(outcome.result)};
+        try {
         if (!report.result.has_value()) {
             report.status = FitStatus::ERROR;
             if (report.refusal.empty()) {
@@ -167,30 +145,66 @@ struct FitJob::State {
         } else if (outcome.scan) {
             // The scan's results are the rows on disk; the template is left as it was.
             report.status = report.result->status;
-        } else if (!unchanged_since(self->live, outcome.stamps) ||
-                   inputs_of(self->live) != outcome.inputs ||
-                   !copy_parameter_states(self->live, *outcome.fitted)) {
-            report.status = FitStatus::SUPERSEDED;
         } else {
-            // The fitted copy's pattern is the fit's own last calculation, at the values just written: it
-            // is published under the stamps the live project has now. The fit's result record goes with it.
-            copy_fit_result(self->live, *outcome.fitted);
-            publish(self->live, stage_computed(*outcome.fitted, work_stamps(self->live)));
-            report.status = report.result->status;
+            try {
+                if (!unchanged_since(self->live, outcome.stamps) || inputs_of(self->live) != outcome.inputs)
+                    report.status = FitStatus::SUPERSEDED;
+                else {
+                    const auto targets = parameter_entries(self->live);
+                    const auto sources = parameter_entries(*outcome.fitted);
+                    bool same = targets.size() == sources.size();
+                    for (std::size_t i = 0; same && i < targets.size(); ++i)
+                        same = targets[i].path == sources[i].path && targets[i].parameter && sources[i].parameter;
+                    if (!same) report.status = FitStatus::SUPERSEDED;
+                    else {
+                        FitResultRecord record = outcome.fitted->fit_result;
+                        auto staged = stage_computed(*outcome.fitted, work_stamps(self->live));
+                        auto publication = detail::prepare_publication(self->live, std::move(staged));
+                        if (!publication) report.status = FitStatus::SUPERSEDED;
+                        else {
+                            // All owning copies, parameter joins and source buffers exist before the first write.
+                            for (std::size_t i = 0; i < targets.size(); ++i) {
+                                auto& to = *targets[i].parameter; const auto& from = *sources[i].parameter;
+                                if (to.value.get() != from.value.get()) { to.value = from.value.get(); to.epoch = detail::Epoch(); }
+                                if (to.uncertainty.get() != from.uncertainty.get()) to.uncertainty = from.uncertainty.get();
+                                if (to.start_value.get() != from.start_value.get()) to.start_value = from.start_value.get();
+                                if (to.start_uncertainty.get() != from.start_uncertainty.get()) to.start_uncertainty = from.start_uncertainty.get();
+                            }
+                            static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+                            self->live.fit_result = std::move(record);
+                            for (std::size_t i = 0; i < self->live.experiments.size(); ++i)
+                                copy_fit_share(*self->live.experiments[i], *outcome.fitted->experiments[i]);
+                            publication->commit(self->live);
+                            report.status = report.result->status;
+                        }
+                    }
+                }
+            } catch (...) {
+                report.status = FitStatus::ERROR;
+                try { report.refusal = "The fit result could not be prepared for publication; accepted state is unchanged"; }
+                catch (...) { report.refusal.clear(); }
+            }
         }
+        } catch (...) {
+            // Keep the actual optimizer result even if a failure explanation cannot allocate.
+            report.status = FitStatus::ERROR;
+        }
+        self->completed.emplace(std::move(report));
         if (self->hooks.finished) {
-            self->hooks.finished(report);
+            try { self->hooks.finished(*self->completed); }
+            catch (...) { /* The actual completed report remains owned for owner-thread recovery. */ }
         }
     }
 };
 
-FitJob::FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams)
-    : state_(std::make_shared<State>(live, worker, std::move(hooks), std::move(seams))) {}
+FitJob::FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams, CancelCallback checkpoint)
+    : state_(std::make_shared<State>(live, worker, std::move(hooks), std::move(seams), std::move(checkpoint))) {}
 
 FitJob::~FitJob() {
     state_->open = false;
     if (state_->ticket != 0) {
-        state_->worker.cancel(state_->ticket);
+        try { state_->worker.cancel(state_->ticket); }
+        catch (...) { /* Publication was already disabled; teardown must not throw. */ }
     }
 }
 
@@ -203,12 +217,16 @@ bool FitJob::start(const Project* scan_template) {
     auto inputs = std::make_shared<FitInputs>(inputs_of(state_->live));
     state_->frame_wanted.store(true, std::memory_order_release);
     const std::shared_ptr<State> self = state_;
+    // Prepare final ownership/delivery before admission. Worker-side preparation failure
+    // must still return the same nonallocating final delivery, carrying the real result.
+    auto outcome = std::make_shared<Outcome>();
+    outcome->stamps = snapshot->stamps;
+    outcome->inputs = *inputs;
+    outcome->scan = is_scan_fitting_mode(effective_fitting_mode(snapshot->project));
+    work::Delivery completion = [self, outcome] { State::finish(self, *outcome); };
     state_->ticket = state_->worker.submit(
-        kChannel, [self, snapshot, inputs](const work::CancelToken& token, const work::Emit& emit) -> work::Delivery {
-            auto outcome = std::make_shared<Outcome>();
-            outcome->stamps = snapshot->stamps;
-            outcome->inputs = *inputs;
-            outcome->scan = is_scan_fitting_mode(effective_fitting_mode(snapshot->project));
+        kChannel, [self, snapshot, outcome, completion = std::move(completion)](const work::CancelToken& token, const work::Emit& emit) mutable -> work::Delivery {
+            try {
             // A single or joint fit's frames are drawn on a second copy, so the fit's own copy is touched by the
             // fit alone. A scan's frame is the pattern crysta's fit left for the file (edi ADR-0029).
             std::shared_ptr<Project> preview;
@@ -301,7 +319,7 @@ bool FitJob::start(const Project* scan_template) {
                 if (self->seams.polled) {
                     self->seams.polled(polls);
                 }
-                return token.cancelled();
+                return token.cancelled() || (self->checkpoint && self->checkpoint());
             };
             try {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
@@ -312,8 +330,13 @@ bool FitJob::start(const Project* scan_template) {
             } catch (...) {
                 outcome->refusal = "the fit failed";
             }
-            return [self, outcome] { State::finish(self, *outcome); };
+            } catch (const std::exception& error) {
+                try { outcome->refusal = error.what(); } catch (...) { outcome->refusal.clear(); }
+            } catch (...) { outcome->refusal.clear(); }
+            return std::move(completion);
         });
+    // An exception before this successful submission keeps the previous borrow valid.
+    state_->completed.reset();
     return true;
 }
 

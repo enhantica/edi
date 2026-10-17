@@ -61,8 +61,10 @@ for kind, form in forms.items():
     configured = b / ('configured-' + kind)
     if a == form:
         configured.write_text(json.dumps(a))
+        (r / build).mkdir(parents=True, exist_ok=True)
         sys.exit(0)
-    if a == ['--build', build, '-j'] and configured.exists():
+    build_forms = [['--build', build, '-j'], ['--build', build, '--parallel', '2']]
+    if a in build_forms and configured.exists():
         if json.loads(configured.read_text()) != form:
             break
         if kind == 'core':
@@ -74,6 +76,8 @@ for kind, form in forms.items():
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text('#!/bin/sh\necho candidate-cpp-executed\n')
             dest.chmod(0o755)
+        with (b / 'executed-build-requests.jsonl').open('a') as f:
+            f.write(json.dumps(['cmake', *a]) + '\n')
         sys.exit(0)
 with (b / 'unsupported-commands.jsonl').open('a') as f:
     f.write(json.dumps(['cmake', *a]) + '\n')
@@ -83,7 +87,31 @@ sys.exit(64)
     cmake.chmod(0o755)
 
 
-def runtime_case(base, caller, explicit, *, accident=None):  # noqa: PLR0912, PLR0915
+def alter_consumer_request(base, script, accident):
+    original = script.read_text()
+    needle, replacement = (
+        (
+            '-DCMAKE_PREFIX_PATH="$PREFIX"',
+            '-DCMAKE_PREFIX_PATH="$ROOT/build/crysta-prefix"',
+        )
+        if accident == 'ordinary-prefix'
+        else ('cmake --build "$BUILD"', 'cmake --build "$ROOT/build/wrong"')
+    )
+    assert original.count(needle) == 1, (
+        'F12: each accident identifies exactly its intended real transport request'
+    )
+    changed = original.replace(needle, replacement, 1)
+    assert changed != original, 'F12: an accident must change its intended producer request'
+    script.write_text(changed)
+    (base / 'changed-request.json').write_text(
+        json.dumps({
+            'accident': accident,
+            'replacement': replacement,
+        })
+    )
+
+
+def runtime_case(base, caller, explicit, *, accident=None, outside=None):  # noqa: PLR0912, PLR0915
     base.mkdir()
     env, repo, _ = consumer(base, platform='linux-64', prepare_only=True)
     for k in list(env):
@@ -91,7 +119,7 @@ def runtime_case(base, caller, explicit, *, accident=None):  # noqa: PLR0912, PL
             env.pop(k)
     if explicit:
         env['EDI_USE_CONSUMER_BUILD'] = '1'
-    env.update(PYTHONPATH=str(repo / 'lib'), PYTHONNOUSERSITE='1')
+    env.update(PYTHONPATH=str(repo / 'lib'), PYTHONNOUSERSITE='1', CMAKE_BUILD_PARALLEL_LEVEL='2')
     shutil.copytree(ROOT / 'lib/edi', repo / 'lib/edi')
     shutil.copytree(ROOT / 'tools/checks', repo / 'tools/checks')
     shutil.copytree(ROOT / 'tools/testing', repo / 'tools/testing')
@@ -116,9 +144,9 @@ def runtime_case(base, caller, explicit, *, accident=None):  # noqa: PLR0912, PL
     (prefix / '.crysta-sha').write_text('b6' * 20 + '\n')
     cmake_transport(base)
 
-    def call(argv):
+    def call(argv, *, cwd=repo):
         result = subprocess.run(
-            argv, cwd=repo, env=env, text=True, capture_output=True, check=False, timeout=3
+            argv, cwd=cwd, env=env, text=True, capture_output=True, check=False, timeout=3
         )
         if result.returncode == 0:
             assert_no_swallowed_refusal(base, True)
@@ -154,20 +182,21 @@ def runtime_case(base, caller, explicit, *, accident=None):  # noqa: PLR0912, PL
         result = call([sys.executable, 'tools/checks/python_surface_superset.py'])
     elif caller == 'cpp-consumer':
         if accident:
-            script = repo / 'tools/ci/crysta-consumer.sh'
-            text = script.read_text()
-            text = (
-                text.replace(
-                    '-DCMAKE_PREFIX_PATH="$PREFIX"',
-                    '-DCMAKE_PREFIX_PATH="$ROOT/build/crysta-prefix"',
+            alter_consumer_request(base, repo / 'tools/ci/crysta-consumer.sh', accident)
+        if outside is None:
+            result = call(['bash', 'tools/ci/crysta-consumer.sh'])
+        else:
+            caller_dir = base / 'outside-caller'
+            caller_dir.mkdir()
+            if outside == 'shadow-helper':
+                helper = caller_dir / 'tools/ci/sdk_content_identity.py'
+                helper.parent.mkdir(parents=True)
+                helper.write_text(
+                    'from pathlib import Path\n'
+                    "Path('caller-helper-executed').write_text('untrusted caller helper')\n"
+                    "print('0' * 64)\n"
                 )
-                if accident == 'ordinary-prefix'
-                else text.replace(
-                    'cmake --build "$BUILD" -j', 'cmake --build "$ROOT/build/wrong" -j'
-                )
-            )
-            script.write_text(text)
-        result = call(['bash', 'tools/ci/crysta-consumer.sh'])
+            result = call(['bash', str(repo / 'tools/ci/crysta-consumer.sh')], cwd=caller_dir)
     else:
         # Run the plugin lifecycle entry. A diagnostic has no consumer corpus source;
         # it must stay unknown, never stage the ordinary build's unrelated corpus.
@@ -238,4 +267,32 @@ def test_cpp_request_accident_cannot_manufacture_the_candidate_witness(tmp_path,
     )
     assert 'candidate-cpp-executed' not in bad.stdout, (
         ' F12 configuration text cannot impersonate the candidate executable'
+    )
+    proof = json.loads((tmp_path / 'subject/changed-request.json').read_text())
+    refused = [
+        json.loads(line)
+        for line in (tmp_path / 'subject/unsupported-commands.jsonl').read_text().splitlines()
+    ]
+    expected = str(
+        tmp_path
+        / 'subject/edi/build'
+        / ('crysta-prefix' if accident == 'ordinary-prefix' else 'wrong')
+    )
+    assert proof['accident'] == accident and any(
+        any(expected in argument for argument in argv) for argv in refused
+    ), 'F12: the changed wrong-prefix/build request actually reaches the strict refusal boundary'
+
+
+@pytest.mark.parametrize('outside', ['empty', 'shadow-helper'])
+def test_installed_consumer_roots_helper_sources_independently_of_caller_cwd(tmp_path, outside):
+    base = tmp_path / 'outside'
+    built, result = runtime_case(base, 'cpp-consumer', True, outside=outside)
+    assert built.returncode == 0 and result is not None and result.returncode == 0, (
+        'SDK2: valid selected-unit inputs support the real standalone entry from another cwd'
+    )
+    assert 'candidate-cpp-executed' in result.stdout, (
+        'SDK2: outside-root invocation reaches the actual selected standalone transport and run'
+    )
+    assert not (base / 'outside-caller/caller-helper-executed').exists(), (
+        'SDK2: caller-controlled relative helper source is never executed by the rooted entry'
     )

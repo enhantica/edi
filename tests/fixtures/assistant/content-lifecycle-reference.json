@@ -1,0 +1,7 @@
+{
+  "url": "https://developers.openai.com/api/reference/resources/responses/streaming-events.md",
+  "utc": "2026-10-15T03:27:51.634429+00:00",
+  "sha256": "2f550046706d1383155d630988e01c6444626247f4c10400aaafba060a349ce0",
+  "bytes": 2087868,
+  "purpose": "Independent Responses item/content identities and finalization; no provider entitlement or generated oracle."
+}
