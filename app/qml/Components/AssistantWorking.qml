@@ -15,15 +15,17 @@ EaElements.Label {
         && Object.keys(assistant.pendingPlan).length === 0
     visible: presented && working
     clip: true
-    text: qsTr("Working…")
+    text: qsTr("AI working...")
     textFormat: Text.PlainText
     color: EaStyle.Colors.themeAccent
-    Accessible.name: qsTr("Assistant is working")
-    property bool branded: false
+    Accessible.name: text
+    property int variant: 0
+    readonly property bool animating: visible && EaStyle.Times.translationChange > 0
+    onAnimatingChanged: if (!animating) workGlyph.rotation = 0
     readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
     leftPadding: iconExtent + AppSizes.unit * 0.5
     onVisibleChanged: {
-        if (visible) branded = Math.random() < 0.5;
+        if (visible) variant = Math.floor(Math.random() * 3);
         else workGlyph.rotation = 0;
     }
     Item {
@@ -31,22 +33,36 @@ EaElements.Label {
         height: width
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        ControlsImpl.IconImage {
+        Item {
             id: workGlyph
             width: workStatus.iconExtent
             height: width
             anchors.centerIn: parent
-            source: workStatus.branded ? "../../resources/logo/AssistantWorking.svg" : "../../resources/logo/AssistantSpinner.svg"
-            sourceSize: Qt.size(width, height)
-            color: EaStyle.Colors.themeAccent
-            fillMode: Image.PreserveAspectFit
-            Accessible.ignored: true
+            ControlsImpl.IconImage {
+                anchors.fill: parent
+                visible: workStatus.variant !== 2
+                source: workStatus.variant === 1 ? "../../resources/logo/AssistantWorking.svg" : "../../resources/logo/AssistantSpinner.svg"
+                sourceSize: Qt.size(width, height)
+                color: EaStyle.Colors.themeAccent
+                fillMode: Image.PreserveAspectFit
+                Accessible.ignored: true
+            }
+            EaElements.Label {
+                anchors.centerIn: parent
+                visible: workStatus.variant === 2
+                text: "robot"
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: workStatus.iconExtent
+                color: EaStyle.Colors.themeAccent
+                Accessible.ignored: true
+            }
         }
     }
+
     RotationAnimation {
         target: workGlyph
         property: "rotation"
-        running: workStatus.visible && workStatus.branded && EaStyle.Times.translationChange > 0
+        running: workStatus.animating && workStatus.variant !== 0
         loops: Animation.Infinite
         from: 0
         to: 360 * 6
@@ -58,7 +74,7 @@ EaElements.Label {
     RotationAnimation {
         target: workGlyph
         property: "rotation"
-        running: workStatus.visible && !workStatus.branded && EaStyle.Times.translationChange > 0
+        running: workStatus.animating && workStatus.variant === 0
         loops: Animation.Infinite
         from: 0
         to: 360

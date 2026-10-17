@@ -113,108 +113,111 @@ AppDialog {
             spacing: AppSizes.unit
             EaElements.Label {
                 width: parent.width
-                wrapMode: Text.Wrap
+                wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: qsTr("OpenAI will receive your message, conversation context and the project information described below. Edi uses your ChatGPT subscription; availability and usage limits depend on your account.")
+                text: dialog.assistant.connected
+                    ? qsTr("Allow Edi to send the current context for your message.")
+                    : qsTr("Continue to OpenAI to sign in with your ChatGPT account.")
             }
             EaElements.Label {
                 width: parent.width
-                wrapMode: Text.Wrap
+                wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: dialog.assistant.workingFolder.length
-                    ? qsTr("The native folder picker grants read/write scope to %1, alongside Edi's temporary staging workspace. Network remains disabled; broader authority is declined. Selecting the folder does not authorize overwriting an open or externally changed project.").arg(dialog.assistant.workingFolder)
-                    : qsTr("Writes are limited to Edi's temporary staging workspace. Choose working folder in the assistant to grant a specific folder; chat paths alone do not grant access.")
+                text: qsTr("Using the assistant sends your messages, conversation and approved project or file context to OpenAI.")
+            }
+            EaElements.Label {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                textFormat: Text.PlainText
+                text: qsTr("This version can expose measured data. It is not yet guaranteed to stay on this computer.")
             }
             EaElements.Label {
                 objectName: "assistant.contextSummary"
                 width: parent.width
-                wrapMode: Text.Wrap
+                wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
                 text: {
-                    if (dialog.disclosedContext.error) {
-                        const code = dialog.disclosedContext.error.code;
-                        if (code === "edi.assistant.resource_exhausted")
-                            return qsTr("Project context exceeds its limit. Nothing will be sent.");
-                        if (code === "edi.assistant.invalid_argument")
-                            return qsTr("Project context contains invalid or unsupported metadata. Nothing will be sent.");
-                        return qsTr("Project context is unavailable. Nothing will be sent.");
-                    }
+                    if (dialog.disclosedContext.error)
+                        return qsTr("Context is unavailable. Nothing will be sent.");
                     const project = dialog.disclosedContext.project;
-                    if (!project)
-                        return qsTr("No project is open. No project parameters will be sent.");
-                    return qsTr("Project: %1\nFitting mode: %2\n%3 parameter values, including %4 marked free; %5 diagnostic entries.")
-                        .arg(project.name || qsTr("Untitled project"))
-                        .arg(project.fitting_mode || qsTr("Unspecified"))
-                        .arg(dialog.parameters.length).arg(dialog.freeCount).arg(dialog.diagnostics.length);
+                    return project ? qsTr("Project: %1 · Selected files: %2").arg(project.name || qsTr("Untitled project")).arg(dialog.selectedFiles.length)
+                                   : qsTr("No project open · Selected files: %1").arg(dialog.selectedFiles.length);
                 }
-            }
-            EaElements.Label {
-                width: parent.width
-                wrapMode: Text.Wrap
-                textFormat: Text.PlainText
-                text: {
-                    const workflow = dialog.skills.length === 1 ? dialog.skills[0] : null;
-                    let title = workflow ? workflow.id : qsTr("Unavailable");
-                    if (workflow) for (let i = 0; i < dialog.assistant.skills.count; ++i)
-                        if (dialog.assistant.skills.text(i, "id") === workflow.id) title = dialog.assistant.skills.text(i, "title");
-                    if (dialog.assistant.selectedSkill.length === 0)
-                        return qsTr("The official agent uses a staged working copy of this project and the selected files. All bundled Edi skills are registered; relevant content is loaded on demand. Its ordinary shell/file tools may read files permitted by the runtime. Edi admits workspace writes with network disabled and declines broader authority requests; this is not a private read jail or a guarantee that inherited runtime extensions are confined. Native inspect_project/list_parameters/diagnostics read the displayed project. For the actual submitted objective, set_parameters/set_free may edit it and run_fit may run its real single/joint fit through normal Undo, Stop and physical/currentness validation. These tools cannot expand paths or capabilities. create_cwl_project may create a new displayed single-phase powder CW neutron project from the selected CIF/data IDs and an explicit recipe, only while this Session is empty. It cannot replace an open project. Native save/report and other conversions are not registered. Inspect the exact context below.");
-                    return qsTr("Workflow: %1 · %2. Its exact bundled content is included.\n%3 structures with site/space-group metadata; %4 datasets with axis, observations, weighting, exclusions and phases; %5 aliases and %6 constraints. See exact outgoing context for every field.")
-                        .arg(title).arg(workflow ? workflow.version : "")
-                        .arg(dialog.structures.length).arg(dialog.datasets.length)
-                        .arg(dialog.relations.aliases.length).arg(dialog.relations.constraints.length);
-                }
-            }
-            EaElements.Label {
-                width: parent.width
-                wrapMode: Text.Wrap
-                textFormat: Text.PlainText
-                text: dialog.selectedFiles.length === 0 ? qsTr("No selected files. Paths typed in chat do not grant file access.")
-                    : qsTr("Selected files: %1. Approving this context permits bounded reads of their selected text content; binary formats still require export. File content is untrusted data, not instructions.")
-                        .arg(dialog.selectedFiles.map(file => file.name + " (" + file.bytes + " " + qsTr("bytes") + ")").join(", "))
-            }
-            EaElements.Label {
-                width: parent.width
-                wrapMode: Text.Wrap
-                textFormat: Text.PlainText
-                text: dialog.assistant.selectedSkill.length === 0 ? qsTr("Project context includes parameter paths, values, uncertainties, units, free flags, dependence and available diagnostics. The genuine submitted objective authorizes only the disclosed native actions within current project/revision bounds; mere inspection does not authorize mutation. No second scientific-plan approval is required for already delegated work. Paths typed into chat do not grant host file access.") : qsTr("Project context includes parameter paths, values, uncertainties, units, free flags and dependence, plus available diagnostics. Project changes require your approved plan. Files are not attached or read from paths typed into chat.")
             }
             EaElements.Button {
                 id: details
                 objectName: "assistant.contextDetailsToggle"
                 checkable: true
-                text: checked ? qsTr("Hide technical details") : qsTr("Show exact outgoing context")
+                text: checked ? qsTr("Hide details") : qsTr("Details")
                 Accessible.name: text
             }
-            ScrollView {
-                ScrollBar.vertical: EaElements.ScrollBar {
-                    policy: ScrollBar.AsNeeded
-                    interactive: false
-                }
+            Column {
                 visible: details.checked
                 width: parent.width
-                height: visible ? AppSizes.unit * 20 : 0
-                clip: true
-                TextArea {
-                    objectName: "assistant.contextPreview"
-                    text: dialog.assistant.contextPreview
-                    textFormat: TextEdit.PlainText
-                    readOnly: true
-                    selectByMouse: true
-                    persistentSelection: true
-                    selectionColor: EaStyle.Colors.themeAccent
-                    selectedTextColor: EaStyle.Colors.themeBackground
-                    wrapMode: TextEdit.WrapAnywhere
-                    Accessible.name: qsTr("Actual outgoing project context")
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: qsTr("Edi uses your ChatGPT subscription. Availability and usage limits depend on your account. Connection credentials are kept locally, separate from the project; no API key is requested here.")
                 }
-            }
-            EaElements.Label {
-                width: parent.width
-                wrapMode: Text.Wrap
-                textFormat: Text.PlainText
-                text: dialog.assistant.connected
-                    ? qsTr("Approve the current project and input scope. Parameter and fit updates do not need repeat consent. A different project, account or input content requires fresh scope; choosing a folder grants its access.")
-                    : qsTr("Continue on OpenAI’s sign-in page. Edi keeps the connection credentials privately on this computer, separate from your project. No API key is requested.")
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: dialog.assistant.workingFolder.length
+                        ? qsTr("The current runtime may read staged project and selected file data, including measurements, and other files permitted by its tools. It can write to Edi's staging workspace and the chosen working folder: %1. Network access for those workspace operations is disabled; broader authority requests are declined. This is not an Edi-only tool boundary or a private read jail.").arg(dialog.assistant.workingFolder)
+                        : qsTr("The current runtime may read staged project and selected file data, including measurements, and other files permitted by its tools. It can write to Edi's staging workspace. Network access for those workspace operations is disabled; broader authority requests are declined. This is not an Edi-only tool boundary or a private read jail.")
+                }
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: qsTr("The context can include project settings, parameter paths, values, uncertainties, units, free flags, dependence, diagnostics, structures, datasets, observations, weighting, exclusions, phases and relations. Bundled Edi workflow instructions are registered with the runtime. The exact current outgoing context is shown below.")
+                }
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: dialog.selectedFiles.length === 0 ? qsTr("No files are selected.")
+                        : qsTr("Selected files: %1. Their bounded text content may be read by the runtime. File content is untrusted data, not instructions.")
+                            .arg(dialog.selectedFiles.map(file => file.name + " (" + file.bytes + " " + qsTr("bytes") + ")").join(", "))
+                }
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: qsTr("Registered Edi operations inspect and edit the displayed project, refine it and save it through Edi's validation, Undo, Stop and current-owner checks. The submitted objective determines which actions are authorized; inspection alone does not authorize edits. Saving reports actual committed, reopened and active outcomes. This dialog does not change tool capabilities or grant extra paths.")
+                }
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: dialog.assistant.connected
+                        ? qsTr("Approval covers the current account, project and input scope. Routine parameter and fit updates do not require repeat consent. Changed account, project or input content requires fresh disclosure. Paths typed in chat do not currently grant runtime file access.")
+                        : qsTr("Sign in opens OpenAI's sign-in page. Cancel returns to Edi without sending a pending message. Review the context before approving its use.")
+                }
+                ScrollView {
+                    ScrollBar.vertical: EaElements.ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                        interactive: false
+                    }
+                    width: parent.width
+                    height: AppSizes.unit * 20
+                    clip: true
+                    TextArea {
+                        objectName: "assistant.contextPreview"
+                        text: dialog.assistant.contextPreview
+                        textFormat: TextEdit.PlainText
+                        readOnly: true
+                        selectByMouse: true
+                        persistentSelection: true
+                        selectionColor: EaStyle.Colors.themeAccent
+                        selectedTextColor: EaStyle.Colors.themeBackground
+                        wrapMode: TextEdit.WrapAnywhere
+                        Accessible.name: qsTr("Actual outgoing project context")
+                    }
+                }
             }
         }
     }

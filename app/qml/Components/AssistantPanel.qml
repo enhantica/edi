@@ -467,12 +467,6 @@ Popup {
                     text: panel.assistant.lastError
                     wrapMode: Text.Wrap
                 }
-                EaElements.Button {
-                    Layout.fillWidth: true
-                    visible: panel.assistant.connected && panel.assistant.contextConsentRequired
-                    text: qsTr("Inspect outgoing project context")
-                    onClicked: connectionDialog.open()
-                }
                 AssistantWorking {
                     objectName: "assistant.working"
                     Layout.fillWidth: true
@@ -533,16 +527,10 @@ Popup {
                 anchors.top: header.bottom
                 anchors.bottom: parent.bottom
                 color: EaStyle.Colors.contentBackground
-                EaElements.Label {
+                EmptyStateLabel {
                     objectName: "assistant.signInPrompt"
-                    enabled: false
                     anchors.centerIn: parent
                     width: Math.max(0,parent.width-AppSizes.unit*2)
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    font.family: EaStyle.Fonts.secondFontFamily
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize*3
-                    font.weight: Font.ExtraLight
                     text: qsTr("Sign in to use the assistant")
                 }
                 EaElements.Button {

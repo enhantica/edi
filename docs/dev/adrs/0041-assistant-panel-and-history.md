@@ -1126,3 +1126,49 @@ unchanged. Its custom label delegates foreground color to the original Button
 contract, including hover, pressed and disabled states. The passive sidebar edge
 paints above both signed-out and authenticated backgrounds on either sidebar
 side; it adds no input surface or changed button geometry.
+
+
+### Robot head shares the existing work presentation
+
+The shared sidebar/status work cue chooses once per visible appearance among the
+existing ring, branded mark and the same icon-font robot head used by the app
+bar. Its text and accessible name are "AI working...". The robot and branded mark
+use the existing elastic logo rotation; the ring retains its linear rotation.
+Actual agent activity with no pending question or plan remains authoritative.
+Hidden cues and reduced motion stop and reset the glyph rotation.
+
+The app-bar assistant button animates only its displayed robot content under the
+same work predicate, while visible and enabled. Its selected columns glyph stays
+still. The original ToolButton content, hover/theme state, hit target, focus,
+accessible purpose and sidebar action remain intact; the button itself never
+rotates. Ending work, input-required state, hidden/disabled control, selected
+columns or reduced motion stops and resets the content rotation. No additional
+backend activity state or filesystem authority is introduced.
+
+
+The signed-out assistant prompt uses the original shared EmptyStateLabel, as the
+existing chart empty states do, instead of copying its font/disabled/wrapping
+properties. Its exact sign-in text, centered placement, bounded width and
+signed-out ownership remain. The shared component supplies the original WordWrap
+and visual style; no separate empty-state implementation or new registration is
+introduced. The existing sign-in entry, native foreground and passive divider
+correction remain intact.
+
+
+### Brief sign-in and context disclosure
+
+The existing connection/context dialog presents a few short human-readable items
+first. Its existing Details toggle reveals the complete current capability and
+sharing explanation plus the unchanged selectable, read-only exact context.
+Current runtime access can expose measurements and permit workspace writes; that
+limitation is stated upfront, with no promise that measurements stay local or
+that model tools are Edi-only. This presentation change does not enforce a new
+privacy or filesystem policy. Stale claims that native Save is unavailable are
+removed; actual operation outcomes remain authoritative.
+
+The separate Inspect outgoing context link is removed. Original Send still opens
+the same dialog when context approval is needed, and only its original accepted
+context signal can resume the exact captured draft once. Authentication,
+connectionAttempt, current-owner/account/conversation checks, refusal, Cancel,
+IME, ACK and native save/science behavior are unchanged. No second approval
+window or scientific form is added.

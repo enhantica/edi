@@ -185,6 +185,24 @@ EaComponents.ApplicationWindow {
             objectName: "assistant.toggle"
             readonly property bool assistantSelected: assistantPanel.shown || (Session.assistant.showingActions && Preferences.assistantShown)
             fontIcon: assistantSelected ? "columns" : "robot"
+            readonly property bool rotateRobot: visible && enabled && !assistantSelected
+                && Session.assistant.state === "agent_active"
+                && Object.keys(Session.assistant.pendingQuestion).length === 0
+                && Object.keys(Session.assistant.pendingPlan).length === 0
+                && EaStyle.Times.translationChange > 0
+            onRotateRobotChanged: if (!rotateRobot && contentItem) contentItem.rotation = 0
+            RotationAnimation {
+                target: assistantToggle.contentItem
+                property: "rotation"
+                running: assistantToggle.rotateRobot
+                loops: Animation.Infinite
+                from: 0
+                to: 360 * 6
+                duration: 2000
+                easing.type: Easing.OutInElastic
+                easing.amplitude: 1
+                easing.period: 0.3
+            }
             enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
                 : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages")
