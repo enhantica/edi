@@ -251,45 +251,85 @@ AppDialog {
     ListModel { id: backgrounds }
     ListModel { id: exclusions }
     ListModel { id: parameters }
-    readonly property var rowModel: sections.currentIndex === 2 ? backgrounds : sections.currentIndex === 3 ? exclusions : parameters
+    readonly property var rowModel: modelForSection(sections.currentIndex)
     readonly property int sectionIndex: sections.currentIndex
     readonly property int rowCount: rowModel.count
     readonly property int selectedRow: rowSelector.currentIndex
     property bool loadingRow: false
+    property var rowProjection: null
+    function modelForSection(section) {
+        return section === 2 ? backgrounds : section === 3 ? exclusions : parameters;
+    }
+    function rowSelectionCurrent(intent, section, model) {
+        return requestId === intent && sections.currentIndex === section
+            && rowModel === model && model === modelForSection(section);
+    }
+    function projectionCurrent(projection) {
+        return rowProjection === projection
+            && rowSelectionCurrent(projection.intent, projection.section, projection.model)
+            && selectedRow === projection.index;
+    }
+    function selectRowSection() {
+        if (!rowSelector) return;
+        const intent = requestId, section = sections.currentIndex, model = rowModel;
+        if (!rowSelectionCurrent(intent, section, model)) return;
+        rowSelector.currentIndex = model.count ? 0 : -1;
+        if (rowSelectionCurrent(intent, section, model)) loadRow();
+    }
+    onRowModelChanged: selectRowSection()
     function loadRow() {
         if (!rowSelector || !first || !second) return;
-        const intent = requestId, model = rowModel, index = selectedRow, parameter = sections.currentIndex === 4;
-        const current = () => requestId === intent && rowModel === model && selectedRow === index;
-        loadingRow = true;
-        if (!current()) return;
+        const intent = requestId, section = sections.currentIndex, model = rowModel, index = selectedRow;
+        if (!rowSelectionCurrent(intent, section, model)) return;
+        // The captured actual model owns its roles, including when the row
+        // editor is hidden on Inputs/Instrument or tab bindings are settling.
         const valid = index >= 0 && index < model.count;
         const row = valid ? model.get(index) : null;
-        first.text = row ? (parameter ? row.parameterPath : row.firstValue) : "";
-        if (!current()) return;
-        second.text = row ? (parameter ? row.parameterValue : row.secondValue) : "";
-        if (current()) loadingRow = false;
+        const parameter = model === parameters;
+        const firstValue = row ? (parameter ? row.parameterPath : row.firstValue) : "";
+        const secondValue = row ? (parameter ? row.parameterValue : row.secondValue) : "";
+        if (typeof firstValue !== "string" || typeof secondValue !== "string") return;
+        const projection = {intent: intent, section: section, model: model, index: index};
+        rowProjection = projection;
+        if (!projectionCurrent(projection)) return;
+        loadingRow = true;
+        try {
+            if (!projectionCurrent(projection)) return;
+            first.text = firstValue;
+            if (!projectionCurrent(projection)) return;
+            second.text = secondValue;
+        } finally {
+            // A nested row load owns its own loading state. Old cleanup must
+            // not release the write fence around a newer request/selection.
+            if (rowProjection === projection) loadingRow = false;
+        }
     }
     function rowText(firstField, value) {
-        if (loadingRow || selectedRow < 0 || selectedRow >= rowModel.count) return;
-        const key = sections.currentIndex === 4 ? (firstField ? "parameterPath" : "parameterValue") : (firstField ? "firstValue" : "secondValue");
-        rowModel.setProperty(selectedRow, key, value);
+        const projection = rowProjection;
+        if (loadingRow || !projection || !projectionCurrent(projection) || !editable
+            || projection.index < 0 || projection.index >= projection.model.count) return;
+        const parameter = projection.model === parameters;
+        const key = parameter ? (firstField ? "parameterPath" : "parameterValue") : (firstField ? "firstValue" : "secondValue");
+        projection.model.setProperty(projection.index, key, value);
     }
     function appendRow() {
-        if (!editable || rowModel.count >= 256) return;
-        const intent = requestId, model = rowModel, parameter = sections.currentIndex === 4;
-        if (parameter) model.append({parameterPath: "", parameterValue: ""});
+        const intent = requestId, section = sections.currentIndex, model = rowModel;
+        if (!editable || model.count >= 256 || !rowSelectionCurrent(intent, section, model)) return;
+        if (model === parameters) model.append({parameterPath: "", parameterValue: ""});
         else model.append({firstValue: "", secondValue: ""});
-        if (requestId !== intent || rowModel !== model) return;
+        if (!rowSelectionCurrent(intent, section, model)) return;
         rowSelector.currentIndex = model.count - 1;
-        if (requestId === intent && rowModel === model) loadRow();
+        if (rowSelectionCurrent(intent, section, model)) loadRow();
     }
     function removeRow() {
-        if (!editable || selectedRow < 0 || selectedRow >= rowModel.count) return;
-        const intent = requestId, model = rowModel;
-        model.remove(selectedRow);
-        if (requestId !== intent || rowModel !== model) return;
-        rowSelector.currentIndex = Math.min(selectedRow, model.count - 1);
-        if (requestId === intent && rowModel === model) loadRow();
+        const intent = requestId, section = sections.currentIndex, model = rowModel, index = selectedRow;
+        if (!editable || !rowSelectionCurrent(intent, section, model) || index < 0 || index >= model.count) return;
+        model.remove(index);
+        if (!rowSelectionCurrent(intent, section, model)) return;
+        // Respect a selection established synchronously by the removal or a
+        // genuine observer; only adjust the still-original selection.
+        if (selectedRow === index) rowSelector.currentIndex = Math.min(index, model.count - 1);
+        if (rowSelectionCurrent(intent, section, model)) loadRow();
     }
     // Compact multiline editors preserve the same admitted Unicode/control
     // text as the native recipe; final Apply alone interprets numeric fields.
@@ -336,7 +376,7 @@ AppDialog {
             id: sections
             Layout.fillWidth: true
             enabled: dialog.editable
-            onCurrentIndexChanged: { rowSelector.currentIndex = dialog.rowModel.count ? 0 : -1; dialog.loadRow(); }
+            onCurrentIndexChanged: dialog.selectRowSection()
             TabButton { objectName: "nativeImport.tab.inputs"; text: qsTr("Inputs") }
             TabButton { objectName: "nativeImport.tab.instrument"; text: qsTr("Instrument") }
             TabButton { objectName: "nativeImport.tab.background"; text: qsTr("Background") }

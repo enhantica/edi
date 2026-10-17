@@ -813,3 +813,24 @@ Clear rebinding remain charged until that stack releases them. If this optional
 remaining-scope proof cannot be admitted, Clear still clears memory and requires
 fresh approval. Original owner/account/input fences surround settlement and
 failure continuations, so an old callback cannot approve or retire a newer owner.
+
+
+### Coherent native import row projection
+
+The ordinary native CW import dialog and its visible assistant route share the
+same staged row editor. Its actual ListModel determines the row roles: background
+and exclusion rows have two numeric draft strings; initial-parameter rows have an
+exact path and numeric draft string. Inputs and Instrument may keep that hidden
+parameter model selected, so a tab label alone cannot choose another model's roles.
+
+Each row load captures the original request, section, actual model and selected
+index, reads both actual strings before publishing either, and owns one local
+projection while text notifications run. Settling a model binding refreshes the
+projection; an obsolete section/model/selection cannot write staged text. A nested
+load owns its own loading fence, and old cleanup cannot release it. Add, Remove
+and text updates use the same captured selection and actual model roles. Missing
+roles refuse projection instead of becoming a string, zero or scientific default.
+All literal drafts, recipe admission, selected-file authority, original Apply,
+worker/commit/Undo and once-only outcome boundaries remain unchanged. The prior
+relation form uses the same id/definition/enabled roles in both of its models; it
+does not need an alternate role mapping or a new shared staging framework.
