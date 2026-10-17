@@ -29,6 +29,13 @@ class ProjectEditor {
     virtual QString assign_parameter_value(edi::Parameter& parameter, double value) {
         return apply(edi::Edit::value(parameter, value), false);
     }
+    struct BackgroundOutcome { bool applied = false, published = false; QString message; };
+    virtual BackgroundOutcome edit_background_point(edi::ExperimentBase&, const edi::BackgroundPointInput&) {
+        return {false, false, QStringLiteral("Defined background editing is unavailable for this editor")};
+    }
+    virtual QString rename_background_point(edi::ExperimentBase&, edi::LineSegment& point, const std::string& id) {
+        return apply(edi::Edit::background_id(point, id), true);
+    }
     virtual QString assign_parameter_free(edi::Parameter& parameter, bool free) {
         return apply(edi::Edit::assign(parameter.free, free), false);
     }

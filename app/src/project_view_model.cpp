@@ -16,6 +16,7 @@
 #include <QUrl>
 #include <algorithm>
 #include <memory>
+#include <limits>
 #include <cctype>
 #include <map>
 #include <fstream>
@@ -24,6 +25,8 @@
 #include "background.hpp"
 #include "../../core/src/assistant_relation_edits.hpp"
 #include "edi/assistant_limits.hpp"
+#include "edi/assistant_files.hpp"
+#include "background_input.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
 #include "engine_setup.hpp"
@@ -1262,7 +1265,7 @@ QString ProjectViewModel::pendingRefusal() const { return editReadinessRefusal(f
 QString ProjectViewModel::criticalEditRefusal(bool restoring) const {
     if (retired_) return tr("This project owner has been replaced or closed");
     if (editing_) return tr("The current project edit is still being published");
-    if ((widget_input_ || widget_relation_input_) && !widget_input_executing_)
+    if ((widget_input_ || widget_relation_input_ || widget_background_input_) && !widget_input_executing_)
         return tr("The current visible native input is still being completed");
     if (edit_publication_failed_ && !restoring)
         return tr("An edit was applied but its presentation failed: Undo or reopen the project before further changes");
@@ -2411,6 +2414,103 @@ ProjectViewModel::EditOutcome ProjectViewModel::populateEmptyProject(const std::
     return result;
 }
 
+std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackground(
+    edi::ExperimentBase& experiment, const edi::BackgroundPointInput& expected) {
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetBackgroundInput>(); input->experiment = &experiment; input->expected = expected;
+    input->outcome.message = tr("The actual background Apply was not committed");
+    widget_background_input_ = input; return input;
+}
+void ProjectViewModel::finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>& input) noexcept {
+    if (widget_background_input_ == input) widget_background_input_.reset();
+}
+ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
+    edi::ExperimentBase& experiment, const edi::BackgroundPointInput& request, bool native_bounded) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_background_input_;
+    EditOutcome result;
+    result.message = tr("The background point operation was refused");
+    const bool previous = widget_input_executing_;
+    std::shared_ptr<edi::BackgroundPointChange> prepared;
+    try {
+        using Limits = edi::assistant::Limits;
+        if (input) {
+            const auto& expected = input->expected;
+            if (input->consumed || input->experiment != &experiment || request.action != expected.action || request.id != expected.id ||
+                (request.action != edi::BackgroundPointInput::Action::Remove && (request.position != expected.position ||
+                 request.intensity != expected.intensity || request.free != expected.free)))
+                throw std::invalid_argument("The actual background form differs from its original request");
+            input->consumed = true; widget_input_executing_ = true;
+        }
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) { result.message = refusal; if (input) input->outcome = result; return result; }
+        if (!currentExperiment() || currentExperiment()->experiment() != &experiment)
+            throw std::invalid_argument("The requested background bank is not the selected experiment");
+        // Native packet/source/domain policy is caller-owned. Ordinary manual
+        // simulation/extrapolation and stored keys use this same Edit/Undo path.
+        native_bounded = native_bounded || bool(input);
+        const auto unbounded = std::numeric_limits<std::size_t>::max();
+        prepared = edi::prepare_background_point(*project_, experiment, request,
+            native_bounded ? Limits::stream_items : unbounded, native_bounded ? Limits::id_bytes : unbounded,
+            native_bounded ? edi::assistant::SelectedFileLimits::collection_bytes / sizeof(double) : unbounded,
+            native_bounded ? Limits::stream_items : unbounded, native_bounded);
+        const auto edit = edi::Edit::background_point(*project_, prepared);
+        const auto index = undo_history_.size(); undo_history_.reserve(index + 1);
+        undo_history_.emplace_back(BackgroundPointUndo{prepared});
+        try { result = applyEdit(edit, true); }
+        catch (...) { if (self && !prepared->committed) undo_history_.pop_back(); throw; }
+        if (input) input->outcome = result; // Actual committed/applied latch before presentation/readback.
+        if (!self || retired_) return result;
+        if (!prepared->committed) undo_history_.pop_back();
+        else if (input) {
+            const auto& rows = experiment.background;
+            input->verified = rows.size() == prepared->after.size() && std::equal(rows.begin(), rows.end(), prepared->after.begin());
+        }
+        try { syncUndo(); }
+        catch (...) {
+            if (!result.applied) throw;
+            result.published = false; result.message = tr("The background edit and Undo are retained; final presentation was incomplete");
+            holdPublicationFailure(result.message);
+        }
+    } catch (...) {
+        if (input && input->outcome.applied) result = input->outcome;
+        if (prepared && prepared->committed) result.applied = true;
+        if (!result.applied) result.message = tr("The background edit was refused; check its current bank, ID, measured domain and relation ownership");
+        else { result.published = false; result.message = tr("The background edit was applied; final presentation was not confirmed"); }
+    }
+    if (input) input->outcome = result;
+    return result;
+}
+ProjectEditor::BackgroundOutcome ProjectViewModel::edit_background_point(edi::ExperimentBase& experiment, const edi::BackgroundPointInput& request) {
+    const QPointer<ProjectViewModel> self(this);
+    const auto result = changeBackgroundPoint(experiment, request);
+    if (self && !retired_ && !result.applied) setLastError(result.message);
+    return {result.applied, result.published, result.message};
+}
+QString ProjectViewModel::rename_background_point(edi::ExperimentBase& experiment, edi::LineSegment& point, const std::string& id) {
+    const PublicationScope publication(*this);
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refusal;
+    if (!currentExperiment() || currentExperiment()->experiment() != &experiment ||
+        std::none_of(project_->experiments.begin(), project_->experiments.end(), [&](const auto& bank) { return bank.get() == &experiment; }))
+        return tr("The background experiment was replaced or is not selected");
+    PointIds before{&experiment, {}}; before.before.reserve(experiment.background.size());
+    bool found = false;
+    for (const auto& row : experiment.background) {
+        before.before.push_back(row->id.value()); found = found || row.get() == &point;
+    }
+    if (!found) return tr("The exact background row was replaced");
+    undo_history_.reserve(undo_history_.size() + 1); undo_history_.emplace_back(std::move(before));
+    const QPointer<ProjectViewModel> self(this);
+    EditOutcome result;
+    try { result = applyEdit(edi::Edit::background_id(point, id), true); }
+    catch (...) { if (self) undo_history_.pop_back(); throw; }
+    if (!self || retired_) return result.applied ? QString{} : result.message;
+    if (!result.applied) undo_history_.pop_back();
+    try { syncUndo(); } catch (...) { if (!result.applied) throw; holdPublicationFailure(tr("The background rename and Undo are retained")); }
+    return result.applied ? QString{} : result.message;
+}
+
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
     const PublicationScope publication(*this);
     const EditOutcome result = applyRecordedEdit(change, true);
@@ -2513,6 +2613,8 @@ void ProjectViewModel::undo() {
             }
             syncCorrelations();
         }
+    } else if (const auto* point = std::get_if<BackgroundPointUndo>(&undo_history_.back())) {
+        undone = restore(edi::Edit::background_point(*project_, point->prepared, true), true);
     } else if (const auto* ids = std::get_if<PointIds>(&undo_history_.back())) {
         const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
                                         [ids](const auto& held) { return held.get() == ids->experiment; });

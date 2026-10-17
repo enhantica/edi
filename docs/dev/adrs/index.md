@@ -67,6 +67,8 @@ in the same change — see `AGENTS.md` §ADRs.
 
 | [0042](0042-assistant-product-skills.md) | Versioned assistant product guidance | Accepted | 🟡 | High | Initial exact content/index present; embedded loading, consented context and resource browsing pending |
 
+| [0043](0043-defined-background-editing.md) | Defined line-segment background editing | Accepted | 🟡 | High | Common explicit manual/native/visible add-update-remove preparation, atomic row Edit and Undo; complete bounded anchor inspection; native capacity distinct from ordinary GUI capacity |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.

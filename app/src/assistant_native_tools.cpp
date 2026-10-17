@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_tools.hpp"
 #include "assistant_native_create.hpp"
+#include "background_input.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
 #include "../../core/src/assistant_relation_edits.hpp"
 #include "edi/assistant_limits.hpp"
@@ -51,11 +52,16 @@ QJsonArray assistant_native_tool_specs() {
          {"constraints", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"expression", Object{{"type", "string"}, {"minLength", 1}, {"maxLength", static_cast<int>(edi::assistant::Limits::context_bytes)}}},
                 {"enabled", Object{{"type", "boolean"}}}}, {"id", "expression", "enabled"})}}}}, {"aliases", "constraints"});
+    add("edit_background", "Add, update or remove one explicit measured line-segment background anchor in the CURRENT selected experiment, with one atomic Undo. Position uses native measured axis units (CW two-theta degrees or TOF microseconds). Add/update require position, intensity and free; remove must omit all three. Existing data, other anchors and declared relations remain unchanged. Show actions uses the same genuine staged manual form and Apply.",
+        {{"experiment", text}, {"operation", Object{{"type","string"},{"enum",Array{"add","update","remove"}}}}, {"id", text},
+         {"position", Object{{"type","number"},{"description","Required for add/update only, within the measured axis"}}},
+         {"intensity", Object{{"type","number"},{"description","Required for add/update only, actual measured intensity units"}}},
+         {"free", Object{{"type","boolean"},{"description","Required for add/update only, refine this independent intensity"}}}}, {"experiment","operation","id"});
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
     return name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
-        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project";
+        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project" || name == "edit_background";
 }
 QString assistant_native_purpose(const Object& args) {
     const auto value = args.value("purpose");
@@ -69,13 +75,33 @@ QString assistant_native_purpose(const Object& args) {
 }
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
-    if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
+    if (name == "edit_background") {
+        if (args.value("operation") == "remove") shape(args,{"purpose","experiment","operation","id"});
+        else shape(args,{"purpose","experiment","operation","id","position","intensity","free"});
+    } else if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
     else if (name == "add_relations") shape(args, {"purpose", "aliases", "constraints"});
     else if(name=="save_project") shape(args,{"purpose","name"});
     else if (name == "set_parameters") shape(args, {"purpose", "values"});
     else if (name == "set_free") shape(args, {"purpose", "flags"});
     else if (assistant_native_tool(name)) shape(args, {"purpose"});
     else throw std::invalid_argument("Native action is unavailable");
+}
+NativeBackgroundInput assistant_native_background(edi::Project& project, const Object& args) {
+    assistant_native_arguments("edit_background", args);
+    if (!args.value("experiment").isString() || !args.value("operation").isString() || !args.value("id").isString())
+        throw std::invalid_argument("Invalid background operation text");
+    const auto name = background_text(args.value("experiment").toString());
+    const bool remove = args.value("operation") == "remove";
+    if (!remove && (!args.value("position").isDouble() || !args.value("intensity").isDouble() || !args.value("free").isBool()))
+        throw std::invalid_argument("Background add/update requires actual numeric values and a boolean free flag");
+    auto input = background_input(args.value("operation").toString(), args.value("id").toString(),
+        remove ? 0 : args.value("position").toDouble(), remove ? 0 : args.value("intensity").toDouble(), !remove && args.value("free").toBool());
+    for (const auto& experiment : project.experiments) {
+        if (experiment->name.value().size() > edi::assistant::Limits::id_bytes)
+            throw std::length_error("The background experiment identity exceeds its admitted capacity");
+        if (edi::KeyTraits<edi::BraggPdExperiment>::canonical(experiment->name.value()) == name) return {experiment.get(), std::move(input)};
+    }
+    throw std::invalid_argument("The original background experiment is unavailable");
 }
 std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QString& name, const Object& args, std::vector<std::pair<std::string, bool>>& beforeFlags) {
     assistant_native_arguments(name, args);

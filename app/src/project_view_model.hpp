@@ -303,6 +303,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Native batches and the existing manual relation/free editor share the same
     // preowned Undo and actual applied/publication boundary. No QML entry point.
     EditOutcome applyRecordedEdit(const edi::Edit& change, bool structural);
+    EditOutcome changeBackgroundPoint(edi::ExperimentBase&, const edi::BackgroundPointInput&, bool native_bounded = false);
+    BackgroundOutcome edit_background_point(edi::ExperimentBase&, const edi::BackgroundPointInput&) override;
+    QString rename_background_point(edi::ExperimentBase&, edi::LineSegment&, const std::string&) override;
     // Same-owner empty completion, sharing the normal structural editor/Undo.
     EditOutcome populateEmptyProject(const std::shared_ptr<edi::EmptyProjectPopulation>& prepared);
     // Name points by position: the current experiment's line-segment points take ids from their positions
@@ -464,6 +467,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         bool consumed = false, verified = false;
         EditOutcome outcome;
     };
+    struct WidgetBackgroundInput {
+        const edi::ExperimentBase* experiment = nullptr;
+        edi::BackgroundPointInput expected;
+        bool consumed = false, verified = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetBackgroundInput> widget_background_input_;
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackground(edi::ExperimentBase&, const edi::BackgroundPointInput&);
+    void finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>&) noexcept;
     std::shared_ptr<WidgetRelationInput> widget_relation_input_;
     std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const QJsonObject& arguments);
     void finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept;
@@ -529,6 +541,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::vector<std::pair<std::string, bool>> before;
     };
     // Name points by position: the experiment's background point ids as they were, in order.
+    struct BackgroundPointUndo { std::shared_ptr<edi::BackgroundPointChange> prepared; };
     struct PointIds {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
@@ -544,7 +557,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState, EmptyPopulationUndo>;
+                                    edi::StructuresUndo, FreeFlags, PointIds, BackgroundPointUndo, BlockName, edi::ReportSettingsState, EmptyPopulationUndo>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.

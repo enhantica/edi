@@ -4910,6 +4910,9 @@ void rename_scan_results(FitResultRecord& record, const Renamed& renamed) {
 
 // A background row's parameter is named by the row's id (`<experiment>.background.<id>.intensity`, or `.coef` for
 // a polynomial or Chebyshev term), so a rename carries every alias, and the fit's correlations, to the new id.
+inline std::string background_parameter_name(const ExperimentBase& experiment, const std::string& id, bool term = false) {
+    return datablock_key(experiment.name.value(), "experiment") + ".background." + id + (term ? ".coef" : ".intensity");
+}
 inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next) {
     for (const auto& experiment : project.experiments) {
         const char* field = nullptr;
@@ -4920,9 +4923,8 @@ inline void follow_background_aliases(Project& project, const ItemKey& key, cons
             if (&term->id == &key) field = ".coef";
         }
         if (field == nullptr) continue;
-        const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
-        const auto from = root + key.value() + field;
-        const auto to = root + next + field;
+        const auto from = background_parameter_name(*experiment, key.value(), std::string_view(field) == ".coef");
+        const auto to = background_parameter_name(*experiment, next, std::string_view(field) == ".coef");
         std::vector<std::pair<ParameterAlias*, std::string>> changes;
         for (const auto& alias : project.aliases) {
             if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);

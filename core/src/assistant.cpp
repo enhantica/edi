@@ -117,6 +117,11 @@ std::uint64_t project_metadata_size(const Project* project) {
         const auto phases = encoded_rows(experiment->linked_structures, [](const auto& phase) {
             return encoded_fields({{"structure_id", encoded_text(metadata_key(phase->structure_id, "structure"), true)}, {"enabled", phase->enabled.get() ? 4 : 5}});
         });
+        const auto anchors = encoded_rows(experiment->background, [](const auto& point) {
+            return encoded_fields({{"id", encoded_text(point->id.value(), true)}, {"position", encoded_finite(point->position.get())},
+                {"intensity", encoded_finite(point->intensity.value.get())}, {"uncertainty", encoded_optional(point->intensity.uncertainty.get())},
+                {"free", point->intensity.free.get() ? 4 : 5}, {"dependence", encoded_text(dependence(point->intensity.dependence))}});
+        });
         std::uint64_t axis_size = 4, intensity_count = 0, sigma_count = 0;
         std::string_view data_status = "absent", weighting = "unavailable";
         if (experiment->data) {
@@ -151,7 +156,7 @@ std::uint64_t project_metadata_size(const Project* project) {
                 {"sigma_count", payload_size(J(static_cast<double>(sigma_count)))}, {"weighting", encoded_text(weighting)}})},
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
             {"background", encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
-                {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)}})}});
+                {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)}, {"anchors", anchors}})}});
     });
     const auto aliases = encoded_rows(project->aliases, [](const auto& alias) {
         return encoded_fields({{"id", encoded_text(alias->id.value(), true)}, {"parameter_unique_name", encoded_text(alias->parameter_unique_name.value(), true)}});
@@ -185,11 +190,15 @@ J project_metadata(const Project* project) {
                 {"sites", std::move(sites)}, {"anisotropic_site_ids", std::move(anisotropic)}});
         }
         for (const auto& experiment : project->experiments) {
-            A exclusions, phases;
+            A exclusions, phases, anchors;
             for (const auto& region : experiment->excluded_regions)
                 append(exclusions, O{{"id", region->id.value()}, {"first", finite(region->first.get())}, {"second", finite(region->second.get())}});
             for (const auto& phase : experiment->linked_structures)
                 append(phases, O{{"structure_id", KeyTraits<Structure>::canonical(phase->structure_id.value())}, {"enabled", phase->enabled.get()}});
+            for (const auto& point : experiment->background)
+                append(anchors, O{{"id", point->id.value()}, {"position", finite(point->position.get())},
+                    {"intensity", finite(point->intensity.value.get())}, {"uncertainty", optional(point->intensity.uncertainty.get())},
+                    {"free", point->intensity.free.get()}, {"dependence", dependence(point->intensity.dependence)}});
             J axis;
             std::string data_status = "absent", weighting = "unavailable";
             std::size_t intensity_count = 0, sigma_count = 0;
@@ -224,7 +233,7 @@ J project_metadata(const Project* project) {
                 {"observations", O{{"intensity_count", static_cast<double>(intensity_count)}, {"sigma_count", static_cast<double>(sigma_count)}, {"weighting", weighting}}},
                 {"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
                 {"background", O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
-                                 {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}}}});
+                                 {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}, {"anchors", std::move(anchors)}}}});
         }
         for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
         for (const auto& constraint : project->constraints)

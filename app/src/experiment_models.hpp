@@ -12,6 +12,8 @@
 #include "parameter_item.hpp"
 #include "row_table_model.hpp"
 
+namespace edi { struct BackgroundPointInput; }
+
 namespace edi_app {
 
 class ParameterRegistry;
@@ -58,7 +60,13 @@ class BackgroundListModel : public RowTableModel {
     Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setPosition(int row, double position);
     Q_INVOKABLE void append();
+    Q_INVOKABLE QVariantMap changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free);
+    Q_PROPERTY(QString operationError READ operationError NOTIFY operationErrorChanged)
+    QString operationError() const { return operation_error_; }
     Q_INVOKABLE void remove(int row);
+ signals:
+    void insertionRequested();
+    void operationErrorChanged();
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {
@@ -70,6 +78,8 @@ class BackgroundListModel : public RowTableModel {
     edi::ExperimentBase& experiment_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+    QString operation_error_;
+    QVariantMap applyDefined(const edi::BackgroundPointInput& input);
 };
 
 // The polynomial or Chebyshev background terms: `order` (text-editable, unique within the type's range) and `coef`

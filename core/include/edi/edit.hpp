@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -219,6 +220,149 @@ class EmptyProjectPopulation {
     bool committed_ = false, undone_ = false;
 };
 
+/// An explicit operation on one line-segment anchor in native measured-axis units.
+/// App callers admit IDs/rows before constructing this input; it never selects a bank.
+struct BackgroundPointInput {
+    enum class Action { Add, Update, Remove } action = Action::Add;
+    std::string id;
+    double position = 0, intensity = 0;
+    bool free = false;
+};
+/// Exact shared rows before/after one background operation, retained for ordinary Undo.
+/// Only the updated/new row is copied. Other rows and all project data retain identity.
+struct BackgroundPointChange {
+    ExperimentBase* experiment = nullptr;
+    std::vector<ItemVec<LineSegment>::Ptr> before, after;
+    const PdDataBase* data = nullptr;
+    std::uint64_t stamp = 0, data_stamp = 0, alias_stamp = 0, constraint_stamp = 0;
+    std::uint64_t theta_stamp = 0, tof_stamp = 0, intensity_stamp = 0, sigma_stamp = 0;
+    BeamModeEnum mode = BeamModeEnum::CONSTANT_WAVELENGTH;
+    double low = 0, high = 0;
+    std::optional<LineSegment> original, replacement;
+    static bool same_point(const LineSegment& a, const LineSegment& b) noexcept {
+        const auto& x = a.intensity; const auto& y = b.intensity;
+        return a.id.value() == b.id.value() && a.position.get() == b.position.get() && x.value.get() == y.value.get() &&
+            x.uncertainty.get() == y.uncertainty.get() && x.free.get() == y.free.get() && x.spec == y.spec &&
+            x.start_value.get() == y.start_value.get() && x.start_uncertainty.get() == y.start_uncertainty.get() && x.dependence == y.dependence;
+    }
+    bool native_request = false, calculation_only = false;
+    bool same_source(const ExperimentBase& bank) const noexcept {
+        if (bank.background_type != "line-segment" || bank.calculation_only != calculation_only ||
+            bank.effective_beam_mode() != mode || bool(bank.data) != (data != nullptr)) return false;
+        if (!bank.data) return !native_request;
+        return (!native_request || !bank.calculation_only) && &*bank.data == data && bank.data->written.value() == data_stamp &&
+            bank.data->two_theta.written() == theta_stamp && bank.data->time_of_flight.written() == tof_stamp &&
+            bank.data->intensity_meas.written() == intensity_stamp && bank.data->intensity_meas_su.written() == sigma_stamp;
+    }
+    bool committed = false, undone = false;
+};
+/// Prepare a bounded, validated line-segment add/update/remove without live writes.
+/// Native callers require a measured bank and finite, distinct in-domain anchors.
+/// Ordinary manual callers retain simulation, extrapolation and stored-row ordering.
+/// Removing an alias target refuses; changing dependent intensity/free flags refuses.
+/// @param project Borrowed live owner; it must outlive execution and Undo.
+/// @param experiment Borrowed bank owned by project; measured data is required for native callers.
+/// @param input Caller-owned exact operation/ID and native-axis scientific values.
+/// @param max_points Inclusive caller admission for the complete result collection.
+/// @param max_text Inclusive caller byte admission for IDs and named relation targets.
+/// @param max_samples Inclusive borrowed-axis traversal admission.
+/// @param max_aliases Inclusive borrowed alias collection admission.
+/// @param native_request Apply native measured/domain policy; false preserves ordinary manual semantics.
+/// @return Owned preparation retaining the original shared rows; no live values change.
+/// Call on the model's owner thread without concurrent model mutation.
+/// @throws std::invalid_argument Invalid source, shape or scientific input.
+/// @throws std::length_error A declared caller capacity was exceeded.
+inline std::shared_ptr<BackgroundPointChange> prepare_background_point(
+    Project& project, ExperimentBase& experiment, const BackgroundPointInput& input, std::size_t max_points, std::size_t max_text, std::size_t max_samples, std::size_t max_aliases, bool native_request) {
+    if (input.action != BackgroundPointInput::Action::Add && input.action != BackgroundPointInput::Action::Update &&
+        input.action != BackgroundPointInput::Action::Remove) throw std::invalid_argument("unknown background operation");
+    const auto owned = std::find_if(project.experiments.begin(), project.experiments.end(),
+        [&](const auto& e) { return e.get() == &experiment; });
+    if (owned == project.experiments.end() || experiment.background_type != "line-segment")
+        throw std::invalid_argument("background editing requires an owned line-segment experiment");
+    if (native_request && (!experiment.data || experiment.calculation_only))
+        throw std::invalid_argument("native background editing requires measured data");
+    if (!max_points || experiment.background.size() > max_points ||
+        (input.action == BackgroundPointInput::Action::Add && experiment.background.size() == max_points))
+        throw std::length_error("background collection exceeds its admitted capacity");
+    if (!max_text || input.id.size() > max_text || experiment.name.value().size() > max_text)
+        throw std::length_error("background identity exceeds its admitted capacity");
+    for (const auto& row : experiment.background) if (row->id.value().size() > max_text)
+        throw std::length_error("background identity exceeds its admitted capacity");
+    (void)KeyTraits<LineSegment>::canonical(input.id);
+    if (project.aliases.size() > max_aliases)
+        throw std::length_error("background relation collection exceeds its admitted capacity");
+    for (const auto& alias : project.aliases) if (alias->parameter_unique_name.value().size() > max_text)
+        throw std::length_error("background relation identity exceeds its admitted capacity");
+    double low = 0, high = 0;
+    if (native_request) {
+        const auto& axis = experiment.data->axis();
+        if (axis.size() > max_samples) throw std::length_error("background source exceeds its admitted capacity");
+        if (bool(experiment.data->two_theta) != (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH))
+            throw std::invalid_argument("the measured axis does not match this experiment's mode");
+        if (axis.empty() || axis.size() != experiment.data->intensity_meas.size())
+            throw std::invalid_argument("the measured background axis is unavailable");
+        low = high = axis.front();
+        for (const double x : axis) {
+            if (!std::isfinite(x)) throw std::invalid_argument("the measured axis is nonfinite");
+            low = std::min(low, x); high = std::max(high, x);
+        }
+    }
+    const auto found = std::find_if(experiment.background.begin(), experiment.background.end(),
+        [&](const auto& p) { return p->id.value() == input.id; });
+    if ((input.action == BackgroundPointInput::Action::Add) != (found == experiment.background.end()))
+        throw std::invalid_argument("the background ID is already present or no longer exists");
+    if (input.action != BackgroundPointInput::Action::Remove &&
+        (!std::isfinite(input.position) || !std::isfinite(input.intensity) ||
+         (native_request && (input.position < low || input.position > high))))
+        throw std::invalid_argument("the background point is nonfinite or outside its native measured domain");
+    if (input.action == BackgroundPointInput::Action::Remove) {
+        const auto name = detail::background_parameter_name(experiment, input.id);
+        for (const auto& alias : project.aliases) if (alias->parameter_unique_name.value() == name)
+            throw std::invalid_argument("a declared alias still names this background intensity");
+    } else if (input.action == BackgroundPointInput::Action::Update && (*found)->intensity.dependence != Dependence::Independent &&
+        ((*found)->intensity.value.get() != input.intensity || (*found)->intensity.free.get() != input.free))
+        throw std::invalid_argument("a relation owns this background intensity or free flag");
+    auto prepared = std::make_shared<BackgroundPointChange>();
+    prepared->experiment = &experiment; prepared->stamp = experiment.background.category_stamp();
+    prepared->native_request = native_request; prepared->calculation_only = experiment.calculation_only;
+    if (experiment.data) {
+        prepared->data = &*experiment.data; prepared->data_stamp = experiment.data->written.value();
+        prepared->theta_stamp = experiment.data->two_theta.written(); prepared->tof_stamp = experiment.data->time_of_flight.written();
+        prepared->intensity_stamp = experiment.data->intensity_meas.written(); prepared->sigma_stamp = experiment.data->intensity_meas_su.written();
+    }
+    prepared->mode = experiment.effective_beam_mode(); prepared->low = low; prepared->high = high;
+    if (found != experiment.background.end()) prepared->original.emplace(**found);
+    prepared->alias_stamp = project.aliases.category_stamp(); prepared->constraint_stamp = project.constraints.category_stamp();
+    prepared->before.assign(experiment.background.begin(), experiment.background.end());
+    prepared->after.reserve(prepared->before.size() + (input.action == BackgroundPointInput::Action::Add ? 1 : 0));
+    for (const auto& point : prepared->before) if (point->id.value() != input.id) prepared->after.push_back(point);
+    if (input.action != BackgroundPointInput::Action::Remove) {
+        auto point = input.action == BackgroundPointInput::Action::Update ? std::make_shared<LineSegment>(**found) : std::make_shared<LineSegment>();
+        point->id = input.id; point->position = input.position;
+        if (input.action == BackgroundPointInput::Action::Add || point->intensity.value.get() != input.intensity)
+            assign_value(point->intensity, input.intensity);
+        point->intensity.free = input.free;
+        prepared->replacement.emplace(*point);
+        if (!native_request && input.action == BackgroundPointInput::Action::Update)
+            prepared->after.insert(prepared->after.begin() + std::distance(experiment.background.begin(), found), std::move(point));
+        else prepared->after.push_back(std::move(point));
+    }
+    for (const auto& point : prepared->after) if (!std::isfinite(point->position.get()) || !std::isfinite(point->intensity.value.get()))
+        throw std::invalid_argument("background anchors must be finite");
+    if (native_request) {
+        std::sort(prepared->after.begin(), prepared->after.end(), [](const auto& a, const auto& b) { return a->position.get() < b->position.get(); });
+        std::optional<double> previous;
+        for (const auto& point : prepared->after) {
+            const double x = point->position.get();
+            if (x < low || x > high || (previous && x <= *previous))
+                throw std::invalid_argument("background points need distinct finite ordered measured positions");
+            previous = x;
+        }
+    }
+    return prepared;
+}
+
 class Edit {
    public:
     /// Add one prepared scientific graph to the SAME empty project. Collection
@@ -377,6 +521,61 @@ class Edit {
     // A background point's fixed position: one recorded assignment, which cannot fail.
     static Edit background_position(LineSegment& point, double position) {
         return Edit([&point, position] { point.position = position; });
+    }
+
+    /// Commit one exact preparation, or restore its shared-row Undo, on the owner thread.
+    /// Project and its original bank are borrowed and must outlive execution.
+    /// The Edit owns prepared; no callbacks run inside its closed model mutation.
+    /// Throws invalid_argument for stale/conflicting input; allocation may throw
+    /// before ItemVec's all-or-none commit. A committed latch precedes publication.
+    static Edit background_point(Project& project, std::shared_ptr<BackgroundPointChange> prepared, bool undo = false) {
+        return Edit([&project, prepared = std::move(prepared), undo] {
+            if (!prepared || !prepared->experiment || (undo ? !prepared->committed || prepared->undone : prepared->committed))
+                throw std::invalid_argument("the background operation is no longer current");
+            const auto owner = std::find_if(project.experiments.begin(), project.experiments.end(),
+                [&](const auto& e) { return e.get() == prepared->experiment; });
+            if (owner == project.experiments.end()) throw std::invalid_argument("the background experiment was replaced");
+            auto& rows = (*owner)->background;
+            if (!prepared->same_source(**owner) || (!undo && (rows.category_stamp() != prepared->stamp ||
+                project.aliases.category_stamp() != prepared->alias_stamp || project.constraints.category_stamp() != prepared->constraint_stamp)))
+                throw std::invalid_argument("the prepared background input changed before its edit");
+            const auto& expected = undo ? prepared->after : prepared->before;
+            if (rows.size() != expected.size() || !std::equal(rows.begin(), rows.end(), expected.begin()))
+                throw std::invalid_argument("the exact background rows were replaced");
+            // The affected detached/live row must still have the exact prepared state;
+            // unrelated surviving rows are shared and never copied back by Undo.
+            const auto matches = [](const auto& rows, const auto& state) {
+                if (!state) return true;
+                const auto row = std::find_if(rows.begin(), rows.end(), [&](const auto& p) { return p->id.value() == state->id.value(); });
+                return row != rows.end() && BackgroundPointChange::same_point(**row, *state);
+            };
+            if (!matches(prepared->before, prepared->original) || !matches(prepared->after, prepared->replacement))
+                throw std::invalid_argument("the affected background row changed outside its prepared edit");
+            if (undo && !prepared->original && prepared->replacement) {
+                const auto name = detail::background_parameter_name(**owner, prepared->replacement->id.value());
+                for (const auto& alias : project.aliases) if (alias->parameter_unique_name.value() == name)
+                    throw std::invalid_argument("a current alias still names the added background point");
+            }
+            // A new native result is strict, but Undo restores the captured
+            // lawful manual arrangement, including its order/extrapolation.
+            // Surviving unrelated rows stay shared, never copied back.
+            auto candidate = undo ? prepared->before : prepared->after;
+            for (const auto& point : candidate) if (!std::isfinite(point->position.get()) || !std::isfinite(point->intensity.value.get()))
+                throw std::invalid_argument("background anchors must be finite");
+            if (prepared->native_request && !undo) {
+                std::sort(candidate.begin(), candidate.end(), [](const auto& a, const auto& b) { return a->position.get() < b->position.get(); });
+                std::optional<double> previous;
+                for (const auto& point : candidate) {
+                    const auto x = point->position.get();
+                    if (x < prepared->low || x > prepared->high || (previous && x <= *previous))
+                        throw std::invalid_argument("background positions must remain distinct and in the measured domain");
+                    previous = x;
+                }
+            }
+            // Copies/admission precede the single live collection commit.
+            rows.assign(std::move(candidate));
+            if (undo) prepared->undone = true; else prepared->committed = true;
+        });
     }
 
     // --- Validated settings -----------------------------------------------------------------------
