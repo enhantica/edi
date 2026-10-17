@@ -143,6 +143,7 @@ TestCase {
         const mainAt = main.mapToItem(chart, 0, 0);
         verify(Math.abs(resetAt.y - chart.topMargin) < 1, " owner chart margin is realised above the actual toolbar button");
         const rightInset = chart.width - mainAt.x - main.plotArea.x - main.plotArea.width;
+        verify(rightInset > 0, "The plot's right margin and the matching toolbar gap remain positive");
         verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - rightInset) < 1, "The gap below the toolbar equals the actual plot's right margin");
         const title = object("chart.title.x");
         // The label is centred in its reserved title band; its normal leading

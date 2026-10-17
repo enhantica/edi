@@ -27,8 +27,9 @@ TestCase {
     }
     function test_pattern_marks_are_drawn_with_series_widths() {
         Ui.click(test, Probe, appWindow, "appBar.tab.experiment");
-        const toggle = Ui.control(Probe, appWindow, "chart.toolbar.legend");
-        verify(toggle !== null, "The pattern legend button remains available beside the coloured axis titles");
+        let toggle;
+        tryVerify(() => { toggle = Ui.control(Probe, appWindow, "chart.toolbar.legend"); return toggle !== null; }, 3000,
+                  "The pattern legend button becomes rendered beside the coloured axis titles");
         compare(toggle.checked, false, "Coloured axis titles replace the legend box by default");
         Ui.click(test, Probe, appWindow, "chart.toolbar.legend");
         tryCompare(toggle, "checked", true, 2000, "The legend button explicitly shows the optional legend box");
