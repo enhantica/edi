@@ -51,22 +51,27 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    `name`, `units`, `x_title` and points with `x`, `y`, `su` and `text`, all read from the results in one pass) sit at
    the root. Each pattern carries its `title`, the experiment's Rwp and χ² (`reliability_text`), and `legend`, false:
    its y titles name the series in their colours. The evolution is one chart per listed parameter, in the Evolution
-   tab's order, titled with its name and units: two to a row at half the column, or one when the column is narrower than
-   300 px. The preview draws each with the Evolution tab's chart given its series, the HTML report with plotly.js, and
-   the PDF as images of the preview's charts. Every renderer colours the charts from the model's style rows alone, never
-   from the app's settings or project: a scan's table has a measured row for each of its datasets and its pattern takes
-   its template dataset's row, the colour the app's pages give that dataset, and the evolution charts take the first
-   measured row in every renderer.
+   tab's order, titled with its name and units: one to a row, the column's width, its height to its width the Evolution
+   tab's at the app's default window size (1.05), so its axes keep the app's proportions. A pattern or evolution chart
+   has no border round it; a structure view is framed as a table is (the owner, 2026-10-14). The preview draws each with
+   the Evolution tab's chart given its series, the HTML report with plotly.js, and the PDF as images of the preview's
+   charts. Every renderer colours the charts from the model's style rows alone, never from the app's settings or
+   project: a scan's table has a measured row for each of its datasets and its pattern takes its template dataset's row,
+   the colour the app's pages give that dataset, and the evolution charts take the first measured row in every renderer.
 5. **Numbers.** Every value with a standard uncertainty carries the number, its s.u. and the text spelled by the
    project's rule, so no renderer writes a bracket itself. Units follow the value after a space, as the app's unit
    fields write them; an angle is in `deg`, never with the degree sign, in tables and axis titles alike, in the app and
    in every report (the owner, 2026-10-17).
 6. **The static PDF is the app's.** The core also writes the report as static HTML in the subset Qt's rich text reads
-   (`report_static_html`): the same sections and tables, each number in two cells so a column's points line up under
-   any header, and each figure an image by its name. The app lays it out with `QTextDocument` on A4 pages with 2.5 cm
-   margins and the page number below, keeps a heading with what follows it and a short table whole, and draws the
-   figures as images of copies of the preview's figures in the light colours, whatever the app's theme, as a PDF is
-   for print, grabbed at twice their size. The CLI and Python do not write it, as edi's core has no Qt.
+   (`report_static_html`): the same sections and tables, each number in two cells so a column's points line up under any
+   header, and each figure an image by its name. The app lays it out with `QTextDocument` on A4 pages with 2.5 cm
+   margins and the page number below, keeps a heading with what follows it and a short table whole, lets a long table
+   run on over pages with its header repeated on each, and draws the figures as images of copies of the preview's
+   figures in the light colours, whatever the app's theme, as a PDF is for print, grabbed at twice their size. Its text
+   is printed in the light theme's ink too, and its tables' borders are finer and lighter than the HTML report's, as
+   they print bolder. The PDF and the HTML report show the same groups: a group the Contents include, the reflections
+   and the measured data among them, is shown in full in both, the HTML's tables every row (the owner, 2026-10-14). The
+   CLI and Python do not write it, as edi's core has no Qt.
 
 7. **The report's settings are project data, kept with the page that sets them.** `reports/report.edi` holds what Save
    report writes: the formats (`_report.html`, `pdf`, `cif`; absent, the HTML only), whether the HTML embeds its

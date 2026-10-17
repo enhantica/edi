@@ -20,8 +20,9 @@ Flickable {
     property ReportViewModel report: null
     readonly property var model: report ? report.model : ({})
     readonly property var sections: model.sections ?? []
-    // The narrowest column that takes two evolution charts to a row, here and in the HTML report's grid; narrower, one.
-    readonly property real evolutionMinWidth: 300
+    // An evolution chart's height to its width: the Evolution tab's at the app's default window size, so a report's
+    // chart has the axes' proportions the app shows (the owner, 2026-10-14).
+    readonly property real evolutionAspect: 1.05
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The reference's sizes and margins are in points over its 10.04 pt body.
     readonly property real pt: em / 10.04
@@ -157,8 +158,8 @@ Flickable {
             under: record.index === 0 ? 2 : 0
             text: `${preview.number(record.section)}.${record.index + 1}.  ${record.modelData.id}`
         }
-        // Its figure first, as the reference report places it: the structure view, or the pattern chart, framed by a
-        // border in the tables' colour and spaced as a table is (the owner, 2026-10-13).
+        // Its figure first, as the reference report places it: the structure view, framed by a border in the tables'
+        // colour, or the pattern chart, with no border round it (the owner, 2026-10-14); spaced as a table is.
         Item {
             visible: preview.charts
             width: parent.width
@@ -172,6 +173,7 @@ Flickable {
                 sourceComponent: record.section === "structures" ? structureFigure : patternFigure
             }
             Rectangle {
+                visible: record.section === "structures"
                 width: figure.width
                 height: figure.height
                 color: "transparent"
@@ -422,18 +424,16 @@ Flickable {
             Heading {
                 text: `${preview.number("evolution")}.  ` + qsTr("Evolution")
             }
-            // One chart per parameter the Evolution tab lists, in its order, as the HTML report draws them: two to a
-            // row at half the column, one when the column is narrower than the minimum width (the owner, 2026-10-14).
-            // Placed by bindings rather than a Flow, so the grid follows a width change at once, not at the next
-            // layout pass.
+            // One chart per parameter the Evolution tab lists, in its order, as the HTML report draws them: one to a row,
+            // the column's width, with the app's proportions and no border round it (the owner, 2026-10-14). Placed by
+            // bindings rather than a Column, so the charts follow a width change at once, not at the next layout pass.
             Item {
                 id: evolutionCharts
 
-                readonly property int columns: width >= preview.evolutionMinWidth ? 2 : 1
                 readonly property real spacing: EaStyle.Sizes.fontPixelSize
-                readonly property real chartWidth: columns === 2 ? (width - spacing) / 2 : width
-                readonly property real chartHeight: Math.round(chartWidth * 0.75)
-                readonly property int rows: Math.ceil(evolutionRecords.count / columns)
+                readonly property real chartWidth: width
+                readonly property real chartHeight: Math.round(chartWidth * preview.evolutionAspect)
+                readonly property int rows: evolutionRecords.count
 
                 width: parent.width
                 height: rows > 0 ? rows * chartHeight + (rows - 1) * spacing : 0
@@ -447,8 +447,7 @@ Flickable {
                         required property int index
 
                         objectName: "report.evolution"
-                        x: (index % evolutionCharts.columns) * (evolutionCharts.chartWidth + evolutionCharts.spacing)
-                        y: Math.floor(index / evolutionCharts.columns) * (evolutionCharts.chartHeight + evolutionCharts.spacing)
+                        y: index * (evolutionCharts.chartHeight + evolutionCharts.spacing)
                         width: evolutionCharts.chartWidth
                         height: evolutionCharts.chartHeight
                         reportSeries: modelData
