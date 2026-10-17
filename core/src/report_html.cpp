@@ -843,7 +843,8 @@ private:
                 const double value = matrix.values[row * count + column];
                 const std::string size = "width=\"43\" style=\"padding-top: 13px; padding-bottom: 13px; ";
                 if (!std::isfinite(value)) {
-                    out_ += "<td " + size + "\"></td>";
+                    // An empty cell keeps its border, as in the HTML report and the preview (the owner, 2026-10-13).
+                    out_ += "<td " + size + border + "\"></td>";
                     continue;
                 }
                 const std::string text = std::fabs(value) >= 0.5 ? "<span style=\"color: #f5f5f5\">" + fixed2(value) +
