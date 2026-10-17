@@ -3413,6 +3413,9 @@ struct InstrumentBase {
     // load engages both at upstream's default 0 (K = 0 is no correction); a neutron or TOF experiment
     // never carries them.
     OptionalParameter setup_polarization_coefficient, setup_monochromator_twotheta;
+    // The X-ray CW K-alpha doublet: the second wavelength and its intensity relative to the first,
+    // presence-tracked like the polarization pair (a ratio of 0 is a single wavelength).
+    OptionalParameter setup_wavelength_2, setup_wavelength_2_to_1_ratio;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -4214,6 +4217,19 @@ void register_engine_peak_type(const std::string& token, BeamModeEnum mode);
 // structure-factor work counter.
 std::string engine_model_dump(const Project& project);
 bool engine_folds_reflections(const Project& project);
+
+/// A linked structure's Hill-Howard weight fraction (J. Appl. Cryst. 20, 467 (1987)) and its
+/// standard uncertainty, derived from the current model and never an input.
+struct WeightFraction {
+    double value = 0.0;
+    /// Absent when no free scale of the experiment carries an uncertainty.
+    std::optional<double> uncertainty;
+};
+/// The weight fraction of `link` in the experiment that holds it, computed by crysta from the
+/// project's structures, scales and last fit's stored correlations; exactly 1 with no uncertainty for
+/// the only enabled structure. Otherwise absent when the link belongs to no project, takes no part,
+/// or a structure's cell mass is unknown.
+std::optional<WeightFraction> weight_fraction(const LinkedStructure& link);
 std::uint64_t engine_structure_factor_evaluations() noexcept;
 // The chi-square tolerance a fit uses when `_minimizer.chi_square_tolerance` is not declared: the
 // LINKED crysta's default, forwarded like default_descent() (the app shows the value the minimizer
@@ -5077,8 +5093,8 @@ static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::
 struct InstrumentCategory {
     using Owner = InstrumentBase;
     static constexpr const char* name = "_instrument";
-    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta};
-    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta"};
+    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio};
+    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio"};
     static constexpr std::array legacy{"_instr", "_diffrn_radiation_wavelength", "_pd_calib"};
 };
 static_assert(detail::one_entry_per_column(InstrumentCategory::columns, InstrumentCategory::items));
@@ -5435,6 +5451,8 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
     detail::push_optional(out, calib_sample_transparency);
     detail::push_optional(out, setup_polarization_coefficient);  // , X-ray only
     detail::push_optional(out, setup_monochromator_twotheta);
+    detail::push_optional(out, setup_wavelength_2);  // , X-ray only
+    detail::push_optional(out, setup_wavelength_2_to_1_ratio);
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
