@@ -38,6 +38,7 @@ Item {
         when: windowShown
         property int savedPage
         property int savedTheme
+        property var paletteReference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
         function initTestCase() {
             savedTheme = Style.Colors.theme;
             savedPage = Globals.Vars.appBarCurrentIndex;
@@ -69,7 +70,7 @@ Item {
         function test_palette_functions_follow_data_for_few_and_many_patterns_data() {
             const rows = [];
             for (const dark of [false, true])
-                for (const scheme of ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"])
+                for (const scheme of paletteReference.schemes.map(row => row.id))
                     for (const count of [3, 100])
                         rows.push({
                             tag: scheme + "-" + count + (dark ? "-dark" : "-light"),
@@ -105,8 +106,8 @@ Item {
             }
             for (let i = 0; i < rows.structure.length; ++i)
                 compare(String(AppColors.structure(i)).toLowerCase(), rows.structure[i][theme].toLowerCase(), "Structure icons read their own palette rows through the shared core function");
-            if (data.scheme === "default" && data.count === 3)
-                compare(colors[0], String(ApplicationInfo.patternColour("default", 0, data.count, data.dark)).toLowerCase(), "Default first colour follows its published contrast-safe palette shade in each theme");
+            if (data.scheme === "coast" && data.count === 3)
+                compare(colors[0], String(ApplicationInfo.patternColour("coast", 0, data.count, data.dark)).toLowerCase(), "Coast first colour follows its published contrast-safe palette shade in each theme");
         }
         function test_scan_summary_uses_ui_font_size_and_equal_digit_slots() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real three-file scan supplies the status-bar summary");

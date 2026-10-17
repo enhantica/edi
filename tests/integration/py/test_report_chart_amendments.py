@@ -105,8 +105,8 @@ def test_default_pattern_titles_are_coloured_segments_with_unstyled_separators(t
 def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
     directory = ROOT / 'data/palettes'
     paths = sorted(directory.glob('*.tsv'))
-    assert len(paths) == 5, (
-        'The app ships Default, Colour-blind safe, Tableau, Paul Tol and Vivid as data; '
+    assert len(paths) == 18, (
+        'The app ships the eighteen ADR-0038 schemes as data; '
         f'actual palette tables={[path.name for path in paths]}'
     )
     schemes = {}
@@ -146,13 +146,15 @@ def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
             'No data colour can collide with calculated, background, residual or excluded roles'
         )
         schemes[path.stem.lower()] = pattern
-    default = schemes.get('default')
-    assert default is not None, 'The Default palette retains an explicit stable scheme identity'
+    default = schemes.get('coast')
+    assert default is not None, (
+        'Coast is the default palette with an explicit stable scheme identity'
+    )
     # Before: the first blue was pinned to one Material shade. After: a published
     # blue shade may change to satisfy the three-to-one contrast requirement.
     blue = default[0]['dark' if dark else 'light'].lower()
     red, green, channel_blue = (int(blue[index : index + 2], 16) for index in (1, 3, 5))
     assert channel_blue > max(red, green), (
-        f'Default keeps blue first in each theme while allowing contrast-safe published shades; '
+        f'Coast keeps blue first in each theme while allowing contrast-safe published shades; '
         f'actual first colour={blue}'
     )

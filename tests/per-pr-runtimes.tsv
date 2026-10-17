@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T16:15:52Z
+# measured_utc = 2026-10-17T10:31:40Z
 #
-# Recorded from: measured test run (151 node(s) measured once, 10947 banked, 17 stale row(s) dropped)
-# Collected tests: 12051; with a reported duration: 6473
+# Recorded from: measured test run (38 node(s) measured once, 10991 banked, 18 stale row(s) dropped)
+# Collected tests: 12069; with a reported duration: 6497
 # Module-scoped fixture costs recorded: 47
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12051
+# inventory_python = 12069
 # inventory_cpp = 333
-# inventory_measured = 10993
-# inventory_unmeasured = 1391
+# inventory_measured = 11029
+# inventory_unmeasured = 1373
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -5472,24 +5472,42 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_source
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#808080-False]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#EF9A9A-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#F44336-True]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[apple]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[carbon]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[catppuccin]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[coast]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark2]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[fogForest]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[garden]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[nord]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[observable]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[okabeIto]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[paulTolBright]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[paulTolMuted]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[peaceful]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[petroff]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[sage]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[solarized]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[tableau]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[vivid]
+0.200	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-apple]
+0.400	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-carbon]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-catppuccin]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-coast]
+0.750	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-dark2]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-fogForest]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-garden]
+0.160	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-nord]
+0.230	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-observable]
+0.510	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-okabeIto]
+0.510	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-paulTolBright]
+0.520	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-paulTolMuted]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-peaceful]
+0.340	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-petroff]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-sage]
+0.560	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-solarized]
+0.440	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-tableau]
+0.620	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark-vivid]
+0.360	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-apple]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-carbon]
+0.130	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-catppuccin]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-coast]
+0.250	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-dark2]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-fogForest]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-garden]
+0.540	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-nord]
+0.500	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-observable]
+0.360	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-okabeIto]
+0.570	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-paulTolBright]
+0.360	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-paulTolMuted]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-peaceful]
+0.270	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-petroff]
+0.000	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-sage]
+0.150	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-solarized]
+0.420	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-tableau]
+0.590	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[light-vivid]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_exactly_eighteen_schemes_are_published_with_coast_default
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[apple]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[carbon]

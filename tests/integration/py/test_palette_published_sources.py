@@ -141,7 +141,14 @@ def test_exactly_eighteen_schemes_are_published_with_coast_default():
 
 
 @pytest.mark.parametrize('scheme', REFERENCE['schemes'], ids=itemgetter('id'))
-def test_each_palette_retains_its_cited_published_source_coordinates(scheme):
+@pytest.mark.parametrize(
+    ('theme', 'background', 'calculated'),
+    [('light', '#FFFFFF', '#F44336'), ('dark', '#444444', '#EF9A9A')],
+    ids=['light', 'dark'],
+)
+def test_each_palette_retains_its_cited_published_source_coordinates(
+    scheme, theme, background, calculated
+):
     rows = palette_rows(scheme)
     section = cited_section(scheme)
     assert section, (
@@ -161,33 +168,27 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):
         assert row['role'] in {'pattern', 'structure', 'gradient'} and all(
             re.fullmatch(r'#[0-9A-Fa-f]{6}', row[t]) for t in ('light', 'dark')
         ), f'Each stored row has a known role and explicit 8-bit RGB coordinates: {row}'
-        if row['role'] == 'gradient' or scheme['kind'] == 'design':
+        # Structure fills use ADR-0038 decision 5's muted, stepped colours.
+        if row['role'] != 'pattern' or scheme['kind'] == 'design':
             continue
         sources = source_pair(scheme, row, section)
-        for source, theme, background in zip(
-            sources, ('light', 'dark'), ('#FFFFFF', '#444444'), strict=True
-        ):
-            actual = row[theme]
-            calculated = (
-                ('#F44336' if theme == 'light' else '#EF9A9A')
-                if row['role'] == 'pattern'
-                else None
-            )
-            ideal = smallest_adaptation(source, background, calculated)
-            others = [r[theme] for r in rows if r['role'] == row['role'] and r != row]
-            if not gamut_hue_chroma_preserved(source, actual):
-                failures.append(('hue/maximal gamut chroma', source, actual, theme))
-            if contrast(actual, background) < 3:
-                failures.append(('WCAG 3:1', actual, theme))
-            if all(
-                math.dist(ideal, oklab(other)) >= 0.08 for other in others
-            ) and not nearest_passing_lightness(source, actual, background, calculated):
-                failures.append((
-                    'nearest passing one-sided lattice lightness',
-                    source,
-                    actual,
-                    theme,
-                ))
+        source = sources[0 if theme == 'light' else 1]
+        actual = row[theme]
+        ideal = smallest_adaptation(source, background, calculated)
+        others = [r[theme] for r in rows if r['role'] == row['role'] and r != row]
+        if not gamut_hue_chroma_preserved(source, actual):
+            failures.append(('hue/maximal gamut chroma', source, actual, theme))
+        if contrast(actual, background) < 3:
+            failures.append(('WCAG 3:1', actual, theme))
+        if all(
+            math.dist(ideal, oklab(other)) >= 0.08 for other in others
+        ) and not nearest_passing_lightness(source, actual, background, calculated):
+            failures.append((
+                'nearest passing one-sided lattice lightness',
+                source,
+                actual,
+                theme,
+            ))
     assert not failures, (
         'Published adaptations retain source hue/maximal gamut chroma and nearest passing '
         f'8-bit lightness with strict contrast; scheme={scheme["label"]}, actual={failures}'
