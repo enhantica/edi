@@ -615,6 +615,12 @@ void complete_atom_site_aniso(Structure& s) {
                 if (parameters[k]->value != components[k]) {
                     parameters[k]->value = components[k];
                 }
+                // An exact zero has no s.u., as in a new tensor: a fixed 0 read from a file keeps none either, so a
+                // project reopened, or holding what it saved, shows its zeros as it did before.
+                if (components[k] == 0.0 && !parameters[k]->free.get() &&
+                    parameters[k]->uncertainty.get() == std::optional<double>(0.0)) {
+                    parameters[k]->uncertainty = std::nullopt;
+                }
             }
             // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
             const double equivalent = crysta::iso_of(crysta::equivalent_iso_form(form),
