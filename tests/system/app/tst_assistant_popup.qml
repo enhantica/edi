@@ -3141,21 +3141,31 @@ TestCase {
             compare(parameters[0].free, false, "IMPORT267: original fixed cell does not become free");
             compare(parameters[0].uncertainty, 0, "IMPORT267: public cell uncertainty view retains numeric zero");
         }
-        const sites = Probe.rows(project.currentStructure.atomSites).map(row => [row.label, row.typeSymbol])
+        const siteRows = Probe.rows(project.currentStructure.atomSites);
+        const sites = siteRows.map(row => [row.label, row.typeSymbol])
             .sort((a, b) => a[0].localeCompare(b[0]));
         compare(JSON.stringify(sites), JSON.stringify([["O1", "O"], ["O2", "O"], ["O3", "O"], ["Pb", "Pb"], ["S", "S"]]),
             "IMPORT265: every original independent site/species is retained");
         const positions = {Pb: [0.1882, 0.25, 0.167], S: [0.063, 0.25, 0.686],
             O1: [-0.095, 0.25, 0.6], O2: [0.181, 0.25, 0.543], O3: [0.085, 0.026, 0.806]};
         for (const label of Object.keys(positions)) {
+            const matchingSites = siteRows.filter(site => site.label === label);
+            compare(matchingSites.length, 1, "IMPORT281: each original physical site has one public owning-model row");
+            const site = matchingSites[0];
             for (let index = 0; index < 3; ++index)
-                compare(visible185_parameter(project, label, ["fract_x", "fract_y", "fract_z"][index]).value,
+                compare(site[["fractX", "fractY", "fractZ"][index]].value,
                     positions[label][index], "IMPORT265: original fractional coordinates retain literal source values");
-            compare(visible185_parameter(project, label, "occupancy").value, 1,
+            compare(site.occupancy.value, 1,
                 "IMPORT265: original occupancies are unchanged");
-            compare(visible185_parameter(project, label, "adp_iso").value, 0.01,
+            compare(site.adpIso.value, 0.01,
                 "IMPORT265: original isotropic ADP retains source Uiso convention/value");
+            compare(site.adpType, "Uiso", "IMPORT281: every original site retains the literal CIF displacement convention");
         }
+        // Original CIF block data_pbso4-phase; public nonempty datablock keys retain that spelling.
+        compare(project.currentStructure.name, "pbso4-phase", "IMPORT281: sole phase retains its original canonical datablock key");
+        compare(JSON.stringify(Probe.rows(project.currentExperiment.linkedStructures)
+            .map(row => [row.structureId, row.enabled])), JSON.stringify([["pbso4-phase", true]]),
+            "IMPORT281: the sole original canonical phase is actually linked and enabled");
         const wavelengths = visible185_parameters(project).filter(parameter => parameter.name === "setup_wavelength");
         compare(wavelengths.length, 1, "IMPORT265 SETUP: original wavelength parameter is unique");
         compare(wavelengths[0].value, 1.909, "IMPORT265: explicit supplied original wavelength is retained");

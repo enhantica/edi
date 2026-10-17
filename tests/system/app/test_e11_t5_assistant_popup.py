@@ -1172,6 +1172,11 @@ def test_import267_real_main_manual_visible_creation_and_retirement(case, tmp_pa
         assert len(observations) == 1 and observations[0]['observations'] == expected, (
             'IMPORT267: every actual measured coordinate/intensity/original supplied sigma matches immutable source'
         )
-        assert observations[0]['weight'] == 1 and len(observations[0]['links']) == 1, (
-            'IMPORT267: real imported measured dataset keeps its single phase and unit weight'
+        original_blocks = [line.strip()[5:] for line in original_bytes[0].decode().splitlines()
+                           if line.strip().lower().startswith('data_')]
+        assert original_blocks == ['pbso4-phase'], (
+            'IMPORT281 SETUP: immutable original CIF declares exactly its known nonempty datablock key'
+        )
+        assert observations[0]['weight'] == 1 and observations[0]['links'] == [[original_blocks[0], True]], (
+            'IMPORT267: real imported measured dataset keeps its sole original enabled phase and unit weight'
         )
