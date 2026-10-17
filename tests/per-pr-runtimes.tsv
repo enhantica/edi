@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-17T13:21:25Z
+# measured_utc = 2026-10-17T14:18:51Z
 #
-# Recorded from: measured test run (30 node(s) measured once, 11086 banked, 0 stale row(s) dropped)
-# Collected tests: 12078; with a reported duration: 6591
+# Recorded from: completed focused native presentation run (tests-seq80-presentation.log)
+# Collected tests: 12411; with a reported duration: 6591
 # Module-scoped fixture costs recorded: 47
 #
 # Breaches are decided PER TIER against the table
@@ -10868,7 +10868,7 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I15 I16 drawing hit maps half bonds and viewport dimensions
 0.001	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I9 published home orientation fits the whole drawing
 UNMEASURED:not-produced-by-this-run	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 gate 1 every CLI scene equals independently loaded crysta geometry
-0.004	tests/unit/cpp/test_e04_t9_presentation.cpp::E04-T9 I17 identity modes and I23 authoritative style colors
+0.000	tests/unit/cpp/test_e04_t9_presentation.cpp::E04-T9 I17 identity modes and I23 authoritative style colors
 0.030	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 engine checkpoint cancel retains partial values and undo
 0.036	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint engine checkpoint cancel retains partial values and undo
 0.011	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-T1 gate 3 joint worker token cancellation reaches a running fit
