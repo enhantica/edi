@@ -594,16 +594,7 @@ int main(int argc,char** argv) {
             for(const auto& token:edi::supported_peak_profiles(edi::BeamModeEnum::CONSTANT_WAVELENGTH))
                 cwl_profiles.push_back(QString::fromStdString(token));
             result["native_profile_catalog"]=Object{{"beam_mode","constant wavelength"},{"profiles",cwl_profiles}};
-            result["native_import_observer"]=QJsonValue::fromVariant(vm->property("nativeImport"));
             const auto usage_index=vm->metaObject()->indexOfProperty("usage");
-            const auto folder_index=vm->metaObject()->indexOfProperty("workingFolder");
-            result["folder_observer"]=Object{
-                {"property_present",folder_index>=0},
-                {"value",folder_index>=0?QJsonValue::fromVariant(vm->property("workingFolder")):QJsonValue()},
-                {"begin_method",vm->metaObject()->indexOfMethod("beginWorkingFolderSelection()")>=0},
-                {"complete_method",vm->metaObject()->indexOfMethod("completeWorkingFolderSelection(QString,QUrl)")>=0},
-                {"cancel_method",vm->metaObject()->indexOfMethod("cancelWorkingFolderSelection(QString)")>=0},
-                {"temporary_method",vm->metaObject()->indexOfMethod("useTemporaryWorkingFolder()")>=0}};
             result["usage_observer"]=Object{{"property_present",usage_index>=0},
                 {"refresh_present",vm->metaObject()->indexOfMethod("refreshUsage()")>=0},
                 {"changes",report_urls.usage_changes},
@@ -663,25 +654,6 @@ int main(int argc,char** argv) {
                 result={{"method_present",present},{"invoked",present && QMetaObject::invokeMethod(vm,
                     "openReport",Qt::DirectConnection,Q_ARG(QString,input["row_id"].toString()),
                     Q_ARG(QString,input["href"].toString()))}};
-            } else if(codex_mode && op=="working_folder_begin") {
-                QString intent;
-                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"beginWorkingFolderSelection",
-                    Qt::DirectConnection,Q_RETURN_ARG(QString,intent));
-                result={{"invoked",invoked},{"intent",intent}};
-            } else if(codex_mode && op=="working_folder_complete") {
-                bool accepted=false;
-                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"completeWorkingFolderSelection",
-                    Qt::DirectConnection,Q_RETURN_ARG(bool,accepted),Q_ARG(QString,input["intent"].toString()),
-                    Q_ARG(QUrl,QUrl::fromLocalFile(input["directory"].toString())));
-                result={{"invoked",invoked},{"accepted",accepted}};
-            } else if(codex_mode && op=="working_folder_cancel") {
-                result={{"invoked",QMetaObject::invokeMethod(session->assistant(),"cancelWorkingFolderSelection",
-                    Qt::DirectConnection,Q_ARG(QString,input["intent"].toString()))}};
-            } else if(codex_mode && op=="working_folder_temporary") {
-                bool accepted=false;
-                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"useTemporaryWorkingFolder",
-                    Qt::DirectConnection,Q_RETURN_ARG(bool,accepted));
-                result={{"invoked",invoked},{"accepted",accepted}};
             } else if(codex_mode && op=="save_as_begin") {
                 QString intent;
                 const bool invoked=QMetaObject::invokeMethod(session.get(),"beginSaveAs",Qt::DirectConnection,
@@ -843,10 +815,7 @@ int main(int argc,char** argv) {
                 const auto action=input["action"].toString(),signal=input["signal"].toString();
                 const auto destination=input["destination"].toString();
                 const auto replacement=input["replacement"].toString();
-                const auto import_intent=input["import_intent"].toString();
-                if(action=="import272-cancel" && import_intent.isEmpty())
-                    throw std::invalid_argument("actual original import intent required");
-                auto callback=[&,owner=QPointer<edi_app::ProjectViewModel>(owner),action,signal,destination,replacement,import_intent] {
+                auto callback=[&,owner=QPointer<edi_app::ProjectViewModel>(owner),action,signal,destination,replacement] {
                     if(!publication_armed)return;publication_armed=false;
                     publication_observer={{"entered",true},{"action",action},{"signal",signal},
                         {"same_owner_at_entry",owner && session->project()==owner},
@@ -861,20 +830,6 @@ int main(int argc,char** argv) {
                     else if(action=="restore-patterns")owner->restorePatterns();
                     else if(action=="scan-prepare")refusal=owner->prepareScan(true);
                     else if(action=="scan-reset")refusal=owner->resetScan();
-                    else if(action=="import272-cancel") {
-                        auto* vm=session->assistant();
-                        const auto current=QJsonValue::fromVariant(vm->property("nativeImport")).toObject();
-                        Object observed{{"intent",import_intent},{"before",current},
-                            {"can_cancel_at_entry",vm->canCancel()},
-                            {"structures_at_entry",static_cast<int>(owner->project().structures.size())},
-                            {"experiments_at_entry",static_cast<int>(owner->project().experiments.size())}};
-                        // Existing real synchronous publication receiver calls the SAME
-                        // public exact-ID door as original form Close/hide/destruction.
-                        vm->cancelNativeImport(import_intent);
-                        observed["after"]=QJsonValue::fromVariant(vm->property("nativeImport"));
-                        observed["returned"]=true;
-                        publication_observer["import272"]=observed;
-                    }
                     else if(action=="close")session->closeProject();
                     else if(action=="replace")publication_observer["replacement_opened"]=session->openProject(QUrl::fromLocalFile(replacement));
                     else throw std::invalid_argument("undeclared finite publication action");
@@ -1044,16 +999,6 @@ int main(int argc,char** argv) {
                 named_empty_owner=session->project();
                 named_empty_core=named_empty_owner?static_cast<const void*>(&named_empty_owner->project()):nullptr;
                 result={{"created",created},{"error",session->lastError()}};
-            }
-            else if(codex_mode && op=="import265_begin") {
-                result={{"intent",session->assistant()->beginNativeImport(nullptr)}};
-            }
-            else if(codex_mode && op=="import265_apply") {
-                result={{"admitted",session->assistant()->applyNativeImport(input["intent"].toString(),
-                    input["cif_id"].toString(),input["data_id"].toString(),input["recipe_json"].toString())}};
-            }
-            else if(codex_mode && op=="import265_cancel") {
-                session->assistant()->cancelNativeImport(input["intent"].toString());
             }
             else if(codex_mode && op=="background285_observe") {
                 background285_enabled=true;result={{"enabled",true}};
