@@ -3189,7 +3189,7 @@ TestCase {
             "visible-source-refusal-close"].map(tag => ({tag: tag}));
     }
     function test_import265_actual_manual_and_visible_creation(data) {
-        const manual = data.tag.startsWith("manual-");
+        const manual = ["manual-no-owner", "manual-saved-empty"].includes(data.tag);
         const same = data.tag.endsWith("saved-empty");
         const cancelled = !manual && !["visible-no-owner", "visible-saved-empty"].includes(data.tag);
         const recipe = import265_recipe();
@@ -3688,7 +3688,7 @@ TestCase {
         const project = Session.project;
         tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
             "BG SETUP: original actual calculation is current before staging/input baselines");
-        const manual = data.tag.startsWith("manual-");
+        const manual = ["manual-add", "manual-update", "manual-remove"].includes(data.tag);
         const operation = data.tag === "manual-remove" || data.tag === "visible-remove" ? "remove"
             : data.tag === "manual-update" || data.tag === "visible-update-tof" ? "update" : "add";
         const id = operation === "add" ? "native-bg-original" : "p1";

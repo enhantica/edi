@@ -1055,7 +1055,7 @@ def test_import267_real_main_manual_visible_creation_and_retirement(case, tmp_pa
     config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
     config = json.loads(config_path.read_text())
     config.pop('report_page_reply')
-    manual = case.startswith('manual-')
+    manual = case in {'manual-no-owner', 'manual-saved-empty'}
     cancelled = not manual and case not in {'visible-no-owner', 'visible-saved-empty'}
     recipe = import267_recipe()
     calls = [
@@ -1197,7 +1197,7 @@ def test_background285_actual_main_stage_and_original_rpc(case, tmp_path):
     environment['EDI_ACCEPTANCE_REFERENCE'] = str(tmp_path)
     source = background285_fixture(tmp_path, 'tof' if case == 'visible-update-tof' else 'cw')
     original = {str(p.relative_to(source)): p.read_bytes() for p in source.rglob('*') if p.is_file()}
-    manual = case.startswith('manual-')
+    manual = case in {'manual-add', 'manual-update', 'manual-remove'}
     operation = 'remove' if case in {'manual-remove', 'visible-remove'} else (
         'update' if case in {'manual-update', 'visible-update-tof'} else 'add')
     args = {'purpose': 'Original independently requested defined background edit',
