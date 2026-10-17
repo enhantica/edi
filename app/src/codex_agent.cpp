@@ -96,12 +96,27 @@ void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
     operation_start_ = now; last_activity_ = now;
     total_ms_ = totalMs; idle_ms_ = idleMs;
 }
-bool CodexAgent::retainOutput(quint64 bytes) {
+bool CodexAgent::remainingOutput(quint64 bytes, quint64& available) const noexcept {
+    available = 0;
     if (bytes > Limits::stream_retained_bytes || record_bytes_ > Limits::stream_retained_bytes - bytes ||
-        static_cast<quint64>(incoming_.size()) > Limits::stream_retained_bytes - bytes - record_bytes_) {
+        static_cast<quint64>(incoming_.size()) > Limits::stream_retained_bytes - bytes - record_bytes_)
+        return false;
+    available = Limits::stream_retained_bytes - bytes - record_bytes_ - static_cast<quint64>(incoming_.size());
+    return true;
+}
+bool CodexAgent::retainOutput(quint64 bytes) {
+    quint64 available = 0;
+    if (!remainingOutput(bytes, available)) {
         fail("The official agent output exceeds retained capacity."); return false;
     }
     output_bytes_ = bytes; return true;
+}
+bool CodexAgent::releaseOutput(quint64 bytes, quint64 originalGeneration) noexcept {
+    if (failed_ || !process_ || generation_ != originalGeneration || bytes > output_bytes_) return false;
+    quint64 available = 0;
+    if (!remainingOutput(bytes, available)) return false;
+    output_bytes_ = bytes;
+    return true;
 }
 void CodexAgent::activity() { last_activity_ = clock_.elapsed(); }
 void CodexAgent::settleOperation() {

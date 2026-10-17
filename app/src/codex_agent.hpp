@@ -28,7 +28,12 @@ public:
     bool reject(const QJsonValue& originalId);
     void resolved(const QJsonValue& originalId);
     void activity();
+    // Callback-free admission query for the same aggregate guarded by retainOutput.
+    bool remainingOutput(quint64 bytes, quint64& available) const noexcept;
     bool retainOutput(quint64 bytes);
+    // A release can only lower the same live process's previously admitted role.
+    quint64 outputGeneration() const noexcept { return generation_; }
+    bool releaseOutput(quint64 bytes, quint64 originalGeneration) noexcept;
     void retire();
     void beginOperation(quint64 totalMs, quint64 idleMs);
     void settleOperation();

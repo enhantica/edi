@@ -898,11 +898,13 @@ row does not erase the original frame's payload charge, and an original final
 context slot remains admitted while that frame can still use it. Nested delivery
 unwinds in call order and cleanup touches only the same surviving receiver/State.
 
-Final link removal is callback-free. The agent can conservatively retain its
-prior larger output charge until the next ordinary charge; this can temporarily
-refuse otherwise available capacity. A reentrant lowering call while the original
-frame still owns payload would be unsafe. Immediate reduction is not a Save
-completion requirement, and no old worker stays admitted to obtain it.
+Final link removal is callback-free. The idle Worker's existing owner-thread
+Post epilogue reconciles the transport charge after the delivered function and
+its captures have been destroyed. Earlier local release guards measure all
+remaining owners, including the still-live delivery task. No old worker stays
+admitted to obtain this release, and an old estimate never subtracts from a new
+call's ownership. If measurement cannot complete, the conservative prior charge
+remains; no live payload is uncharged to manufacture capacity.
 
 Receipt export now has an allocation-free byte/depth/token prepass over the
 existing closed schema, before toStdString or strict-parser growth. Native Save
@@ -1012,3 +1014,64 @@ and lifetime retire original ownership on actual changes; value-role publication
 does not become a new owner. No parent.model/index inference or synthetic input
 is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
 and all unrelated original controls remain unchanged.
+
+## Joint output capacity before retained construction
+
+Prior implementation: CodexAgent::retainOutput owns the shared retained-output
+limit, charging the VM's native/item/progress owners beside the current parsed
+record and unread input. Native Save source capture, exporter/publication
+preparation and visible input preparation previously subtracted only VM owners
+when taking their remaining slot. Filling that slot made the next retainOutput
+check fail whenever the original RPC record still occupied transport capacity.
+This is local retained-output admission, not subscription or model quota.
+
+The same transport now provides a callback-free remainingOutput query with the
+exact existing checked subtraction and inclusive boundary. It neither reserves,
+releases, publishes, reads input nor changes process/account/request state.
+retainOutput uses that same predicate and keeps its original failure/termination
+behavior. VM native_room combines native, item and progress owners with those
+actual current transport roles. All remaining-slot constructions and disclosure
+pre-growth admission use that common calculation. No fixed headroom, capacity
+increase, current-data truncation or live-outcome eviction is introduced. Before
+a transport exists, there is no transport-owned record or input to subtract.
+
+The slot is still charged through native_charge before construction. Source
+capture transfers it to the actual retained source image; exporter preparation
+retains its existing exact smaller prepared role; publication retains its
+conservative original scope until its local owners unwind. A failed original
+constructor or retired owner keeps the existing release/receipt/uncertainty
+rules. No callback runs between the query and scalar slot installation; callers
+retain their existing rechecks after effects. The query is not a promise about
+future input: later records and actual retained roles remain subject to the
+unchanged guard. Fit/project values, Undo, source permission, writer/reopen/
+adoption and factual committed outcomes are unchanged. No automatic Save retry
+follows a capacity refusal, and an already committed destination is not retried.
+
+
+### Save publication and final delivery retention
+
+The original native Save exporter and prepared saved-state metadata retain their
+whole admitted slots while their actual local owners are live. On success their
+scope ends before `native_finish` performs the required changed-project disclosure
+refresh. The same order holds on exceptions through normal unwinding. The rounded
+calculation, original result and final-delivery task remain charged independently;
+this does not borrow their capacity for a separately live refresh proof.
+
+Temporary disclosure and exporter release guards subtract only their own ended
+role and then recompute the current aggregate. The transport's internal release
+operation can only lower its previously admitted output role for the same live
+process generation; it has no callbacks, cannot admit growth, and leaves the old
+conservative charge if accounting cannot complete. Original receiver, State, account and live process generation fence this
+reconciliation. A new input or project on that same account and process is
+measured as current ownership rather than charged by subtracting old estimates;
+no former receipt or outcome supplies the replacement aggregate.
+
+The existing idle Worker's queued Post seam destroys the delivered function and
+its captured task before its release epilogue measures current ownership. The Save
+preparation closure relinquishes its own no-longer-read task capture before
+returning that final delivery. Reconciliation runs in this original owner-thread
+event, with no timer, input retry or provider protocol change, before ordinary next
+frame processing. During reentrant delivery all still-live local and task roles
+remain charged. Retired processes and changed accounts or States are never revived or
+lowered by old cleanup. Mandatory refresh, source permission, committed/reopened/
+active latches, uncertainty, Stop and exactly-once response behavior are unchanged.

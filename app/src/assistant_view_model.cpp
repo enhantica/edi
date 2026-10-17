@@ -392,19 +392,22 @@ struct AssistantViewModel::State {
     quint64 disclosure_preparing_bytes = 0;
     static constexpr quint64 disclosure_shell_bytes = sizeof(DisclosureScope) + 4 * 32;
     void disclosure_room(quint64 extra) const {
-        // Use the same combined native/item/progress budget as native_charge,
-        // before adding a cache, proof or temporary encoded metadata role.
-        const auto current = native_bytes();
-        if (current > Limits::stream_retained_bytes || generic_item_bytes > Limits::stream_retained_bytes - current ||
-            generic_progress_bytes > Limits::stream_retained_bytes - current - generic_item_bytes ||
-            extra > Limits::stream_retained_bytes - current - generic_item_bytes - generic_progress_bytes)
+        // Include the current parsed record and unread input before growing a
+        // cache, proof or temporary encoded metadata role.
+        if (extra > native_room())
             throw std::length_error("Disclosure retention exceeds capacity");
     }
     auto reserve_disclosure(quint64 bytes) {
         disclosure_room(bytes);
+        const auto publication = file_projection();
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto transport_generation = transport ? transport->outputGeneration() : 0;
         disclosure_preparing_bytes += bytes;
-        const QPointer<AssistantViewModel> alive(&owner);
-        return qScopeGuard([this, alive, bytes] { if (alive) disclosure_preparing_bytes -= bytes; });
+        return qScopeGuard([this, publication, transport, transport_generation, bytes] {
+            if (!publication.receiver || publication.receiver->state_.get() != this) return;
+            disclosure_preparing_bytes -= bytes;
+            native_release_charge(publication, transport, transport_generation);
+        });
     }
     static void scope_bytes(QCryptographicHash& hash, const char* data, std::size_t size) {
         hash.addData(QByteArrayView(data, static_cast<qsizetype>(size)));
@@ -2293,6 +2296,19 @@ struct AssistantViewModel::State {
         }
         return total;
     }
+    quint64 native_room() const {
+        const auto size = native_bytes();
+        if (size > Limits::stream_retained_bytes || generic_item_bytes > Limits::stream_retained_bytes - size ||
+            generic_progress_bytes > Limits::stream_retained_bytes - size - generic_item_bytes)
+            throw std::length_error("Native retained roles exceed capacity");
+        const auto owned = size + generic_item_bytes + generic_progress_bytes;
+        auto available = static_cast<quint64>(Limits::stream_retained_bytes) - owned;
+        // A missing transport has no parsed/unread input owner. An existing
+        // transport supplies its exact live roles without callbacks or changes.
+        if (agent && !agent->remainingOutput(owned, available))
+            throw std::length_error("Native and transport retained roles exceed capacity");
+        return available;
+    }
     void native_charge(quint64 itemBytes) {
         const auto size = native_bytes();
         if (itemBytes > Limits::stream_retained_bytes || generic_progress_bytes > Limits::stream_retained_bytes - itemBytes ||
@@ -2301,6 +2317,21 @@ struct AssistantViewModel::State {
             throw std::length_error("Native retained roles exceed capacity");
     }
     void native_charge() { native_charge(generic_item_bytes); }
+    void native_release_charge(const FileProjection& publication, const QPointer<CodexAgent>& transport,
+                               quint64 transport_generation) noexcept {
+        // Recompute all CURRENT owners, including a newly admitted same-project
+        // call. Never subtract an old call's estimate from a replacement's total.
+        // Release is callback-free and cannot admit growth or revive a transport.
+        if (!publication.receiver || publication.receiver->state_.get() != this || !publishing ||
+            usage_epoch != publication.account || !transport || agent.get() != transport.data()) return;
+        try {
+            const auto size = native_bytes();
+            if (generic_item_bytes > Limits::stream_retained_bytes ||
+                generic_progress_bytes > Limits::stream_retained_bytes - generic_item_bytes ||
+                size > Limits::stream_retained_bytes - generic_item_bytes - generic_progress_bytes) return;
+            (void)transport->releaseOutput(size + generic_item_bytes + generic_progress_bytes, transport_generation);
+        } catch (...) {} // Keep the conservative admitted charge if measurement cannot complete.
+    }
     void native_restore_charge() noexcept {
         const auto publication = file_projection();
         try { native_charge(); }
@@ -3412,79 +3443,78 @@ struct AssistantViewModel::State {
                     QString::fromUtf8(task->failure.data(),static_cast<qsizetype>(task->failure_size)):
                     QStringLiteral("Saving was cancelled or its original owner changed; no destination was published.")));
             } else {
-                const auto parser_role=reserve_disclosure(AssistantResultExport::receiptPreparationBytes(task->artifact->receipt));
-                native_charge();
-                if(!receiver || receiver->state_.get()!=this)return;
-                if(!native_save_current(task))throw std::runtime_error("Save retired before export receipt preparation");
-                const auto before_export=native_bytes();
-                if(before_export>Limits::stream_retained_bytes || generic_item_bytes>Limits::stream_retained_bytes-before_export ||
-                   generic_progress_bytes>Limits::stream_retained_bytes-before_export-generic_item_bytes)
-                    throw std::length_error("Export preparation has no retained role");
-                const auto export_limit=Limits::stream_retained_bytes-before_export-generic_item_bytes-generic_progress_bytes;
-                quint64 export_bytes=export_limit;
-                disclosure_room(export_bytes);
-                disclosure_preparing_bytes+=export_bytes;
-                const auto export_role=qScopeGuard([this,receiver,&export_bytes] {
-                    if(receiver && receiver->state_.get()==this)disclosure_preparing_bytes-=export_bytes;
-                });
-                native_charge();
-                if(!receiver || receiver->state_.get()!=this)return;
-                if(!native_save_current(task))throw std::runtime_error("Save retired before bounded export construction");
-                auto output=task->current_destination
-                    ?std::make_unique<AssistantResultExport>(*task->artifact,task->source,task->folder,export_limit)
-                    :std::make_unique<AssistantResultExport>(*task->artifact,task->folder,task->name,export_limit);
-                if(!receiver || receiver->state_.get()!=this)return;
-                if(!native_save_current(task))throw std::runtime_error("Save retired during bounded export construction");
-                const auto prepared_export_bytes=output->preparationBytes();
-                if(prepared_export_bytes>export_bytes)throw std::length_error("Export exceeded its preowned preparation role");
-                disclosure_preparing_bytes-=export_bytes-prepared_export_bytes;
-                export_bytes=prepared_export_bytes; // Callback-free transfer; no unsafe reentrant charge lowering.
+                {
+                    const auto parser_role=reserve_disclosure(AssistantResultExport::receiptPreparationBytes(task->artifact->receipt));
+                    native_charge();
+                    if(!receiver || receiver->state_.get()!=this)return;
+                    if(!native_save_current(task))throw std::runtime_error("Save retired before export receipt preparation");
+                    const auto export_limit=native_room();
+                    quint64 export_bytes=export_limit;
+                    disclosure_room(export_bytes);
+                    const auto export_publication=file_projection();
+                    const QPointer<CodexAgent> export_transport(agent.get());
+                    const auto export_generation=export_transport?export_transport->outputGeneration():0;
+                    disclosure_preparing_bytes+=export_bytes;
+                    const auto export_role=qScopeGuard([this,receiver,&export_bytes,export_publication,export_transport,export_generation] {
+                        if(!receiver || receiver->state_.get()!=this)return;
+                        disclosure_preparing_bytes-=export_bytes;
+                        native_release_charge(export_publication,export_transport,export_generation);
+                    });
+                    native_charge();
+                    if(!receiver || receiver->state_.get()!=this)return;
+                    if(!native_save_current(task))throw std::runtime_error("Save retired before bounded export construction");
+                    auto output=task->current_destination
+                        ?std::make_unique<AssistantResultExport>(*task->artifact,task->source,task->folder,export_limit)
+                        :std::make_unique<AssistantResultExport>(*task->artifact,task->folder,task->name,export_limit);
+                    if(!receiver || receiver->state_.get()!=this)return;
+                    if(!native_save_current(task))throw std::runtime_error("Save retired during bounded export construction");
+                    const auto prepared_export_bytes=output->preparationBytes();
+                    if(prepared_export_bytes>export_bytes)throw std::length_error("Export exceeded its preowned preparation role");
+                    disclosure_preparing_bytes-=export_bytes-prepared_export_bytes;
+                    export_bytes=prepared_export_bytes; // Callback-free transfer; no unsafe reentrant charge lowering.
 
-                task->recovery=output->recoveryDirectory();
-                native_save_prepare_progress(task);
-                native_charge();
-                if(!receiver || receiver->state_.get()!=this)return;
-                if(!native_save_current(task))throw std::runtime_error("Save retired before publication preparation");
-                const auto retained=native_bytes();
-                if(retained>Limits::stream_retained_bytes || generic_item_bytes>Limits::stream_retained_bytes-retained ||
-                   generic_progress_bytes>Limits::stream_retained_bytes-retained-generic_item_bytes)
-                    throw std::length_error("Saved publication metadata has no retained role");
-                static_assert(Limits::stream_retained_bytes<=std::numeric_limits<std::size_t>::max());
-                const auto publication_limit=Limits::stream_retained_bytes-retained-generic_item_bytes-generic_progress_bytes;
-                const auto publication_role=reserve_disclosure(publication_limit);
-                native_charge();
-                if(!receiver || receiver->state_.get()!=this)return;
-                if(!native_save_current(task))throw std::runtime_error("Save retired before its prepared metadata allocation");
-                // The strict loader restores rounded measured/model values;
-                // actual current arrays were calculated by the original worker.
-                if(!task->calculation)throw std::runtime_error("The rounded saved calculation is unavailable");
-                auto ready=[&] {
-                    auto prepared_model=load_captured_assistant_result(*task->artifact);
-                    return task->project->prepareNativeSaved(prepared_model,task->snapshot.stamps,std::move(*task->calculation),task->destination,static_cast<std::size_t>(publication_limit));
-                }(); // The full rounded model is gone before disk publication or any UI callback.
-                task->calculation.reset();
-                if(!native_save_current(task))throw std::runtime_error("The save owner changed before publication");
-                native_call->may_have_written=true;
-                try { output->publish([this,receiver,task]{return receiver && receiver->state_.get()==this && native_save_current(task);}); }
-                catch(...) {task->committed=output->committed();if(task->committed)native_save_latch(task,1);throw;}
-                task->committed=output->committed(); // Actual disk latch before fallible verification/publication.
-                if(task->committed)native_save_latch(task,1);
-                { auto reopened=output->reopen(); (void)reopened; } // Drop the verification model before adoption/signals.
-                task->reopened=true;native_save_latch(task,2);
-                if(!native_save_current(task))throw std::runtime_error("The save completed after its displayed owner changed");
-                // No own-edit suppression across synchronous presentation:
-                // genuine manual edits keep their normal retirement path.
-                if(!result_session()->commitAssistantCurrentSave(task->project,task->epoch,*ready))throw std::runtime_error("The saved current model could not be adopted");
-                task->active=true;native_save_latch(task,3);
-                task->call.may_have_written=true;
-                // Original task's actual state is established before observers;
-                // manual edits/replacement during presentation always win.
-                const bool session_presented=result_session()->presentAssistantCurrentSave(task->project,task->epoch);
-                if(!receiver)return;
-                if(receiver && task->project && original_call() && project==task->project &&
-                   result_session() && result_session()->assistantEpoch()==task->epoch)
-                    task->presented=task->project->presentNativeSaved(*ready) && session_presented;
-                if(!receiver)return;
+                    task->recovery=output->recoveryDirectory();
+                    native_save_prepare_progress(task);
+                    native_charge();
+                    if(!receiver || receiver->state_.get()!=this)return;
+                    if(!native_save_current(task))throw std::runtime_error("Save retired before publication preparation");
+                    static_assert(Limits::stream_retained_bytes<=std::numeric_limits<std::size_t>::max());
+                    const auto publication_limit=native_room();
+                    const auto publication_role=reserve_disclosure(publication_limit);
+                    native_charge();
+                    if(!receiver || receiver->state_.get()!=this)return;
+                    if(!native_save_current(task))throw std::runtime_error("Save retired before its prepared metadata allocation");
+                    // The strict loader restores rounded measured/model values;
+                    // actual current arrays were calculated by the original worker.
+                    if(!task->calculation)throw std::runtime_error("The rounded saved calculation is unavailable");
+                    auto ready=[&] {
+                        auto prepared_model=load_captured_assistant_result(*task->artifact);
+                        return task->project->prepareNativeSaved(prepared_model,task->snapshot.stamps,std::move(*task->calculation),task->destination,static_cast<std::size_t>(publication_limit));
+                    }(); // The full rounded model is gone before disk publication or any UI callback.
+                    task->calculation.reset();
+                    if(!native_save_current(task))throw std::runtime_error("The save owner changed before publication");
+                    native_call->may_have_written=true;
+                    try { output->publish([this,receiver,task]{return receiver && receiver->state_.get()==this && native_save_current(task);}); }
+                    catch(...) {task->committed=output->committed();if(task->committed)native_save_latch(task,1);throw;}
+                    task->committed=output->committed(); // Actual disk latch before fallible verification/publication.
+                    if(task->committed)native_save_latch(task,1);
+                    { auto reopened=output->reopen(); (void)reopened; } // Drop the verification model before adoption/signals.
+                    task->reopened=true;native_save_latch(task,2);
+                    if(!native_save_current(task))throw std::runtime_error("The save completed after its displayed owner changed");
+                    // No own-edit suppression across synchronous presentation:
+                    // genuine manual edits keep their normal retirement path.
+                    if(!result_session()->commitAssistantCurrentSave(task->project,task->epoch,*ready))throw std::runtime_error("The saved current model could not be adopted");
+                    task->active=true;native_save_latch(task,3);
+                    task->call.may_have_written=true;
+                    // Original task's actual state is established before observers;
+                    // manual edits/replacement during presentation always win.
+                    const bool session_presented=result_session()->presentAssistantCurrentSave(task->project,task->epoch);
+                    if(!receiver)return;
+                    if(receiver && task->project && original_call() && project==task->project &&
+                       result_session() && result_session()->assistantEpoch()==task->epoch)
+                        task->presented=task->project->presentNativeSaved(*ready) && session_presented;
+                    if(!receiver)return;
+                } // ready/output and their parser/export/publication roles are gone before refresh.
                 release();
                 if(receiver && original_call())native_finish(true,native_save_outcome(*task,
                     task->presented?QStringLiteral("Saved, reopened and adopted as the active project."):
@@ -3692,6 +3722,7 @@ struct AssistantViewModel::State {
                 constexpr char failed[]="Native save preparation failed";
                 std::copy_n(failed,sizeof(failed)-1,task->failure.data());task->failure_size=sizeof(failed)-1;
             }
+            task.reset(); // The final delivery now owns the task; this job never reads it again.
             return std::move(completion);
         };
         static_assert(sizeof(decltype(prepare)) <= 3 * sizeof(edi::work::Job));
@@ -3730,12 +3761,8 @@ struct AssistantViewModel::State {
             native_save_prepare_progress(task); // Variants and replacement scratch are preowned before growth.
             if(!task->source_directory.isEmpty()) {
                 save_stage="SOURCE_CAPTURE";
-                const auto retained=native_bytes();
-                if(retained>Limits::stream_retained_bytes || generic_item_bytes>Limits::stream_retained_bytes-retained ||
-                   generic_progress_bytes>Limits::stream_retained_bytes-retained-generic_item_bytes)
-                    throw std::length_error("Save source has no original retained slot");
-                task->source_reservation=Limits::stream_retained_bytes-retained-generic_item_bytes-generic_progress_bytes;
-                native_charge(); // Preown the actual remaining slot before source growth.
+                task->source_reservation=native_room();
+                native_charge(); // Preown remaining joint capacity, including the original transport record.
                 if(!receiver || !admission.input_current() || !native_save_current(task))return;
                 task->source=std::make_shared<AssistantSaveSource>(task->source_directory,task->source_reservation,
                     [this,receiver,task]{return receiver && receiver->state_.get()==this && native_save_current(task);});
@@ -4020,12 +4047,8 @@ struct AssistantViewModel::State {
         const quint64 inputSlots = static_cast<quint64>(19 + 3 * count);
         const quint64 fixed = sizeof(NativeCreateWidget) + sizeof(AssistantWidgetInput::Request) + inputSlots * sizeof(NativeCreateWidget::Input) +
             static_cast<quint64>(count) * (sizeof(QVariantMap) + 2 * sizeof(QVariant) + 2 * sizeof(QString)) + 2 * Limits::error_bytes * sizeof(QChar);
-        const auto current = native_bytes();
-        if (current > Limits::stream_retained_bytes || generic_item_bytes > Limits::stream_retained_bytes - current ||
-            generic_progress_bytes > Limits::stream_retained_bytes - current - generic_item_bytes ||
-            fixed > Limits::stream_retained_bytes - current - generic_item_bytes - generic_progress_bytes)
-            throw std::length_error("Visible import staging exceeds retained capacity");
-        const auto available = Limits::stream_retained_bytes - current - generic_item_bytes - generic_progress_bytes;
+        const auto available = native_room();
+        if (fixed > available) throw std::length_error("Visible import staging exceeds retained capacity");
         quint64 owned = fixed;
         run->inputs.reserve(static_cast<qsizetype>(inputSlots));
         const auto add = [&](AssistantWidgetInput::Kind kind, const QString& target, const QString& text = {}, int option = -1, int section = -1, int row = -1) {
@@ -6178,7 +6201,26 @@ struct AssistantViewModel::State {
     void initialize() {
 #endif
         idle_worker = std::make_unique<edi::work::Worker>([this](edi::work::Delivery delivery) {
+#ifndef __EMSCRIPTEN__
+            const QPointer<AssistantViewModel> receiver(&owner);
+            QMetaObject::invokeMethod(&owner, [this,receiver,delivery=std::move(delivery)]() mutable {
+                if(!receiver || receiver->state_.get()!=this)return;
+                const auto publication=file_projection();
+                const QPointer<CodexAgent> transport(agent.get());
+                const auto transport_generation=transport?transport->outputGeneration():0;
+                const auto released=qScopeGuard([this,publication,transport,transport_generation] {
+                    if(publication.receiver && publication.receiver->state_.get()==this)
+                        native_release_charge(publication,transport,transport_generation);
+                });
+                // Destroy the actual callback and its task captures BEFORE
+                // reconciling the original transport's retained-output role.
+                // Its native delivery chain has already unwound at that point.
+                auto owned=std::move(delivery);
+                if(owned)owned();
+            }, Qt::QueuedConnection);
+#else
             QMetaObject::invokeMethod(&owner, std::move(delivery), Qt::QueuedConnection);
+#endif
         });
         history_path = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/assistant/history.json";
         QFile saved(history_path);
