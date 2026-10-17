@@ -3998,8 +3998,40 @@ TestCase {
         compare(editor.text, text, "UX289: pre-ACK row publication must preserve the submitted editor spelling");
         compare(canonicalSelected(), selected,
             "UX289: pending presentation cannot revoke original selected identities or authority");
-        verify(ux289_descendantText(popup).some(value => value.indexOf("PbSO4-Wyckoff.cif") >= 0),
-            "UX289: pending original attachment stays visibly presented before its ACK");
+        const popupContent = popup.contentItem;
+        verify(popupContent !== null, "UX345 SETUP: original popup has its actual visual content root");
+        const originalPreAckChipCandidates345 = Ui.itemsWithProperty(popupContent, "objectName").filter(value =>
+            value.objectName === "assistant.file." + selectedId);
+        console.info("UX345_DRAFT_CHIP", JSON.stringify({selectedId: selectedId,
+            popup: String(popup), content: String(popupContent), candidateCount: originalPreAckChipCandidates345.length,
+            candidates: originalPreAckChipCandidates345.slice(0, 4).map(value => ({identity: String(value),
+                name: value.objectName, visible: value.visible, rendered: Ui.rendered(value),
+                exposed: Ui.exposed(value), width: value.width, height: value.height}))}));
+        compare(originalPreAckChipCandidates345.length, 1, "UX345: exactly one draft chip owns the original selected source ID");
+        const draftChip = originalPreAckChipCandidates345[0];
+        let inComposer = false, inPopup = false, inWindow = false;
+        for (let parent = draftChip; parent; parent = parent.parent) {
+            inComposer = inComposer || parent === composer[0];
+            inPopup = inPopup || parent === popupContent;
+            inWindow = inWindow || parent === Ui.windowRoot(window);
+        }
+        console.info("UX345_DRAFT_ANCESTRY", JSON.stringify({selectedId: selectedId,
+            inComposer: inComposer, inPopup: inPopup, inWindow: inWindow}));
+        verify(inComposer && inPopup && inWindow,
+            "UX345: original draft chip belongs to the original composer, popup content and window");
+        compare(Ui.control(Probe, window, draftChip.objectName), draftChip,
+            "UX345: original draft chip satisfies the existing current-popup and physical-window exposure contract");
+        verify(draftChip.visible && Ui.rendered(draftChip) && Ui.exposed(draftChip),
+            "UX289: original pre-ACK draft chip is genuinely rendered inside the visible viewport");
+        const filenames = Ui.itemsWithProperty(draftChip, "text").filter(value =>
+            value.visible && Ui.rendered(value) && Ui.exposed(value)
+                && String(value.text).indexOf("PbSO4-Wyckoff.cif") >= 0);
+        console.info("UX345_DRAFT_TEXT", JSON.stringify({selectedId: selectedId,
+            inComposer: inComposer, inPopup: inPopup, inWindow: inWindow,
+            visibleFilenameCount: filenames.length,
+            labels: filenames.slice(0, 4).map(value => ({identity: String(value), text: String(value.text),
+                visible: value.visible, rendered: Ui.rendered(value), exposed: Ui.exposed(value)}))}));
+        compare(filenames.length, 1, "UX289: pending original attachment stays visibly presented before its ACK");
         if (data.tag === "new-identical-draft") {
             Ui.click(this, Probe, window, editor.objectName);
             visible185_type("New original draft");

@@ -8357,6 +8357,36 @@ def test_background291_fixture_construction_preserves_declared_sections(
             'BG291 SETUP: actual second measured bank differs only by its independent original dataset name'
         )
 
+def ux345_default_scattering_project(owned):
+    """Owned original scientific bytes, deliberately using the public native default table."""
+    original = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    before = save211_files(original)
+    declaration = (b'loop_\n_scattering_length.type_symbol\n'
+                   b'_scattering_length.length_fm\nLa 8.24\n')
+    structure = before['structures/lbco.edi']
+    assert structure.count(declaration) == 1 and structure.endswith(declaration), (
+        'UX345 SETUP: committed original has exactly the known terminal La-only custom declaration'
+    )
+    expected = dict(before)
+    expected['structures/lbco.edi'] = structure[:-len(declaration)]
+    assert b'_scattering_length.' not in expected['structures/lbco.edi'], (
+        'UX345 SETUP: owned fixture truly omits the custom table and requests the documented default'
+    )
+    source = owned / 'ux345-default-scattering-project'
+    assert not source.exists() and not source.is_symlink(), (
+        'UX345 SETUP: scientific input is a fresh owned directory, never shared or reused'
+    )
+    shutil.copytree(original, source)
+    (source / 'structures/lbco.edi').write_bytes(expected['structures/lbco.edi'])
+    assert save211_files(source) == expected and save211_files(original) == before, (
+        'UX345 SETUP: only the incomplete custom declaration is omitted; every other byte and original fixture stay exact'
+    )
+    assert expected['structures/lbco.edi'] + declaration == structure, (
+        'UX345 SETUP: literal declaration reinsertion reconstructs every original scientific structure byte'
+    )
+    return source
+
+
 # Direct public facade ownership is deliberately separate from real Session/account
 # authority. Existing target/peer/Generic transport and bounds only.
 @pytest.mark.parametrize(('trigger', 'action'), [
@@ -8366,7 +8396,8 @@ def test_background291_fixture_construction_preserves_declared_sections(
 ])
 def test_ux304_public_transport_callback_owns_original_receiver(generic, trigger, action):
     actor, trace = generic('transport304')
-    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+    source = ux345_default_scattering_project(trace.parent)
+    assert actor.command('open', path=str(source))[
         'reply']['opened'], 'UX304 SETUP: real scientific owner exists outside isolated facade caller'
     actor.command('native_science_enable')
     actor.command('background285_observe')
@@ -8541,7 +8572,7 @@ def test_ux319_actual_completed_model_callback_keeps_original_authority(generic,
     config['vm319_record_packets'] = True
     config_path.write_text(json.dumps(config))
     original_config = config_path.read_bytes()
-    source = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    source = ux345_default_scattering_project(trace.parent)
     original_files = save211_files(source)
     assert actor.command('open', path=str(source))['reply']['opened'], (
         'UX319 SETUP: original public Session owns actual committed scientific fixture'
@@ -8680,7 +8711,7 @@ def test_ux319_actual_final_failure_publication_preserves_factual_cause(generic)
     config['vm319_record_packets'] = True
     config_path.write_text(json.dumps(config))
     original_config = config_path.read_bytes()
-    source = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    source = ux345_default_scattering_project(trace.parent)
     original_files = save211_files(source)
     assert actor.command('open', path=str(source))['reply']['opened'], (
         'UX319 SETUP: final-publication callback observes original genuine scientific owner'
