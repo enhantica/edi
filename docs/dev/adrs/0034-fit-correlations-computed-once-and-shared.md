@@ -44,8 +44,9 @@ and save, and copies all the rows on Reset fits. The fits themselves did not get
    one. Nothing assigns, renumbers or copies the whole scan's pairs, at the end of a run or
    at any other time. The map is live state, not a category of the file.
 4. **The saved loop holds only what a save writes.** The record's `correlations` table stays the persisted loop. For a
-   single or joint fit it holds that fit's rows, as now. For a scan it holds the template file's rows, made from the
-   template's table when the template's fit changes: the end of a run, a Single fit on a dataset, or their Undo. Ids
+   single or joint fit it holds that fit's rows, as now. For a scan it holds the template file's rows (the declared
+   template dataset, else the first file of the scan's listing, the one its report shows; `effective_scan_template_file`,
+   2026-10-14), made from the template's table when the template's fit changes: the end of a run, a Single fit on a dataset, or their Undo. Ids
    run 1, 2, … in pair order, and coefficients are crysta's shortest form, so the bytes match today's. Rows read from a
    file keep their ids and text until a fit replaces them. When the template's fit changes, rows read with another
    file move, unchanged, into that file's bundle unless a fit gave it one: the loop then holds the template's rows

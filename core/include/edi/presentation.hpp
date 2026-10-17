@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "edi/palette.hpp"
+
 // ADR-0021: the pattern presentation — the one description every renderer
 // draws (the app's chart now).
 // crysta computes every number; this file selects, decimates for the screen and maps to a display
@@ -39,11 +41,12 @@ struct PatternSource {
         std::string structure_id, label;
         std::size_t place = 0;  // the structure's place in the project's list: its row and colour
         Column position;        // `_refln` positions, on the experiment's x axis
+        Column readout;         // what a tick's readout shows when not its position: the reflection's d on the d axis
         std::shared_ptr<const std::vector<std::array<std::int32_t, 3>>> hkl;
         // The `_refln` row of each position; empty when they are rows 0, 1, 2, …
         std::vector<std::size_t> rows;
     };
-    std::string x_title;                   // `2θ (°)` or `TOF (µs)`
+    std::string x_title;                   // `2θ (deg)` or `TOF (µs)`
     Column x, meas, su, calc, bkg, resid;  // null: the column is absent
     std::vector<Phase> phases;
     std::vector<ExcludedBand> excluded;
@@ -51,9 +54,17 @@ struct PatternSource {
     bool current = false;              // the computed columns describe the model now
 };
 
+// The x axis a pattern is captured on: the experiment's own (2θ or TOF), or d-spacing.
+enum class PatternAxis : std::uint8_t { Native, DSpacing };
+
 // Owner thread. The computed columns and the reflections are taken only when the experiment's
 // computed categories are current; otherwise they are absent and `current` is false.
-PatternSource capture_pattern(const Project& project, std::size_t experiment_index);
+// On the d axis x is `_pd_data.d_spacing`, titled `d (Å)`; every column is reversed when d descends (constant
+// wavelength), so x ascends (a presented point's row then counts from the last `_data` row), and each excluded band's
+// ends and each tick's `_refln.position` are mapped to d along the data, so a tick meets its peak; a tick's readout is
+// its `_refln.d_spacing`. Without a current d column the pattern stays on its own axis.
+PatternSource capture_pattern(const Project& project, std::size_t experiment_index,
+                              PatternAxis axis = PatternAxis::Native);
 
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
@@ -84,7 +95,7 @@ struct PatternSeries {
     Pane pane{};
     std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>"
     std::string label;  // the legend text
-    std::string style;  // a key of pattern_style_table()
+    std::string style;  // a key of pattern_style_table(): `meas.<experiment place>`, `bragg.<structure place>`
     std::vector<PresentedPoint> points;
     // Per point: its `_data` row, or its `_refln` row; kNoRow for a gap or a tick's end.
     std::vector<std::size_t> rows;
@@ -93,8 +104,16 @@ struct PatternSeries {
     std::vector<double> bar_low, bar_high;
 };
 
+// A piece of an axis title in a series' colour: `style` names its style row; empty, it is plain (a separator).
+struct TitleSegment {
+    std::string text, style;
+};
+
 struct AxisDescription {
     std::string title;
+    // The title as coloured pieces, each series' word in its colour: the main pane's "meas, calc, bkg" and the
+    // residual's "meas − calc", of the series presented. Empty for the x axis.
+    std::vector<TitleSegment> segments;
     double min = 0.0, max = 0.0;  // of what is presented, in the display scale
     YScale scale = YScale::Linear;
 };
@@ -106,10 +125,18 @@ struct PaneLayout {
     double fixed_px = 0.0;
 };
 
+// A Bragg tick row's label, drawn at the row's left in its colour: the structure's name, its style row and the
+// row's centre in the Bragg pane's units (row k from the bottom spans k to k + 1).
+struct BraggRowLabel {
+    std::string text, style;
+    double centre = 0.0;
+};
+
 struct PatternPresentation {
     bool current = false;  // the calculated series describe the model now
     AxisDescription x, y_main, y_residual;
     std::vector<PatternSeries> series;
+    std::vector<BraggRowLabel> bragg_labels;
     std::vector<ExcludedBand> excluded;
     std::vector<PaneLayout> layout;  // top to bottom
 };
@@ -123,7 +150,12 @@ struct SeriesStyle {
     double opacity = 1.0;
     double marker_px = 0.0;
 };
-const std::vector<SeriesStyle>& pattern_style_table();
+// The style table of a project of `experiments` experiments and `structures` structures in `scheme`: a
+// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least the scheme's
+// structure colours), each colour the palette's (edi::pattern_colour, edi::structure_colour, which takes the structure
+// colours round again), and the role rows, the calculated, background, residual and excluded-region styles.
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
+                                             std::size_t structures = 0);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

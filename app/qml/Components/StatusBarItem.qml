@@ -97,7 +97,7 @@ Control {
         }
     }
 
-    // A clickable item highlights on hover, as the fit area's outcome does (FitOutcomeLabel).
+    // A clickable item highlights on hover, as the fit area's status does (FitStatusItem).
     background: Item {
         Rectangle {
             anchors.fill: parent

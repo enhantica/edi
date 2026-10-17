@@ -3,6 +3,7 @@
 
 #include "app_build_info.hpp"
 #include "engine_setup.hpp"
+#include "edi/palette.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/threading.hpp"
 
@@ -12,6 +13,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QQuickWindow>
+#include <QScreen>
 #include <QSGRendererInterface>
 #include <QStringList>
 #include <QSysInfo>
@@ -143,6 +145,37 @@ QStringList ApplicationInfo::elementSymbols() const {
         symbols.append(QString::fromStdString(style.symbol));
     }
     return symbols;
+}
+
+namespace {
+edi::ColourScheme colour_scheme(const QString& name) {
+    return edi::colour_scheme_from_name(name.toStdString()).value_or(edi::kDefaultColourScheme);
+}
+}  // namespace
+
+QColor ApplicationInfo::patternColour(const QString& scheme, int place, int count, bool dark) const {
+    return QColor(QString::fromStdString(edi::pattern_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)),
+                                                             static_cast<std::size_t>(std::max(count, 1)), dark)));
+}
+
+QPoint ApplicationInfo::onScreenPosition(int x, int y, int width, int height) const {
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    for (const QScreen* screen : screens) {
+        if (screen->virtualGeometry().contains(x, y)) {
+            return {x, y};
+        }
+    }
+    const QScreen* primary = QGuiApplication::primaryScreen();
+    if (primary == nullptr) {
+        return {x, y};
+    }
+    const QRect area = primary->availableGeometry();
+    return {area.x() + std::max(0, (area.width() - width) / 2), area.y() + std::max(0, (area.height() - height) / 2)};
+}
+
+QColor ApplicationInfo::structureColour(const QString& scheme, int place, bool dark) const {
+    return QColor(QString::fromStdString(
+        edi::structure_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)), dark)));
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {
