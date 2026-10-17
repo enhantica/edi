@@ -4521,6 +4521,43 @@ TestCase {
             results: Probe.rows(project.fit.results), outcome: project.fit.outcome,
             iterations: project.fit.iterations, goodnessOfFit: project.fit.goodnessOfFit});
     }
+    function save380_preAdmissionRefusal(callId, previousIds, expectedArguments) {
+        const rows = Probe.rows(assistant.messages).filter(row => !previousIds.has(row.id)
+            && row.kind === "activity" && row.payload && row.payload.id === callId);
+        verify(rows.length <= 1, "SAVE380: only one new original activity owns the exact refused call");
+        if (!rows.length) return null;
+        const row = rows[0], payload = row.payload;
+        verify(typeof row.id === "string" && row.id.length > 0,
+            "SAVE380: original refused activity has a genuine nonempty public identity");
+        compare(payload.type, "dynamicToolCall", "SAVE380: original result is a real dynamic tool activity");
+        compare(payload.tool, "save_project", "SAVE380: exact original Save tool owns the refusal");
+        compare(payload.namespace, null, "SAVE380: original Save namespace is unchanged");
+        verify(payload.arguments && typeof payload.arguments === "object",
+            "SAVE380: original full Save arguments remain available");
+        compare(Object.keys(payload.arguments).sort(), Object.keys(expectedArguments).sort(),
+            "SAVE380: refused original arguments have exactly the independently requested fields");
+        for (const key of Object.keys(expectedArguments))
+            compare(payload.arguments[key], expectedArguments[key],
+                "SAVE380: each refused original argument equals the independent requested operand");
+        if (row.status !== "failed") return null;
+        compare(payload.status, "failed", "SAVE380: original generic activity truthfully records failure");
+        compare(payload.success, false, "SAVE380: original pre-admission result cannot claim success");
+        verify(!Object.prototype.hasOwnProperty.call(payload, "nativeOutcome"),
+            "SAVE380: pre-admission refusal does not fabricate an admitted native record");
+        verify(Array.isArray(payload.contentItems) && payload.contentItems.length === 1,
+            "SAVE380: original refusal retains exactly one typed result item");
+        const content = payload.contentItems[0];
+        compare(content.type, "inputText", "SAVE380: original refused result uses the public text item type");
+        verify(typeof content.text === "string", "SAVE380: original typed refusal contains actual JSON text");
+        const result = JSON.parse(content.text);
+        compare(Object.keys(result).sort(), ["message", "status"],
+            "SAVE380: original validation refusal has the exact public result fields");
+        compare(result.status, "refused", "SAVE380: no-grant Save explicitly refuses before admission");
+        verify(typeof result.message === "string"
+            && result.message.endsWith("[save_project:WORKING_OWNER/VALIDATION]"),
+            "SAVE380: deliberate absent authority refuses at the exact expected validation phase");
+        return {activityId: row.id, result: result};
+    }
     function test_save349_visible_real_save_and_retirement_data() {
         return ["fresh", "current", "no-grant", "collision", "stop", "close-owner", "current-ten-refit"].map(tag => ({tag: tag}));
     }
@@ -4704,10 +4741,21 @@ TestCase {
                 } else if (data.tag === "close-owner") Session.closeProject();
             }
             const refused = ["no-grant", "collision", "stop", "close-owner"].includes(data.tag);
+            const expectedArguments380 = {purpose: "Save original fitted displayed project through actual visible controls",
+                destination: "fresh", name: leaf};
+            let preAdmission380 = null;
             tryVerify(() => !assistant.canCancel && !assistant.showingActions
-                && (data.tag === "close-owner" ? Session.project === null : visible185_outcome(call, beforeIds) !== null),
+                && (data.tag === "close-owner" ? Session.project === null : data.tag === "no-grant"
+                    ? (preAdmission380 = save380_preAdmissionRefusal(call, beforeIds, expectedArguments380)) !== null
+                    : visible185_outcome(call, beforeIds) !== null),
                 observation, "SAVE349: original whole request settles without a fabricated native receipt");
-            const outcome = visible185_outcome(call, beforeIds);
+            const originalRefusal380 = data.tag === "no-grant"
+                ? save380_preAdmissionRefusal(call, beforeIds, expectedArguments380) : null;
+            if (data.tag === "no-grant") verify(originalRefusal380 !== null,
+                "SAVE380: settled no-grant requires its original typed refusal, never an admitted fallback");
+            if (originalRefusal380 !== null) compare(originalRefusal380.activityId, preAdmission380.activityId,
+                "SAVE380: the same original refused public activity survives whole-turn settlement");
+            const outcome = originalRefusal380 !== null ? originalRefusal380.result : visible185_outcome(call, beforeIds);
             if (!refused) verify(alive313(owner) && Session.project === project,
                 "SAVE352: successful Save keeps the exact original live displayed owner before any inspection");
             console.log("SAVE349_TERMINAL", JSON.stringify({case: data.tag, outcome: outcome,
