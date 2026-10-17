@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-17T14:18:51Z
+# measured_utc = 2026-10-17T14:32:46Z
 #
-# Recorded from: completed focused native presentation run (tests-seq80-presentation.log)
-# Collected tests: 12411; with a reported duration: 6591
-# Module-scoped fixture costs recorded: 47
+# Recorded from: measured test run (2 node(s) measured once, 11116 banked, 0 stale row(s) dropped)
+# Collected tests: 12080; with a reported duration: 6591
+# Module-scoped fixture costs recorded: 48
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12078
+# inventory_python = 12080
 # inventory_cpp = 333
-# inventory_measured = 11116
+# inventory_measured = 11118
 # inventory_unmeasured = 1295
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -9748,6 +9748,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
+0.003	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[delayed-render]
+0.000	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[never-rendered]
 0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[0]
 0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[4294967295]
 0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[7]
@@ -12486,6 +12488,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
+# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py
 # module-cost: 0.115	tests/system/py/test_report_publication_failures.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
