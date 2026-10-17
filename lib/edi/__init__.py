@@ -231,6 +231,7 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     TofPseudoVoigt,
     ValidationError,
     VerbosityEnum,
+    WeightFraction,
     error_report,
     iteration_line,
     machine_report,
@@ -362,6 +363,7 @@ __all__ = [
     'TofPseudoVoigt',
     'ValidationError',
     'VerbosityEnum',
+    'WeightFraction',
     'error_report',
     'iteration_line',
     'machine_report',
@@ -665,10 +667,12 @@ _CW_PEAK_KEYS = frozenset({
 _CW_INSTRUMENT_KEYS = frozenset({'setup_wavelength', 'calib_twotheta_offset'})
 # The optional CW line shifts — accepted from a spec, never engaged by default.
 _CW_LINE_SHIFT_KEYS = frozenset({'calib_sample_displacement', 'calib_sample_transparency'})
-# The X-ray CW monochromator polarization — accepted from an X-ray spec only.
+# The X-ray CW monochromator polarization and K-alpha doublet — accepted from an X-ray spec only.
 _XRAY_POLARIZATION_KEYS = frozenset({
     'setup_polarization_coefficient',
     'setup_monochromator_twotheta',
+    'setup_wavelength_2',
+    'setup_wavelength_2_to_1_ratio',
 })
 
 _PEAK_PROFILE_BY_TOKEN = {

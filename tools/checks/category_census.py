@@ -107,6 +107,7 @@ NOT_MODEL = {
     'StructureGeometry': 'the computed structure categories, published whole',
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',
+    'WeightFraction': "a linked structure's weight fraction, derived from the model on each read",
     'FitPreamble': 'a fit report',
     'ScanFileRecord': 'a fit report',
     'ScanPreamble': 'a fit report',

@@ -8,8 +8,8 @@ FitJob result supplies an expectation. Elapsed times are provenance, never parit
 expectations. Comparison uses the existing machine-record parity tolerance:
 absolute 5e-10 and relative 5e-9 (`test_c09_t9_output_contract_and_cli.py`).
 
-The core fit-stream gates expect the packet's FitJob next to LivePreview. The
-initial executable interface follows LivePreview's owner-thread pattern:
+The core fit-stream tests exercise FitJob next to LivePreview. The
+initial executable interface follows LivePreview's calling-thread pattern:
 `FitJob(Project&, work::Worker&, Hooks, Seams = {})`, `start()`, `cancel()` and
 `running()`. Hooks carry `started(const FitPreamble&)`,
 `iterated(const IterationRecord&)`, optional `frame(const FitFrame&)`, and
@@ -29,7 +29,7 @@ and parameters retain the machine parity tolerance. The CLI capture trace reads
 parameters at the CLI's own `_fit` return boundary, before the writer rounds
 values; it invokes the normal CLI entry point and performs no additional fit.
 
-Gate 8's codec input is independent: `_fit_result` names come from diffraction-lib
+The codec input is independent: `_fit_result` names come from diffraction-lib
 `develop`, `src/easydiffraction/analysis/categories/fit_result/{base,lsq}.py`;
 `analysis.py` defines objective chi_square and degrees of freedom. Synthetic time
 123.375 tests the seconds conversion away from identity. CLI/app saves require
@@ -70,12 +70,12 @@ All CLI values, uncertainties and the original project input bytes are retained.
 
 `generate.py --only <new-project-id>` appends a newly registered single/joint
 CLI oracle while retaining every existing case byte for byte. The appended case
-names the actual imported artifact's linked engine source. Tests adds
-`pd-xray-cwl_lif_single` after ; its two free polarization parameters are
+names the actual imported artifact's linked engine source. The generator adds
+`pd-xray-cwl_lif_single`; its two free polarization parameters are
 fitted using the current engine. The independent selected-model count comes from
 the same diffraction-lib selection and documented projection as the earlier cases.
 
-'s registered Chebyshev CeCoAl, polynomial PEARL and polynomial LaB6
+The registered Chebyshev CeCoAl, polynomial PEARL and polynomial LaB6
 examples append their author-time CLI records and native references without
 replacing earlier oracles. The count generator's `--only` mode preserves prior
 rows. Its external diffraction-lib selection maps the plain-power coefficient
@@ -100,3 +100,22 @@ digests and authoring CLI head; the count retains the frozen external source and
 raw selected names alongside the existing model projection. The inventory gate
 requires the registered single/joint set in all three inventories, and refuses
 omissions and duplicate CLI rows. No numerical tolerance changes.
+
+The doublet and absorption extension updates the LiF capture with `generate.py --update pd-xray-cwl_lif_single`
+and adds `pd-xray-cwl_pbso4-lab_round-robin` with `--only`. These are explicitly
+labelled CLI wiring regression pins from an actual private-copy CLI fit, not
+physics oracles. The update requires changed complete input hashes and retains
+every other case and full record. The authoring artifact is a DEV-only diagnostic
+linked to Crysta `8b0c8c81`; it does not establish published-SDK qualification.
+
+`generate_model_counts.py` uses the same frozen diffraction-lib `0d9f10e4`
+selection method, with native CW profile labels adapted to that reader's enum and
+existing background IDs preserved. Its declared-model projection includes all
+eight X-ray instrument slots: the prior polarization pair and the doublet pair
+beyond the external reader's four CW slots. The plain Npr5 shape projects X/Y
+identities to eta0/eta1 for counting only, without a coefficient conversion or a
+fit. Selected active-model counts are LiF 31 and PbSO4 56; the raw external counts
+are 27 and 52. The full all-profile `Project.parameters` walk is not this selection.
+These values come from the committed count generator and its frozen external
+source, never a native parameter walk. All twenty unrelated CLI/count rows and
+full records remain intact.

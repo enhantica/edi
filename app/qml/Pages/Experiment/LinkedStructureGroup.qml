@@ -15,6 +15,8 @@ import edi.app
 // each row shows the structure's icon in that structure's colour before its name (edi ADR-0017 §8). The name
 // is picked from the project's structures; a row can be added for a structure not yet linked, removed while
 // another remains, and switched off: a disabled row is kept and saved but neither calculated nor fitted.
+// The weight fraction beside the scale is derived from the scales (Hill-Howard) and cannot be edited; a single
+// enabled structure shows 1.
 Column {
     id: group
 
@@ -31,7 +33,7 @@ Column {
         defaultInfoText: qsTr("No linked structure")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.TableViewLabel {
@@ -50,6 +52,10 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
+                text: qsTr("weight fraction")
+            }
+            EaComponents.TableViewLabel {
+                horizontalAlignment: Text.AlignHCenter
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -62,6 +68,8 @@ Column {
             required property int index
             required property string structureId
             required property int colorIndex
+            // The Hill-Howard weight fraction: `value` and `uncertainty` (0 without one), empty when there is none.
+            required property var weightFraction
             // `scale` and `enabled` are Item properties, so these two roles are read through the model.
             required property var model
 
@@ -104,6 +112,36 @@ Column {
                 objectName: `linkedStructure.scale.${row.index}`
                 enabled: row.model.enabled
                 item: row.model.scale
+            }
+            // Read-only, as a parameter the scales imply: written by the app's number rule like the scale, its s.u. in
+            // the value's menu, never edited or fitted. A fraction keeps its decimal point, so a lone phase shows 1.0
+            // as the saved file writes it.
+            EaComponents.TableViewParameter {
+                id: fraction
+
+                readonly property bool known: row.weightFraction !== undefined && row.weightFraction.value !== undefined
+                readonly property real fractionValue: known ? row.weightFraction.value : 0
+                readonly property real fractionError: known ? row.weightFraction.uncertainty : 0
+
+                horizontalAlignment: Text.AlignHCenter
+                objectName: `linkedStructure.weightFraction.${row.index}`
+                enabled: row.model.enabled
+                readOnly: true
+                parameter: known ? {
+                    "value": (text => /[.e]/.test(text) ? text : text + ".0")(NumberText.parameter(fractionValue, fractionError)),
+                    "error": NumberText.error(fractionError, 0, fractionValue),
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "category": "linked_structure",
+                    "name": "weight_fraction",
+                    "units": ""
+                } : {
+                    "value": "",
+                    "error": ""
+                }
+                color: EaStyle.Colors.themeForegroundMinor
+                ToolTip.text: qsTr("Hill-Howard weight fraction, from the scales")
             }
             // Disabled as a constraint is: kept and saved, but neither calculated nor fitted.
             EaComponents.TableViewButton {

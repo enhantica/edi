@@ -18,6 +18,7 @@ import pytest
 
 from conftest import calculator_load_warning, corpus_case_dir
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -835,7 +836,9 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
     project.save_as(saved)
 
     for relative_path, expected_sha256 in PRE_FIX_DATABLOCK_SHA256.items():
-        data = without_calculator(relative_path, (saved / relative_path).read_bytes())
+        data = historical_single_fraction(
+            relative_path, without_calculator(relative_path, (saved / relative_path).read_bytes())
+        )
         if relative_path == 'analysis/analysis.edi':
             #  adds precisely the previously dropped minimizer declaration.
             original = [
@@ -878,5 +881,5 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
         assert actual_sha256 == expected_sha256, (
             f"{relative_path} must remain byte-identical to the packet's labelled pre-fix "
             'regression pin apart from the separately checked  minimizer, '
-            ' geom and  calculator declarations'
+            'geom and calculator declarations and the checked unity fraction column'
         )

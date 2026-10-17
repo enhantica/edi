@@ -47,16 +47,25 @@ EaElements.ParamTextField {
     // The value as edited: in full, where the cell shows it rounded (NumberText).
     readonly property string editText: item !== null ? NumberText.full(item.value) : value
 
+    // A value wider than the field shows from its start and clips at the end, without an ellipsis, as a table
+    // cell does; it is shown in full while edited.
     onActiveFocusChanged: {
-        if (activeFocus && text === value)
+        if (activeFocus && text === value) {
             text = editText;
-        else if (!activeFocus)
+        } else if (!activeFocus) {
             commit();
+            cursorPosition = 0;
+        }
+    }
+    onTextChanged: if (!activeFocus)
+        cursorPosition = 0
+    Component.onCompleted: {
+        // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
+        FieldTitles.align(field);
+        cursorPosition = 0;
     }
 
     warned: warningText !== ""
-    // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
-    Component.onCompleted: FieldTitles.align(field)
     ToolTip.text: warningText
     WarningToolTip {
         text: field.warningText

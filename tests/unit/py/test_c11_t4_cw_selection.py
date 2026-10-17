@@ -14,6 +14,7 @@ import edi
 
 from conftest import project_record_datetime, tree_bytes_with_normalized_project_metadata
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -247,10 +248,13 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
         actual['analysis/analysis.edi'] = historical_analysis(
             source, actual['analysis/analysis.edi']
         )
-        actual = {name: without_calculator(name, data) for name, data in actual.items()}
+        actual = {
+            name: historical_single_fraction(name, without_calculator(name, data))
+            for name, data in actual.items()
+        }
         assert actual == _tree_bytes(golden), (
             'adding project identity must leave every pre-existing canonical TOF golden path '
-            'and byte unchanged apart from the checked  calculator block'
+            'and byte unchanged apart from the checked calculator block and unity fraction column'
         )
         normalized = tree_bytes_with_normalized_project_metadata(
             destination, 'created', 'last_modified'

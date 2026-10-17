@@ -739,6 +739,24 @@
         "structures/latp.edi": "43c03a58b8813d99e0196532745e7f8e00e94fd9fd1d00cc2844f21e09ba930d"
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_lif_single/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+        "experiments/cu_ka.edi": "1b3407778dcdbeba8fcb83e95bc3c25b15ed9a5734d454568978bf070cdf40a1",
+        "project.edi": "889a03d5f93dd1b479515d59b53eec51e417433901ce122fb805c8d056db7bab",
+        "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
+        "experiments/pbsox.edi": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+        "project.edi": "fa9e6fa39a75c1ab54504fea9930132d76ea1df515175ce9225a486eabe24c6b",
+        "structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401"
+      },
+      "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     }
   },
   "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128"

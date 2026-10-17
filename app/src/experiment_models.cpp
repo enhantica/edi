@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
 
+#include <QVariantMap>
 #include <QtNumeric>
 #include <algorithm>
+#include <exception>
+#include <optional>
 
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
@@ -39,6 +42,15 @@ void ParameterListModel::sync() {
         used_count_ = used_count;
         emit usedCountChanged();
     }
+}
+
+ParameterItem* ParameterListModel::parameterNamed(const QString& name) const {
+    for (int row = 0; row < count(); ++row) {
+        if (get(row, QStringLiteral("name")).toString() == name) {
+            return qobject_cast<ParameterItem*>(get(row, QStringLiteral("parameter")).value<QObject*>());
+        }
+    }
+    return nullptr;
 }
 
 // ---- BackgroundListModel ------------------------------------------------------------------------
@@ -202,10 +214,30 @@ void ExcludedRegionListModel::remove(int row) {
 
 // ---- LinkedStructureListModel --------------------------------------------------------------------
 
+namespace {
+
+// A weight fraction for its read-only cell: `value` and `uncertainty` (0 without one), written by the app's
+// number rule in QML, or an empty map when there is none or the model cannot be calculated mid-edit.
+QVariantMap weight_fraction_cell(const edi::LinkedStructure& link) {
+    std::optional<edi::WeightFraction> fraction;
+    try {
+        fraction = edi::weight_fraction(link);
+    } catch (const std::exception&) {
+        return {};
+    }
+    if (!fraction) {
+        return {};
+    }
+    return {{QStringLiteral("value"), fraction->value},
+            {QStringLiteral("uncertainty"), fraction->uncertainty.value_or(0.0)}};
+}
+
+}  // namespace
+
 LinkedStructureListModel::LinkedStructureListModel(edi::Project& project, edi::ExperimentBase& experiment,
                                                    ProjectEditor& editor, ParameterRegistry& registry,
                                                    QObject* parent)
-    : RowTableModel({"structureId", "scale", "enabled", "colorIndex"}, parent),
+    : RowTableModel({"structureId", "scale", "enabled", "colorIndex", "weightFraction"}, parent),
       project_(project),
       experiment_(experiment),
       editor_(editor),
@@ -222,12 +254,26 @@ void LinkedStructureListModel::sync() {
         structure_names_ = names;
         emit structureNamesChanged();
     }
+    // A single enabled structure's fraction is exactly 1, as the saved file writes it; it is shown without asking the
+    // engine, which would convert the whole project for a known answer.
+    const auto enabled_links = std::count_if(experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
+                                             [](const auto& link) { return link->enabled.get(); });
+    const auto fraction = [enabled_links](const edi::LinkedStructure& link) {
+        if (enabled_links > 1) {
+            return weight_fraction_cell(link);
+        }
+        if (link.enabled.get()) {
+            return QVariantMap{{QStringLiteral("value"), 1.0}, {QStringLiteral("uncertainty"), 0.0}};
+        }
+        return QVariantMap();
+    };
     QList<Row> rows;
     for (const auto& link : experiment_.linked_structures) {
         const QString id = QString::fromStdString(link->structure_id.value());
         rows.append({link.get(),
                      {id, parameter_role(registry_, &link->scale), link->enabled.get(),
-                      static_cast<int>(names.indexOf(id))}});
+                      static_cast<int>(names.indexOf(id)),
+                      fraction(*link)}});
     }
     setTableRows(rows);
     const auto linked = [this](const QString& name) {
