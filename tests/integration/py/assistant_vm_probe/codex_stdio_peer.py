@@ -789,6 +789,47 @@ def gn_steer_notification(case):
         notify('original/unknown', {'threadId': thread_id, 'turnId': turn_id})
 
 
+def reuse269_observe(request):
+    """Opt-in original peer evidence; no account/model/scientific result is fabricated."""
+    policy = config.get('reuse269')
+    if policy is None:
+        return
+    cwd_path = Path(cwd)
+    stage_name = policy.get('stage_name')
+    path = cwd_path / 'inputs' / stage_name if stage_name else None
+    original = None
+    changed = False
+    if path is not None and path.is_file():
+        if not policy.get('_changed'):
+            original = hashlib.sha256(path.read_bytes()).hexdigest()
+            with path.open('ab') as output:
+                output.write(b'Original provider-owned staged modification\n')
+            policy['_changed'] = True
+            changed = True
+    with trace.with_suffix('.reuse269.jsonl').open('a', encoding='utf-8') as output:
+        output.write(json.dumps({
+            'original_request_id': request['id'], 'thread_id': thread_id,
+            'cwd': str(cwd_path), 'stage_path': str(path) if path else None,
+            'stage_changed': changed, 'stage_original_sha256': original,
+            'stage_sha256': hashlib.sha256(path.read_bytes()).hexdigest()
+                if path is not None and path.is_file() else None,
+        }) + '\n')
+
+
+def reuse280_observe_thread(request, result):
+    """Retain actual effective public reply fields; never choose acceptance or credentials."""
+    if config.get('reuse269') is None:
+        return
+    with trace.with_suffix('.reuse280-threads.jsonl').open('a', encoding='utf-8') as output:
+        output.write(json.dumps({
+            'request_id': request['id'], 'thread_id': result['thread']['id'],
+            'requested_ephemeral': request['params'].get('ephemeral'),
+            'effective_ephemeral': result['thread'].get('ephemeral'),
+            'requested_cwd': request['params']['cwd'], 'effective_cwd': result['cwd'],
+            'effective_roots': result['sandbox']['writableRoots'],
+        }) + '\n')
+
+
 # Actual native dynamic-tool bridge only; this peer never performs model edits or fits.
 native_pending = {}
 native_index = 0
@@ -1482,6 +1523,10 @@ for line in sys.stdin:
                 for line in trace.read_text(encoding='utf-8').splitlines()
             )
             thread_id = '019a0290-0000-7000-8000-' + f'{6000 + count:012d}'
+        if config.get('reuse269') is not None:
+            count = sum(json.loads(line).get('method') == 'thread/start'
+                        for line in trace.read_text(encoding='utf-8').splitlines())
+            thread_id = '019a0290-0000-7000-8000-' + f'{os.getpid() * 1000 + count:012d}'
         value = {
             'approvalPolicy': 'on-request',
             'approvalsReviewer': 'user',
@@ -1538,8 +1583,10 @@ for line in sys.stdin:
                     'request': request,
                     'response': {'id': request['id'], 'result': value},
                 }) + '\n')
+        reuse280_observe_thread(request, value)
         reply(request, value)
     elif method == 'turn/start':
+        reuse269_observe(request)
         if scenario.startswith('rpc83:unknown:'):
             variant = scenario.rsplit(':', 1)[1]
             if variant == 'eof':

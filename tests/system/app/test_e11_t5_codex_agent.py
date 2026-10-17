@@ -7316,3 +7316,590 @@ def test_import272_exact_close_after_real_committed_owner_retirement_cannot_be_o
         assert save211_files(Path(original['path'])) == saved_files, (
             'MI-CLOSE: Close/replay/oneUndo/newdraft never overwrites the independent saved source tree'
         )
+
+
+# Owner same-project conversation contract, public243/SURFACE plus original public228/BOUNDARIES; these are
+# normal native-runtime gates, not restricted/browser or physical GUI proofs.
+def reuse269_configure(trace, *, stage_name=None):
+    path = trace.parent / 'peer-input.json'
+    config = json.loads(path.read_text())
+    assert not path.with_suffix('.peer-pid').exists(), 'REUSE SETUP: complete opt-in config precedes original process read'
+    config['reuse269'] = {'stage_name': stage_name}
+    path.write_text(json.dumps(config))
+
+
+def reuse269_account(before, after, trace):
+    assert after['connected'] and after['models'] == before['models'] and (
+        after['handoff']['account_label'] == before['handoff']['account_label']
+    ), 'REUSE: real scientific/session actions preserve the admitted managed account/catalog'
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'}
+                   for row in records(trace)), (
+        'REUSE: conversation maintenance does not repair authentication by login/logout'
+    )
+
+
+def reuse269_send(actor, trace, text, *, native_count=None):
+    # Deliberately NO auto-approval here: unchanged scope must already be admitted.
+    before = actor.last['vm']
+    assert before['connected'] and not before['can_cancel'] and not (
+        before['context_consent_required']
+    ), 'REUSE: admitted unchanged scope is ready without another disclosure approval'
+    context = before['context']
+    prior = len(started_requests(trace))
+    prior_ids = {row['id'] for row in before['messages']}
+    actor.command('send_text', text=text)
+    state = settle(actor, lambda value: (
+        len(started_requests(trace)) == prior + 1 and not value['can_cancel']
+        and any(row.get('kind') == 'user' and row.get('text') == text
+                and row.get('status') == 'completed' and row['id'] not in prior_ids
+                for row in value['messages'])
+    ))
+    sent = started_requests(trace)
+    assert len(sent) == prior + 1 and rpc83_context_inputs(sent[-1]['params']) == [context], (
+        'REUSE: one original turn carries exactly the complete CURRENT GUI context bytes'
+    )
+    user_rows = [row for row in state['messages'] if row.get('kind') == 'user'
+                 and row.get('text') == text and row['id'] not in prior_ids]
+    assert len(user_rows) == 1 and (
+        sent[-1]['params']['clientUserMessageId'] == user_rows[0]['id']
+    ), 'REUSE: fresh original input/RPC authority never reuses a historical row identity'
+    if native_count is not None:
+        replies = native_records(trace, '.native-replies.jsonl')
+        assert len(replies) == native_count and not native_records(
+            trace, '.native-wrong-envelope.jsonl'
+        ), 'REUSE: every original native envelope responds once without identity substitution'
+        assert len({row['response']['id'] for row in replies}) == native_count and all(
+            row['response']['id'] == row['original']['id'] for row in replies
+        ), 'REUSE: retained conversation cannot duplicate an old original reverse response'
+    assert all(row in state['messages'] for row in before['messages']), (
+        'REUSE: same-conversation work preserves all already retained public history'
+    )
+    return state
+
+
+def reuse269_thread(trace):
+    starts = [row for row in records(trace) if row.get('method') == 'thread/start']
+    assert starts, 'REUSE SETUP: real original thread/start has reached the owned peer'
+    replies = native_records(trace, '.reuse280-threads.jsonl')
+    assert len(replies) == len(starts) and all(
+        row['params'].get('ephemeral') is True for row in starts
+    ) and all(row['effective_ephemeral'] is True for row in replies), (
+        'REUSE: actual original outgoing/effective thread admission remains explicitly ephemeral'
+    )
+    assert [row['id'] for row in starts] == [row['request_id'] for row in replies], (
+        'REUSE: every observed effective reply belongs to its exact original bootstrap request'
+    )
+    return starts[-1]['params']['cwd'], starts
+
+
+@pytest.mark.parametrize('change', ['value', 'background'])
+def test_reuse269_manual_science_keeps_thread_workspace_and_fresh_context(
+    generic, tmp_path, change
+):
+    actor, trace = generic('fileauth')
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    owned = tmp_path / 'Original same-owner measured project'
+    shutil.copytree(source, owned)
+    original_files = save211_files(owned)
+    assert actor.command('open', path=str(owned))['reply']['opened'], (
+        'REUSE SETUP: original measured project loads through public Session'
+    )
+    assert actor.command('native_science_enable')['reply']['enabled']
+    selected = tmp_path / 'Original selected scope.txt'
+    selected.write_bytes(b'Original unchanged disclosure bytes\n')
+    intent = actor.command('selected_begin')['reply']['request_id']
+    assert actor.command('selected_add', request_id=intent, urls=[selected.as_uri()])[
+        'reply'
+    ]['accepted'], 'REUSE SETUP: real immutable selected input is admitted before bootstrap'
+    reuse269_configure(trace, stage_name=selected.name)
+    connect(actor)
+    native145_approve(actor)  # Initial explicit approval only; never after ordinary edit.
+    initial = native145_science_settled(actor)
+    first = reuse269_send(actor, trace, 'Original admitted conversation before scientific edit')
+    cwd, starts = reuse269_thread(trace)
+    witness = native_records(trace, '.reuse269.jsonl')[-1]
+    assert witness['stage_changed'] and witness['stage_original_sha256'] == (
+        hashlib.sha256(selected.read_bytes()).hexdigest()
+    ), 'REUSE SETUP: actual peer modified only its genuinely staged copy of selected bytes'
+    staged = Path(witness['stage_path'])
+    provider_bytes = staged.read_bytes()
+    selected_before = first['selected_files']
+    selected.write_bytes(selected.read_bytes())  # Actual equal-content original backing-file write.
+    original_context = first['context']
+    choices = [row for row in first['project']['parameters'] if row['independent'] and (
+        ('background' in row['path'] and row['path'].endswith('.intensity'))
+        if change == 'background' else row['path'] == 'structure.cell.length_a'
+    )]
+    assert choices, 'REUSE SETUP: actual original independent scientific field is exposed'
+    target = choices[0]
+    requested = target['value'] + (1.0 if change == 'background' else 0.001)
+    changed = actor.command('manual_value', path=target['path'], value=requested)
+    assert not changed['reply']['error'], 'REUSE: real ordinary shared editor commits the edit'
+    state = native145_science_settled(actor)
+    assert native_parameter(state, target['path'])['value'] == requested and (
+        state['context'] != original_context
+    ), 'REUSE: genuine changed value is current GUI truth before next original turn'
+    assert native_inputs(state) == native_inputs(initial), (
+        'REUSE: ordinary parameter/background editing preserves every raw observation/sigma/mask/weight'
+    )
+    second = reuse269_send(actor, trace, 'Original follow-up uses current scientific GUI truth')
+    new_cwd, later = reuse269_thread(trace)
+    assert len(starts) == len(later) == 1 and new_cwd == cwd and (
+        started_requests(trace)[0]['params']['threadId']
+        == started_requests(trace)[1]['params']['threadId']
+    ), 'REUSE: ordinary science retains actual backend thread and immutable staging workspace'
+    assert second['selected_files'] == selected_before, (
+        'REUSE: equal backing bytes keep the original immutable selected IDs/hash authority'
+    )
+    assert staged.read_bytes() == provider_bytes and selected.read_bytes() == (
+        b'Original unchanged disclosure bytes\n'
+    ), 'REUSE: follow-up does not overwrite provider staging or silently adopt it into GUI inputs'
+    reuse269_account(first, second, trace)
+    assert save211_files(owned) == original_files, (
+        'REUSE: conversation retention never saves/rewrites the original scientific source tree'
+    )
+
+
+def test_reuse269_native_free_relations_fit_and_undo_retain_original_conversation(
+    generic, tmp_path
+):
+    # Independent original Co2SiO4 fixture: Co1/Co2 Biso=.5. The explicit test user
+    # requests their equality; this is not a heuristic that all sites must share ADPs.
+    relation = native_call('add_relations', aliases=[
+        {'id': 'reuse_co2', 'path': 'structure.atom_sites[Co2].adp_iso'},
+    ], constraints=[{'id': 'reuse_adp', 'expression': 'reuse_co2 = original_co1_biso', 'enabled': True}])
+    free = native_call('set_free', flags=[
+        {'path': 'structure.atom_sites[Co1].adp_iso', 'free': True},
+        {'path': 'structure.atom_sites[Co2].adp_iso', 'free': False},
+    ])
+    turns = json.loads(json.dumps([[native_call('inspect_project')], [free], [free],
+                                    [relation], [relation], [native_call('run_fit')],
+                                    [native_call('diagnostics')]]))
+    # Existing helper consumes its predeclared turn script and connects exactly once.
+    def original(g, *args, **kwargs):
+        actor, trace = g(*args, **kwargs)
+        reuse269_configure(trace)
+        return actor, trace
+    actor, trace, _source = save211_owner(lambda *a, **k: original(generic, *a, **k),
+                                         tmp_path, turns)
+    initial = native145_science_settled(actor)
+    first = reuse269_send(actor, trace, 'Original native read establishes live conversation',
+                          native_count=1)
+    cwd, starts = reuse269_thread(trace)
+    before_free = first['project']['parameters']
+    initial_declarations = first['project']['science_observer']
+    freed = reuse269_send(actor, trace, 'Original native free request', native_count=2)
+    assert native_parameter(freed, 'structure.atom_sites[Co1].adp_iso')['free'] and not (
+        native_parameter(freed, 'structure.atom_sites[Co2].adp_iso')['free']
+    ), 'REUSE: the genuine original free command changes its requested flags'
+    expected_free = json.loads(json.dumps(before_free))
+    for row in expected_free:
+        if row['path'] == 'structure.atom_sites[Co2].adp_iso':
+            row['free'] = False
+    assert freed['project']['parameters'] == expected_free, (
+        'REUSE: a genuine free-only edit preserves all values/SUs/unrelated flags and metadata'
+    )
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'REUSE: one normal Undo is genuinely available for the recorded free edit'
+    )
+    undone = native145_science_settled(actor)
+    assert undone['project']['parameters'] == before_free, (
+        'REUSE: one ordinary Undo restores all actual pre-free values/flags/SUs'
+    )
+    assert undone['project']['native_observer']['can_undo'] == first['project']['native_observer']['can_undo'], (
+        'REUSE: the complete free batch consumes one record, with no phantom remaining step'
+    )
+    reuse269_send(actor, trace, 'Original native free reapplication', native_count=3)
+    before_relation = actor.last['vm']['project']
+    related = reuse269_send(actor, trace, 'Original explicit same-element ADP relation',
+                            native_count=4)
+    assert any(row['id'] == 'reuse_adp' and row['enabled'] for row in (
+        related['project']['science_observer']['constraints']
+    )), 'REUSE: actual native relation declaration is observable before Undo'
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'REUSE: the real recorded relation edit offers one normal Undo'
+    )
+    undone = native145_science_settled(actor)
+    assert undone['project']['parameters'] == before_relation['parameters'] and all(
+        undone['project']['science_observer'][key]
+        == before_relation['science_observer'][key] for key in ['aliases', 'constraints']
+    ), 'REUSE: one Undo restores original declarations/values/free/SUs without retiring conversation'
+    assert undone['project']['native_observer']['can_undo'] == before_relation['native_observer']['can_undo'], (
+        'REUSE: one relation Undo restores the prior recorded history boundary'
+    )
+    reuse269_send(actor, trace, 'Original ADP relation reapplication', native_count=5)
+    fitted = reuse269_send(actor, trace, 'Original real native fit of current constrained owner',
+                           native_count=6)
+    replies = native_records(trace, '.native-replies.jsonl')
+    fit = json.loads(replies[-1]['response']['result']['contentItems'][0]['text'])
+    assert fit['status'] in {'done', 'max_iterations'} and fit['adopted'] is True and (
+        fit['iterations'] > 0
+    ), 'REUSE: actual native FitJob completes/adopts real iterations, never cached/fictitious success'
+    fitted = native145_science_settled(actor)
+    report = fitted['project']['native_observer']
+    record = report['record']
+    chi_square = record['reduced_chi_square']
+    assert not report['fit_running'] and record['kind'] and record['iterations'] == fit['iterations'], (
+        'REUSE: real completed worker report is adopted into this same current owner'
+    )
+    assert type(chi_square) in (int, float) and chi_square == chi_square and (
+        -float('inf') < chi_square < float('inf')
+    ), 'REUSE: actual fitted statistics are finite without a producer-derived optimum/Rwp golden'
+    assert all(row in fitted['project']['science_observer']['aliases']
+               for row in initial_declarations['aliases']) and all(
+        row in fitted['project']['science_observer']['constraints']
+        for row in initial_declarations['constraints']
+    ), 'REUSE: genuine fit retains every original enabled/disabled declaration'
+    assert native_parameter(fitted, 'structure.atom_sites[Co1].adp_iso')['value'] == (
+        native_parameter(fitted, 'structure.atom_sites[Co2].adp_iso')['value']
+    ), 'REUSE: actual requested ADP relation remains satisfied after real worker publication'
+    final = reuse269_send(actor, trace, 'Original current postfit diagnostics', native_count=7)
+    assert len(reuse269_thread(trace)[1]) == len(starts) == 1 and (
+        reuse269_thread(trace)[0] == cwd
+        and len({row['params']['threadId'] for row in started_requests(trace)}) == 1
+    ), 'REUSE: own native free/relation/fit/Undo preserve one actual backend conversation/workspace'
+    assert native_inputs(final) == native_inputs(initial), (
+        'REUSE: genuine fit and declarations preserve all original measured columns/masks/weights'
+    )
+    assert all(row['response']['result']['success'] for row in native_records(
+        trace, '.native-replies.jsonl'
+    )), 'REUSE: each genuine normal native operation has its own successful original response'
+    reuse269_account(first, final, trace)
+
+
+@pytest.mark.parametrize('change', ['selected-add', 'selected-remove', 'same-name-bytes',
+                                   'owner', 'folder', 'account', 'topology'])
+def test_reuse269_real_scope_revocation_requires_new_backend_memory(generic, tmp_path, change):
+    actor, trace = generic('fileauth')
+    fixture = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    assert actor.command('open', path=str(fixture))['reply']['opened'], (
+        'REUSE SETUP: original genuine project opens before scope approval'
+    )
+    selected = tmp_path / 'Original scope bytes.txt'
+    selected.write_bytes(b'Original content A\n')
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert actor.command('selected_add', request_id=token, urls=[selected.as_uri()])[
+        'reply'
+    ]['accepted'], 'REUSE SETUP: initial selected content is genuinely admitted'
+    reuse269_configure(trace)
+    connect(actor)
+    native145_approve(actor)
+    first = reuse269_send(actor, trace, 'Original conversation before genuine scope revocation')
+    original_thread = started_requests(trace)[-1]['params']['threadId']
+    old_selection = first['selected_files'][0]['id']
+    if change in {'selected-remove', 'same-name-bytes'}:
+        assert actor.command('selected_remove', id=old_selection)['reply']['accepted'], (
+            'REUSE SETUP: genuine settled selected authority is actually removed'
+        )
+    if change in {'selected-add', 'same-name-bytes'}:
+        if change == 'selected-add':
+            selected = tmp_path / 'Original added input.txt'
+            selected.write_bytes(b'Original independent content B\n')
+        else:
+            selected.write_bytes(b'Original content B\n')  # Same name/path/byte count, real changed bytes.
+        token = actor.command('selected_begin')['reply']['request_id']
+        assert actor.command('selected_add', request_id=token, urls=[selected.as_uri()])[
+            'reply'
+        ]['accepted'], 'REUSE: current new/changed input is actually selected through public intake'
+    elif change == 'owner':
+        actor.command('close_project')
+        assert actor.command('open', path=str(fixture))['reply']['opened'], (
+            'REUSE: a real newly loaded owner may have equal metadata/path/science'
+        )
+    elif change == 'topology':
+        removed = actor.command('native_remove_structure', index=0)
+        assert removed['reply']['remaining'] == 0, (
+            'REUSE SETUP: actual public structure removal changes same-owner structural scope'
+        )
+    elif change == 'folder':
+        chosen = tmp_path / 'Original genuinely chosen capability'
+        chosen.mkdir()
+        intent = actor.command('working_folder_begin')['reply']['intent']
+        assert actor.command('working_folder_complete', intent=intent,
+                             directory=str(chosen))['reply']['accepted'], (
+            'REUSE: only actual public picker callback authorizes the new writable root'
+        )
+    elif change == 'account':
+        actor.command('sign_out')
+        assert not actor.last['vm']['connected'], 'REUSE: explicit account retirement actually disconnects'
+        connect(actor)  # Explicit new account admission, never silent repair.
+    state = settle(actor, lambda value: value['connected'] and not value['can_cancel'])
+    if change in {'selected-add', 'selected-remove', 'same-name-bytes', 'owner', 'topology'}:
+        native145_approve(actor)  # Acknowledge only genuinely requested changed-scope disclosure.
+    elif change == 'folder':
+        assert not state['context_consent_required'], (
+            'REUSE: genuine picker already authorized the exact folder, without duplicate grant'
+        )
+    else:
+        native145_approve(actor)
+    final = reuse269_send(actor, trace, 'Original new turn after genuine scope admission')
+    assert started_requests(trace)[-1]['params']['threadId'] != original_thread, (
+        'REUSE: actual input/owner/account/root revocation cannot retain old model memory'
+    )
+    if change != 'account':
+        reuse269_account(first, final, trace)
+    if change == 'selected-remove':
+        assert not final['selected_files'] and old_selection not in json.dumps(
+            started_requests(trace)[-1]['params']['input']
+        ), 'REUSE: removed original grant cannot leak into new original turn context'
+    if change == 'same-name-bytes':
+        assert len(final['selected_files']) == 1 and final['selected_files'][0]['id'] != (
+            old_selection
+        ), 'REUSE: same-name same-length content replacement receives current authority, not stale ID'
+        staged = Path(reuse269_thread(trace)[0]) / 'inputs' / selected.name
+        assert staged.read_bytes() == b'Original content B\n', (
+            'REUSE: new memory stages independently authored changed bytes, never the old same-name snapshot'
+        )
+    if change == 'folder':
+        folder167_policy(trace, chosen.resolve())
+    assert not any(row.get('method') in {'thread/list', 'thread/read', 'thread/archive'}
+                   for row in records(trace)), (
+        'REUSE: fresh memory uses actual new admission, never scans/rewrites personal sessions'
+    )
+
+
+@pytest.mark.parametrize('selected_input', [False, True], ids=['project-only', 'input-removed'])
+def test_reuse269_settled_clear_resets_memory_without_reapproving_remaining_scope(
+    generic, tmp_path, selected_input
+):
+    actor, trace = generic('fileauth')
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened'], 'REUSE SETUP: original current owner exists before Clear'
+    if selected_input:
+        selected = tmp_path / 'Original removed by Clear.txt'
+        selected.write_bytes(b'Original selected scope before Clear\n')
+        token = actor.command('selected_begin')['reply']['request_id']
+        assert actor.command('selected_add', request_id=token, urls=[selected.as_uri()])[
+            'reply'
+        ]['accepted'], 'REUSE SETUP: real selected grant precedes conversation approval'
+    reuse269_configure(trace)
+    connect(actor)
+    native145_approve(actor)
+    first = reuse269_send(actor, trace, 'Original retained history before real settled Clear')
+    initial_thread = started_requests(trace)[-1]['params']['threadId']
+    actor.command('clear_history')
+    cleared = settle(actor, lambda value: value['connected'] and not value['can_cancel']
+                     and not value['messages'])
+    assert not cleared['context_consent_required'] and not cleared['selected_files'], (
+        'REUSE: actual Clear removes selected grants and preserves unchanged remaining approval'
+    )
+    assert_clear_projection156(cleared)
+    assert actor.command('archive')['reply']['rows'] == [], (
+        'REUSE: fresh model memory begins only after actual durable empty history settlement'
+    )
+    assert actor.last['vm']['project'] == first['project'], (
+        'REUSE: real Clear leaves current scientific owner/parameters/data/Undo untouched'
+    )
+    final = reuse269_send(actor, trace, 'Original fresh memory after successful Clear')
+    assert started_requests(trace)[-1]['params']['threadId'] != initial_thread and not any(
+        row.get('text') == 'Original retained history before real settled Clear'
+        for row in final['messages']
+    ), 'REUSE: retired conversation is not revived by fresh post-Clear input'
+    reuse269_account(first, final, trace)
+
+
+@pytest.mark.parametrize('retirement', ['clear', 'scope-upgrade'])
+def test_reuse269_real_preack_retirement_preserves_once_and_scope_upgrade(
+    generic, tmp_path, retirement
+):
+    actor, trace = generic('clear:pending-ack')
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened'], 'REUSE SETUP: original project opens before genuine pre-ACK work'
+    selected = tmp_path / 'Original grant before actual pending control.txt'
+    selected.write_bytes(b'Original selected content\n')
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert actor.command('selected_add', request_id=token, urls=[selected.as_uri()])[
+        'reply'
+    ]['accepted'], 'REUSE SETUP: actual initial selected grant is live'
+    reuse269_configure(trace)
+    connect(actor)
+    native145_approve(actor)
+    original = actor.last['vm']
+    actor.command('send_text', text='Original real work before settled reuse decision')
+    settle(actor, lambda value: value['can_cancel'] and any(
+        row.get('payload', {}).get('id') == 'clear-prior-work' for row in value['messages']
+    ))
+    target = native_parameter(actor.last['vm'])
+    changed = actor.command('manual_value', path=target['path'], value=target['value'] + 0.001)
+    assert not changed['reply']['error'], 'REUSE: original ordinary edit actually triggers retirement'
+    settle(actor, lambda _value: any(
+        row['kind'] == 'control-terminal' for row in clear_control_events(trace)
+    ))
+    events = clear_control_events(trace)
+    assert not any(row['kind'] == 'interrupt-ack' for row in events), (
+        'REUSE SETUP: actual original terminal reached while original control ACK is still held'
+    )
+    if retirement == 'clear':
+        actor.command('clear_history')
+    else:
+        assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+            'reply'
+        ]['opened'], 'REUSE SETUP: real Session replacement upgrades scope while original ACK is held'
+        replacement = native_parameter(actor.last['vm'], target['path'])
+        assert replacement['value'] == target['value'] and not actor.last['vm']['selected_files'], (
+            'REUSE SETUP: genuine new owner contains original input and has fresh selected authority'
+        )
+        changed = actor.command('manual_value', path=replacement['path'],
+                                value=replacement['value'] + 0.002)
+        assert not changed['reply']['error'], (
+            'REUSE: a later genuine scientific edit cannot downgrade a prior scope revocation'
+        )
+    assert not any(row['kind'] == 'interrupt-ack' for row in clear_control_events(trace)), (
+        'REUSE SETUP: requested Clear/scope-upgrade is genuinely reached before the same ACK'
+    )
+    interrupts = [row for row in records(trace) if row.get('method') == 'turn/interrupt']
+    active = next(row for row in clear_control_events(trace) if row['kind'] == 'active')
+    assert len(interrupts) == 1 and interrupts[0]['params'] == {
+        'threadId': active['threadId'], 'turnId': active['turnId']
+    }, 'REUSE: repeated retirement channels keep one exact original interrupt obligation'
+    final = settle(actor, lambda value: not value['can_cancel'] and any(
+        row['kind'] == 'interrupt-ack' for row in clear_control_events(trace)
+    ))
+    assert len(started_requests(trace)) == 1 and not final['selected_files'], (
+        'REUSE: no second turn or retired selected grant crosses unsettled original control'
+    )
+    if retirement == 'clear':
+        assert_clear_projection156(final)
+        assert not final['context_consent_required'], (
+            'REUSE: deferred successful Clear retains unchanged remaining admitted disclosure'
+        )
+        assert actor.command('archive')['reply']['rows'] == [], (
+            'REUSE: deferred Clear really commits canonical empty retained history'
+        )
+    else:
+        native145_approve(actor)  # Real changed-scope consent only if actually requested.
+    assert native_parameter(actor.last['vm'])['value'] == target['value'] + (
+        0.001 if retirement == 'clear' else 0.002
+    ), 'REUSE: settling old model work cannot overwrite the genuine original manual edit'
+    after = reuse269_send(actor, trace, 'Original fresh turn after actual control settlement')
+    assert started_requests(trace)[-1]['params']['threadId'] != active['threadId'], (
+        'REUSE: Clear or a genuine scope upgrade defeats routine-thread retention permanently'
+    )
+    reuse269_account(original, after, trace)
+
+
+def test_reuse269_fresh_turn_rejects_actual_old_native_turn_authority(generic):
+    # The old turn ID is the independently predeclared first original native script
+    # ID (peer native_start), not an identity inferred from candidate output.
+    first = native_call('set_parameters', values=[
+        {'path': 'structure.cell.length_a', 'value': 3.911}
+    ])
+    stale = native_call('set_parameters', values=[
+        {'path': 'structure.cell.length_a', 'value': 3.912}
+    ])
+    stale['turn_id'] = '019a0290-0000-7000-8000-000000000002'
+    actor, trace = native_case(generic, [],
+        project=ROOT / 'tests/fixtures/e04_t1/editable-project', connect_now=False,
+        script={'reuse269': {}})
+    assert actor.command('native_science_enable')['reply']['enabled']
+    native145_configure(actor, trace, [[first], [stale]])
+    original = native145_science_settled(actor)
+    reuse269_send(actor, trace, 'Original first turn commits its own valid value', native_count=1)
+    settled = native145_science_settled(actor)
+    assert native_parameter(settled)['value'] == 3.911, (
+        'REUSE SETUP: first original-turn value really committed before stale-ID escape'
+    )
+    before = settled['project']
+    assert not settled['context_consent_required'], (
+        'REUSE: original successful own edit does not force unrelated reapproval'
+    )
+    actor.command('send_text', text='Original fresh turn must not authorize old native turn')
+    settle(actor, lambda _value: len(native_records(trace, '.native-emitted.jsonl')) == 2)
+    assert len(started_requests(trace)) == 2 and rpc83_context_inputs(
+        started_requests(trace)[-1]['params']
+    ) == [settled['context']], 'REUSE: stale escape starts only from an actually fresh full GUI context'
+    state = actor.command('inspect')['vm']  # Existing ordinary event delivery after real emission.
+    emitted = native_records(trace, '.native-emitted.jsonl')
+    assert len(emitted) == 2 and emitted[-1]['params']['turnId'] == stale['turn_id'] and (
+        emitted[-1]['params']['turnId'] != emitted[-1]['binding']['turnId']
+    ), 'REUSE SETUP: exact old turn is actually emitted during a distinct genuine current turn'
+    responses = native_records(trace, '.native-replies.jsonl')
+    assert 1 <= len(responses) <= 2 and not native_records(trace, '.native-wrong-envelope.jsonl'), (
+        'REUSE: stale authority cannot produce duplicate or rebased original responses'
+    )
+    if len(responses) == 2:
+        refused = responses[-1]
+        response = refused['response']
+        error = response.get('error')
+        lawful_failure = response.get('result', {}).get('success') is False or (
+            isinstance(error, dict) and type(error.get('code')) is int
+            and isinstance(error.get('message'), str) and 'result' not in response
+        )
+        assert refused['original']['id'] == emitted[-1]['id'] == response['id'] and lawful_failure, (
+            'REUSE: any stale refusal is exactly once on its original envelope, never new authority'
+        )
+    assert state['project']['parameters'] == before['parameters'] and (
+        native_inputs(state) == native_inputs(settled)
+    ), 'REUSE: even a lawfully unanswered stale call cannot acquire authority or write partial science'
+    if state['can_cancel']:
+        actor.command('cancel')  # Genuine Stop settles a lawfully unanswered foreign request.
+        state = settle(actor, lambda value: not value['can_cancel'])
+    assert state['project']['parameters'] == before['parameters'] and (
+        native_inputs(state) == native_inputs(settled)
+    ), 'REUSE: original Stop/control settlement cannot revive rejected old-turn authority'
+    final_responses = native_records(trace, '.native-replies.jsonl')
+    assert 1 <= len(final_responses) <= 2 and final_responses[0] == responses[0] and not (
+        native_records(trace, '.native-wrong-envelope.jsonl')
+    ), 'REUSE: final discard/Stop retains the first reply and permits at most one original stale refusal'
+    if len(final_responses) == 2:
+        refused = final_responses[-1]
+        response = refused['response']
+        error = response.get('error')
+        lawful_failure = response.get('result', {}).get('success') is False or (
+            isinstance(error, dict) and type(error.get('code')) is int
+            and isinstance(error.get('message'), str) and 'result' not in response
+        )
+        assert refused['original']['id'] == emitted[-1]['id'] == response['id'] and lawful_failure, (
+            'REUSE: deferred stale refusal remains exact original once-only failure, never scientific success'
+        )
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'REUSE: rejected stale call cannot consume the valid original recorded Undo'
+    )
+    undone = native145_science_settled(actor)
+    assert undone['project']['parameters'] == original['project']['parameters'], (
+        'REUSE: one real Undo restores exactly the original pre-first-call scientific state'
+    )
+
+
+def test_reuse280_failed_archive_clear_cannot_claim_fresh_memory(generic):
+    actor, trace = generic('fileauth')
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply'
+    ]['opened'], 'REUSE SETUP: actual original project loads before failed discard control'
+    reuse269_configure(trace)
+    connect(actor)
+    native145_approve(actor)
+    first = reuse269_send(actor, trace, 'Original durable history before real storage refusal')
+    old_thread = started_requests(trace)[-1]['params']['threadId']
+    before_rows = actor.command('archive')['reply']['rows']
+    barrier = actor.command('persistence_barrier')
+    assert barrier['archive']['is_directory'] and barrier['reply']['preserved_sha256'], (
+        'REUSE SETUP: actual QSaveFile target is blocked with original archive bytes preserved'
+    )
+    actor.command('clear_history')
+    state = settle(actor, lambda value: not value['can_cancel'] and bool(value['last_error']))
+    assert state['messages'] == first['messages'] and state['project'] == first['project'], (
+        'REUSE: refused durable Clear retains original canonical history/science/Undo'
+    )
+    assert len(started_requests(trace)) == 1 and len(reuse269_thread(trace)[1]) == 1, (
+        'REUSE: failed discard cannot manufacture a fresh backend conversation'
+    )
+    reuse269_account(first, state, trace)
+    actor.command('persistence_restore')
+    assert actor.command('archive')['reply']['rows'] == before_rows, (
+        'REUSE: restored real archive retains exactly the original committed records'
+    )
+    actor.command('clear_history')
+    state = settle(actor, lambda value: not value['can_cancel'] and not value['messages'])
+    assert_clear_projection156(state)
+    assert actor.command('archive')['reply']['rows'] == [], (
+        'REUSE: later genuine successful Clear commits empty history, not inferred success'
+    )
+    assert not actor.last['vm']['context_consent_required'], (
+        'REUSE: successful retry retains only the unchanged preowned remaining project scope'
+    )
+    final = reuse269_send(actor, trace, 'Original new memory only after actual committed discard')
+    assert started_requests(trace)[-1]['params']['threadId'] != old_thread
+    reuse269_account(first, final, trace)
