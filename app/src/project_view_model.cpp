@@ -443,6 +443,11 @@ void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
         project.report_files = before;
         throw;
     }
+    // A scan's save writes its template, so the rows go there too; the Report Text tab shows them.
+    if (scan_template_) {
+        scan_template_->report_files = project.report_files;
+    }
+    report_text_->invalidate();
 }
 
 void ProjectViewModel::setReportHtmlOffline(bool embedded) {
