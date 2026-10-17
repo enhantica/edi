@@ -37,6 +37,12 @@ static int target(int fd, char* path, const void* buffer, size_t size) {
 #endif
     if (strncmp(path, directory, strlen(directory)) || path[strlen(directory)] != '/') return 0;
     const char* base = path + strlen(directory) + 1;
+    if (!strcmp(kind, "settings-write")) return strstr(base, "report.edi") != NULL;
+    if (!strcmp(kind, "settings-close")) {
+        const char* leaf = strrchr(path, '/');
+        leaf = leaf ? leaf + 1 : path;
+        return size == 0 && strstr(leaf, "report.edi") && strcmp(leaf, "report.edi");
+    }
     if (!strcmp(kind, "pdf")) return strstr(base, ".pdf") != NULL || (size >= 4 && !memcmp(buffer, "%PDF", 4));
     return !strstr(base, "report.edi") && !strstr(base, ".pdf") && !strstr(base, ".cif");
 }
@@ -62,6 +68,32 @@ ssize_t writev(int fd, const struct iovec* vectors, int count) {
         return -1;
     }
     return real_writev(fd, vectors, count);
+}
+int close(int fd) {
+    int (*real_close)(int) = dlsym(RTLD_NEXT, "close");
+    const char* kind = getenv("EDI_REPORT_FAULT_KIND");
+    char path[PATH_MAX];
+    if (kind && !strcmp(kind, "settings-close") && target(fd, path, "", 0)) {
+        int result = real_close(fd);
+        if (result != 0) return result;
+        receipt("close-after-write", path);
+        errno = EIO;
+        return -1;
+    }
+    return real_close(fd);
+}
+int fclose(FILE* stream) {
+    int (*real_fclose)(FILE*) = dlsym(RTLD_NEXT, "fclose");
+    const char* kind = getenv("EDI_REPORT_FAULT_KIND");
+    char path[PATH_MAX];
+    if (kind && !strcmp(kind, "settings-close") && target(fileno(stream), path, "", 0)) {
+        int result = real_fclose(stream);
+        if (result != 0) return result;
+        receipt("close-after-write", path);
+        errno = EIO;
+        return EOF;
+    }
+    return real_fclose(stream);
 }
 int rename(const char* from, const char* to) {
     int (*real_rename)(const char*, const char*) = dlsym(RTLD_NEXT, "rename");

@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-17T14:32:46Z
+# measured_utc = 2026-10-17T15:24:22Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 11116 banked, 0 stale row(s) dropped)
-# Collected tests: 12080; with a reported duration: 6591
-# Module-scoped fixture costs recorded: 48
+# Recorded from: focused Python and native boundary runs (tests-seq82-bank-final-edi.log; tests-seq82-native-current.log)
+# Collected tests: 12160; with a reported duration: 6645
+# Module-scoped fixture costs recorded: 51
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12080
-# inventory_cpp = 333
-# inventory_measured = 11118
-# inventory_unmeasured = 1295
+# inventory_python = 12160
+# inventory_cpp = 335
+# inventory_measured = 11176
+# inventory_unmeasured = 1319
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -5849,6 +5849,70 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::te
 0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.95-expected1]
 0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-0.99-expected2]
 0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[pairs-None-expected0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[directory-cli-output]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[directory-cli-save]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[directory-core-save]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[directory-python-save-html]
+0.260	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[final-cli-output]
+0.260	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[final-cli-save]
+0.030	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[final-core-save]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[final-python-save-html]
+0.230	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[temporary-cli-output]
+0.280	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[temporary-cli-save]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[temporary-core-save]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_html_publication_never_truncates_a_link_target[temporary-python-save-html]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_project_report_settings_never_follow_retained_links[directory-save-as]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_project_report_settings_never_follow_retained_links[directory-save]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_project_report_settings_never_follow_retained_links[final-save-as]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_project_report_settings_never_follow_retained_links[final-save]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_project_report_settings_never_follow_retained_links[temporary-save-as]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_project_report_settings_never_follow_retained_links[temporary-save]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[fallback-su-limit-save-as-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[fallback-su-limit-save-as-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[fallback-su-limit-save-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[fallback-su-limit-save-iucr_99]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[finite-control-save-as-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[finite-control-save-as-iucr_99]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[finite-control-save-iucr_19]
+0.020	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[finite-control-save-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[negative-limit-save-as-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[negative-limit-save-as-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[negative-limit-save-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[negative-limit-save-iucr_99]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[nonzero-control-save-as-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[nonzero-control-save-as-iucr_99]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[nonzero-control-save-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[nonzero-control-save-iucr_99]
+0.020	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[subnormal-control-save-as-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[subnormal-control-save-as-iucr_99]
+0.050	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[subnormal-control-save-iucr_19]
+0.060	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[subnormal-control-save-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[value-limit-save-as-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[value-limit-save-as-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[value-limit-save-iucr_19]
+0.010	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[value-limit-save-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-as-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-as-iucr_99]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_19]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_99]
+0.180	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[apple]
+0.060	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[carbon]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[catppuccin]
+0.086	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[coast]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[dark2]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[fogForest]
+0.060	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[garden]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[nord]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[observable]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[okabeIto]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[paulTolBright]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[paulTolMuted]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[peaceful]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[petroff]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[sage]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[solarized]
+0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[tableau]
+0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[vivid]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_absent_report_items_resolve_defaults_without_inventing_an_offline_item
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_declared_report_options_survive_reload_and_canonical_resave[false]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_project_options.py::test_declared_report_options_survive_reload_and_canonical_resave[true]
@@ -9764,6 +9828,22 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.p
 UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[cli-save]
 UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[core-python]
 UNMEASURED:failed-in-this-run	tests/system/py/test_report_publication_failures.py::test_write_failure_after_opening_preserves_the_previous_report_bytes[python-save-html]
+0.250	tests/system/py/test_report_renderer_contract.py::test_all_html_surfaces_deliver_the_same_shared_renderer[cli-output]
+0.230	tests/system/py/test_report_renderer_contract.py::test_all_html_surfaces_deliver_the_same_shared_renderer[cli-save]
+0.010	tests/system/py/test_report_renderer_contract.py::test_all_html_surfaces_deliver_the_same_shared_renderer[core-file]
+0.030	tests/system/py/test_report_renderer_contract.py::test_all_html_surfaces_deliver_the_same_shared_renderer[notebook]
+0.010	tests/system/py/test_report_renderer_contract.py::test_all_html_surfaces_deliver_the_same_shared_renderer[python-file]
+0.010	tests/system/py/test_report_renderer_contract.py::test_all_html_surfaces_deliver_the_same_shared_renderer[python-html]
+0.001	tests/system/py/test_report_renderer_contract.py::test_delivered_renderer_consumes_the_models_legend_flag[legend-hidden]
+0.000	tests/system/py/test_report_renderer_contract.py::test_delivered_renderer_consumes_the_models_legend_flag[legend-visible]
+0.000	tests/system/py/test_report_renderer_contract.py::test_delivered_renderer_draws_each_coloured_bragg_label_at_its_row[legend-hidden]
+0.000	tests/system/py/test_report_renderer_contract.py::test_delivered_renderer_draws_each_coloured_bragg_label_at_its_row[legend-visible]
+0.010	tests/system/py/test_report_renderer_contract.py::test_delivered_renderer_retains_main_and_residual_title_segments[legend-hidden]
+0.000	tests/system/py/test_report_renderer_contract.py::test_delivered_renderer_retains_main_and_residual_title_segments[legend-visible]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_settings_completion.py::test_late_settings_write_error_preserves_the_previous_rows_and_reports_failure[settings-close-cli-save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_settings_completion.py::test_late_settings_write_error_preserves_the_previous_rows_and_reports_failure[settings-close-core-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_settings_completion.py::test_late_settings_write_error_preserves_the_previous_rows_and_reports_failure[settings-write-cli-save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_settings_completion.py::test_late_settings_write_error_preserves_the_previous_rows_and_reports_failure[settings-write-core-python]
 0.150	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
 0.170	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
 0.840	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]
@@ -11022,6 +11102,8 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_integer_domain.cpp::Rep
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite values as null
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
+0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure palette entry and wraparound retains its Bragg colour
+0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Fit record copies retain immutable result pointers and only template rows
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::Shared numeric tables preserve upper-triangle ids and shortest text
@@ -12462,6 +12544,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.780	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.361	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
@@ -12491,6 +12574,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py
 # module-cost: 0.115	tests/system/py/test_report_publication_failures.py
+# module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
+# module-cost: 0.261	tests/system/py/test_report_settings_completion.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py
 # module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py

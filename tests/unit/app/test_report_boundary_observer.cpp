@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
+#include <limits>
 #include <vector>
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -8,6 +9,8 @@
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
+#include <QTextDocument>
+#include <QTextTable>
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QStandardPaths>
@@ -27,6 +30,27 @@ class ReportBoundaryProof : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    Q_INVOKABLE QVariantList staticCorrelationCellBorders() const {
+        const double missing = std::numeric_limits<double>::quiet_NaN();
+        edi::ReportModel model;
+        model.sections = {edi::ReportSection::Correlations};
+        model.contents = {{"correlations", "Correlations", true}};
+        model.correlations = edi::ReportCorrelations{{"alpha", "beta"}, {missing, missing, .65, missing}, .2, 2, {}};
+        QTextDocument document;
+        document.setHtml(QString::fromStdString(edi::report_static_html(model, 400)));
+        QVariantList result;
+        for (auto* frame : document.rootFrame()->childFrames()) {
+            auto* table = qobject_cast<QTextTable*>(frame);
+            if (!table || table->rows() != 3 || table->columns() != 3) continue;
+            for (int row = 1; row <= 2; ++row) for (int column = 1; column <= 2; ++column) {
+                const auto cell = table->cellAt(row, column).format().toTableCellFormat();
+                result.append(QVariantMap{{"row", row}, {"column", column},
+                    {"top", cell.topBorder()}, {"right", cell.rightBorder()},
+                    {"bottom", cell.bottomBorder()}, {"left", cell.leftBorder()}});
+            }
+        }
+        return result;
+    }
     Q_INVOKABLE QString reportDigest(QObject* object) const {
         auto* report = qobject_cast<edi_app::ReportViewModel*>(object);
         return report ? QString::fromStdString(edi::report_digest(report->reportModel(), "html")) : QString{};
