@@ -1262,3 +1262,180 @@ def test_background285_actual_main_stage_and_original_rpc(case, tmp_path):
         )
     else:
         assert outcome['status'] == 'edited', 'BG: genuine visible Apply is confirmed with strict original edited status'
+
+
+@pytest.mark.parametrize('case', ['unchanged-draft', 'new-identical-draft', 'active-ime',
+                                  'server-refusal', 'new-file-sent-revoke'])
+def test_ux289_original_ack_consumes_only_submitted_presentation(case, tmp_path):
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'UX289 SETUP: genuine coherent Main runner is required'
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    calls = [
+        {'tool': 'inspect_project', 'call_id': 'ux289-original-inspect',
+         'arguments': {'purpose': 'Inspect original selected source scope after the original input ACK'}},
+        {'tool': 'list_parameters', 'call_id': 'ux289-original-parameters',
+         'arguments': {'purpose': 'Read actual original project parameters without changing science'}},
+    ]
+    config.update(scenario='native:script', ux289_hold_input=True, native_turn_calls=[calls],
+                  ux295_refuse_original_input=case == 'server-refusal')
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_ux289_original_ack_consumes_only_submitted_presentation:' + case,
+            '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            raw = getattr(error, stream) or b''
+            if isinstance(raw, str):
+                raw = raw.encode()
+            (tmp_path / ('ux289-timeout.' + stream + '.log')).write_bytes(raw)
+        raise
+    (tmp_path / 'ux289.stdout.log').write_text(result.stdout)
+    (tmp_path / 'ux289.stderr.log').write_text(result.stderr)
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_ux289_original_ack_consumes_only_submitted_presentation('
+        + case + ')' in output
+    ), 'UX289: exact real pending/ACK/revision/chip/native/account premises and outcomes must execute\n' + output
+    assert not any(('Binding loop detected' in line and any(name in line for name in (
+        'assistantHomeFocusCovered', 'implicitHeight', 'AssistantComposer', 'AssistantPanel'
+    ))) or ('Cannot assign [undefined]' in line and any(name in line for name in (
+        'AssistantComposer', 'AssistantMessage', 'AssistantPanel', 'NativeCwlImportDialog'
+    ))) for line in output.splitlines()), 'UX289: covered real UX paths emit no named Qt binding/undefined warning\n' + output
+    assert original_config == config_path.read_bytes(), 'UX289: original peer inputs cannot change after launch'
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text().splitlines()]
+    starts = [row for row in requests if row.get('method') == 'turn/start']
+    assert len(starts) == 1 and starts[0]['params']['clientUserMessageId'], (
+        'UX289: one real original start owns the exact acknowledged user identity'
+    )
+    assert not any(row.get('method') in {'turn/steer', 'account/login/start', 'account/logout'}
+                   for row in requests), 'UX289: original ACK cannot fabricate another input/account transaction'
+    events = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text().splitlines()]
+    received = [row for row in events if row['kind'] == 'ux289-original-input-received']
+    released = [row for row in events if row['kind'] == 'ux289-original-ack-release']
+    assert len(received) == len(released) == 1 and (
+        received[0]['request_id'] == released[0]['request_id'] == starts[0]['id']
+        and released[0]['client_user_message_id'] == starts[0]['params']['clientUserMessageId']
+        and any(row.get('method') == 'account/rateLimits/read' and row['id'] == released[0]['read_id']
+                for row in requests)
+    ), 'UX289: genuine public optional read releases exactly the previously received original ACK'
+    if case == 'server-refusal':
+        refused = [row for row in events if row['kind'] == 'ux295-original-input-refused']
+        assert len(refused) == 1 and refused[0]['response'] == {
+            'id': starts[0]['id'], 'error': {'code': -32600,
+            'message': 'Original explicit input admission refusal'}
+        }, 'UX295: exact original real server error envelope is emitted once instead of ACK'
+        assert not trace.with_suffix('.native-replies.jsonl').exists() and not trace.with_suffix(
+            '.native-emitted.jsonl').exists(), (
+            'UX295: real original admission refusal emits no native call or fabricated native response'
+        )
+        return
+    responses = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(responses) == len(calls), 'UX289: both original real native reads settle once after chip consumption'
+    for response, call in zip(responses, calls, strict=True):
+        assert response['original']['params']['callId'] == call['call_id'] and (
+            response['response']['id'] == response['original']['id']
+            and response['response']['result']['success'] is True
+        ), 'UX289: native authority survives presentation consumption on the original successful RPC channel'
+
+
+@pytest.mark.parametrize('case', ['hidden-activity', 'folder-caption'])
+def test_ux289_real_main_activity_and_folder_presentation(case, tmp_path):
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'UX289 SETUP: actual coherent Main consumer is required'
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    calls = [
+        {'tool': 'inspect_project', 'call_id': 'ux289-working-first',
+         'arguments': {'purpose': 'Read original project before actual two-tool request gap'}},
+        {'tool': 'list_parameters', 'call_id': 'ux289-working-second',
+         'arguments': {'purpose': 'Finish original read-only two-tool objective after genuine public observation'}},
+    ]
+    if case == 'hidden-activity':
+        config.update(scenario='native:script', native_turn_calls=[calls],
+                      relation246_wait_for_usage=['ux289-working-first'])
+    config_path.write_text(json.dumps(config))
+    original = config_path.read_bytes()
+    function = ('test_ux289_hidden_activity_uses_real_original_request' if case == 'hidden-activity'
+                else 'test_ux289_folder_caption_preserves_actual_grant')
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::' + function, '-o', '-,txt']
+    result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                            text=True, timeout=90, check=False)
+    (tmp_path / 'ux289-ui.stdout.log').write_text(result.stdout)
+    (tmp_path / 'ux289-ui.stderr.log').write_text(result.stderr)
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::' + function + '()' in output
+    ), 'UX289: real original activity/scope controls and identity assertions must execute\n' + output
+    assert original == config_path.read_bytes(), 'UX289: actual original peer configuration remains immutable'
+    assert not any(('Binding loop detected' in line and any(name in line for name in (
+        'assistantHomeFocusCovered', 'implicitHeight', 'AssistantWorking', 'AssistantComposer'
+    ))) or ('Cannot assign [undefined]' in line and any(name in line for name in (
+        'AssistantWorking', 'AssistantPanel', 'AssistantComposer', 'NativeCwlImportDialog'
+    ))) for line in output.splitlines()), 'UX289: covered real presentation paths emit no named Qt loop/undefined warning\n' + output
+    if case == 'hidden-activity':
+        trace = Path(config['trace'])
+        replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+        assert len(replies) == 2 and all(row['response']['result']['success'] is True
+                                       for row in replies), 'UX289: both real native reads succeed once on original envelopes'
+        assert [row['original']['params']['callId'] for row in replies] == [row['call_id'] for row in calls], (
+            'UX289: actual tool sequence remains the predeclared original multi-tool objective'
+        )
+
+
+@pytest.mark.parametrize('case', ['add-refused-input', 'remove-refused-input', 'add-new-owner',
+                                  'remove-new-owner', 'add-nested-add', 'remove-nested-add',
+                                  'logout-refused-input', 'logout-picker'])
+def test_ux300_original_public_notification_and_retirement(case, tmp_path):
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'UX300 SETUP: genuine coherent normal Main consumer is required'
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    original_config = config_path.read_bytes()
+    config = json.loads(original_config)
+    logout = case.startswith('logout-')
+    function = ('test_ux300_real_signout_retires_despite_same_owner_notification' if logout
+                else 'test_ux300_real_selection_notification_keeps_original_authority')
+    row = case.removeprefix('logout-') if logout else case
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::' + function + ':' + row, '-o', '-,txt']
+    result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                            text=True, timeout=90, check=False)
+    (tmp_path / 'ux300.stdout.log').write_text(result.stdout)
+    (tmp_path / 'ux300.stderr.log').write_text(result.stderr)
+    (tmp_path / 'ux300-process.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::' + function + '(' + row + ')' in output
+    ), 'UX300: genuine original Qt notifications/public owner action/lifecycle and scientific guards all execute\n' + output
+    assert config_path.read_bytes() == original_config, 'UX300: actual original owned peer inputs remain byte-exact'
+    assert not any(('Binding loop detected' in line and any(name in line for name in (
+        'assistantHomeFocusCovered', 'implicitHeight', 'AssistantComposer', 'AssistantPanel'
+    ))) or ('Cannot assign [undefined]' in line and any(name in line for name in (
+        'AssistantComposer', 'AssistantMessage', 'AssistantPanel', 'NativeCwlImportDialog'
+    ))) for line in output.splitlines()), 'UX300: covered callback/lifecycle UI emits no named binding/undefined warnings\n' + output
+    trace = Path(config['trace'])
+    if not logout:
+        assert not trace.exists() and not config_path.with_suffix('.peer-pid').exists(), (
+            'UX300: ordinary offline selection/model notification requires no provider process/account'
+        )
+        return
+    requests = [json.loads(line) for line in trace.read_text().splitlines()]
+    assert len([x for x in requests if x.get('method') == 'account/logout']) == 1, (
+        'UX300: actual explicit sign-out reaches exactly one original logout RPC'
+    )
+    assert not any(x.get('method') in {'turn/start', 'turn/steer', 'account/login/start'}
+                   for x in requests), 'UX300: nested refused input/picker cannot become a new Send/account transaction'
+    assert not trace.with_suffix('.native-emitted.jsonl').exists(), (
+        'UX300: genuine logout retirement never fabricates a native scientific invocation'
+    )

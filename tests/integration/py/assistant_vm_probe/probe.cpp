@@ -2,6 +2,9 @@
 #include "fixture_services.hpp"
 #include "session.hpp"
 #include "assistant_view_model.hpp"
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+#include "codex_agent.hpp"
+#endif
 #include "engine_setup.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
@@ -10,6 +13,7 @@
 #include "experiment_view_model.hpp"
 #include "pattern_model.hpp"
 #include <QCryptographicHash>
+#include <QJsonDocument>
 #include <QAbstractItemModel>
 #include <QEvent>
 #include <QDesktopServices>
@@ -125,6 +129,127 @@ Object background285_image(edi_app::ProjectViewModel* owner) {
     return image;
 }
 
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+// Test-owned public caller in the existing native target. No production member
+// access. Its app-context observers remain alive if the genuine facade dies.
+struct PublicTransport304 {
+    using Agent=edi_app::CodexAgent;
+    std::unique_ptr<Agent> facade;
+    std::vector<QMetaObject::Connection> connections;
+    Object facts;
+    Array events;
+    QString root,trigger,action;
+    bool enabled=false,armed=false,closing=false;
+    int depth=0;
+    QElapsedTimer operation;
+    static QString identity(QObject* p) {
+        return QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(p)),16);
+    }
+    void disconnect() {
+        for(const auto& connection:connections)QObject::disconnect(connection);
+        connections.clear();
+    }
+    ~PublicTransport304() {closing=true;disconnect();facade.reset();}
+    QString targetSignal() const {return trigger.startsWith("failed-")?QStringLiteral("failed"):trigger;}
+    void boundary(const QString& name,const QString& label,QPointer<Agent> original,Object extra={}) {
+        if(closing)return;
+        if(events.size()>=32) {facts["observer_overflow"]=true;return;}
+        ++depth;
+        const auto leave=qScopeGuard([&]{--depth;});
+        Object record{{"signal",name},{"label",label},{"depth",depth},
+            {"receiver",identity(original.data())},{"original_alive_at_entry",!original.isNull()},
+            {"elapsed_operation_ms",operation.isValid()?static_cast<double>(operation.elapsed()):-1.}};
+        for(auto i=extra.begin();i!=extra.end();++i)record[i.key()]=i.value();
+        const int index=events.size();events.push_back(record);
+        if(label=="A" && armed && name==targetSignal()) {
+            armed=false;facts["boundary_reached"]=true;facts["boundary_event_index"]=index;
+            facts["boundary_in_callback_depth"]=depth;
+            if(facade.get()!=original.data()) {facts["observer_error"]="original receiver not current fixture-owned facade";return;}
+            if(action=="restart") {
+                disconnect();original->retire();
+                attach("B",false);
+                facts["replacement_start_returned"]=facade->start(Agent::executable(),root+"/B");
+            } else {
+                disconnect();facade.reset();
+                if(action=="recreate") {
+                    attach("B",true);
+                    facts["replacement_start_returned"]=facade->start(Agent::executable(),root+"/B");
+                }
+            }
+            auto after=events[index].toObject();
+            after["original_alive_after_action"]=!original.isNull();
+            after["active_receiver_after_action"]=identity(facade.get());
+            after["returned_from_action_in_same_callback"]=true;
+            events[index]=after;
+        }
+    }
+    void initialize(const QString& label,QPointer<Agent> original) {
+        if(!original)return;
+        const Object params{{"clientInfo",Object{{"name","independent-public-"+label},{"version","1"}}},
+                            {"capabilities",Object{{"experimentalApi",true}}}};
+        if(label=="A" && trigger=="failed-deadline") {
+            operation.start();original->beginOperation(100,100);
+            facts["declared_total_ms"]=100;facts["declared_idle_ms"]=100;
+        }
+        QString id;
+        if(label=="A" && trigger=="before-write") {
+            id=original->request("initialize",params,[this,original](const QString& request_id) {
+                facts["original_prepared_id"]=request_id;
+                boundary("before-write","A",original,Object{{"request_id",request_id},{"method","initialize"}});
+                return true; // The callback's original facade may have been destroyed.
+            });
+        } else id=original->request("initialize",params);
+        auto issued=facts.value("issued").toObject();issued[label]=id;facts["issued"]=issued;
+    }
+    void attach(const QString& label,bool create) {
+        if(create)facade=std::make_unique<Agent>();
+        QPointer<Agent> original=facade.get();
+        auto* context=QCoreApplication::instance();
+        connections.push_back(QObject::connect(original.data(),&Agent::started,context,[=,this] {
+            boundary("started",label,original);
+            if(original && (label=="B" || trigger!="started"))initialize(label,original);
+        },Qt::DirectConnection));
+        connections.push_back(QObject::connect(original.data(),&Agent::response,context,
+            [=,this](const QString& id,const QString& method,const Object& envelope) {
+                boundary("response",label,original,Object{{"request_id",id},{"method",method},{"envelope",envelope}});
+            },Qt::DirectConnection));
+        connections.push_back(QObject::connect(original.data(),&Agent::event,context,
+            [=,this](const QString& method,const Object& params) {
+                boundary("event",label,original,Object{{"method",method},{"params",params}});
+            },Qt::DirectConnection));
+        connections.push_back(QObject::connect(original.data(),&Agent::failed,context,
+            [=,this](const QString& explanation) {
+                boundary("failed",label,original,Object{{"explanation",explanation}});
+            },Qt::DirectConnection));
+        connections.push_back(QObject::connect(original.data(),&Agent::serverRequest,context,
+            [=,this](const QJsonValue& id,const QString& method,const Object&) {
+                boundary("serverRequest",label,original,Object{{"original_id",id},{"method",method}});
+            },Qt::DirectConnection));
+    }
+    Object start(const Object& input,const QString& temporary) {
+        if(enabled)throw std::invalid_argument("one original public facade case per probe process");
+        trigger=input["trigger"].toString();action=input["action"].toString();
+        if(!QStringList{"started","response","event","failed-record","failed-eof","failed-deadline","before-write"}.contains(trigger)
+            || !QStringList{"destroy","recreate","restart"}.contains(action))
+            throw std::invalid_argument("finite public transport boundary/action required");
+        const auto executable=Agent::executable();
+        if(executable!=qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE") || !QFileInfo(executable).isAbsolute()
+            || !QFileInfo(executable).isExecutable())throw std::invalid_argument("actual owned absolute executable required");
+        root=temporary+"/public-transport304";
+        if(!QDir().mkpath(root+"/A") || !QDir().mkpath(root+"/B"))throw std::runtime_error("owned original workspaces unavailable");
+        enabled=true;armed=true;attach("A",true);
+        facts={{"trigger",trigger},{"action",action},{"original_receiver",identity(facade.get())},
+               {"owned_executable",executable},{"workspace_A",root+"/A"},{"workspace_B",root+"/B"}};
+        facts["initial_start_returned"]=facade->start(executable,root+"/A");
+        return {{"armed",true}};
+    }
+    Object snapshot() const {
+        Object result=facts;result["events"]=events;result["active_receiver"]=identity(facade.get());
+        result["in_callback_now"]=depth;return result;
+    }
+};
+#endif
+
 int main(int argc,char** argv) {
     const bool codex_mode=argc==2 && QByteArray(argv[1])=="--codex";
     QTemporaryDir storage;
@@ -141,6 +266,9 @@ int main(int argc,char** argv) {
         return std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     };
     auto session=make_session();
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+    PublicTransport304 public_transport304;
+#endif
     OwnedUrlRecorder report_urls;
     const QStringList observed_schemes{QStringLiteral("file"),QStringLiteral("http"),
         QStringLiteral("https"),QStringLiteral("javascript"),QStringLiteral("data"),
@@ -249,6 +377,11 @@ int main(int argc,char** argv) {
             {"scan_processed",owner->fit()->scanProcessed()},{"scan_fitted",owner->fit()->scanFitted()}};
         return facts;
     };
+    // Opt-in real public VM callbacks. Receipts outlive original Session/receiver.
+    Object callback319;
+    bool callback319_armed=false;
+    int callback319_depth=0;
+    QMetaObject::Connection callback319_model,callback319_state,callback319_error;
     auto snapshot=[&]()->Object {
         if(!session)return {{"alive",false}};
         auto* vm=session->assistant();Object project;
@@ -479,6 +612,7 @@ int main(int argc,char** argv) {
                 {"json_depth",static_cast<double>(edi::assistant::Limits::json_depth)},
                 {"ui_messages",static_cast<double>(edi::assistant::Limits::ui_messages)}}}};
 #endif
+        if(!callback319.isEmpty())result["callback319"]=callback319;
         return result;
     };
     auto callback=[&](const Object& value) {
@@ -492,6 +626,14 @@ int main(int argc,char** argv) {
         try {
             const auto input=decode(QByteArray::fromStdString(line)).toObject();
             const auto op=input["op"].toString();Object result;
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+            if(codex_mode && op=="codex304_start")result=public_transport304.start(input,storage.path());
+            else if(codex_mode && op=="codex304_inspect") {
+                if(!public_transport304.enabled)throw std::invalid_argument("public facade not started");
+                result=public_transport304.snapshot();
+            }
+            else
+#endif
             if(op=="sign_in")session->assistant()->signIn();
             else if(op=="sign_out")session->assistant()->signOut();
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
@@ -750,6 +892,120 @@ int main(int argc,char** argv) {
                 if(!session->project())throw std::runtime_error("real project required");
                 result={{"created",session->project()->createStructure()}};
             }
+            else if(codex_mode && op=="ux319_arm") {
+                QObject::disconnect(callback319_model);QObject::disconnect(callback319_state);QObject::disconnect(callback319_error);
+                const auto trigger=input["trigger"].toString(),action=input["action"].toString(),text=input["text"].toString();
+                if((trigger!="completed-user" && trigger!="failure") ||
+                   (action!="clear" && action!="replace-project" && action!="recreate-session" && action!="refused-input") ||
+                   (trigger=="completed-user" && text.isEmpty()) ||
+                   (trigger=="failure" && action!="refused-input"))
+                    throw std::invalid_argument("319 finite original callback declaration required");
+                QPointer<edi_app::AssistantViewModel> original=session->assistant();
+                QPointer<edi_app::Session> original_session=session.get();
+                QPointer<edi_app::ProjectViewModel> original_project=session->project();
+                const auto identity=[](const void* value) {return QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(value)),16);};
+                const auto receiver_id=identity(original.data()),session_id=identity(original_session.data());
+                auto* original_model=original->messages();
+                const auto model_id=identity(original_model);
+                callback319={{"armed",true},{"trigger",trigger},{"action",action},{"original_receiver",receiver_id},
+                    {"original_session",session_id},{"original_model",model_id},{"original_text",text},
+                    {"notices",Array{}},{"callbacks",0},{"sequence",0}};
+                callback319_armed=true;
+                auto action319=[&,original,original_session,original_project,receiver_id,session_id,model_id,trigger,action,text,identity](const QString& signal,int first,int last,const QList<int>& roles) {
+                    if(!callback319_armed || !original || !original_session || session.get()!=original_session.data())return;
+                    Object user;int user_index=-1;Array role_names;
+                    if(trigger=="completed-user") {
+                        if(first<0 || last<first)return;
+                        const auto published=rows(original->messages());
+                        const auto names=original->messages()->roleNames();
+                        bool status_announced=roles.isEmpty();
+                        for(const int role:roles) {
+                            const auto name=QString::fromUtf8(names.value(role));role_names.push_back(name);
+                            if(name=="status")status_announced=true;
+                        }
+                        if(!status_announced)return;
+                        for(int index=first;index<=last && index<published.size();++index) {
+                            const auto row=published.at(index).toObject();
+                            if(row["kind"].toString()=="user" && row["text"].toString()==text && row["status"].toString()=="completed") {
+                                if(!user.isEmpty()) {callback319["observer_error"]="Original notification has multiple completed identities";callback319_armed=false;return;}
+                                user=row;user_index=index;
+                            }
+                        }
+                        if(user.isEmpty())return;
+                        QFile retained(history);
+                        if(!retained.open(QIODevice::ReadOnly)) {callback319["observer_error"]="Original completed archive unavailable";callback319_armed=false;return;}
+                        const auto bytes=retained.readAll();retained.close();
+                        const auto persisted=QJsonDocument::fromJson(bytes);
+                        if(!persisted.isArray()) {callback319["observer_error"]="Original completed archive is not an array";callback319_armed=false;return;}
+                        int matches=0;Object retained_user;
+                        for(const auto& entry:persisted.array()) {
+                            const auto row=entry.toObject();
+                            if(row["id"]==user["id"] && row["kind"].toString()=="user" && row["text"].toString()==text && row["status"].toString()=="completed") {++matches;retained_user=row;}
+                        }
+                        if(matches!=1) {callback319["observer_error"]="Original completed public row lacks exact unique durable identity";callback319_armed=false;return;}
+                        callback319["archive_user_at_entry"]=retained_user;
+                        callback319["archive_sha256_at_entry"]=QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
+                    } else if(original->connected() || original->lastError().isEmpty())return;
+                    callback319_armed=false;++callback319_depth;
+                    callback319["callbacks"]=callback319["callbacks"].toInt()+1;
+                    callback319["entered"]=true;callback319["signal"]=signal;
+                    callback319["sequence"]=callback319["sequence"].toInt()+1;
+                    callback319["entry_sequence"]=callback319["sequence"];
+                    callback319["receiver_at_entry"]=identity(original.data());
+                    callback319["session_at_entry"]=identity(original_session.data());
+                    callback319["model_at_entry"]=identity(original->messages());
+                    callback319["original_alive_at_entry"]=!original.isNull();
+                    callback319["depth_at_entry"]=callback319_depth;
+                    callback319["user_at_entry"]=user;
+                    callback319["error_at_entry"]=original->lastError();
+                    callback319["message_count_at_entry"]=original->messages()->count();
+                    callback319["changed_first"]=first;callback319["changed_last"]=last;
+                    callback319["changed_user_index"]=user_index;callback319["changed_roles"]=role_names;
+                    callback319["all_roles_changed"]=roles.isEmpty();
+                    if(action=="clear")original->clearHistory();
+                    else if(action=="replace-project") {
+                        session->closeProject();
+                        callback319["replacement_created"]=session->createProject("Original319 B","Actual public notification successor");
+                    } else if(action=="recreate-session") {
+                        session.reset();session=make_session();observe();
+                        callback319["replacement_present"]=session && session->assistant();
+                        // Explicit real B account admission happens IN original A callback.
+                        session->assistant()->signIn();callback319["replacement_signin_returned"]=true;
+                    } else {
+                        QString returned;
+                        callback319["submit_invoked"]=QMetaObject::invokeMethod(original,"submitDraft",Qt::DirectConnection,
+                            Q_RETURN_ARG(QString,returned),Q_ARG(QString,QStringLiteral("   ")));
+                        callback319["refused_row"]=returned;
+                    }
+                    callback319["returned_inside_callback"]=true;
+                    callback319["depth_after_action"]=callback319_depth;
+                    callback319["original_alive_after_action"]=!original.isNull();
+                    callback319["original_session_alive_after_action"]=!original_session.isNull();
+                    callback319["original_project_alive_after_action"]=!original_project.isNull();
+                    callback319["current_receiver_after_action"]=identity(session->assistant());
+                    callback319["current_session_after_action"]=identity(session.get());
+                    --callback319_depth;
+                };
+                if(trigger=="completed-user")callback319_model=QObject::connect(original_model,&QAbstractItemModel::dataChanged,
+                    &app,[action319](const QModelIndex& first,const QModelIndex& last,const QList<int>& roles) {action319("messages.dataChanged",first.row(),last.row(),roles);},Qt::DirectConnection);
+                else callback319_state=QObject::connect(original,&edi_app::AssistantViewModel::stateChanged,
+                    &app,[action319] {action319("stateChanged",-1,-1,{});},Qt::DirectConnection);
+                callback319_error=QObject::connect(original,&edi_app::AssistantViewModel::lastErrorChanged,&app,[&,original,receiver_id] {
+                    if(!original)return;
+                    auto notices=callback319["notices"].toArray();
+                    if(notices.size()>=16) {callback319["overflow"]=true;return;}
+                    callback319["sequence"]=callback319["sequence"].toInt()+1;
+                    notices.push_back(Object{{"sequence",callback319["sequence"]},{"signal","lastErrorChanged"},{"receiver",receiver_id},
+                        {"error",original->lastError()},{"inside_action_depth",callback319_depth}});
+                    callback319["notices"]=notices;
+                },Qt::DirectConnection);
+                result={{"armed",true},{"receiver",receiver_id},{"session",session_id},{"model",model_id}};
+            } else if(codex_mode && op=="ux319_submit") {
+                QString returned;
+                const bool invoked=QMetaObject::invokeMethod(session->assistant(),"submitDraft",Qt::DirectConnection,
+                    Q_RETURN_ARG(QString,returned),Q_ARG(QString,input["text"].toString()));
+                result={{"invoked",invoked},{"row_id",returned}};
+            }
             else if(op=="send_text")session->assistant()->send(input["text"].toString());
             else if(op=="answer")session->assistant()->answerQuestion(input["id"].toString(),input["answer"].toString());
             else if(op=="approve")session->assistant()->approvePlan(input["id"].toString());
@@ -924,6 +1180,9 @@ int main(int argc,char** argv) {
             } else result=fixture.dispatch(input);
             drain();
             auto output=fixture.snapshot();output["reply"]=result;output["vm"]=snapshot();output["archive"]=archive();output["notice_barrier"]=notice_barrier;
+#ifdef EDI_TEST_WORKFLOW_CONTEXT
+            if(public_transport304.enabled)output["public_transport304"]=public_transport304.snapshot();
+#endif
             std::cout<<encode(output).toStdString()<<'\n'<<std::flush;
         } catch(const std::exception& error) {
             std::cout<<encode(Object{{"host_error",QString::fromUtf8(error.what())}}).toStdString()<<'\n'<<std::flush;

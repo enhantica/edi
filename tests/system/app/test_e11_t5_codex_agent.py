@@ -8356,3 +8356,397 @@ def test_background291_fixture_construction_preserves_declared_sections(
         assert other.read_text() == experiment.replace('data_experiment', 'data_other', 1), (
             'BG291 SETUP: actual second measured bank differs only by its independent original dataset name'
         )
+
+# Direct public facade ownership is deliberately separate from real Session/account
+# authority. Existing target/peer/Generic transport and bounds only.
+@pytest.mark.parametrize(('trigger', 'action'), [
+    ('response', 'destroy'), ('response', 'recreate'), ('event', 'recreate'),
+    ('failed-record', 'restart'), ('failed-eof', 'recreate'),
+    ('failed-deadline', 'recreate'), ('before-write', 'recreate'),
+])
+def test_ux304_public_transport_callback_owns_original_receiver(generic, trigger, action):
+    actor, trace = generic('transport304')
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/e04_t1/editable-project'))[
+        'reply']['opened'], 'UX304 SETUP: real scientific owner exists outside isolated facade caller'
+    actor.command('native_science_enable')
+    actor.command('background285_observe')
+    original = settle(actor, lambda value: not value['project']['science_observer']['calculating']
+                      and all(x['current'] for x in value['project']['science_observer']['calculations']))
+    before = json.loads(json.dumps(original))
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['transport304_mode'] = trigger
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    assert actor.command('codex304_start', trigger=trigger, action=action)['reply']['armed'], (
+        'UX304 SETUP: existing native target starts only its actual owned public facade'
+    )
+    for _ in range(40):
+        state = actor.last.get('public_transport304', {})
+        completed = state.get('boundary_reached') and (action == 'destroy' or any(
+            x['signal'] == 'response' and x['label'] == 'B' for x in state.get('events', [])))
+        if completed:
+            break
+        actor.command('inspect')
+    state = actor.last.get('public_transport304', {})
+    assert state.get('boundary_reached') and not state.get('observer_error') and not state.get(
+        'observer_overflow'), 'UX304 SETUP: original real public callback interval is witnessed without synthetic state'
+    event = state['events'][state['boundary_event_index']]
+    assert event['label'] == 'A' and event['signal'] == (
+        'failed' if trigger.startswith('failed-') else trigger
+    ) and event['receiver'] == state['original_receiver'] and event['original_alive_at_entry'], (
+        'UX304: reached callback belongs to the exact original live public QObject receiver'
+    )
+    assert event['depth'] >= 1 and state['boundary_in_callback_depth'] >= 1 and event[
+        'returned_from_action_in_same_callback'], (
+        'UX304: real deletion/restart returned inside original direct callback, never between command frames'
+    )
+    assert event['original_alive_after_action'] is (action == 'restart'), (
+        'UX304: QPointer proves genuine QObject destruction or surviving same-facade process restart'
+    )
+    assert not any(x['label'] == 'A' for x in state['events'][state['boundary_event_index'] + 1:]), (
+        'UX308: disconnected A listener records no later A signal; this alone is not stale-emission proof'
+    )
+    if action != 'destroy':
+        replacement = [x for x in state['events'] if x['label'] == 'B' and x['signal'] == 'response']
+        assert len(replacement) == 1 and replacement[0]['request_id'] == state['issued']['B'] and (
+            replacement[0]['envelope']['id'] == state['issued']['B']
+            and 'error' not in replacement[0]['envelope']
+            and replacement[0]['envelope']['result']['userAgent'] == 'original-offline-peer/0.162.1'
+        ), 'UX304: new actual process original request/reply settles once, never detached/failed by A cleanup'
+        assert state['replacement_start_returned'] and not any(
+            x['label'] == 'B' and x['signal'] in {'failed', 'serverRequest'} for x in state['events']
+        ), 'UX304: retired original read/fail/finished continuation cannot fail new receiver/process'
+    if trigger.startswith('failed-'):
+        assert event['explanation'] and len(event['explanation'].encode()) <= 512 and (
+            'ORIGINAL_TRANSPORT304_CANARY' not in event['explanation']
+        ), 'UX304: original public failure cause is nonempty/bounded and never raw malformed record text'
+    if trigger == 'failed-deadline':
+        assert state['declared_total_ms'] == state['declared_idle_ms'] == 100 and (
+            event['elapsed_operation_ms'] >= 100
+        ), 'UX304 SETUP: actual public100ms operation deadline elapsed against a genuinely pending original reply'
+    requests = records(trace)
+    assert all(x.get('method') == 'initialize' for x in requests), (
+        'UX304: isolated facade caller emits only original initialize, never account/provider/native input'
+    )
+    labels = [x['params']['clientInfo']['name'].removeprefix('independent-public-') for x in requests]
+    expected = ([] if trigger == 'before-write' else ['A']) + ([] if action == 'destroy' else ['B'])
+    assert labels == expected, 'UX304: retired before-write A is not delivered as B and every genuine request is once-only'
+    events = clear_control_events(trace)
+    actual_requests = [x for x in events if x['kind'] == 'transport304-request']
+    assert [x['label'] for x in actual_requests] == expected and all(
+        x['request'] == request for x, request in zip(actual_requests, requests, strict=True)
+    ), 'UX304 SETUP: original actual owned peer process/envelope is independently recorded for each delivered request'
+    if len(actual_requests) == 2:
+        assert actual_requests[0]['pid'] != actual_requests[1]['pid'], (
+            'UX304 SETUP: replacement request reaches a new genuine owned OS process'
+        )
+    # Independently specified fixture packets, joined to ACTUAL outgoing IDs.
+    # Expected operands are not copied from any parsed subject signal/envelope.
+    declarations = [x for x in events if x['kind'] == 'transport308-packet-declared']
+    declared_labels = ([] if trigger in {'before-write', 'failed-eof', 'failed-deadline'} else ['A']) + (
+        [] if action == 'destroy' else ['B'])
+    assert [x['label'] for x in declarations] == declared_labels, (
+        'UX308 SETUP: every response batch is independently declared and closed before its delivery'
+    )
+    wire_by_label = dict(zip(labels, requests, strict=True))
+    peer_by_label = {x['label']: x for x in actual_requests}
+    expected_responses = {}
+    for label in expected:
+        request = wire_by_label[label]
+        assert set(request) == {'id', 'method', 'params'} and request['method'] == 'initialize' and (
+            request['params'] == {'clientInfo': {'name': 'independent-public-' + label, 'version': '1'},
+                                  'capabilities': {'experimentalApi': True}}
+            and isinstance(request['id'], str) and request['id']
+        ), 'UX308: actual original request is the complete independently declared public initialize envelope'
+        assert state['issued'][label] == request['id'], (
+            'UX308: facade returned original ID is bonded to its actual independent outgoing wire ID'
+        )
+        expected_responses[label] = {'id': request['id'], 'result': {
+            'userAgent': 'original-offline-peer/0.162.1',
+            'codexHome': str(trace.parent / 'peer-unused-profile'),
+            'platformFamily': 'unix', 'platformOs': 'linux'}}
+    for declared in declarations:
+        label = declared['label']
+        packet = [expected_responses[label]]
+        if label == 'A' and trigger == 'failed-record':
+            packet = [{'method': 'original/transport304-before-malformed',
+                       'params': {'originalCaller': 'A', 'position': 'before-malformed'}}]
+        elif label == 'A':
+            packet += [{'method': method, 'params': {'originalCaller': 'A'}} for method in [
+                'original/transport304-boundary', 'original/transport304-tail']]
+        encoded = ''.join(json.dumps(x, separators=(',', ':')) + '\n' for x in packet).encode()
+        if label == 'A' and trigger == 'failed-record':
+            encoded += b'{"malformed":"ORIGINAL_TRANSPORT304_CANARY"\n'
+        assert declared['records'] == packet and declared['request_id'] == wire_by_label[label]['id'] and (
+            declared['pid'] == peer_by_label[label]['pid'] and declared['mode'] == trigger and
+            declared['wire_utf8'].encode() == encoded and declared['bytes'] == len(encoded)
+            and declared['sha256'] == hashlib.sha256(encoded).hexdigest()
+            and 0 < len(encoded) <= declared['pipe_bound']
+        ), 'UX308 SETUP: pre-delivery declaration matches the complete independent original atomic fixture packet'
+    if trigger in {'response', 'event'}:
+        original_responses = [x for x in state['events'] if x['label'] == 'A' and x['signal'] == 'response']
+        assert len(original_responses) == 1 and original_responses[0]['method'] == 'initialize' and (
+            original_responses[0]['request_id'] == wire_by_label['A']['id']
+            and original_responses[0]['envelope'] == expected_responses['A']
+        ), 'UX308: actual A response ID/method/complete envelope equals the independently authored original packet'
+        if trigger == 'event':
+            original_events = [x for x in state['events'][:state['boundary_event_index'] + 1]
+                               if x['label'] == 'A' and x['signal'] == 'event']
+            assert original_events == [event] and event['method'] == 'original/transport304-boundary' and (
+                event['params'] == {'originalCaller': 'A'}
+                and state['events'].index(original_responses[0]) < state['boundary_event_index']
+            ), 'UX308: actual boundary is the exact first declared A event after its original response, not tail/empty/altered data'
+        else:
+            assert event == original_responses[0], 'UX308: reached response callback itself is the original full A response'
+    if trigger == 'failed-record':
+        prefix = [x for x in state['events'][:state['boundary_event_index']]
+                  if x['label'] == 'A' and x['signal'] == 'event']
+        assert len(prefix) == 1 and prefix[0]['method'] == 'original/transport304-before-malformed' and (
+            prefix[0]['params'] == {'originalCaller': 'A', 'position': 'before-malformed'}
+        ), 'UX308 SETUP: exact public prefix receipt proves original atomic input delivery before genuine failure callback'
+    if action != 'destroy':
+        assert replacement[0]['method'] == 'initialize' and replacement[0]['request_id'] == wire_by_label['B']['id'] and (
+            replacement[0]['envelope'] == expected_responses['B']
+        ), 'UX308: B returned/parsed IDs and COMPLETE reply match actual independent B request and fixture packet exactly'
+    if trigger == 'failed-eof':
+        assert len([x for x in events if x['kind'] == 'transport304-real-eof']) == 1, (
+            'UX304 SETUP: original owning process really exits instead of an injected failure signal'
+        )
+    if trigger == 'failed-deadline':
+        held = [x for x in events if x['kind'] == 'transport304-real-pending']
+        assert len(held) == 1 and held[0]['request_id'] == state['issued']['A'], (
+            'UX304 SETUP: actual original request is outstanding with no fabricated reply before real deadline'
+        )
+    if trigger == 'before-write':
+        assert state['original_prepared_id'] and event['request_id'] == state['original_prepared_id'], (
+            'UX304 SETUP: actual original prepare callback receives its own allocated envelope identity before delivery'
+        )
+    assert config_path.read_bytes() == original_config, 'UX304: original process inputs stay frozen across genuine restart'
+    after = actor.last['vm']
+    assert after['project'] == before['project'] and after['selected_files'] == before['selected_files'], (
+        'UX304: transport callback/deletion/restart leaves every original parameter/SU/free/raw observation/weight/identity/Undo unchanged'
+    )
+    assert not after['connected'] and not after['can_cancel'] and after['messages'] == before['messages'] and (
+        after['models'] == before['models'] and after['pending_plan'] == before['pending_plan']
+        and after['pending_question'] == before['pending_question']
+    ), 'UX304: isolated facade lifetime never invents account, ACK, history, worker or native scientific authority'
+
+
+@pytest.mark.parametrize('action', ['clear', 'replace-project', 'recreate-session'])
+def test_ux319_actual_completed_model_callback_keeps_original_authority(generic, action):
+    actor, trace = generic('complete')
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['vm319_record_packets'] = True
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    source = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    original_files = save211_files(source)
+    assert actor.command('open', path=str(source))['reply']['opened'], (
+        'UX319 SETUP: original public Session owns actual committed scientific fixture'
+    )
+    actor.command('native_science_enable')
+    native145_science_settled(actor)
+    selected_source = trace.parent / 'Original319 selected source.txt'
+    selected_bytes = b'Original319 immutable selected source\n'
+    selected_source.write_bytes(selected_bytes)
+    intent = actor.command('selected_begin')['reply']['request_id']
+    selected_reply = actor.command('selected_add', request_id=intent, urls=[selected_source.as_uri()])
+    assert selected_reply['reply']['accepted'], 'UX319 SETUP: genuine picker admits original canonical selected bytes'
+    selected = selected_reply['vm']['selected_files']
+    assert len(selected) == 1 and selected[0]['id'] and selected[0]['name'] == selected_source.name and (
+        selected[0]['bytes'] == len(selected_bytes) and selected[0]['pending'] is True
+    ), 'UX319 SETUP: exact actual selected source is pending before any successful acknowledgement'
+    connect(actor)
+    native145_approve(actor)
+    before = actor.last['vm']
+    original_pid, original_started = live_original_peer(actor)
+    text = 'Original319 admitted user before synchronous ' + action
+    arm = actor.command('ux319_arm', trigger='completed-user', action=action, text=text)['reply']
+    assert arm['armed'], 'UX319 SETUP: observer arms on original actual messages model before Send'
+    submitted = actor.command('ux319_submit', text=text)['reply']
+    assert submitted['invoked'] and submitted['row_id'], (
+        'UX319 SETUP: public submitDraft truthfully returns actual admitted original row through notification retirement'
+    )
+    for _ in range(40):
+        state = actor.last['vm']
+        witness = state.get('callback319', {})
+        settled = witness.get('entered') and witness.get('returned_inside_callback')
+        if action == 'replace-project':
+            settled = settled and not state['can_cancel'] and not (
+                state['project']['science_observer']['calculating']
+            )
+        elif action == 'recreate-session':
+            settled = settled and state['connected'] and not state['can_cancel'] and not (
+                original_peer_is_live((original_pid, original_started))
+            )
+        if settled:
+            break
+        actor.command('inspect')
+    witness = actor.last['vm'].get('callback319', {})
+    assert witness.get('entered') and witness.get('callbacks') == 1 and not witness.get('overflow') and not witness.get('observer_error'), (
+        'UX319 SETUP: one real completed-user data notification reaches exact original synchronous callback'
+    )
+    assert witness['signal'] == 'messages.dataChanged' and (
+        witness['receiver_at_entry'] == arm['receiver'] == witness['original_receiver']
+        and witness['session_at_entry'] == arm['session'] == witness['original_session']
+        and witness['model_at_entry'] == arm['model'] == witness['original_model']
+        and witness['original_alive_at_entry']
+        and witness['depth_at_entry'] == witness['depth_after_action'] == 1
+        and witness['returned_inside_callback']
+        and witness['changed_first'] <= witness['changed_user_index'] <= witness['changed_last']
+        and (witness['all_roles_changed'] or 'status' in witness['changed_roles'])
+    ), 'UX319: exact completed user belongs to announced original model range/status roles and direct live callback receiver'
+    user = witness['user_at_entry']
+    assert user['id'] == submitted['row_id'] and user['text'] == text and (
+        user['kind'] == 'user' and user['status'] == 'completed'
+        and witness['archive_user_at_entry'] == user and witness['archive_sha256_at_entry']
+    ), 'UX319: actual original response durably commits exact public completed user before callback retirement'
+    descriptor = {'id': selected[0]['id'], 'name': selected_source.name, 'bytes': len(selected_bytes),
+                  'textReadable': True, 'format': selected[0]['format']}
+    assert user['payload'] == {'type': 'ediInput', 'files': [descriptor]}, (
+        'UX319: actual ACK descriptor preserves original admitted selected identity and bounded metadata, never source paths or bytes'
+    )
+    requests = records(trace)
+    starts = [row for row in requests if row.get('method') == 'turn/start']
+    assert len(starts) == 1 and sum(row.get('text') == text for row in starts[0]['params']['input']) == 1 and (
+        starts[0]['params']['clientUserMessageId'] == submitted['row_id']
+        and not starts[0]['params'].get('additionalContext')
+        and rpc83_context_inputs(starts[0]['params']) == [before['context']]
+    ), (
+        'UX319: one exact original text request is actually written, never transferred or repeated for successor'
+    )
+    deliveries = [json.loads(line) for line in trace.with_suffix('.vm319-requests.jsonl').read_text().splitlines()]
+    delivered_starts = [row for row in deliveries if row['request'].get('method') == 'turn/start']
+    assert delivered_starts == [{'pid': original_pid, 'request': starts[0]}], (
+        'UX319: independent actual receiving process records complete original request once before dispatch'
+    )
+    packets = [json.loads(line) for line in trace.with_suffix('.vm319-packets.jsonl').read_text().splitlines()]
+    expected_reply = {'id': starts[0]['id'], 'result': {'turn': {
+        'id': '019a0290-0000-7000-8000-000000000002', 'items': [], 'status': 'inProgress'}}}
+    assert packets.count({'pid': original_pid, 'packet': expected_reply}) == 1, (
+        'UX319 SETUP: actual original process predeclares exact successful envelope before completed callback delivery'
+    )
+    state = actor.last['vm']
+    if action == 'clear':
+        final = settle(actor, lambda value: not value['can_cancel'] and not value['messages'])
+        retained = actor.command('archive')['reply']['rows']
+        assert retained == [] and final['connected'] and final['project'] == before['project'] and (
+            final['models'] == before['models'] and final['selected_model'] == before['selected_model']
+            and final['selected_effort'] == before['selected_effort']
+            and [row['id'] for row in final['selected_files']] == [selected[0]['id']]
+        ), 'UX319: real committed Clear discards memory while retaining original account/science/Undo/canonical source consent'
+    elif action == 'replace-project':
+        assert witness['replacement_created'] and state['project_present'] and (
+            state['project']['host_snapshot']['name'] == 'Original319 B'
+            and state['project']['science_observer']['structures'] == []
+            and state['project']['host_snapshot']['experiments'] == []
+            and state['project']['science_observer']['calculations'] == []
+            and state['project']['science_observer']['aliases'] == []
+            and state['project']['science_observer']['constraints'] == []
+            and not state['project']['science_observer']['calculating']
+            and not state['can_cancel'] and not state['selected_files']
+            and state['connected'] and state['models'] == before['models']
+            and state['selected_model'] == before['selected_model']
+            and state['selected_effort'] == before['selected_effort']
+        ), 'UX319: new empty owner retains original account/catalog/model/effort without old science/input/work'
+    else:
+        assert not witness['original_alive_after_action'] and not witness['original_session_alive_after_action'] and (
+            witness['replacement_present'] and witness['replacement_signin_returned']
+        ), 'UX319: real original weak lifetime retires inside callback and explicit new receiver begins actual bootstrap there'
+        final = state
+        assert final['connected'] and not final['project_present'] and final['models'] and (
+            not final['can_cancel'] and not final['selected_files']
+        ), 'UX319: retired old publication cannot detach/fail or lend source/science authority to genuine explicit successor account'
+        replacement_pid, _ = live_original_peer(actor)
+        assert replacement_pid != original_pid and not original_peer_is_live((original_pid, original_started)), (
+            'UX319: old original process really terminates while independent replacement process owns ready account'
+        )
+        deliveries = [json.loads(line) for line in trace.with_suffix('.vm319-requests.jsonl').read_text().splitlines()]
+        original_initializes = [row for row in deliveries if row['request'].get('method') == 'initialize']
+        assert [row['pid'] for row in original_initializes] == [original_pid, replacement_pid], (
+            'UX319: new explicit Session bootstrap has independent actual process, not stale original continuation identity'
+        )
+    assert config_path.read_bytes() == original_config and save211_files(source) == original_files and (
+        selected_source.read_bytes() == selected_bytes
+    ), 'UX319: callback actions never alter original provider configuration/scientific fixture/admitted source bytes'
+
+
+def test_ux319_actual_final_failure_publication_preserves_factual_cause(generic):
+    actor, trace = generic('rpc83:unknown:eof')
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['vm319_record_packets'] = True
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    source = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    original_files = save211_files(source)
+    assert actor.command('open', path=str(source))['reply']['opened'], (
+        'UX319 SETUP: final-publication callback observes original genuine scientific owner'
+    )
+    actor.command('native_science_enable')
+    native145_science_settled(actor)
+    connect(actor)
+    native145_approve(actor)
+    before = actor.last['vm']
+    original_pid, original_started = live_original_peer(actor)
+    arm = actor.command('ux319_arm', trigger='failure', action='refused-input')['reply']
+    text = 'Original319 submitted request before genuine peer EOF'
+    submitted = actor.command('ux319_submit', text=text)['reply']
+    assert submitted['invoked'] and submitted['row_id'], (
+        'UX319 SETUP: original admitted input exists before owned peer really closes transport without ACK'
+    )
+    for _ in range(40):
+        state = actor.last['vm']
+        witness = state.get('callback319', {})
+        if witness.get('returned_inside_callback') and witness.get('notices') and (
+            not state['connected'] and not state['can_cancel']
+            and not state['project']['science_observer']['calculating']
+            and not original_peer_is_live((original_pid, original_started))
+        ):
+            break
+        actor.command('inspect')
+    state = actor.last['vm']
+    witness = state.get('callback319', {})
+    assert witness.get('entered') and witness.get('callbacks') == 1 and not witness.get('overflow') and not witness.get('observer_error'), (
+        'UX319 SETUP: genuine fatal original transport publishes direct original state callback'
+    )
+    assert witness['signal'] == 'stateChanged' and witness['receiver_at_entry'] == arm['receiver'] and (
+        witness['original_alive_at_entry'] and witness['original_alive_after_action']
+        and witness['session_at_entry'] == arm['session']
+        and witness['current_session_after_action'] == arm['session']
+        and witness['depth_at_entry'] == witness['depth_after_action'] == 1
+        and witness['returned_inside_callback']
+    ), 'UX319: nested refused input occurs within actual unchanged original fatal-publication receiver'
+    cause = witness['error_at_entry']
+    assert cause and len(cause.encode()) <= 512 and witness['submit_invoked'] and witness['refused_row'] == '', (
+        'UX319: same-owner blocked-account whitespace is truly refused and original transport cause is bounded/nonempty'
+    )
+    after_notices = [row for row in witness['notices'] if row['sequence'] > witness['entry_sequence']]
+    assert after_notices and all(row['receiver'] == arm['receiver'] and row['error'] == cause
+                                 for row in after_notices) and state['last_error'] == cause, (
+        'UX319: later actual lastError notification/getter retains factual cause after refused input'
+    )
+    starts = [row for row in records(trace) if row.get('method') == 'turn/start']
+    deliveries = [json.loads(line) for line in trace.with_suffix('.vm319-requests.jsonl').read_text().splitlines()]
+    assert len(starts) == 1 and sum(row.get('text') == text for row in starts[0]['params']['input']) == 1 and (
+        starts[0]['params']['clientUserMessageId'] == submitted['row_id']
+        and not starts[0]['params'].get('additionalContext')
+        and rpc83_context_inputs(starts[0]['params']) == [before['context']]
+    ) and (
+        [row for row in deliveries if row['request'].get('method') == 'turn/start']
+        == [{'pid': original_pid, 'request': starts[0]}]
+    ), 'UX319: only exact original encoded input reaches independent peer, never nested refused draft'
+    packets = [json.loads(line) for line in trace.with_suffix('.vm319-packets.jsonl').read_text().splitlines()]
+    assert not any(row['pid'] == original_pid and row['packet'].get('id') == starts[0]['id'] for row in packets) and (
+        not original_peer_is_live((original_pid, original_started))
+    ), 'UX319 SETUP: actual original peer exits after receiving request without any successful ACK response'
+    assert not any(row.get('id') == submitted['row_id'] and row.get('status') == 'completed'
+                   for row in state['messages']), 'UX319: missing original ACK cannot be fabricated by callback refusal/publication'
+    assert not state['connected'] and not state['can_cancel'] and state['project'] == before['project'], (
+        'UX319: factual account retirement finishes without modifying original scientific values/Undo/source owner'
+    )
+    assert config_path.read_bytes() == original_config and save211_files(source) == original_files, (
+        'UX319: fatal publication and nested policy refusal preserve original config and every source file byte'
+    )

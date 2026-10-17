@@ -41,6 +41,11 @@ clear_prior = None
 
 
 def emit(value):
+    # Opt-in packet declaration closes before the existing real stdout write.
+    if config.get('vm319_record_packets') is True:
+        with trace.with_suffix('.vm319-packets.jsonl').open('a', encoding='utf-8') as output:
+            output.write(json.dumps({'pid': os.getpid(), 'packet': value}, ensure_ascii=False,
+                                    separators=(',', ':')) + '\n')
     sys.stdout.write(json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n')
     sys.stdout.flush()
 
@@ -1139,7 +1144,34 @@ def relation246_resolve_at_original_read():
     })
 
 
+# Opt-in original protocol barrier. Only a genuine optional read AFTER a received
+# input releases that exact input's ACK; no timer, fabricated flag or producer hook.
+ux289_pending_input = None
+
+
+def ux289_release_input(read_request):
+    global ux289_pending_input  # noqa: PLW0603 -- original received RPC only
+    original = ux289_pending_input
+    if original is None:
+        return
+    ux289_pending_input = None
+    clear_observation('ux289-original-ack-release', {
+        'request_id': original['id'], 'read_id': read_request['id'],
+        'method': original['method'], 'client_user_message_id':
+            original['params']['clientUserMessageId'],
+    })
+    if config.get('ux295_refuse_original_input') is True:
+        response = {'id': original['id'], 'error': {'code': -32600,
+                    'message': 'Original explicit input admission refusal'}}
+        clear_observation('ux295-original-input-refused', {'response': response})
+        emit(response)
+    else:
+        native_start(original)
+
+
 def usage_read(request):
+    if config.get('ux289_hold_input') is True:
+        ux289_release_input(request)
     relation246_resolve_at_original_read()
     waiting = config.pop('_relation246_waiting_next', None)
     if waiting is not None:
@@ -1345,12 +1377,61 @@ def roots207_response(request, value):
             'returned_roots': roots, 'sandbox': value['sandbox']}) + '\n')
 
 
+
+def transport304_dispatch(request):
+    """Actual owned original process; no account, inference or subject callbacks."""
+    mode = config['transport304_mode']
+    if request.get('method') != 'initialize':
+        raise RuntimeError('transport304 accepts only the predeclared public initialize request')
+    label = request['params']['clientInfo']['name'].removeprefix('independent-public-')
+    assert label in {'A', 'B'}, 'TRANSPORT304 SETUP: independent caller labels are finite'
+    clear_observation('transport304-request', {'label': label, 'request': request})
+    if label == 'A' and mode == 'failed-eof':
+        clear_observation('transport304-real-eof', {'label': label})
+        sys.exit(0)
+    if label == 'A' and mode == 'failed-deadline':
+        clear_observation('transport304-real-pending', {'label': label, 'request_id': request['id']})
+        return
+    if label == 'A' and mode == 'failed-record':
+        batch = [{'method': 'original/transport304-before-malformed',
+                  'params': {'originalCaller': 'A', 'position': 'before-malformed'}}]
+        wire = (json.dumps(batch[0], separators=(',', ':')) + '\n').encode() + (
+            b'{"malformed":"ORIGINAL_TRANSPORT304_CANARY"\n')
+    else:
+        response = {'id': request['id'], 'result': {
+            'userAgent': 'original-offline-peer/0.162.1',
+            'codexHome': str(trace.parent / 'peer-unused-profile'),
+            'platformFamily': 'unix', 'platformOs': 'linux'}}
+        batch = [response]
+        if label == 'A':
+            batch.extend({'method': name, 'params': {'originalCaller': label}}
+                         for name in ['original/transport304-boundary', 'original/transport304-tail'])
+        wire = ''.join(json.dumps(x, separators=(',', ':')) + '\n' for x in batch).encode()
+    pipe_bound = os.fpathconf(sys.stdout.fileno(), 'PC_PIPE_BUF')
+    assert len(wire) <= pipe_bound, (
+        'TRANSPORT304 SETUP: complete original batch fits the actual owned pipe atomic bound'
+    )
+    # This is a DECLARATION, closed before delivery. Callback retirement can kill
+    # this process immediately after os.write; public exact receipts prove delivery.
+    clear_observation('transport308-packet-declared', {'label': label, 'request_id': request['id'],
+        'records': batch, 'wire_utf8': wire.decode(), 'bytes': len(wire),
+        'sha256': hashlib.sha256(wire).hexdigest(), 'pipe_bound': pipe_bound, 'mode': mode})
+    written = os.write(sys.stdout.fileno(), wire)
+    assert written == len(wire), 'TRANSPORT304 SETUP: original complete bounded batch reaches actual pipe'
+
 for line in sys.stdin:
     request = json.loads(line)
     with trace.open('a', encoding='utf-8') as output:
         output.write(json.dumps(request, ensure_ascii=False) + '\n')
+    if config.get('vm319_record_packets') is True:
+        with trace.with_suffix('.vm319-requests.jsonl').open('a', encoding='utf-8') as output:
+            output.write(json.dumps({'pid': os.getpid(), 'request': request}, ensure_ascii=False,
+                                    separators=(',', ':')) + '\n')
     method = request.get('method')
     params = request.get('params') or {}
+    if config.get('transport304_mode'):
+        transport304_dispatch(request)
+        continue
     if method is None:
         if scenario.startswith('native:'):
             native_reply(request)
@@ -1610,7 +1691,15 @@ for line in sys.stdin:
             usage_start(request)
             continue
         if scenario.startswith('native:'):
-            native_start(request)
+            if config.get('ux289_hold_input') is True:
+                assert ux289_pending_input is None, 'UX289 SETUP: original input has one pending envelope'
+                ux289_pending_input = request
+                clear_observation('ux289-original-input-received', {
+                    'request_id': request['id'],
+                    'client_user_message_id': request['params']['clientUserMessageId'],
+                })
+            else:
+                native_start(request)
             continue
         if scenario == 'fileauth':
             turn_id = '019a0290-0000-7000-8000-' + f'{8000 + turn_number:012d}'

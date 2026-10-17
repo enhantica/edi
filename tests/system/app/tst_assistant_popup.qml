@@ -3939,4 +3939,545 @@ TestCase {
             if (assistant.canCancel) assistant.cancel();
         }
     }
+    function ux289_descendantText(root) {
+        return Ui.itemsWithProperty(root, "text").filter(value => value.visible)
+            .map(value => String(value.text));
+    }
+    function test_ux289_original_ack_consumes_only_submitted_presentation_data() {
+        return [{tag: "unchanged-draft"}, {tag: "new-identical-draft"}, {tag: "active-ime"},
+            {tag: "server-refusal"}, {tag: "new-file-sent-revoke"}];
+    }
+    function test_ux289_original_ack_consumes_only_submitted_presentation(data) {
+        const project = Session.project;
+        const source = "tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif";
+        const beforeBytes = Probe.readFile(source);
+        const intent = assistant.beginFileSelection();
+        verify(intent.length > 0 && assistant.addSelectedFiles(intent, [Probe.repoUrl(source)]),
+            "UX289 SETUP: genuine selected-file intent admits unchanged committed source bytes");
+        tryCompare(assistant.selectedFiles, "count", 1, 2000,
+            "UX289 SETUP: real selected model publishes the original file");
+        function canonicalSelected() {
+            return JSON.stringify(Probe.rows(assistant.selectedFiles).map(row => ({id: row.id,
+                name: row.name, bytes: row.bytes, textReadable: row.textReadable, format: row.format})));
+        }
+        const selected = canonicalSelected();
+        compare(Probe.rows(assistant.selectedFiles)[0].pending, true,
+            "UX289: newly admitted original selected file is pending before any completed input");
+        const selectedId = assistant.selectedFiles.text(0, "id");
+        verify(selectedId.length > 0, "UX289 SETUP: original selected identity is app-issued");
+        toggle();
+        assistant.signIn();
+        report187_ready("ux289-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux289-disclosed", true);
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const editor = item("assistant.composer");
+        const composer = Probe.objectsWithProperty(window, "textRevision").filter(object =>
+            object.firstFocusItem === editor);
+        compare(composer.length, 1, "UX289 SETUP: exact original editor has one owning composer revision");
+        const text = "Original sent source " + data.tag;
+        Ui.click(this, Probe, window, editor.objectName);
+        visible185_type(text);
+        const beforeRefusal = JSON.stringify(Probe.rows(assistant.messages));
+        compare(assistant.submitDraft("   "), "", "UX289: actual empty-input admission returns no original row authority");
+        compare(editor.text, text, "UX289: real pre-admission refusal preserves the original editor spelling");
+        compare(JSON.stringify(Probe.rows(assistant.messages)), beforeRefusal,
+            "UX289: refused admission cannot fabricate a successfully submitted user row");
+        compare(Probe.rows(assistant.selectedFiles)[0].pending, true,
+            "UX289: refused admission cannot consume a pending selected-file presentation");
+        const submittedRevision = composer[0].textRevision;
+        const previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        Ui.click(this, Probe, window, "assistant.send");
+        let original = null;
+        tryVerify(() => {
+            const matches = Probe.rows(assistant.messages).filter(row => !previous.has(row.id)
+                && row.kind === "user" && row.text === text);
+            if (matches.length !== 1 || matches[0].status !== "pending") return false;
+            original = matches[0]; return true;
+        }, 2000, "UX289 SETUP: actual once-only original admitted row is pending before wire ACK");
+        compare(editor.text, text, "UX289: pre-ACK row publication must preserve the submitted editor spelling");
+        compare(canonicalSelected(), selected,
+            "UX289: pending presentation cannot revoke original selected identities or authority");
+        verify(ux289_descendantText(popup).some(value => value.indexOf("PbSO4-Wyckoff.cif") >= 0),
+            "UX289: pending original attachment stays visibly presented before its ACK");
+        if (data.tag === "new-identical-draft") {
+            Ui.click(this, Probe, window, editor.objectName);
+            visible185_type("New original draft");
+            visible185_type(text);
+            verify(composer[0].textRevision > submittedRevision,
+                "UX289 SETUP: real keyboard edits created a newer revision with identical text");
+        }
+        if (data.tag === "active-ime") {
+            Ui.click(this, Probe, window, editor.objectName);
+            const input = Probe.focusedInputMethod233(window, window.activeFocusItem, "原稿", "");
+            verify(input.delivered && input.accepted && input.preeditAfter === "原稿",
+                "UX289 SETUP: actual focused composer receives genuine uncommitted InputMethod preedit");
+            compare(editor.text, text, "UX289 SETUP: genuine preedit precedes committed-text revision");
+        }
+        const revisionBeforeAck = composer[0].textRevision;
+        // Existing public optional read releases the exact real received input in the
+        // owned peer. It grants no turn/native authority and mutates no UI/model state.
+        assistant.refreshUsage();
+        if (data.tag === "server-refusal") {
+            tryVerify(() => Probe.rows(assistant.messages).some(row => row.id === original.id
+                && row.kind === "user" && row.text === text && row.status !== "pending" && row.status !== "completed")
+                && !assistant.canCancel && assistant.connected, 10000,
+                "UX295: real original server refusal settles without completed input acknowledgement");
+            compare(editor.text, text, "UX295: refused original RPC retains exact submitted editor text");
+            compare(composer[0].textRevision, revisionBeforeAck,
+                "UX295: refusal does not replace or consume the original editor revision");
+            compare(Probe.rows(assistant.selectedFiles)[0].pending, true,
+                "UX295: refused original input cannot consume pending selected presentation");
+            compare(canonicalSelected(), selected, "UX295: refusal preserves original selected IDs and descriptors");
+            const refused = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(refused.length, 1, "UX295: failed original row identity remains unique");
+            verify(!refused.some(row => row.status === "completed"),
+                "UX295: refusal cannot fabricate durable original completed acknowledgement");
+            verify(findChild(window, "assistant.sentFile." + selectedId) === null,
+                "UX295: failed original row cannot fabricate a sent-file snapshot chip");
+            compare(Probe.readFile(source), beforeBytes, "UX295: refusal leaves original scientific file untouched");
+            compare(Session.project, project, "UX295: refusal preserves original displayed project owner");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account,
+                "UX295: input refusal does not revoke genuine managed account/catalog");
+            visible185_capture("ux295-original-refusal");
+            return;
+        }
+        tryVerify(() => Probe.rows(assistant.messages).some(row => row.id === original.id
+            && row.kind === "user" && row.text === text && row.status === "completed")
+            && !assistant.canCancel && assistant.connected, 10000,
+            "UX289: original exact row receives a real ACK and original native turn completes");
+        compare(editor.text, ["new-identical-draft", "active-ime"].includes(data.tag) ? text : "",
+            "UX289: original ACK consumes only its original editor revision, preserving newer identical draft");
+        if (data.tag === "new-identical-draft") compare(composer[0].textRevision, revisionBeforeAck,
+            "UX289: old ACK must not edit the newer editor revision");
+        if (data.tag === "active-ime") {
+            compare(editor.preeditText, "原稿", "UX289: original ACK cannot clear an active original composition");
+            verify(window.activeFocusItem === editor || focusWithinManual(editor),
+                "UX289: ACK cannot steal the actual composition target");
+        }
+        const completed = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+        compare(completed.length, 1, "UX289: exact original completed user identity remains unique");
+        compare(completed[0].payload.type, "ediInput", "UX289: completed input uses the declared bounded descriptor payload");
+        const expectedDescriptors = JSON.parse(selected);
+        compare(completed[0].payload.files.length, expectedDescriptors.length,
+            "UX289: actual submitted descriptor cardinality matches the original selected snapshot");
+        for (let index = 0; index < expectedDescriptors.length; ++index)
+            for (const key of ["id", "name", "bytes", "textReadable", "format"])
+                compare(completed[0].payload.files[index][key], expectedDescriptors[index][key],
+                    "UX289: every bounded descriptor field retains the exact original selected snapshot");
+        compare(Probe.rows(assistant.selectedFiles)[0].pending, false,
+            "UX289: only acknowledged selected identity changes its pending presentation role");
+        const rows = Ui.itemsWithProperty(window.contentItem, "rowId").filter(row => row.rowId === original.id);
+        compare(rows.length, 1, "UX289: exactly one actual original user bubble owns the sent attachment presentation");
+        const sent = findChild(rows[0], "assistant.sentFile." + selectedId);
+        verify(sent !== null && sent.visible, "UX289: exact acknowledged user bubble owns the actual original sent-chip ID");
+        verify(ux289_descendantText(rows[0]).some(value => value.indexOf("PbSO4-Wyckoff.cif") >= 0),
+            "UX289: actual acknowledged user bubble displays the original sent filename");
+        const draftChips = findChild(window, "assistant.file." + selectedId);
+        verify(draftChips === null || !draftChips.visible,
+            "UX289: consumed sent chip is absent from unsent presentation after ACK");
+        compare(canonicalSelected(), selected,
+            "UX289: presentation consumption preserves canonical file IDs, descriptors and native usability");
+        compare(Probe.readFile(source), beforeBytes, "UX289: original scientific input bytes remain untouched");
+        compare(Session.project, project, "UX289: sent presentation does not replace the project owner");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account,
+            "UX289: exact original managed account and model catalog remain admitted");
+        compare(Probe.rows(assistant.messages).filter(row => !previous.has(row.id)
+            && row.kind === "user" && row.text === text).length, 1,
+            "UX289: original Send has one retained identity, never a second synthetic user input");
+        if (data.tag === "new-file-sent-revoke") {
+            const extraSource = "tests/fixtures/assistant/reference/inst_d1a.prm";
+            const extraBytes = Probe.readFile(extraSource);
+            const extraIntent = assistant.beginFileSelection();
+            verify(extraIntent.length > 0 && assistant.addSelectedFiles(extraIntent, [Probe.repoUrl(extraSource)]),
+                "UX295: later genuine picker admission adds an independent original source ID");
+            tryCompare(assistant.selectedFiles, "count", 2, 2000,
+                "UX295: both canonical selected sources remain independently represented");
+            const later = Probe.rows(assistant.selectedFiles).filter(row => row.id !== selectedId);
+            compare(later.length, 1, "UX295: exactly one newly selected identity differs from old ACK snapshot");
+            compare(later[0].pending, true, "UX295: earlier completed input cannot consume later selected source");
+            compare(Probe.rows(assistant.selectedFiles).filter(row => row.id === selectedId)[0].pending, false,
+                "UX295: acknowledged original identity remains consumed independently of later file");
+            const retained = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(JSON.stringify(retained[0].payload), JSON.stringify(completed[0].payload),
+                "UX295: later selection cannot rewrite historical acknowledged descriptor payload");
+            const remove = Ui.itemsWithProperty(window.contentItem, "objectName").filter(control =>
+                control.objectName === "assistant.sentFile.remove." + selectedId && control.visible);
+            compare(remove.length, 1, "UX295: original sent source owns one real idle revoke control");
+            verify(remove[0].enabled, "UX295: actual idle sent-source revoke is enabled before genuine click");
+            Ui.scrollIntoView(remove[0]); rendered();
+            verify(Ui.exposed(remove[0]), "UX295: actual original sent revoke is physically exposed");
+            Ui.click(this, Probe, window, remove[0].objectName);
+            tryCompare(assistant.selectedFiles, "count", 1, 2000,
+                "UX295: actual original sent revoke removes only original current source authority");
+            const remaining = Probe.rows(assistant.selectedFiles);
+            compare(remaining[0].id, later[0].id, "UX295: sent revoke cannot remove later selected authority");
+            compare(remaining[0].pending, true, "UX295: unrelated later pending chip remains pending");
+            const historical = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(historical.length, 1, "UX295: authority revoke retains exact original user history identity");
+            compare(JSON.stringify(historical[0].payload), JSON.stringify(completed[0].payload),
+                "UX295: current read-grant revoke cannot erase historical sent descriptor snapshot");
+            verify(findChild(window, "assistant.sentFile." + selectedId) !== null,
+                "UX295: removed current authority remains truthfully represented as historical sent input");
+            compare(Probe.readFile(extraSource), extraBytes, "UX295: later source bytes remain immutable after revoke");
+            compare(Probe.readFile(source), beforeBytes, "UX295: sent revoke never deletes original source bytes");
+            compare(Session.project, project, "UX295: source presentation/revoke preserves scientific owner");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account,
+                "UX295: sent revoke preserves original genuine account and model catalog");
+        }
+        visible185_capture("ux289-" + data.tag);
+    }
+
+
+    function test_ux289_hidden_activity_uses_real_original_request() {
+        const project = Session.project;
+        const values = visible185_values(project);
+        toggle();
+        assistant.signIn();
+        report187_ready("ux289-working-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux289-working-disclosed", true);
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        Ui.click(this, Probe, window, "assistant.composer");
+        visible185_type("Original two-tool activity retained across public observation");
+        Ui.click(this, Probe, window, "assistant.send");
+        tryVerify(() => visible185_outcome("ux289-working-first", previous) !== null
+            && assistant.state === "agent_active" && assistant.canCancel, 10000,
+            "UX289 SETUP: real first original native read completed while original objective is still active");
+        const panelWorking = item("assistant.working");
+        verify(panelWorking.visible, "UX289: genuine active objective displays existing panel Working");
+        toggle(); // Genuine explicit user hide must retain precedence after terminal.
+        const status = item("statusBar.assistant.working");
+        tryCompare(status, "visible", true, 2000,
+            "UX289: hidden chat displays shared Working during real request gap, not synthetic busy");
+        compare(panelWorking.visible, false, "UX289: covered panel and hidden-chat status do not duplicate painted activity");
+        verify(Ui.exposed(status) && status.width > 0 && status.height > 0,
+            "UX289: actual hidden-chat activity owns nonzero unobscured status geometry");
+        visible185_capture("ux289-hidden-working");
+        assistant.refreshUsage();
+        tryVerify(() => visible185_outcome("ux289-working-second", previous) !== null
+            && Probe.rows(assistant.messages).some(row => !previous.has(row.id)
+                && row.kind === "assistant" && row.status === "completed")
+            && assistant.state === "idle" && !assistant.canCancel, 10000,
+            "UX289: both original native replies and actual retained assistant completion settle before activity ends");
+        tryCompare(status, "visible", false, 2000, "UX289: whole original completion retires genuine Working once");
+        compare(Preferences.assistantShown, false, "UX289: explicit later hide survives original objective completion");
+        compare(popup.visible, false, "UX289: terminal cannot reopen over the user's later explicit hide");
+        compare(Session.project, project, "UX289: activity presentation keeps original project ownership");
+        compare(visible185_values(project), values, "UX289: two read-only native tools preserve all actual scientific scalars/free/SU");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account,
+            "UX289: activity presentation preserves genuine managed account/model admission");
+    }
+    function test_ux289_folder_caption_preserves_actual_grant() {
+        const project = Session.project;
+        const directory = Probe.scratchProjectUrl();
+        const path = ApplicationInfo.localPath(directory);
+        verify(path.length > 0, "UX289 SETUP: actual owned scratch directory has a physical filesystem path");
+        toggle();
+        assistant.signIn();
+        report187_ready("ux289-folder-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux289-folder-disclosed", true);
+        const history = JSON.stringify(Probe.rows(assistant.messages));
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const intent = assistant.beginWorkingFolderSelection();
+        verify(intent.length > 0 && assistant.completeWorkingFolderSelection(intent, directory),
+            "UX289 SETUP: original real picker intent consumes its actual local directory callback");
+        compare(assistant.workingFolder, path, "UX289: caption never replaces actual selected physical folder authority");
+        const caption = item("assistant.workingFolder.caption");
+        const show = item("assistant.showActions");
+        const basename = path.replace(/\\/g, "/").split("/").filter(part => part.length).slice(-1)[0];
+        compare(caption.text, basename, "UX289: actual compact caption spells the independent real folder basename");
+        compare(caption.elide, Text.ElideMiddle, "UX289: long actual folder text uses middle elision");
+        compare(caption.ToolTip.text, path, "UX289: full original physical scope remains available in tooltip");
+        compare(caption.Accessible.name, path, "UX289: actual full original scope remains accessible");
+        verify(Ui.exposed(caption) && Ui.exposed(show), "UX289: compact scope and mode control are actually exposed");
+        const cr = rect(caption), sr = rect(show);
+        verify(Math.abs((cr[1] + cr[3] / 2) - (sr[1] + sr[3] / 2)) <= Math.max(cr[3], sr[3]) / 2
+            && cr[0] >= sr[0] + sr[2], "UX289: scope occupies the same row to the right without covering Show actions");
+        const oldWidth = window.width;
+        try {
+            window.width = Math.max(window.minimumWidth, 800);
+            rendered();
+            verify(Ui.exposed(caption) && Ui.exposed(show),
+                "UX289: actual narrow viewport preserves usable caption and mode-control hit areas");
+            verify(rect(caption)[0] + caption.width <= window.contentItem.width,
+                "UX289: actual scope caption cannot expand outside the narrow application viewport");
+            compare(assistant.workingFolder, path, "UX289: layout changes cannot create or replace a grant");
+            visible185_capture("ux289-folder-narrow");
+        } finally { window.width = oldWidth; }
+        verify(!assistant.completeWorkingFolderSelection(intent, directory),
+            "UX289: consumed picker callback cannot acquire a second authority from caption presentation");
+        Ui.click(this, Probe, window, "assistant.temporaryWorkingFolder");
+        tryCompare(assistant, "workingFolder", "", 2000,
+            "UX289: genuine existing temporary action restores actual app-owned temporary scope");
+        compare(caption.text, "Temporary workspace", "UX289: temporary mode has an honest compact caption");
+        compare(Session.project, project, "UX289: scope presentation and ordinary picker/temp controls preserve project owner");
+        compare(JSON.stringify(Probe.rows(assistant.messages)), history, "UX289: scope presentation retains actual original history");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account, "UX289: picker/temp presentation retains original managed account");
+    }
+
+    function test_ux300_real_selection_notification_keeps_original_authority_data() {
+        return ["add-refused-input", "remove-refused-input", "add-new-owner", "remove-new-owner",
+            "add-nested-add", "remove-nested-add"]
+            .map(tag => ({tag: tag}));
+    }
+    function test_ux300_real_selection_notification_keeps_original_authority(data) {
+        const original = Session.project;
+        const originalLifetime = lifetime313(original);
+        const originalIdentity = identity313(originalLifetime);
+        const selectedModel = assistant.selectedFiles;
+        const selectedLifetime = lifetime313(selectedModel);
+        verify(original !== null && !assistant.connected && !assistant.canCancel,
+            "UX300 SETUP: actual ordinary project and signed-out idle selection are genuine");
+        const source = "tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif";
+        const bytes = Probe.readFile(source);
+        const beforeInputs = visible185_inputs(original);
+        const beforeShape = relation246_shape(original);
+        const beforeRelations = relation245_declarations(original);
+        const beforeUndo = item("appBar.button.undo").enabled;
+        compare(assistant.selectedFiles.count, 0, "UX300 SETUP: real fresh selected authority starts empty");
+        const removal = data.tag.startsWith("remove-");
+        const nested = data.tag.endsWith("nested-add");
+        const laterSource = "tests/fixtures/assistant/reference/inst_d1a.prm";
+        const laterBytes = nested ? Probe.readFile(laterSource) : null;
+        let laterReference = null;
+        if (nested) {
+            // This separate ordinary admission establishes only the public format
+            // label; basename/ASCII-byte count/readability come from the fixture.
+            const referenceIntent = assistant.beginFileSelection();
+            verify(referenceIntent.length > 0 && assistant.addSelectedFiles(referenceIntent,
+                [Probe.repoUrl(laterSource)]), "UX334 SETUP: real independent ordinary later-file admission succeeds before callback setup");
+            tryCompare(assistant.selectedFiles, "count", 1, 2000,
+                "UX334 SETUP: independent ordinary admission settles before its descriptor reference");
+            const referenceRows = Probe.rows(assistant.selectedFiles);
+            compare(referenceRows.length, 1, "UX334 SETUP: ordinary reference has exactly the one independently supplied fixture");
+            const referenceRow = referenceRows[0];
+            verify(typeof referenceRow.id === "string" && referenceRow.id.length > 0,
+                "UX334 SETUP: independent ordinary admission has an actual opaque app ID");
+            compare(referenceRow.name, "inst_d1a.prm", "UX334: expected basename comes from the committed fixture path");
+            compare(referenceRow.bytes, laterBytes.length,
+                "UX334: committed ASCII fixture length independently specifies its exact UTF8 byte count");
+            compare(referenceRow.textReadable, true, "UX334: actual complete ASCII fixture is independently readable UTF8 without NUL");
+            compare(referenceRow.pending, true, "UX334: genuinely new ordinary source is unacknowledged");
+            verify(typeof referenceRow.format === "string", "UX334 SETUP: ordinary reference supplies the unspecified public format label");
+            laterReference = {name: "inst_d1a.prm", bytes: laterBytes.length,
+                textReadable: true, format: referenceRow.format, pending: true};
+            console.log("UX334_ORDINARY_REFERENCE", JSON.stringify({fixture: laterSource,
+                descriptor: laterReference, referenceID: referenceRow.id}));
+            verify(assistant.removeSelectedFile(referenceRow.id),
+                "UX334 SETUP: genuine reference cleanup removes only its ordinary source authority");
+            tryCompare(assistant.selectedFiles, "count", 0, 2000,
+                "UX334 SETUP: ordinary reference is removed before original outer admission/removal");
+        }
+        let originalId = null;
+        if (removal) {
+            const initial = assistant.beginFileSelection();
+            verify(initial.length > 0 && assistant.addSelectedFiles(initial, [Probe.repoUrl(source)]),
+                "UX300 SETUP: normal public picker first admits the real removable source");
+            compare(assistant.selectedFiles.count, 1, "UX300 SETUP: original source exists before removal observer");
+            originalId = assistant.selectedFiles.text(0, "id");
+        }
+        let armed = true, outerReturned = false, observations = [], replacement = null;
+        function notified() {
+            if (!armed || assistant.selectedFiles.count !== (removal ? 0 : 1)) return;
+            armed = false;
+            const record = {beforeOuterReturn: !outerReturned, count: assistant.selectedFiles.count, enteringOwner: String(Session.project),
+                enteringConnected: assistant.connected, enteringFiles: Probe.rows(assistant.selectedFiles)};
+            observations.push(record);
+            if (data.tag.endsWith("refused-input")) {
+                record.refusedRow = assistant.submitDraft("   ");
+                record.returningOwner = String(Session.project);
+            } else if (data.tag.endsWith("nested-add")) {
+                const nestedIntent = assistant.beginFileSelection();
+                record.nestedIntent = nestedIntent;
+                record.nestedAccepted = nestedIntent.length > 0 && assistant.addSelectedFiles(nestedIntent,
+                    [Probe.repoUrl("tests/fixtures/assistant/reference/inst_d1a.prm")]);
+                record.nestedRows = Probe.rows(assistant.selectedFiles);
+            } else {
+                Session.closeProject();
+                record.created = Session.createProject("UX300 replacement", "Real owner from selected model notification");
+                replacement = Session.project;
+                record.returningOwner = String(replacement);
+            }
+            record.callbackActionReturned = true;
+        }
+        selectedModel.countChanged.connect(notified);
+        let accepted;
+        try {
+            if (removal) accepted = assistant.removeSelectedFile(originalId);
+            else {
+                const intent = assistant.beginFileSelection();
+                verify(intent.length > 0, "UX300 SETUP: genuine original file-selection intent is issued before admission");
+                accepted = assistant.addSelectedFiles(intent, [Probe.repoUrl(source)]);
+            }
+            outerReturned = true;
+            compare(observations.length, 1,
+                "UX300 SETUP: exact genuine selected-model notification reached the original synchronous owner action");
+            verify(observations[0].beforeOuterReturn && observations[0].callbackActionReturned,
+                "UX332 SETUP: real model signal and original public action both return synchronously inside original Add/Remove");
+            compare(observations[0].enteringOwner, originalIdentity,
+                "UX300: notification belongs to the original actual displayed project");
+            compare(observations[0].enteringConnected, false,
+                "UX300: ordinary file authority never requires a fabricated authenticated provider");
+            verify(accepted, "UX300: already admitted original selection/removal remains a truthful admitted fact");
+            if (data.tag.endsWith("refused-input")) {
+                compare(observations[0].refusedRow, "", "UX300: actual nested whitespace input is refused without a user authority");
+                compare(Session.project, original, "UX300: same-owner refusal cannot strand original ordinary selection continuation");
+                compare(assistant.selectedFiles.count, removal ? 0 : 1,
+                    "UX300: actual offline Add/Remove publishes its complete requested canonical selection");
+                if (!removal) {
+                    const rows = Probe.rows(assistant.selectedFiles);
+                    verify(rows[0].id.length > 0 && rows[0].name === "PbSO4-Wyckoff.cif" && rows[0].pending === true,
+                        "UX300: ordinary original source has real canonical identity/name and remains unacknowledged");
+                }
+                compare(visible185_inputs(original), beforeInputs, "UX300: reentrant refusal leaves every original measured input unchanged");
+                compare(relation246_shape(original), beforeShape, "UX300: ordinary admission leaves original structure/composition unchanged");
+                compare(relation245_declarations(original), beforeRelations, "UX300: selection/refusal cannot rewrite scientific relations");
+                compare(item("appBar.button.undo").enabled, beforeUndo, "UX300: selection/refusal adds no scientific Undo record");
+            } else if (data.tag.endsWith("nested-add")) {
+                verify(observations[0].nestedIntent.length > 0 && observations[0].nestedAccepted,
+                    "UX303 SETUP: real same-owner model notification admits a distinct nested source through its genuine picker");
+                compare(Session.project, original, "UX303: nested same-owner source publication preserves scientific owner");
+                const expectedSurvivors = observations[0].enteringFiles;
+                compare(expectedSurvivors.length, removal ? 0 : 1,
+                    "UX334 SETUP: exact pre-nested projection identifies every original surviving source");
+                const originalIDs = expectedSurvivors.map(row => row.id);
+                compare(new Set(originalIDs).size, expectedSurvivors.length,
+                    "UX334 SETUP: original pre-nested surviving IDs are unique before nested publication");
+                if (!removal) verify(expectedSurvivors[0].id.length > 0
+                    && expectedSurvivors[0].name === "PbSO4-Wyckoff.cif"
+                    && expectedSurvivors[0].pending === true,
+                    "UX334 SETUP: original surviving selection has its real pre-nested ID and remains unacknowledged");
+                let rows = [], later = [];
+                tryVerify(() => {
+                    rows = Probe.rows(assistant.selectedFiles);
+                    later = rows.filter(row => row.name === laterReference.name);
+                    if (rows.length !== expectedSurvivors.length + 1 || later.length !== 1)
+                        return false;
+                    const row = later[0];
+                    if (typeof row.id !== "string" || row.id.length === 0
+                        || originalIDs.includes(row.id) || (removal && row.id === originalId))
+                        return false;
+                    for (const key of ["name", "bytes", "textReadable", "format", "pending"])
+                        if (row[key] !== laterReference[key]) return false;
+                    const survivors = rows.filter(value => value.id !== row.id);
+                    return JSON.stringify(survivors) === JSON.stringify(expectedSurvivors)
+                        && new Set(rows.map(value => value.id)).size === rows.length
+                        && (!removal || !rows.some(value => value.id === originalId));
+                }, 2000, "UX334: outer-return settlement preserves exact original descriptors/IDs and independently admitted later-file facts");
+                compare(rows.length, removal ? 1 : 2,
+                    "UX303: old publisher continuation cannot erase or resurrect canonical nested selected rows");
+                compare(later.length, 1, "UX303: exact independently selected later source remains unique after old cleanup");
+                verify(typeof later[0].id === "string" && later[0].id.length > 0
+                    && later[0].pending === true && !originalIDs.includes(later[0].id),
+                    "UX334: genuine nested source has a unique nonempty opaque ID distinct from every surviving original authority");
+                for (const key of ["name", "bytes", "textReadable", "format", "pending"])
+                    compare(later[0][key], laterReference[key],
+                        "UX334: final later-file descriptor equals independent fixture/ordinary-reference facts");
+                compare(JSON.stringify(rows.filter(row => row.id !== later[0].id)),
+                    JSON.stringify(expectedSurvivors),
+                    "UX334: final surviving original descriptors and IDs equal the pre-nested snapshot exactly");
+                if (removal) verify(!rows.some(row => row.id === originalId),
+                    "UX303: admitted original removal is never undone by nested source publication");
+                compare(Probe.readFile(laterSource), laterBytes,
+                    "UX334: ordinary reference and nested admission never rewrite the independent later-file bytes");
+                compare(visible185_inputs(original), beforeInputs, "UX303: nested file publication leaves all original observations unchanged");
+                compare(relation246_shape(original), beforeShape, "UX303: nested file publication leaves original composition unchanged");
+                compare(relation245_declarations(original), beforeRelations, "UX303: nested file publication leaves all scientific relations unchanged");
+                compare(item("appBar.button.undo").enabled, beforeUndo, "UX303: nested selection creates no scientific Undo step");
+            } else {
+                verify(observations[0].created && replacement !== null
+                    && String(replacement) !== originalIdentity,
+                    "UX300 SETUP: actual public callback really created a distinct replacement owner");
+                compare(Session.project, replacement, "UX300: original selection continuation cannot recapture or replace B");
+                compare(assistant.selectedFiles.count, 0, "UX300: A selection cannot publish old input authority into replacement B");
+                compare(replacement.structures.count, 0, "UX300: old selection never creates stale structure in genuine empty B");
+                compare(replacement.experiments.count, 0, "UX300: old selection never creates stale dataset in genuine empty B");
+                compare(replacement.canUndo, false, "UX300: selection from A cannot create a hidden edit record in B");
+            }
+            compare(Probe.readFile(source), bytes, "UX300: actual model notification/reentry never rewrites original scientific file");
+            compare(assistant.connected, false, "UX300: offline selection remains genuinely signed out");
+            verify(!assistant.canCancel && !assistant.showingActions,
+                "UX300: source selection/refused input cannot fabricate active work or visible execution");
+            compare(Probe.rows(assistant.messages).filter(row => row.kind === "user").length, 0,
+                "UX300: rejected nested draft and selection never fabricate a successfully admitted user request");
+        } finally {
+            disconnect313(selectedLifetime, selectedModel, "countChanged", notified);
+            console.log("UX300_SELECTION", data.tag, JSON.stringify({observations: observations,
+                accepted: accepted, originalOwner: originalIdentity, originalAlive: alive313(originalLifetime), currentOwner: String(Session.project),
+                selected: Probe.rows(assistant.selectedFiles), connected: assistant.connected,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions}));
+        }
+    }
+    function test_ux300_real_signout_retires_despite_same_owner_notification_data() {
+        return [{tag: "refused-input"}, {tag: "picker"}];
+    }
+    function test_ux300_real_signout_retires_despite_same_owner_notification(data) {
+        const project = Session.project;
+        const projectLifetime = lifetime313(project);
+        const projectIdentity = identity313(projectLifetime);
+        const assistantLifetime = lifetime313(assistant);
+        const inputs = visible185_inputs(project), shape = relation246_shape(project);
+        const relations = relation245_declarations(project);
+        const undo = item("appBar.button.undo").enabled;
+        const source = "tests/fixtures/assistant/reference/PbSO4-Wyckoff.cif";
+        const sourceBytes = Probe.readFile(source), selectedIntent = assistant.beginFileSelection();
+        verify(selectedIntent.length > 0 && assistant.addSelectedFiles(selectedIntent, [Probe.repoUrl(source)]),
+            "UX303 SETUP: original source is genuinely admitted before account retirement");
+        const originalSelected = JSON.stringify(Probe.rows(assistant.selectedFiles));
+        toggle(); assistant.signIn(); report187_ready("ux300-signout-bootstrap", false);
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("ux300-signout-disclosed", true);
+        verify(assistant.connected && !assistant.canCancel, "UX300 SETUP: real owned authenticated process is idle before logout");
+        let armed = true, callerReturned = false, observations = [];
+        function retired() {
+            if (!armed) return;
+            armed = false;
+            const record = {beforeCallerReturn: !callerReturned, owner: String(Session.project), connectedAtEntry: assistant.connected,
+                rowCount: assistant.messages.count};
+            observations.push(record);
+            if (data.tag === "refused-input") record.row = assistant.submitDraft("   ");
+            else record.picker = assistant.beginFileSelection();
+            record.ownerAfter = String(Session.project);
+            record.callbackActionReturned = true;
+        }
+        assistant.conversationRetired.connect(retired);
+        try {
+            assistant.signOut();
+            callerReturned = true;
+            tryVerify(() => !assistant.connected && !assistant.canCancel && assistant.models.count === 0, 10000,
+                "UX300: genuine explicit sign-out completes original account retirement despite same-owner nested presentation action");
+            compare(observations.length, 1, "UX300 SETUP: real conversation retirement delivered original callback before caller completed");
+            verify(observations[0].beforeCallerReturn && observations[0].callbackActionReturned,
+                "UX332 SETUP: original public retirement signal really encloses the nested action before signOut returns");
+            compare(observations[0].owner, projectIdentity, "UX300: logout notification belongs to original unchanged scientific owner");
+            compare(observations[0].ownerAfter, projectIdentity, "UX300: nested refused input/picker cannot replace scientific owner");
+            if (data.tag === "refused-input") compare(observations[0].row, "",
+                "UX300: actual logout-interval empty input is refused without durable ACK");
+            else {
+                verify(typeof observations[0].picker === "string", "UX300: nested ordinary picker call returns its actual public intent result");
+                if (observations[0].picker.length) assistant.cancelFileSelection(observations[0].picker);
+            }
+            compare(Session.project, project, "UX300: original logout leaves displayed project owner intact");
+            compare(visible185_inputs(project), inputs, "UX300: genuine account retirement preserves all original measured inputs");
+            compare(relation246_shape(project), shape, "UX300: logout/reentrant presentation preserves original structure/composition");
+            compare(relation245_declarations(project), relations, "UX300: logout/reentrant presentation preserves scientific relations");
+            compare(item("appBar.button.undo").enabled, undo, "UX300: logout/refusal creates no scientific Undo step");
+            verify(!assistant.showingActions, "UX303: original logout cannot fabricate visible active work");
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), originalSelected,
+                "UX303: genuine account retirement preserves actual earlier admitted immutable file authority");
+            compare(Probe.readFile(source), sourceBytes, "UX303: logout notification never rewrites admitted original source bytes");
+            compare(Probe.rows(assistant.messages).filter(row => row.kind === "user").length, 0,
+                "UX300: same-owner rejected input cannot survive as fabricated completed logout-interval Send");
+        } finally {
+            disconnect313(assistantLifetime, assistant, "conversationRetired", retired);
+            console.log("UX300_SIGNOUT", data.tag, JSON.stringify({observations: observations,
+                currentOwner: String(Session.project), connected: assistant.connected, state: assistant.state,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions,
+                modelCount: assistant.models.count, lastError: assistant.lastError}));
+        }
+    }
+
 }
