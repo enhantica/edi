@@ -8783,7 +8783,28 @@ def test_ux319_actual_final_failure_publication_preserves_factual_cause(generic)
     )
 
 
-@pytest.mark.parametrize('case', ['fresh', 'current', 'no-grant', 'collision', 'stop', 'close-owner'])
+
+
+def save359_four_original_anchors(text):
+    start = 'loop_\n_background.id\n_background.position\n_background.intensity\n'
+    stop = '\nloop_\n_data.two_theta\n'
+    assert text.count(start) == text.count(stop) == 1, 'SAVE359 SETUP: original exact background/data sections are unambiguous'
+    prefix, rest = text.split(start)
+    original, suffix = rest.split(stop)
+    rows = [line.split() for line in original.splitlines() if line.strip()]
+    assert len(rows) == 14 and rows == [[str(index), position, '0.()'] for index, position in enumerate(
+        ['8.', '9.', '10.', '11.', '12.', '15.', '25.', '30.', '50.', '70.', '90.', '110.', '130.', '150.'], 1)], (
+        'SAVE359 SETUP: committed ordinary fixture has its exact independently pinned FOURTEEN anchor operands'
+    )
+    selected = [rows[index] for index in [0, 5, 9, 13]]
+    value = prefix + start + '\n'.join(' '.join(row) for row in selected) + '\n' + stop + suffix
+    assert value.split(start)[0] == prefix and value.split(stop)[1] == suffix, (
+        'SAVE359 SETUP: only owned background rows change; every original measured/calculated section and other scalar stays byte-exact'
+    )
+    return value
+
+
+@pytest.mark.parametrize('case', ['fresh', 'current', 'no-grant', 'collision', 'stop', 'close-owner', 'current-ten-refit'])
 def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noqa: PLR0914, PLR0915 -- finite existing Main/ordinary writer/loader receipts
     from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
 
@@ -8792,6 +8813,9 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     reference.mkdir()
     fixture = reference / 'input'
     shutil.copytree(source, fixture)
+    if case == 'current-ten-refit':
+        experiment359 = fixture / 'experiments/d20.edi'
+        experiment359.write_text(save359_four_original_anchors(experiment359.read_text()))
     analysis = fixture / 'analysis/analysis.edi'
     original_analysis = analysis.read_text()
     assert original_analysis.count('_edi.schema_version 2') == 1, (
@@ -8821,8 +8845,8 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     selected_before = save211_files(selected)
     call = {'tool': 'save_project', 'call_id': 'save349-' + case, 'arguments': {
         'purpose': 'Save original fitted displayed project through actual visible controls',
-        'destination': 'current' if case == 'current' else 'fresh',
-        **({} if case == 'current' else {'name': leaf}),
+        'destination': 'current' if case in {'current', 'current-ten-refit'} else 'fresh',
+        **({} if case in {'current', 'current-ten-refit'} else {'name': leaf}),
     }}
     environment = popup171_owned_environment(tmp_path)
     environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
@@ -8879,8 +8903,8 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
         returned['contentItems'][0]['type'] == 'inputText'
     ), 'SAVE349: actual original native response retains the typed official envelope'
     outcome = json.loads(returned['contentItems'][0]['text'])
-    if case in {'fresh', 'current'}:
-        destination = reference / 'current' if case == 'current' else selected / leaf
+    if case in {'fresh', 'current', 'current-ten-refit'}:
+        destination = reference / 'current' if case in {'current', 'current-ten-refit'} else selected / leaf
         assert returned['success'] is True and outcome['status'] == 'succeeded' and all(
             outcome.get(key) is True for key in ['committed', 'reopened', 'active', 'presentation_complete']
         ), 'SAVE349: only committed/reopened/active/fully presented actual save is success'
@@ -8890,10 +8914,57 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
         assert destination.is_dir() and not destination.is_symlink() and (destination / 'project.edi').is_file(), (
             'SAVE349: actual native files must exist; a staged receipt is not disk publication'
         )
+        if case == 'current-ten-refit':
+            lines359 = [line.split('SAVE359_ORDINARY ', 1)[1] for line in result.stdout.splitlines()
+                        if 'SAVE359_ORDINARY ' in line]
+            assert len(lines359) == 1, 'SAVE359: one actual pre-Save ordinary-writer reference must be delivered'
+            ordinary359 = json.loads(lines359[0])
+            documents359 = ordinary359['documents']
+            names359 = ['project.edi', 'structures/cosio.edi', 'experiments/d20.edi', 'analysis/analysis.edi']
+            assert set(documents359) == set(names359), 'SAVE359: ordinary reference has exact closed independent source document membership'
+            # Public ProjectText joins the same ordinary savedFiles as '# path\n' + body,
+            # with one newline separator. Verify the complete closure; no EDI parser or
+            # scientific re-emitter is introduced. The existing real loader reads it.
+            import re
+            order359 = re.findall(r'(?m)^# ([^\r\n]+\.edi)\n', ordinary359['completeText'])
+            assert len(order359) == len(names359) and set(order359) == set(names359) and ordinary359['completeText'] == (
+                '\n'.join('# ' + name + '\n' + documents359[name] for name in order359)
+            ), 'SAVE359: captured four ordinary blocks equal the WHOLE actual ordinary Project Text file closure'
+            positions362 = {'1': 8, '6': 15, '10': 70, '14': 150, 'save359_9': 9,
+                            'save359_12': 12, 'save359_25': 25, 'save359_50': 50, 'save359_90': 90, 'save359_130': 130}
+            starts362 = {'1': 5.5, '6': 0, '10': 0, '14': 0, 'save359_9': 10,
+                         'save359_12': 12.5, 'save359_25': 15, 'save359_50': 17.5, 'save359_90': 20, 'save359_130': 22.5}
+            assert len(ordinary359['initialTen']) == 10 and {
+                row[0]: (row[1], row[2], row[3]) for row in ordinary359['initialTen']
+            } == {key: (positions362[key], starts362[key], True) for key in positions362}, (
+                'SAVE362B: independent literal TEN start operands and all-free flags precede genuine refit; they are not a fitted-output golden'
+            )
+            fitted362 = ordinary359['postFitBackground']
+            assert len(fitted362) == 10 and len({row['id'] for row in fitted362}) == 10 and {
+                row['id']: row['position'] for row in fitted362
+            } == positions362 and all(row['free'] is True and row['hasUncertainty'] is True and row['uncertainty'] > 0
+                                     and float('-inf') < row['intensity'] < float('inf') for row in fitted362), (
+                'SAVE362B: observed genuine post-fit physical BG operands contain ALL TEN free identities and positive actual SUs'
+            )
+            assert any(row['intensity'] != starts362[row['id']] for row in fitted362), (
+                'SAVE362B: at least one actual fitted background intensity MOVES; no fixed-intensity/no-step substitution'
+            )
+            assert ordinary359['dirty'] is True and ordinary359['four'] == 4 and len(ordinary359['ten']) == 10 and (
+                ordinary359['refitStarts'] == 1 and ordinary359['fittedIterations'] > 0
+                and ordinary359['fittedOutcome'] in {'success', 'maxIterations'}
+                and Path(ordinary359['currentPath']).resolve() == destination.resolve()
+            ), 'SAVE359: original current-path DIRTY four-to-ten refit facts precede delegated Save, never a pre-saved ten-point substitute'
+            for name in names359:
+                (reference / 'ordinary' / name).parent.mkdir(parents=True, exist_ok=True)
+                (reference / 'ordinary' / name).write_text(documents359[name])
         loader, _ = generic('fileauth')
         assert loader.command('native_science_enable')['reply']['enabled'], (
             'SAVE349: existing independent Session loader exposes full actual native science'
         )
+        if case == 'current-ten-refit':
+            assert loader.command('background285_observe')['reply']['enabled'], (
+                'SAVE359: existing passive full background observer independently reads ALL persisted anchor rows'
+            )
         assert loader.command('open', path=str(reference / 'ordinary'))['reply']['opened'], (
             'SAVE349: independent real reader loads pre-Save ordinary fitted writer reference'
         )
@@ -8903,6 +8974,27 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
         )
         actual = native145_science_settled(loader)
         save211_compare_model(expected, actual)
+        if case == 'current-ten-refit':
+            expected359 = positions362
+            for state359 in [expected, actual]:
+                banks359 = state359['project']['background285']['banks']
+                assert len(banks359) == 1 and len(banks359[0]['anchors']) == 10, (
+                    'SAVE359: both independently reopened ordinary and delegated files retain exactly ALL TEN anchors'
+                )
+                rows359 = banks359[0]['anchors']
+                assert len({row['id'] for row in rows359}) == 10 and {
+                    row['id']: row['position'] for row in rows359
+                } == expected359 and all(row['free'] is True and row['uncertainty'] is not None and row['uncertainty'] > 0 for row in rows359), (
+                    'SAVE362B: both actual ordinary/delegated readbacks retain every independent anchor identity/position and ALL TEN fitted free flags/positive BG SUs'
+                )
+                assert any(row['uncertainty'] is not None and row['uncertainty'] > 0
+                           for row in state359['project']['parameters']), (
+                    'SAVE359: BOTH real reader results retain actual positive fitted uncertainties, never an unfit substitute'
+                )
+            fields359 = ['id', 'position', 'value', 'free', 'uncertainty', 'start_value', 'start_uncertainty', 'dependence']
+            assert [{key: row[key] for key in fields359} for row in actual['project']['background285']['banks'][0]['anchors']] == (
+                [{key: row[key] for key in fields359} for row in expected['project']['background285']['banks'][0]['anchors']]
+            ), 'SAVE359: ALL persisted background SU/start/dependence/order metadata follows independent ordinary writer/readback exactly'
         title = [shlex.split(line)[1:] for line in (destination / 'project.edi').read_text().splitlines()
                  if line.startswith('_metadata.title ') or line.startswith('_metadata.title\t')]
         assert title == [['Original visible Save ' + case]], (
@@ -8921,4 +9013,141 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
         )
     assert not any(row.get('method') in {'account/login/start', 'account/logout'} for row in requests), (
         'SAVE349: scientific saving never substitutes account login/logout repair'
+    )
+
+
+UX356_GUI_CASES = ('send-click', 'send-keyboard', 'cancel-new-draft')
+
+
+def ux356_owned_inputs(owned):
+    reference = owned / 'Original356 reference'
+    reference.mkdir()
+    source = ux345_default_scattering_project(reference)
+    source.rename(reference / 'project')
+    folder = reference / 'files'
+    folder.mkdir()
+    originals = {
+        'Original structure.cif': ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm/lbco.cif',
+        'Original measured neutron profile.xye': ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm/hrpt.xye',
+    }
+    facts = {}
+    for name, path in originals.items():
+        raw = path.read_bytes()
+        (folder / name).write_bytes(raw)
+        facts[name] = {'source': str(path), 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+        assert (folder / name).read_bytes() == raw, 'UX356 SETUP: actual selected source is a whole-byte original copy'
+    return reference, facts
+
+
+@pytest.mark.parametrize('case', UX356_GUI_CASES)
+def test_ux356_real_send_compact_scope_short_file_presentation(case, tmp_path):
+    from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
+
+    original_project = save211_files(ROOT / 'tests/fixtures/e04_t1/editable-project')
+    reference, facts = ux356_owned_inputs(tmp_path)
+    original_inputs = save211_files(reference)
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[[], []], ux289_hold_input=True)
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'UX356 SETUP: genuinely coherent actual Main consumer is required'
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_ux356_real_send_compact_scope_and_short_files:' + case, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ['stdout', 'stderr']:
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            destination = tmp_path / ('ux356-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'ux356.stdout.log').write_text(result.stdout)
+    (tmp_path / 'ux356.stderr.log').write_text(result.stderr)
+    (tmp_path / 'ux356-process.json').write_text(json.dumps({'argv': argv, 'case': case,
+        'timeout': 90, 'returncode': result.returncode}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_ux356_real_send_compact_scope_and_short_files(' + case + ')' in output
+    ), 'UX356: actual compact dialog/input/chip/ACK/once/science premises must execute\n' + output
+    assert config_path.read_bytes() == original_config and save211_files(reference) == original_inputs and (
+        save211_files(ROOT / 'tests/fixtures/e04_t1/editable-project') == original_project
+    ), 'UX356: compact presentation/consent/removal preserves original objective and every source/scientific file byte'
+    for name, expected in facts.items():
+        raw = Path(expected['source']).read_bytes()
+        assert len(raw) == expected['bytes'] and hashlib.sha256(raw).hexdigest() == expected['sha256'], (
+            'UX356: independently committed selected bytes remain exact outside the owned invocation'
+        )
+    loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['sha256'] == hashlib.sha256(original_config).hexdigest() and loaded['native_turn_calls'] == [[], []], (
+        'UX356 SETUP: original peer consumed exact held-input two-turn configuration; no fabricated ACK timer'
+    )
+    trace = Path(config['trace'])
+    requests = records(trace)
+    starts = [row for row in requests if row.get('method') in {'turn/start', 'turn/steer'}]
+    assert len(starts) == 2 and all(row['method'] == 'turn/start' for row in starts) and (
+        len({row['id'] for row in starts}) == 2
+        and len({row['params']['clientUserMessageId'] for row in starts}) == 2
+    ), 'UX356: actual approval/Cancel/new-draft/no-repeat sends only TWO original distinct inputs, never hidden replay'
+    gui_lines358 = [line.split('UX356_IDS ', 1)[1] for line in result.stdout.splitlines() if 'UX356_IDS ' in line]
+    assert len(gui_lines358) == 1, 'UX358: one actual bounded original GUI identity receipt must be delivered'
+    gui358 = json.loads(gui_lines358[0])
+    assert gui358['case'] == case and len(gui358['submissions']) == 2, (
+        'UX358: actual receipt belongs to this original case and BOTH exact submitted user inputs'
+    )
+    assert [row['text'] for row in gui358['submissions']] == ['continue', 'continue again'] and (
+        len({row['id'] for row in gui358['submissions']}) == 2 and gui358['first'] == gui358['submissions'][0]['id']
+    ), 'UX358: original GUI user identities are unique and bonded to literal independent input order'
+    ids = []
+    for request, text, submitted358 in zip(starts, ['continue', 'continue again'], gui358['submissions'], strict=True):
+        context = rpc83_context_inputs(request['params'])
+        assert len(context) == 1, 'UX356: actual original request has one complete current context as data'
+        selected = context[0]['selected_files']['files']
+        assert submitted358['text'] == text and submitted358['id'] == request['params']['clientUserMessageId'], (
+            'UX358: each actual original GUI user-row ID equals its independently received original wire clientUserMessageId'
+        )
+        fields358 = ('id', 'name', 'bytes', 'textReadable', 'format')
+        assert len(submitted358['files']) == 2 and all(set(row) == set(fields358) for row in submitted358['files']), (
+            'UX358: each original GUI receipt contains exactly TWO bounded five-field admitted descriptors'
+        )
+        assert submitted358['files'] == [{key: row[key] for key in fields358} for row in selected], (
+            'UX358: BOTH literal input orders disclose the corresponding actual GUI canonical IDs and every descriptor field in order'
+        )
+        assert len(selected) == 2 and {row['name'] for row in selected} == set(facts), (
+            'UX356: original current context discloses only the TWO actual independently selected files'
+        )
+        assert len({row['id'] for row in selected}) == 2 and all(row['id'] for row in selected) and all(
+            row['bytes'] == facts[row['name']]['bytes'] for row in selected
+        ), 'UX356: disclosed opaque canonical identities and exact byte sizes are actual source facts'
+        assert sum(row.get('type') == 'text' and row.get('text') == text
+                   for row in request['params']['input']) == 1, (
+            'UX356: exact real user spelling remains its own current input, never a developer instruction'
+        )
+        ids.append({row['name']: row['id'] for row in selected})
+    assert ids[0] == ids[1], 'UX356: ACK/presentation and unchanged-scope followup preserve actual canonical file IDs'
+    events = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text().splitlines()]
+    held = [row for row in events if row['kind'] == 'ux289-original-input-received']
+    released = [row for row in events if row['kind'] == 'ux289-original-ack-release']
+    assert len(held) == len(released) == 2 and all(
+        actual['request_id'] == request['id'] and actual['client_user_message_id'] == request['params']['clientUserMessageId']
+        for actual, request in zip(held, starts, strict=True)
+    ), 'UX356: real original pending intervals are independently witnessed by exact received wire envelopes'
+    reads = {row['id']: row for row in requests if row.get('method') == 'account/rateLimits/read'}
+    assert len({row['read_id'] for row in released}) == 2 and all(
+        release['request_id'] == request['id'] and release['method'] == 'turn/start'
+        and release['read_id'] in reads and release['client_user_message_id'] == request['params']['clientUserMessageId']
+        for release, request in zip(released, starts, strict=True)
+    ), 'UX356: genuine existing public optional reads release only their independently received original ACKs'
+    assert not native_records(trace, '.native-replies.jsonl') and not native_records(trace, '.native-wrong-envelope.jsonl'), (
+        'UX356: consent/presentation cannot fabricate a native scientific action or RPC'
+    )
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'} for row in requests), (
+        'UX356: genuine owned healthy-account setup never repairs admission by provider login/logout'
     )

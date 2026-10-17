@@ -4522,7 +4522,7 @@ TestCase {
             iterations: project.fit.iterations, goodnessOfFit: project.fit.goodnessOfFit});
     }
     function test_save349_visible_real_save_and_retirement_data() {
-        return ["fresh", "current", "no-grant", "collision", "stop", "close-owner"].map(tag => ({tag: tag}));
+        return ["fresh", "current", "no-grant", "collision", "stop", "close-owner", "current-ten-refit"].map(tag => ({tag: tag}));
     }
     function test_save349_visible_real_save_and_retirement(data) {
         const leaf = "Original μ 🧪 saved project";
@@ -4574,6 +4574,7 @@ TestCase {
         project = Session.project;
         tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
             "SAVE349 SETUP: ordinary real readback is current before Save admission");
+        if (data.tag === "current-ten-refit") { save359_current_ten_refit(project); return; }
         const science = save349_science(project), owner = lifetime313(project);
         const currentPath = project.path;
         const sourceDocuments = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
@@ -4768,5 +4769,470 @@ TestCase {
                 disconnect313(finalLife, finalSave, "clicked", finalClicked);
             }
         }
+    }
+    function ux358_acknowledgedPresentation(composer, files) {
+        const selected = Probe.rows(assistant.selectedFiles);
+        compare(JSON.stringify(selected.map(file => ({id: file.id, name: file.name, bytes: file.bytes,
+            textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
+            "UX358: completed original ACK preserves exact canonical source descriptors and order");
+        for (const file of files) {
+            const matches = selected.filter(row => row.id === file.id);
+            compare(matches.length, 1, "UX358: each acknowledged original source retains one exact canonical authority row");
+            compare(matches[0].pending, false,
+                "UX358: matching completed ACK consumes this original source's pending presentation role");
+            const chips = Ui.itemsWithProperty(composer, "objectName").filter(control =>
+                control.objectName === "assistant.file." + file.id);
+            verify(chips.length <= 1 && chips.every(chip => !chip.visible),
+                "UX358: each acknowledged original chip is absent or hidden in its exact original composer subtree");
+        }
+    }
+    function ux356_fullyExposed(control) {
+        verify(control !== null && control.visible && control.width > 0 && control.height > 0,
+            "UX356: original visible control has real positive layout geometry");
+        let inWindow = false;
+        for (let parent = control.parent; parent; parent = parent.parent) {
+            inWindow = inWindow || parent === Ui.windowRoot(window);
+            if (parent.clip) {
+                const bounds = control.mapToItem(parent, 0, 0, control.width, control.height);
+                verify(bounds.x >= -0.5 && bounds.y >= -0.5
+                    && bounds.x + bounds.width <= parent.width + 0.5
+                    && bounds.y + bounds.height <= parent.height + 0.5,
+                    "UX356: complete original primary text/control is inside every actual clipping viewport");
+            }
+        }
+        verify(inWindow && Ui.rendered(control) && Ui.exposed(control),
+            "UX356: original control belongs to the genuine visible Main window");
+        const bounds = control.mapToItem(window.contentItem, 0, 0, control.width, control.height);
+        verify(bounds.x >= -0.5 && bounds.y >= -0.5
+            && bounds.x + bounds.width <= window.contentItem.width + 0.5
+            && bounds.y + bounds.height <= window.contentItem.height + 0.5,
+            "UX356: original primary control/text fits the unchanged normal window viewport");
+    }
+    function ux356_dialog() {
+        const candidates = Probe.objectsWithProperty(window, "disclosedContext").filter(object =>
+            object.assistant === assistant);
+        compare(candidates.length, 1, "UX356: one exact original assistant owns the existing disclosure/sign-in dialog");
+        return candidates[0];
+    }
+    function ux356_dialogControl(dialog, name) {
+        const found = Ui.itemsWithProperty(dialog.contentItem, "objectName").filter(control =>
+            control.objectName === name);
+        compare(found.length, 1, "UX356: exact original dialog owns one " + name);
+        return found[0];
+    }
+    function ux356_compactDialog(dialog) {
+        verify(dialog.opened && dialog.visible, "UX356: actual original consent/sign-in dialog is open");
+        const details = ux356_dialogControl(dialog, "assistant.contextDetailsToggle");
+        const preview = ux356_dialogControl(dialog, "assistant.contextPreview");
+        compare(details.checked, false, "UX356: exact technical payload is collapsed in the primary flow");
+        verify(!preview.visible, "UX356: exact technical JSON is not primary dialog prose");
+        const primary = Ui.itemsWithProperty(dialog.contentItem, "text").filter(control =>
+            control.visible && typeof control.text === "string" && control.text.length > 0);
+        verify(primary.length > 0, "UX356: compact primary flow still presents actual human-readable scope/account information");
+        for (const control of primary) ux356_fullyExposed(control);
+        verify(/ChatGPT|OpenAI/.test(dialog.title) || primary.some(control => /ChatGPT|OpenAI/.test(control.text)),
+            "UX356: compact primary presentation still identifies the real provider/account route");
+        const ok = dialog.standardButton(Dialog.Ok), cancel = dialog.standardButton(Dialog.Cancel);
+        verify(ok !== null && cancel !== null && ok.enabled && cancel.enabled,
+            "UX356: original standard consent/sign-in actions remain genuinely available");
+        ux356_fullyExposed(ok); ux356_fullyExposed(cancel); ux356_fullyExposed(details);
+        const actual = assistant.contextPreview;
+        compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(actual)),
+            "UX356: collapsed primary dialog still owns the exact actual current disclosure");
+        mouseClick(details, Ui.clickPoint(details).x, Ui.clickPoint(details).y);
+        tryCompare(details, "checked", true, 2000, "UX356: real detail control opens exact payload on demand");
+        verify(preview.visible && preview.readOnly, "UX356: actual original technical payload is accessible as read-only text");
+        compare(preview.text, actual, "UX356: on-demand technical text is byte-exact actual outgoing context, not a summary/golden");
+        // Expanded details may legitimately scroll. Close through the same live
+        // original control before measuring/using the compact primary actions.
+        Ui.scrollIntoView(details); rendered();
+        verify(details.enabled && Ui.exposed(details), "UX356: original expanded-details control remains physically reachable");
+        mouseClick(details, Ui.clickPoint(details).x, Ui.clickPoint(details).y);
+        tryCompare(details, "checked", false, 2000, "UX356: genuine detail close restores compact primary flow");
+        rendered(); ux356_fullyExposed(ok); ux356_fullyExposed(cancel);
+    }
+    function ux356_chip(root, file, sent) {
+        const name = (sent ? "assistant.sentFile." : "assistant.file.") + file.id;
+        const chips = Ui.itemsWithProperty(root, "objectName").filter(control => control.objectName === name);
+        compare(chips.length, 1, "UX356: exact original composer/user row owns one canonical attachment chip");
+        const chip = chips[0];
+        Ui.scrollIntoView(chip); rendered(); ux356_fullyExposed(chip);
+        const labels = Ui.itemsWithProperty(chip, "text").filter(control => control.visible
+            && typeof control.text === "string" && control.text.includes(file.name));
+        compare(labels.length, 1, "UX356: original chip has one actual complete filename/size label");
+        const label = labels[0];
+        ux356_fullyExposed(label);
+        verify(label.truncated === false && label.contentHeight <= label.height + 0.5,
+            "UX356: short message cannot collapse ordinary filename/size to ellipses or vertically crop it");
+        verify(/[0-9]/.test(label.text) && /bytes|[KMGT]i?B|[kmgt]B/.test(label.text),
+            "UX356: readable ordinary filename retains its actual size presentation");
+        verify(label.Accessible.name.includes(file.name) && label.Accessible.name.includes(String(file.bytes)),
+            "UX356: accessibility retains the complete original filename and exact admitted byte count");
+        const buttons = Ui.itemsWithProperty(chip, "enabled").filter(control =>
+            typeof control.clicked === "function" && control.Accessible.name.includes(file.name));
+        compare(buttons.length, 1, "UX356: original chip owns one actual named remove action");
+        ux356_fullyExposed(buttons[0]);
+        return {chip: chip, remove: buttons[0]};
+    }
+    function test_ux356_real_send_compact_scope_and_short_files_data() {
+        return ["send-click", "send-keyboard", "cancel-new-draft"].map(tag => ({tag: tag}));
+    }
+    function test_ux356_real_send_compact_scope_and_short_files(data) {
+        verify(Session.openProject(Probe.referenceUrl("project")),
+            "UX356 SETUP: lawful owned default-table scientific input opens through real Session");
+        const project = Session.project, owner = lifetime313(project);
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "UX356 SETUP: original real scientific calculation is actually current");
+        const science = save349_science(project), undo = project.canUndo;
+        const metadata = import265_owner(project), modified = project.modified;
+        compare(Probe.rows(assistant.messages).length, 0,
+            "UX356 SETUP: actual unique Qt test-mode storage starts without unrelated prior user history");
+        toggle();
+        Ui.click(this, Probe, window, "assistant.connection");
+        const dialog = ux356_dialog(), dialogLife = lifetime313(dialog);
+        tryCompare(dialog, "opened", true, 2000, "UX356: genuine connection control opens original sign-in dialog");
+        ux356_compactDialog(dialog);
+        const signIn = dialog.standardButton(Dialog.Ok);
+        mouseClick(signIn, Ui.clickPoint(signIn).x, Ui.clickPoint(signIn).y);
+        report187_ready("ux356-real-signin", false);
+        verify(!dialog.visible, "UX356: original sign-in acceptance closes its actual modal before composer input");
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const token = assistant.beginFileSelection();
+        verify(token.length > 0 && assistant.addSelectedFiles(token, [
+            Probe.referenceUrl("files/Original structure.cif"), Probe.referenceUrl("files/Original measured neutron profile.xye")]),
+            "UX356 SETUP: existing genuine selection door admits the actual independently owned source bytes");
+        tryCompare(assistant.selectedFiles, "count", 2, 2000,
+            "UX356 SETUP: both exact real canonical source IDs are present before Send");
+        const admitted = Probe.rows(assistant.selectedFiles);
+        const files = admitted.map(file => ({id: file.id, name: file.name,
+            bytes: file.bytes, textReadable: file.textReadable, format: file.format}));
+        compare(new Set(files.map(file => file.id)).size, 2, "UX356 SETUP: source IDs are app-issued, nonempty and distinct");
+        verify(admitted.every(file => file.id.length > 0 && file.pending === true),
+            "UX356 SETUP: actual newly admitted sources await original Send acknowledgement");
+        verify(assistant.contextConsentRequired, "UX356 SETUP: genuine changed selected-input scope requires fresh approval");
+        const initialHistory = JSON.stringify(Probe.rows(assistant.messages));
+        const editor = item("assistant.composer");
+        const composers = Probe.objectsWithProperty(window, "textRevision").filter(object => object.firstFocusItem === editor);
+        compare(composers.length, 1, "UX356: exact original editor has one genuine draft-revision owner");
+        const composer = composers[0];
+        for (const file of files) ux356_chip(composer, file, false);
+        verify(!Ui.itemsWithProperty(popup.contentItem, "text").some(control => control.visible
+            && control.text === "Inspect outgoing project context"),
+            "UX356: required approval is reached from actual Send, without the retired separate context link");
+        let opens = 0;
+        function opened() { if (alive313(dialogLife) && dialog.opened) ++opens; }
+        dialog.openedChanged.connect(opened);
+        try {
+            Ui.click(this, Probe, window, editor.objectName); visible185_type("continue");
+            const originalText = editor.text, originalRevision = composer.textRevision;
+            const selectedBefore = JSON.stringify(Probe.rows(assistant.selectedFiles));
+            if (data.tag === "send-keyboard") {
+                compare(window.activeFocusItem, editor, "UX356: real Return Send targets the actual focused original composer");
+                keyClick(Qt.Key_Return);
+            } else Ui.click(this, Probe, window, "assistant.send");
+            tryCompare(dialog, "opened", true, 2000, "UX356: actual click/Return Send directly opens required original disclosure");
+            compare(JSON.stringify(Probe.rows(assistant.messages)), initialHistory,
+                "UX356: requesting approval cannot fabricate an admitted or acknowledged original user row");
+            compare(editor.text, originalText, "UX356: before approval original typed text remains exact");
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selectedBefore,
+                "UX356: before approval all exact pending source identities/descriptors remain unchanged");
+            ux356_compactDialog(dialog);
+            if (data.tag === "cancel-new-draft") {
+                const cancel = dialog.standardButton(Dialog.Cancel);
+                mouseClick(cancel, Ui.clickPoint(cancel).x, Ui.clickPoint(cancel).y);
+                tryCompare(dialog, "visible", false, 2000, "UX356: genuine Cancel closes original disclosure without admission");
+                compare(editor.text, originalText, "UX356: actual Cancel preserves original draft spelling");
+                compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selectedBefore,
+                    "UX356: actual Cancel preserves all original pending source authority/presentation");
+                compare(JSON.stringify(Probe.rows(assistant.messages)), initialHistory,
+                    "UX356: canceled approval has no admitted/completed input or transcript side effect");
+                Ui.click(this, Probe, window, editor.objectName); visible185_type("A genuinely newer draft"); visible185_type("continue");
+                verify(composer.textRevision > originalRevision,
+                    "UX356: real keyboard edits create a distinct newer revision with identical final text");
+                Ui.click(this, Probe, window, "assistant.send");
+                tryCompare(dialog, "opened", true, 2000, "UX356: only new actual Send can reopen a canceled request");
+            }
+            const approvedRevision = composer.textRevision;
+            const expectedOpens = data.tag === "cancel-new-draft" ? 2 : 1;
+            compare(opens, expectedOpens, "UX356: original approval dialog opens once per genuine requested approval");
+            const oldIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+            const ok = dialog.standardButton(Dialog.Ok);
+            ux356_fullyExposed(ok); mouseClick(ok, Ui.clickPoint(ok).x, Ui.clickPoint(ok).y);
+            let original = null;
+            tryVerify(() => {
+                const rows = Probe.rows(assistant.messages).filter(row => !oldIds.has(row.id)
+                    && row.kind === "user" && row.text === "continue");
+                if (rows.length !== 1 || rows[0].status !== "pending") return false;
+                original = rows[0]; return true;
+            }, 2000, "UX356: actual matching approval auto-resumes exactly one original pending input before held ACK");
+            const submissions358 = [{text: "continue", id: original.id, files: files}];
+            compare(editor.text, "continue", "UX356: approval/admission is not an acknowledgement that consumes editor text");
+            compare(composer.textRevision, approvedRevision, "UX356: queued original approval cannot rewrite original admitted draft revision");
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selectedBefore,
+                "UX356: unacknowledged original cannot consume pending selected presentation");
+            assistant.refreshUsage();
+            tryVerify(() => !assistant.canCancel && assistant.connected && Probe.rows(assistant.messages).some(row =>
+                row.id === original.id && row.kind === "user" && row.status === "completed")
+                && Probe.rows(assistant.messages).some(row => !oldIds.has(row.id)
+                    && row.kind === "assistant" && row.status === "completed"), 10000,
+                "UX356: actual original ACK AND original assistant publication settle before history baseline");
+            ux358_acknowledgedPresentation(composer, files);
+            compare(editor.text, "", "UX356: only completed matching ACK consumes original editor revision");
+            const originalRows = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(originalRows.length, 1, "UX356: matching approval/ACK never duplicates original row ID");
+            compare(JSON.stringify(originalRows[0].payload.files.map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
+                "UX356: original completed user snapshot retains every exact submitted source descriptor");
+            const userRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
+            compare(userRows.length, 1, "UX356: exact original user row owns short-message sent chip presentation");
+            for (const file of files) ux356_chip(userRows[0], file, true);
+            verify(!assistant.contextConsentRequired, "UX356: completed approved current scope does not request repeat consent");
+            const retained = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+            const followIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+            const followFiles358 = Probe.rows(assistant.selectedFiles).map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}));
+            Ui.click(this, Probe, window, editor.objectName); visible185_type("continue again");
+            Ui.click(this, Probe, window, "assistant.send");
+            tryVerify(() => Probe.rows(assistant.messages).some(row => !followIds.has(row.id)
+                && row.kind === "user" && row.text === "continue again" && row.status === "pending"), 2000,
+                "UX356: already-approved unchanged scope sends directly without another modal");
+            const followRows358 = Probe.rows(assistant.messages).filter(row => !followIds.has(row.id)
+                && row.kind === "user" && row.text === "continue again" && row.status === "pending");
+            compare(followRows358.length, 1, "UX358: second held original input has one actual pending public user identity");
+            submissions358.push({text: "continue again", id: followRows358[0].id, files: followFiles358});
+            compare(opens, expectedOpens, "UX356: unchanged approved scope never repeats the disclosure");
+            verify(!dialog.visible, "UX356: ordinary approved Send does not reopen approval UI");
+            assistant.refreshUsage();
+            tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => !followIds.has(row.id)
+                && row.kind === "user" && row.text === "continue again" && row.status === "completed")
+                && Probe.rows(assistant.messages).some(row => !followIds.has(row.id)
+                    && row.kind === "assistant" && row.status === "completed"), 10000,
+                "UX356: second original ACK and response settle before removal/readback");
+            ux358_acknowledgedPresentation(composer, followFiles358);
+            const completedFollow358 = Probe.rows(assistant.messages).filter(row => row.id === followRows358[0].id);
+            compare(completedFollow358.length, 1, "UX358: second matching ACK retains exactly its original public row identity");
+            compare(completedFollow358[0].status, "completed", "UX358: second original receipt is its actual completed ACK row");
+            compare(JSON.stringify(completedFollow358[0].payload.files.map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(followFiles358),
+                "UX358: second acknowledged user snapshot retains every exact corresponding submitted source descriptor");
+            verify(retained.every(row => Probe.rows(assistant.messages).some(actual => JSON.stringify(actual) === row)),
+                "UX356: ordinary repeated work retains every completed original message unchanged");
+            const retainedRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
+            compare(retainedRows.length, 1, "UX356: original ID is re-resolved after later delegate/layout publication");
+            const sent = ux356_chip(retainedRows[0], files[0], true);
+            verify(sent.remove.enabled, "UX356: original sent source has a genuine idle remove action");
+            mouseClick(sent.remove, Ui.clickPoint(sent.remove).x, Ui.clickPoint(sent.remove).y);
+            tryCompare(assistant.selectedFiles, "count", 1, 2000, "UX356: actual original remove revokes only that current source ID");
+            compare(Probe.rows(assistant.selectedFiles)[0].id, files[1].id,
+                "UX356: sent remove preserves the other independently selected source identity");
+            const preserved = Probe.rows(assistant.messages).filter(row => row.id === original.id);
+            compare(preserved.length, 1, "UX356: source removal preserves the sole original historical row");
+            compare(JSON.stringify(preserved[0].payload.files.map(file => ({id: file.id, name: file.name,
+                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
+                "UX356: revoking current authority never rewrites historical sent-file snapshot");
+            const context = JSON.parse(assistant.contextPreview);
+            compare(JSON.stringify(context.selected_files.files.map(file => file.id)), JSON.stringify([files[1].id]),
+                "UX356: current outgoing context has no read authority for the removed historical source");
+            verify(alive313(owner) && Session.project === project,
+                "UX356: compact consent/attachment presentation preserves exact original scientific owner");
+            compare(save349_science(project), science, "UX356: input/consent/chip changes preserve all original science/data/SU/relations/metadata");
+            compare(import265_owner(project), metadata, "UX356: original owner metadata/path/settings remain exact");
+            compare(project.modified, modified, "UX356: conversation/file presentation does not dirty the scientific project");
+            verify(!project.calculating && Probe.computedCurrent(project.currentExperiment),
+                "UX356: unchanged actual science remains current without a forced stamp or extra observation window");
+            compare(project.canUndo, undo, "UX356: presentation and permission changes invent no scientific Undo step");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account,
+                "UX356: genuine managed account/catalog remains exact through original admission and removal");
+            console.info("UX356_IDS", JSON.stringify({case: data.tag, first: original.id,
+                files: files, removed: files[0].id, remaining: files[1].id, dialogOpens: opens,
+                submissions: submissions358}));
+            visible185_capture("ux356-" + data.tag);
+        } finally { disconnect313(dialogLife, dialog, "openedChanged", opened); }
+    }
+    // The seven-case family's additional row enters only after the original
+    // four-point fit and ordinary writer/readback establish the saved directory.
+    function save359_current_ten_refit(project) {
+        const owner = lifetime313(project), path = project.path;
+        const inputs = visible185_inputs(project), shape = relation246_shape(project);
+        const declarations = relation245_declarations(project);
+        const beforeRows = Probe.rows(project.currentExperiment.background);
+        compare(JSON.stringify(beforeRows.map(row => [row.id, row.position, row.intensity.value])),
+            JSON.stringify([["1", 8, 0], ["6", 15, 0], ["10", 70, 0], ["14", 150, 0]]),
+            "SAVE359 SETUP: real saved current owner begins with FOUR independently declared original anchors");
+        verify(!project.modified && !Session.needsSaveAs,
+            "SAVE359 SETUP: the four-anchor current folder is genuinely owned and clean before editing");
+        compare(path, ApplicationInfo.localPath(Probe.referenceUrl("current")),
+            "SAVE359 SETUP: original current path is the established four-anchor directory");
+        const names = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
+        const diskBefore = names.map(name => Probe.readReferenceFile("current/" + name));
+        const background = project.currentExperiment.background;
+        const update = background.changeDefined("update", "1", 8, 5.5, false);
+        verify(update.applied === true && update.published === true,
+            "SAVE359 SETUP: lawful original ordinary background update actually applies/publishes");
+        const added = [["save359_9", 9, 10], ["save359_12", 12, 12.5], ["save359_25", 25, 15],
+            ["save359_50", 50, 17.5], ["save359_90", 90, 20], ["save359_130", 130, 22.5]];
+        for (const entry of added) {
+            const outcome = background.changeDefined("add", entry[0], entry[1], entry[2], false);
+            verify(outcome.applied === true && outcome.published === true,
+                "SAVE359 SETUP: each lawful ordinary Add really applies/publishes one independent anchor");
+            verify(alive313(owner) && Session.project === project && project.path === path && project.modified,
+                "SAVE359: background edits retain original current owner/path and genuinely dirty its saved state");
+        }
+        for (const row of Probe.rows(background)) {
+            verify(row.intensity.refinable && row.intensity.fittable,
+                "SAVE362B SETUP: every one of the ten genuine background intensities is actually eligible for fitting");
+            row.intensity.free = true; // Existing ordinary ParameterItem free entrance; never a fabricated fit/currentness stamp.
+            compare(row.intensity.free, true, "SAVE362B SETUP: all TEN actual background intensities are free before refit");
+        }
+        const expected = [["1", 8, 5.5, true], ["6", 15, 0, true], ["10", 70, 0, true], ["14", 150, 0, true]]
+            .concat(added.map(entry => [entry[0], entry[1], entry[2], true]));
+        function anchors() {
+            return Probe.rows(background).map(row => [row.id, row.position, row.intensity.value, row.intensity.free]);
+        }
+        function assertTenMembership() {
+            const actual = anchors();
+            compare(actual.length, 10, "SAVE359: all TEN actual original and newly admitted background rows remain present");
+            for (const row of expected) {
+                const found = actual.filter(value => value[0] === row[0]);
+                compare(found.length, 1, "SAVE359: every independently declared background ID remains unique");
+                compare(JSON.stringify([found[0][0], found[0][1], found[0][3]]), JSON.stringify([row[0], row[1], true]),
+                    "SAVE362B: all ten independent anchor identities/positions and FREE flags survive real refit/Save");
+            }
+        }
+        function assertTenStarts() {
+            assertTenMembership();
+            for (const row of expected) compare(JSON.stringify(anchors().filter(value => value[0] === row[0])[0]), JSON.stringify(row),
+                "SAVE362B SETUP: exact independent starting intensity operands are required BEFORE actual fitting only");
+        }
+        function roundedBackground() {
+            return JSON.stringify(background285_rows(project).map(row => {
+                const su = project.suText(row.intensity, row.uncertainty);
+                return [row.id, row.position, row.free, row.hasUncertainty, row.uid,
+                    row.minimum, row.maximum, row.name, row.units, su.value, su.su, su.bracket];
+            }));
+        }
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE359 SETUP: actual ten-anchor edit calculation settles before genuine refit");
+        assertTenStarts();
+        const beforeFit = visible185_values(project);
+        const fit = project.fit, fitLife = lifetime313(fit);
+        let starts = 0, finishes = 0;
+        function started() { if (alive313(fitLife) && fit.running) ++starts; }
+        function finished() { ++finishes; }
+        fit.runningChanged.connect(started); fit.finished.connect(finished);
+        try {
+            visible185_page("analysis"); Ui.click(this, Probe, window, "sideBar.tab.basic");
+            Ui.click(this, Probe, window, "fitting.start");
+            tryVerify(() => finishes === 1 && !fit.running && !project.calculating
+                && Probe.computedCurrent(project.currentExperiment), 10000,
+                "SAVE359 SETUP: real ordinary second FitJob finishes/publishes current ten-anchor science");
+            compare(starts, 1, "SAVE359: actual ten-anchor refit starts precisely one real worker");
+            verify(["success", "maxIterations"].includes(fit.outcome) && fit.iterations > 0
+                && Probe.rows(fit.results).length > 0 && visible185_values(project) !== beforeFit,
+                "SAVE359: refit actually moves parameters with real successful/bounded iterative results");
+            verify(visible185_parameters(project).some(parameter => parameter.free
+                && parameter.hasUncertainty && parameter.uncertainty > 0),
+                "SAVE359: actual positive fitted SUs exercise ordinary writer rounding");
+        } finally {
+            disconnect313(fitLife, fit, "runningChanged", started);
+            disconnect313(fitLife, fit, "finished", finished);
+        }
+        assertTenMembership();
+        const postFitBackground = background285_rows(project);
+        verify(postFitBackground.length === 10 && postFitBackground.every(row => row.free
+            && row.hasUncertainty && Number.isFinite(row.intensity) && Number.isFinite(row.uncertainty) && row.uncertainty > 0),
+            "SAVE362B SETUP: genuine refit publishes positive fitted SUs for ALL TEN actual free background intensities");
+        verify(postFitBackground.some(row => row.intensity !== expected.filter(value => value[0] === row.id)[0][2]),
+            "SAVE362B SETUP: actual background fitting moves at least one declared start, never a fixed/cached substitute");
+        const encodedBackground = roundedBackground();
+        compare(visible185_inputs(project), inputs, "SAVE359: background/refit preserves every original measured triple, mask, weight and phase link");
+        compare(relation246_shape(project), shape, "SAVE359: background/refit preserves actual original sites/composition/coordinates/occupancies");
+        compare(relation245_declarations(project), declarations, "SAVE359: actual original enabled/disabled equations and aliases survive refit");
+        visible185_page("project"); Ui.click(this, Probe, window, "mainArea.project.tab.description");
+        Ui.click(this, Probe, window, "project.title"); visible185_type("Original visible Save current-ten-refit");
+        keyClick(Qt.Key_Return);
+        compare(project.title, "Original visible Save current-ten-refit",
+            "SAVE359: actual original user title is committed before ordinary writer reference and Save");
+        for (let index = 0; index < names.length; ++index)
+            compare(Probe.readReferenceFile("current/" + names[index]), diskBefore[index],
+                "SAVE359: ten-anchor edits/refit have NOT been secretly saved before delegated current Save");
+        // Existing public BlockText is the ordinary writer's lazy Text-tab
+        // output. Reading it creates no destination or replacement owner.
+        const blocks = {"project.edi": project.metadataText, "structures/cosio.edi": project.currentStructure.text,
+            "experiments/d20.edi": project.currentExperiment.text, "analysis/analysis.edi": project.analysis.text};
+        const documents = {};
+        for (const name of names) {
+            documents[name] = blocks[name].text;
+            verify(blocks[name].error === "" && documents[name].length > 0,
+                "SAVE359: each actual pre-Save ordinary writer document is nonempty and has no writer refusal");
+        }
+        const completeText = project.projectText.text;
+        verify(project.projectText.error === "" && completeText.length > 0,
+            "SAVE359: complete original public Project Text is a healthy ordinary-writer document-closure witness");
+        function roundedValues() {
+            return JSON.stringify(visible185_parameters(project).map(parameter => {
+                const su = project.suText(parameter.value, parameter.uncertainty);
+                // Compare encoded ordinary SU spelling here, not an unsupported
+                // raw null-versus-fixed-zero storage promise. The independent
+                // real loader compares every persisted value/free/SU below.
+                return [parameter.path, parameter.free,
+                    su.value.length > 0 ? [su.value, su.su, su.bracket] : [parameter.value, su.su, su.bracket]];
+            }));
+        }
+        const values = roundedValues(), metadata = import265_owner(project);
+        const result = {outcome: fit.outcome, iterations: fit.iterations};
+        const undo = item("appBar.button.undo").enabled;
+        console.info("SAVE359_ORDINARY", JSON.stringify({documents: documents, completeText: completeText,
+            currentPath: path, four: 4, initialTen: expected, ten: anchors(), postFitBackground: postFitBackground,
+            encodedBackground: encodedBackground, dirty: project.modified, refitStarts: starts,
+            fittedOutcome: fit.outcome, fittedIterations: fit.iterations}));
+        verify(alive313(owner) && Session.project === project && project.path === path && project.modified,
+            "SAVE359: public ordinary Text reference leaves original ten-anchor fitted owner/path DIRTY before Save");
+        toggle(); assistant.signIn(); visible185_ready("save359-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("save359-disclosed");
+        compare(assistant.workingFolder, "", "SAVE359: genuine current-directory Save needs no fresh-parent grant workaround");
+        const show = item("assistant.showActions");
+        verify(show.enabled && show.visible && !assistant.showActions,
+            "SAVE359 SETUP: original actionable mode checkbox begins in normal mode");
+        mouseClick(show); verify(assistant.showActions, "SAVE359: real checkbox selects actual visible Save controls");
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const before = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const save = Ui.control(Probe, window, "appBar.button.save"), saveLife = lifetime313(save);
+        verify(save.enabled && Ui.exposed(save), "SAVE359: original ordinary current Save button is physically actionable");
+        let clicks = 0;
+        function clicked() { ++clicks; }
+        save.clicked.connect(clicked);
+        try {
+            assistant.send("Save this actual fitted displayed project using original visible Save current-ten-refit");
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                && visible185_outcome("save349-current-ten-refit", before) !== null,
+                visible237_observationMs([{path: "", text: "Original μ 🧪 saved project"}]),
+                "SAVE359: exact original current Save request actually returns/settles within the existing bound");
+            const outcome = visible185_outcome("save349-current-ten-refit", before);
+            verify(outcome.status === "succeeded" && outcome.committed === true && outcome.reopened === true
+                && outcome.active === true && outcome.presentation_complete === true,
+                "SAVE359: only actual commit/verified reopen/active displayed presentation is current Save success");
+            compare(clicks, 1, "SAVE359: exactly ONE real original ordinary Save control is clicked");
+            verify(alive313(owner) && Session.project === project && project.path === path && !project.modified,
+                "SAVE359: same live original displayed owner/path is saved/unmodified without a fresh directory");
+            verify(alive313(fitLife), "SAVE359: original public real-fit receiver remains alive before outcome readback");
+            compare(outcome.destination, path, "SAVE359: exact original current directory is the truthful actual destination");
+            tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                "SAVE359: original active ten-anchor owner is actually current after saved readback publication");
+            assertTenMembership();
+            compare(roundedBackground(), encodedBackground,
+                "SAVE362B: ALL genuine post-fit background values/free/positive-SU/spec metadata follow ordinary writer rounding after active Save");
+            compare(roundedValues(), values, "SAVE359: all active parameter values/free/SUs follow the ORIGINAL ordinary writer rounding rule");
+            compare(visible185_inputs(project), inputs, "SAVE359: current Save retains ALL original observations/sigmas/masks/weights/links");
+            compare(relation246_shape(project), shape, "SAVE359: current Save retains actual original physical sites/composition");
+            compare(relation245_declarations(project), declarations, "SAVE359: current Save retains exact original scientific declarations");
+            compare(import265_owner(project), metadata, "SAVE359: actual current Save retains every original metadata/path/settings fact");
+            compare(fit.outcome, result.outcome, "SAVE359: original real refit outcome remains factual after Save");
+            compare(fit.iterations, result.iterations, "SAVE359: original actual refit iterations survive Save");
+            compare(item("appBar.button.undo").enabled, undo, "SAVE359: current Save invents/consumes no original Undo availability");
+            verify(!Session.needsSaveAs && assistant.connected, "SAVE359: genuine current Save retains account and current-directory ownership");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE359: original managed account/model catalog stays exact");
+        } finally { disconnect313(saveLife, save, "clicked", clicked); }
     }
 }
