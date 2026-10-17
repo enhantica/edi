@@ -184,6 +184,10 @@ disabled** rather than left out, so the layout is final:
   profile)", whose label ran over its neighbours. Now `ParameterGrid` hides it and the other fields close
   up, a family row with no used field disappears, and the field stays in the Analysis table, where it can be
   fixed. Its value is unchanged and stays in the file.
+- **A missing peak family has no visible row.** Both the repeated profile-family rows and the
+  asymmetry row use the shared `ParameterGrid.fieldCount > 0` guard. That property already handles a
+  null `fields` model as zero, so initial loading and experiment replacement do not dereference a
+  missing model. Existing profile-used field selection, values and Analysis-table visibility are unchanged.
 - **Every field's title is set the same way, as the combo box's** (the owner, 2026-09-29): left-aligned,
   inset from the field's left edge by the base combo box's own content padding (read at run time from a base
   `ComboBox`, not a number of edi's; 0.75 font units in v0.9.1), as wide as the field less that inset, and
