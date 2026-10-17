@@ -124,6 +124,4 @@ def test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting(
         {'value': '1.0', 'error': ''},
         {'value': '0.38', 'error': '0.01'},
         {'value': '', 'error': ''},
-    ], (
-        'The real cell displays 1.0; multiphase s.u. and unavailable cells retain their rules'
-    )
+    ], 'The real cell displays 1.0; multiphase s.u. and unavailable cells retain their rules'
