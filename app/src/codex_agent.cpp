@@ -237,10 +237,8 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         prepared = process; process_ = process;
         process->setProgram(executable);
         process->setArguments({QStringLiteral("--listen"), QStringLiteral("stdio://"),
-            QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.writable_roots=[]"),
-            QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.network_access=false"),
-            QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.exclude_slash_tmp=true"),
-            QStringLiteral("-c"), QStringLiteral("sandbox_workspace_write.exclude_tmpdir_env_var=true"),
+            QStringLiteral("-c"), QStringLiteral("sandbox_mode=\"read-only\""),
+            QStringLiteral("-c"), QStringLiteral("approval_policy=\"never\""),
             QStringLiteral("-c"), QStringLiteral("features.shell_zsh_fork=false")});
         process->setWorkingDirectory(workspace);
         process->setProcessChannelMode(QProcess::SeparateChannels);

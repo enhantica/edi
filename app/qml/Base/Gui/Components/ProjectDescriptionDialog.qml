@@ -37,7 +37,12 @@ EaElements.Dialog {
 
     property int inputFieldWidth: EaStyle.Sizes.fontPixelSize * 35
 
+    objectName: "createProject.dialog"
     title: qsTr("Create project")
+    onOpened: {
+        const button = standardButton(Dialog.Ok);
+        if (button) button.objectName = "createProject.accept";
+    }
 
     standardButtons: Dialog.Ok
 
@@ -64,7 +69,7 @@ EaElements.Dialog {
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
                 validator: RegularExpressionValidator {
-                    regularExpression: /^[a-zA-Z][a-zA-Z0-9_\-\.]{1,30}$/
+                    regularExpression: /^[^/\\\u0000]+$/
                 }
                 placeholderText: qsTr("Enter project name here")
 
@@ -125,15 +130,16 @@ EaElements.Dialog {
                 text: qsTr("Description")
             }
 
-            EaElements.TextField {
+            EaElements.TextArea {
                 id: projectDescriptionField
+                objectName: "createProject.description"
 
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Enter project description here")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                wrapMode: TextEdit.Wrap
+                implicitHeight: Math.max(contentHeight + topPadding + bottomPadding, font.pixelSize * 3)
             }
         }
 
@@ -147,6 +153,7 @@ EaElements.Dialog {
 
             EaElements.TextField {
                 id: projectLocationField
+                objectName: "createProject.location"
 
                 implicitWidth: dialog.inputFieldWidth
                 rightPadding: chooseParentDirectoryButton.width

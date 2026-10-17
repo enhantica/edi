@@ -1241,3 +1241,34 @@ A Send-triggered approval retains one original composer receipt through asynchro
 The status bar reserves the assistant activity and Stop target against its own viewport before allocating fit space. Complete original fit values, result control and progress remain in a native horizontally scrollable viewport when they exceed the remaining width. The original Stop receiver stays at the bar's right edge during chat presentation changes, manual takeover and its native press/release. Existing fit controls and actual value text are retained.
 
 Table row decoration follows the native cell content origins and cell padding once; table blocks have zero additional vertical margins. Each next native row origin supplies the preceding row's shared boundary, including native border rounding. Wrapped lines expand their own row; shaded and unshaded single-line rows have the same ordinary cell padding. The same editor, semantic source/copy, resource restrictions and selection/link coordinates remain authoritative. GUI preparation failure still attempts complete literal text. Failure of owned scene-graph allocations instead deletes the complete partial owned decoration tree and returns no decoration, leaving the original editor intact; the rendering callback never accesses its GUI-thread document. The header keeps the last known actual used percentage during refresh without a stale suffix; internal freshness and missing/error handling remain.
+
+## One project folder and application-owned IO
+
+The separate assistant folder links/caption are removed with their backend grant,
+writable-root, raw-staging and provider-result-writer dependencies. The existing
+Project Create/Save destination controls are the only destination UI. Account
+entry remains the account/usage dialog; it does not grant a folder. Current saved
+project IO is Edi's owned native Save operation, not a reusable model write grant.
+The required short Send disclosure continues to preserve the original draft,
+revision/IME and attachment receipt through backend readiness and one actual ACK.
+It accurately says that stock read-only execution can still expose general reads,
+tools and measurement data; optional exact technical context remains available.
+
+The original statusBar.project item now opens a standard application dialog with
+the full selectable current project folder and native Copy/Open actions. Unsaved
+projects have no path action. Original owner/path replacement retires this
+presentation; a matching pathname alone never grants access. No separate AI path
+or new destination wizard is introduced. Existing working/Stop placement,
+viewport reservation, native table geometry and stable used-usage text remain
+unchanged by this folder flow.
+
+### Status folder presentation ownership
+
+The original project-folder dialog installs one complete owner/path presentation
+record. Its derived public owner/path bindings can notify ordinary observers;
+no old opener writes another field after those callbacks. Opening, Copy and Open
+folder each retain that exact record and check receiver lifetime, Session owner,
+path and presentation identity before continuing. A reentrant new owner, a new
+opening for the same owner/path or destruction supersedes the old opener. The
+same standard dialog and unsaved behavior remain; no callbacks are suppressed and
+no old opener restores or reopens a newer presentation.

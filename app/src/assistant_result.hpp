@@ -72,9 +72,14 @@ class AssistantSaveSource {
 std::shared_ptr<ImmutableAssistantResult> capture_prepared_native_documents(
     const std::vector<std::pair<std::string, std::string>>& documents, const AssistantSaveSource& source);
 
-// A native picker, never a provider path argument, constructs this grant.
-// It pins the physical root; mutable descendants remain untrusted and must use
-// the existing bounded no-follow readers/writers. No directory enumeration here.
+// One original Edi Save As picker constructs this short-lived destination.
+// No State-wide or model write grant is retained. The original spelling and
+// physical directory must still agree; publication remains bounded/no-follow.
+bool assistant_input_path_allowed(const QString& physical) noexcept;
+// Classification must describe this same opened object, not an independently
+// resolved alias. The original spelling and physical no-follow path are rechecked.
+bool assistant_input_matches(int descriptor,const QString& physical,const QString& selected) noexcept;
+
 class AssistantWorkingFolder {
  public:
     explicit AssistantWorkingFolder(const QString& selected);
@@ -82,6 +87,8 @@ class AssistantWorkingFolder {
     AssistantWorkingFolder(const AssistantWorkingFolder&) = delete;
     AssistantWorkingFolder& operator=(const AssistantWorkingFolder&) = delete;
     const QString& path() const noexcept;
+    static quint64 preparationBytes(const QString& selected);
+    quint64 retainedBytes() const noexcept;
     bool current() const noexcept;
  private:
     friend class AssistantResultExport;

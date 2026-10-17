@@ -52,6 +52,18 @@ class ProjectEditor {
     virtual QString apply_relation_control(const edi::Edit& change, const RelationAction&) {
         return apply_relation_edit(change);
     }
+    // Original creation-row controls expose finite semantic metadata, just as
+    // the original alias/constraint controls do. No provider callable/edit exists.
+    struct CreationAction {
+        enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, ExclusionAppend, ExclusionStart, ExclusionEnd };
+        Kind kind;
+        const void* row = nullptr;
+        QString field, text;
+        double number = 0;
+    };
+    virtual QString apply_creation_control(const edi::Edit& change, bool structural, const CreationAction&) {
+        return apply(change, structural);
+    }
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }

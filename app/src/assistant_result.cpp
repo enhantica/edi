@@ -12,6 +12,7 @@
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QStringView>
+#include <QScopeGuard>
 #include <charconv>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -30,6 +31,7 @@
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -39,6 +41,12 @@
 #elif defined(__APPLE__)
 #include <stdio.h>
 #endif
+#elif defined(Q_OS_WIN)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <io.h>
 #endif
 
 namespace edi_app {
@@ -108,9 +116,14 @@ Fd physical_directory(const QString& path) {
     // links instead of resolving unknown replacement path text.
     if (!QDir::isAbsolutePath(path)) refuse();
     Fd fd(::open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC));
-    for (const auto& part : path.split('/', Qt::SkipEmptyParts)) {
-        if(part=="." || part==".." || part.contains(QChar(0)))refuse();
-        fd = Fd(::openat(fd.n, part.toUtf8().constData(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
+    const auto view=QStringView(path);
+    for(qsizetype start=0;start<view.size();) {
+        while(start<view.size() && view[start]==u'/')++start;
+        if(start==view.size())break;
+        auto end=view.indexOf(u'/',start);if(end<0)end=view.size();
+        const auto part=view.mid(start,end-start);start=end;
+        if(part==u"." || part==u".." || part.contains(QChar(0)))refuse();
+        fd=Fd(::openat(fd.n,part.toUtf8().constData(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));
     }
     return fd;
 }
@@ -742,6 +755,76 @@ bool separated_from_host_storage(const QString& physical) {
 }
 }
 
+bool assistant_input_path_allowed(const QString& physical) noexcept {
+    try {
+        if(physical.isEmpty() || !separated_from_host_storage(physical))return false;
+        const auto home=QDir::homePath();
+        const QStringList privateRoots{home+"/.codex",qEnvironmentVariable("CODEX_HOME"),home+"/.ssh",home+"/.aws"};
+        for(const auto& name:privateRoots) {
+            if(name.isEmpty())continue;
+            const auto actual=QFileInfo(name).canonicalFilePath();
+            const auto root=actual.isEmpty()?QDir::cleanPath(name):actual;
+#if defined(Q_OS_WIN)
+            constexpr auto sensitivity=Qt::CaseInsensitive;
+#else
+            constexpr auto sensitivity=Qt::CaseSensitive;
+#endif
+            if(physical.compare(root,sensitivity)==0 || physical.startsWith(root+'/',sensitivity) || root.startsWith(physical+'/',sensitivity))return false;
+        }
+        return true;
+    } catch(...) {return false;}
+}
+
+bool assistant_input_matches(int descriptor,const QString& physical,const QString& selected) noexcept {
+    try {
+        if(descriptor<0 || !assistant_input_path_allowed(physical))return false;
+#if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+        const Identity pinned(descriptor);
+        const bool dir=S_ISDIR(pinned.value.st_mode);
+        if(!dir && (!S_ISREG(pinned.value.st_mode) || pinned.value.st_nlink!=1))return false;
+        // Reuse the original bounded writer's physical, component-wise no-follow
+        // descent. A mutable canonical parent cannot redirect this open to A
+        // while the classifier was checking B's spelling.
+        // An input's physical leaf keeps the existing read domain, including
+        // lawful Unix trailing dots/spaces; result-tree naming is stricter.
+        auto classified=dir?physical_directory(physical):Fd(::openat(
+            physical_directory(QFileInfo(physical).absolutePath()).n,QFileInfo(physical).fileName().toUtf8().constData(),
+            O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC));
+        if(!pinned.unchanged(classified.n) || QFileInfo(selected).canonicalFilePath()!=physical)return false;
+        Fd named(::open(selected.toUtf8().constData(),O_RDONLY|O_NONBLOCK|O_CLOEXEC));
+        return pinned.unchanged(named.n) && pinned.unchanged(descriptor) && assistant_input_path_allowed(physical);
+#elif defined(Q_OS_WIN)
+        const auto handle=reinterpret_cast<HANDLE>(_get_osfhandle(descriptor));
+        if(handle==INVALID_HANDLE_VALUE)return false;
+        BY_HANDLE_FILE_INFORMATION pinned{};
+        if(!GetFileInformationByHandle(handle,&pinned) || GetFileType(handle)!=FILE_TYPE_DISK ||
+            (pinned.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)) || pinned.nNumberOfLinks!=1)return false;
+        // Windows supplies the normalized name of this actual opened handle,
+        // rather than resolving the mutable caller spelling as the classifier.
+        // The platform's extended native pathname domain is 32767 UTF-16 units.
+        std::array<wchar_t,32768> buffer{};
+        const auto count=GetFinalPathNameByHandleW(handle,buffer.data(),static_cast<DWORD>(buffer.size()),FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+        if(!count || count>=buffer.size())return false;
+        auto actual=QDir::fromNativeSeparators(QString::fromWCharArray(buffer.data(),count));
+        if(actual.startsWith("//?/UNC/"))actual="//"+actual.mid(8);
+        else if(actual.startsWith("//?/"))actual=actual.mid(4);
+        if(actual.compare(physical,Qt::CaseInsensitive)!=0 || !assistant_input_path_allowed(actual))return false;
+        const auto spelling=QDir::toNativeSeparators(selected).toStdWString();
+        const auto named=CreateFileW(spelling.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+            nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+        if(named==INVALID_HANDLE_VALUE)return false;
+        const auto close=qScopeGuard([named]{CloseHandle(named);});
+        BY_HANDLE_FILE_INFORMATION info{};
+        return GetFileInformationByHandle(named,&info) && !(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT) &&
+            pinned.dwVolumeSerialNumber==info.dwVolumeSerialNumber && pinned.nFileIndexHigh==info.nFileIndexHigh &&
+            pinned.nFileIndexLow==info.nFileIndexLow && pinned.nFileSizeHigh==info.nFileSizeHigh && pinned.nFileSizeLow==info.nFileSizeLow &&
+            pinned.ftLastWriteTime.dwHighDateTime==info.ftLastWriteTime.dwHighDateTime && pinned.ftLastWriteTime.dwLowDateTime==info.ftLastWriteTime.dwLowDateTime;
+#else
+        Q_UNUSED(selected);return false;
+#endif
+    }catch(...){return false;}
+}
+
 struct AssistantSaveSource::State {
     QString path;
     std::string record;
@@ -915,7 +998,7 @@ std::shared_ptr<ImmutableAssistantResult> capture_prepared_native_documents(
 }
 
 struct AssistantWorkingFolder::State {
-    QString path;
+    QString path, selected;
 
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     Fd descriptor;
@@ -923,10 +1006,28 @@ struct AssistantWorkingFolder::State {
     explicit State(QString physical)
         : path(std::move(physical)), descriptor(directory(path)), identity(descriptor.n) {
         if (!S_ISDIR(identity.value.st_mode) || ::faccessat(descriptor.n, ".", R_OK | W_OK | X_OK, 0))
-            throw std::runtime_error("The chosen working folder is not readable and writable");
+            throw std::runtime_error("The chosen Save As parent is not readable and writable");
     }
 #endif
 };
+quint64 AssistantWorkingFolder::preparationBytes(const QString& selected) {
+    if(selected.isEmpty() || selected.size()>static_cast<qsizetype>(Limits::id_bytes))refuse();
+    // Selected QString plus its UTF-8 validation, two simultaneous canonical
+    // spellings and directory encoder scratch coexist in the existing picker
+    // constructor. PATH_MAX bounds the platform canonicalization intermediate;
+    // the accepted retained physical spelling still obeys id_bytes.
+#if defined(Q_OS_UNIX) && defined(PATH_MAX) && !defined(__EMSCRIPTEN__)
+    return sizeof(AssistantWorkingFolder)+sizeof(State)+
+        static_cast<quint64>(selected.size())*sizeof(QChar)+Limits::id_bytes+
+        2*static_cast<quint64>(PATH_MAX)*sizeof(QChar)+Limits::id_bytes;
+#else
+    refuse();
+#endif
+}
+quint64 AssistantWorkingFolder::retainedBytes() const noexcept {
+    return sizeof(AssistantWorkingFolder)+sizeof(State)+
+        static_cast<quint64>(state_->path.capacity()+state_->selected.capacity())*sizeof(QChar);
+}
 AssistantWorkingFolder::AssistantWorkingFolder(const QString& selected) {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     // Admit path bytes before canonicalization and retain the physical spelling.
@@ -934,23 +1035,24 @@ AssistantWorkingFolder::AssistantWorkingFolder(const QString& selected) {
     if (selected.isEmpty() || selected.size() > static_cast<qsizetype>(Limits::id_bytes) ||
         selected.contains(QChar(0)) || selected.toUtf8().size() > static_cast<qsizetype>(Limits::id_bytes) ||
         !QDir::isAbsolutePath(selected))
-        throw std::runtime_error("Choose an existing local working folder");
+        throw std::runtime_error("Choose an existing local Save As parent");
     const auto physical = QFileInfo(selected).canonicalFilePath();
     if (physical.isEmpty() || physical == "/" || physical.toUtf8().size() > static_cast<qsizetype>(Limits::id_bytes))
-        throw std::runtime_error("Choose a bounded project working folder");
+        throw std::runtime_error("Choose a bounded project Save As parent");
     if (!separated_from_host_storage(physical))
-        throw std::runtime_error("Choose a working folder outside Edi's protected storage");
+        throw std::runtime_error("Choose a Save As parent outside Edi's protected storage");
     auto prepared = std::make_unique<State>(physical);
+    prepared->selected=selected;
     // The actual selected alias must still name that pinned object after all
     // fallible admission. Future runtime requests use only the physical path.
     const auto selectedNow = QFileInfo(selected).canonicalFilePath();
     auto namedNow = directory(physical);
     if (selectedNow != physical || !prepared->identity.object(namedNow.n) || !separated_from_host_storage(physical))
-        throw std::runtime_error("The chosen working folder changed");
+        throw std::runtime_error("The chosen Save As parent changed");
     state_ = std::move(prepared);
 #else
     Q_UNUSED(selected);
-    throw std::runtime_error("Working-folder access is unavailable on this platform");
+    throw std::runtime_error("Native Save As is unavailable on this platform");
 #endif
 }
 AssistantWorkingFolder::~AssistantWorkingFolder() = default;
@@ -959,7 +1061,8 @@ bool AssistantWorkingFolder::current() const noexcept {
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     try {
         auto named = directory(state_->path);
-        return state_->identity.object(state_->descriptor.n) && state_->identity.object(named.n) &&
+        return QFileInfo(state_->selected).canonicalFilePath()==state_->path &&
+            state_->identity.object(state_->descriptor.n) && state_->identity.object(named.n) &&
             separated_from_host_storage(state_->path) && !::faccessat(state_->descriptor.n, ".", R_OK | W_OK | X_OK, 0);
     } catch (...) { return false; }
 #else

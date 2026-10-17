@@ -21,10 +21,13 @@ namespace edi_app {
 class AssistantWidgetInput final : public QObject {
     Q_OBJECT
  public:
-    enum class Kind { Value, Text, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose, SearchChoice, ContextMenu, DismissMenu };
+    enum class Kind { Value, Text, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose, SearchChoice, ContextMenu, DismissMenu, FileLocation, FilePath, FormText };
     struct Request {
         Kind kind;
         QPointer<QQuickItem> target;
+        // Only the original Qt FileDialog breadcrumb field, captured through
+        // its actual dialog link before the genuine Ctrl+L focus transition.
+        QPointer<QQuickItem> locationField;
         int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
         int option = -1; // Actual finite ComboBox option.
         QString value; // Actual numeric spelling, declaration text or popup search; never executable input.

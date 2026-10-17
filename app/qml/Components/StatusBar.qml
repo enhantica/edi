@@ -82,7 +82,9 @@ EaElements.StatusBar {
         keyIcon: "archive"
         keyText: qsTr("Project")
         valueText: bar.project ? bar.project.name : qsTr("Undefined")
-        ToolTip.text: qsTr("Current project")
+        clickable: bar.project !== null
+        ToolTip.text: qsTr("Current project folder")
+        onClicked: projectFolder.openCurrent()
     }
     StatusBarItem {
         id: structuresItem
@@ -373,6 +375,68 @@ EaElements.StatusBar {
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
+        }
+    }
+
+    AppDialog {
+        id: projectFolder
+        objectName: "statusBar.project.folder"
+        property var presentation: null
+        readonly property var original: presentation ? presentation.owner : null
+        readonly property string originalPath: presentation ? presentation.path : ""
+        function owns(request) {
+            return Qt.isQtObject(projectFolder) && request!==null && presentation===request
+                && Qt.isQtObject(request.owner) && request.owner===Session.project && request.owner.path===request.path
+                && presentation===request;
+        }
+        readonly property bool current: owns(presentation)
+        function openCurrent() {
+            const dialog=projectFolder;
+            const owner=Session.project;
+            if(!Qt.isQtObject(owner))return;
+            const request={owner:owner,path:owner.path};
+            dialog.presentation=request; // One complete immutable record before notifying observers.
+            if(Qt.isQtObject(dialog) && dialog.owns(request))dialog.open();
+        }
+        title: qsTr("Project folder")
+        standardButtons: Dialog.Ok
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: folderContent.implicitHeight
+        Connections { target: Session; function onProjectChanged(){if(projectFolder.visible && !projectFolder.current)projectFolder.close();} }
+        Connections { target: projectFolder.original; function onPathChanged(){if(projectFolder.visible && !projectFolder.current)projectFolder.close();} }
+        Column {
+            id: folderContent
+            width: projectFolder.contentWidth
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.TextArea {
+                objectName: "statusBar.project.path"
+                width: parent.width
+                readOnly: true
+                selectByMouse: true
+                wrapMode: TextEdit.Wrap
+                textFormat: TextEdit.PlainText
+                text: projectFolder.current && projectFolder.originalPath.length ? projectFolder.originalPath : qsTr("This project has not been saved in a folder yet.")
+            }
+            Row {
+                spacing: EaStyle.Sizes.fontPixelSize
+                EaElements.Button {
+                    objectName: "statusBar.project.copy"
+                    text: qsTr("Copy path")
+                    enabled: projectFolder.current && projectFolder.originalPath.length>0
+                    onClicked: {const request=projectFolder.presentation;if(projectFolder.owns(request))ApplicationInfo.copyText(request.path);}
+                }
+                EaElements.Button {
+                    objectName: "statusBar.project.open"
+                    text: qsTr("Open folder")
+                    enabled: projectFolder.current && projectFolder.originalPath.length>0
+                    onClicked: {
+                        const dialog=projectFolder,request=dialog.presentation;
+                        if(!dialog.owns(request))return;
+                        const target=Session.projectFolderUrl();
+                        if(Qt.isQtObject(dialog) && dialog.owns(request))Qt.openUrlExternally(target);
+                    }
+                }
+            }
         }
     }
 

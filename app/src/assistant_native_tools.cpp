@@ -41,12 +41,14 @@ QJsonArray assistant_native_tool_specs() {
         {{"flags", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"free", Object{{"type", "boolean"}}}}, {"path", "free"})}}}}, {"flags"});
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
-    add("create_cwl_project", "Create a native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe, or populate the SAME scientifically empty current project with one Undo while preserving its identity/metadata/settings/path. Never replaces a nonempty project. Show actions uses the same ordinary typed import form and real final Apply; normal mode uses the native preparation directly. recipe project_name/description apply only when no project is open. No fit or save is implied; existing-directory saving is not this operation.",
+    add("create_cwl_project", "Create a native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe, or populate the SAME scientifically empty current project with one Undo while preserving its identity/metadata/settings/path. Never replaces a nonempty project. Show actions uses the existing Project Create, Structure Load, Experiment Create/type/data/instrument/profile/background and Analysis controls with factual per-step partial outcomes and ordinary Undo behavior. No duplicate import form or atomic GUI batch is used. Normal mode uses the native preparation directly. recipe project_name/description apply only when no project is open. No fit or save is implied; existing-directory saving is not this operation.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
-    add("save_project", "Save the settled current single/joint native project, verify reopen and keep the same active owner. The default is a fresh named child under the genuine chosen folder. Explicit destination=current saves only its genuine already-owned directory, without a name or path. Show actions uses the genuine Save button and fresh-name Save As form; normal mode uses the same bounded writer directly. No unrelated overwrite, scan or external report assets.",
+    add("acquire_inputs", "Capture immutable local input files only from an opaque scope_id in the current genuine user input_scopes. No path, URL, glob or command argument is accepted. Returns file IDs, source ordinal, reader hints and counts; it does not claim scientific import. Use returned IDs with create_cwl_project and inspect the actual native project afterward. Already captured sources are not reread. Stale, changed, protected or oversized sources refuse without replacing the prior selection.",
+        {{"scope_id",text}},{"scope_id"});
+    add("save_project", "Save the settled current single/joint native project, verify reopen and keep the same active owner. The default uses a fresh name and the original human Save As destination choice for this one operation. Explicit destination=current saves only its genuine already-owned directory, without a name or path. Show actions uses the genuine Save button and fresh-name Save As form; normal mode uses the same bounded writer directly. No unrelated overwrite, scan or external report assets.",
         {{"destination", Object{{"type","string"},{"enum",Array{"fresh","current"}},{"description","Omit for the existing fresh-name Save As contract. current requires a genuine current Session-owned directory and forbids name/path."}}},
          {"name", Object{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(edi::assistant::SelectedFileLimits::name_bytes)},
-            {"description","Fresh single child directory name under the genuine chosen folder; spaces and Unicode are supported within the shared 512 UTF-8-byte Save As limit. No separators, dot components, NUL, trailing dot/space or existing destination. A chat path never grants access. Required only for fresh destination; omit for current."}}}}, {});
+            {"description","Suggested fresh project directory basename for the one-operation original Save As chooser; spaces and Unicode are supported within the shared 512 UTF-8-byte Save As limit. No separators, dot components, NUL, trailing dot/space or existing destination. A chat path never grants access. Required only for fresh destination; omit for current."}}}}, {});
     add("add_relations", "Append explicit affine alias/constraint declarations to the displayed project. Normal mode validates one atomic batch with one Undo; Show actions uses the existing Aliases/Constraints append, ID, parameter, expression and enable controls, each with its ordinary Undo. Visible interruption may leave actual partial edits, reported with complete/atomic/steps_completed facts. Existing relations/composition are preserved; this is not a trial or fit.",
         {{"aliases", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"path", text}}, {"id", "path"})}}},
@@ -61,7 +63,7 @@ QJsonArray assistant_native_tool_specs() {
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
-    return name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
+    return name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project" || name == "edit_background";
 }
 QString assistant_native_purpose(const Object& args) {
@@ -76,7 +78,8 @@ QString assistant_native_purpose(const Object& args) {
 }
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
-    if (name == "edit_background") {
+    if(name=="acquire_inputs") shape(args,{"purpose","scope_id"});
+    else if (name == "edit_background") {
         if (args.value("operation") == "remove") shape(args,{"purpose","experiment","operation","id"});
         else shape(args,{"purpose","experiment","operation","id","position","intensity","free"});
     } else if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});

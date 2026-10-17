@@ -173,9 +173,7 @@ AppDialog {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     textFormat: Text.PlainText
-                    text: dialog.assistant.workingFolder.length
-                        ? qsTr("The current runtime may read staged project and selected file data, including measurements, and other files permitted by its tools. It can write to Edi's staging workspace and the chosen working folder: %1. Network access for those workspace operations is disabled; broader authority requests are declined. This is not an Edi-only tool boundary or a private read jail.").arg(dialog.assistant.workingFolder)
-                        : qsTr("The current runtime may read staged project and selected file data, including measurements, and other files permitted by its tools. It can write to Edi's staging workspace. Network access for those workspace operations is disabled; broader authority requests are declined. This is not an Edi-only tool boundary or a private read jail.")
+                    text: qsTr("Edi reads inputs and saves projects through its own operations. Before inference, Edi verifies a read-only runtime thread with no Edi-granted writable folder. It can still have general file-read and tool access, including measurements. This is not an Edi-only tool boundary or raw-data isolation.")
                 }
                 EaElements.Label {
                     width: parent.width

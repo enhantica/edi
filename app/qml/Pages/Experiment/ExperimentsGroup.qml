@@ -393,16 +393,87 @@ EaElements.GroupBox {
     }
 
     // Original ordinary pickers; a chosen file never retargets a later owner.
+    // Only an original visible request configures this SAME ordinary picker.
+    // A retired request never restores over a newer human/dialog intent.
+    property var assistantPicker: null
+    readonly property string assistantPickerId: assistantPicker !== null ? assistantPicker.id : ""
+    function prepareAssistantPicker(id, experiment) {
+        const life = pickerLife;
+        const originalProject = project;
+        if (!restoreRetiredAssistantPicker() || !life.alive || project !== originalProject || Session.project !== originalProject) return false;
+        if (id.length === 0 || WebFiles.available || project === null || experiment === null || Session.project !== project ||
+            assistantPicker !== null || dataDialog.intent !== null || dataDialog.visible || webIntent !== null) return false;
+        const original = { id: id, project: project, experiment: experiment, options: dataDialog.options, popupType: dataDialog.popupType,
+            ownedOptions: dataDialog.options | FileDialog.DontUseNativeDialog, retired: false, cancelled: false };
+        assistantPicker = original;
+        if (!life.alive || assistantPicker !== original) return false;
+        dataDialog.popupType = Popup.Item;
+        if (!life.alive || assistantPicker !== original) return false;
+        dataDialog.options = original.ownedOptions;
+        if (!life.alive || assistantPicker !== original) return false;
+        if (project !== original.project || Session.project !== original.project) {
+            original.retired = true;
+            Qt.callLater(() => { if (life.alive) group.restoreAssistantPicker(original); });
+            return false;
+        }
+        return true;
+    }
+    function restoreAssistantPicker(original) {
+        if (original === null || original.restoring || assistantPicker !== original || dataDialog.visible || dataDialog.intent !== null
+            || (dataDialog.cleanupOwner !== null && dataDialog.cleanupOwner !== original)) return;
+        const life = pickerLife;
+        original.restoring = true;
+        try {
+            if (dataDialog.popupType === Popup.Item) dataDialog.popupType = original.popupType;
+            if (!life.alive || assistantPicker !== original || dataDialog.visible || dataDialog.intent !== null) return;
+            if (dataDialog.options === original.ownedOptions) dataDialog.options = original.options;
+            if (!life.alive || assistantPicker !== original || dataDialog.visible || dataDialog.intent !== null) return;
+            if (dataDialog.cleanupOwner === original) dataDialog.cleanupOwner = null;
+            if (!life.alive || assistantPicker !== original || dataDialog.visible || dataDialog.intent !== null
+                || dataDialog.cleanupOwner !== null) return;
+            assistantPicker = null; // Terminal: a newer configuration may now be admitted.
+        } finally { original.restoring = false; }
+    }
+    function restoreRetiredAssistantPicker() {
+        const life = pickerLife;
+        const original = assistantPicker;
+        if (original === null || !original.retired) return true;
+        restoreAssistantPicker(original);
+        return life.alive && assistantPicker === null;
+    }
+    function retireAssistantPicker(id, manual) {
+        const original = assistantPicker;
+        if (original === null || original.id !== id) return;
+        const life = pickerLife;
+        original.retired = true;
+        original.cancelled = true;
+        const pending = dataDialog.intent;
+        const controls = pending !== null && pending.assistant === original;
+        if (controls) {
+            if (manual) pending.assistant = null;
+            // close() need not emit rejected. Consume only A's still-owned
+            // unopened/cancelled intent; an open manual picker keeps its target.
+            if (!manual || !dataDialog.visible) dataDialog.intent = null;
+        }
+        if (!life.alive) return;
+        Qt.callLater(() => { if (life.alive) group.restoreAssistantPicker(original); });
+        // A later retirement cannot close a picker already handed to a human.
+        if (!manual && controls && assistantPicker === original && dataDialog.intent === null &&
+            (dataDialog.cleanupOwner === null || dataDialog.cleanupOwner === original)) dataDialog.close();
+    }
     property var pickerLife: ({ alive: true })
     Component.onDestruction: pickerLife.alive = false
     readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv"
     property int webRequest: 0
     property var webIntent: null
     function chooseFiles(experiment) {
-        if (project === null || Session.project !== project || webIntent !== null ||
-            loadDialog.intent !== null || dataDialog.intent !== null || loadDialog.visible || dataDialog.visible) return false;
         const life = pickerLife;
-        const original = { project: project, experiment: experiment };
+        const originalProject = project;
+        if (!restoreRetiredAssistantPicker() || !life.alive || project !== originalProject || Session.project !== originalProject) return false;
+        if (project === null || Session.project !== project || webIntent !== null ||
+            loadDialog.intent !== null || dataDialog.intent !== null || loadDialog.visible || dataDialog.visible ||
+            (assistantPicker !== null && (assistantPicker.retired || experiment !== assistantPicker.experiment))) return false;
+        const original = { project: project, experiment: experiment, assistant: assistantPicker, configuration: assistantPicker };
         if (WebFiles.available) {
             webIntent = original;
             if (!life.alive || webIntent !== original) return false;
@@ -414,6 +485,8 @@ EaElements.GroupBox {
         } else {
             const dialog = experiment !== null ? dataDialog : loadDialog;
             dialog.intent = original;
+            if (!life.alive || dialog.intent !== original) return false;
+            if (dialog === dataDialog) dialog.cleanupOwner = original.configuration;
             if (!life.alive || dialog.intent !== original) return false;
             if (project !== original.project || Session.project !== original.project) { dialog.intent = null; return false; }
             dialog.open();
@@ -465,6 +538,14 @@ EaElements.GroupBox {
         id: dataDialog
         objectName: "experiments.dataDialog"
         property var intent: null
+        property var cleanupOwner: null
+        onVisibleChanged: {
+            const original = cleanupOwner;
+            const life = group.pickerLife;
+            if (!visible && original !== null)
+                Qt.callLater(() => { if (life.alive) group.restoreAssistantPicker(original); });
+        }
+        readonly property string assistantIntentId: intent !== null && intent.assistant !== null ? intent.assistant.id : ""
         readonly property var experiment: intent !== null ? intent.experiment : null
         readonly property var project: intent !== null ? intent.project : null
         title: qsTr("Load measured data from a plain two- or three-column file")
@@ -473,10 +554,27 @@ EaElements.GroupBox {
             const life = group.pickerLife;
             const original = intent;
             const file = selectedFile;
+            const picker = original !== null ? original.assistant : null;
+            const configuration = original !== null ? original.configuration : null;
+            if (configuration !== null) {
+                configuration.retired = true;
+                Qt.callLater(() => { if (life.alive) group.restoreAssistantPicker(configuration); });
+            }
             intent = null;
-            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project)
+            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project &&
+                (picker === null || (!picker.cancelled && group.assistantPicker === picker)))
                 original.project.loadDataInto(original.experiment, file);
         }
-        onRejected: intent = null
+        onRejected: {
+            const life = group.pickerLife;
+            const original = intent;
+            const picker = original !== null ? original.assistant : null;
+            const configuration = original !== null ? original.configuration : null;
+            if (configuration !== null) {
+                configuration.retired = true;
+                Qt.callLater(() => { if (life.alive) group.restoreAssistantPicker(configuration); });
+            }
+            intent = null;
+        }
     }
 }

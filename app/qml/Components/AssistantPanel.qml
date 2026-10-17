@@ -12,7 +12,6 @@ import edi.app
 Popup {
     id: panel
     objectName: "assistant.popup"
-    signal chooseWorkingFolderRequested()
     required property AssistantViewModel assistant
     // One bounded JSON-domain presentation copy handles Qt QVariant lists.
     readonly property var usageData: {
@@ -68,13 +67,6 @@ Popup {
         return qsTr("Resets in %1 min").arg(minutes);
     }
     readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
-    function workingFolderCaption(path) {
-        if (path.length === 0) return qsTr("Temporary workspace");
-        const normalized = path.replace(/\\/g, "/");
-        const trimmed = normalized.replace(/\/+$/, "");
-        if (trimmed.length === 0) return path; // A filesystem root remains visible.
-        return trimmed.substring(trimmed.lastIndexOf("/") + 1);
-    }
     property var consentSend: null
     function retireConsentSend() { consentSend = null; }
     function ownsConsentSend(intent) {
@@ -340,39 +332,6 @@ Popup {
                 anchors.bottom: parent.bottom
                 anchors.margins: AppSizes.unit
                 spacing: AppSizes.unit * 0.855
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: AppSizes.unit * 0.25
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: AppSizes.unit * 0.25
-                        EaElements.Button {
-                            id: chooseWorkingFolderButton
-                            objectName: "assistant.chooseWorkingFolder"
-                            KeyNavigation.priority: KeyNavigation.BeforeItem
-                            KeyNavigation.backtab: usageButton
-                            KeyNavigation.tab: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled
-                                ? temporaryWorkingFolderButton : composer.actionsControl.enabled ? composer.actionsControl : composer.firstFocusItem
-                            text: qsTr("Choose working folder")
-                            enabled: !panel.assistant.canCancel
-                            Accessible.name: text
-                            onClicked: panel.chooseWorkingFolderRequested()
-                        }
-                        EaElements.Button {
-                            id: temporaryWorkingFolderButton
-                            objectName: "assistant.temporaryWorkingFolder"
-                            KeyNavigation.priority: KeyNavigation.BeforeItem
-                            KeyNavigation.backtab: chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled
-                                ? chooseWorkingFolderButton : usageButton
-                            KeyNavigation.tab: composer.actionsControl.enabled ? composer.actionsControl : composer.firstFocusItem
-                            text: qsTr("Use temporary folder")
-                            visible: panel.assistant.workingFolder.length > 0
-                            enabled: !panel.assistant.canCancel
-                            Accessible.name: text
-                            onClicked: panel.assistant.useTemporaryWorkingFolder()
-                        }
-                    }
-                }
                 ListView {
                     id: conversation
                     objectName: "assistant.messages"
@@ -538,34 +497,13 @@ Popup {
                     implicitHeight: EaStyle.Sizes.borderThickness
                     color: EaStyle.Colors.appBorder
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: AppSizes.unit * 0.5
-
-                    EaElements.Label {
-                        objectName: "assistant.workingFolder.caption"
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        Layout.preferredWidth: 0
-                        text: panel.workingFolderCaption(panel.assistant.workingFolder)
-                        textFormat: Text.PlainText
-                        elide: Text.ElideMiddle
-                        horizontalAlignment: Text.AlignRight
-                        color: EaStyle.Colors.themeForegroundMinor
-                        ToolTip.text: panel.assistant.workingFolder.length ? panel.assistant.workingFolder : qsTr("App-owned temporary workspace")
-                        ToolTip.visible: folderHover.hovered
-                        Accessible.name: qsTr("Working folder: %1").arg(ToolTip.text)
-                        HoverHandler { id: folderHover }
-                    }
-                }
                 AssistantComposer {
                     id: composer
                     Layout.fillWidth: true
                     assistant: panel.assistant
                     toggleControl: panel.toggleControl
                     popupBoundary: panel.contentItem
-                    previousFocusItem: composer.actionsControl.enabled ? composer.actionsControl : temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
-                        : chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton : usageButton
+                    previousFocusItem: composer.actionsControl.enabled ? composer.actionsControl : usageButton
                     hasPreviousUserMessage: conversation.previousUserIndex >= 0
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)

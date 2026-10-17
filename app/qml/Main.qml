@@ -420,31 +420,6 @@ EaComponents.ApplicationWindow {
         onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()
         onClosed: window.restoreAssistantFocus()
-        onChooseWorkingFolderRequested: {
-            if (assistantWorkingFolder.visible) return;
-            const token = Session.assistant.beginWorkingFolderSelection();
-            if (!token.length) return;
-            assistantWorkingFolder.intent = token;
-            assistantWorkingFolder.open();
-        }
-    }
-    Connections {
-        target: Session.assistant
-        function onWorkingFolderSelectionRetired(token) {
-            if (assistantWorkingFolder.intent !== token) return;
-            assistantWorkingFolder.intent = "";
-            assistantWorkingFolder.reject();
-        }
-    }
-    FolderDialog {
-        id: assistantWorkingFolder
-        property string intent: ""
-        title: qsTr("Choose the assistant working folder")
-        onRejected: { Session.assistant.cancelWorkingFolderSelection(intent); intent = ""; }
-        onAccepted: {
-            const token = intent; intent = "";
-            Session.assistant.completeWorkingFolderSelection(token, selectedFolder);
-        }
     }
 
     Repeater {
@@ -514,7 +489,7 @@ EaComponents.ApplicationWindow {
             }
             saveFolder.intent = intent;
             if (!originalIntent(intent)) { Session.cancelSaveAs(intent); return; }
-            saveFolder.fresh = Session.needsFreshSaveAs;
+            saveFolder.fresh = Session.assistantSaveAs || Session.needsFreshSaveAs;
             if (!originalIntent(intent)) { Session.cancelSaveAs(intent); return; }
             saveFolder.open();
             return;
@@ -540,6 +515,29 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    Connections {
+        target: Session
+        function onAssistantSaveChanged() {
+            const picker=saveFolder, form=freshProjectFolder;
+            const old=picker.intent;
+            if(old.length && !Session.saveAsCurrent(old)) {
+                if(!Qt.isQtObject(picker) || picker.intent!==old)return;
+                picker.intent="";
+                if(Qt.isQtObject(picker) && !picker.intent.length)picker.reject();
+            }
+            if(!Qt.isQtObject(form) || !Qt.isQtObject(window))return;
+            const shown=form.intent;
+            if(shown.length && !Session.saveAsCurrent(shown))form.retireAssistantSave(shown,false);
+            if(!Qt.isQtObject(window) || !Session.assistantSaveReady || !Session.assistantSaveAs || Session.assistant.showActions)return;
+            const original=Session.project;
+            const token=Session.beginSaveAs();
+            if(!token.length)return;
+            Qt.callLater(function(){
+                if(Qt.isQtObject(window) && Qt.isQtObject(original) && Session.project===original &&
+                    Session.assistantSaveReady && !Session.assistant.showActions && Session.saveAsCurrent(token))window.saveProjectAs();
+            });
+        }
+    }
     FolderDialog {
         id: saveFolder
         property string intent: ""
@@ -599,7 +597,7 @@ EaComponents.ApplicationWindow {
             if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
             destinationParent = parentFolder;
             if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
-            const suggestion = originalOwner.name;
+            const suggestion = Session.saveAsSuggestion(token);
             if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
             freshFolderName.assistantEditing = false;
             if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }

@@ -4,6 +4,7 @@
 
 #include <QObject>
 #include <QJsonArray>
+#include <QVariantMap>
 #include "edi/calculation.hpp"
 #include <optional>
 #include <QString>
@@ -121,6 +122,8 @@ class Session : public QObject {
     bool assistantSaveReady() const;
     bool assistantSaveAs() const;
     Q_INVOKABLE QUrl saveAsParent(const QString& intent) const;
+    Q_INVOKABLE QString saveAsSuggestion(const QString& intent) const;
+    Q_INVOKABLE QUrl projectFolderUrl() const;
     Q_INVOKABLE QString beginSaveAs();
     Q_INVOKABLE bool saveAsCurrent(const QString& intent) const;
     Q_INVOKABLE bool completeSaveAs(const QString& intent, const QUrl& parent, const QString& leaf);
@@ -138,7 +141,12 @@ class Session : public QObject {
     // the new project's `_report.html_offline` (ADR-0036 §7); no other project takes the preference.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_19"), const QString& title = QString(),
-                                   const QString& authors = QString(), bool reportLibraries = false);
+                                   const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString());
+    // Same creator, with an original owner/error result for the ordinary dialog.
+    Q_INVOKABLE QVariantMap createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
+                                   const QString& suRule, const QString& title, const QString& authors,
+                                   bool reportLibraries, const QString& assistantIntent);
+    Q_INVOKABLE bool creationOutcomeCurrent(const QVariantMap& outcome) const;
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();
@@ -167,6 +175,10 @@ class Session : public QObject {
     void loadFailed(const QString& message);
 
    private:
+    struct ProjectCreationOutcome;
+    bool createProjectImpl(const QString& name, const QString& description, const QString& location,
+                           const QString& suRule, const QString& title, const QString& authors,
+                           bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome);
     bool openProjectAt(const QUrl& directory);
     bool openExampleNamed(const QString& exampleId);
     bool open(const QString& directory, const QString& example);
@@ -175,7 +187,7 @@ class Session : public QObject {
     bool openCopy(const QString& source, const QString& target, const QString& example);
     bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example,
                         bool managedResult = false, std::shared_ptr<ImmutableAssistantResult> result = {},
-                        std::optional<edi::WorkStamps> resultStamps = {}, bool nativePrepared = false, bool* nativeCommitted = nullptr);
+                        std::optional<edi::WorkStamps> resultStamps = {}, bool nativePrepared = false, bool* nativeCommitted = nullptr, quint64* committedReplacement = nullptr);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool emptyAssistantOwner(quint64 epoch) const noexcept;
@@ -190,10 +202,11 @@ class Session : public QObject {
     bool presentAssistantCurrentSave(ProjectViewModel* original, quint64 epoch);
     QString armAssistantSave(const QString& id, ProjectViewModel* original, quint64 epoch, bool fresh,
         const QUrl& parent, const QString& leaf, std::function<bool()> current,
-        std::function<bool()> start, std::function<void()> cancelled);
+        std::function<bool(const QUrl&, const QString&)> start, std::function<void()> cancelled);
     struct SaveIntent;
     static quint64 assistantSaveIntentBytes() noexcept;
-    bool consumeAssistantSave(std::unique_ptr<SaveIntent> intent, bool selectionMatches) noexcept;
+    bool consumeAssistantSave(std::unique_ptr<SaveIntent> intent, bool selectionMatches,
+        const QUrl& parent = {}, const QString& leaf = {}) noexcept;
     bool saveIntentCurrent(const SaveIntent& intent) const;
     std::unique_ptr<SaveIntent> save_intent_;
     std::shared_ptr<ImmutableAssistantResult> assistant_result_;

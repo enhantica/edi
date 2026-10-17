@@ -30,7 +30,6 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
-    Q_PROPERTY(QVariantMap nativeImport READ nativeImport NOTIFY nativeImportChanged)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(QString connectionLabel READ connectionLabel NOTIFY connectionLabelChanged)
@@ -49,7 +48,6 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
     Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
-    Q_PROPERTY(QString workingFolder READ workingFolder NOTIFY workingFolderChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
 
@@ -83,11 +81,6 @@ class AssistantViewModel : public QObject {
     QVariantMap usage() const;
     QVariantMap account() const;
     Q_INVOKABLE void refreshUsage();
-    QString workingFolder() const;
-    Q_INVOKABLE QString beginWorkingFolderSelection();
-    Q_INVOKABLE bool completeWorkingFolderSelection(const QString& intent, const QUrl& directory);
-    Q_INVOKABLE void cancelWorkingFolderSelection(const QString& intent);
-    Q_INVOKABLE bool useTemporaryWorkingFolder();
     QString contextPreview() const;
     bool contextConsentRequired() const;
     void setSelectedModel(const QString& model);
@@ -110,12 +103,6 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void signIn();
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void clearHistory();
-    QVariantMap nativeImport() const;
-    Q_INVOKABLE QStringList nativeImportProfiles() const;
-    Q_INVOKABLE QString beginNativeImport(QObject* form = nullptr);
-    Q_INVOKABLE bool applyNativeImport(const QString& intent, const QString& cifId, const QString& dataId, const QString& recipeJson);
-    Q_INVOKABLE void cancelNativeImport(const QString& intent);
-    Q_INVOKABLE QString completeNativeImportFiles(const QString& requestId, const QList<QUrl>& urls);
     Q_INVOKABLE QString beginFileSelection(bool requireSignedIn = false);
     Q_INVOKABLE bool addSelectedFiles(const QString& requestId, const QList<QUrl>& urls);
     Q_INVOKABLE void cancelFileSelection(const QString& requestId);
@@ -123,7 +110,6 @@ class AssistantViewModel : public QObject {
 
    signals:
     void accountChanged();
-    void nativeImportChanged();
     void showActionsChanged();
     void showingActionsChanged();
     void actionWindowChanged();
@@ -150,8 +136,6 @@ class AssistantViewModel : public QObject {
     void lastErrorChanged();
     void usageChanged();
     void contextPreviewChanged();
-    void workingFolderChanged();
-    void workingFolderSelectionRetired(const QString& intent);
 
    protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -162,6 +146,10 @@ class AssistantViewModel : public QObject {
     AttachmentClear drainAttachmentClear() noexcept;
     bool clearHistoryNow(bool* committed = nullptr);
     bool commitNativeProject(ProjectViewModel* project) noexcept;
+    // Existing ordinary Create dialog only; its captured original intent cannot
+    // become an unauthenticated fallback after Stop/replacement.
+    bool prepareOrdinaryProjectCreation(ProjectViewModel*, const QString& intent);
+    void finishOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, bool committed) noexcept;
     bool resultSettledReady() const;
     struct State;
     std::unique_ptr<State> state_;

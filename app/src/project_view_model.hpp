@@ -30,6 +30,7 @@
 #include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
 #include "edi/model.hpp"
+#include "edi/assistant_files.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
 #include "correlation_view_model.hpp"
@@ -467,6 +468,29 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         bool consumed = false;
         EditOutcome outcome;
     };
+    struct WidgetCreationInput {
+        CreationAction expected;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetCreationInput> widget_creation_input_;
+    std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
+    void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
+    QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
+    struct WidgetFileInput {
+        enum class Kind { Structure, Measurement };
+        Kind kind = Kind::Structure;
+        const edi::ExperimentBase* experiment = nullptr;
+        std::size_t points = 0, skipped = 0, nonpositive = 0, duplicates = 0, reordered = 0, derived = 0;
+        QUrl path;
+        std::shared_ptr<const edi::assistant::SelectedFile> source;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetFileInput> widget_file_input_;
+    std::shared_ptr<WidgetFileInput> prepareWidgetStructureFile(const QUrl&, std::shared_ptr<const edi::assistant::SelectedFile>);
+    std::shared_ptr<WidgetFileInput> prepareWidgetMeasurementFile(const QUrl&, std::shared_ptr<const edi::assistant::SelectedFile>, ExperimentViewModel*);
+    void finishWidgetFile(const std::shared_ptr<WidgetFileInput>&) noexcept;
     struct WidgetBackgroundInput {
         const edi::ExperimentBase* experiment = nullptr;
         edi::BackgroundPointInput expected;

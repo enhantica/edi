@@ -1075,3 +1075,243 @@ frame processing. During reentrant delivery all still-live local and task roles
 remain charged. Retired processes and changed accounts or States are never revived or
 lowered by old cleanup. Mandatory refresh, source permission, committed/reopened/
 active latches, uncertainty, Stop and exactly-once response behavior are unchanged.
+
+## Original human creation controls
+
+Creation in Show actions uses the existing Project Create dialog, Structure Load,
+Experiment Create and type/data/profile/instrument/phase/background/exclusion
+controls, followed by Analysis Main. This replaces the parallel native import
+form, its Project button and public form API; earlier form/row-model descriptions
+above are superseded. Normal mode retains the same bounded native preparation,
+reader, same-owner empty-project completion and atomic scientific Undo.
+
+A visible operation parses its finite explicit recipe and verifies both admitted
+readable file IDs before input. It owns its finite control plan and captured
+source buffers before growth within the existing combined retention policy.
+There is no unused preview project: the original structure and measurement
+loaders supply validation and actual reader statistics when their real controls
+accept. The first original experiment is created and its type is chosen before
+data loading; the same validated model editors receive all subsequent values.
+Existing scientific defaults are not described as supplied observations. A later
+refusal leaves only genuine completed controls, with ordinary per-control Undo.
+`complete`, `atomic:false`, `steps_completed`, actual reader counts and the current
+adoption/calculation/presentation facts report that sequence; creation never
+implies a fit or a save. Parameter/free multi-input parity and scoped folder
+acquisition are separate unfinished capabilities.
+
+The original FileDialog instance uses its standard toolkit fallback only for its
+exact owned visible operation. The genuine current picker receives Ctrl+L and
+literal protected capture-path input through its own breadcrumb and Return.
+Neither selectedFile assignment nor emitted accepted substitutes for that input.
+The original picker owner/experiment/token and immutable admitted source bytes
+remain authoritative. Its configuration is restored only while the original
+operation still owns it; a newer manual picker is preserved. This does not claim
+native macOS-panel automation or grant a pathname mentioned in chat.
+
+With no project, the original Create dialog's actual name/description and empty
+location create the ordinary unsaved owner. Its existing Session pointer commit
+prepares and installs the same controller/selected-input attachment without
+retiring the original native RPC. The original name field follows the core's
+no-path-separator rule, allowing ordinary Unicode names rather than imposing an
+assistant-only ASCII subset. An existing scientifically empty saved owner skips
+Create and keeps identity, metadata, settings and path. No nonempty project is
+replaced. Stop, manual input, account/owner replacement and late callbacks keep
+the original once receipt and factual edits. Cleanup uses exact original form,
+helper, prearm and picker identities before each notifying continuation; it never
+closes a newer picker or routes an old key release to a newly focused field.
+The original asynchronous calculation signal resumes the next original step;
+there is no pseudo-idle property or independent polling lifecycle.
+
+
+The original creation control metadata is a finite `CreationAction` equivalent
+to the existing relation-control metadata: experiment Add/type/name, profile
+choice and exclusion Add/bounds. It is app-private and not a provider-selected
+QObject/property executor. The original model control must consume the exact
+prearm before its own closed edit. File prearms similarly bind the original
+owner/member and admitted capture. Original structure/data and experiment-Add
+Undo storage is prepared before the live edit; later presentation does not
+invent a failed write. Post-publication model callers first check their original
+weak receiver. Shared category selectors retain their original activation,
+options and owner across selected callbacks, rather than reading a replacement
+project's error or rebinding a newer choice.
+
+Actual source capture, the finite plan's container/spellings, one helper/editor
+and restoration role, bounded diagnostic/result fields, file/control receipts,
+background preparation and simultaneous original CIF text are charged beside
+the existing native record/post-context roles. Counts come from the original
+reader receipt even when delivery/presentation becomes uncertain. Source-file
+and model construction retain their existing reader/editor policies; the live
+ordinary project and its Undo are not charged again as a duplicate preview.
+No allowance, file limit, operation deadline or scientific value is raised.
+
+## Original creation continuation and failure ownership
+
+The original Structure and measurement FileDialogs keep configuration cleanup
+ownership separately from assistant mutation authority. Manual takeover detaches
+that authority while preserving the actual open picker and event. Exact original
+configuration cleanup survives through ordinary accept/reject/visible teardown;
+it cannot restore over a new intent. Retired unopened configuration is restored
+synchronously before the next ordinary Load/assistant preparation, so deferred
+cleanup alone cannot strand the original human door. Options and popup preference
+are restored only while the same original configuration still owns them.
+
+Shared group/outer viewport reveal discards only the create_expose helper. A live
+background or parameter child resumes its same original member, step and applied
+latch after the real reveal. Inner-row scrolling already follows that rule.
+Revealing an already applied Add cannot create another child/Add or lose factual
+per-control counts. Original controls and ordinary Undo remain the science path.
+
+The existing Session creator has one shared implementation. Its ordinary dialog
+uses createProjectWithOutcome to receive a caller-local success/current/error
+snapshot, with the actual committed owner/replacement identity. replaceProject
+writes that identity beside its real pointer commit before callbacks; no guessed
+notification count is used. creationOutcomeCurrent rechecks it after notifying
+error presentation. The same saved-location failure still leaves its actual new
+project open unsaved and opens create.error, using the original error string.
+An original dialog-operation object and owner/replacement checks prevent an old
+return from presenting for a later Create or replacement, even with identical
+input. The old bool createProject API calls that same implementation. Assistant
+creation retains empty location/no-save and its existing original receipt.
+
+Both noexcept child completion/refusal entrances contain the entire fallible
+result transfer. Nonallocating scalar capture bonds actual applied counts once
+before JSON retention; the original may-have-written latch is preserved. Creation
+preowns the ordinary native uncertainty outcome/response/row before input and
+counts these roles in native retention. If factual replacement construction fails,
+those exact original prepared objects are swapped into the existing native_finish
+path without allocating a new fallback or claiming zero writes. Delivered/discarded
+facts are not overwritten. The original task/receipt/once and new-owner guards
+still govern all later cleanup; no second result executor, rollback or hidden
+backend edit is introduced. Actual event, allocation-fault and platform-picker
+execution remains a separate qualification requirement.
+
+## Edi-owned input and persistence; no assistant working-folder grant
+
+This supersedes the earlier workspace-write/chosen-root and provider-result
+handoff paths. There is no user-facing assistant working-folder choice, retained
+root configuration, writable-root request, raw project/attachment staging or
+model-authored saved-result receipt. The original application remains the only
+scientific editor and project writer. Internal bundled instruction staging and
+immutable selected-input caches are app-owned storage, not model write roots.
+
+The existing CodexAgent process starts with the pinned read-only sandbox and
+never approval policy. The thread/start effective response must confirm the
+actual model, effort, provider, cwd, ephemeral thread and exact readOnly policy
+with networkAccess false, never approval and user reviewer before inference.
+Model/effort changes use the pinned thread/settings/update operation; its empty
+acknowledgment is not proof. Only the actual matching settings notification can
+restore readiness. Every turn carries that same read-only/never policy. Mismatch
+fails closed through the original process/account lifecycle. The stock runtime
+still exposes general reads and tools; this does not establish a strict Edi-only
+tool ceiling, complete raw-data redaction or every inherited extension's write
+behavior. Disclosure retains that limitation. No supported-but-unverified wire
+field or prompt is treated as enforcement.
+
+The prior selected-file cache and native readers remain authoritative. The
+current genuine user's attachments and complete literal source lines can create
+opaque scope IDs before the actual message admission. Only that message's
+accepted receipt owns them. No scope is minted from model arguments, history,
+assistant/tool text, paths embedded in prose, examples/exclusions/output blocks,
+quoted blocks or code fences. A source line is an absolute local path, home path
+or local file URL, optionally introduced by Input:, Source:, use, read, load,
+import or from. Spaces need one complete matching quoted literal; traversal,
+control characters, shell/glob syntax, ambiguous delimiters, remote/query URLs
+and relative paths do not grant scope. Expansion/URL decoding recheck that same
+local path boundary. Native path limits and the existing message/metadata budget
+apply, rather than imposing the tool-ID bound on a pathname.
+
+The registered acquire_inputs operation accepts only scope_id and purpose. It
+captures immediate relevant regular files through pinned local handles, refuses
+linked children, duplicate physical files, protected storage, changed identity,
+invalid Unicode and existing count/payload/metadata limits. It does not follow
+subdirectories. Original aliases can identify the pinned selected object; a
+retarget cannot. The result has actual immutable collection IDs, occurrence
+ordinals, reader hints and factual counts, not raw lines, paths, secret hashes or
+an import success claim. Successful repetition returns its already admitted IDs.
+Failed preparation admits none and keeps the previous selection. Collection
+adoption is one existing Controller update. Its actual returned collection and
+IDs, not guessed epoch deltas, advance only the original RPC's selected/disclosure
+receipt. Factual admission is recorded before model signals, and an old
+continuation cannot clear or overwrite a new owner's receipt. This avoids
+self-retirement while the current Edi operation still owes its response.
+
+Input representations are admitted before growth beside current transport and
+native owners: exact literal/expanded spelling, canonicalization scratch, source
+shell/vector storage, collection replacement maps, names/IDs/hashes, read buffer
+and actual result wrappers. Completed source metadata stays charged while the
+next source and eventual input receipt are constructed. Cache-stage roles remain
+owned through the caller and release only after their old/replacement maps and
+cleanup list die. Payload limits are the existing selected-file policy; there is
+no cap increase, transport headroom constant or whole-model second charge.
+
+Current save_project uses only the actual Session-owned saved directory with
+its original source identity and bounded carried-record writer/reopen/adoption.
+Fresh saving uses the original Save As chooser and name form for one operation.
+No pending Worker or retained Job/task cycle exists before that genuine choice.
+Session consumes its original intent before its start callback and calls the
+original cancellation closure on retirement even if its token has already gone.
+All normal/visible/Stop/replacement/scientific-change/error paths settle only the
+old unsubmitted task; an admitted ticket retains its actual Worker and final
+once-owned outcome. The picker-selected alias and physical destination remain
+pinned for publication. Fresh output is no-replace and cannot nest inside the
+captured source; current replacement retains the old recovery tree. Real
+committed, reopened, active and presentation-complete facts remain separate.
+
+Show actions uses the original Project/Structure/Experiment/Analysis groups and
+the same real Save/Save As controls. A visible Save waits for the original parent
+chooser, then enters the requested fresh name through the ordinary form. No
+synthetic accepted signal or native callback is a substitute for visible input.
+Ordinary manual draft/takeover semantics remain authoritative. The obsolete
+import wizard is removed only with the connected original creation sequencer;
+normal native creation remains the same validated reader/editor. The original
+saved empty owner retains identity, name, path and metadata. Visible steps retain
+ordinary Undo and truthful partial outcomes, not atomic batch fiction. Parameter
+and free-flag multi-input visible batches are still a separate missing route.
+
+Same-project routine edits can keep their legitimate thread. On a required
+same-owner input refresh, a literal continue can carry the bounded genuine completed user messages from the current objective in their original
+order as preceding supported user text items, followed by the exact new draft and current context. No assistant/developer/tool role or fabricated
+history field is replayed. This context-only text is never reparsed for local
+read authority, and its original account/project/generation must still match.
+Clear removes the anchor; account/owner replacement cannot inherit it. No
+persistent UUID, provider archive policy or cross-restart grant is added.
+
+Source and syntax checks establish only the connected candidate. Packaged policy
+responses, native OS/toolkit picker delivery, visible scientific controls, reentry,
+allocation/IO faults, Save recovery and scientific/Undo execution require the
+normal consumer and independent runtime qualification before release claims.
+
+### Input classification and final policy admission ownership
+
+Protected-path classification must name the object actually opened. The shared
+input predicate therefore binds the original descriptor, the physical classified
+path and the selected spelling together. Unix reuses the writer's original
+component-wise no-follow physical descent and final identity check; a mutable
+symlink parent cannot redirect that classified path. The ordinary Windows file
+reader uses the normalized name returned for its actual opened handle and its
+native file identity, rather than blessing a separate canonical-path lookup.
+GetFinalPathNameByHandleW's normalized-handle contract is documented by
+[Microsoft](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew).
+The same bond is checked before capture and immediately before collection
+adoption at both the opaque-scope and ordinary selected-file entrances. Ordinary
+selection keeps its original open handles and content/identity stamps until that
+whole collection attempt ends. A fixed selected alias remains valid; A→B→A
+classification and parent-link swaps cannot classify B while reading A. Linked
+children and protected paths remain refused. Retained proof paths/containers and
+one native classification scratch role enter the existing joint metadata budget;
+no pathname/tool-ID cap or new payload allowance is introduced.
+
+A dependent input belongs to its original selected model/effort and verified
+actual policy, not only the thread/account/project. Policy invalidation and
+readback carry an original monotonic identity; exhaustion refuses new inference
+without interrupting mandatory cleanup. Final before-write admission checks this
+identity, exact selected/effective settings, verified policy and nonconnecting
+state before and after native retention, row publication and optional-Usage
+preemption. Equal settings without a new transition remain valid. A superseded
+unwritten input releases only its original maps and pending row, retains its
+original draft/once semantics and cannot settle the newer settings deadline,
+restore old preferences or fence a newer account. Already written input keeps its
+factual accepted identity. Failed pending-row archive cleanup is a real storage
+failure, never evidence of a successful wire write or permission to discard B.
+
+The physical input leaf is opened under the original read domain, separately from result-tree naming. In particular, lawful Unix source names ending in a dot or space (including a fixed selected alias to that physical leaf) are not normalized or rejected by the writer's basename rule. The same classified descriptor, original spelling, no-follow parent walk and final object/currentness checks still govern both input entrances; result publication keeps its stricter leaf validation.

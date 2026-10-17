@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
+#include <QPointer>
 
 #include <algorithm>
 #include <filesystem>
@@ -189,8 +190,11 @@ void ExperimentViewModel::setPeakType(const QString& token) {
     if (token == peak_type_) {
         return;
     }
+    const QPointer<ExperimentViewModel> self(this);
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::peak_profile(experiment, token.toStdString()), true));
+    const auto refusal=editor_.apply_creation_control(edi::Edit::peak_profile(experiment, token.toStdString()), true,
+        {ProjectEditor::CreationAction::Kind::PeakProfile, &experiment, {}, token});
+    if (self) setLastError(refusal);
 }
 
 void ExperimentViewModel::setAbsorptionType(const QString& token) {
