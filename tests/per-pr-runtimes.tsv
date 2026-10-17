@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-14T14:23:44Z
+# measured_utc = 2026-10-14T16:15:52Z
 #
-# Recorded from: canonical completed Python nodes plus direct C++ integer census: tests-seq59-isolated.xml and tests-seq59-native.xml; expected reds remain declared unmeasured
-# Collected tests: 11937; with a reported duration: 6478
+# Recorded from: measured test run (151 node(s) measured once, 10947 banked, 17 stale row(s) dropped)
+# Collected tests: 12051; with a reported duration: 6473
 # Module-scoped fixture costs recorded: 47
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 11937
+# inventory_python = 12051
 # inventory_cpp = 333
-# inventory_measured = 10973
-# inventory_unmeasured = 1297
+# inventory_measured = 10993
+# inventory_unmeasured = 1391
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4388,18 +4388,38 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_adr_records_the_decision_and_comparison_plan
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[empty-checker]
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_app_reachability_observer_rejects_missing_group_or_checker[missing-edge]
-0.140	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
+0.120	tests/integration/py/test_e04_t1_app_contract.py::test_existing_projects_oracle_covers_the_registry_without_filters
 0.040	tests/integration/py/test_e04_t1_app_contract.py::test_frozen_oracle_inputs_are_the_committed_fixture_bytes
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[archive]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[comment]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[commit]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[duplicate]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_gui_pin_rejects_identity_digest_and_declaration_escapes[source]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
-UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
-0.090	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
+0.070	tests/integration/py/test_e04_t1_app_contract.py::test_local_and_ci_gates_reach_app_tests
+0.020	tests/integration/py/test_e04_t1_app_contract.py::test_one_shared_labelled_regression_baseline_and_pairs
+0.030	tests/integration/py/test_e04_t1_app_contract.py::test_originals_remain_byte_identical
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[alias]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[anonymous-namespace]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[duplicate]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[figures]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[foreign-namespace]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[hash]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[json]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[list]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[method]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[nested-namespace]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[nested]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[other-class]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[other-file]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[renamed]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[savedReports]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[second]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[setPoints]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[signal]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_cannot_widen[suText]
+0.000	tests/integration/py/test_e04_t1_app_contract.py::test_report_model_owner_exception_is_exactly_one_named_property
 0.010	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_qml_imports_and_base_pin
-0.020	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_view_model_api_is_typed
+0.120	tests/integration/py/test_e04_t1_app_contract.py::test_shipped_view_model_api_is_typed
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_allows_model_internal_variants
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_escape_rehearsals[Q_INVOKABLE QJsonObject snapshot() const;]
 0.000	tests/integration/py/test_e04_t1_app_contract.py::test_typed_api_escape_rehearsals[Q_PROPERTY(QVariantMap state READ state NOTIFY changed)]
@@ -5430,35 +5450,129 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.1.coef]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.2.coef]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background[0]]
-0.010	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[colourBlindSafe]
-0.010	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[default]
-0.000	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[paulTol]
-0.010	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[tableau]
-0.010	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[vivid]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[colourBlindSafe]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[default]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[paulTol]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[apple]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[carbon]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[catppuccin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[coast]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[dark2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[fogForest]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[garden]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[nord]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[observable]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[okabeIto]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[paulTolBright]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[paulTolMuted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[peaceful]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[petroff]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[sage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[solarized]
+0.000	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[tableau]
+0.000	tests/integration/py/test_palette_published_sources.py::test_adapted_palette_sets_keep_the_declared_minimum_oklab_distance[vivid]
+0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#0055A0-False]
+0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#808080-False]
+0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#EF9A9A-True]
+0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#F44336-True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[apple]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[carbon]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[catppuccin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[coast]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[dark2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[fogForest]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[garden]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[nord]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[observable]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[okabeIto]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[paulTolBright]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[paulTolMuted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[peaceful]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[petroff]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[sage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[solarized]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[tableau]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_each_palette_retains_its_cited_published_source_coordinates[vivid]
-0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[colourBlindSafe]
-0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[default]
-0.000	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[paulTol]
-0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[tableau]
-0.020	tests/integration/py/test_palette_published_sources.py::test_gradient_endpoints_trim_the_full_published_contrast_range[vivid]
-0.350	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[colourBlindSafe]
-0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[default]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[paulTol]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[tableau]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[vivid]
-0.220	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[colourBlindSafe]
-0.350	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[default]
-0.270	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTol]
-0.390	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[tableau]
-0.340	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[vivid]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_exactly_eighteen_schemes_are_published_with_coast_default
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[apple]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[carbon]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[catppuccin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[coast]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[dark2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[fogForest]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[garden]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[nord]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[observable]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[okabeIto]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[paulTolBright]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[paulTolMuted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[peaceful]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[petroff]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[sage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[solarized]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[tableau]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_fixed_and_structure_sets_are_bounded_distinct_and_indexed[vivid]
+0.460	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
+0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
+0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#4CAF50light]
+0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#FFC107light]
+0.200	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Okabe-Ito#009E73dark]
+0.130	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Tol#CCBB44light]
+0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Vivid#4DAF4Alight]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[apple]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[carbon]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[catppuccin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[coast]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[dark2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[fogForest]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[garden]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[nord]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[observable]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[okabeIto]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[paulTolBright]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[paulTolMuted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[peaceful]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[petroff]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[sage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[solarized]
+0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[tableau]
+0.000	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_keep_the_theme_calculated_colour_distance[vivid]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[apple]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[carbon]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[catppuccin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[coast]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[dark2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[fogForest]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[garden]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[nord]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[observable]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[okabeIto]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTolBright]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[paulTolMuted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[peaceful]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[petroff]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[sage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[solarized]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[tableau]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_pattern_sets_move_near_calculated_hues_to_the_end_in_both_themes[vivid]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#010100-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#808080-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_published_curve_observer_reaches_numeric_interpolation_controls[#FF0000-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[apple]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[carbon]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[catppuccin]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[coast]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[dark2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[fogForest]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[garden]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[nord]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[observable]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[okabeIto]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[paulTolBright]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[paulTolMuted]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[peaceful]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[petroff]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[sage]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[solarized]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[tableau]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_palette_published_sources.py::test_two_gradient_endpoints_rise_in_lightness_and_avoid_calculated_hues[vivid]
 0.331	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[1]
 0.387	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[2]
 0.454	tests/integration/py/test_parameter_correlations.py::test_cli_machine_report_names_external_correlation_count[3]

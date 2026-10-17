@@ -79,15 +79,15 @@ Rectangle {
             fuzzyCompare(luminance("#0a0a0a"), 0.003035269835488375, 1e-12, "Encoded sRGB 10 uses the W3C lower linear branch");
             fuzzyCompare(luminance("#0b0b0b"), 0.003346535763899161, 1e-12, "Encoded sRGB 11 uses the W3C power branch");
         }
-        function test_preferences_lists_all_five_published_schemes() {
+        function test_preferences_lists_all_eighteen_named_schemes() {
             const dialog = createTemporaryObject(preferencesFactory, parent);
-            verify(dialog !== null, "The five-scheme gate creates the actual Preferences dialog");
+            verify(dialog !== null, "The eighteen-scheme gate creates the actual Preferences dialog");
             const box = findChild(dialog, "preferences.colourScheme");
             verify(box !== null, "Appearance exposes its actual preferences.colourScheme selector");
             const actual = Array.from({
                 length: box.count
             }, (_, index) => box.textAt(index));
-            compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Preferences lists the five published schemes in the owner's order; actual=" + JSON.stringify(actual));
+            compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Preferences lists the eighteen named schemes in the owner's order; actual=" + JSON.stringify(actual));
             for (let index = 0; index < reference.schemes.length; ++index) {
                 box.currentIndex = index;
                 box.activated(index);
@@ -109,7 +109,7 @@ Rectangle {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const background = Style.Colors.chartBackground;
             const table = SettingsProof.paletteForScheme(data.scheme);
-            verify(table.pattern !== undefined && table.structure !== undefined, "Each of the five schemes has both actual colour roles before contrast evaluation: " + data.scheme);
+            verify(table.pattern !== undefined && table.structure !== undefined, "Each of the eighteen schemes has both actual colour roles before contrast evaluation: " + data.scheme);
             const failures = [], theme = data.dark ? "dark" : "light";
             function check(colour, point, pattern) {
                 const ratio = contrast(colour, background);
@@ -124,12 +124,132 @@ Rectangle {
                     check(row[theme], "stored " + role + " index=" + row.index, role !== "structure");
             // Both actual APIs, every short palette place, the transition past ten,
             // and dense gradient sampling. Endpoints alone cannot prove a gradient.
-            for (const count of [1, 2, 10, 11, 30, 31, 162, 1001])
+            for (const count of [1, 2, 7, 8, 10, 11, 30, 31, 162, 1001])
                 for (let place = 0; place < count; ++place)
                     check(ApplicationInfo.patternColour(data.scheme, place, count, data.dark), "pattern API place=" + place + " count=" + count, true);
             for (let place = 0; place < table.structure.length * 2; ++place)
                 check(ApplicationInfo.structureColour(data.scheme, place, data.dark), "structure API place=" + place);
             compare(failures.length, 0, "Every stored pattern/structure colour and actual discrete/gradient API sample has at least 3:1 contrast, and every pattern colour stays at least 0.10 Oklab from calculated against the actual theme chart background; scheme=" + data.scheme + " theme=" + theme + " failures=" + failures.slice(0, 30).join("; ") + "; total=" + failures.length);
+        }
+        function hue(colour) {
+            const coordinates = oklab(colour);
+            return Math.atan2(coordinates[2], coordinates[1]) * 180 / Math.PI;
+        }
+        function hueDistance(a, b) {
+            return Math.abs(((a - b + 540) % 360) - 180);
+        }
+        function quantisationBounds(colour) {
+            const channels = [1, 3, 5].map(i => parseInt(String(colour).slice(i, i + 2), 16));
+            const level = oklab(colour)[0], originalHue = hue(colour);
+            const original = oklab(colour);
+            let lightness = 0, angle = 0, chroma = 0, radius = 0;
+            for (const r of [-0.5, 0.5])
+                for (const g of [-0.5, 0.5])
+                    for (const b of [-0.5, 0.5]) {
+                        const values = [r, g, b].map((delta, i) => Math.max(0, Math.min(255, channels[i] + delta)) / 255);
+                        const linear = values.map(v => v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+                        const cone = [[0.4122214708, 0.5363325363, 0.0514459929], [0.2119034982, 0.6806995451, 0.1073969566], [0.0883024619, 0.2817188376, 0.6299787005]].map(row => Math.cbrt(row.reduce((sum, v, i) => sum + v * linear[i], 0)));
+                        const lab = [[0.2104542553, 0.7936177850, -0.0040720468], [1.9779984951, -2.4285922050, 0.4505937099], [0.0259040371, 0.7827717662, -0.8086757660]].map(row => row.reduce((sum, v, i) => sum + v * cone[i], 0));
+                        radius = Math.max(radius, Math.sqrt(lab.reduce((sum, value, i) => sum + Math.pow(value - original[i], 2), 0)));
+                        chroma = Math.max(chroma, Math.abs(Math.hypot(lab[1], lab[2]) - Math.hypot(...oklab(colour).slice(1))));
+                        lightness = Math.max(lightness, Math.abs(lab[0] - level));
+                        angle = Math.max(angle, hueDistance(Math.atan2(lab[2], lab[1]) * 180 / Math.PI, originalHue));
+                    }
+            return {
+                lightness: lightness + 1e-7,
+                hue: angle + 1e-5,
+                chroma: chroma + 1e-7,
+                radius: radius + 1e-7
+            };
+        }
+        function calcHue(colour) {
+            const lab = oklab(colour);
+            if (Math.hypot(lab[1], lab[2]) <= quantisationBounds(colour).chroma)
+                return false;
+            const limits = [hue("#f44336"), hue("#ef9a9a")].sort((a, b) => a - b);
+            const margin = Math.max(quantisationBounds("#f44336").hue, quantisationBounds("#ef9a9a").hue);
+            return hue(colour) >= limits[0] - margin && hue(colour) <= limits[1] + margin;
+        }
+        function test_independent_hue_observer_reaches_calc_and_safe_controls() {
+            verify(calcHue("#f44336") && calcHue("#ef9a9a"), "Both independent light/dark calculated colours lie in the calculated hue range");
+            verify(!calcHue("#0055a0") && !calcHue("#808080"), "An independently blue hue and hue-less neutral stay outside the calculated hue range");
+        }
+        function test_coast_is_the_new_reversible_default() {
+            Preferences.resetToDefaults();
+            compare(Preferences.colourScheme, reference.default, "The owner-selected new default is Coast after a real Preferences reset");
+            Preferences.colourScheme = reference.schemes[1].id;
+            Preferences.resetToDefaults();
+            compare(Preferences.colourScheme, reference.default, "Reset reversibly restores Coast after selecting another named scheme");
+        }
+        function test_eighteen_palette_roles_and_actual_gradient_paths_data() {
+            return test_every_palette_colour_meets_three_to_one_data();
+        }
+        function test_eighteen_palette_roles_and_actual_gradient_paths(data) {
+            const table = SettingsProof.paletteForScheme(data.scheme), theme = data.dark ? "dark" : "light";
+            verify(table.pattern && table.structure && table.gradient, "Every one of eighteen schemes has all three actual data roles: " + data.scheme);
+
+            verify(table.gradient.length >= 2, "The actual gradient path has first and last endpoints before sampling");
+            const failures = [];
+            if (table.gradient.length !== 2)
+                failures.push("Gradient publishes " + table.gradient.length + " colours rather than two");
+            if (!(table.pattern.length >= 1 && table.pattern.length <= 7 && table.structure.length >= 1 && table.structure.length <= 5))
+                failures.push("Fixed measured/structure role sizes exceed seven/five or are empty");
+            let nearSeen = false;
+            for (let place = 0; place < table.pattern.length; ++place) {
+                const colour = String(ApplicationInfo.patternColour(data.scheme, place, table.pattern.length, data.dark)).toLowerCase();
+                compare(colour, table.pattern[place][theme].toLowerCase(), "The actual short-set API uses each stored measured place");
+                const near = calcHue(colour);
+                if (nearSeen && !near)
+                    failures.push("Measured calc-hue colour appears before a safer hue");
+                nearSeen = nearSeen || near;
+            }
+            const count = 1001, samples = [];
+            let highestLowerBound = -Infinity, totalStep = 0, maximumStep = 0, roundingStep = 0, previousLab = null, previousRadius = 0;
+            for (let place = 0; place < count; ++place) {
+                const colour = String(ApplicationInfo.patternColour(data.scheme, place, count, data.dark)).toLowerCase();
+                samples.push(colour);
+                const bounds = quantisationBounds(colour), level = oklab(colour)[0];
+                if (level + bounds.lightness < highestLowerBound)
+                    failures.push("Gradient lightness falls at " + place);
+                if (previousLab) {
+                    const step = Math.sqrt(previousLab.reduce((sum, value, i) => sum + Math.pow(value - oklab(colour)[i], 2), 0));
+                    totalStep += step;
+                    maximumStep = Math.max(maximumStep, step);
+                    roundingStep = Math.max(roundingStep, bounds.radius + previousRadius);
+                }
+                previousLab = oklab(colour);
+                previousRadius = bounds.radius;
+                highestLowerBound = Math.max(highestLowerBound, level - bounds.lightness);
+                if (calcHue(colour))
+                    failures.push("Gradient passes through calculated hue at " + place);
+                if (contrast(colour, data.dark ? "#444444" : "#ffffff") < 3)
+                    failures.push("Gradient loses 3:1 contrast at " + place);
+                if (oklabDistance(colour, data.dark ? "#ef9a9a" : "#f44336") < 0.10)
+                    failures.push("Gradient loses calc-distance at " + place);
+            }
+            if (maximumStep > totalStep / (count - 1) + roundingStep)
+                failures.push("Gradient jumps beyond its average step and independent RGB rounding bounds");
+            compare(samples[0], table.gradient[0][theme].toLowerCase(), "The actual many-set API starts at the first gradient endpoint");
+            compare(samples[count - 1], table.gradient[table.gradient.length - 1][theme].toLowerCase(), "The actual many-set API finishes at the last gradient endpoint");
+            verify(oklab(samples[0])[0] < oklab(samples[count - 1])[0], "The gradient has a strictly positive first-to-last lightness rise");
+            const transition = table.pattern.length + 1;
+            compare(String(ApplicationInfo.patternColour(data.scheme, 0, transition, data.dark)).toLowerCase(), samples[0], "The gradient takes over immediately beyond the bounded fixed set");
+            compare(String(ApplicationInfo.patternColour(data.scheme, transition - 1, transition, data.dark)).toLowerCase(), samples[count - 1], "The fixed-to-gradient transition retains the final endpoint");
+            for (let i = 0; i < table.structure.length; ++i) {
+                const colour = String(ApplicationInfo.structureColour(data.scheme, i, data.dark)).toLowerCase();
+                compare(colour, table.structure[i][theme].toLowerCase(), "The actual structure API consumes each stored structure place");
+                for (let j = i + 1; j < table.structure.length; ++j) {
+                    const other = String(ApplicationInfo.structureColour(data.scheme, j, data.dark)).toLowerCase();
+                    const a = quantisationBounds(colour), b = quantisationBounds(other);
+                    if (hueDistance(hue(colour), hue(other)) <= a.hue + b.hue)
+                        failures.push("Structures share a hue at " + i + "/" + j);
+                    if (Math.abs(oklab(colour)[0] - oklab(other)[0]) <= a.lightness + b.lightness)
+                        failures.push("Structures share a lightness step at " + i + "/" + j);
+                }
+                if (table.pattern.some(row => row[theme].toLowerCase() === colour))
+                    failures.push("Structure duplicates a measured colour at " + i);
+            }
+            compare(failures.length, 0, "All eighteen schemes retain distinct bounded roles and a rising, calc-hue-avoiding gradient with strict contrast at every actual API sample in both themes; scheme=" + data.scheme + " failures=" + failures.slice(0, 5).join("; ") + "; total=" + failures.length);
         }
         function test_pdf_colour_observer_reaches_an_independent_qt_image() {
             const witness = SettingsProof.pdfWitness();

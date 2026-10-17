@@ -34,6 +34,7 @@ Item {
         name: "ExperimentColourIdentity"
         when: windowShown
         property int oldTheme
+        property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
         property string oldScheme
         function initTestCase() {
             oldTheme = Style.Colors.theme;
@@ -72,11 +73,11 @@ Item {
             ];
             const rows = [];
             for (const subject of subjects)
-                for (const safe of [false, true])
+                for (const scheme of reference.schemes)
                     for (const dark of [false, true])
                         rows.push(Object.assign({}, subject, {
-                            tag: subject.kind + (safe ? "-safe" : "-default") + (dark ? "-dark" : "-light"),
-                            safe: safe,
+                            tag: subject.kind + ("-" + scheme.id) + (dark ? "-dark" : "-light"),
+                            scheme: scheme.id,
                             dark: dark
                         }));
             return rows;
@@ -85,7 +86,7 @@ Item {
             verify(Session.openExample(data.example), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
             tryCompare(Session.project, "calculating", false, 15000, "The opened colour witness settles its initial calculation");
             compare(Session.project.experiments.count, data.count, "Each colour witness reaches its independently declared experiment or dataset count");
-            Preferences.colourScheme = data.safe ? "colourBlindSafe" : "default";
+            Preferences.colourScheme = data.scheme;
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = createTemporaryObject(projectFactory, surface, {
                 width: surface.width,
@@ -103,12 +104,12 @@ Item {
                 verify(row !== undefined && icon(row) !== undefined, "The Project list materializes the requested experiment place " + position);
                 expected[position] = ink(icon(row).color);
             }
-            const table = SettingsProof.paletteForScheme(data.safe ? "colourBlindSafe" : "default");
+            const table = SettingsProof.paletteForScheme(data.scheme);
             const palette = table.pattern, gradient = table.gradient || palette.slice(-2);
             const theme = data.dark ? "dark" : "light";
             compare(expected[0], (data.count > palette.length ? gradient[0] : palette[0])[theme].toLowerCase(), "Before endpoints in the short set; after the reordered short set or trimmed gradient role; actual first=" + expected[0] + "; declared first=" + (data.count > palette.length ? gradient[0] : palette[0])[theme]);
-            if (data.count > 11)
-                compare(expected[data.count - 1], gradient[gradient.length - 1][theme].toLowerCase(), "The 162-file Project gradient reaches the independent last palette endpoint");
+            if (data.count > palette.length)
+                compare(expected[data.count - 1], gradient[gradient.length - 1][theme].toLowerCase(), "Any set beyond the fixed colours reaches the independent last gradient endpoint");
             else
                 for (const position of positions)
                     compare(expected[position], palette[position][theme].toLowerCase(), "The few-experiment Project list uses its independent palette place " + position);
