@@ -7949,7 +7949,11 @@ def background285_fixture(tmp_path, kind='cw', rows=3, *, arrangement=None, cons
         text = prefix + '\n_data_range.two_theta_min 10\n_data_range.two_theta_max 40\n_data_range.two_theta_step 10\n'
     else:
         data_lines = data.splitlines()
-        values = [line for line in data_lines if line and not line.startswith('_')]
+        assert data_lines[:3] == [
+            'time_of_flight' if kind == 'tof' else 'two_theta',
+            '_data.intensity_meas', '_data.intensity_meas_su',
+        ], 'BG SETUP: actual fixture axis/intensity/sigma headers precede every original observation'
+        values = [line for line in data_lines[3:] if line]
         assert len(values) == 4, 'BG SETUP: the public fixture writer declares four literal original observations'
         prefix += 'loop_\n_data.' + data.splitlines()[0] + '\n_data.intensity_meas\n_data.intensity_meas_su\n'
         prefix += ''.join(f'{x:.17g} {y:.17g} {s:.17g}\n' for x, y, s in zip(axis, [41, 43, 47, 53], [.5, .75, 1.25, 2], strict=True))
@@ -8280,3 +8284,75 @@ def test_background285_complete_context_cannot_truncate_over_cap_anchor_collecti
         'BG RESOURCE: actual complete context refuses honestly instead of returning a silently truncated dataset/anchor prefix'
     )
     assert not trace.exists(), 'BG RESOURCE: capacity refusal never silently starts a provider/account process'
+
+
+# Pure setup preflight: these literal factory shapes are shared by ordinary,
+# native and Main background cases. No Session, native process or app is started.
+BACKGROUND291_FIXTURE_SHAPES = [
+    pytest.param('cw', 3, None, False, False, id='cw-simulation-base'),
+    pytest.param('tof', 3, None, False, False, id='tof'),
+    pytest.param('no-measured-source', 3, None, False, False, id='no-measured-source'),
+    pytest.param('cw', 3, [28.0, 12.0, 12.0], False, False, id='ordinary-duplicate-order'),
+    pytest.param('cw', 3, [28.0, 12.0, 20.0], False, False, id='native-unsorted-repair'),
+    pytest.param('cw', 3, [12.0, 20.0, 20.0], False, False, id='native-duplicate-repair'),
+    pytest.param('cw', 3, [9.0, 20.0, 28.0], False, False, id='native-extrapolation-repair'),
+    pytest.param('cw', 255, None, False, False, id='native-count-equal'),
+    pytest.param('cw', 256, None, False, False, id='native-count-over-and-context'),
+    pytest.param('cw', 257, None, False, False, id='ordinary-above-native-capacity'),
+    pytest.param('cw', 3, None, True, False, id='original-alias-constraint'),
+    pytest.param('cw', 3, None, False, True, id='existing-nonselected-bank'),
+]
+
+
+@pytest.mark.parametrize('kind,rows,arrangement,constrained,second_bank',
+                         BACKGROUND291_FIXTURE_SHAPES)
+def test_background291_fixture_construction_preserves_declared_sections(
+        tmp_path, kind, rows, arrangement, constrained, second_bank):
+    """Setup-only gate over real committed factory; never a background product pass."""
+    root = background285_fixture(tmp_path, kind, rows, arrangement=arrangement,
+                                 constrained=constrained, second_bank=second_bank)
+    experiment = (root / 'experiments/experiment.edi').read_text()
+    if kind == 'no-measured-source':
+        assert '_data.' not in experiment and (
+            '_data_range.two_theta_min 10\n_data_range.two_theta_max 40\n'
+            '_data_range.two_theta_step 10\n' in experiment
+        ), 'BG291 SETUP: calculation-only fixture keeps its literal declared range and has no measured data loop'
+    else:
+        axis_name = 'time_of_flight' if kind == 'tof' else 'two_theta'
+        axis = [2000, 4000, 6000, 8000] if kind == 'tof' else [10, 20, 30, 40]
+        expected_rows = list(zip(axis, [41, 43, 47, 53], [.5, .75, 1.25, 2], strict=True))
+        expected_block = ('loop_\n_data.' + axis_name
+            + '\n_data.intensity_meas\n_data.intensity_meas_su\n'
+            + ''.join(f'{x:.17g} {y:.17g} {sigma:.17g}\n' for x, y, sigma in expected_rows))
+        assert experiment.endswith(expected_block) and experiment.count(expected_block) == 1, (
+            'BG291 SETUP: exact axis/intensity/sigma headers precede all four original numeric observations once'
+        )
+        assert len(expected_rows) == 4 and all(len(row) == 3 and row[2] > 0 for row in expected_rows), (
+            'BG291 SETUP: independent original four measured triples retain their literal positive sigmas'
+        )
+    anchors = experiment.split('_background.intensity\n', 1)[1].split('\nloop_', 1)[0].splitlines()
+    anchors = [line for line in anchors if line]
+    positions = arrangement if arrangement is not None else (
+        [2400.0, 4000.0, 5600.0] if kind == 'tof' else [12.0, 20.0, 28.0])
+    if rows > 3:
+        positions = [10.0 + 30.0 * (index + 1) / (rows + 1) for index in range(rows)]
+    assert anchors == [f'p{index} {position:.17g} {11.25 + index:.17g}(25)'
+                       for index, position in enumerate(positions)], (
+        'BG291 SETUP: original ordered anchor IDs, positions, literal intensities and nonzero SU remain exact'
+    )
+    assert '\nmask 21 22\n' in experiment and (
+        '\nstructure 0\n' in experiment
+    ), 'BG291 SETUP: original exclusion and linked phase scale survive the measured-loop extraction'
+    analysis = (root / 'analysis/analysis.edi').read_text()
+    assert analysis.endswith('experiment.background.p1 10.75 0.125\n'), (
+        'BG291 SETUP: independent original nonzero fit-start value/SU and canonical persistent key survive'
+    )
+    assert ('keep_target experiment.background.p0.intensity' in analysis) is constrained and (
+        ('keep_value "keep_target = 11.25" true' in analysis) is constrained
+    ), 'BG291 SETUP: original alias/constraint fixture is present exactly when explicitly requested'
+    other = root / 'experiments/other.edi'
+    assert other.exists() is second_bank, 'BG291 SETUP: only declared two-bank variants create the nonselected bank'
+    if second_bank:
+        assert other.read_text() == experiment.replace('data_experiment', 'data_other', 1), (
+            'BG291 SETUP: actual second measured bank differs only by its independent original dataset name'
+        )
