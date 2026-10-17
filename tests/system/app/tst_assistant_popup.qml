@@ -3458,10 +3458,152 @@ TestCase {
         return JSON.stringify(visible185_parameters(project).filter(p => !p.path.includes(".background["))
             .map(p => [p.path, p.value, p.free, p.hasUncertainty, p.uncertainty]));
     }
-    function background285_operation(operation) {
-        const combo = Ui.control(Probe, window, "background.stage.operation");
+    // Observe the selected public sidebar pane and its original source-bound form.
+    // Basic/Extra retain separate component trees; a page-wide name is not ownership.
+    function background294_under(control, owner) {
+        for (let current = control; current; current = current.parent)
+            if (current === owner) return true;
+        return false;
+    }
+    function background294_fact(control) {
+        if (!control) return null;
+        try {
+            const ancestors = [];
+            for (let parent = control.parent; parent && ancestors.length < 14; parent = parent.parent)
+                ancestors.push({identity: String(parent), name: parent.objectName,
+                    visible: parent.visible, enabled: parent.enabled, clip: parent.clip,
+                    shownTier: parent.shownTier === undefined ? null : parent.shownTier,
+                    categoryId: parent.categoryId === undefined ? null : parent.categoryId,
+                    currentIndex: parent.currentIndex === undefined ? null : parent.currentIndex,
+                    currentItem: parent.currentItem === undefined ? null : String(parent.currentItem),
+                    interactive: parent.interactive === undefined ? null : parent.interactive,
+                    hasItemAt: typeof parent.itemAt === "function"});
+            return {identity: String(control), name: control.objectName,
+                visible: control.visible, enabled: control.enabled, opacity: control.opacity,
+                geometry: rect(control), inPane: Ui.inPane(control), exposed: Ui.exposed(control),
+                activeFocus: control.activeFocus,
+                readOnly: control.readOnly === undefined ? null : control.readOnly,
+                text: typeof control.text === "string" ? control.text.slice(0, 80) : null,
+                hasTextEdited: typeof control.textEdited === "function",
+                hasClicked: typeof control.clicked === "function",
+                currentIndex: control.currentIndex === undefined ? null : control.currentIndex,
+                currentItem: control.currentItem === undefined ? null : String(control.currentItem),
+                interactive: control.interactive === undefined ? null : control.interactive,
+                hasItemAt: typeof control.itemAt === "function",
+                sourceModel: control.sourceModel === undefined ? null : String(control.sourceModel),
+                ancestors: ancestors};
+        } catch (error) { return {observationError: String(error)}; }
+    }
+    function background294_observe(stage, scope) {
+        try {
+            const page = Ui.page(window);
+            const names = ["background.stage", "background.stage.id", "background.stage.apply"];
+            const candidates = Ui.itemsWithProperty(page, "objectName")
+                .filter(control => names.includes(control.objectName));
+            console.log("BACKGROUND294_CANDIDATES", stage, JSON.stringify({
+                page: String(page), pageIndex: window.appBarCentralTabs.currentIndex,
+                pageCurrent: page ? page.current : null, currentOwner: String(Session.project),
+                expectedOwner: scope ? String(scope.project) : null,
+                sidebar: scope ? String(scope.sidebar) : null,
+                view: scope ? String(scope.view) : null,
+                viewIndex: scope && scope.view ? scope.view.currentIndex : null,
+                selectedPane: scope && scope.view ? String(scope.view.currentItem) : null,
+                originalPane: scope ? String(scope.pane) : null,
+                originalForm: scope ? String(scope.form) : null,
+                focused: String(window.activeFocusItem), candidateCount: candidates.length,
+                candidates: candidates.slice(0, 12).map(background294_fact),
+                ownershipCandidates: scope && scope.ownershipCandidates
+                    ? scope.ownershipCandidates.slice(0, 8).map(background294_fact) : [],
+                ownershipCandidateCount: scope && scope.ownershipCandidates ? scope.ownershipCandidates.length : 0}));
+        } catch (error) { console.log("BACKGROUND294_OBSERVATION_ERROR", stage, String(error)); }
+    }
+    function background294_scope(project, stage) {
+        const scope = {project: project, sidebar: null, view: null, pane: null, form: null};
+        background294_observe(stage + "-before-ownership", scope);
+        const page = Ui.page(window);
+        verify(Session.project === project && page === window.contentArea[AppState.Page.Experiment]
+            && page.current && page.experiment === project.currentExperiment,
+            "BG294 SETUP: operative current Experiment page belongs to the exact original project/experiment");
+        const sidebars = Ui.itemsWithProperty(page, "objectName").filter(control =>
+            control.objectName === "workflow.experiment.manualSidebar");
+        scope.ownershipCandidates = sidebars;
+        background294_observe(stage + "-sidebar-candidates", scope);
+        compare(sidebars.length, 1, "BG294 SETUP: current Experiment page owns exactly one ordinary sidebar");
+        scope.sidebar = sidebars[0];
+        // Public EA SideBar: its direct-child SwipeView owns retained Loader items;
+        // TabBar's internal view is not a direct child with this Container contract.
+        const views = Ui.itemsWithProperty(scope.sidebar, "interactive").filter(control =>
+            control.parent === scope.sidebar && typeof control.itemAt === "function"
+            && control.currentIndex !== undefined && control.currentItem !== undefined);
+        scope.ownershipCandidates = views;
+        background294_observe(stage + "-view-candidates", scope);
+        compare(views.length, 1, "BG294 SETUP: actual ordinary sidebar owns one direct selected-pane view");
+        scope.view = views[0];
+        scope.pane = scope.view.currentItem;
+        const basic = Ui.itemsWithProperty(scope.sidebar, "objectName").filter(control =>
+            control.objectName === "sideBar.tab.basic" && typeof control.checked === "boolean");
+        background294_observe(stage + "-selected-pane", scope);
+        compare(basic.length, 1, "BG294 SETUP: exact sidebar has one genuine Main tab control");
+        verify(basic[0].checked && scope.view.currentIndex === 0 && scope.pane !== null
+            && scope.pane === scope.view.itemAt(0),
+            "BG294 SETUP: original real Main click selects the actual Basic Loader, not retained Extras content");
+        const groups = Ui.itemsWithProperty(scope.pane, "categoryId").filter(control =>
+            control.objectName === "group.background" && control.categoryId === "background"
+            && control.shownTier === "Basic");
+        scope.ownershipCandidates = groups;
+        background294_observe(stage + "-category-candidates", scope);
+        compare(groups.length, 1, "BG294 SETUP: actual current Basic pane owns exactly one Background category");
+        scope.group = groups[0];
+        const forms = Ui.itemsWithProperty(scope.group, "objectName").filter(control =>
+            control.objectName === "background.stage"
+            && control.sourceModel === project.currentExperiment.background);
+        scope.ownershipCandidates = forms;
+        background294_observe(stage + "-form-candidates", scope);
+        compare(forms.length, 1, "BG294 SETUP: original category owns exactly one stage for the original background model");
+        scope.form = forms[0];
+        scope.source = project.currentExperiment.background;
+        background294_observe(stage + "-owned-form", scope);
+        return scope;
+    }
+    function background294_control(scope, name, stage) {
+        background294_observe(stage + "-before-control", scope);
+        verify(Session.project === scope.project && Ui.page(window).current
+            && Ui.page(window) === window.contentArea[AppState.Page.Experiment]
+            && scope.view.currentItem === scope.pane && scope.view.currentIndex === 0
+            && background294_under(scope.form, scope.pane)
+            && scope.form.sourceModel === scope.source
+            && scope.project.currentExperiment.background === scope.source,
+            "BG294 SETUP: exact original current form/pane/source ownership remains valid before accessing its receiver");
+        const found = Ui.itemsWithProperty(scope.form, "objectName")
+            .filter(control => control.objectName === name);
+        scope.ownershipCandidates = found;
+        background294_observe(stage + "-receiver-candidates", scope);
+        compare(found.length, 1, "BG294 SETUP: exactly one original named receiver belongs to the operative source-bound form: " + name);
+        return found[0];
+    }
+    function background294_expose(scope, name) {
+        const control = background294_control(scope, name, "expose-" + name);
+        // Existing genuine viewport reveal, followed by original Ui input. No
+        // visibility/focus/model write, alternate click executor or hidden opener.
+        Ui.scrollIntoView(control); rendered();
+        background294_observe("exposed-" + name, scope);
+        verify(Ui.control(Probe, window, name) === control && control.enabled && Ui.exposed(control),
+            "BG294 SETUP: existing physical input lookup resolves the exact exposed original form receiver: " + name);
+        return control;
+    }
+    function background294_text(scope, name, text) {
+        const original = background294_expose(scope, name);
+        verify(typeof original.textEdited === "function" && original.readOnly === false,
+            "BG294 SETUP: original scoped editor is the actual editable TextField signal receiver");
+        compare(relation245_text(name, text), original,
+            "BG294: unchanged real input helper types into the exact original scoped editor");
+    }
+    function background285_operation(operation, scope) {
+        const combo = background294_control(scope, "background.stage.operation", "operation");
         verify(combo !== null, "BG SETUP: actual ordinary operation ComboBox exists");
         Ui.scrollIntoView(combo); rendered();
+        verify(Ui.control(Probe, window, "background.stage.operation") === combo,
+            "BG294 SETUP: actual operation input resolves the original form ComboBox");
         Ui.click(this, Probe, window, "background.stage.operation");
         keyClick(Qt.Key_Home);
         const index = ["add", "update", "remove"].indexOf(operation);
@@ -3473,7 +3615,7 @@ TestCase {
         tryVerify(() => !combo.popup.visible && !combo.popup.opened, 2000,
             "BG SETUP: original operation popup actually closes before next real input");
     }
-    function background285_stage(operation, id, position, intensity, free) {
+    function background285_stage(operation, id, position, intensity, free, scope) {
         visible185_page("experiment");
         Ui.click(this, Probe, window, "sideBar.tab.basic");
         Ui.expandGroup(this, Probe, window, "group.background");
@@ -3482,14 +3624,16 @@ TestCase {
             tryVerify(() => Ui.control(Probe, window, "background.stage.id") !== null, 2000,
                 "BG SETUP: genuine ordinary Add point opens the original staged form before input");
         }
-        background285_operation(operation);
-        relation245_text("background.stage.id", id);
+        background285_operation(operation, scope);
+        background294_text(scope, "background.stage.id", id);
         if (operation !== "remove") {
-            relation245_text("background.stage.position", String(position));
-            relation245_text("background.stage.intensity", String(intensity));
-            const flag = Ui.control(Probe, window, "background.stage.free");
+            background294_text(scope, "background.stage.position", String(position));
+            background294_text(scope, "background.stage.intensity", String(intensity));
+            const flag = background294_control(scope, "background.stage.free", "free");
             verify(flag !== null, "BG SETUP: genuine staged free checkbox exists");
             Ui.scrollIntoView(flag); rendered();
+            verify(Ui.control(Probe, window, "background.stage.free") === flag,
+                "BG294 SETUP: actual free input resolves the original form checkbox");
             if (flag.checked !== free) Ui.click(this, Probe, window, "background.stage.free");
             compare(flag.checked, free, "BG: actual ordinary free control stores only requested draft flag");
         }
@@ -3548,15 +3692,14 @@ TestCase {
             tryVerify(() => Ui.control(Probe, window, "background.stage.id") !== null, 2000,
                 "BG SETUP: original ordinary Add action exposes the real form before controls/input");
         }
-        // Capture existing visual objects for passive signal receipts only. Hidden
-        // handles are not an exposure premise; the native route opens its own form.
-        const handles = [...new Set(Ui.itemsWithProperty(Ui.page(window), "objectName"))];
-        const idHandles = handles.filter(control => control.objectName === "background.stage.id");
-        const applyHandles = handles.filter(control => control.objectName === "background.stage.apply");
-        compare(idHandles.length, 1, "BG SETUP: one original current-page ID object exists for passive receipts");
-        compare(applyHandles.length, 1, "BG SETUP: one original current-page Apply object exists for passive receipts");
-        const idField = idHandles[0];
-        const apply = applyHandles[0];
+        // Passive original handles belong to the actual current pane/category/form,
+        // including a still-hidden native stage. Exposure follows its genuine opener.
+        const scope = background294_scope(project, data.tag);
+        const idField = background294_control(scope, "background.stage.id", "original-id");
+        const apply = background294_control(scope, "background.stage.apply", "original-apply");
+        verify(typeof idField.textEdited === "function" && idField.readOnly === false
+            && typeof apply.clicked === "function",
+            "BG294 SETUP: unique original ID/Apply are the real editable/clickable signal receivers");
         let edits = 0, applies = 0, starts = 0, takeovers = 0;
         function edited() { ++edits; }
         function applied() { ++applies; }
@@ -3569,7 +3712,7 @@ TestCase {
         const call = "background285-" + data.tag;
         try {
             if (manual || data.tag === "preexisting-draft") {
-                background285_stage(operation, id, position, intensity, true);
+                background285_stage(operation, id, position, intensity, true, scope);
                 compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
                     "BG: real staged typing/free selection and ordinary focus changes never mutate before Apply");
                 if (data.tag === "preexisting-draft") {
@@ -3577,7 +3720,11 @@ TestCase {
                         start: window.activeFocusItem.selectionStart, end: window.activeFocusItem.selectionEnd};
                 }
             }
-            if (manual) Ui.click(this, Probe, window, "background.stage.apply");
+            if (manual) {
+                compare(background294_expose(scope, "background.stage.apply"), apply,
+                    "BG294 SETUP: actual ordinary Apply belongs to the same original retained form");
+                Ui.click(this, Probe, window, "background.stage.apply");
+            }
             else {
                 assistant.send("Perform the original defined background operation " + data.tag);
                 if (data.tag !== "preexisting-draft") {
@@ -3601,7 +3748,8 @@ TestCase {
                     verify(stop.enabled && Ui.exposed(stop), "BG SETUP: genuine original Stop is exposed");
                     mouseClick(stop);
                 } else if (data.tag === "manual-takeover") {
-                    Ui.scrollIntoView(idField); rendered();
+                    compare(background294_expose(scope, "background.stage.id"), idField,
+                        "BG294 SETUP: original manual takeover targets the same actually exposed current-form editor");
                     Ui.click(this, Probe, window, "background.stage.id");
                     compare(window.activeFocusItem, idField, "BG: original actual manual receiver gains focus normally");
                     keyClick("x");
@@ -3683,6 +3831,7 @@ TestCase {
                     "BG: original history remains intact through shared editor execution");
             }
         } finally {
+            background294_observe("finally-" + data.tag, scope);
             console.log("BACKGROUND285_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
                 originalOwner: String(project), replacementOwner: String(replacement), connected: assistant.connected,
                 canCancel: assistant.canCancel, showingActions: assistant.showingActions, edits: edits,
