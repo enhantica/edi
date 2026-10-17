@@ -287,8 +287,7 @@ std::size_t characters(std::string_view text) {
 std::string whole(std::size_t number) { return std::to_string(number); }
 
 // A number's text split at its decimal point, as the Report page's tables split it: the sign and whole digits; then the
-// decimals with an s.u. bracket, an exponent and units after them (a degree sign right after the digits, other units
-// after a space). Absent for a text that is not a number.
+// decimals with an s.u. bracket, an exponent and units after a space. Absent for a text that is not a number.
 struct NumberParts {
     std::string left, right;
     bool dot = false;
@@ -336,8 +335,8 @@ std::optional<NumberParts> number_parts(std::string_view text) {
         any = true;
     }
     const std::string_view rest = text.substr(at);
-    const bool units = rest.empty() || rest == "\xC2\xB0" || rest == "\xC2\xB0\xC2\xB2" ||
-                       (rest.size() >= 2 && rest[0] == ' ' && rest[1] != ' ' && (rest[1] < '0' || rest[1] > '9'));
+    const bool units =
+        rest.empty() || (rest.size() >= 2 && rest[0] == ' ' && rest[1] != ' ' && (rest[1] < '0' || rest[1] > '9'));
     if (!units || !any) {
         return std::nullopt;
     }
@@ -372,12 +371,12 @@ std::vector<ColumnLayout> layout_of(const std::vector<std::vector<std::string>>&
     return out;
 }
 
-// A value with its units: a degree sign right after the number (90°, 0.24°²), other units after a space (3.88 Å).
+// A value with its units after a space: 90 deg, 3.88 Å.
 std::string with_units(const ReportRow& row) {
     if (row.units.empty()) {
         return row.text;
     }
-    return row.units.starts_with("\xC2\xB0") ? row.text + row.units : row.text + " " + row.units;
+    return row.text + " " + row.units;
 }
 
 // A correlation cell's colour: from white at 0 to diffraction-lib's red at -1 or blue at 1, as the Correlations tab

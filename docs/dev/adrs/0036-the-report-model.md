@@ -58,7 +58,9 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    its template dataset's row, the colour the app's pages give that dataset, and the evolution charts take the first
    measured row in every renderer.
 5. **Numbers.** Every value with a standard uncertainty carries the number, its s.u. and the text spelled by the
-   project's rule, so no renderer writes a bracket itself.
+   project's rule, so no renderer writes a bracket itself. Units follow the value after a space, as the app's unit
+   fields write them; an angle is in `deg`, never with the degree sign, in tables and axis titles alike, in the app and
+   in every report (the owner, 2026-10-17).
 6. **The static PDF is the app's.** The core also writes the report as static HTML in the subset Qt's rich text reads
    (`report_static_html`): the same sections and tables, each number in two cells so a column's points line up under
    any header, and each figure an image by its name. The app lays it out with `QTextDocument` on A4 pages with 2.5 cm

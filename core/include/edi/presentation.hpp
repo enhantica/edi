@@ -45,7 +45,7 @@ struct PatternSource {
         // The `_refln` row of each position; empty when they are rows 0, 1, 2, …
         std::vector<std::size_t> rows;
     };
-    std::string x_title;                   // `2θ (°)` or `TOF (µs)`
+    std::string x_title;                   // `2θ (deg)` or `TOF (µs)`
     Column x, meas, su, calc, bkg, resid;  // null: the column is absent
     std::vector<Phase> phases;
     std::vector<ExcludedBand> excluded;

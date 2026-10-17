@@ -24,7 +24,7 @@ Column {
     property ExperimentViewModel experiment: null
     readonly property RangeViewModel range: experiment ? experiment.measuredRange : null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
-    readonly property string units: timeOfFlight ? "µs" : "°"
+    readonly property string units: timeOfFlight ? "µs" : "deg"
     readonly property bool editable: experiment !== null && experiment.calculationOnly
 
     // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
@@ -100,7 +100,7 @@ Column {
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (deg)")
             }
             EaComponents.TableViewLabel {
                 horizontalAlignment: Text.AlignHCenter

@@ -356,7 +356,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     if (data.two_theta.has_value() == data.time_of_flight.has_value()) {
         return source;  // no single engaged axis: nothing to present
     }
-    source.x_title = data.two_theta.has_value() ? "2θ (°)" : "TOF (µs)";
+    source.x_title = data.two_theta.has_value() ? "2θ (deg)" : "TOF (µs)";
     const auto copy = [](const std::vector<double>& values) -> PatternSource::Column {
         return values.empty() ? nullptr : std::make_shared<const std::vector<double>>(values);
     };

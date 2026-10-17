@@ -4614,7 +4614,7 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
         source.excluded.push_back({std::min(start, end), std::max(start, end)});
     }
-    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (°)" : "TOF (µs)";
+    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (deg)" : "TOF (µs)";
     const crysta::ComputedView view = crysta::peek(fitted, fitted.experiment());
     const auto shared = [](const crysta::ColumnSnapshot<double>& column) -> PatternSource::Column {
         return column.empty() ? nullptr : column.buffer();

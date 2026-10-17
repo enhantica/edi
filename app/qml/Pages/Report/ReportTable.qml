@@ -72,11 +72,10 @@ Flickable {
     // A windowed table keeps its scroll bar clear of the last column.
     readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + 2 * border + (windowed ? vertical.width : 0)
 
-    // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units with them; a
-    // degree sign follows the digits directly).
+    // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units after a space).
     // Null for a text that is not a number.
     function split(text: string): var {
-        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?:°²?| [^ 0-9].*)?)$/.exec(text);
+        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$/.exec(text);
         if (!match || !/[0-9]/.test(match[1] + match[3]))
             return null;
         return {

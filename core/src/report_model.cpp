@@ -118,13 +118,13 @@ std::string label_of(const Parameter& parameter, const std::string& fallback) {
     return symbol.empty() ? fallback : symbol;
 }
 
-// A parameter's units as the report writes them: an angle in degrees as ° and °², as the Cell table writes it.
+// A parameter's units as the report writes them: as the app's unit fields show them, an angle in deg (the owner,
+// 2026-10-17).
 std::string units_of(const Parameter& parameter) {
     if (parameter.spec == nullptr || parameter.spec->display_units == nullptr) {
         return "";
     }
-    const std::string units = parameter.spec->display_units;
-    return units.starts_with("deg") ? "°" + units.substr(3) : units;
+    return parameter.spec->display_units;
 }
 
 void add_fields(std::vector<ReportRow>& rows, const std::vector<CategoryField>& fields, const std::string& rule) {
@@ -388,7 +388,7 @@ ReportCategory category(const std::string& id) { return {id, category_title(id),
 
 // Where an experiment's data lie on its own axis, as a row label and units: 2θ in degrees or TOF in µs.
 std::pair<std::string, std::string> axis_of(const PdDataBase& data) {
-    return data.two_theta.has_value() ? std::pair<std::string, std::string>{"2θ", "°"}
+    return data.two_theta.has_value() ? std::pair<std::string, std::string>{"2θ", "deg"}
                                       : std::pair<std::string, std::string>{"TOF", "µs"};
 }
 
@@ -417,7 +417,7 @@ ReportStructure structure_of(const Structure& structure, const std::string& rule
             const std::pair<const char*, const Parameter*> angles[] = {
                 {"α", &cell.angle_alpha}, {"β", &cell.angle_beta}, {"γ", &cell.angle_gamma}};
             for (const auto& [name, parameter] : angles) {
-                next.rows.push_back({name, value_of(*parameter, rule).text, "°"});
+                next.rows.push_back({name, value_of(*parameter, rule).text, "deg"});
             }
         } else if (listed.id == "atom_site") {
             std::map<std::string, int> multiplicity;

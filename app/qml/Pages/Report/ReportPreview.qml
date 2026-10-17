@@ -67,10 +67,9 @@ Flickable {
     function number(section) {
         return sections.indexOf(section) + 1;
     }
-    // A key-value table's rows from the model's rows, each value followed by its units: a degree sign right after the
-    // number (90°, 0.24°²), other units after a space (3.88 Å).
+    // A key-value table's rows from the model's rows, each value followed by its units after a space (90 deg, 3.88 Å).
     function keyValues(rows) {
-        return (rows ?? []).map(row => [row.label, !row.units ? row.text : row.units.startsWith("°") ? row.text + row.units : row.text + " " + row.units]);
+        return (rows ?? []).map(row => [row.label, !row.units ? row.text : row.text + " " + row.units]);
     }
 
     contentHeight: column.implicitHeight + 2 * AppSizes.reportPadding
