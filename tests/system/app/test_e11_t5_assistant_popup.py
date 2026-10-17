@@ -1185,3 +1185,80 @@ def test_import267_real_main_manual_visible_creation_and_retirement(case, tmp_pa
         assert observations[0]['weight'] == 1 and observations[0]['links'] == [[original_blocks[0], True]], (
             'IMPORT267: real imported measured dataset keeps its sole original enabled phase and unit weight'
         )
+
+
+@pytest.mark.parametrize('case', ['manual-add', 'manual-update', 'manual-remove', 'visible-add-cw',
+    'visible-update-tof', 'visible-remove', 'stop', 'manual-takeover', 'preexisting-draft', 'new-owner'])
+def test_background285_actual_main_stage_and_original_rpc(case, tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import background285_fixture
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'BG SETUP: actual coherent normal Main Qt consumer is required'
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(tmp_path)
+    source = background285_fixture(tmp_path, 'tof' if case == 'visible-update-tof' else 'cw')
+    original = {str(p.relative_to(source)): p.read_bytes() for p in source.rglob('*') if p.is_file()}
+    manual = case.startswith('manual-')
+    operation = 'remove' if case in {'manual-remove', 'visible-remove'} else (
+        'update' if case in {'manual-update', 'visible-update-tof'} else 'add')
+    args = {'purpose': 'Original independently requested defined background edit',
+            'experiment': 'experiment', 'operation': operation,
+            'id': 'p1' if operation != 'add' else 'native-bg-original'}
+    if operation != 'remove':
+        args.update(position=4200.0 if case == 'visible-update-tof' else 21.5 if operation == 'update' else 32.5,
+                    intensity=19.75, free=True)
+    calls = [{'tool': 'edit_background', 'call_id': 'background285-' + case, 'arguments': args}]
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text());config.pop('report_page_reply')
+    if not manual: config.update(scenario='native:script', native_turn_calls=[calls])
+    config_path.write_text(json.dumps(config));original_config = config_path.read_bytes()
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_background285_real_stage_and_original_rpc:' + case, '-o', '-,txt']
+    # Existing90s Main transport allowance; new single-operation observation is
+    # independently derived in the actor, without changing unrelated bounds.
+    result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                            text=True, timeout=90, check=False)
+    (tmp_path / 'background285.stdout.log').write_text(result.stdout)
+    (tmp_path / 'background285.stderr.log').write_text(result.stderr)
+    (tmp_path / 'background285-process.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_background285_real_stage_and_original_rpc(' + case + ')' in output
+    ), 'BG: genuine Main original stage/events/science/currentness/Undo assertions all execute\n' + output
+    assert config_path.read_bytes() == original_config and original == {
+        str(p.relative_to(source)): p.read_bytes() for p in source.rglob('*') if p.is_file()
+    }, 'BG: original complete request and every input scientific file remain byte-exact'
+    trace = Path(config['trace'])
+    if manual:
+        assert not trace.exists() and not config_path.with_suffix('.peer-pid').exists(), (
+            'BG: ordinary manual stage needs no provider connection or fake account'
+        )
+        return
+    loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['native_turn_calls'] == [calls], (
+        'BG: actual owned process consumes the whole predeclared original request before bootstrap'
+    )
+    requests = [json.loads(line) for line in trace.read_text().splitlines()]
+    assert len([x for x in requests if x.get('method') == 'turn/start']) == 1 and not any(
+        x.get('method') in {'account/login/start', 'account/logout'} for x in requests
+    ), 'BG: one original objective and genuine account survive without a login/steer substitute'
+    emitted = [json.loads(line) for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted) == len(replies) == 1 and emitted[0]['params']['callId'] == calls[0]['call_id'] and (
+        emitted[0]['params']['tool'] == 'edit_background' and emitted[0]['params']['arguments'] == args
+        and replies[0]['response']['id'] == emitted[0]['id'] == replies[0]['original']['id']
+    ), 'BG: actual complete original native arguments and once-only reverse RPC envelope are canonical'
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists(), (
+        'BG: no response substitutes call identity for the original request envelope'
+    )
+    response = replies[0]['response']['result']
+    outcome = json.loads(response['contentItems'][0]['text'])
+    cancelled = case in {'stop', 'manual-takeover', 'preexisting-draft', 'new-owner'}
+    assert response['success'] is (not cancelled), (
+        'BG: actual original native response reports success only for genuine confirmed requested edit'
+    )
+    if cancelled:
+        assert outcome['status'] not in {'edited', 'applied_unconfirmed'}, (
+            'BG: pre-Apply retirement/refusal never hides a scientific write as cancellation'
+        )
+    else:
+        assert outcome['status'] == 'edited', 'BG: genuine visible Apply is confirmed with strict original edited status'

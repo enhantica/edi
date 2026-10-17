@@ -2290,7 +2290,8 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'create_cwl_project',
         'add_relations',
         'save_project',
-    }, 'NATIVE: this declared save increment advertises exactly nine wired capabilities'
+        'edit_background',
+    }, 'NATIVE: this declared background increment advertises exactly ten wired capabilities'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
         'NATIVE: registered reads use original rpc and retained purpose'
@@ -4653,6 +4654,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'create_cwl_project',
         'add_relations',
         'save_project',
+        'edit_background',
     }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
@@ -5113,7 +5115,8 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'create_cwl_project',
         'add_relations',
         'save_project',
-    }, 'BOOTSTRAP: native save stage truthfully advertises exactly nine implemented tools'
+        'edit_background',
+    }, 'BOOTSTRAP: native background stage truthfully advertises exactly ten implemented tools'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
         'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
@@ -5736,7 +5739,8 @@ def signin206_shipped(state, trace):
         'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
         'run_fit', 'create_cwl_project', 'add_relations',
         'save_project',
-    }, 'SIGNIN206: discovery errors cannot silently expand or trim the real nine-tool save stage'
+        'edit_background',
+    }, 'SIGNIN206: discovery errors cannot silently expand or trim the real ten-tool background stage'
 
 
 @pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
@@ -7917,3 +7921,362 @@ def test_reuse280_failed_archive_clear_cannot_claim_fresh_memory(generic):
     final = reuse269_send(actor, trace, 'Original new memory only after actual committed discard')
     assert started_requests(trace)[-1]['params']['threadId'] != old_thread
     reuse269_account(first, final, trace)
+
+
+# BG285: public declared ordinary/native policy, exact core round-trip invariants,
+# and committed independent fixture writer. No producer-generated scientific golden.
+def background285_fixture(tmp_path, kind='cw', rows=3, *, arrangement=None, constrained=False,
+                          second_bank=False):
+    root = tmp_path / 'Original declared background input'
+    namespace = {}
+    factory = ROOT / 'tests/fixtures/c13_t6_background/project.py'
+    exec(compile(factory.read_text(), str(factory), 'exec'), namespace)
+    axis = [10.0, 20.0, 30.0, 40.0] if kind != 'tof' else [2000.0, 4000.0, 6000.0, 8000.0]
+    namespace['materialize'](root, {'project': 'pd-neut-' + ('tof' if kind == 'tof' else 'cwl'),
+                                  'type': 'line-segment'}, axis, [41.0, 43.0, 47.0, 53.0])
+    path = root / 'experiments/experiment.edi'
+    text = path.read_text()
+    prefix, data = text.split('loop_\n_data.', 1)
+    prefix = prefix.split('_background.type', 1)[0]
+    positions = arrangement or ([12.0, 20.0, 28.0] if kind != 'tof' else [2400.0, 4000.0, 5600.0])
+    if rows > 3:
+        positions = [axis[0] + (axis[-1] - axis[0]) * (i + 1) / (rows + 1) for i in range(rows)]
+    prefix += '_background.type line-segment\nloop_\n_background.id\n_background.position\n_background.intensity\n'
+    prefix += ''.join(f'p{i} {position:.17g} {11.25 + i:.17g}(25)\n' for i, position in enumerate(positions))
+    prefix += '\nloop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\nmask 21 22\n'
+    if kind == 'no-measured-source':
+        # Real load path generates a calculation-only grid; it is not a raw null-data hook.
+        text = prefix + '\n_data_range.two_theta_min 10\n_data_range.two_theta_max 40\n_data_range.two_theta_step 10\n'
+    else:
+        data_lines = data.splitlines()
+        values = [line for line in data_lines if line and not line.startswith('_')]
+        assert len(values) == 4, 'BG SETUP: the public fixture writer declares four literal original observations'
+        prefix += 'loop_\n_data.' + data.splitlines()[0] + '\n_data.intensity_meas\n_data.intensity_meas_su\n'
+        prefix += ''.join(f'{x:.17g} {y:.17g} {s:.17g}\n' for x, y, s in zip(axis, [41, 43, 47, 53], [.5, .75, 1.25, 2], strict=True))
+        text = prefix
+    path.write_text(text)
+    analysis = root / 'analysis/analysis.edi'
+    analysis.write_text('_edi.schema_version 3\n_fitting_mode.type single\n_minimizer.max_iterations 3\n'
+        + ('\nloop_\n_alias.id\n_alias.parameter_unique_name\nkeep_target experiment.background.p0.intensity\n'
+           'loop_\n_constraint.id\n_constraint.expression\n_constraint.enabled\n'
+           'keep_value "keep_target = 11.25" true\n' if constrained else ''))
+    analysis.write_text(analysis.read_text() + '\nloop_\n_fit_parameter.id\n_fit_parameter.start_value\n_fit_parameter.start_uncertainty\nexperiment.background.p1 10.75 0.125\n')
+    if second_bank:
+        (root / 'experiments/other.edi').write_text(path.read_text().replace(
+            'data_experiment', 'data_other', 1))
+    return root
+
+
+def background285_image(actor):
+    return actor.command('inspect')['vm']['project']['background285']
+
+
+def background285_bank(image, name='experiment'):
+    rows = [row for row in image['banks'] if row['id'] == name]
+    assert len(rows) == 1, 'BG: exact actual bank identity resolves uniquely, never an implicit bank switch'
+    return rows[0]
+
+
+def background285_without_identity(row):
+    return {key: value for key, value in row.items() if key != 'identity'}
+
+
+def background285_preserved(before, after, bank_id='experiment'):
+    assert all(before[key] == after[key] for key in ['owner', 'core', 'mode', 'path', 'selected_index']), (
+        'BG: actual current Session/core owner remains the original project'
+    )
+    old = background285_bank(before, bank_id)
+    new = background285_bank(after, bank_id)
+    assert {k: v for k, v in old.items() if k != 'anchors'} == {
+        k: v for k, v in new.items() if k != 'anchors'
+    }, 'BG: complete raw axes/intensity/sigma, every write identity, exclusions, phase links/scale, weight and bank metadata survive'
+    unrelated_before = [row for row in before['parameters'] if '.background[' not in row['path']]
+    unrelated_after = [row for row in after['parameters'] if '.background[' not in row['path']]
+    assert unrelated_before == unrelated_after, (
+        'BG: complete unrelated spec/start/SU/free/dependence and composition parameters are preserved'
+    )
+    assert [row for row in before['banks'] if row['id'] != bank_id] == [
+        row for row in after['banks'] if row['id'] != bank_id
+    ], 'BG: unrelated banks retain exact membership, source bytes and anchor metadata/identities'
+
+
+def background285_undo(actor, before, bank_id='experiment'):
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'BG: the actual common editor retains one genuine recorded Undo'
+    )
+    restored = background285_image(actor)
+    background285_preserved(before, restored, bank_id)
+    assert background285_bank(restored, bank_id)['anchors'] == background285_bank(before, bank_id)['anchors'], (
+        'BG: ONE actual Undo restores every original ordered owned row identity/ID/value/free/SU/start/dependence/spec'
+    )
+    assert restored['parameters'] == before['parameters'] and restored['can_undo'] == before['can_undo'], (
+        'BG: one structural edit/Undo restores full parameter metadata and the actual prior Undo availability'
+    )
+
+
+@pytest.mark.parametrize('case', ['simulation', 'no-measured-source', 'legacy-owned-key',
+                                  'extrapolation', 'duplicate-order', 'above-native-capacity'])
+def test_background285_ordinary_policy_and_real_undo(generic, tmp_path, case):
+    root = background285_fixture(tmp_path,
+        'no-measured-source' if case == 'no-measured-source' else 'cw',
+        257 if case == 'above-native-capacity' else 3,
+        arrangement=[28.0, 12.0, 12.0] if case == 'duplicate-order' else None)
+    actor, trace = native_case(generic, [], project=root, connect_now=False)
+    actor.command('native_science_enable')
+    assert actor.command('background285_observe')['reply']['enabled'], (
+        'BG SETUP: test-only observer reads actual model state without preparing edits'
+    )
+    bank_id = 'experiment'
+    if case == 'simulation':
+        result = actor.command('background285_simulation')
+        assert result['reply']['created'], 'BG SETUP: genuine public Create Experiment creates a simulation'
+        image = background285_image(actor)
+        simulations = [row for row in image['banks'] if row['calculation_only']]
+        assert len(simulations) == 1, 'BG SETUP: actual new simulation is unique among the measured source bank'
+        bank_id = simulations[0]['id']
+    if case == 'legacy-owned-key':
+        renamed = actor.command('background285_manual', action='rename', row=1, id='legacy\towned')
+        assert renamed['reply']['accepted'], 'BG SETUP: existing ordinary rename accepts original owned legacy key bytes'
+    before = background285_image(actor)
+    original = background285_bank(before, bank_id)['anchors']
+    if case == 'no-measured-source':
+        assert background285_bank(before)['calculation_only'], (
+            'BG SETUP: actual no-measurement source is a genuine calculation-only project, not a fake measured bank'
+        )
+    if case == 'above-native-capacity':
+        assert len(original) == 257, 'BG SETUP: ordinary source genuinely exceeds the native inclusive256 rows'
+    if case == 'simulation':
+        result = actor.command('background285_manual', action='defined', operation='add', id='manual-first',
+                               position=2.5, intensity=7.25, free=True)
+        assert result['reply']['applied'] and result['reply']['published'], (
+            'BG: ordinary no-observation simulation Add commits through actual shared editor'
+        )
+        after = background285_image(actor)
+        background285_preserved(before, after, bank_id)
+        anchors = background285_bank(after, bank_id)['anchors']
+        assert len(anchors) == len(original) + 1 and [row['id'] for row in anchors[:-1]] == [row['id'] for row in original] and any(row['id'] == 'manual-first' and row['position'] == 2.5 and row['value'] == 7.25
+                   and row['free'] for row in anchors), 'BG: genuine simulation Add publishes exact declared point'
+        background285_undo(actor, before, bank_id)
+        return
+    # Existing row entrance must preserve exact already-owned key bytes, not route
+    # them through native text admission. Ordinary finite positions may extrapolate
+    # or duplicate an existing one while preserving the original slot/order.
+    position = -4.5 if case == 'extrapolation' else original[0]['position']
+    result = actor.command('background285_manual', action='position', row=1, position=position)
+    assert result['reply']['accepted'], 'BG: genuine ordinary row position admits its broader finite manual policy'
+    after = background285_image(actor)
+    background285_preserved(before, after, bank_id)
+    anchors = background285_bank(after, bank_id)['anchors']
+    expected = json.loads(json.dumps(original))
+    expected[1]['position'] = position
+    assert [background285_without_identity(row) for row in anchors] == [
+        background285_without_identity(row) for row in expected
+    ], 'BG: manual position changes only its exact existing row, without sorting/clamping/ID normalization'
+    assert all(anchors[i]['identity'] == original[i]['identity'] for i in range(len(original)) if i != 1), (
+        'BG: every unrelated actual shared anchor identity survives manual update'
+    )
+    background285_undo(actor, before, bank_id)
+    before = background285_image(actor)
+    removed = actor.command('background285_manual', action='remove', row=1)
+    assert removed['reply']['removed'], 'BG: actual ordinary remove reaches its exact owned row at every capability size'
+    after = background285_image(actor)
+    background285_preserved(before, after, bank_id)
+    assert [row['id'] for row in background285_bank(after, bank_id)['anchors']] == [
+        row['id'] for i, row in enumerate(background285_bank(before, bank_id)['anchors']) if i != 1
+    ], 'BG: manual removal preserves exact remaining legacy keys and original order'
+    background285_undo(actor, before, bank_id)
+    # Ordinary staged Add stays outside native capacity/domain policy as well.
+    before = background285_image(actor)
+    result = actor.command('background285_manual', action='defined', operation='add', id='manual-extra',
+                           position=50.5, intensity=8.125, free=False)
+    assert result['reply']['applied'] and result['reply']['published'], (
+        'BG: ordinary staged Add remains available for no-measurement, legacy, duplicate and above-native-capacity banks'
+    )
+    after = background285_image(actor)
+    background285_preserved(before, after, bank_id)
+    actual = background285_bank(after, bank_id)['anchors']
+    assert [row['id'] for row in actual] == [row['id'] for row in background285_bank(before, bank_id)['anchors']] + ['manual-extra'], (
+        'BG: ordinary Add appends without normalizing original order or imposing native row admission'
+    )
+    background285_undo(actor, before, bank_id)
+    assert not trace.exists(), 'BG: ordinary shared editor never silently starts an assistant/provider process'
+
+
+@pytest.mark.parametrize('case', ['cw', 'tof', 'outside', 'wrong-bank', 'duplicate-position',
+    'existing-id', 'missing-id', 'control-id', 'id-equal', 'id-over', 'count-equal', 'count-over',
+    'dependent', 'alias-removal', 'remove-extra-fields', 'wrong-type', 'simulation',
+    'repair-unsorted', 'repair-unsorted-add', 'repair-unsorted-update',
+    'repair-duplicate', 'repair-extrapolation', 'remove', 'undo-conflict',
+    'valid-two-bank-current', 'valid-distinct-update'])
+def test_background285_original_native_policy_metadata_and_undo(generic, tmp_path, case):
+    root = background285_fixture(tmp_path, 'tof' if case == 'tof' else 'cw',
+                                  255 if case == 'count-equal' else 256 if case == 'count-over' else 3,
+                                  constrained=case in {'dependent', 'alias-removal'},
+                                  arrangement=[28.0, 12.0, 20.0] if case.startswith('repair-unsorted') else
+                                  [12.0, 20.0, 20.0] if case == 'repair-duplicate' else
+                                  [9.0, 20.0, 28.0] if case == 'repair-extrapolation' else None,
+                                  second_bank=case in {'wrong-bank', 'valid-two-bank-current'})
+    actor, trace = native_case(generic, [], project=root, connect_now=False)
+    actor.command('native_science_enable')
+    actor.command('background285_observe')
+    if case == 'simulation':
+        assert actor.command('background285_simulation')['reply']['created'], (
+            'BG SETUP: native refusal observes a real current simulation rather than a fake flag'
+        )
+    initial = background285_image(actor)
+    context = json.loads(actor.last['vm']['native_context'])
+    if case == 'simulation':
+        bank_id = next(row['id'] for row in initial['banks'] if row['calculation_only'])
+    else:
+        bank_id = 'experiment'
+    bank = background285_bank(initial, bank_id)
+    if case != 'simulation':
+        original_p1 = next(row for row in bank['anchors'] if row['id'] == 'p1')
+        assert original_p1['value'] == 12.25 and original_p1['uncertainty'] == 0.25 and (
+            original_p1['start_value'] == 10.75 and original_p1['start_uncertainty'] == 0.125
+        ), 'BG SETUP: original nonzero SU and fit-start metadata are literal fixture inputs, not an output-derived golden'
+    disclosed = [row for row in context['datasets'] if row['id'] == bank_id]
+    assert len(disclosed) == 1, 'BG SETUP: exact current dataset is genuinely disclosed before original native RPC'
+    expected_descriptors = [{key: row[key] for key in ['id', 'position', 'free']}
+                            | {'intensity': row['value'], 'uncertainty': row['uncertainty'],
+                               'dependence': 'constrained' if row['dependence'] == 3 else 'independent'}
+                            for row in bank['anchors']]
+    assert disclosed[0]['background']['anchors'] == expected_descriptors, (
+        'BG: complete ordered public context owns every actual anchor ID/value/SU/free/dependence, never a truncated prefix'
+    )
+    args = dict(experiment=bank_id, operation='update', id='p1', position=bank['anchors'][1]['position']
+                if len(bank['anchors']) > 1 else 1.0, intensity=12.25, free=False)
+    good = case in {'cw', 'tof', 'id-equal', 'count-equal', 'repair-unsorted',
+                    'repair-unsorted-add', 'repair-unsorted-update',
+                    'repair-duplicate', 'repair-extrapolation', 'remove', 'undo-conflict',
+                    'valid-two-bank-current', 'valid-distinct-update'}
+    if case in {'id-equal', 'id-over', 'count-equal', 'count-over', 'outside', 'existing-id', 'control-id', 'duplicate-position', 'repair-unsorted-add'}:
+        args.update(operation='add', id=('測' * 85 + 'x') if case == 'id-equal' else ('測' * 85 + 'xx')
+                    if case == 'id-over' else 'bad\tkey' if case == 'control-id' else 'p0' if case == 'existing-id' else 'native-new',
+                    position=9.0 if case == 'outside' else bank['anchors'][0]['position'] if case == 'duplicate-position' else 35.0)
+    if case == 'wrong-bank':
+        other = background285_bank(initial, 'other')
+        assert bank['id'] == initial['banks'][initial['selected_index']]['id'] and other['id'] != bank['id'] and (
+            not other['calculation_only'] and other['axis'] == bank['axis']
+            and [row['id'] for row in other['anchors']] == ['p0', 'p1', 'p2']
+        ), 'BG NEGATIVE SETUP: target is a real existing measured NONCURRENT bank with lawful rows, never an unknown name'
+        args['experiment'] = other['id']
+    if case == 'missing-id':
+        args.update(id='no-such-anchor', position=21.5)
+        assert all(row['position'] != args['position'] and row['id'] != args['id'] for row in bank['anchors']), (
+            'BG NEGATIVE SETUP: missing-ID Update has distinct in-range otherwise-valid position, so an upsert cannot refuse for collision'
+        )
+    if case == 'dependent': args.update(id='p0', position=bank['anchors'][0]['position'], intensity=21.0)
+    if case in {'alias-removal', 'remove-extra-fields', 'remove', 'repair-unsorted', 'repair-duplicate'}:
+        args = dict(experiment=bank_id, operation='remove', id='p0' if case in {'alias-removal', 'remove-extra-fields'} else 'p1')
+        if case == 'remove-extra-fields': args.update(position=12, intensity=11.25, free=False)
+    if case == 'repair-extrapolation': args.update(id='p0', position=12.0, intensity=11.25)
+    if case == 'repair-unsorted-update': args.update(position=14.0)
+    if case == 'valid-distinct-update': args.update(position=21.5)
+    if case == 'valid-two-bank-current':
+        other = background285_bank(initial, 'other')
+        assert bank['id'] == initial['banks'][initial['selected_index']]['id'] and other['id'] != bank['id'], (
+            'BG POSITIVE SETUP: exact same two-bank fixture admits a current-bank edit, isolating noncurrent refusal'
+        )
+    if case == 'simulation':
+        args.update(operation='add', id='simulation-new', position=20.5, intensity=12.25, free=False)
+        assert bank['calculation_only'] and bank['axis'] and min(bank['axis']) <= args['position'] <= max(bank['axis']) and all(
+            row['id'] != args['id'] and row['position'] != args['position'] for row in bank['anchors']
+        ), 'BG NEGATIVE SETUP: measured-only rejection gets a lawful real simulation Add, never an absent-row Update'
+    if case == 'wrong-type': args['free'] = 1
+    call = native_call('edit_background', **args)
+    native145_configure(actor, trace, [[call]])
+    before = background285_image(actor)
+    old_state = actor.last['vm']
+    state, replies = native_send(actor, trace, 1)
+    outcome = replies[0]['decoded']
+    after = background285_image(actor)
+    background285_preserved(before, after, bank_id)
+    if good:
+        assert replies[0]['response']['result']['success'] and outcome['status'] == 'edited', (
+            'BG: genuine native CW/TOF and inclusive exact capacities commit, not applied_unconfirmed/refused'
+        )
+        anchors = background285_bank(after, bank_id)['anchors']
+        if args['operation'] == 'remove':
+            expected = sorted([(row['id'], row['position'], row['value'], row['free'])
+                               for row in bank['anchors'] if row['id'] != args['id']], key=lambda row: row[1])
+        elif args['operation'] == 'add':
+            expected = sorted([(row['id'], row['position'], row['value'], row['free']) for row in bank['anchors']]
+                              + [(args['id'], args['position'], args['intensity'], args['free'])], key=lambda row: row[1])
+        else:
+            expected = [(row['id'], args['position'] if row['id'] == args['id'] else row['position'],
+                         args['intensity'] if row['id'] == args['id'] else row['value'],
+                         args['free'] if row['id'] == args['id'] else row['free']) for row in bank['anchors']]
+            expected.sort(key=lambda row: row[1])
+        assert [(row['id'], row['position'], row['value'], row['free']) for row in anchors] == expected, (
+            'BG: one native edit publishes exactly its independently declared sorted arrangement'
+        )
+        old = {row['id']: row for row in bank['anchors']}
+        for row in anchors:
+            if row['id'] in old and row['id'] != args['id']:
+                assert row == old[row['id']], 'BG: every untouched native row keeps shared identity and all original metadata'
+            elif row['id'] in old:
+                assert row['uncertainty'] == old[row['id']]['uncertainty'] and all(
+                    row[key] == old[row['id']][key] for key in ['spec_identity', 'start_value', 'start_uncertainty', 'dependence']
+                ), 'BG: equal-intensity native update preserves original SU/start/spec/dependence exactly'
+        if case == 'undo-conflict':
+            target = next(row for row in actor.last['vm']['project']['parameters']
+                          if '.background[p1]' in row['path'])
+            actual = actor.command('manual_value', path=target['path'], value=target['value'] + 2.0)
+            assert not actual['reply']['error'], 'BG SETUP: genuine later ordinary edit changes the actual affected row'
+            conflict = background285_image(actor)
+            assert actor.command('native_undo')['reply']['was_available'], 'BG SETUP: original structural Undo is still offered before conflict validation'
+            refused_undo = background285_image(actor)
+            assert {k: v for k, v in refused_undo.items() if k != 'can_undo'} == {
+                k: v for k, v in conflict.items() if k != 'can_undo'
+            }, 'BG: conflicting Undo never writes its stale recorded background over a later actual manual edit'
+        else:
+            background285_undo(actor, before, bank_id)
+            if case.startswith('repair-'):
+                assert background285_bank(background285_image(actor), bank_id)['anchors'] == bank['anchors'], (
+                    'BG: native repair ONE Undo restores exact original unsorted/duplicate/extrapolating rows and shared identities'
+                )
+    else:
+        assert not replies[0]['response']['result']['success'] and outcome['status'] in {'refused', 'unavailable'}, (
+            'BG: native domain/type/count/text/current-bank/dependence/alias violations honestly refuse before writes'
+        )
+        assert after == before, 'BG: refused original native work preserves every anchor/spec/raw identity and Undo'
+    reuse269_account(old_state, actor.last['vm'], trace)
+
+
+def test_background285_complete_context_cannot_truncate_over_cap_anchor_collection(generic, tmp_path):
+    root = background285_fixture(tmp_path, rows=256)
+    original = root / 'experiments/experiment.edi'
+    text = original.read_text()
+    anchor_lines = text.split('_background.intensity\n', 1)[1].split('\nloop_', 1)[0].splitlines()
+    rows = [line.split() for line in anchor_lines if line.strip()]
+    assert len(rows) == 256, 'BG RESOURCE SETUP: actual declared per-bank anchor count is exactly the inclusive native limit'
+    # Seventeen banks x256 distinct256-byte owned IDs exceeds1MiB just in IDs.
+    # Ordinary file sources own these bounded literal inputs before any native call.
+    total_id_bytes = 0
+    for bank in range(17):
+        replacement = []
+        for index, row in enumerate(rows):
+            identifier = f'owned-{bank:02d}-{index:03d}-' + 'x' * (256 - len(f'owned-{bank:02d}-{index:03d}-'))
+            assert len(identifier.encode()) == 256, 'BG RESOURCE SETUP: independent ASCII ID spelling is exactly256 UTF8 bytes'
+            total_id_bytes += len(identifier.encode())
+            replacement.append(identifier + ' ' + row[1] + ' ' + row[2])
+        bank_text = text.replace('data_experiment', 'data_bank_' + str(bank), 1)
+        bank_text = bank_text.replace('\n'.join(anchor_lines), '\n'.join(replacement), 1)
+        (root / 'experiments' / ('bank_' + str(bank) + '.edi')).write_text(bank_text)
+    original.unlink()
+    # No fit-start names are retained for a nonexistent renamed original bank.
+    (root / 'analysis/analysis.edi').write_text('_edi.schema_version 3\n_fitting_mode.type joint\n')
+    assert total_id_bytes == 17 * 256 * 256 and total_id_bytes > 1048576, (
+        'BG RESOURCE: mandatory complete descriptor IDs alone exceed the declared inclusive1MiB context capacity'
+    )
+    actor, trace = native_case(generic, [], project=root, connect_now=False)
+    state = actor.last['vm']
+    assert len([row for row in state['project']['parameters'] if '.background[' in row['path']]) == 17 * 256, (
+        'BG RESOURCE SETUP: actual ordinary source admitted every declared owned anchor before context refusal'
+    )
+    context = json.loads(state['native_context'])
+    assert context.get('error'), (
+        'BG RESOURCE: actual complete context refuses honestly instead of returning a silently truncated dataset/anchor prefix'
+    )
+    assert not trace.exists(), 'BG RESOURCE: capacity refusal never silently starts a provider/account process'

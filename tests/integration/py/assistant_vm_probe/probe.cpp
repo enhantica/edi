@@ -57,6 +57,74 @@ Array rows(edi_app::RowTableModel* model) {
     return result;
 }
 }
+// Test-only passive original core metadata. No ownership/state is changed here.
+Object background285_image(edi_app::ProjectViewModel* owner) {
+    Object image;if(!owner)return image;
+    const auto pointer=[](const void* p) {return QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(p)),16);};
+    const auto number=[](const std::optional<double>& v)->QJsonValue {return v?QJsonValue(*v):QJsonValue(QJsonValue::Null);};
+    Array banks,parameters;
+    auto* project=owner->assistantProject();
+    for(const auto& entry:edi::parameter_entries(*project)) {
+        const auto& p=*entry.parameter;Object spec;
+        if(p.spec) {
+            Array edi_names,cif_names;
+            for(const auto* name:p.spec->edi_names)edi_names.push_back(QString::fromUtf8(name));
+            for(const auto* name:p.spec->cif_names)cif_names.push_back(QString::fromUtf8(name));
+            spec={{"identity",pointer(p.spec)},{"category",QString::fromUtf8(p.spec->category)},
+                {"name",QString::fromUtf8(p.spec->name)},{"units",QString::fromUtf8(p.spec->units)},
+                {"description",QString::fromUtf8(p.spec->description)},
+                {"display_name",QString::fromUtf8(p.spec->display_name)},
+                {"display_units",QString::fromUtf8(p.spec->display_units)},
+                {"latex_name",QString::fromUtf8(p.spec->latex_name)},
+                {"latex_units",QString::fromUtf8(p.spec->latex_units)},
+                {"minimum",p.spec->range.min},{"maximum",p.spec->range.max},
+                {"edi_names",edi_names},{"cif_names",cif_names}};
+        }
+        parameters.push_back(Object{{"path",QString::fromStdString(entry.path)},
+            {"value",p.value.get()},{"free",p.free.get()},{"uncertainty",number(p.uncertainty.get())},
+            {"start_value",number(p.start_value.get())},{"start_uncertainty",number(p.start_uncertainty.get())},
+            {"dependence",static_cast<int>(p.dependence)},{"spec",spec}});
+    }
+    for(const auto& bank:project->experiments) {
+        Array points,excluded,links,axis,measured,sigma;Object raw;
+        for(const auto& row:bank->background)points.push_back(Object{
+            {"id",QString::fromStdString(row->id.value())},{"identity",pointer(row.get())},
+            {"position",row->position.get()},{"value",row->intensity.value.get()},
+            {"free",row->intensity.free.get()},{"uncertainty",number(row->intensity.uncertainty.get())},
+            {"start_value",number(row->intensity.start_value.get())},
+            {"start_uncertainty",number(row->intensity.start_uncertainty.get())},
+            {"dependence",static_cast<int>(row->intensity.dependence)},
+            {"spec_identity",pointer(row->intensity.spec)}});
+        for(const auto& row:bank->excluded_regions)excluded.push_back(Array{row->first.get(),row->second.get()});
+        for(const auto& row:bank->linked_structures)links.push_back(Array{
+            QString::fromStdString(row->structure_id.value()),row->enabled.get(),row->scale.value.get()});
+        if(bank->data) {
+            const auto& data=*bank->data;
+            if(data.two_theta)for(auto x:*data.two_theta)axis.push_back(x);
+            if(data.time_of_flight)for(auto x:*data.time_of_flight)axis.push_back(x);
+            for(auto x:data.intensity_meas.get())measured.push_back(x);
+            for(auto x:data.intensity_meas_su.get())sigma.push_back(x);
+            raw={{"identity",pointer(&data)},{"aggregate",QString::number(static_cast<qulonglong>(data.written.value()))},
+                {"two_theta",QString::number(static_cast<qulonglong>(data.two_theta.written()))},
+                {"time_of_flight",QString::number(static_cast<qulonglong>(data.time_of_flight.written()))},
+                {"intensity",QString::number(static_cast<qulonglong>(data.intensity_meas.written()))},
+                {"sigma",QString::number(static_cast<qulonglong>(data.intensity_meas_su.written()))}};
+        }
+        banks.push_back(Object{{"id",QString::fromStdString(bank->name.value())},
+            {"identity",pointer(bank.get())},{"calculation_only",bank->calculation_only},
+            {"has_data",bank->data.has_value()},{"background_type",QString::fromStdString(bank->background_type)},
+            {"origin",number(bank->background_origin)},{"x_min",number(bank->background_x_min)},
+            {"x_max",number(bank->background_x_max)},{"anchors",points},
+            {"axis",axis},{"measured",measured},{"sigma",sigma},{"raw_identity",raw},
+            {"exclusions",excluded},{"links",links},{"weight",bank->dataset_weight}});
+    }
+    image={{"owner",pointer(owner)},{"core",pointer(project)},{"banks",banks},{"parameters",parameters},
+        {"mode",QString::fromStdString(project->fitting_mode)},{"path",owner->path()},
+        {"selected_index",owner->currentExperimentIndex()},
+        {"can_undo",owner->canUndo()}};
+    return image;
+}
+
 int main(int argc,char** argv) {
     const bool codex_mode=argc==2 && QByteArray(argv[1])=="--codex";
     QTemporaryDir storage;
@@ -133,6 +201,7 @@ int main(int argc,char** argv) {
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
     };
     bool native_science_enabled=false;
+    bool background285_enabled=false;
     bool named_empty_observation=false;
     QPointer<edi_app::ProjectViewModel> named_empty_owner;
     const void* named_empty_core=nullptr;
@@ -293,6 +362,7 @@ int main(int argc,char** argv) {
                     {"metadata_path",QString::fromStdString(value.metadata.path)}};
             }
             if(codex_mode && native_science_enabled)project["science_observer"]=science;
+            if(codex_mode && background285_enabled)project["background285"]=background285_image(session->project());
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
             if(codex_mode) {
                 Array experiments;
@@ -720,6 +790,35 @@ int main(int argc,char** argv) {
             }
             else if(codex_mode && op=="import265_cancel") {
                 session->assistant()->cancelNativeImport(input["intent"].toString());
+            }
+            else if(codex_mode && op=="background285_observe") {
+                background285_enabled=true;result={{"enabled",true}};
+            }
+            else if(codex_mode && op=="background285_simulation") {
+                if(!session->project())throw std::invalid_argument("actual owner required");
+                const bool created=session->project()->createExperiment();
+                if(created)session->project()->setCurrentExperimentIndex(
+                    static_cast<int>(session->project()->experimentModels().size())-1);
+                result={{"created",created},{"selected",session->project()->currentExperimentIndex()}};
+            }
+            else if(codex_mode && op=="background285_manual") {
+                if(!session->project())throw std::invalid_argument("actual owner required");
+                const auto models=session->project()->experimentModels();
+                const auto index=session->project()->currentExperimentIndex();
+                if(index<0 || index>=models.size())throw std::invalid_argument("actual current bank required");
+                auto* model=models[index]->background();const auto action=input["action"].toString();
+                if(action=="defined") {
+                    result=QJsonObject::fromVariantMap(model->changeDefined(
+                        input["operation"].toString(),input["id"].toString(),
+                        input["position"].toDouble(),input["intensity"].toDouble(),input["free"].toBool()));
+                } else if(action=="position") {
+                    result={{"accepted",model->setPosition(input["row"].toInt(),input["position"].toDouble())}};
+                } else if(action=="remove") {
+                    const auto count=model->count();model->remove(input["row"].toInt());
+                    result={{"removed",model->count()==count-1}};
+                } else if(action=="rename") {
+                    result={{"accepted",model->setId(input["row"].toInt(),input["id"].toString())}};
+                } else throw std::invalid_argument("declared public model operation required");
             }
             else if(codex_mode && op=="native_science_enable") {
                 native_science_enabled=true;result={{"enabled",true}};

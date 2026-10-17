@@ -3442,4 +3442,257 @@ TestCase {
             if (assistant.canCancel) assistant.cancel();
         }
     }
+
+    // BG285 public-stage tests: actual Main/default Session, real Qt input and
+    // original native envelopes. Numeric expectations are declared fixture inputs.
+    function background285_rows(project) {
+        return Probe.rows(project.currentExperiment.background).map(row => ({
+            id: row.id, position: row.position, intensity: row.intensity.value,
+            free: row.intensity.free, hasUncertainty: row.intensity.hasUncertainty,
+            uncertainty: row.intensity.uncertainty, uid: row.intensity.uid,
+            minimum: row.intensity.minimum, maximum: row.intensity.maximum,
+            name: row.intensity.name, units: row.intensity.displayUnits
+        }));
+    }
+    function background285_unrelated(project) {
+        return JSON.stringify(visible185_parameters(project).filter(p => !p.path.includes(".background["))
+            .map(p => [p.path, p.value, p.free, p.hasUncertainty, p.uncertainty]));
+    }
+    function background285_operation(operation) {
+        const combo = Ui.control(Probe, window, "background.stage.operation");
+        verify(combo !== null, "BG SETUP: actual ordinary operation ComboBox exists");
+        Ui.scrollIntoView(combo); rendered();
+        Ui.click(this, Probe, window, "background.stage.operation");
+        keyClick(Qt.Key_Home);
+        const index = ["add", "update", "remove"].indexOf(operation);
+        verify(index >= 0, "BG SETUP: operation belongs to the public ordered three-value selector");
+        for (let i = 0; i < index; ++i) keyClick(Qt.Key_Down);
+        keyClick(Qt.Key_Return);
+        tryCompare(combo, "currentValue", operation, 2000,
+            "BG: real keys select the exact original requested operation");
+        tryVerify(() => !combo.popup.visible && !combo.popup.opened, 2000,
+            "BG SETUP: original operation popup actually closes before next real input");
+    }
+    function background285_stage(operation, id, position, intensity, free) {
+        visible185_page("experiment");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        Ui.expandGroup(this, Probe, window, "group.background");
+        if (Ui.control(Probe, window, "background.stage.id") === null) {
+            Ui.click(this, Probe, window, "background.append");
+            tryVerify(() => Ui.control(Probe, window, "background.stage.id") !== null, 2000,
+                "BG SETUP: genuine ordinary Add point opens the original staged form before input");
+        }
+        background285_operation(operation);
+        relation245_text("background.stage.id", id);
+        if (operation !== "remove") {
+            relation245_text("background.stage.position", String(position));
+            relation245_text("background.stage.intensity", String(intensity));
+            const flag = Ui.control(Probe, window, "background.stage.free");
+            verify(flag !== null, "BG SETUP: genuine staged free checkbox exists");
+            Ui.scrollIntoView(flag); rendered();
+            if (flag.checked !== free) Ui.click(this, Probe, window, "background.stage.free");
+            compare(flag.checked, free, "BG: actual ordinary free control stores only requested draft flag");
+        }
+    }
+    function background285_observationMs(operation, id, position, intensity) {
+        // Same public input pacing as prior relation/import actors: movement500,
+        // press100, relaxation500, key100. Eight possible real stage actions plus
+        // three declared text entries, SelectAll/Backspace/Return (4 extra keys).
+        const texts = operation === "remove" ? [id] : [id, String(position), String(intensity)];
+        return 10000 + 1100 * 8 + 100 * texts.reduce((n, text) => n + [...text].length + 4, 0);
+    }
+    function test_background285_real_stage_and_original_rpc_data() {
+        return ["manual-add", "manual-update", "manual-remove", "visible-add-cw",
+            "visible-update-tof", "visible-remove", "stop", "manual-takeover",
+            "preexisting-draft", "new-owner"].map(tag => ({tag: tag}));
+    }
+    function test_background285_real_stage_and_original_rpc(data) {
+        verify(Session.openProject(Probe.referenceUrl("Original declared background input")),
+            "BG SETUP: independently generated original scientific source opens through real Session");
+        const project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "BG SETUP: original actual calculation is current before staging/input baselines");
+        const manual = data.tag.startsWith("manual-");
+        const operation = data.tag === "manual-remove" || data.tag === "visible-remove" ? "remove"
+            : data.tag === "manual-update" || data.tag === "visible-update-tof" ? "update" : "add";
+        const id = operation === "add" ? "native-bg-original" : "p1";
+        const position = data.tag === "visible-update-tof" ? 4200 : operation === "update" ? 21.5 : 32.5;
+        const intensity = 19.75;
+        const original = background285_rows(project);
+        compare(original.length, 3, "BG SETUP: independent fixture carries all three declared anchors");
+        const inputs = visible185_inputs(project);
+        const unrelated = background285_unrelated(project);
+        const declarations = relation245_declarations(project);
+        const shape = relation246_shape(project);
+        const previousUndo = item("appBar.button.undo").enabled;
+        const previousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const oldHistory = Probe.rows(assistant.messages).map(row => JSON.stringify(row));
+        let models = null;
+        if (!manual) {
+            toggle(); assistant.signIn(); visible185_ready("background285-bootstrap");
+            if (assistant.contextConsentRequired) assistant.signIn();
+            visible185_ready("background285-current-context");
+            verify(!assistant.contextConsentRequired, "BG SETUP: actual current original scope is disclosed once");
+            compare(assistant.showActions, false, "BG: fresh actual Session begins in default normal mode");
+            const show = item("assistant.showActions");
+            verify(show.enabled && show.visible, "BG SETUP: genuine mode checkbox is actionable");
+            mouseClick(show); compare(assistant.showActions, true, "BG: real checkbox enables visible route");
+            models = JSON.stringify(Probe.rows(assistant.models));
+            toggle();
+        }
+        visible185_page("experiment");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        Ui.expandGroup(this, Probe, window, "group.background");
+        if (manual || data.tag === "preexisting-draft") {
+            Ui.click(this, Probe, window, "background.append");
+            tryVerify(() => Ui.control(Probe, window, "background.stage.id") !== null, 2000,
+                "BG SETUP: original ordinary Add action exposes the real form before controls/input");
+        }
+        // Capture existing visual objects for passive signal receipts only. Hidden
+        // handles are not an exposure premise; the native route opens its own form.
+        const handles = [...new Set(Ui.itemsWithProperty(Ui.page(window), "objectName"))];
+        const idHandles = handles.filter(control => control.objectName === "background.stage.id");
+        const applyHandles = handles.filter(control => control.objectName === "background.stage.apply");
+        compare(idHandles.length, 1, "BG SETUP: one original current-page ID object exists for passive receipts");
+        compare(applyHandles.length, 1, "BG SETUP: one original current-page Apply object exists for passive receipts");
+        const idField = idHandles[0];
+        const apply = applyHandles[0];
+        let edits = 0, applies = 0, starts = 0, takeovers = 0;
+        function edited() { ++edits; }
+        function applied() { ++applies; }
+        function pointerStarted() { ++starts; }
+        function tookOver() { ++takeovers; }
+        idField.textEdited.connect(edited); apply.clicked.connect(applied);
+        assistant.actionPointerShown.connect(pointerStarted);
+        assistant.actionManualTakeover.connect(tookOver);
+        let manualText = null, replacement = null, draft = null;
+        const call = "background285-" + data.tag;
+        try {
+            if (manual || data.tag === "preexisting-draft") {
+                background285_stage(operation, id, position, intensity, true);
+                compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                    "BG: real staged typing/free selection and ordinary focus changes never mutate before Apply");
+                if (data.tag === "preexisting-draft") {
+                    draft = {id: idField.text, focus: window.activeFocusItem,
+                        start: window.activeFocusItem.selectionStart, end: window.activeFocusItem.selectionEnd};
+                }
+            }
+            if (manual) Ui.click(this, Probe, window, "background.stage.apply");
+            else {
+                assistant.send("Perform the original defined background operation " + data.tag);
+                if (data.tag !== "preexisting-draft") {
+                    tryVerify(() => Ui.control(Probe, window, "background.stage.id") === idField
+                        && Ui.control(Probe, window, "background.stage.apply") === apply,
+                        background285_observationMs(operation, id, position, intensity),
+                        "BG SETUP: original native helper actually opens its genuine form before input/exposure assertions");
+                }
+            }
+            if (["stop", "manual-takeover", "new-owner"].includes(data.tag)) {
+                tryVerify(() => assistant.showingActions && assistant.canCancel && starts > 0
+                    && edits > 0 && idField.text.length > 0 && idField.text !== id,
+                    background285_observationMs(operation, id, position, intensity),
+                    "BG INTERVAL SETUP: actual original partial staged text and real painted-helper route are reached");
+                verify(item("assistant.actionPointer").opacity > 0,
+                    "BG INTERVAL SETUP: current helper actually paints its original pointer");
+                compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                    "BG: partial native form has zero scientific effect before original Apply");
+                if (data.tag === "stop") {
+                    const stop = item("assistant.stopVisibleAction");
+                    verify(stop.enabled && Ui.exposed(stop), "BG SETUP: genuine original Stop is exposed");
+                    mouseClick(stop);
+                } else if (data.tag === "manual-takeover") {
+                    Ui.scrollIntoView(idField); rendered();
+                    Ui.click(this, Probe, window, "background.stage.id");
+                    compare(window.activeFocusItem, idField, "BG: original actual manual receiver gains focus normally");
+                    keyClick("x");
+                    verify(idField.text.includes("x"), "BG: original genuine manual key survives native retirement");
+                    manualText = idField.text;
+                } else {
+                    Session.closeProject();
+                    verify(Session.createProject("BG-new-owner", "Original real replacement"),
+                        "BG SETUP: actual Session creates a distinct genuinely empty replacement owner");
+                    replacement = Session.project;
+                    verify(replacement !== project, "BG: original A cannot acquire the new B owner");
+                }
+            }
+            const retired = ["stop", "manual-takeover", "new-owner", "preexisting-draft"].includes(data.tag);
+            if (!manual) {
+                tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                    && (data.tag === "new-owner" || visible185_outcome(call, previousIds) !== null),
+                    background285_observationMs(operation, id, position, intensity),
+                    "BG: same-owner original retained outcome and real terminal presentation settle within the existing bound");
+                const outcome = visible185_outcome(call, previousIds);
+                if (data.tag === "new-owner") {
+                    if (outcome !== null) verify(!["edited", "applied_unconfirmed"].includes(outcome.status),
+                        "BG: any surviving old-A row cannot claim an edit of the new owner");
+                    compare(Session.project, replacement, "BG: later original cleanup cannot replace B");
+                    compare(replacement.structures.count, 0, "BG: stale A never injects old science into new empty owner");
+                    compare(replacement.experiments.count, 0, "BG: old staged Apply cannot create a bank in B");
+                    compare(applies, 0, "BG: retired original A never clicks a late Apply");
+                    return;
+                }
+                verify(outcome !== null, "BG: same-owner original native outcome is actually retained");
+                if (retired) {
+                    verify(!["edited", "applied_unconfirmed"].includes(outcome.status),
+                        "BG: pre-Apply draft/Stop/manual retirement honestly refuses without scientific success");
+                    compare(applies, 0, "BG: genuine retirement/draft refusal cannot click original Apply later");
+                    if (draft !== null) {
+                        compare(idField.text, draft.id, "BG: preexisting genuine draft text remains intact");
+                        compare(window.activeFocusItem, draft.focus, "BG: refusal never blurs/commits existing draft");
+                        compare(draft.focus.selectionStart, draft.start, "BG: original draft selection start survives");
+                        compare(draft.focus.selectionEnd, draft.end, "BG: original draft selection end survives");
+                    }
+                    if (manualText !== null) {
+                        verify(takeovers > 0, "BG: actual manual event is recognized in the reached helper interval");
+                        compare(idField.text, manualText, "BG: no late helper typing overwrites original manual text");
+                    }
+                } else {
+                    compare(outcome.status, "edited", "BG: actual visible edit is confirmed, never normalized from uncertainty");
+                    compare(applies, 1, "BG: the genuine native prearm reaches exactly one ordinary Apply click");
+                    verify(starts > 0 && edits > 0, "BG: real pointer and typed controls perform native work");
+                }
+            }
+            if (!retired) {
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                    "BG: real post-edit calculation becomes current before scientific readback");
+                const rows = background285_rows(project);
+                let expected = original.map(row => Object.assign({}, row));
+                if (operation === "remove") expected = expected.filter(row => row.id !== id);
+                else if (operation === "add") expected.push({id: id, position: position, intensity: intensity, free: true});
+                else expected = expected.map(row => row.id === id ? Object.assign({}, row,
+                    {position: position, intensity: intensity, free: true}) : row);
+                compare(JSON.stringify(rows.map(row => [row.id, row.position, row.intensity, row.free])),
+                    JSON.stringify(expected.map(row => [row.id, row.position, row.intensity, row.free])),
+                    "BG: actual ordinary/visible Apply publishes the complete exact requested arrangement");
+                Ui.click(this, Probe, window, "appBar.button.undo");
+                compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                    "BG: ONE actual appbar Undo restores all original ordered keys/values/SU/free/spec metadata");
+            } else compare(JSON.stringify(background285_rows(project)), JSON.stringify(original),
+                "BG: refusal/retirement preserves every original background parameter");
+            compare(item("appBar.button.undo").enabled, previousUndo,
+                "BG: one Apply/Undo or refusal preserves actual prior Undo availability");
+            compare(background285_unrelated(project), unrelated, "BG: all unrelated scientific parameters/SUs/free flags survive");
+            compare(visible185_inputs(project), inputs, "BG: every actual observation/sigma/mask/phase/weight is unchanged");
+            compare(relation245_declarations(project), declarations, "BG: all preexisting relation declarations survive");
+            compare(relation246_shape(project), shape, "BG: complete original composition/fractional coordinates survive");
+            compare(Session.project, project, "BG: ordinary/visible transaction retains exact original owner");
+            if (!manual) {
+                verify(assistant.connected, "BG: genuine managed account survives scientific work and Undo");
+                compare(JSON.stringify(Probe.rows(assistant.models)), models, "BG: real catalog never repaired by signing in again");
+                verify(oldHistory.every(row => Probe.rows(assistant.messages).some(value => JSON.stringify(value) === row)),
+                    "BG: original history remains intact through shared editor execution");
+            }
+        } finally {
+            console.log("BACKGROUND285_STATE", data.tag, JSON.stringify({currentOwner: String(Session.project),
+                originalOwner: String(project), replacementOwner: String(replacement), connected: assistant.connected,
+                canCancel: assistant.canCancel, showingActions: assistant.showingActions, edits: edits,
+                applies: applies, starts: starts, takeovers: takeovers,
+                originalOutcome: visible185_outcome(call, previousIds)}));
+            if (idField && idField.textEdited) idField.textEdited.disconnect(edited);
+            if (apply && apply.clicked) apply.clicked.disconnect(applied);
+            assistant.actionPointerShown.disconnect(pointerStarted);
+            assistant.actionManualTakeover.disconnect(tookOver);
+            if (assistant.canCancel) assistant.cancel();
+        }
+    }
 }
