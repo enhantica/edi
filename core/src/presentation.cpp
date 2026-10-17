@@ -295,8 +295,9 @@ PatternSource::Column reversed(const PatternSource::Column& values) {
     return std::make_shared<const std::vector<double>>(values->rbegin(), values->rend());
 }
 
-// The d of a native x, linear between the data's rows (the end rows' d beyond the data).
-double d_at(const std::vector<double>& native, const std::vector<double>& d, double x) {
+// The d of a native x, linear between the data's rows; beyond the data the end rows' d, or with `extend` the end rows'
+// line carried on.
+double d_at(const std::vector<double>& native, const std::vector<double>& d, double x, bool extend = false) {
     const bool ascending = native.front() <= native.back();
     std::size_t upper = 0;
     if (ascending) {
@@ -306,10 +307,15 @@ double d_at(const std::vector<double>& native, const std::vector<double>& d, dou
             std::lower_bound(native.begin(), native.end(), x, std::greater<>()) - native.begin());
     }
     if (upper == 0) {
-        return d.front();
-    }
-    if (upper >= native.size()) {
-        return d.back();
+        if (!extend) {
+            return d.front();
+        }
+        upper = 1;
+    } else if (upper >= native.size()) {
+        if (!extend) {
+            return d.back();
+        }
+        upper = native.size() - 1;
     }
     const double x0 = native[upper - 1], x1 = native[upper];
     const double share = x1 != x0 ? (x - x0) / (x1 - x0) : 0.0;
@@ -336,8 +342,22 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
             *column = reversed(*column);
         }
     }
-    source.phases = group_reflections(refln.structure_id.values(), refln.d_spacing.values(), refln.index_h.values(),
+    // A tick is drawn where its peak is: its native position mapped as the points are, so the zero and line shifts
+    // that move the peak off the reflection's d move the tick with it. Its readout keeps the reflection's d.
+    const std::vector<double>& positions = refln.position.values();
+    std::vector<double> drawn;
+    drawn.reserve(positions.size());
+    for (const double position : positions) {
+        drawn.push_back(d_at(native, d, position, true));
+    }
+    source.phases = group_reflections(refln.structure_id.values(), drawn, refln.index_h.values(),
                                       refln.index_k.values(), refln.index_l.values(), names);
+    const std::vector<PatternSource::Phase> reflection_d =
+        group_reflections(refln.structure_id.values(), refln.d_spacing.values(), refln.index_h.values(),
+                          refln.index_k.values(), refln.index_l.values(), names);
+    for (std::size_t place = 0; place < source.phases.size() && place < reflection_d.size(); ++place) {
+        source.phases[place].readout = reflection_d[place].position;
+    }
 }
 
 }  // namespace
@@ -688,13 +708,14 @@ std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternS
                 }
                 index = static_cast<std::size_t>(found - phase.rows.begin());
             }
-            if (index >= phase.hkl->size() || index >= phase.position->size()) {
+            const PatternSource::Column& read = phase.readout ? phase.readout : phase.position;
+            if (index >= phase.hkl->size() || index >= read->size()) {
                 return {};
             }
             const auto& hkl = (*phase.hkl)[index];
             // Only the Miller indices take the tick's colour (the owner, 2026-10-03).
             return {{phase.structure_id, ""},
-                    {"x: " + readout_number((*phase.position)[index]), ""},
+                    {"x: " + readout_number((*read)[index]), ""},
                     {"Miller indices: (" + std::to_string(hkl[0]) + " " + std::to_string(hkl[1]) + " " +
                          std::to_string(hkl[2]) + ")",
                      series.style}};

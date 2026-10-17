@@ -41,6 +41,7 @@ struct PatternSource {
         std::string structure_id, label;
         std::size_t place = 0;  // the structure's place in the project's list: its row and colour
         Column position;        // `_refln` positions, on the experiment's x axis
+        Column readout;         // what a tick's readout shows when not its position: the reflection's d on the d axis
         std::shared_ptr<const std::vector<std::array<std::int32_t, 3>>> hkl;
         // The `_refln` row of each position; empty when they are rows 0, 1, 2, …
         std::vector<std::size_t> rows;
@@ -58,10 +59,10 @@ enum class PatternAxis : std::uint8_t { Native, DSpacing };
 
 // Owner thread. The computed columns and the reflections are taken only when the experiment's
 // computed categories are current; otherwise they are absent and `current` is false.
-// On the d axis x is `_pd_data.d_spacing` and the ticks are at `_refln.d_spacing`, titled `d (Å)`; every column is
-// reversed when d descends (constant wavelength), so x ascends (a presented point's row then counts from the last
-// `_data` row), and each excluded band's ends are mapped to d along the data. Without a current d column the pattern
-// stays on its own axis.
+// On the d axis x is `_pd_data.d_spacing`, titled `d (Å)`; every column is reversed when d descends (constant
+// wavelength), so x ascends (a presented point's row then counts from the last `_data` row), and each excluded band's
+// ends and each tick's `_refln.position` are mapped to d along the data, so a tick meets its peak; a tick's readout is
+// its `_refln.d_spacing`. Without a current d column the pattern stays on its own axis.
 PatternSource capture_pattern(const Project& project, std::size_t experiment_index,
                               PatternAxis axis = PatternAxis::Native);
 

@@ -41,7 +41,8 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
    its correlations are the pairs the fit record keeps for it (ADR-0034), so a report from the saved files shows the
    same pairs as one made in the app.
 4. **Charts are the core's outputs.** For each experiment the builder captures the pattern (the d axis is a capture
-   choice: x from `_pd_data.d_spacing` and the ticks from `_refln.d_spacing`, ascending), applies the options to that
+   choice: x from `_pd_data.d_spacing`, ascending, and each tick at its `_refln.position` mapped to d as the points are,
+   so it meets its peak as on the native axis, its readout keeping `_refln.d_spacing`), applies the options to that
    source (no residual: no residual column; no ticks: no phases) and stores `present_pattern`'s presentation at full
    resolution, with the core's hover text for each Bragg point and the style rows it names. For each structure it stores
    `present_structure`'s scene (default options), its `default_view` and `scene_drawing` for a report viewport of 800 ×
