@@ -320,12 +320,14 @@ Rectangle {
     signal previousUserRequested()
     signal nextUserRequested()
     signal contextApprovalRequested(string draft)
+    signal submissionRequested(var draft)
     property int textRevision: 0
     property int selectionRevision: -1
     property int savedSelectionStart: 0
     property int savedSelectionEnd: 0
     property var submittedDrafts: []
     property int draftOwnerRevision: 0
+    property int consentFileRevision: 0
     property int pendingFileCount: 0
     readonly property bool canSteer: assistant.state === "agent_active"
     readonly property bool hasDraft: editor.text.trim().length > 0
@@ -411,8 +413,8 @@ Rectangle {
     }
     Connections {
         target: composer.assistant.selectedFiles
-        function onCountChanged() { composer.refreshFilePresentation(); }
-        function onDataChanged() { composer.refreshFilePresentation(); }
+        function onCountChanged() { ++composer.consentFileRevision; composer.refreshFilePresentation(); }
+        function onDataChanged() { ++composer.consentFileRevision; composer.refreshFilePresentation(); }
     }
     Connections {
         target: composer.assistant
@@ -439,20 +441,46 @@ Rectangle {
         if (restore)
             editor.select(start, end);
     }
-    function submitApprovedDraft(draft) {
-        if (editor.text !== draft || !assistant.connected || assistant.contextConsentRequired)
-            return;
-        submit();
+    function captureConsentDraft() {
+        if (editor.inputMethodComposing || editor.preeditText.length) return null;
+        return { owner: assistant, text: editor.text, revision: textRevision, ownerRevision: draftOwnerRevision,
+            files: consentFileRevision, project: Session.project, context: assistant.contextPreview,
+            model: assistant.selectedModel, effort: assistant.selectedEffort,
+            email: assistant.account.email, plan: assistant.account.planType };
     }
-    function submit() {
+    function ownsConsentDraft(draft) {
+        return draft !== null && draft.owner === assistant && draft.text === editor.text
+            && draft.revision === textRevision && draft.ownerRevision === draftOwnerRevision
+            && draft.files === consentFileRevision && draft.project === Session.project
+            && draft.context === assistant.contextPreview && draft.model === assistant.selectedModel
+            && draft.effort === assistant.selectedEffort && draft.email === assistant.account.email
+            && draft.plan === assistant.account.planType
+            && !editor.inputMethodComposing && editor.preeditText.length === 0;
+    }
+    function submitApprovedDraft(draft) {
+        if (!ownsConsentDraft(draft) || !assistant.connected || assistant.contextConsentRequired
+            || assistant.state !== "idle" || assistant.canCancel) return;
+        submit(draft);
+    }
+    function submit(approvedDraft) {
+        if (!approvedDraft) {
+            const requested = captureConsentDraft();
+            submissionRequested(requested);
+            if (!Qt.isQtObject(composer) || (requested && !ownsConsentDraft(requested))) return;
+        }
         if (!assistant.connected || (assistant.canCancel && !canSteer) || !hasDraft)
             return;
+        if (approvedDraft && !ownsConsentDraft(approvedDraft)) return;
         if (assistant.contextConsentRequired) {
+            if (approvedDraft) return;
             contextApprovalRequested(editor.text);
             return;
         }
+        const original = assistant;
         const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
-        const rowId = assistant.submitDraft(text);
+        if (approvedDraft && (!ownsConsentDraft(approvedDraft) || original.state !== "idle" || original.canCancel)) return;
+        const rowId = original.submitDraft(text);
+        if (!Qt.isQtObject(composer) || original !== composer.assistant) return;
         if (rowId.length && draftOwnerRevision === ownerRevision) {
             const pending = submittedDrafts.slice();
             pending.push({id: rowId, text: text, revision: revision});

@@ -82,6 +82,15 @@ void AssistantMarkdown::updatePolish() {
             const auto inset = table->cellAt(0,0).format().toTableCellFormat().leftPadding();
             const auto rowLeft = frame.left() - inset;
             const auto headerRows = table->format().headerRowCount();
+            qreal previousTop = 0, previousBottom = 0;
+            int previousRow = -1;
+            const auto appendRow = [&](int row, qreal top, qreal bottom) {
+                if (bottom <= top) return;
+                if (table_shade_color_.isValid() && (row < headerRows || (row-headerRows)%2 == 1))
+                    next.push_back({QRectF(rowLeft,top,frame.width(),bottom-top).intersected(boundingRect()),table_shade_color_});
+                if (table_border_color_.isValid() && row+1 == headerRows)
+                    next.push_back({QRectF(rowLeft,bottom-0.5,frame.width(),0.5).intersected(boundingRect()),table_border_color_});
+            };
             for (int row = 0; row < table->rows(); ++row) {
                 qreal top = frame.bottom(), bottom = frame.top();
                 for (int column = 0; column < table->columns(); ++column) {
@@ -94,15 +103,17 @@ void AssistantMarkdown::updatePolish() {
                     const auto lastRect = layout->blockBoundingRect(last);
                     if (!current() || !layout) return;
                     const auto format = cell.format().toTableCellFormat();
-                    top = std::min(top,firstRect.top()-first.blockFormat().topMargin()-format.topPadding());
-                    bottom = std::max(bottom,lastRect.bottom()+last.blockFormat().bottomMargin()+format.bottomPadding());
+                    top = std::min(top,firstRect.top()-format.topPadding());
+                    bottom = std::max(bottom,lastRect.bottom()+format.bottomPadding());
                 }
                 if (bottom <= top) continue;
-                if (table_shade_color_.isValid() && (row < headerRows || (row-headerRows)%2 == 1))
-                    next.push_back({QRectF(rowLeft,top,frame.width(),bottom-top).intersected(boundingRect()),table_shade_color_});
-                if (table_border_color_.isValid() && row+1 == headerRows)
-                    next.push_back({QRectF(rowLeft,bottom-0.5,frame.width(),0.5).intersected(boundingRect()),table_border_color_});
+                // Native cell origins already include their padding. Adjacent
+                // row origins are the shared boundaries, including Qt's border
+                // rounding; block margins must not be charged a second time.
+                if (previousRow >= 0) appendRow(previousRow,previousTop,top);
+                previousRow = row; previousTop = top; previousBottom = bottom;
             }
+            if (previousRow >= 0) appendRow(previousRow,previousTop,previousBottom);
         }
         if (!current() || !layout) return;
         decorations_.swap(next);
@@ -116,17 +127,26 @@ void AssistantMarkdown::updatePolish() {
     }
 }
 QSGNode* AssistantMarkdown::updatePaintNode(QSGNode* old, UpdatePaintNodeData*) {
-    auto* root = old ? old : new QSGNode;
-    auto* node = root->firstChild();
-    for (const auto& decoration : decorations_) {
-        auto* rectangle = node ? static_cast<QSGSimpleRectNode*>(node) : new QSGSimpleRectNode;
-        if (!node) root->appendChildNode(rectangle);
-        rectangle->setRect(decoration.rect);
-        rectangle->setColor(decoration.color);
-        node = rectangle->nextSibling();
+    auto* root = old;
+    try {
+        if (!root) root = new QSGNode;
+        auto* node = root->firstChild();
+        for (const auto& decoration : decorations_) {
+            auto* rectangle = node ? static_cast<QSGSimpleRectNode*>(node) : new QSGSimpleRectNode;
+            if (!node) root->appendChildNode(rectangle);
+            rectangle->setRect(decoration.rect);
+            rectangle->setColor(decoration.color);
+            node = rectangle->nextSibling();
+        }
+        while (node) { auto* next = node->nextSibling(); root->removeChildNode(node); delete node; node = next; }
+        return root;
+    } catch (...) {
+        // This callback owns the complete node tree, including any rectangles
+        // attached before allocation failed. The original editor stays intact;
+        // never access its GUI-thread document from the rendering callback.
+        delete root;
+        return nullptr;
     }
-    while (node) { auto* next = node->nextSibling(); root->removeChildNode(node); delete node; node = next; }
-    return root;
 }
 QQuickTextDocument* AssistantMarkdown::document() const { return target_; }
 QString AssistantMarkdown::source() const { return source_; }
@@ -271,6 +291,8 @@ void AssistantMarkdown::formatPresentation() {
             for (auto block = cell.firstCursorPosition().block(); block.isValid() && block.position() <= end; block = block.next()) {
                 auto block_format = block.blockFormat();
                 block_format.setAlignment(Qt::AlignLeft);
+                // Cell padding alone owns the space above and below table text.
+                block_format.setTopMargin(0); block_format.setBottomMargin(0);
                 QTextCursor cursor(block); cursor.setBlockFormat(block_format);
                 if (!current()) return;
             }

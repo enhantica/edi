@@ -48,7 +48,7 @@ EaElements.StatusBar {
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
     readonly property int roomFor: {
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0)
+        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitViewport.visible ? fitViewport.width + spacing : 0)
             - (assistantGroup.visible ? assistantGroup.width + spacing : 0);
         let width = 0;
         for (let i = 0; i < items.length; ++i) {
@@ -147,12 +147,10 @@ EaElements.StatusBar {
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
         implicitWidth: assistantArea.implicitWidth + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
-        width: Math.max(visibleStop.visible ? visibleStop.implicitWidth : 0,
-            Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
-            - (fitArea.visible ? fitArea.compactWidth + EaStyle.Sizes.fontPixelSize * 1.2 : 0))))
+        width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
-        anchors.right: fitArea.visible ? fitArea.left : parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize * (fitArea.visible ? 1.2 : 1)
+        anchors.right: parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         AssistantWorking {
             id: assistantArea
@@ -187,16 +185,33 @@ EaElements.StatusBar {
             onClicked: Session.assistant.cancel()
         }
     }
-    // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
-    // the ones on the left (the owner, 2026-10-13), and while a fit runs its live values with the progress bar at the
-    // far right, which stays put while their width changes. The status opens the last fit's results.
+    // Reserve the assistant's real viewport target first. Long native fit
+    // values remain complete inside a bounded, horizontally scrollable area.
+    Flickable {
+        id: fitViewport
+        objectName: "statusBar.fit.viewport"
+        parent: bar
+        visible: bar.fit !== null && (bar.fit.running || bar.fit.outcome !== "")
+        anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize * (assistantGroup.visible ? 1.2 : 1)
+        anchors.verticalCenter: parent.verticalCenter
+        width: Math.min(fitArea.implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
+            - (assistantGroup.visible ? assistantGroup.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0)))
+        height: bar.height
+        contentWidth: fitArea.implicitWidth
+        contentHeight: height
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.HorizontalFlick
+        ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
+    }
+    // Original full fit values, result control and progress retain their model
+    // and native input behavior inside that viewport.
     Row {
         id: fitArea
 
         objectName: "statusBar.fit"
-        parent: bar
-        anchors.right: parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        parent: fitViewport.contentItem
         anchors.verticalCenter: parent.verticalCenter
         spacing: EaStyle.Sizes.fontPixelSize * 1.2
         visible: bar.fit !== null && (running || bar.fit.outcome !== "")

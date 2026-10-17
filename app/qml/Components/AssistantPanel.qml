@@ -75,21 +75,56 @@ Popup {
         if (trimmed.length === 0) return path; // A filesystem root remains visible.
         return trimmed.substring(trimmed.lastIndexOf("/") + 1);
     }
-    property bool sendAfterConsent: false
-    property string consentDraft: ""
-    property string consentContext: ""
-    function retireConsentSend() { sendAfterConsent = false; consentDraft = ""; consentContext = ""; }
+    property var consentSend: null
+    function retireConsentSend() { consentSend = null; }
+    function ownsConsentSend(intent) {
+        return intent !== null && consentSend === intent && intent.owner === panel.assistant
+            && intent.project === Session.project && composer.ownsConsentDraft(intent.draft)
+            && panel.assistant.connected && panel.assistant.contextPreview === intent.context
+            && panel.assistant.selectedModel === intent.model && panel.assistant.selectedEffort === intent.effort
+            && consentSend === intent && composer.ownsConsentDraft(intent.draft);
+    }
+    function resumeConsentSend() {
+        const intent = consentSend;
+        if (!intent) return;
+        if (!ownsConsentSend(intent)) { if (consentSend === intent) retireConsentSend(); return; }
+        if (!intent.approved || panel.assistant.contextConsentRequired
+            || panel.assistant.state !== "idle" || panel.assistant.canCancel) return;
+        // Consume before submission: queued readiness notifications cannot send twice.
+        consentSend = null;
+        composer.submitApprovedDraft(intent.draft);
+    }
+    function scheduleConsentSend() { Qt.callLater(resumeConsentSend); }
     Connections {
         target: panel.assistant
         function onConversationRetired() { panel.retireConsentSend(); }
         function onConnectedChanged() { panel.retireConsentSend(); }
-        function onConnectionLabelChanged() { panel.retireConsentSend(); }
+        function onAccountChanged() { panel.retireConsentSend(); }
         function onSelectedModelChanged() { panel.retireConsentSend(); }
         function onSelectedEffortChanged() { panel.retireConsentSend(); }
+        function onStateChanged() { panel.scheduleConsentSend(); }
+        function onCanCancelChanged() { panel.scheduleConsentSend(); }
         function onContextPreviewChanged() {
-            if (panel.sendAfterConsent && panel.assistant.contextPreview !== panel.consentContext) panel.retireConsentSend();
+            const intent = panel.consentSend;
+            if (intent && !panel.ownsConsentSend(intent)) { if (panel.consentSend === intent) panel.retireConsentSend(); }
+            else panel.scheduleConsentSend();
         }
     }
+    Connections {
+        target: Session
+        function onProjectChanged() { panel.retireConsentSend(); }
+    }
+    Connections {
+        target: composer
+        function onTextRevisionChanged() { panel.retireConsentSend(); }
+        function onDraftOwnerRevisionChanged() { panel.retireConsentSend(); }
+    }
+    Connections {
+        target: panel.assistant.selectedFiles
+        function onCountChanged() { panel.retireConsentSend(); }
+        function onDataChanged() { panel.retireConsentSend(); }
+    }
+    Component.onDestruction: retireConsentSend()
     // A user navigation link always refers to the current project's normal
     // Report page. Other links retain their completed-row/file ownership checks.
     function openReportLink(sourceRowId, link) {
@@ -221,7 +256,7 @@ Popup {
                         id: usageButton
                         visible: panel.assistant.connected
                         objectName: "assistant.usage"
-                        text: !panel.usageWindow ? "–" : qsTr("%1% used").arg(panel.usageWindow.usedPercent)+(panel.usageData.stale ? " · "+qsTr("stale") : "")
+                        text: !panel.usageWindow ? "–" : qsTr("%1% used").arg(panel.usageWindow.usedPercent)
                         font.bold: false
                         contentItem: EaElements.Label {
                             text: usageButton.text
@@ -535,9 +570,22 @@ Popup {
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)
                     onNextUserRequested: conversation.jumpToUser(1)
+                    onSubmissionRequested: draft => {
+                        const intent = panel.consentSend;
+                        if (intent && draft && intent.draft.owner === draft.owner
+                            && intent.draft.revision === draft.revision && intent.draft.ownerRevision === draft.ownerRevision
+                            && intent.draft.files === draft.files && intent.draft.project === draft.project)
+                            panel.retireConsentSend();
+                    }
                     onContextApprovalRequested: draft => {
-                        panel.consentDraft = draft; panel.consentContext = panel.assistant.contextPreview; panel.sendAfterConsent = true;
-                        connectionDialog.open();
+                        const captured = composer.captureConsentDraft();
+                        if (!captured || captured.text !== draft) return;
+                        const original = panel.assistant;
+                        const intent = { owner: original, project: Session.project, draft: captured,
+                            context: original.contextPreview, model: original.selectedModel,
+                            effort: original.selectedEffort, approved: false };
+                        panel.consentSend = intent;
+                        if (panel.ownsConsentSend(intent)) connectionDialog.open();
                     }
                 }
             }
@@ -763,10 +811,10 @@ Popup {
             assistant: panel.assistant
             onRejected: panel.retireConsentSend()
             onContextApproved: {
-                const send = panel.sendAfterConsent;
-                const draft = panel.consentDraft;
-                panel.retireConsentSend();
-                if (send) composer.submitApprovedDraft(draft);
+                const intent = panel.consentSend;
+                if (!panel.ownsConsentSend(intent)) { if (panel.consentSend === intent) panel.retireConsentSend(); return; }
+                intent.approved = true;
+                panel.scheduleConsentSend();
             }
         }
     }
