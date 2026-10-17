@@ -76,45 +76,143 @@ TestCase {
         for (let i = 0; i < 4; ++i)
             verify(Math.abs(actual[i] - expected[i]) < 0.5, "I16/popup: actual sidebar/main rectangle stays aligned");
     }
+    // Main's genuine appbar returns from current manual takeover before an
+    // ordinary open/close action. Preference and physical visibility are distinct.
+    function togglePolicy388(shown, takeover) {
+        return {preference: takeover || !shown,
+            action: takeover ? "return-to-chat" : (shown ? "ordinary-close" : "ordinary-open")};
+    }
     function toggle() {
         const control = item("assistant.toggle");
-        verify(control.visible && control.enabled, "I16/popup: existing appbar button remains actionable");
-        const requested = !Preferences.assistantShown;
-        pointerObservation("before-toggle", control, requested);
-        const receipts = [];
-        function receipt(name) {
-            receipts.push(name);
-            pointerObservation("button-" + name, control, requested);
+        const original = {window: window, popup: popup, owner: Session.project,
+            page: window.assistantWorkflowPage, assistant: assistant};
+        const lives = [window, popup, control, original.owner, original.page, assistant].map(lifetime313);
+        function current() {
+            verify(lives.every(life => life === null || alive313(life)),
+                "I16/popup: original appbar window/control/owner/page receivers remain alive");
+            verify(window === original.window && popup === original.popup
+                && Session.project === original.owner && window.assistantWorkflowPage === original.page
+                && assistant === original.assistant && Session.assistant === original.assistant
+                && findChild(window, "assistant.toggle") === control,
+                "I16/popup: genuine action cannot retarget a replacement owner/window/page/control");
+            verify(original.page !== null && window.visible && control.visible && control.enabled,
+                "I16/popup: existing current workflow appbar button remains actionable");
+            const center = control.mapToItem(window.contentItem, control.width / 2, control.height / 2);
+            verify(Ui.exposed(control) && center.x >= 0 && center.y >= 0
+                && center.x < window.contentItem.width && center.y < window.contentItem.height,
+                "I16/popup: original actual-window appbar input point remains exposed");
         }
-        function pressedChanged() { receipt("pressedChanged=" + control.pressed); }
-        function released() { receipt("released"); }
-        function clicked() { receipt("clicked"); }
-        function canceled() { receipt("canceled"); }
-        control.pressedChanged.connect(pressedChanged);
-        control.released.connect(released);
-        control.clicked.connect(clicked);
-        control.canceled.connect(canceled);
+        current();
+        let policy = togglePolicy388(Preferences.assistantShown, window.assistantManualTakeover);
+        pointerObservation("before-toggle", control, policy.preference);
+        const receipts = [];
+        let truePresses = 0;
+        let releases = 0;
+        let clicks = 0;
+        let canceledCount = 0;
+        function receipt(name) {
+            current();
+            receipts.push(name);
+            pointerObservation("button-" + name, control, policy.preference);
+        }
+        function pressedChanged() {
+            current();
+            if (control.pressed) ++truePresses;
+            receipt("pressedChanged=" + control.pressed);
+        }
+        function released() {
+            current();
+            // Observe the real release, after genuine input filtering and before
+            // the ensuing clicked action. Never infer takeover from popup output.
+            compare(clicks, 0, "I16/popup: original release precedes its clicked receipt");
+            policy = togglePolicy388(Preferences.assistantShown, window.assistantManualTakeover);
+            ++releases;
+            receipt("released-" + policy.action);
+        }
+        function clicked() { ++clicks; receipt("clicked"); }
+        function canceled() { ++canceledCount; receipt("canceled"); }
+        const connected = [];
         try {
-            pointerObservation("before-pointer-move", control, requested);
+            for (const pair of [["pressedChanged", pressedChanged], ["released", released],
+                                ["clicked", clicked], ["canceled", canceled]]) {
+                control[pair[0]].connect(pair[1]);
+                connected.push(pair);
+            }
+            pointerObservation("before-pointer-move", control, policy.preference);
             mouseMove(control, control.width / 2, control.height / 2);
-            pointerObservation("after-pointer-move", control, requested);
+            current();
+            policy = togglePolicy388(Preferences.assistantShown, window.assistantManualTakeover);
+            pointerObservation("after-pointer-move", control, policy.preference);
             mouseClick(control);
         } finally {
-            control.pressedChanged.disconnect(pressedChanged);
-            control.released.disconnect(released);
-            control.clicked.disconnect(clicked);
-            control.canceled.disconnect(canceled);
+            for (const pair of connected)
+                disconnect313(lives[2], control, pair[0], pair[1]);
             console.log("APPBAR_CONTROL_RECEIPTS", JSON.stringify(receipts));
         }
-        pointerObservation("after-toggle", control, requested);
-        try {
-            tryCompare(popup, "visible", requested, 2000, "I16/slide: appbar request reaches actual opened/fully closed visibility");
-        } finally {
-            pointerObservation("after-toggle-wait", control, requested);
+        current();
+        compare(truePresses, 1, "I16/popup: one genuine original button press is observed");
+        compare(releases, 1, "I16/popup: one genuine original button release is observed");
+        compare(clicks, 1, "I16/popup: one genuine original button clicked receipt is observed");
+        compare(canceledCount, 0, "I16/popup: original appbar click is not a canceled input");
+        compare(Preferences.assistantShown, policy.preference,
+            "I16/popup: appbar follows original return-from-takeover or ordinary visibility policy");
+        compare(window.assistantManualTakeover, false,
+            "I16/popup: explicit original appbar return consumes only current takeover");
+        pointerObservation("after-toggle", control, policy.preference);
+        function requestedVisible() {
+            current();
+            compare(Preferences.assistantShown, policy.preference,
+                "I16/popup: original request remains exact while its presentation settles");
+            compare(window.assistantManualTakeover, false,
+                "I16/popup: a newer takeover cannot silently satisfy old visibility cleanup");
+            return policy.preference && !assistant.showingActions;
         }
-        if (requested)
-            tryCompare(popup, "opened", true, 2000, "I16/slide: settled opening waits for actual enter completion");
+        try {
+            tryVerify(() => {
+                const expected = requestedVisible();
+                return popup.visible === expected;
+            }, 2000,
+                "I16/slide: actual opened/fully closed visibility follows current request and visible-action suppression");
+        } finally {
+            current();
+            pointerObservation("after-toggle-wait", control, policy.preference);
+        }
+        if (requestedVisible())
+            tryVerify(() => { current(); return popup.opened === true; }, 2000,
+                "I16/slide: settled opening waits for actual enter completion");
         rendered();
+        current();
+        console.log("APPBAR_ACTION388", JSON.stringify({action: policy.action,
+            preference: policy.preference, showingActions: assistant.showingActions,
+            manualTakeover: window.assistantManualTakeover, visible: popup.visible,
+            opened: popup.opened, window: identity313(lives[0]), popup: identity313(lives[1]),
+            control: identity313(lives[2]), owner: identity313(lives[3]), page: identity313(lives[4])}));
+        return policy.action;
+    }
+    function closeAssistant388() {
+        // Explicit close intent is not a retry: one return-from-takeover action
+        // lawfully opens chat; the following ordinary genuine action closes it.
+        const owner = Session.project;
+        const originalWindow = window;
+        const originalPopup = popup;
+        const originalPage = window.assistantWorkflowPage;
+        const action = toggle();
+        if (action === "return-to-chat") {
+            verify(Session.project === owner && window === originalWindow && popup === originalPopup
+                && window.assistantWorkflowPage === originalPage,
+                "I16/popup: return-to-chat cannot authorize closing a replacement owner/page");
+            compare(Preferences.assistantShown, true,
+                "I16/popup: genuine return retains the current open preference before ordinary close");
+            compare(window.assistantManualTakeover, false,
+                "I16/popup: next genuine close is ordinary, never a second takeover return");
+            compare(toggle(), "ordinary-close",
+                "I16/popup: explicit close uses the following original ordinary appbar action");
+        } else {
+            compare(action, "ordinary-close",
+                "I16/popup: a close caller requires an actual ordinary close action");
+        }
+        compare(Preferences.assistantShown, false, "I16/popup: explicit genuine close clears the requested visibility");
+        compare(popup.visible, false, "I16/popup: explicit genuine close leaves actual popup fully closed");
     }
     function pointerObservation(stage, control, requested) {
         const center = control.mapToItem(window.contentItem, control.width / 2, control.height / 2);
@@ -229,12 +327,12 @@ TestCase {
         // Return through genuine workflow navigation before clearing that request.
         eligibleProject();
         if (popup && Preferences.assistantShown)
-            toggle();
+            closeAssistant388();
     }
     function cleanupTestCase() {
         eligibleProject();
         if (Preferences.assistantShown)
-            toggle();
+            closeAssistant388();
         Session.closeProject();
         Preferences.sideBarSide = oldSide;
         EaStyle.Colors.theme = oldTheme;
@@ -294,7 +392,7 @@ TestCase {
         compare(editor.selectionStart, selection[0], "HOME: original selection start survives");
         compare(editor.selectionEnd, selection[1], "HOME: original selection end survives");
         capture("assistant-popup-returned-from-home");
-        toggle();
+        closeAssistant388();
         editor.clear();
     }
     function focusWithinManual(manual) {
@@ -377,7 +475,7 @@ TestCase {
         const end = composer.selectionEnd;
         const messages = assistant.messages;
         capture("assistant-popup-" + data.tag);
-        toggle();
+        closeAssistant388();
         compare(manual.visible, painted.visible, "I16/popup: original painted manual survives hiding");
         compare(manual.opacity, painted.opacity, "I16/popup: hiding preserves the ordinary manual opacity");
         compare(manual.currentIndex, tabIndex, "I16/popup: actual manual tab survives covering");
@@ -395,7 +493,7 @@ TestCase {
         compare(assistant.messages, messages, "I16/popup: hiding does not replace the conversation model");
         compare(Session.project, project, "I16/popup: toggling does not replace the open project");
         sameRect(rect(main), before);
-        toggle();
+        closeAssistant388();
         composer.clear();
     }
     function test_navigation_keeps_visible_popup_fixed_data() {
@@ -532,7 +630,7 @@ TestCase {
     }
     function test_keyboard_can_return_to_appbar(data) {
         if (popup.visible)
-            toggle();
+            closeAssistant388();
         const button = item("assistant.toggle");
         keyboardObservation("before-focus-" + data.tag, button);
         button.forceActiveFocus();
@@ -569,7 +667,7 @@ TestCase {
     }
     function test_focus_restore_uses_current_scope(data) {
         if (popup.visible)
-            toggle();
+            closeAssistant388();
         verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/POP2: real project establishes a live workflow scope");
         window.appBarCentralTabs.currentIndex = 1;
         rendered();
@@ -671,7 +769,7 @@ TestCase {
     }
     function test_rapid_slide_keeps_actual_plot_and_input_scope() {
         if (popup.visible)
-            toggle();
+            closeAssistant388();
         verify(Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project")), "I16/slide: actual independent project anchors the live sidebar/plot");
         Preferences.sideBarSide = "Right";
         window.appBarCentralTabs.currentIndex = 1;
@@ -740,7 +838,7 @@ TestCase {
         toggle();
         compare(editor.selectionStart, selectedStart, "I16/slide: interrupted show/hide restores actual selection start");
         compare(editor.selectionEnd, selectedEnd, "I16/slide: interrupted show/hide restores actual selection end");
-        toggle();
+        closeAssistant388();
         // Continue is intentionally hidden by the existing owner rule. Exercise a
         // genuine visible manual tab instead of requiring a retired action to appear.
         const basicTab = findChild(manual, "sideBar.tab.basic");
@@ -1080,7 +1178,7 @@ TestCase {
             mouseClick(checkbox);
             compare(assistant.showActions, true, "VA: real checkbox enables the nonpersistent mode");
         }
-        toggle(); // Actual original toggle exposes manual controls before setup input.
+        closeAssistant388(); // Actual original toggle exposes manual controls before setup input.
         visible185_page("analysis");
         if (!fitCase) {
             const filter = Ui.control(Probe, window, "parameters.nameFilter");
@@ -1573,7 +1671,7 @@ TestCase {
             mouseClick(show);
             compare(assistant.showActions, true, "DRAFT1 SETUP: visible route is genuinely enabled");
         }
-        toggle();
+        closeAssistant388();
         const textCase = data.tag.endsWith("text-id");
         visible185_page(textCase ? "structure" : textFormatted ? "experiment" : "analysis");
         if (textCase) {
@@ -1837,7 +1935,7 @@ TestCase {
             mouseClick(show);
             compare(assistant.showActions, true, "EXPOSURE SETUP: genuine pointer enables visible mode");
         }
-        toggle();
+        closeAssistant388();
         visible185_page("analysis");
         Ui.click(this, Probe, window, "sideBar.tab.basic");
         const table = Ui.control(Probe, window, "parameters.list");
@@ -2115,7 +2213,7 @@ TestCase {
         if (assistant.contextConsentRequired) assistant.signIn();
         visible185_ready("slider-disclosed");
         verify(!assistant.contextConsentRequired, "SLIDER SETUP: genuine current context is approved");
-        toggle();
+        closeAssistant388();
         visible185_page("analysis");
         Ui.click(this, Probe, window, "sideBar.tab.basic");
         const name = Ui.control(Probe, window, "parameters.nameFilter");
@@ -2338,7 +2436,7 @@ TestCase {
         verify(show.visible && show.enabled, "SL1 SETUP: actual Show actions checkbox receives input");
         mouseClick(show);
         compare(assistant.showActions, true, "SL1 SETUP: genuine visible mode is enabled");
-        toggle();
+        closeAssistant388();
         visible185_page("analysis");
         Ui.click(this, Probe, window, "sideBar.tab.basic");
         const name = Ui.control(Probe, window, "parameters.nameFilter");
@@ -2551,7 +2649,7 @@ TestCase {
         if (assistant.contextConsentRequired) assistant.signIn();
         visible185_ready("relation245-disclosed");
         const models = JSON.stringify(Probe.rows(assistant.models));
-        toggle();
+        closeAssistant388();
         if (data.tag === "zero-new-aliases") {
             // First real ordinary Apply establishes addresses. The second append
             // adds zero aliases and references those existing original IDs.
@@ -2707,7 +2805,7 @@ TestCase {
         verify(modeControl.enabled && modeControl.visible, "REL RPC SETUP: genuine mode checkbox is actionable");
         mouseClick(modeControl);
         verify(assistant.showActions, "REL RPC: original real Show actions checkbox enables the mode");
-        toggle();
+        closeAssistant388();
         visible185_page("analysis");
         Ui.click(this, Probe, window, "sideBar.tab.extras");
         const models = JSON.stringify(Probe.rows(assistant.models));
@@ -3774,7 +3872,7 @@ TestCase {
             verify(show.enabled && show.visible, "BG SETUP: genuine mode checkbox is actionable");
             mouseClick(show); compare(assistant.showActions, true, "BG: real checkbox enables visible route");
             models = JSON.stringify(Probe.rows(assistant.models));
-            toggle();
+            closeAssistant388();
         }
         visible185_page("experiment");
         Ui.click(this, Probe, window, "sideBar.tab.basic");
@@ -4179,7 +4277,7 @@ TestCase {
             "UX289 SETUP: real first original native read completed while original objective is still active");
         const panelWorking = item("assistant.working");
         verify(panelWorking.visible, "UX289: genuine active objective displays existing panel Working");
-        toggle(); // Genuine explicit user hide must retain precedence after terminal.
+        closeAssistant388(); // Genuine explicit user hide must retain precedence after terminal.
         const status = item("statusBar.assistant.working");
         tryCompare(status, "visible", true, 2000,
             "UX289: hidden chat displays shared Working during real request gap, not synthetic busy");
