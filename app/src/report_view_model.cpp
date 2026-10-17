@@ -82,7 +82,7 @@ void ReportViewModel::refresh() {
         return;
     }
     if (build()) {
-        emit modelChanged();
+        publishModel();
     }
     emit savedReportsChanged();
 }
@@ -90,7 +90,16 @@ void ReportViewModel::refresh() {
 void ReportViewModel::ensureBuilt() const {
     if (dirty_ && build()) {
         auto* self = const_cast<ReportViewModel*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        QMetaObject::invokeMethod(self, [self] { emit self->modelChanged(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(self, [self] { self->publishModel(); }, Qt::QueuedConnection);
+    }
+}
+
+void ReportViewModel::publishModel() {
+    emit modelChanged();
+    const QString stem = fileStem();
+    if (stem != published_file_stem_) {
+        published_file_stem_ = stem;
+        emit fileStemChanged();
     }
 }
 
