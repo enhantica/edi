@@ -4618,10 +4618,13 @@ TestCase {
         let saveClicks = 0, finalClicks = 0, typed = 0, finalName = null;
         let editor = null, finalSave = null, editorLife = null, finalLife = null;
         let originalDialog = null, dialogLife = null, originalFooter = null, openedEvents = 0;
+        const saveLife370 = lifetime313(save);
+        const connected370 = {save: false, text: false, press: false, click: false, opened: false};
         function savedClicked() { ++saveClicks; }
         function finalPressed() {
             verify(alive313(dialogLife) && alive313(editorLife) && alive313(finalLife),
                 "SAVE352: original dialog/editor/footer receiver remain alive at real final press");
+            if (!finalSave.pressed) return; // pressedChanged also notifies release; only the true edge is precommit.
             verify(originalDialog.opened && originalDialog.visible && finalSave.enabled
                 && Ui.rendered(finalSave) && Ui.exposed(finalSave),
                 "SAVE352: genuine final Save is physically exposed in its actual opened original form");
@@ -4643,10 +4646,10 @@ TestCase {
         }
         function finalClicked() { ++finalClicks; }
         function textEdited() { ++typed; }
-        save.clicked.connect(savedClicked);
         const call = "save349-" + data.tag;
         const observation = visible237_observationMs([{path: "", text: leaf}]);
         try {
+            save.clicked.connect(savedClicked); connected370.save = true;
             if (["fresh", "collision", "stop", "close-owner"].includes(data.tag)) {
                 // Passive original receiver binding, including collision. A closed
                 // form need not be rendered/exposed and no open interval is forced.
@@ -4666,9 +4669,12 @@ TestCase {
                 compare(buttons.length, 1, "SAVE352 SETUP: exact footer owns one original final Save receiver");
                 editor = names[0]; finalSave = buttons[0];
                 editorLife = lifetime313(editor); finalLife = lifetime313(finalSave);
-                editor.textEdited.connect(textEdited);
-                finalSave.pressed.connect(finalPressed); finalSave.clicked.connect(finalClicked);
-                originalDialog.openedChanged.connect(openedChanged);
+                verify(typeof finalSave.pressed === "boolean" && typeof finalSave.pressedChanged === "function",
+                    "SAVE370 SETUP: actual original Qt Button exposes pressed STATE and its pressedChanged SIGNAL");
+                editor.textEdited.connect(textEdited); connected370.text = true;
+                finalSave.pressedChanged.connect(finalPressed); connected370.press = true;
+                finalSave.clicked.connect(finalClicked); connected370.click = true;
+                originalDialog.openedChanged.connect(openedChanged); connected370.opened = true;
                 console.log("SAVE352_ORIGINAL_RECEIVERS", JSON.stringify({case: data.tag,
                     dialog: identity313(dialogLife), editor: identity313(editorLife),
                     finalSave: identity313(finalLife), originallyOpened: originalDialog.opened}));
@@ -4761,13 +4767,11 @@ TestCase {
             verify(assistant.connected, "SAVE349: save/cancel/retirement preserves genuine managed account");
             compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE349: original account/model catalog is unchanged");
         } finally {
-            save.clicked.disconnect(savedClicked);
-            if (dialogLife !== null) disconnect313(dialogLife, originalDialog, "openedChanged", openedChanged);
-            if (editorLife !== null) disconnect313(editorLife, editor, "textEdited", textEdited);
-            if (finalLife !== null) {
-                disconnect313(finalLife, finalSave, "pressed", finalPressed);
-                disconnect313(finalLife, finalSave, "clicked", finalClicked);
-            }
+            if (connected370.save) disconnect313(saveLife370, save, "clicked", savedClicked);
+            if (connected370.opened) disconnect313(dialogLife, originalDialog, "openedChanged", openedChanged);
+            if (connected370.text) disconnect313(editorLife, editor, "textEdited", textEdited);
+            if (connected370.press) disconnect313(finalLife, finalSave, "pressedChanged", finalPressed);
+            if (connected370.click) disconnect313(finalLife, finalSave, "clicked", finalClicked);
         }
     }
     function ux358_acknowledgedPresentation(composer, files) {
