@@ -261,6 +261,8 @@ struct AssistantViewModel::State {
     }
     struct FileSelection {
         QString id, collection_id, next_collection_id, connection_id, native_status;
+        bool authenticated_selection = false;
+        quint64 account_epoch = 0;
         std::uint64_t owner_generation = 0, epoch = 0, connection_epoch = 0, selection_generation = 0;
         edi::assistant::Controller* controller = nullptr;
         ProjectViewModel* project = nullptr;
@@ -4842,6 +4844,12 @@ struct AssistantViewModel::State {
             const auto account = account_value.toObject();
             if (account.value("type") == "chatgpt") {
                 usage_read_epoch = usage_epoch;
+                Object public_account;
+                for (const auto* field : {"email", "planType"}) {
+                    if (account.value(field).isString()) public_account[field]=usage_text(account.value(field));
+                }
+                generic_native["account"]=public_account;
+                generic_native["accountEpoch"]=QString::number(usage_epoch);
                 generic_native["label"] = account.value("email").isString() ? account.value("email") : QJsonValue("ChatGPT");
                 generic_native["models"] = QJsonArray{};
                 reason_code = "REQUEST_ADMISSION";
@@ -5675,7 +5683,8 @@ struct AssistantViewModel::State {
     bool file_current(const FileSelection& scope) const {
         if (attachment_clear_requested || attachment_clear_draining) return false;
 #ifndef __EMSCRIPTEN__
-        if (generic_mode && generic_context_retention_pending) return false;
+        if (generic_mode && (generic_context_retention_pending || (scope.authenticated_selection &&
+            (!generic_authenticated || generic_retiring || scope.account_epoch!=usage_epoch)))) return false;
 #endif
         if (!publishing || file_authority_exhausted || scope.epoch != file_epoch ||
             scope.owner_generation != generation || scope.controller != controller.get() || scope.project != project ||
@@ -6161,6 +6170,7 @@ struct AssistantViewModel::State {
             if (!property("state", &AssistantViewModel::state, &AssistantViewModel::stateChanged)) return;
             if (!property("connected", &AssistantViewModel::connected, &AssistantViewModel::connectedChanged)) return;
             if (!property("connectionLabel", &AssistantViewModel::connectionLabel, &AssistantViewModel::connectionLabelChanged)) return;
+            if (!property("account", &AssistantViewModel::account, &AssistantViewModel::accountChanged)) return;
             if (!property("selectedModel", &AssistantViewModel::selectedModel, &AssistantViewModel::selectedModelChanged)) return;
             if (!property("selectedSkill", &AssistantViewModel::selectedSkill, &AssistantViewModel::selectedSkillChanged)) return;
             if (!property("selectedEffort", &AssistantViewModel::selectedEffort, &AssistantViewModel::selectedEffortChanged)) return;
@@ -7156,6 +7166,14 @@ QVariantMap AssistantViewModel::usage() const {
 #endif
     return {{"available", false}, {"stale", false}, {"buckets", QVariantList{}}};
 }
+QVariantMap AssistantViewModel::account() const {
+#ifndef __EMSCRIPTEN__
+    if (state_->generic_mode && state_->generic_authenticated && !state_->generic_retiring &&
+        state_->generic_native.value("accountEpoch").toString()==QString::number(state_->usage_epoch))
+        return state_->generic_native.value("account").toObject().toVariantMap();
+#endif
+    return {};
+}
 void AssistantViewModel::refreshUsage() {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) state_->usage_refresh();
@@ -8036,16 +8054,17 @@ void AssistantViewModel::cancelNativeImport(const QString& id) {
 #endif
 }
 
-QString AssistantViewModel::beginFileSelection() {
+QString AssistantViewModel::beginFileSelection(bool requireSignedIn) {
     if (QThread::currentThread() != thread()) return {};
 #ifdef __EMSCRIPTEN__
+    Q_UNUSED(requireSignedIn);
     state_->error = tr("File selection is unavailable until the browser transfer is implemented."); state_->notify(); return {};
 #else
     auto projection = state_->file_projection();
     bool refused = false;
     try {
         if (!state_->claim_file_projection(projection)) return {};
-        if (!state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
+        if ((requireSignedIn && !connected()) || !state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
             { refused = true; throw std::runtime_error("The selected-file owner is unavailable"); }
         if (state_->working_folder_selection || state_->working_folder_transition || state_->attachment_clear_requested || state_->attachment_clear_draining || state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()))
             { refused = true; throw std::runtime_error("Finish the active operation before selecting files"); }
@@ -8053,6 +8072,7 @@ QString AssistantViewModel::beginFileSelection() {
         const auto descriptor = state_->file_context();
         const auto native = state_->file_native_state();
         State::FileSelection scope;
+        scope.authenticated_selection=requireSignedIn; scope.account_epoch=state_->usage_epoch;
         scope.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         scope.collection_id = descriptor.value("collection_id").toString();
         scope.next_collection_id = scope.collection_id.isEmpty() ? QUuid::createUuid().toString(QUuid::WithoutBraces) : scope.collection_id;

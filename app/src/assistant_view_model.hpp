@@ -48,6 +48,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
+    Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
     Q_PROPERTY(QString workingFolder READ workingFolder NOTIFY workingFolderChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
@@ -80,6 +81,7 @@ class AssistantViewModel : public QObject {
     bool canCancel() const;
     QString lastError() const;
     QVariantMap usage() const;
+    QVariantMap account() const;
     Q_INVOKABLE void refreshUsage();
     QString workingFolder() const;
     Q_INVOKABLE QString beginWorkingFolderSelection();
@@ -114,12 +116,13 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool applyNativeImport(const QString& intent, const QString& cifId, const QString& dataId, const QString& recipeJson);
     Q_INVOKABLE void cancelNativeImport(const QString& intent);
     Q_INVOKABLE QString completeNativeImportFiles(const QString& requestId, const QList<QUrl>& urls);
-    Q_INVOKABLE QString beginFileSelection();
+    Q_INVOKABLE QString beginFileSelection(bool requireSignedIn = false);
     Q_INVOKABLE bool addSelectedFiles(const QString& requestId, const QList<QUrl>& urls);
     Q_INVOKABLE void cancelFileSelection(const QString& requestId);
     Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void accountChanged();
     void nativeImportChanged();
     void showActionsChanged();
     void showingActionsChanged();

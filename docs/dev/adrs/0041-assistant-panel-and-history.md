@@ -1051,3 +1051,66 @@ outgoing context, capture a draft or alter file/context permissions. The
 disconnected Sign in control retains its original connection-dialog entrance;
 Send retains the existing required-context approval flow. Sign-out and actual
 account changes update the same identity binding, without a stored email copy.
+
+
+## Account controls, allowance presentation and signed-out sidebar
+
+The original account/usage entrance and Clear action remain the authority for
+account operations and conversation retirement. The header now places Clear,
+the remaining allowance and the account initial in that order. Account and
+Usage use separate compact ordinary dialogs. Only real account email/plan and
+actual supplied usage windows are projected; missing identity uses a neutral
+icon and missing usage an en dash. The most constrained supplied window sets
+the remaining percentage. Its normal foreground changes to the theme warning
+color below 25 percent remaining and error color below 5; bar fill still shows
+the actual used fraction. Stale observations are explicitly labeled. Opening
+Usage invokes the existing read-only refresh; opening Account grants no project
+or context authority. The eye control in the original composer toolbar toggles
+the existing Show actions setting, with a checked accent and accessible state.
+
+Until actual sign-in readiness, the original chat/composer and ordinary
+sidebar controls are hidden, while their draft/history models remain intact.
+The empty area uses the existing scientific empty-state typography and exact
+text “Sign in to use the assistant”. The single header Sign in entrance remains;
+authentication Cancel, required retiring-work Stop and sidebar Close remain
+usable. Signed-out drop input and stale authenticated file-choice completion
+are refused at the original file-intent boundary. Ordinary offline scientific
+file selection keeps its existing separate manual entrance. Global Preferences
+remains available. Real account/project/input retirement, matching ACK/history
+retention, Clear, native validation, Undo and Worker semantics are unchanged.
+
+These controls use actual object identity and current geometry. No coordinates
+or layout instructions belong in skill guidance. Existing working-folder and
+context-consent behavior remains separate; these presentation changes do not
+implement a new folder grant or conversation-continuity policy.
+
+
+### One composer model and effort chooser
+
+The original separate model/effort combos used the provider model Rows, current
+selection and existing guarded setters. A single light rounded pill now shows
+the same actual model and a visually muted effort label. Its ordinary bounded
+popup contains two single-selection DataTables with shared radio/label widths.
+Model selection refreshes the original dependent effort choices and keeps the
+popup open; effort selection returns to the same pill. Default is still the
+original empty provider-default token, never an invented model or quota.
+Actual unavailable models remain disabled. Keyboard and pointer activation use
+the same original setters; busy/auth/current assistant and popup-intent checks
+prevent an old control from affecting a replacement. Popup retirement and queued
+focus retain the same captured intent; Escape/outside close returns focus only
+to the original eligible control. No hidden compatibility combos remain.
+
+Footer Add, eye and history arrows use consistent circular light theme fills;
+Send and Stop retain their stronger original styling and behavior. Eye checked
+state retains the accent. No catalog/backend/session/scientific policy changes.
+
+
+Each chooser table uses its own exclusive ButtonGroup, so genuine mouse/Space
+activation cannot clear the current radio. After an original setter returns,
+the same popup intent reconciles its instantiated group's checked button to
+the actual selected model/effort; refused and same-value setters cannot leave
+a false selection. Delegate creation retains its authoritative value binding.
+Rows.text is explicitly interpreted as the string “true” for availability in
+both focus traversal and choice admission; disabled middle rows are skipped.
+The pill's real Return/Enter press calls the same guarded opener once, consumes
+auto-repeat and release, and leaves native Space/pointer activation unchanged.

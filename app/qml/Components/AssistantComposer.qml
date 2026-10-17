@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 Rectangle {
@@ -16,13 +17,256 @@ Rectangle {
     property Item popupBoundary: composer.parent
     property Item previousFocusItem: toggleControl
     readonly property Item firstFocusItem: editor
+    readonly property alias actionsControl: showActionsControl
     readonly property real actionSize: EaStyle.Sizes.toolButtonHeight * 0.75
-    function closeChoices() { models.popup.close(); efforts.popup.close(); }
+    function closeChoices() { if (Qt.isQtObject(choicePopup)) choicePopup.close(); }
     function choiceX(control, menuWidth) {
         return Math.max(0, Math.min(popupBoundary.width - menuWidth, control.mapToItem(popupBoundary, 0, 0).x));
     }
     function choiceY(control, menuHeight) {
         return Math.max(0, Math.min(popupBoundary.height - menuHeight, control.mapToItem(popupBoundary, 0, 0).y - menuHeight));
+    }
+
+    readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
+    readonly property color lightActionBackground: EaStyle.Colors.themeBackgroundHovered2
+    readonly property var effortChoices: [""].concat(assistant.availableEfforts).map(token => ({token: token, label: effortLabel(token)}))
+    readonly property int selectedModelRow: {
+        for (let i=0;i<assistant.models.count;++i)
+            if (assistant.models.text(i,"id")===assistant.selectedModel) return i;
+        return -1;
+    }
+    readonly property string modelLabel: selectedModelRow>=0 ? assistant.models.text(selectedModelRow,"displayName") : qsTr("Model")
+    readonly property string selectedEffortLabel: effortChoices.some(row=>row.token===assistant.selectedEffort) ? effortLabel(assistant.selectedEffort) : qsTr("Effort")
+    function effortLabel(value) {
+        switch (value) {
+        case "": return qsTr("Auto");
+        case "none": return qsTr("None");
+        case "low": return qsTr("Low");
+        case "medium": return qsTr("Medium");
+        case "high": return qsTr("High");
+        case "xhigh": return qsTr("Extra high");
+        case "max": return qsTr("Maximum");
+        default: return value;
+        }
+    }
+    function openChoices() {
+        if(!choicesEnabled || !Qt.isQtObject(choicePopup) || choicePopup.visible)return;
+        const original={owner:assistant};
+        choicePopup.intent=original;
+        if(Qt.isQtObject(choicePopup) && choicePopup.intent===original && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled)choicePopup.open();
+    }
+    onAssistantChanged: closeChoices()
+    onChoicesEnabledChanged: { if (!choicesEnabled) closeChoices(); }
+    Connections {
+        target: composer.assistant
+        function onConversationRetired() { composer.closeChoices(); }
+        function onConnectionLabelChanged() { composer.closeChoices(); }
+    }
+    FontMetrics { id: choiceMetrics; font.family: EaStyle.Fonts.fontFamily; font.pixelSize: EaStyle.Sizes.fontPixelSize }
+    ButtonGroup { id: modelSelection; exclusive: true }
+    ButtonGroup { id: effortSelection; exclusive: true }
+    Popup {
+        id: choicePopup
+        objectName: "assistant.modelEffort.popup"
+        parent: composer.popupBoundary
+        property var intent: null
+        readonly property real viewportHeight: Math.max(0,composer.popupBoundary.height-AppSizes.unit*2)
+        readonly property real radioColumnWidth: Math.min(AppSizes.iconColumnWidth,Math.max(0,availableWidth/3))
+        readonly property real desiredLabelWidth: {
+            let measured=choiceMetrics.advanceWidth(composer.modelLabel+" · "+composer.selectedEffortLabel);
+            for(let i=0;i<composer.assistant.models.count;++i)measured=Math.max(measured,choiceMetrics.advanceWidth(composer.assistant.models.text(i,"displayName")));
+            for(const row of composer.effortChoices)measured=Math.max(measured,choiceMetrics.advanceWidth(row.label));
+            return measured;
+        }
+        width: Math.min(Math.max(modelEffortButton.width,desiredLabelWidth+AppSizes.iconColumnWidth+AppSizes.unit*3),Math.max(0,composer.popupBoundary.width-AppSizes.unit*2))
+        contentHeight: Math.min(choiceContent.implicitHeight,Math.max(0,viewportHeight-topPadding-bottomPadding))
+        height: contentHeight+topPadding+bottomPadding
+        x: composer.choiceX(modelEffortButton,width)
+        y: composer.choiceY(modelEffortButton,height)
+        padding: AppSizes.unit*0.5
+        focus: true
+        modal: true
+        dim: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        background: Rectangle { color: EaStyle.Colors.dialogBackground; radius: AppSizes.unit*0.5; border.color: EaStyle.Colors.appBorder; border.width: EaStyle.Sizes.borderThickness }
+        function current(original) {
+            return original && intent===original && visible && Qt.isQtObject(composer) && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled;
+        }
+        function focusRow(table,index,original) {
+            if(!current(original) || index<0 || index>=table.count)return;
+            table.positionViewAtIndex(index,ListView.Contain);
+            Qt.callLater(function() {
+                if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original) || !Qt.isQtObject(table))return;
+                const row=table.itemAtIndex(index);
+                if(Qt.isQtObject(row) && row.selector.enabled)row.selector.forceActiveFocus();
+            });
+        }
+        function modelAvailable(model,index) { return model.text(index,"available")==="true"; }
+        function reconcile(group,original) {
+            if(!current(original))return;
+            let actual=null;
+            for(const button of group.buttons)
+                if(Qt.isQtObject(button) && button.selectionCurrent){actual=button;break;}
+            group.checkedButton=actual; // Actual selection owns presentation, including a refused/no-op setter.
+        }
+        function focusModel(start,step,original) {
+            if(!current(original))return;
+            const model=original.owner.models;
+            for(let i=start;i>=0&&i<model.count;i+=step)
+                if(modelAvailable(model,i)){focusRow(modelTable,i,original);return;}
+            focusEffort(step>0?0:composer.effortChoices.length-1,original);
+        }
+        function focusEffort(index,original) { focusRow(effortTable,index,original); }
+        function chooseModel(id) {
+            const original=intent;
+            if(!current(original))return;
+            let offered=false;
+            for(let i=0;i<original.owner.models.count;++i)
+                if(original.owner.models.text(i,"id")===id && modelAvailable(original.owner.models,i)){offered=true;break;}
+            if(!offered){reconcile(modelSelection,original);return;}
+            original.owner.selectedModel=id;
+            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
+            reconcile(modelSelection,original);
+            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
+            const selected=composer.effortChoices.findIndex(row=>row.token===original.owner.selectedEffort);
+            focusEffort(Math.max(0,selected),original);
+        }
+        function chooseEffort(token) {
+            const original=intent;
+            if(!current(original))return;
+            if(!composer.effortChoices.some(row=>row.token===token)){reconcile(effortSelection,original);return;}
+            original.owner.selectedEffort=token;
+            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
+            reconcile(effortSelection,original);
+            if(Qt.isQtObject(choicePopup) && choicePopup.current(original))close();
+        }
+        onOpened: {
+            const original=intent;
+            reconcile(modelSelection,original);
+            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
+            reconcile(effortSelection,original);
+            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
+            focusModel(Math.max(0,composer.selectedModelRow),1,original);
+        }
+        onClosed: {
+            const original=intent;
+            intent=null;
+            if(Qt.isQtObject(choicePopup) && choicePopup.intent===null && Qt.isQtObject(composer) && original && original.owner===composer.assistant && composer.choicesEnabled && modelEffortButton.visible)modelEffortButton.forceActiveFocus();
+        }
+        ScrollView {
+            anchors.fill: parent
+            clip: true
+            Column {
+                id: choiceContent
+                width: Math.max(0,choicePopup.availableWidth-AppSizes.unit)
+                spacing: AppSizes.unit*0.5
+                EaElements.Label { text: qsTr("Model"); font.bold: true; width: parent.width }
+                DataTable {
+                    id: modelTable
+                    objectName: "assistant.choice.models"
+                    width: parent.width
+                    sourceModel: composer.assistant.models
+                    maxRowCountShow: 4
+                    marksCurrentRow: true
+                    currentRow: composer.selectedModelRow
+                    columnWidths: [choicePopup.radioColumnWidth,-1]
+                    delegate: EaComponents.ListViewDelegate {
+                        id: modelRow
+                        required property int index
+                        required property var model
+                        readonly property string modelId: model.id
+                        readonly property alias selector: modelRadio
+                        objectName: "assistant.choice.model.row."+modelId
+                        Item {
+                            property int horizontalAlignment: Text.AlignHCenter
+                            height: parent.height
+                            EaElements.RadioButton {
+                                id: modelRadio
+                                objectName: "assistant.choice.model."+modelRow.modelId
+                                anchors.centerIn: parent
+                                width: parent.width; height: parent.height
+                                padding: 0
+                                ButtonGroup.group: modelSelection
+                                readonly property bool selectionCurrent: composer.assistant.selectedModel===modelRow.modelId
+                                checked: selectionCurrent
+                                enabled: composer.choicesEnabled && modelRow.model.available
+                                Accessible.name: modelRow.model.displayName
+                                ToolTip.text: modelRow.model.displayName
+                                onClicked: choicePopup.chooseModel(modelRow.modelId)
+                                Keys.onReturnPressed: event=>{choicePopup.chooseModel(modelRow.modelId);event.accepted=true;}
+                                Keys.onEnterPressed: event=>{choicePopup.chooseModel(modelRow.modelId);event.accepted=true;}
+                                Keys.onTabPressed: event=>{choicePopup.focusModel(modelRow.index+1,1,choicePopup.intent);event.accepted=true;}
+                                Keys.onBacktabPressed: event=>{choicePopup.focusModel(modelRow.index-1,-1,choicePopup.intent);event.accepted=true;}
+                                Keys.onDownPressed: event=>{choicePopup.focusModel(modelRow.index+1,1,choicePopup.intent);event.accepted=true;}
+                                Keys.onUpPressed: event=>{choicePopup.focusModel(modelRow.index-1,-1,choicePopup.intent);event.accepted=true;}
+                            }
+                        }
+                        EaComponents.TableViewLabel {
+                            objectName: "assistant.choice.model.label."+modelRow.modelId
+                            text: modelRow.model.displayName
+                            textFormat: Text.PlainText
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideMiddle
+                            color: modelRow.model.available ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                            ToolTip.text: text
+                            TapHandler { enabled: composer.choicesEnabled && modelRow.model.available; onTapped: choicePopup.chooseModel(modelRow.modelId) }
+                        }
+                    }
+                }
+                EaElements.Label { text: qsTr("Reasoning effort"); font.bold: true; width: parent.width }
+                DataTable {
+                    id: effortTable
+                    objectName: "assistant.choice.efforts"
+                    width: parent.width
+                    sourceModel: composer.effortChoices
+                    maxRowCountShow: 4
+                    marksCurrentRow: true
+                    currentRow: composer.effortChoices.findIndex(row=>row.token===composer.assistant.selectedEffort)
+                    columnWidths: [choicePopup.radioColumnWidth,-1]
+                    delegate: EaComponents.ListViewDelegate {
+                        id: effortRow
+                        required property int index
+                        required property var modelData
+                        readonly property string choiceId: modelData.token.length ? "assistant.choice.effort.value."+modelData.token : "assistant.choice.effort.default"
+                        readonly property alias selector: effortRadio
+                        objectName: choiceId+".row"
+                        Item {
+                            property int horizontalAlignment: Text.AlignHCenter
+                            height: parent.height
+                            EaElements.RadioButton {
+                                id: effortRadio
+                                objectName: effortRow.choiceId
+                                anchors.centerIn: parent
+                                width: parent.width; height: parent.height
+                                padding: 0
+                                ButtonGroup.group: effortSelection
+                                readonly property bool selectionCurrent: composer.assistant.selectedEffort===effortRow.modelData.token
+                                checked: selectionCurrent
+                                enabled: composer.choicesEnabled
+                                Accessible.name: effortRow.modelData.label
+                                ToolTip.text: effortRow.modelData.token.length ? effortRow.modelData.label : qsTr("Provider default reasoning effort")
+                                onClicked: choicePopup.chooseEffort(effortRow.modelData.token)
+                                Keys.onReturnPressed: event=>{choicePopup.chooseEffort(effortRow.modelData.token);event.accepted=true;}
+                                Keys.onEnterPressed: event=>{choicePopup.chooseEffort(effortRow.modelData.token);event.accepted=true;}
+                                Keys.onTabPressed: event=>{if(effortRow.index+1<effortTable.count)choicePopup.focusEffort(effortRow.index+1,choicePopup.intent);else choicePopup.focusModel(0,1,choicePopup.intent);event.accepted=true;}
+                                Keys.onBacktabPressed: event=>{if(effortRow.index>0)choicePopup.focusEffort(effortRow.index-1,choicePopup.intent);else choicePopup.focusModel(modelTable.count-1,-1,choicePopup.intent);event.accepted=true;}
+                                Keys.onDownPressed: event=>{if(effortRow.index+1<effortTable.count)choicePopup.focusEffort(effortRow.index+1,choicePopup.intent);event.accepted=true;}
+                                Keys.onUpPressed: event=>{if(effortRow.index>0)choicePopup.focusEffort(effortRow.index-1,choicePopup.intent);event.accepted=true;}
+                            }
+                        }
+                        EaComponents.TableViewLabel {
+                            objectName: effortRow.choiceId+".label"
+                            text: effortRow.modelData.label
+                            textFormat: Text.PlainText
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideMiddle
+                            ToolTip.text: text
+                            TapHandler { enabled: composer.choicesEnabled; onTapped: choicePopup.chooseEffort(effortRow.modelData.token) }
+                        }
+                    }
+                }
+            }
+        }
     }
     onWidthChanged: closeChoices()
     Connections {
@@ -44,36 +288,50 @@ Rectangle {
     readonly property bool canSteer: assistant.state === "agent_active"
     readonly property bool hasDraft: editor.text.trim().length > 0
     function chooseFiles() {
-        if (WebFiles.available || assistant.canCancel) return;
-        const request = assistant.beginFileSelection();
-        if (request.length === 0) return;
-        nativeFiles.requestId = request;
-        nativeFiles.open();
+        if (WebFiles.available || !assistant.connected || assistant.canCancel || nativeFiles.requestId.length) return;
+        const original=assistant;
+        const request=original.beginFileSelection(true);
+        if (!Qt.isQtObject(composer) || !Qt.isQtObject(original) || original!==composer.assistant || !original.connected || !request.length) {
+            if (Qt.isQtObject(original)) original.cancelFileSelection(request);
+            return;
+        }
+        const intent={owner:original,id:request};
+        nativeFiles.selection=intent;
+        if (Qt.isQtObject(nativeFiles) && nativeFiles.selection===intent) nativeFiles.open();
+        else if (Qt.isQtObject(original)) original.cancelFileSelection(request);
     }
     FileDialog {
         id: nativeFiles
         objectName: "assistant.files.dialog"
-        property string requestId: ""
+        property var selection: null
+        readonly property string requestId: selection ? selection.id : ""
+        readonly property var original: selection ? selection.owner : null
         title: qsTr("Add files to the assistant")
         fileMode: FileDialog.OpenFiles
         onAccepted: {
-            const request = requestId;
-            requestId = "";
-            composer.assistant.addSelectedFiles(request, selectedFiles);
+            const target=original; const request=requestId; const files=selectedFiles;
+            selection=null;
+            if (!Qt.isQtObject(target)) return;
+            if (Qt.isQtObject(composer) && target===composer.assistant && target.connected) target.addSelectedFiles(request,files);
+            else target.cancelFileSelection(request);
         }
         onRejected: {
-            const request = requestId;
-            requestId = "";
-            composer.assistant.cancelFileSelection(request);
+            const target=original; const request=requestId;
+            selection=null;
+            if (Qt.isQtObject(target)) target.cancelFileSelection(request);
+        }
+        Component.onDestruction: {
+            const target=original; const request=requestId;
+            selection=null;
+            if (Qt.isQtObject(target)) target.cancelFileSelection(request);
         }
     }
     Connections {
-        target: composer.assistant
+        target: nativeFiles.original
         function onFileSelectionRetired(requestId) {
-            if (nativeFiles.requestId === requestId) {
-                nativeFiles.requestId = "";
-                nativeFiles.reject();
-            }
+            if (nativeFiles.requestId!==requestId) return;
+            nativeFiles.selection=null;
+            if (Qt.isQtObject(nativeFiles) && nativeFiles.selection===null) nativeFiles.reject();
         }
     }
     function acknowledgeVisiblePrompt() {
@@ -131,6 +389,7 @@ Rectangle {
         }
     }
     function focusEditor() {
+        if (!assistant.connected) return;
         const restore = selectionRevision === textRevision;
         const start = savedSelectionStart;
         const end = savedSelectionEnd;
@@ -211,7 +470,7 @@ Rectangle {
                             horizontalAlignment: Text.AlignLeft
                             verticalAlignment: Text.AlignVCenter
                         }
-                        enabled: !composer.assistant.canCancel
+                        enabled: composer.assistant.connected && !composer.assistant.canCancel
                         ToolTip.text: qsTr("Remove %1").arg(model.name)
                         Accessible.name: ToolTip.text
                         onClicked: composer.assistant.removeSelectedFile(model.id)
@@ -263,22 +522,11 @@ Rectangle {
         }
         RowLayout {
             id: composerToolbar
-            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth
+            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth
                 - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0)
                 - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * 6)
             width: parent.width
             spacing: AppSizes.unit * 0.5
-            FontMetrics { id: menuFontMetrics; font: models.font }
-            TextMetrics {
-                id: modelLabelMetrics
-                font: models.font
-                text: models.displayText
-            }
-            TextMetrics {
-                id: effortLabelMetrics
-                font: efforts.font
-                text: efforts.displayText
-            }
             EaElements.ToolButton {
                 id: addFilesButton
                 objectName: "assistant.files.add"
@@ -290,152 +538,104 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
-                    color: "transparent"
+                    color: addFilesButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                     radius: width * 0.5
                     border.width: addFilesButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
                     border.color: EaStyle.Colors.themeForeground
                 }
-                enabled: !WebFiles.available && !composer.assistant.canCancel
+                enabled: composer.assistant.connected && !WebFiles.available && !composer.assistant.canCancel
                 ToolTip.text: WebFiles.available ? qsTr("Browser file selection is not available yet") : qsTr("Add files")
                 Accessible.name: qsTr("Add files")
                 Accessible.description: ToolTip.text
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.backtab: editor
-                KeyNavigation.tab: models
+                KeyNavigation.tab: showActionsControl
                 onClicked: composer.chooseFiles()
             }
-            EaElements.ComboBox {
-                id: models
+            EaElements.ToolButton {
+                id: showActionsControl
+                objectName: "assistant.showActions"
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                fontIcon: "eye"
+                checkable: true
+                checked: composer.assistant.showActions
+                highlighted: checked
+                font.pixelSize: EaStyle.Sizes.fontPixelSize*0.75
+                contentItem: EaElements.Label {
+                    text: showActionsControl.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: showActionsControl.font.pixelSize*1.25
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    color: !showActionsControl.enabled ? EaStyle.Colors.themeForegroundDisabled : showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
+                }
+                background: Rectangle {
+                    implicitWidth: composer.actionSize; implicitHeight: implicitWidth
+                    radius: width*0.5
+                    color: showActionsControl.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    border.width: showActionsControl.checked || showActionsControl.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                    border.color: EaStyle.Colors.themeAccent
+                }
+                enabled: composer.assistant.connected && !composer.assistant.canCancel
+                ToolTip.text: qsTr("Show actions")
+                Accessible.name: ToolTip.text
+                Accessible.description: qsTr("Use real visible controls for supported actions")
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: efforts
                 KeyNavigation.backtab: addFilesButton
-                textFormat: Text.PlainText
-                displayText: currentIndex < 0 ? qsTr("Model") : currentText
-                currentIndex: {
-                    const count = composer.assistant.models.count;
-                    for (let i = 0; i < count; ++i)
-                        if (composer.assistant.models.text(i, "id") === composer.assistant.selectedModel)
-                            return i;
-                    return -1;
-                }
-                readonly property real menuWidth: {
-                    let measured = width;
-                    for (let i = 0; i < composer.assistant.models.count; ++i)
-                        measured = Math.max(measured, menuFontMetrics.advanceWidth(composer.assistant.models.text(i, "displayName")) + AppSizes.unit * 3);
-                    return Math.min(measured, Math.max(0, composer.popupBoundary.width - AppSizes.unit * 2));
-                }
-                popup.parent: composer.popupBoundary
-                popup.margins: 0
-                popup.width: menuWidth
-                popup.height: Math.min(models.popup.contentItem.implicitHeight + models.popup.topPadding + models.popup.bottomPadding,
-                    Math.max(0, composer.popupBoundary.height - AppSizes.unit * 2))
-                popup.x: composer.choiceX(models, models.popup.width)
-                popup.y: composer.choiceY(models, models.popup.height)
-                delegate: EaElements.MenuItem {
-                    required property var model
-                    id: modelOption
-                    required property int index
-                    width: models.popup.width
-                    height: Math.max(EaStyle.Sizes.comboBoxHeight, implicitContentHeight + topPadding + bottomPadding)
-                    text: model.displayName
-                    contentItem: EaElements.Label {
-                        text: modelOption.text
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WrapAnywhere
-                        font: modelOption.font
-                        color: models.foregroundColor
-                    }
-                    textFormat: Text.PlainText
-                    enabled: model.available
-                    highlighted: models.highlightedIndex === index
-                }
-                objectName: "assistant.model"
-                Layout.preferredWidth: modelLabelMetrics.advanceWidth + AppSizes.unit * 2.5
-                Layout.maximumWidth: composerToolbar.choiceWidth * 0.5
-                background: Rectangle {
-                    implicitHeight: EaStyle.Sizes.comboBoxHeight
-                    color: "transparent"
-                    radius: AppSizes.unit * 0.25
-                    border.width: models.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeForeground
-                }
-                model: composer.assistant.models
-                textRole: "displayName"
-                enabled: composer.assistant.connected && !composer.assistant.canCancel
-                Accessible.name: qsTr("Assistant model")
-                onActivated: index => composer.assistant.selectedModel = composer.assistant.models.text(index, "id")
+                KeyNavigation.tab: modelEffortButton
+                onToggled: composer.assistant.showActions = checked
             }
-            EaElements.ComboBox {
-                id: efforts
-                KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.tab: previousUserButton
-                KeyNavigation.backtab: models
-                textFormat: Text.PlainText
-                readonly property var effortValues: [""].concat(composer.assistant.availableEfforts)
-                readonly property real menuWidth: {
-                    let measured = width;
-                    for (const value of effortValues)
-                        measured = Math.max(measured, menuFontMetrics.advanceWidth(effortLabel(value)) + AppSizes.unit * 3);
-                    return Math.min(measured, Math.max(0, composer.popupBoundary.width - AppSizes.unit * 2));
-                }
-                popup.parent: composer.popupBoundary
-                popup.margins: 0
-                popup.width: menuWidth
-                popup.height: Math.min(efforts.popup.contentItem.implicitHeight + efforts.popup.topPadding + efforts.popup.bottomPadding,
-                    Math.max(0, composer.popupBoundary.height - AppSizes.unit * 2))
-                popup.x: composer.choiceX(efforts, efforts.popup.width)
-                popup.y: composer.choiceY(efforts, efforts.popup.height)
-                function effortLabel(value) {
-                    switch (value) {
-                    case "": return qsTr("Auto");
-                    case "none": return qsTr("None");
-                    case "low": return qsTr("Low");
-                    case "medium": return qsTr("Medium");
-                    case "high": return qsTr("High");
-                    case "xhigh": return qsTr("Extra high");
-                    case "max": return qsTr("Maximum");
-                    default: return qsTr("Unavailable");
-                    }
-                }
-                displayText: !composer.assistant.connected || composer.assistant.models.count === 0
-                    || models.currentIndex < 0 || currentIndex < 0 ? qsTr("Effort") : currentText
-                currentIndex: effortValues.indexOf(composer.assistant.selectedEffort)
-                objectName: "assistant.effort"
-                Layout.preferredWidth: effortLabelMetrics.advanceWidth + AppSizes.unit * 2.5
-                Layout.maximumWidth: composerToolbar.choiceWidth * 0.5
+            EaElements.Button {
+                id: modelEffortButton
+                objectName: "assistant.modelEffort"
+                Layout.preferredWidth: choiceMetrics.advanceWidth(composer.modelLabel+" · "+composer.selectedEffortLabel)+leftPadding+rightPadding+AppSizes.unit*0.4
+                Layout.maximumWidth: composerToolbar.choiceWidth
+                implicitHeight: composer.actionSize
+                leftPadding: AppSizes.unit*0.75
+                rightPadding: AppSizes.unit*0.75
+                enabled: composer.choicesEnabled
                 background: Rectangle {
-                    implicitHeight: EaStyle.Sizes.comboBoxHeight
-                    color: "transparent"
-                    radius: AppSizes.unit * 0.25
-                    border.width: efforts.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeForeground
+                    implicitHeight: composer.actionSize
+                    radius: height*0.5
+                    color: modelEffortButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    border.width: modelEffortButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                    border.color: EaStyle.Colors.themeAccent
                 }
-                delegate: EaElements.MenuItem {
-                    id: effortOption
-                    required property var modelData
-                    required property int index
-                    width: efforts.popup.width
-                    height: Math.max(EaStyle.Sizes.comboBoxHeight, implicitContentHeight + topPadding + bottomPadding)
-                    text: modelData
-                    textFormat: Text.PlainText
-                    highlighted: efforts.highlightedIndex === index
-                    contentItem: EaElements.Label {
-                        text: effortOption.text
+                contentItem: RowLayout {
+                    id: modelEffortText
+                    spacing: AppSizes.unit*0.4
+                    EaElements.Label {
+                        text: composer.modelLabel
                         textFormat: Text.PlainText
-                        wrapMode: Text.WrapAnywhere
-                        font: effortOption.font
-                        color: efforts.foregroundColor
+                        elide: Text.ElideMiddle
+                        Layout.fillWidth: true
+                    }
+                    EaElements.Label {
+                        text: composer.selectedEffortLabel
+                        textFormat: Text.PlainText
+                        color: EaStyle.Colors.themeForegroundMinor
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: modelEffortButton.availableWidth*0.45
                     }
                 }
-                model: effortValues.map(value => effortLabel(value))
-                enabled: composer.assistant.connected && !composer.assistant.canCancel
-                ToolTip.text: !composer.assistant.connected || composer.assistant.models.count === 0 ? qsTr("Reasoning effort is available after sign-in and model discovery") : composer.assistant.selectedEffort === "" ? qsTr("Provider default: the model or provider chooses the reasoning effort") : qsTr("Reasoning effort: %1").arg(currentText)
-                EaElements.ToolTip {
-                    text: efforts.ToolTip.text
-                    visible: (efforts.hovered || efforts.activeFocus) && EaGlobals.Vars.showToolTips && text !== ""
+                ToolTip.text: qsTr("Model: %1 · Reasoning effort: %2").arg(composer.modelLabel).arg(composer.selectedEffortLabel)
+                Accessible.name: ToolTip.text
+                Accessible.description: qsTr("Choose model and reasoning effort")
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: showActionsControl
+                KeyNavigation.tab: previousUserButton
+                onClicked: composer.openChoices()
+                Keys.priority: Keys.BeforeItem
+                Keys.onPressed: event=>{
+                    if(event.key===Qt.Key_Return || event.key===Qt.Key_Enter){
+                        event.accepted=true;
+                        if(!event.isAutoRepeat)composer.openChoices();
+                    } else event.accepted=false;
                 }
-                Accessible.name: qsTr("Reasoning effort")
-                onActivated: index => composer.assistant.selectedEffort = effortValues[index]
+                Keys.onReleased: event=>{
+                    event.accepted=event.key===Qt.Key_Return || event.key===Qt.Key_Enter;
+                }
             }
             Item { Layout.fillWidth: true }
             EaElements.ToolButton {
@@ -450,14 +650,14 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: "transparent"
+                    color: previousUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                     border.width: previousUserButton.activeFocus ? 1 : 0
                     border.color: EaStyle.Colors.themeForeground
                 }
                 ToolTip.text: qsTr("Previous user message")
                 Accessible.name: ToolTip.text
                 KeyNavigation.priority: KeyNavigation.BeforeItem
-                KeyNavigation.backtab: efforts
+                KeyNavigation.backtab: modelEffortButton
                 KeyNavigation.tab: nextUserButton
                 onClicked: composer.previousUserRequested()
             }
@@ -473,7 +673,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: "transparent"
+                    color: nextUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                     border.width: nextUserButton.activeFocus ? 1 : 0
                     border.color: EaStyle.Colors.themeForeground
                 }
