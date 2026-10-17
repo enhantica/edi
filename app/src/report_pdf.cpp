@@ -3,12 +3,14 @@
 
 #include <QAbstractTextDocumentLayout>
 #include <QBuffer>
+#include <QColor>
 #include <QFont>
 #include <QImage>
 #include <QMarginsF>
 #include <QPageLayout>
 #include <QPageSize>
 #include <QPainter>
+#include <QPalette>
 #include <QPdfWriter>
 #include <QTextBlock>
 #include <QTextCursor>
@@ -151,7 +153,13 @@ QByteArray reportPdf(const edi::ReportModel& model, const QHash<QString, QImage>
         }
         painter.save();
         painter.translate(0, -page * body.height());
-        document.drawContents(&painter, QRectF(0, page * body.height(), body.width(), body.height()));
+        // The page is printed in the light theme's colours whatever the app's: text the report leaves uncoloured takes
+        // the HTML report's ink, never the application's palette.
+        QAbstractTextDocumentLayout::PaintContext context;
+        context.palette.setColor(QPalette::Text, QColor(QStringLiteral("#000000")));
+        context.clip = QRectF(0, page * body.height(), body.width(), body.height());
+        painter.setClipRect(context.clip);
+        document.documentLayout()->draw(&painter, context);
         painter.restore();
         painter.setFont(font);
         painter.drawText(QRectF(0, body.height(), body.width(), margin), Qt::AlignCenter, QString::number(page + 1));
