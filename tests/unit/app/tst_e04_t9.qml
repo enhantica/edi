@@ -142,7 +142,8 @@ TestCase {
         const main = object("chart.view.main");
         const mainAt = main.mapToItem(chart, 0, 0);
         verify(Math.abs(resetAt.y - chart.topMargin) < 1, " owner chart margin is realised above the actual toolbar button");
-        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - chart.toolbarGap) < 1, " owner chart margin is realised between the toolbar button and actual top plot border");
+        const rightInset = chart.width - mainAt.x - main.plotArea.x - main.plotArea.width;
+        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - rightInset) < 1, "The gap below the toolbar equals the actual plot's right margin");
         const title = object("chart.title.x");
         // The label is centred in its reserved title band; its normal leading
         // is distinct from the owner's equal margin outside that band.
@@ -156,7 +157,7 @@ TestCase {
         ["legend", "hover", "pan", "zoom", "reset"].forEach(key => {
             const button = object("chart.toolbar." + key);
             const point = button.mapToItem(chart, 0, 0);
-            verify(scaleAt.x > point.x + button.width, " owner y-scale drop-down follows every button at the toolbar's far right");
+            verify(scaleAt.x + scale.width < point.x, "The y-scale drop-down precedes every toolbar button at the far left");
         });
         verify(object("chart.toolbar.zoom").checked, " I27 box zoom starts active");
         verify(!object("chart.toolbar.pan").checked, " I27 pan and box zoom exclude each other");
