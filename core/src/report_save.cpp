@@ -44,6 +44,11 @@ const ReportLibraries& html_libraries(const ReportOptions& options, const Report
 // that was there as it was.
 void replace_file(const fs::path& path, const std::string& text) {
     const fs::path part = path.parent_path() / ("." + path.filename().string() + ".part");
+    // A link left at the part's name is removed, not followed: the open below would truncate whatever it points at.
+    std::error_code link_error;
+    if (fs::is_symlink(fs::symlink_status(part, link_error))) {
+        fs::remove(part, link_error);
+    }
     {
         std::ofstream out(part, std::ios::binary | std::ios::trunc);
         out << text;

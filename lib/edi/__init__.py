@@ -696,7 +696,10 @@ class Report:
         # Written beside the old file and renamed over it, so a failed write leaves the old file.
         part = path.with_name(f'.{path.name}.part')
         try:
-            part.write_text(text, encoding='utf-8')
+            # A link left at the part's name is removed, not followed; the part is created anew.
+            part.unlink(missing_ok=True)
+            with part.open('x', encoding='utf-8') as out:
+                out.write(text)
             part.replace(path)
         except BaseException:
             part.unlink(missing_ok=True)
