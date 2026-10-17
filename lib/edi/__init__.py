@@ -533,6 +533,29 @@ Project.analysis = property(_analysis)
 _DATA_DIR = _Path(__file__).resolve().parent.parent.parent / 'data'
 
 
+def _own_folder(folder: _Path) -> None:
+    """Make ``folder`` the project's own, so a report written next lands in the project.
+
+    A link standing there is replaced by a folder linking each entry of the folder it pointed at.
+    """
+    if not folder.is_symlink():
+        folder.mkdir(parents=True, exist_ok=True)
+        return
+    target = folder.resolve()
+    entries = sorted(target.iterdir()) if target.is_dir() else []
+    folder.unlink()
+    folder.mkdir()
+    for entry in entries:
+        (folder / entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
+
+
+def _write_part(part: _Path, text: str) -> None:
+    """Write ``text`` to a new ``part``: a link left at its name is removed, never followed."""
+    part.unlink(missing_ok=True)
+    with part.open('x', encoding='utf-8') as out:
+        out.write(text)
+
+
 class Report:
     """The report facade (ADR-0036 §7), mirroring diffraction-lib's ``project.report``.
 
@@ -692,14 +715,20 @@ class Report:
             colour_scheme=colour_scheme,
             correlation_experiment=correlation_experiment,
         )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Written beside the old file and renamed over it, so a failed write leaves the old file.
-        part = path.with_name(f'.{path.name}.part')
+        # Written whole and renamed over the old file, so a failed write leaves the old file. Into
+        # the project's reports folder when that folder is a link, the part is written in the
+        # project's folder first, so a failed write changes nothing behind the link.
+        folder = self._project.metadata.path
+        reports = _Path(folder) / 'reports' if folder is not None else None
+        own = reports is not None and path.parent.absolute() == reports.absolute()
+        linked = own and reports.is_symlink()
+        if not linked:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        part = (_Path(folder) if linked else path.parent) / f'.{path.name}.part'
         try:
-            # A link left at the part's name is removed, not followed; the part is created anew.
-            part.unlink(missing_ok=True)
-            with part.open('x', encoding='utf-8') as out:
-                out.write(text)
+            _write_part(part, text)
+            if own:
+                _own_folder(reports)
             part.replace(path)
         except BaseException:
             part.unlink(missing_ok=True)

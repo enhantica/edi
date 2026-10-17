@@ -4,6 +4,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <locale>
 #include <memory>
@@ -11,6 +12,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <system_error>
+#include <vector>
 
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -40,11 +42,47 @@ const ReportLibraries& html_libraries(const ReportOptions& options, const Report
     return options.embed_libraries ? libraries : kOnline;
 }
 
-// Writes `text` to `path` through a file beside it, renamed over it once whole, so a failed write leaves the file
-// that was there as it was.
-void replace_file(const fs::path& path, const std::string& text) {
-    const fs::path part = path.parent_path() / ("." + path.filename().string() + ".part");
-    // A link left at the part's name is removed, not followed: the open below would truncate whatever it points at.
+// The project's own reports folder: a link standing there is replaced by a folder of the project's own holding a link
+// to each entry of the folder it pointed at, so what is written next lands in the project, never behind the link.
+void own_folder(const fs::path& folder) {
+    std::error_code error;
+    if (!fs::is_symlink(fs::symlink_status(folder, error))) {
+        return;
+    }
+    std::vector<fs::path> entries;
+    const fs::path target = fs::canonical(folder, error);
+    if (!error && fs::is_directory(target, error)) {
+        for (fs::directory_iterator it(target, error), end; !error && it != end; it.increment(error)) {
+            entries.push_back(it->path());
+        }
+    }
+    if (!error) {
+        fs::remove(folder, error);
+    }
+    if (!error) {
+        fs::create_directory(folder, error);
+    }
+    for (const fs::path& entry : entries) {
+        if (error) {
+            break;
+        }
+        if (fs::is_directory(entry, error)) {
+            fs::create_directory_symlink(entry, folder / entry.filename(), error);
+        } else if (!error) {
+            fs::create_symlink(entry, folder / entry.filename(), error);
+        }
+    }
+    if (error) {
+        throw std::runtime_error("cannot make " + folder.string() + " the project's own folder");
+    }
+}
+
+// Writes `text` to `path` through a part file in `part_folder`, renamed over `path` once whole, so a failed write
+// leaves the file that was there, and its folder, as they were. A link left at the part's name is removed, not
+// followed; `before_rename` runs once the part is whole (if it throws, the part is removed).
+void replace_file(const fs::path& path, const std::string& text, const fs::path& part_folder,
+                  const std::function<void()>& before_rename = {}) {
+    const fs::path part = part_folder / ("." + path.filename().string() + ".part");
     std::error_code link_error;
     if (fs::is_symlink(fs::symlink_status(part, link_error))) {
         fs::remove(part, link_error);
@@ -60,6 +98,14 @@ void replace_file(const fs::path& path, const std::string& text) {
         }
     }
     std::error_code error;
+    if (before_rename) {
+        try {
+            before_rename();
+        } catch (...) {
+            fs::remove(part, error);
+            throw;
+        }
+    }
     fs::rename(part, path, error);
     if (error) {
         fs::remove(part, error);
@@ -110,7 +156,12 @@ ReportSaveResult save_report(Project& project, const ReportOverrides& overrides,
         const ReportLibraries& used = html_libraries(options, libraries);
         const std::string name = (model.name.empty() ? std::string("report") : model.name) + ".html";
         const fs::path path = reports / name;
-        replace_file(path, report_html(model, used));
+        // Written whole beside the file, or in the project's folder when the reports folder is a link, and only then
+        // into the project's own reports folder.
+        std::error_code link_error;
+        const bool linked = fs::is_symlink(fs::symlink_status(reports, link_error));
+        replace_file(path, report_html(model, used), linked ? fs::path(project.path) : reports,
+                     [&reports] { own_folder(reports); });
         result.written.push_back(path.string());
         ReportFile row;
         row.name = name;
