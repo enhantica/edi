@@ -91,6 +91,14 @@ def complete():
             '[Open Report page](edi:report)\n\n'
             '[Unknown protected report](not-a-report:original)'
         )
+    # GUI404 opt-in literal table uses ONLY the existing genuine held original turn.
+    # The ordinary peer/default scenarios and all event/envelope paths stay unchanged.
+    if 'gui404_table_reply' in config:
+        assert config['gui404_table_reply'] is True and scenario == 'native:script' and (
+            config.get('native_turn_calls') == [[]] and config.get('ux289_hold_input') is True
+            and turn_number == 1 and config.get('report_page_reply') is not True
+        ), 'GUI404 SETUP: exact legal original no-native-operation held-table fixture only'
+        item['text'] = 'Original fileauth reply 1\n\n| Item | Value |\n| --- | --- |\n| Alpha | 111 |\n| Bravo | 222 |\n| Charlie | 333 |\n| Delta | 444 |'
     notify('item/started', {'threadId': thread_id, 'turnId': turn_id, 'item': item})
     notify(
         'item/completed',

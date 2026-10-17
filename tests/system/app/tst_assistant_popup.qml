@@ -14,6 +14,7 @@ import "../../unit/app/UiInteraction.js" as Ui
 TestCase {
     name: "AssistantPopup"
     when: windowShown
+    FontMetrics { id: gui398FontMetrics }
     property var window
     property var popup
     property var assistant
@@ -5401,11 +5402,22 @@ TestCase {
             && typeof control.text === "string" && typeof control.textFormat === "number");
     }
     function gui392_dialog(name) {
-        const dialogs = Probe.objectsWithProperty(window, "opened").filter(object =>
-            object.objectName === name && object.visible);
-        compare(dialogs.length, 1, "GUI392: one exact current Main-owned visible dialog: " + name);
-        verify(dialogs[0].opened, "GUI392: original named dialog has actually opened");
-        return dialogs[0];
+        const original = {assistant: Session.assistant, project: Session.project, popup: popup};
+        verify(original.assistant === assistant && popup.assistant === assistant,
+            "GUI398: original Main Popup and Session retain SAME controller before genuine dialog readiness");
+        const dialogs = Probe.objectsWithProperty(window, "opened").filter(object => object.objectName === name);
+        compare(dialogs.length, 1, "GUI398: SAME original Main window owns ONE exact named dialog, including its enter interval: " + name);
+        const dialog = dialogs[0], life = lifetime313(dialog), popupLife = lifetime313(popup);
+        tryVerify(() => alive313(life) && alive313(popupLife)
+            && Session.assistant === original.assistant && Session.project === original.project
+            && popup === original.popup && popup.assistant === original.assistant
+            && dialog.visible && dialog.opened, 2000,
+            "GUI398: original unique receiver genuinely completes native enter before opened/exposure assertions: " + name);
+        const current = Probe.objectsWithProperty(window, "opened").filter(object => object.objectName === name);
+        compare(current.length, 1, "GUI398: settled original dialog remains unique, no replacement/hidden duplicate blessing");
+        compare(current[0], dialog, "GUI398: readiness belongs to SAME captured original dialog");
+        gui398_nativeDialog(dialog);
+        return dialog;
     }
     function gui392_button(button) {
         verify(button !== null && button.enabled, "GUI392: original standard action is enabled");
@@ -5421,7 +5433,7 @@ TestCase {
         tryCompare(dialog, "opened", true, 2000, "GUI392: actual header Sign in opens original provider dialog");
         gui392_button(dialog.standardButton(Dialog.Ok));
         report187_ready("gui392-genuine-header-signin", false);
-        verify(!dialog.visible, "GUI392: actual ready account closes original sign-in modal");
+        tryCompare(dialog, "visible", false, 2000, "GUI398: original ready sign-in dialog genuinely finishes native exit before reuse");
     }
     function gui392_science() {
         const project = Session.project;
@@ -5486,6 +5498,7 @@ TestCase {
         const signIn = ux356_dialog();
         tryCompare(signIn, "opened", true, 2000, "GUI392: genuine Sign in reaches original dialog");
         console.log("GUI395_SIGNIN_OPEN");
+        gui398_details(signIn);
         compare(Session.project, before.owner, "GUI395: genuine Sign in click preserves SAME original scientific owner");
         gui392_button(signIn.standardButton(Dialog.Cancel));
         tryCompare(signIn, "visible", false, 2000, "GUI395: ordinary Cancel actually closes ORIGINAL sign-in dialog");
@@ -5504,20 +5517,24 @@ TestCase {
         compare(avatar.text, "O", "GUI392: actual Original@example.invalid email yields its email initial, not invented name");
         verify(clear.fontIcon === "eraser" && /clear/i.test(clear.Accessible.name),
             "GUI392: actual Clear has icon and accessible action name");
+        gui398_header(avatar);
         const consent = assistant.contextConsentRequired, selected = JSON.stringify(Probe.rows(assistant.selectedFiles));
         Ui.click(this, Probe, window, "assistant.connection");
         const account = gui392_dialog("assistant.accountDialog");
         const accountText = gui392_labels(account.contentItem).map(label => label.text).join("\n");
-        verify(accountText.includes("Original@example.invalid") && /plus/i.test(accountText),
+        verify(accountText.includes("Original@example.invalid") && accountText.includes("Plus"),
             "GUI392: Account shows exact actual owned email and supported plan");
         verify(!Probe.objectsWithProperty(window, "opened").some(object => object.objectName === "assistant.usageDialog" && object.visible),
             "GUI392: Account is distinct from Usage");
+        gui398_account(account);
         ux356_fullyExposed(account.contentItem); ux356_fullyExposed(account.footer);
         capture("gui392-ready-account");
         gui392_button(account.standardButton(Dialog.Close));
+        tryCompare(account, "visible", false, 2000, "GUI399: SAME original Account exit settles before actual later reopen");
         compare(assistant.contextConsentRequired, consent, "GUI392: avatar never approves outgoing project scope");
         compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selected, "GUI392: avatar never grants selected files");
         Ui.click(this, Probe, window, "assistant.connection");
+        compare(gui392_dialog("assistant.accountDialog"), account, "GUI399: genuine later avatar opening settles SAME original Account before Sign out input");
         import265_click("assistant.signOut");
         tryCompare(assistant, "connected", false, 2000, "GUI392: real Account sign out retires actual account");
         tryCompare(account, "visible", false, 2000, "GUI392: actual sign out closes original account popup");
@@ -5535,15 +5552,15 @@ TestCase {
     function gui392_usageData() { return gui392_json(assistant.usage); }
     function test_gui392_usage_actual_windows_data() {
         return [
-            {tag: "remaining25", remaining: 25, used: [75, 32], color: "normal"},
-            {tag: "remaining24", remaining: 24, used: [76, 32], color: "amber"},
-            {tag: "remaining5", remaining: 5, used: [95, 32], color: "amber"},
-            {tag: "remaining4", remaining: 4, used: [96, 32], color: "red"},
-            {tag: "remaining100", remaining: 100, used: [0, 0], color: "normal"},
-            {tag: "over100", remaining: 0, used: [137, 32], color: "red"},
-            {tag: "unknown", remaining: null, used: [], color: "normal"},
-            {tag: "stale", remaining: 17, used: [17, 83], color: "amber"},
-            {tag: "zero-missing-recovered", remaining: 100, used: [0], color: "normal"}
+            {tag: "remaining25", remaining: 25, headerUsed: 75, used: [75, 32], color: "normal"},
+            {tag: "remaining24", remaining: 24, headerUsed: 76, used: [76, 32], color: "amber"},
+            {tag: "remaining5", remaining: 5, headerUsed: 95, used: [95, 32], color: "amber"},
+            {tag: "remaining4", remaining: 4, headerUsed: 96, used: [96, 32], color: "red"},
+            {tag: "remaining100", remaining: 100, headerUsed: 0, used: [null, 0], color: "normal"},
+            {tag: "over100", remaining: 0, headerUsed: 137, used: [137, 32], color: "red"},
+            {tag: "unknown", remaining: null, headerUsed: null, used: [null, null], color: "normal"},
+            {tag: "stale", remaining: 17, headerUsed: 83, used: [17, 83], color: "amber"},
+            {tag: "zero-missing-recovered", remaining: 100, headerUsed: 0, used: [null, 0], color: "normal"}
         ];
     }
     function gui392_closeUsage(dialog) {
@@ -5554,9 +5571,13 @@ TestCase {
         const before = gui392_setup(); gui392_signIn();
         tryVerify(() => !!gui392_usageData().observedAt, 2000, "GUI392: first genuine account usage reply is actually observed");
         mouseMove(window.contentItem, 0, 0); rendered();
-        let label = gui392_usageLabel(data.remaining === null ? "–" : data.remaining + "%");
+        const label = gui392_usageLabel(data.headerUsed === null ? "–" : data.headerUsed + "% used");
         tryCompare(label, "color", data.color === "red" ? EaStyle.Colors.red : data.color === "amber" ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground, 2000,
-            "GUI392: actual painted remaining threshold is below25 amber, below5 red, equality outside lower band");
+            "GUI398: actual USED header preserves strict remaining thresholds below25 orange/below5 red, not their equality");
+        if (data.headerUsed !== null) verify(/used/i.test(item("assistant.usage").ToolTip.text)
+            && /used/i.test(item("assistant.usage").Accessible.name),
+            "GUI398: actual header tooltip/accessibility consistently disclose USED rather than remaining");
+        gui398_noBlueOutline(item("assistant.usage"));
         if (data.tag === "zero-missing-recovered") {
             capture("gui392-usage-actual-zero");
             Ui.click(this, Probe, window, "assistant.usage");
@@ -5564,11 +5585,13 @@ TestCase {
             tryVerify(() => !gui392_usageData().available && !gui392_usageData().stale
                 && gui392_usageData().buckets.length === 0, 2000,
                 "GUI392: real dialog-open optional read observes actual empty provider windows, not zero");
-            gui392_usageLabel("–"); capture("gui392-usage-missing"); gui392_closeUsage(dialog);
+            gui392_usageLabel("–"); gui398_usageRows(dialog, [null, null], false);
+            capture("gui392-usage-missing"); gui392_closeUsage(dialog);
             Ui.click(this, Probe, window, "assistant.usage"); dialog = gui392_dialog("assistant.usageDialog");
             tryVerify(() => gui392_usageData().available && !gui392_usageData().stale, 2000,
                 "GUI392: actual third optional reply recovers genuine zero usage");
-            gui392_usageLabel("100%"); capture("gui392-usage-recovered-zero"); gui392_closeUsage(dialog);
+            gui392_usageLabel("0% used"); gui398_usageRows(dialog, [null, 0], false);
+            capture("gui392-usage-recovered-zero"); gui392_closeUsage(dialog);
         } else {
             const observedBefore = gui392_usageData().observedAt;
             Ui.click(this, Probe, window, "assistant.usage");
@@ -5578,30 +5601,11 @@ TestCase {
             else tryVerify(() => gui392_usageData().available === (data.remaining !== null)
                 && gui392_usageData().observedAt !== observedBefore, 2000,
                 "GUI392: real dialog read retains exact known versus unknown provider semantics");
-            const text = gui392_labels(dialog.contentItem).map(label => label.text).join("\n");
-            if (data.tag === "stale") verify(/last observed|stale/i.test(text), "GUI392: stale observation is explicitly disclosed");
-            else if (data.remaining === null) verify(/unavailable|unknown/i.test(text), "GUI392: unknown usage is explicit, never inferred from history");
-            else {
-                verify(text.includes("Original owned limit") && text.includes("300") && text.includes("10080")
-                    && text.includes("12.50"), "GUI392: actual supplied window labels/durations/credits remain independently recognizable");
-                verify(text.includes("2027-01-15") || text.includes("1800000000"),
-                    "GUI392: actual supplied primary reset is disclosed, not a guessed reset");
-                const bars = Ui.itemsWithProperty(dialog.contentItem, "value").filter(control => control.visible
-                    && typeof control.from === "number" && typeof control.to === "number" && control.to > control.from
-                    && typeof control.position === "number");
-                compare(bars.length, data.used.length, "GUI392: exactly one actual allowance bar per independently supplied window");
-                for (let index = 0; index < data.used.length; ++index) {
-                    verify(Math.abs((bars[index].value - bars[index].from) / (bars[index].to - bars[index].from)
-                        - Math.min(100, Math.max(0, data.used[index])) / 100) < 0.000001,
-                        "GUI392: actual bar fill is supplied USED fraction, including honest presentation clamp");
-                    const remaining = 100 - data.used[index];
-                    const expected = remaining < 5 ? EaStyle.Colors.red : remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground;
-                    const fills = Ui.itemsWithProperty(bars[index].contentItem, "color").filter(control =>
-                        control.visible && control.width > 0 && control.height > 0 && control.color === expected);
-                    verify(fills.length > 0 || data.used[index] === 0,
-                        "GUI392: nonempty actual used bar uses matching independently derived remaining threshold color");
-                }
+            if (data.tag === "stale") {
+                gui392_usageLabel(data.headerUsed + "% used");
+                verify(gui392_usageData().stale === true, "GUI404: hiding unsolicited stale copy cannot falsify actual internal freshness");
             }
+            gui398_usageRows(dialog, data.used, data.tag === "stale");
             ux356_fullyExposed(dialog.contentItem); ux356_fullyExposed(dialog.footer);
             capture("gui392-usage-" + data.tag); gui392_closeUsage(dialog);
         }
@@ -5812,7 +5816,9 @@ TestCase {
         const modelTable = gui393_control(choice, "assistant.choice.models");
         const effortTable = gui393_control(choice, "assistant.choice.efforts");
         compare(modelTable.sourceModel, assistant.models, "GUI393: original model table uses actual VM rows");
-        verify(rect(modelTable)[1] < rect(effortTable)[1], "GUI393: actual models table precedes dependent effort table");
+        verify(rect(modelTable)[0] + rect(modelTable)[2] <= rect(effortTable)[0] + 0.5
+            && Math.abs(rect(modelTable)[1] - rect(effortTable)[1]) < 0.5,
+            "GUI398: full natural model and effort tables are SIDE BY SIDE on the same native dialog row");
         const modelRadios = models.map(row => gui393_control(choice, "assistant.choice.model." + row.id));
         const effortRadios = expectedEfforts.map(token => gui393_control(choice, gui393_effortName(token)));
         const all = Ui.itemsWithProperty(choice.contentItem, "objectName");
@@ -5836,7 +5842,10 @@ TestCase {
             const originalRow = gui393_control(choice, "assistant.choice.model.row." + row.id);
             verify(gui393_under(originalRow, modelTable) && gui393_under(radio, originalRow) && gui393_under(label, originalRow),
                 "GUI393: SAME original model row/table owns its exact radio and label controls");
-            radioRects.push(rect(radio)); labelRects.push(rect(label));
+            verify(!label.truncated && label.contentWidth <= label.width + 0.5,
+                "GUI398: normal viewport shows full natural offered label without elision/scroll substitute");
+            const rr = rect(radio), lr = rect(label), tableX = rect(modelTable)[0];
+            radioRects.push([rr[0] - tableX, rr[2]]); labelRects.push([lr[0] - tableX, lr[2]]);
         }
         const labels = {"": "Auto", "medium": "Medium", "high": "High"};
         for (let index = 0; index < expectedEfforts.length; ++index) {
@@ -5847,14 +5856,20 @@ TestCase {
             const originalRow = gui393_control(choice, gui393_effortName(token) + ".row");
             verify(gui393_under(originalRow, effortTable) && gui393_under(radio, originalRow) && gui393_under(label, originalRow),
                 "GUI393: SAME original dependent effort row/table owns its exact radio and label");
-            radioRects.push(rect(radio)); labelRects.push(rect(label));
+            verify(!label.truncated && label.contentWidth <= label.width + 0.5,
+                "GUI398: normal viewport shows full natural offered label without elision/scroll substitute");
+            const rr = rect(radio), lr = rect(label), tableX = rect(effortTable)[0];
+            radioRects.push([rr[0] - tableX, rr[2]]); labelRects.push([lr[0] - tableX, lr[2]]);
         }
         for (const bounds of radioRects) verify(Math.abs(bounds[0] - radioRects[0][0]) < 0.5
-            && Math.abs(bounds[2] - radioRects[0][2]) < 0.5,
-            "GUI393: actual radio columns align across both tables");
+            && Math.abs(bounds[1] - radioRects[0][1]) < 0.5,
+            "GUI393: actual radio column offsets/widths align relative to BOTH side-by-side tables");
         for (const bounds of labelRects) verify(Math.abs(bounds[0] - labelRects[0][0]) < 0.5
-            && Math.abs(bounds[2] - labelRects[0][2]) < 0.5,
-            "GUI393: actual label columns align across both tables");
+            && Math.abs(bounds[1] - labelRects[0][1]) < 0.5,
+            "GUI393: actual label column offsets/widths align relative to BOTH side-by-side tables");
+        gui399_tableExtent(choice, modelTable, models.map(row => gui393_control(choice, "assistant.choice.model.row." + row.id)));
+        gui399_tableExtent(choice, effortTable, expectedEfforts.map(token => gui393_control(choice, gui393_effortName(token) + ".row")));
+        gui400_chooserSpacing(choice, [modelTable, effortTable]);
         ux356_fullyExposed(choice.contentItem);
         return {models: models, modelRadios: modelRadios, effortRadios: effortRadios,
             modelTable: modelTable, effortTable: effortTable};
@@ -5895,6 +5910,12 @@ TestCase {
         }
         verify(contrast(effort[0]) < contrast(model[0]),
             "GUI393: actual effort ink is less pronounced against SAME real background than model ink");
+        gui398FontMetrics.font = model[0].font;
+        const modelBounds = rect(model[0]), effortBounds = rect(effort[0]);
+        verify(Math.abs(effortBounds[0] - modelBounds[0] - modelBounds[2]
+            - gui398FontMetrics.advanceWidth(" ")) < 0.5,
+            "GUI398: actual model and muted effort have exactly ONE natural text-space, not widened layout gap");
+        gui398_noBlueOutline(pill);
         return pill;
     }
     function gui393_roundFooter() {
@@ -5909,9 +5930,20 @@ TestCase {
                 && Math.abs(background.width - background.height) < 0.5
                 && background.radius >= background.height / 2 - 0.5,
                 "GUI393: actual original footer action has circular painted background: " + name);
+            gui398_noBlueOutline(control);
+            const point = Ui.clickPoint(control);
+            mouseMove(control, point.x, point.y); rendered();
+            gui398_noBlueOutline(control);
+            mouseMove(window.contentItem, 0, 0); rendered();
+            gui398_noBlueOutline(control);
             verify(background.color !== send.background.color,
                 "GUI393: light footer treatment remains distinct from stronger original Send fill: " + name);
         }
+            const previous = rect(item("assistant.previousUserMessage")), next = rect(item("assistant.nextUserMessage")), submit = rect(send);
+        const firstGap = next[0] - previous[0] - previous[2], secondGap = submit[0] - next[0] - next[2];
+        verify(firstGap >= 0 && Math.abs(firstGap - secondGap) < 0.5,
+            "GUI398: actual Previous/Next/Send horizontal gaps are equal in SAME original footer");
+        gui398_noBlueOutline(send);
     }
     function gui393_sourceApproval() {
         Ui.click(this, Probe, window, "assistant.connection");
@@ -5967,6 +5999,7 @@ TestCase {
             }
             opening.openedChanged.connect(opened394);
             try {
+                gui398_noBlueOutline(pill);
                 keyClick(data.tag === "space" ? Qt.Key_Space : data.tag === "enter" ? Qt.Key_Enter : Qt.Key_Return);
                 choice = gui392_dialog("assistant.modelEffort.popup");
                 compare(choice, opening, "GUI394: genuine key opens SAME original popup, no replacement blessing");
@@ -6046,8 +6079,9 @@ TestCase {
                 "GUI393: original busy Stop retains stronger treatment than light footer actions");
             assistant.refreshUsage(); // Same original received-input release door as GUI392.
             tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
-                && row.status === "completed" && row.text === "Original fileauth reply 1"), 2000,
+                && row.status === "completed" && row.text === "Original offline reply"), 2000,
                 "GUI393: original selected-model request really completes before re-enabling choices");
+            gui398_noBlueOutline(pill);
             verify(pill.enabled, "GUI393: genuine completed original work re-enables original combined chooser");
             compare(assistant.selectedModel, "gpt-6-sol", "GUI393: actual request retains independently chosen model");
             compare(assistant.selectedEffort, "medium", "GUI393: actual request retains independently chosen effort");
@@ -6062,7 +6096,6 @@ TestCase {
     function test_gui393_first_delivery_eye_clear() {
         const before = gui392_setup(); gui392_signIn();
         const account = JSON.stringify(gui392_json(Probe.rows(assistant.models)));
-        // Existing public fixture admission is setup only, not native picker proof.
         const token = assistant.beginFileSelection();
         verify(token.length > 0 && assistant.addSelectedFiles(token,
             [Probe.referenceUrl("project/structures/lbco.edi")]),
@@ -6070,10 +6103,13 @@ TestCase {
         tryCompare(assistant.selectedFiles, "count", 1, 2000,
             "GUI393 SETUP: actual canonical source grant exists, not an empty Clear assertion");
         const originalFile = gui392_json(Probe.rows(assistant.selectedFiles))[0];
+        const canonicalFile405 = {id:originalFile.id, name:originalFile.name, bytes:originalFile.bytes,
+            textReadable:originalFile.textReadable, format:originalFile.format};
         verify(originalFile.id.length > 0 && originalFile.pending,
             "GUI393 SETUP: real canonical pending ID is app issued");
-        if (assistant.contextConsentRequired) assistant.signIn();
-        report187_ready("gui393-eye-current-context", true);
+        verify(assistant.connected && assistant.contextConsentRequired,
+            "GUI404 SETUP: changed attachment scope REALLY requires approval, never preapproved via signIn");
+        report187_ready("gui404-attachment-needs-approval", false);
         const eye = item("assistant.showActions");
         compare(eye.checked, false, "GUI393 SETUP: original isolated presentation starts with actions off");
         Ui.click(this, Probe, window, "assistant.showActions");
@@ -6083,40 +6119,111 @@ TestCase {
         mouseMove(window.contentItem, 0, 0); rendered();
         verify(gui392_labels(eye).some(label => label.color === EaStyle.Colors.themeAccent),
             "GUI393: original checked eye actually paints accent ink");
-        Ui.click(this, Probe, window, "assistant.composer"); visible185_type("GUI393 first delivery original Clear request");
-        gui393_roundFooter();
-        Ui.click(this, Probe, window, "assistant.send");
-        tryVerify(() => assistant.canCancel, 2000, "GUI393: actual original input is held before eye/chooser busy observation");
-        verify(!eye.enabled && !item("assistant.modelEffort").enabled,
-            "GUI393: real original work disables presentation and choice changes");
-        const pending = Probe.rows(assistant.messages).filter(row => row.kind === "user"
-            && row.text === "GUI393 first delivery original Clear request");
-        compare(pending.length, 1, "GUI393: held input has one actual original user row");
-        verify(pending[0].id.length > 0 && pending[0].status === "pending",
-            "GUI393: mandatory real GUI user ID is still pending before original ACK release");
-        const originalUserId = pending[0].id;
-        assistant.refreshUsage();
-        tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "user"
-            && row.id === originalUserId && row.status === "completed")
-            && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
-                && row.status === "completed" && row.text === "Original fileauth reply 1"), 2000,
-            "GUI393: original completed user plus original completed reply settle before Clear baseline");
-        const selected = gui392_json(Probe.rows(assistant.selectedFiles));
-        compare(selected.length, 1, "GUI393: ACK retains actual canonical source authority before Clear");
-        compare(selected[0].id, originalFile.id, "GUI393: actual original ACK preserves exact source ID");
-        compare(selected[0].pending, false, "GUI393: actual matching ACK consumes pending source presentation");
-        const usage = JSON.stringify(gui392_usageData());
-        console.log("GUI393_CLEAR_IDS", JSON.stringify({user: originalUserId, file: originalFile.id}));
-        Ui.click(this, Probe, window, "assistant.clear");
-        tryCompare(assistant.messages, "count", 0, 2000, "GUI393: actual eraser Clear removes original conversation");
-        compare(assistant.selectedFiles.count, 0, "GUI393: original Clear retires actual selected-file grants");
-        verify(assistant.connected && !assistant.canCancel && !assistant.contextConsentRequired,
-            "GUI393: original Clear preserves genuine account and unchanged remaining-scope consent");
-        compare(JSON.stringify(gui392_json(Probe.rows(assistant.models))), account,
-            "GUI393: actual Clear preserves original model catalogue");
-        compare(JSON.stringify(gui392_usageData()), usage, "GUI393: actual Clear preserves account-owned usage");
-        gui392_unchanged(before);
-        capture("gui393-first-delivery-eye-clear");
+        gui398_noBlueOutline(eye);
+        const editor = item("assistant.composer"), send = item("assistant.send");
+        const composers = Probe.objectsWithProperty(window, "textRevision").filter(object => object.firstFocusItem === editor);
+        compare(composers.length, 1, "GUI404: exact original native editor has ONE actual revision owner");
+        const composer = composers[0], dialog = ux356_dialog(), dialogLife = lifetime313(dialog), sendLife = lifetime313(send);
+        const selectedBefore = JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles)));
+        const historyBefore = JSON.stringify(gui392_json(Probe.rows(assistant.messages)));
+        const oldIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const originalText = "GUI393 first delivery original Clear request";
+        let sendClicks = 0, opens = 0, cancelClicks = 0, approvalClicks = 0;
+        let cancel = null, approve = null, cancelLife = null, approveLife = null;
+        function current() { verify(alive313(before.life) && Session.project === before.owner && Session.assistant === assistant,
+            "GUI404: original native input/approval retains SAME live project/controller"); }
+        function submitted() { current(); ++sendClicks; }
+        function opened() { current(); verify(alive313(dialogLife), "GUI404: original dialog alive at actual opened signal"); if (dialog.opened) ++opens; }
+        function canceled() { current(); ++cancelClicks; }
+        function approved() { current(); ++approvalClicks; }
+        send.clicked.connect(submitted); dialog.openedChanged.connect(opened);
+        try {
+            Ui.click(this, Probe, window, editor.objectName); visible185_type(originalText);
+            const canceledRevision = composer.textRevision;
+            gui393_roundFooter();
+            Ui.click(this, Probe, window, "assistant.send");
+            tryCompare(dialog, "opened", true, 2000, "GUI404: actual Send directly opens original required consent");
+            gui398_nativeDialog(dialog);
+            compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(assistant.contextPreview)),
+                "GUI404: actual consent discloses the SAME complete original current scope");
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.messages))), historyBefore,
+                "GUI404: requesting approval cannot admit an input before actual approval");
+            cancel = dialog.standardButton(Dialog.Cancel); cancelLife = lifetime313(cancel); cancel.clicked.connect(canceled);
+            gui392_button(cancel);
+            tryCompare(dialog, "visible", false, 2000, "GUI404: real original Cancel settles its native exit");
+            compare(editor.text, originalText, "GUI404: Cancel retains exact original draft");
+            compare(composer.textRevision, canceledRevision, "GUI404: Cancel is not draft editing or ACK");
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), selectedBefore,
+                "GUI404: Cancel retains every original canonical/pending descriptor");
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.messages))), historyBefore,
+                "GUI404: Cancel admits NOTHING and cannot fabricate user history");
+            verify(!assistant.canCancel && assistant.contextConsentRequired, "GUI404: original canceled scope remains unadmitted");
+            Ui.click(this, Probe, window, editor.objectName);
+            visible185_type("A genuinely newer original draft"); visible185_type(originalText);
+            const admittedRevision = composer.textRevision;
+            verify(admittedRevision > canceledRevision, "GUI404: genuine newer-identical keyboard draft has a DISTINCT revision");
+            Ui.click(this, Probe, window, "assistant.send");
+            tryCompare(dialog, "opened", true, 2000, "GUI404: only the new actual Send opens the new pending approval interval");
+            gui398_nativeDialog(dialog);
+            approve = dialog.standardButton(Dialog.Ok); approveLife = lifetime313(approve); approve.clicked.connect(approved);
+            compare(editor.text, originalText, "GUI404: exact current objective still exists at original approval");
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), selectedBefore,
+                "GUI404: exact current attachments remain original at approval");
+            capture("gui404-send-required-approval");
+            gui392_button(approve);
+            // No Send after this original approval. A second-Send requirement MUST fail here.
+            tryVerify(() => assistant.canCancel && Probe.rows(assistant.messages).filter(row => !oldIds.has(row.id)
+                && row.kind === "user" && row.text === originalText && row.status === "pending").length === 1, 2000,
+                "GUI404: matching real approval AUTOMATICALLY admits exactly original pending input before held ACK");
+            compare(editor.text, originalText, "GUI404: admission is not an ACK consuming the editor");
+            compare(composer.textRevision, admittedRevision, "GUI404: original admitted draft revision remains exact before ACK");
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), selectedBefore,
+                "GUI404: preACK authority and pending presentation remain exact");
+            compare(sendClicks, 2, "GUI404: canceled attempt then new Send ONLY; NO postapproval Send workaround");
+            compare(cancelClicks, 1, "GUI404: original native Cancel clicked once");
+            compare(approvalClicks, 1, "GUI404: original native approval clicked ONCE");
+            compare(opens, 2, "GUI404: exact original dialog opened only for the two real Send attempts");
+            verify(!eye.enabled && !item("assistant.modelEffort").enabled,
+                "GUI393: real original work disables presentation and choice changes");
+            const pending = Probe.rows(assistant.messages).filter(row => row.kind === "user" && row.text === originalText);
+            compare(pending.length, 1, "GUI393: held input has one actual original user row");
+            verify(pending[0].id.length > 0 && pending[0].status === "pending", "GUI393: original actual user ID still pending before ACK");
+            const originalUserId = pending[0].id;
+            const markdown = Probe.readReferenceFile("gui404-table.md");
+            assistant.refreshUsage();
+            tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.id === originalUserId
+                && row.kind === "user" && row.status === "completed") && Probe.rows(assistant.messages).some(row => !oldIds.has(row.id)
+                    && row.kind === "assistant" && row.status === "completed" && row.text === markdown), 2000,
+                "GUI393: actual original user ACK AND original literal completed reply settle before Clear baseline");
+            ux358_acknowledgedPresentation(composer, [canonicalFile405]);
+            compare(editor.text, "", "GUI404: only actual matching ACK consumes SAME original draft");
+            const selected = gui392_json(Probe.rows(assistant.selectedFiles));
+            compare(selected.length, 1, "GUI393: ACK retains actual canonical source authority before Clear");
+            compare(selected[0].id, originalFile.id, "GUI393: actual original ACK preserves exact source ID");
+            compare(selected[0].pending, false, "GUI393: actual matching ACK consumes pending source presentation");
+            gui404_table(oldIds, markdown);
+            console.log("GUI404_APPROVAL", JSON.stringify({user: originalUserId, text: originalText,
+                files: selected.map(file => ({id:file.id,name:file.name,bytes:file.bytes,textReadable:file.textReadable,format:file.format})),
+                canceledRevision:canceledRevision, admittedRevision:admittedRevision, sendClicks:sendClicks,
+                cancelClicks:cancelClicks, approvalClicks:approvalClicks, opens:opens}));
+            const usage = JSON.stringify(gui392_usageData());
+            console.log("GUI393_CLEAR_IDS", JSON.stringify({user: originalUserId, file: originalFile.id}));
+            Ui.click(this, Probe, window, "assistant.clear");
+            tryCompare(assistant.messages, "count", 0, 2000, "GUI393: actual eraser Clear removes original conversation");
+            compare(assistant.selectedFiles.count, 0, "GUI393: original Clear retires actual selected-file grants");
+            verify(assistant.connected && !assistant.canCancel && !assistant.contextConsentRequired,
+                "GUI393: original Clear preserves genuine account and unchanged remaining-scope consent");
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.models))), account,
+                "GUI393: actual Clear preserves original model catalogue");
+            compare(JSON.stringify(gui392_usageData()), usage, "GUI393: actual Clear preserves account-owned usage");
+            gui392_unchanged(before);
+            capture("gui393-first-delivery-eye-clear");
+        } finally {
+            disconnect313(sendLife, send, "clicked", submitted);
+            disconnect313(dialogLife, dialog, "openedChanged", opened);
+            if (cancel !== null) disconnect313(cancelLife, cancel, "clicked", canceled);
+            if (approve !== null) disconnect313(approveLife, approve, "clicked", approved);
+        }
     }
     function gui394_sameCurrent(choice, radio, mode, effort) {
         const original = {assistant: assistant, project: Session.project, choice: choice,
@@ -6205,6 +6312,7 @@ TestCase {
         mouseMove(connection, point.x, point.y); rendered();
         tryCompare(labels[0], "color", EaStyle.Colors.themeForegroundHovered, 2000,
             "GUI395: genuine mouse hover paints original native hovered foreground, not a hardcoded label color");
+        gui398_noBlueOutline(connection);
         capture("gui395-real-sign-in-hover");
         mouseMove(window.contentItem, 0, 0); rendered();
         tryCompare(labels[0], "color", EaStyle.Colors.themeForeground, 2000,
@@ -6249,5 +6357,460 @@ TestCase {
             }
         } finally { Preferences.sideBarSide = originalSide; }
         rendered();
+    }
+    // GUI398: independent original native AppDialog and owner display contract.
+    function gui398_nativeDialog(dialog) {
+        verify(dialog.visible && dialog.opened && dialog.contentItem !== null && dialog.parent !== null,
+            "GUI398: original settled native dialog has real parent/content before geometry");
+        verify(gui393_under(dialog.parent, Ui.windowRoot(window)),
+            "GUI398: original native dialog parent belongs to SAME actual Main window");
+        compare(dialog.parent.width, window.contentItem.width, "GUI398: native modal surface spans actual app width");
+        compare(dialog.parent.height, window.contentItem.height, "GUI398: native modal surface spans actual app height");
+        compare(dialog.x, Math.round((dialog.parent.width - dialog.width) / 2),
+            "GUI398: original AppDialog is centered on whole pixels in app, not anchored to composer pill");
+        compare(dialog.y, Math.round((dialog.parent.height - dialog.height) / 2),
+            "GUI398: original AppDialog is vertically centered on whole pixels");
+        compare(dialog.leftPadding, EaStyle.Sizes.fontPixelSize * 2, "GUI398: native dialog retains original horizontal margin");
+        compare(dialog.rightPadding, EaStyle.Sizes.fontPixelSize * 2, "GUI398: native dialog retains symmetric original margin");
+        compare(dialog.topPadding, EaStyle.Sizes.fontPixelSize, "GUI398: native dialog retains original top margin");
+        compare(dialog.bottomPadding, EaStyle.Sizes.fontPixelSize, "GUI398: native dialog retains original bottom margin");
+        compare(dialog.background.color, EaStyle.Colors.dialogBackground, "GUI398: standard native dialog background is reused");
+        compare(dialog.font.pixelSize, EaStyle.Sizes.fontPixelSize, "GUI398: native dialog uses original standard font size");
+        ux356_fullyExposed(dialog.contentItem);
+    }
+    function gui398_owned(root, name, exposed) {
+        const matches = Ui.itemsWithProperty(root.contentItem, "objectName").filter(control => control.objectName === name);
+        compare(matches.length, 1, "GUI398: SAME original dialog uniquely owns actual presentation control: " + name);
+        verify(gui393_under(matches[0], root.contentItem), "GUI398: named native control belongs to original content subtree");
+        if (exposed) ux356_fullyExposed(matches[0]);
+        return matches[0];
+    }
+    function gui398_noBlueOutline(control) {
+        const background = control.background;
+        verify(typeof background !== "undefined", "GUI398: actual original native button exposes its public background property");
+        // A genuinely absent background cannot paint an outline; shape assertions
+        // for pill/avatar/footer remain independently mandatory at their callers.
+        const outlines = background === null ? [] : Ui.itemsWithProperty(background, "border");
+        for (const item of outlines) {
+            if (["assistant.modelEffort", "assistant.files.add", "assistant.showActions", "assistant.previousUserMessage",
+                 "assistant.nextUserMessage", "assistant.send", "assistant.stop"].includes(control.objectName)) {
+                compare(item.border.width, 0, "GUI399: composer action/model pill has NO border of ANY color in actual normal/hover/focus/checked state");
+                continue;
+            }
+            const color = String(item.border.color).toLowerCase();
+            verify(item.border.width === 0 || item.border.color.a === 0
+                || ![EaStyle.Colors.themeAccent, EaStyle.Colors.themeAccentMinor, EaStyle.Colors.blue,
+                     EaStyle.Colors.themeForegroundHovered].some(value => String(value).toLowerCase() === color),
+                "GUI398: actual assistant button background has NO blue outline, including genuine focus/checked state");
+        }
+    }
+    function gui398_header(avatar) {
+        const clear = item("assistant.clear"), plus = item("assistant.files.add"), eye = item("assistant.showActions");
+        gui399_avatar(avatar);
+        const glyphs = [clear, plus, eye].map(control => {
+            const labels = gui392_labels(control).filter(label => label.text === control.fontIcon
+                && label.font.family === EaStyle.Fonts.iconsFamily);
+            compare(labels.length, 1, "GUI398: original actual native icon glyph is uniquely observable");
+            ux356_fullyExposed(labels[0]); return labels[0];
+        });
+        compare(glyphs[0].font.pixelSize, glyphs[1].font.pixelSize,
+            "GUI398: eraser glyph has same small native size as original composer Plus, not an enlarged header icon");
+        compare(glyphs[0].font.pixelSize, glyphs[2].font.pixelSize,
+            "GUI398: eraser glyph also matches original eye, preserving actual action hitboxes");
+        for (const control of [avatar, clear, item("assistant.usage")]) gui398_noBlueOutline(control);
+        const titles = gui392_labels(popup.contentItem).filter(label => label.text === "Assistant");
+        compare(titles.length, 1, "GUI398: actual sidebar has ONE native Assistant header title");
+        const bounds = rect(titles[0]), side = rect(popup.contentItem), image = grabImage(window.contentItem);
+        const x = side[0] + (Preferences.sideBarOnLeft ? side[2] - 3 : 3), y = bounds[1] + bounds[3] / 2;
+        compare(String(image.pixel(Math.floor(x * image.width / window.contentItem.width),
+            Math.floor(y * image.height / window.contentItem.height))).toLowerCase(), String(EaStyle.Colors.contentBackground).toLowerCase(),
+            "GUI398: actual Assistant titlebar paint matches FIRST native Main/Extra contentBackground, not body/divider redesign");
+    }
+    function gui398_account(account) {
+        const labels = gui392_labels(account.contentItem);
+        const email = labels.filter(label => label.text === "Original@example.invalid");
+        const plan = labels.filter(label => label.text === "Plus");
+        compare(email.length, 1, "GUI398: native Account shows exact actual supplied email once");
+        compare(plan.length, 1, "GUI398: actual supported plan is title-cased Plus once");
+        verify(!labels.some(label => label.text === "Original"),
+            "GUI398: absent provider full-name metadata is NOT fabricated from email local part");
+        const ordinary = labels.filter(label => label.font.family !== EaStyle.Fonts.iconsFamily && label.text.trim().length > 0);
+        verify(ordinary.every(label => ["Original@example.invalid", "Plus", "Sign out"].includes(label.text)),
+            "GUI398: original nameless provider record gains no invented personal name or account prose");
+        function contrast(label) {
+            let alpha = label.color.a;
+            for (let object = label; object && object !== account.contentItem; object = object.parent) alpha *= object.opacity;
+            const background = account.background.color;
+            return alpha * alpha * (Math.pow(label.color.r - background.r, 2)
+                + Math.pow(label.color.g - background.g, 2) + Math.pow(label.color.b - background.b, 2));
+        }
+        verify(contrast(plan[0]) < contrast(email[0]),
+            "GUI398: title-case plan has genuinely muted painted ink against SAME native dialog, not disabled semantic authority");
+        ux356_fullyExposed(email[0]); ux356_fullyExposed(plan[0]);
+        const signOut = gui398_owned(account, "assistant.signOut", true);
+        const emailRect = rect(email[0]), planRect = rect(plan[0]), signOutRect = rect(signOut);
+        const tight = planRect[1] - emailRect[1] - emailRect[3];
+        verify(tight >= -0.5 && tight <= EaStyle.Sizes.fontPixelSize / 2,
+            "GUI398: original email/plan are tightly stacked using normal native spacing");
+        verify(signOutRect[1] - planRect[1] - planRect[3] > tight + 0.5,
+            "GUI398: native Sign out has genuinely larger gap below compact identity/plan");
+            const icon = gui392_labels(signOut).filter(label => label.text === "sign-out-alt"
+            && label.font.family === EaStyle.Fonts.iconsFamily);
+        const text = labels.filter(label => label.text === "Sign out");
+        compare(icon.length, 1, "GUI399: original Sign out owns ONE native icon glyph");
+        compare(text.length, 1, "GUI399: original Account owns ONE Sign out text");
+        verify(gui393_under(icon[0], signOut.contentItem) && gui393_under(text[0], signOut.contentItem),
+            "GUI400: exact original native Button content owns its literal child icon and Sign out label, no ToolButton-only property");
+        ux356_fullyExposed(icon[0]); ux356_fullyExposed(text[0]);
+        const ir = rect(icon[0]), tr = rect(text[0]);
+        verify(Math.abs(ir[1] + ir[3] / 2 - tr[1] - tr[3] / 2) < 0.5,
+            "GUI399: actual native Sign out glyph and text share their vertical content center");
+        verify(Math.abs(ir[0] - emailRect[0]) < 0.5 && Math.abs(ir[0] - planRect[0]) < 0.5
+            && tr[0] >= ir[0] + ir[2],
+            "GUI399: native Sign out content starts at SAME original email/plan left edge with text after icon");
+    }
+    function gui398_relativeReset(control, timestamp) {
+        const match = /^Resets in\s+(?:(\d+)d\s*)?(?:(\d+)h\s*)?(?:(\d+)\s+min\s*)?$/i.exec(control.text);
+        verify(match !== null && match.slice(1).some(value => value !== undefined),
+            "GUI399: reset uses compact days/hours and readable separated minute unit, e.g. 12 min");
+        const represented = Number(match[1] || 0) * 86400 + Number(match[2] || 0) * 3600 + Number(match[3] || 0) * 60;
+        const precision = match[3] !== undefined ? 60 : match[2] !== undefined ? 3600 : 86400;
+        verify(Math.abs((timestamp - Date.now() / 1000) - represented) <= precision + 2,
+            "GUI398: relative reset is independently bonded to literal actual provider timestamp at its shown precision");
+    }
+    function gui398_usageRows(dialog, expectedUsed, stale) {
+        const ids = ["session", "weekly"], titles = ["Session limit", "Weekly"];
+        const supplied = JSON.parse(Probe.readReferenceFile("usage399-resets.json"));
+        verify(supplied !== null && typeof supplied === "object" && !Array.isArray(supplied)
+            && Object.keys(supplied).sort().join(",") === "session,weekly"
+            && ids.every(id => Number.isInteger(supplied[id]) && supplied[id] > 0),
+            "GUI399 SETUP: independent original provider reset operands exist before Main, not derived from observed Usage");
+        const rows = [], all = Ui.itemsWithProperty(dialog.contentItem, "objectName");
+        for (let index = 0; index < ids.length; ++index) {
+            const stem = "assistant.usage." + ids[index];
+            if (expectedUsed[index] === null) {
+                verify(!all.some(control => (control.objectName === stem || control.objectName.indexOf(stem + ".") === 0)
+                    && Ui.rendered(control)),
+                    "GUI399: genuinely missing allowance paints NO semantic row/percentage/track/reset, never fake zero or per-row Unavailable");
+                verify(!gui392_labels(dialog.contentItem).some(label => label.text === titles[index] && Ui.rendered(label)),
+                    "GUI399: missing Session/Weekly has no visible title even if passive native objects remain");
+                continue;
+            }
+            const row = gui398_owned(dialog, stem, true), percent = gui398_owned(dialog, stem + ".percent", true);
+            const track = gui398_owned(dialog, stem + ".bar", true), fill = gui398_owned(dialog, stem + ".fill", false);
+            const reset = gui398_owned(dialog, stem + ".reset", true);
+            for (const control of [percent, track, fill, reset]) verify(gui393_under(control, row),
+                "GUI398: exact original semantic allowance row owns its own percentage/bar/reset, never a different window");
+            const labels = gui392_labels(row).filter(label => label.text === titles[index]);
+            compare(labels.length, 1, "GUI398: exactly one independent duration-based Session/Weekly title, not primary/secondary guess");
+            const title = rect(labels[0]), value = rect(percent);
+            verify(title[0] < value[0] && Math.abs(title[1] + title[3] / 2 - value[1] - value[3] / 2) < 0.5,
+                "GUI398: native allowance title left and USED percentage right share same actual baseline");
+            compare(percent.text, expectedUsed[index] + "% used", "GUI398: exact independently supplied USED percentage remains truthful, including over100");
+            gui399_track(dialog, track, fill, expectedUsed[index]);
+            const remaining = 100 - expectedUsed[index];
+            compare(fill.color, remaining < 5 ? EaStyle.Colors.red : remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent,
+                "GUI398: actual used fill is normal accent/orange below25remaining/red below5remaining");
+            gui398_relativeReset(reset, supplied[ids[index]]);
+            if (supplied[ids[index]] - Date.now() / 1000 < 13 * 60)
+                verify(/\d+ min\b/.test(reset.text), "GUI399: real near-minute provider reset visibly separates number and min");
+            rows.push(row);
+        }
+        if (rows.length === 2) verify(rect(rows[0])[1] < rect(rows[1])[1],
+            "GUI398: actual Session and Weekly are separate ordered native rows");
+        compare(all.filter(control => /^assistant\.usage\.[^.]+$/.test(control.objectName) && Ui.rendered(control)).length,
+            expectedUsed.filter(value => value !== null).length,
+            "GUI399: exactly the known semantic rows are visible; missing rows are omitted, not placeholders");
+        const visibleLabels = gui392_labels(dialog.contentItem).filter(label => Ui.rendered(label) && label.text.trim().length > 0);
+        const unavailable = visibleLabels.filter(label => /unavailable/i.test(label.text));
+        compare(unavailable.length, rows.length === 0 ? 1 : 0,
+            "GUI399: neither known means ONE compact honest unavailable message; partial known has no missing-row clutter");
+        const text = visibleLabels.map(label => label.text).join("\n");
+        verify(!/Read at|different allowance|context|credit|balance|primary|secondary|Original owned limit|12\.50|\b300\b|\b10080\b|\d{4}-\d{2}-\d{2}/i.test(text),
+            "GUI398: default Usage has no Read-at/context/credits/raw-duration/ISO/bucket clutter");
+        if (stale) verify(/last known/i.test(text), "GUI398: genuine failed refresh explicitly marks retained observation Last known");
+    }
+    function gui398_details(dialog) {
+        gui398_nativeDialog(dialog);
+        const original = {owner: Session.project, assistant: Session.assistant, raw: assistant.contextPreview};
+        const human = gui398_owned(dialog, "assistant.contextDetailsToggle", true);
+        const technical = gui398_owned(dialog, "assistant.contextTechnicalToggle", false);
+        const preview = gui398_owned(dialog, "assistant.contextPreview", false);
+        verify(human.checkable && technical.checkable && human.enabled,
+            "GUI398: original disclosure links are genuine native checkable controls");
+        compare(human.checked, false, "GUI398: actual human Details starts collapsed");
+        compare(technical.checked, false, "GUI398: raw technical data independently starts collapsed");
+        verify(!Ui.rendered(technical) && !Ui.rendered(preview),
+            "GUI398: default short Sign in reveals neither technical toggle nor raw payload");
+        function link(button, text) {
+            compare(button.text, text, "GUI398: actual original native link shows exact current Show/Hide action");
+            const labels = gui392_labels(button).filter(label => label.text === text);
+            compare(labels.length, 1, "GUI398: original enabled Details link has ONE actually painted label");
+            compare(labels[0].color, EaStyle.Colors.themeAccent, "GUI398: original enabled Details link paints native blue text");
+        }
+        function input(button) {
+            Ui.scrollIntoView(button); rendered(); gui392_button(button);
+            verify(Session.project === original.owner && Session.assistant === original.assistant
+                && dialog.assistant === original.assistant,
+                "GUI398: genuine disclosure toggle preserves SAME original owner/controller/dialog");
+            compare(assistant.contextPreview, original.raw, "GUI398: presentation toggles do not alter original exact outgoing payload");
+        }
+        link(human, "Show details"); input(human);
+        tryCompare(human, "checked", true, 2000, "GUI398: genuine original Show details exposes human-readable Details");
+        link(human, "Hide details");
+        ux356_fullyExposed(technical); link(technical, "Show technical data");
+        compare(technical.checked, false, "GUI398: opening human Details NEVER automatically expands raw technical data");
+        verify(!Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
+        capture("gui398-signin-human-details");
+        input(technical);
+        tryCompare(technical, "checked", true, 2000, "GUI398: genuine Show technical data exposes original exact payload");
+        link(technical, "Hide technical data");
+        verify(Ui.rendered(preview) && preview.readOnly && preview.selectByMouse,
+            "GUI398: actually exposed original raw payload is read-only/selectable, not substituted summary");
+        compare(preview.text, original.raw, "GUI398: independently observed disclosed text is byte-exact original current payload");
+        compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(original.raw)),
+            "GUI398: original dialog owns exact same structured disclosure while technical text is visible");
+        input(technical);
+        tryCompare(technical, "checked", false, 2000, "GUI398: genuine Hide technical data hides original raw presentation");
+        link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: raw field really hides after its own toggle");
+        input(technical);
+        tryCompare(technical, "checked", true, 2000, "GUI398: original technical interval reopens before human-collapse reset witness");
+        input(human);
+        tryCompare(human, "checked", false, 2000, "GUI398: genuine Hide details collapses human presentation");
+        compare(technical.checked, false, "GUI398: collapsing human Details retires original expanded technical state");
+        verify(!Ui.rendered(technical) && !Ui.rendered(preview), "GUI398: collapsed human Details exposes no raw content");
+        input(human);
+        tryCompare(human, "checked", true, 2000, "GUI398: genuine later Show details restores human view only");
+        compare(technical.checked, false, "GUI398: later human open cannot resurrect old technical expansion");
+        link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: later human Details again keeps technical payload collapsed");
+        input(human);
+        tryCompare(human, "checked", false, 2000, "GUI398: original compact Sign in is restored before genuine Cancel");
+        link(human, "Show details");
+        ux356_fullyExposed(dialog.standardButton(Dialog.Cancel));
+    }
+    // GUI399: owner geometry measured from original public native items, not source348 output.
+    function gui399_track(dialog, track, fill, used) {
+        verify(track.width > 0 && track.height > 0 && track.radius >= track.height / 2 - 0.5
+            && track.border.width > 0 && track.border.color.a > 0,
+            "GUI399: actual full rounded track has a permanent visible native outline");
+        compare(track.border.color, EaStyle.Colors.appBorder,
+            "GUI400: Usage outline uses FIRST native application/control appBorder in current palette, never bright muted-text ink");
+        function distance(a, b) { return Math.pow(a.r - b.r, 2) + Math.pow(a.g - b.g, 2) + Math.pow(a.b - b.b, 2); }
+        verify(distance(track.border.color, dialog.background.color) > 0,
+            "GUI399: full track outline has actual contrast against same original popup");
+        const inset = track.border.width, origin = fill.mapToItem(track, 0, 0);
+        const innerWidth = track.width - 2 * inset, innerHeight = track.height - 2 * inset;
+        verify(innerWidth > 0 && innerHeight > 0 && origin.x >= inset - 0.5 && origin.y >= inset - 0.5
+            && origin.x + fill.width <= track.width - inset + 0.5
+            && origin.y + fill.height <= track.height - inset + 0.5,
+            "GUI399: actual fill is contained INSIDE all sides of rounded track border, no edge overdraw");
+        verify(Math.abs(fill.width / innerWidth - Math.min(100, Math.max(0, used)) / 100) < 0.000001,
+            "GUI399: actual inset fill uses truthful independently supplied USED fraction; clamp paint only");
+        compare(fill.height, innerHeight, "GUI399: actual fill occupies inner track height, preserving full border");
+        verify(fill.radius >= fill.height / 2 - 0.5, "GUI398: allowance fill is genuinely rounded");
+    }
+    function gui399_avatar(avatar) {
+        const original = {owner: Session.project, assistant: Session.assistant, theme: EaStyle.Colors.theme};
+        const life = lifetime313(avatar), target = rect(avatar);
+        compare(target[2], EaStyle.Sizes.toolButtonHeight, "GUI399: original connected avatar click WIDTH is unchanged native toolButtonHeight");
+        compare(target[3], EaStyle.Sizes.toolButtonHeight, "GUI399: original connected avatar click HEIGHT is unchanged native toolButtonHeight");
+        function distance(a, b) { return Math.pow(a.r - b.r, 2) + Math.pow(a.g - b.g, 2) + Math.pow(a.b - b.b, 2); }
+        function observe() {
+            verify(alive313(life) && Session.project === original.owner && Session.assistant === original.assistant,
+                "GUI399: genuine palette/pointer observations retain SAME live original avatar owner");
+            sameRect(rect(avatar), target); ux356_fullyExposed(avatar);
+            const circles = Ui.itemsWithProperty(avatar.background, "radius").filter(control => control.visible
+                && control.color !== undefined && control.color.a > 0 && control.width > 0 && control.height > 0
+                && Math.abs(control.width - control.height) < 0.5 && control.radius >= control.height / 2 - 0.5);
+            compare(circles.length, 1, "GUI399: original native avatar owns ONE actual painted circle, not a duplicate overlay");
+            const circle = circles[0], origin = circle.mapToItem(avatar, 0, 0);
+            verify(circle.width < avatar.width && circle.height < avatar.height
+                && Math.abs(origin.x + circle.width / 2 - avatar.width / 2) < 0.5
+                && Math.abs(origin.y + circle.height / 2 - avatar.height / 2) < 0.5,
+                "GUI399: visual circle is genuinely SMALLER and centered inside unchanged original click target");
+            verify(circle.border.width > 0 && circle.border.width <= EaStyle.Sizes.borderThickness && circle.border.color.a > 0,
+                "GUI399: native avatar faint outline is permanently present, not hover-only");
+            const fill = circle.color, ink = circle.border.color;
+            const borderLuma = (ink.r * 0.2126 + ink.g * 0.7152 + ink.b * 0.0722) * ink.a
+                + (fill.r * 0.2126 + fill.g * 0.7152 + fill.b * 0.0722) * (1 - ink.a);
+            const fillLuma = fill.r * 0.2126 + fill.g * 0.7152 + fill.b * 0.0722;
+            const nativeBorder = EaStyle.Colors.appBorder, nativeSurface = EaStyle.Colors.contentBackground;
+            const nativeBoundary = Math.max(Math.abs(nativeBorder.r - nativeSurface.r),
+                Math.abs(nativeBorder.g - nativeSurface.g), Math.abs(nativeBorder.b - nativeSurface.b));
+            const borderDelta = Math.max(Math.abs(ink.r - fill.r), Math.abs(ink.g - fill.g), Math.abs(ink.b - fill.b)) * ink.a;
+            verify(borderLuma < fillLuma && borderDelta > 0 && borderDelta <= nativeBoundary + 1 / 255,
+                "GUI400: avatar border is independently faint/darker: no stronger channel step than FIRST native app boundary plus one8bit quantization level");
+            verify(distance(fill, EaStyle.Colors.contentBackground) * fill.a * fill.a > 0,
+                "GUI400: actual avatar fill separately contrasts native header in both palettes/real hover, without cross-distance ordering");
+        }
+        try {
+            for (const theme of [EaStyle.Colors.LightTheme, EaStyle.Colors.DarkTheme]) {
+                EaStyle.Colors.theme = theme;
+                mouseMove(window.contentItem, 0, 0); rendered(); observe();
+                const point = Ui.clickPoint(avatar);
+                mouseMove(avatar, point.x, point.y); rendered(); observe();
+                mouseMove(window.contentItem, 0, 0); rendered(); observe();
+            }
+        } finally {
+            EaStyle.Colors.theme = original.theme;
+            mouseMove(window.contentItem, 0, 0); rendered();
+        }
+    }
+    function gui399_tableExtent(choice, table, rows) {
+        verify(rows.length > 0 && table.count === rows.length,
+            "GUI399: actual native table exposes ALL independently offered rows, not a fitted subset");
+        const border = EaStyle.Sizes.borderThickness, viewport = rect(table), content = rect(choice.contentItem);
+        ux356_fullyExposed(table);
+        verify(viewport[0] >= content[0] - 0.5 && viewport[0] + viewport[2] <= content[0] + content[2] + 0.5,
+            "GUI399: full native table including RIGHT border is within original dialog content");
+        const naturalHeight = table.tableRowHeight * rows.length + (table.headerItem ? table.headerItem.height : 0);
+        verify(table.height >= naturalHeight - 0.5,
+            "GUI399: normal roomy original Main shows full natural ALL-row table height, not clipped final row");
+        const borders = Ui.itemsWithProperty(table, "border").filter(control => control.visible && control.border.width > 0
+            && control.border.color.a > 0 && Math.abs(rect(control)[0] - viewport[0]) < 0.5
+            && Math.abs(rect(control)[1] - viewport[1]) < 0.5 && Math.abs(control.width - table.width) < 0.5
+            && Math.abs(control.height - table.height) < 0.5);
+        compare(borders.length, 1, "GUI399: original native full table border exists once, not cropped/right-edge omitted");
+        const nativeBorder = borders[0], nativeBounds = rect(nativeBorder);
+        const innerTop = nativeBounds[1] + nativeBorder.border.width;
+        const innerBottom = nativeBounds[1] + nativeBounds[3] - nativeBorder.border.width;
+        for (const row of rows) {
+            ux356_fullyExposed(row);
+            const bounds = rect(row);
+            verify(bounds[1] >= innerTop - 0.5 && bounds[1] + bounds[3] <= innerBottom + 0.5,
+                "GUI400: EVERY actual row including first/last ends inside real inner vertical native border, never under its z4 paint");
+            verify(bounds[0] >= viewport[0] - 0.5 && bounds[0] + bounds[2] <= viewport[0] + viewport[2] + 0.5
+                && bounds[1] >= viewport[1] - 0.5 && bounds[1] + bounds[3] <= viewport[1] + viewport[3] + 0.5,
+                "GUI399: EACH offered row, including last, lies within same native table viewport");
+        }
+
+    }
+    // GUI400: original native padding balance, measured in original actual dialog coordinates.
+    function gui400_chooserSpacing(choice, tables) {
+        const origin = choice.parent.mapToItem(window.contentItem, choice.x, choice.y);
+        const popupBounds = [origin.x, origin.y, choice.width, choice.height];
+        const contentBounds = rect(choice.contentItem);
+        const bounds = tables.map(rect);
+        const left = Math.min.apply(null, bounds.map(value => value[0]));
+        const right = Math.max.apply(null, bounds.map(value => value[0] + value[2]));
+        const bottom = Math.max.apply(null, bounds.map(value => value[1] + value[3]));
+        const leftGap = left - popupBounds[0], rightGap = popupBounds[0] + popupBounds[2] - right;
+        const bottomGap = popupBounds[1] + popupBounds[3] - bottom;
+        verify(Math.abs(leftGap - choice.leftPadding) < 0.5
+            && Math.abs(rightGap - choice.rightPadding) < 0.5,
+            "GUI400: full natural chooser tables retain ONLY balanced original native side padding, no unused right scrollbar gutter");
+        verify(Math.abs(contentBounds[0] + contentBounds[2] - right) < 0.5,
+            "GUI400: actual normal-room rightmost table reaches original content right edge; no invisible scrollbar reserve");
+        verify(bottomGap >= choice.bottomPadding - 0.5 && bottomGap >= Math.min(leftGap, rightGap) - 0.5,
+            "GUI400: bottom has native breathing room balanced against real side margins, not cramped against table border");
+    }
+    // GUI404: existing Report171 native TextEdit observation, independent literal table.
+    function gui404_table(oldIds, markdown) {
+        const owner = Session.project, controller = Session.assistant, theme = EaStyle.Colors.theme;
+        const ownerLife = lifetime313(owner);
+        const rows = Probe.rows(assistant.messages).filter(row => !oldIds.has(row.id)
+            && row.kind === "assistant" && row.status === "completed" && row.text === markdown);
+        compare(rows.length, 1, "GUI404: exactly ONE genuinely completed original literal table response");
+        const rowId = rows[0].id;
+        // Existing bounded polish/render phase precedes ANY native delegate/body lookup.
+        rendered();
+        verify(alive313(ownerLife) && Session.project === owner && Session.assistant === controller,
+            "GUI405: original completed-row owner/controller is STILL live/current after original bounded layout/render");
+        compare(Probe.rows(assistant.messages).filter(row => row.id === rowId && row.kind === "assistant"
+            && row.status === "completed" && row.text === markdown).length, 1,
+            "GUI405: SAME exact original completed row survives genuine layout before unique native lookup");
+        const delegates = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(object => object.rowId === rowId
+            && object.kind === "assistant" && object.status === "completed");
+        compare(delegates.length, 1, "GUI404: exact original response has ONE current native message delegate");
+        const bodies = Ui.itemsWithProperty(delegates[0], "readOnly").filter(object => object.visible
+            && typeof object.linkAt === "function" && object.readOnly);
+        compare(bodies.length, 1, "GUI404: original real delegate owns ONE actual native selectable TextEdit");
+        const body = bodies[0], bodyLife = lifetime313(body);
+        const labels = ["Alpha", "Bravo", "Charlie", "Delta"], values = ["111", "222", "333", "444"];
+        try {
+            for (const palette of [EaStyle.Colors.LightTheme, EaStyle.Colors.DarkTheme]) {
+                EaStyle.Colors.theme = palette; rendered();
+                verify(alive313(ownerLife) && alive313(bodyLife) && Session.project === owner
+                    && Session.assistant === controller, "GUI404: SAME live original response/owner survives native palette observation");
+                ux356_fullyExposed(body);
+                verify(body.readOnly && body.selectByMouse, "GUI404: actual table body remains passive/read-only and genuinely selectable");
+                const plain = body.getText(0, body.length);
+                const prefix = "Original fileauth reply 1";
+                verify(plain.includes(prefix) && plain.includes("Item") && plain.includes("Value"),
+                    "GUI404: actual semantic copy retains independent original prose and BOTH literal column headers");
+                let prior = plain.indexOf(prefix);
+                function operand(text) {
+                    compare(plain.split(text).length - 1, 1, "GUI404: independently declared cell appears exactly ONCE in native semantic text: " + text);
+                    const index = plain.indexOf(text);
+                    verify(index > prior, "GUI404: actual native copy retains literal original cell order: " + text); prior = index;
+                    const first = body.positionToRectangle(index), last = body.positionToRectangle(index + text.length);
+                    verify(Math.abs(first.y - last.y) < 0.5 && first.height > 0,
+                        "GUI404: independent short cell really occupies ONE native text line: " + text);
+                    return {x:first.x, y:first.y, height:first.height, end:last.x};
+                }
+                const left = [], right = [];
+                for (let index = 0; index < labels.length; ++index) { left.push(operand(labels[index])); right.push(operand(values[index])); }
+                const headLeft = body.positionToRectangle(plain.indexOf("Item")), headRight = body.positionToRectangle(plain.indexOf("Value"));
+                verify(left.every(cell => Math.abs(cell.x - headLeft.x) < 0.5)
+                    && right.every(cell => Math.abs(cell.x - headRight.x) < 0.5),
+                    "GUI404: BOTH native headers and all ordinary values are actually LEFT aligned to their respective columns");
+                for (let index = 0; index < left.length; ++index) verify(Math.abs(left[index].y - right[index].y) < 0.5
+                    && Math.abs(left[index].height - right[index].height) < 0.5,
+                    "GUI404: same ordinary row contains both single-line cells on one actual text baseline band");
+                const image = grabImage(window.contentItem), sx = image.width / window.contentItem.width, sy = image.height / window.contentItem.height;
+                verify(sx > 0 && sy > 0, "GUI404: original native framebuffer exists with actual measured pixel scales");
+                const origin = body.mapToItem(window.contentItem, 0, 0);
+                function pixel(x,y) { return String(image.pixel(Math.floor((origin.x+x)*sx),Math.floor((origin.y+y)*sy))).toLowerCase(); }
+                const x = (Math.max.apply(null,left.map(cell => cell.end)) + Math.min.apply(null,right.map(cell => cell.x))) / 2;
+                verify(x > Math.max.apply(null,left.map(cell => cell.end)) && x < Math.min.apply(null,right.map(cell => cell.x)),
+                    "GUI404: actual inter-column blank sampling lane contains NO original glyphs");
+                const prefixRect = body.positionToRectangle(plain.indexOf(prefix));
+                const prefixEnd = body.positionToRectangle(plain.indexOf(prefix) + prefix.length);
+                verify(body.width > prefixEnd.x, "GUI404 SETUP: genuine original prose has actual blank native message background to its RIGHT");
+                const base = pixel((prefixEnd.x+body.width)/2, prefixRect.y + prefixRect.height / 2), shade = String(EaStyle.Colors.contentBackground).toLowerCase();
+                verify(base !== shade, "GUI404 SETUP: native unshaded message surface and original public table-shade token are independently distinguishable");
+                const bands = left.map((cell,index) => {
+                    const center = Math.floor((origin.y+cell.y+cell.height/2)*sy), column = Math.floor((origin.x+x)*sx);
+                    const color = String(image.pixel(column,center)).toLowerCase();
+                    let top = center, bottom = center;
+                    while (top > 0 && String(image.pixel(column,top-1)).toLowerCase() === color) --top;
+                    while (bottom+1 < image.height && String(image.pixel(column,bottom+1)).toLowerCase() === color) ++bottom;
+                    const textTop = (origin.y+cell.y)*sy, textBottom = (origin.y+cell.y+cell.height)*sy;
+                    return {index:index,color:color,top:top,bottom:bottom,height:bottom-top+1,
+                        above:textTop-top,below:bottom+1-textBottom,textTop:textTop,textBottom:textBottom};
+                });
+                console.log("GUI404_TABLE", JSON.stringify({row:rowId,theme:palette,plain:plain,left:left,right:right,base:base,shade:shade,bands:bands,scale:[sx,sy]}));
+                // Interior neighbors independently delimit BOTH a shaded and an unshaded row.
+                // Header/table outer margins need not paint a distinct color: never invent those boundaries.
+                const interior = bands.slice(1,3);
+                verify(interior.every(band => band.top > 0 && band.bottom+1 < image.height && band.above > 0 && band.below > 0),
+                    "GUI404: BOTH shaded/unshaded interior rows have observed finite boundaries and positive breathing room, never inferred outer edges");
+                verify(bands[0].color !== bands[1].color && bands[0].color === bands[2].color && bands[1].color === bands[3].color
+                    && bands.every(band => band.color === base || band.color === shade),
+                    "GUI404: actual alternating shaded/unshaded ordinary rows use exact native public shade and independent message background");
+                for (const band of interior) verify(Math.abs(band.height-interior[0].height) <= 2
+                    && Math.abs(band.above-interior[0].above) <= 2 && Math.abs(band.below-interior[0].below) <= 2,
+                    "GUI404: equal native single-line rows have equal height AND top/bottom padding within two quantized framebuffer edges");
+                for (let index=0;index+1<bands.length;++index) {
+                    const middle = ((origin.y+left[index].y+left[index].height/2)+(origin.y+left[index+1].y+left[index+1].height/2))*sy/2;
+                    verify(Math.abs(bands[index].bottom+1-middle) <= 2 && Math.abs(bands[index+1].top-middle) <= 2,
+                        "GUI404: original shade stops at its OWN row boundary between independent actual text bands, no oversized neighbor paint");
+                }
+                const centers = left.map(cell => cell.y+cell.height/2);
+                verify(Math.abs((centers[1]-centers[0])-(centers[2]-centers[1])) <= 2/sy
+                    && Math.abs((centers[2]-centers[1])-(centers[3]-centers[2])) <= 2/sy,
+                    "GUI404: ALL FOUR equal single-line data rows retain uniform independent native text-band spacing");
+                const from = Math.ceil((origin.x+headLeft.x)*sx), to = Math.floor((origin.x+Math.max.apply(null,right.map(cell => cell.end)))*sx);
+                for (const band of interior) {
+                    const blankTop = Math.floor(band.textTop)-1, blankBottom = Math.ceil(band.textBottom);
+                    verify(blankTop >= band.top && blankBottom <= band.bottom,
+                        "GUI404: BOTH actual interior rows provide at least ONE whole framebuffer pixel of genuinely blank upper/lower padding");
+                    for (const y of [blankTop,blankBottom]) for (let column=from;column<=to;++column) compare(String(image.pixel(column,y)).toLowerCase(),band.color,
+                        "GUI404: actual blank row padding shades full own row across BOTH columns with NO vertical separators or split-cell gaps");
+                }
+                image.save("gui404-native-table-"+palette+".png");
+                capture("gui404-native-table-window-"+palette);
+            }
+        } finally { EaStyle.Colors.theme = theme; rendered(); }
     }
 }

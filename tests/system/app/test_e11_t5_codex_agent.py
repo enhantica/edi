@@ -9077,10 +9077,21 @@ def test_ux356_real_send_compact_scope_short_file_presentation(case, tmp_path):
             'UX358: each actual original GUI user-row ID equals its independently received original wire clientUserMessageId'
         )
         fields358 = ('id', 'name', 'bytes', 'textReadable', 'format')
+        wire_roles358 = {'id': 'id', 'name': 'name', 'bytes': 'bytes', 'textReadable': 'text_readable', 'format': 'format'}
+        assert all(set(row) == set(wire_roles358.values()) and all(type(row[key]) is str for key in ('id', 'name', 'format'))
+                   and type(row['text_readable']) is bool and type(row['bytes']) in (int, float)
+                   and row['bytes'] >= 0 and row['bytes'] % 1 == 0 for row in selected), (
+            'UX405: BOTH actual original wire descriptors have the exact public text_readable schema and declared scalar types, without defaults'
+        )
+        assert all(all(type(row[key]) is str for key in ('id', 'name', 'format'))
+                   and type(row['textReadable']) is bool and type(row['bytes']) in (int, float)
+                   and row['bytes'] >= 0 and row['bytes'] % 1 == 0 for row in submitted358['files']), (
+            'UX405: actual submitted GUI descriptors retain declared textReadable role and scalar types separately from wire spelling'
+        )
         assert len(submitted358['files']) == 2 and all(set(row) == set(fields358) for row in submitted358['files']), (
             'UX358: each original GUI receipt contains exactly TWO bounded five-field admitted descriptors'
         )
-        assert submitted358['files'] == [{key: row[key] for key in fields358} for row in selected], (
+        assert submitted358['files'] == [{key: row[wire_roles358[key]] for key in fields358} for row in selected], (
             'UX358: BOTH literal input orders disclose the corresponding actual GUI canonical IDs and every descriptor field in order'
         )
         assert len(selected) == 2 and {row['name'] for row in selected} == set(facts), (
@@ -9144,12 +9155,22 @@ def gui392_usage_reply(case):
              'credits': {'hasCredits': True, 'unlimited': False, 'balance': '12.50'},
              'individualLimit': None, 'spendControlReached': None, 'planType': 'plus',
              'rateLimitReachedType': None}
+    # Independent duration semantics: weekly may be primary; kind does not define Session.
+    if case in ('remaining24', 'remaining5'):
+        value = {**value, 'primary': value['secondary'], 'secondary': value['primary']}
+    if case == 'remaining100':
+        value = {**value, 'primary': value['secondary'], 'secondary': None}
     if case == 'unknown':
         value = {**value, 'primary': None, 'secondary': None, 'credits': None}
     return {'rateLimits': value,
             'rateLimitsByLimitId': {} if case == 'unknown' else {'original-codex': value},
             'accountId': 'original-account', 'ordinaryUsageAllowed': True,
             'rateLimitResetCredits': None, 'rateLimitUpsell': None}
+
+
+def gui404_table_markdown():
+    # Independent literal supplied response; never a renderer-produced golden.
+    return 'Original fileauth reply 1\n\n| Item | Value |\n| --- | --- |\n| Alpha | 111 |\n| Bravo | 222 |\n| Charlie | 333 |\n| Delta | 444 |'
 
 
 def gui392_run(tmp_path, case):
@@ -9173,6 +9194,14 @@ def gui392_run(tmp_path, case):
     linked = reference / 'skills/linked-skill/gui392-alpha/SKILL.md'
     linked.parent.mkdir(parents=True)
     linked.symlink_to(reference / 'skills/collection/gui392-alpha/SKILL.md')
+    # GUI399: independently supplied reset timestamps, available through existing readReferenceFile.
+    usage399_resets = {'session': 1800000000, 'weekly': 1800000900}
+    if case == 'remaining25':
+        usage399_resets['session'] = int(datetime.now(UTC).timestamp()) + 12 * 60
+    if case in GUI392_USAGE_CASES or case == 'zero-missing-recovered':
+        (reference / 'usage399-resets.json').write_text(json.dumps(usage399_resets))
+    if case == 'first-eye-clear':
+        (reference / 'gui404-table.md').write_text(gui404_table_markdown())
     # Snapshot ordinary owned files separately from the deliberately authored link.
     inputs = {str(path.relative_to(reference)): path.read_bytes()
               for path in reference.rglob('*') if path.is_file() and not path.is_symlink()}
@@ -9195,6 +9224,13 @@ def gui392_run(tmp_path, case):
                                               gui392_usage_reply('remaining100')]
     elif case in GUI392_USAGE_CASES:
         config['gui392_usage_reply'] = gui392_usage_reply(case)
+        if case == 'remaining25':
+            # Actual ordinary provider packet and independent reference have the same predeclared operand.
+            for value in [config['gui392_usage_reply']['rateLimits'],
+                          config['gui392_usage_reply']['rateLimitsByLimitId']['original-codex']]:
+                for key in ['primary', 'secondary']:
+                    if value[key] is not None and value[key]['windowDurationMins'] == 300:
+                        value[key]['resetsAt'] = usage399_resets['session']
     if case.startswith('chooser-'):
         assert case.removeprefix('chooser-') in GUI393_CHOOSER_CASES, 'GUI393 SETUP: exact declared chooser rows only'
         config['gui393_model_reply'] = gui393_model_reply()
@@ -9202,6 +9238,7 @@ def gui392_run(tmp_path, case):
             config['ux289_hold_input'] = True
     if case == 'first-eye-clear':
         config['ux289_hold_input'] = True
+        config['gui404_table_reply'] = True
     config_path.write_text(json.dumps(config))
     config_bytes = config_path.read_bytes()
     function = ('test_gui392_signed_out_native_empty_and_real_account' if case == 'account'
@@ -9360,6 +9397,55 @@ def gui392_run(tmp_path, case):
             row['request_id'] == turn['id'] and row['client_user_message_id'] == receipts[0]['user']
             for row in received + released
         ), 'GUI393: real busy/ACK/Clear interval bonds to exact original received envelope'
+        approval404 = [json.loads(line.split('GUI404_APPROVAL ', 1)[1]) for line in result.stdout.splitlines()
+                       if 'GUI404_APPROVAL ' in line]
+        assert len(approval404) == 1, 'GUI404: mandatory real Cancel/newer-identical/Approve interval is delivered ONCE'
+        proof404 = approval404[0]
+        assert proof404['user'] == turn['params']['clientUserMessageId'] and proof404['text'] == (
+            'GUI393 first delivery original Clear request'
+        ) and {key: proof404[key] for key in ['sendClicks', 'cancelClicks', 'approvalClicks', 'opens']} == {
+            'sendClicks': 2, 'cancelClicks': 1, 'approvalClicks': 1, 'opens': 2
+        }, 'GUI404: exact original wire admission follows native Cancel/new Send/Approve with NO second Send after approval'
+        assert type(proof404['canceledRevision']) is int and type(proof404['admittedRevision']) is int and (
+            proof404['admittedRevision'] > proof404['canceledRevision']
+        ), 'GUI404: physically edited newer-identical draft has a distinct actual original revision'
+        assert sum(item.get('type') == 'text' and item.get('text') == proof404['text']
+                   for item in turn['params']['input']) == 1 and not any(
+            row.get('method') == 'turn/steer' for row in requests
+        ), 'GUI404: one exact original current draft is independent actual wire text, never a newer objective/steer substitute'
+        fields404 = {'id', 'name', 'bytes', 'textReadable', 'format'}
+        wire_roles405 = {'id': 'id', 'name': 'name', 'bytes': 'bytes', 'textReadable': 'text_readable', 'format': 'format'}
+        assert set(descriptor) == set(wire_roles405.values()) and all(
+            type(descriptor[key]) is str for key in ('id', 'name', 'format')
+        ) and type(descriptor['text_readable']) is bool and type(descriptor['bytes']) in (int, float) and (
+            descriptor['bytes'] >= 0 and descriptor['bytes'] % 1 == 0
+        ), 'GUI405: actual original wire descriptor requires exact public text_readable fields and scalar types, never a guessed GUI key/default'
+        assert all(all(type(row[key]) is str for key in ('id', 'name', 'format'))
+                   and type(row['textReadable']) is bool and type(row['bytes']) in (int, float)
+                   and row['bytes'] >= 0 and row['bytes'] % 1 == 0 for row in proof404['files']), (
+            'GUI405: actual original GUI descriptor preserves every declared scalar type and its separate textReadable role'
+        )
+        assert len(proof404['files']) == 1 and set(proof404['files'][0]) == fields404 and proof404['files'] == [
+            {key: descriptor[wire_roles405[key]] for key in fields404}
+        ], 'GUI404: completed GUI canonical descriptor bonds all FIVE fields to independently recorded actual outgoing context'
+        assert proof404['files'][0]['bytes'] == len(original_bytes) and proof404['files'][0]['name'] == 'lbco.edi', (
+            'GUI404: original canonical descriptor also bonds independent fixture name and whole byte length'
+        )
+        messages404 = [packet for packet in replies if packet.get('method') == 'item/completed'
+                       and packet.get('params', {}).get('threadId') == turn['params']['threadId']
+                       and packet.get('params', {}).get('turnId') == next(
+                           reply['result']['turn']['id'] for reply in replies if reply.get('id') == turn['id'] and 'result' in reply)
+                       and packet['params'].get('item', {}).get('type') == 'agentMessage']
+        assert len(messages404) == 1 and messages404[0]['params']['item']['text'] == gui404_table_markdown(), (
+            'GUI404: exact independent literal table is genuinely completed ONCE on actual original acknowledged turn'
+        )
+        tables404 = [json.loads(line.split('GUI404_TABLE ', 1)[1]) for line in result.stdout.splitlines()
+                     if 'GUI404_TABLE ' in line]
+        assert len(tables404) == 2 and len({row['theme'] for row in tables404}) == 2 and len({
+            row['row'] for row in tables404
+        }) == 1 and all(row['row'] and len(row['bands']) == 4 for row in tables404), (
+            'GUI404: both actual native palettes observe SAME one completed original response and all FOUR declared ordinary data rows'
+        )
         folder167_policy(trace, None)
     elif case.startswith('chooser-'):
         replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
