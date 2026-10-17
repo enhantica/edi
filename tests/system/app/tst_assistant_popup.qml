@@ -3496,19 +3496,31 @@ TestCase {
     }
     function background294_observe(stage, scope) {
         try {
-            const page = Ui.page(window);
+            const slot = Ui.page(window);
+            const page = window.assistantWorkflowPage;
             const names = ["background.stage", "background.stage.id", "background.stage.apply"];
-            const candidates = Ui.itemsWithProperty(page, "objectName")
+            const candidates = Ui.itemsWithProperty(slot, "objectName")
                 .filter(control => names.includes(control.objectName));
             console.log("BACKGROUND294_CANDIDATES", stage, JSON.stringify({
-                page: String(page), pageIndex: window.appBarCentralTabs.currentIndex,
-                pageCurrent: page ? page.current : null, currentOwner: String(Session.project),
-                expectedOwner: scope ? String(scope.project) : null,
+                page: String(slot), pageIndex: window.appBarCentralTabs.currentIndex,
+                selectedSlotItem: slot && slot.item !== undefined ? String(slot.item) : null,
+                workflowPage: String(page), pageCurrent: page ? page.current : null,
+                pageName: page ? page.pageName : null,
+                pageProject: page ? String(page.project) : null,
+                pageHasExperiment: page ? page.experiment !== undefined : false,
+                pageExperiment: page && page.experiment !== undefined ? String(page.experiment) : null,
+                currentOwner: String(Session.project), expectedOwner: scope ? String(scope.project) : null,
+                originalSlot: scope ? String(scope.slot) : null,
+                originalPage: scope ? String(scope.page) : null,
+                originalExperiment: scope ? String(scope.experiment) : null,
                 sidebar: scope ? String(scope.sidebar) : null,
                 view: scope ? String(scope.view) : null,
                 viewIndex: scope && scope.view ? scope.view.currentIndex : null,
                 selectedPane: scope && scope.view ? String(scope.view.currentItem) : null,
                 originalPane: scope ? String(scope.pane) : null,
+                selectedPaneContent: scope && scope.view && scope.view.currentItem
+                    ? String(scope.view.currentItem.item) : null,
+                originalPaneContent: scope ? String(scope.content) : null,
                 originalForm: scope ? String(scope.form) : null,
                 focused: String(window.activeFocusItem), candidateCount: candidates.length,
                 candidates: candidates.slice(0, 12).map(background294_fact),
@@ -3518,11 +3530,20 @@ TestCase {
         } catch (error) { console.log("BACKGROUND294_OBSERVATION_ERROR", stage, String(error)); }
     }
     function background294_scope(project, stage) {
-        const scope = {project: project, sidebar: null, view: null, pane: null, form: null};
+        // Ui.page is the contentArea Loader. Main's public alias is its loaded
+        // WorkflowPage; only that declared owner has current/project/experiment.
+        const scope = {project: project, experiment: project.currentExperiment,
+            slot: Ui.page(window), page: window.assistantWorkflowPage,
+            sidebar: null, view: null, pane: null, content: null, form: null};
         background294_observe(stage + "-before-ownership", scope);
-        const page = Ui.page(window);
-        verify(Session.project === project && page === window.contentArea[AppState.Page.Experiment]
-            && page.current && page.experiment === project.currentExperiment,
+        const page = scope.page;
+        verify(Session.project === project && scope.slot !== null && page !== null
+            && window.appBarCentralTabs.currentIndex === AppState.Page.Experiment
+            && scope.slot === window.contentArea[AppState.Page.Experiment]
+            && scope.slot.item === page && window.assistantWorkflowPage === page
+            && page.current && page.project === project
+            && scope.experiment !== null && page.experiment === scope.experiment
+            && project.currentExperiment === scope.experiment,
             "BG294 SETUP: operative current Experiment page belongs to the exact original project/experiment");
         const sidebars = Ui.itemsWithProperty(page, "objectName").filter(control =>
             control.objectName === "workflow.experiment.manualSidebar");
@@ -3545,9 +3566,13 @@ TestCase {
         background294_observe(stage + "-selected-pane", scope);
         compare(basic.length, 1, "BG294 SETUP: exact sidebar has one genuine Main tab control");
         verify(basic[0].checked && scope.view.currentIndex === 0 && scope.pane !== null
-            && scope.pane === scope.view.itemAt(0),
+            && scope.pane === scope.view.itemAt(0)
+            && scope.pane.item !== undefined && scope.pane.item !== null,
             "BG294 SETUP: original real Main click selects the actual Basic Loader, not retained Extras content");
-        const groups = Ui.itemsWithProperty(scope.pane, "categoryId").filter(control =>
+        // WorkflowPage declares Basic/Extras as Loader items of the sidebar view.
+        // Category properties belong to their loaded content, never the Loader.
+        scope.content = scope.pane.item;
+        const groups = Ui.itemsWithProperty(scope.content, "categoryId").filter(control =>
             control.objectName === "group.background" && control.categoryId === "background"
             && control.shownTier === "Basic");
         scope.ownershipCandidates = groups;
@@ -3556,23 +3581,30 @@ TestCase {
         scope.group = groups[0];
         const forms = Ui.itemsWithProperty(scope.group, "objectName").filter(control =>
             control.objectName === "background.stage"
-            && control.sourceModel === project.currentExperiment.background);
+            && control.sourceModel === scope.experiment.background);
         scope.ownershipCandidates = forms;
         background294_observe(stage + "-form-candidates", scope);
         compare(forms.length, 1, "BG294 SETUP: original category owns exactly one stage for the original background model");
         scope.form = forms[0];
-        scope.source = project.currentExperiment.background;
+        scope.source = scope.experiment.background;
         background294_observe(stage + "-owned-form", scope);
         return scope;
     }
     function background294_control(scope, name, stage) {
         background294_observe(stage + "-before-control", scope);
-        verify(Session.project === scope.project && Ui.page(window).current
-            && Ui.page(window) === window.contentArea[AppState.Page.Experiment]
+        verify(Session.project === scope.project && Ui.page(window) === scope.slot
+            && scope.slot === window.contentArea[AppState.Page.Experiment]
+            && window.appBarCentralTabs.currentIndex === AppState.Page.Experiment
+            && scope.slot.item === scope.page && window.assistantWorkflowPage === scope.page
+            && scope.page.current && scope.page.project === scope.project
+            && scope.page.experiment === scope.experiment
+            && scope.project.currentExperiment === scope.experiment
             && scope.view.currentItem === scope.pane && scope.view.currentIndex === 0
-            && background294_under(scope.form, scope.pane)
+            && scope.pane === scope.view.itemAt(0) && scope.pane.item === scope.content
+            && background294_under(scope.group, scope.content)
+            && background294_under(scope.form, scope.group)
             && scope.form.sourceModel === scope.source
-            && scope.project.currentExperiment.background === scope.source,
+            && scope.experiment.background === scope.source,
             "BG294 SETUP: exact original current form/pane/source ownership remains valid before accessing its receiver");
         const found = Ui.itemsWithProperty(scope.form, "objectName")
             .filter(control => control.objectName === name);
