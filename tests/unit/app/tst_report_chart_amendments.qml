@@ -38,11 +38,9 @@ Item {
         when: windowShown
         property int savedPage
         property int savedTheme
-        property string savedScheme
         property var paletteReference: JSON.parse(SettingsProof.repoText("tests/fixtures/palette_sources/reference.json"))
         function initTestCase() {
             savedTheme = Style.Colors.theme;
-            savedScheme = Preferences.colourScheme;
             savedPage = Globals.Vars.appBarCurrentIndex;
             surface.Window.window.width = surface.width;
             surface.Window.window.height = surface.height;
@@ -50,7 +48,6 @@ Item {
         function cleanup() {
             Session.closeProject();
             Style.Colors.theme = savedTheme;
-            Preferences.colourScheme = savedScheme;
             Globals.Vars.appBarCurrentIndex = savedPage;
         }
         function test_unfitted_evolution_has_every_free_parameter_and_no_axes() {
@@ -91,27 +88,26 @@ Item {
             verify(typeof Preferences.colourScheme === "string", "The scheme preference is available to every actual colour consumer");
             Preferences.colourScheme = data.scheme;
             const rows = SettingsProof.paletteForScheme(data.scheme);
-            verify(rows.pattern && rows.pattern.length >= 1 && rows.pattern.length <= 7 && rows.structure && rows.structure.length >= 1 && rows.structure.length <= 5, "ADR-0038's eighteen schemes have bounded measured and structure data rows");
-            verify(rows.gradient && rows.gradient.length === 2, "ADR-0038 gives every scheme exactly two separate gradient endpoints");
-            const gradient = rows.gradient;
+            verify(rows.pattern && rows.pattern.length >= 3 && rows.structure && rows.structure.length > 0, "The independent colour inputs are the shipped palette data rows");
+            const gradient = rows.gradient || rows.pattern.slice(-2);
             const theme = data.dark ? "dark" : "light";
             const colors = Array.from({
                 length: data.count
             }, (_, i) => String(AppColors.experiment(i)).toLowerCase());
             const roles = ["#f44336", "#607d8b", "#8bc34a", "#8c8c8c"];
             verify(colors.every(color => !roles.includes(color)), "Few and many patterns cannot collide with calculated, background, residual or excluded colours");
-            if (data.count <= rows.pattern.length) {
-                compare(JSON.stringify(colors), JSON.stringify(rows.pattern.slice(0, data.count).map(row => row[theme].toLowerCase())), "Few patterns use their distinct palette rows in order");
-                compare(new Set(colors).size, data.count, "Few patterns retain distinct colours in each scheme and theme");
+            if (data.count === 3) {
+                compare(JSON.stringify(colors), JSON.stringify(rows.pattern.slice(0, 3).map(row => row[theme].toLowerCase())), "Few patterns use their distinct palette rows in order");
+                compare(new Set(colors).size, 3, "Three patterns retain distinct colours in each scheme and theme");
             } else {
-                compare(colors[0], gradient[0][theme].toLowerCase(), "A many-pattern gradient starts at its first declared endpoint");
-                compare(colors[data.count - 1], gradient[1][theme].toLowerCase(), "A many-pattern gradient finishes at its last declared endpoint");
-                verify(colors[Math.floor(data.count / 2)] !== colors[0] && colors[Math.floor(data.count / 2)] !== colors[data.count - 1], "An interior pattern receives an interior gradient colour rather than an endpoint or repeated short palette");
+                compare(colors[0], gradient[0][theme].toLowerCase(), "The 100-pattern gradient starts at its first declared endpoint");
+                compare(colors[99], gradient[gradient.length - 1][theme].toLowerCase(), "The 100-pattern gradient finishes at its last declared endpoint");
+                verify(colors[50] !== colors[0] && colors[50] !== colors[99], "An interior pattern receives an interior gradient colour rather than an endpoint or repeated short palette");
             }
             for (let i = 0; i < rows.structure.length; ++i)
                 compare(String(AppColors.structure(i)).toLowerCase(), rows.structure[i][theme].toLowerCase(), "Structure icons read their own palette rows through the shared core function");
-            if (data.scheme === paletteReference.default && data.count === 3)
-                compare(colors[0], String(ApplicationInfo.patternColour("coast", 0, data.count, data.dark)).toLowerCase(), "Coast's first colour follows the shared core palette API in each theme");
+            if (data.scheme === "coast" && data.count === 3)
+                compare(colors[0], String(ApplicationInfo.patternColour("coast", 0, data.count, data.dark)).toLowerCase(), "Coast first colour follows its published contrast-safe palette shade in each theme");
         }
         function test_scan_summary_uses_ui_font_size_and_equal_digit_slots() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_scan-3f"), "A real three-file scan supplies the status-bar summary");

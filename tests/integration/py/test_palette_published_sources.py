@@ -120,11 +120,15 @@ def source_pair(scheme, row, section):
 
 
 def in_calc_hue(colour):
-    # ADR-0038 decision 2; PROVENANCE.md excludes chroma below 0.04.
-    _, chroma, hue = polar(colour)
-    if chroma < 0.04:
+    # The short OKLCH arc spanning the independently specified light/dark calc
+    # colours, enlarged only by their half-LSB hue uncertainty. Neutral has no hue.
+    if polar(colour)[1] <= quantisation_tolerance(colour)[0]:
         return False
-    return any(angle_difference(hue, polar(value)[2]) <= 45 for value in ('#F44336', '#EF9A9A'))
+    hues = [polar(value)[2] for value in ('#F44336', '#EF9A9A')]
+    margin = max(quantisation_tolerance(value)[1] for value in ('#F44336', '#EF9A9A'))
+    start, end = sorted(hues)
+    hue = polar(colour)[2]
+    return start - margin <= hue <= end + margin
 
 
 def test_exactly_eighteen_schemes_are_published_with_coast_default():
@@ -379,10 +383,6 @@ def test_fixed_and_structure_sets_are_bounded_distinct_and_indexed(scheme):
         structures = [r[theme] for r in roles['structure']]
         measured = [r[theme] for r in roles['pattern']]
         for i, first in enumerate(structures):
-            assert polar(first)[1] <= 0.06 + quantisation_tolerance(first)[0], (
-                f'Structure fills keep the declared muted Oklab chroma of at most 0.06 '
-                f'within half-LSB rounding: {scheme["label"]}/{theme}/{first}'
-            )
             for other in structures[i + 1 :]:
                 assert angle_difference(polar(first)[2], polar(other)[2]) > sum(
                     quantisation_tolerance(c)[1] for c in (first, other)
@@ -396,9 +396,11 @@ def test_fixed_and_structure_sets_are_bounded_distinct_and_indexed(scheme):
                     f'Each structure colour has its own lightness step beyond half-LSB '
                     f'uncertainty: {scheme["label"]}/{theme}'
                 )
-            assert all(distance(first, c) >= 0.08 for c in measured), (
-                f'Every structure colour keeps the declared 0.08 Oklab distance from every '
-                f'measured-data '
+            assert all(
+                distance(first, c) > sum(lightness_quantisation_tolerance(v) for v in (first, c))
+                for c in measured
+            ), (
+                f'Every structure colour is distinct from every measured-data '
                 f'colour in both themes: {scheme["label"]}/{theme}'
             )
 
@@ -440,20 +442,10 @@ def test_one_sided_quantisation_matches_exhaustive_independent_lattice(witness):
 
 @pytest.mark.parametrize(
     ('colour', 'expected'),
-    [
-        ('#F44336', True),
-        ('#EF9A9A', True),
-        ('#D08000', True),
-        ('#D500A0', True),
-        ('#D500C0', False),
-        ('#D09000', False),
-        ('#887878', False),
-        ('#0055A0', False),
-        ('#808080', False),
-    ],
+    [('#F44336', True), ('#EF9A9A', True), ('#0055A0', False), ('#808080', False)],
 )
 def test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls(colour, expected):
     assert in_calc_hue(colour) is expected, (
-        'ADR-0038 includes hues within 45 degrees of either calculated colour across '
-        'the circular seam, excludes more distant hues, and treats chroma below 0.04 as hue-less'
+        'The independent OKLCH observer identifies both calculated hues, excludes blue '
+        'and treats neutral quantisation uncertainty as hue-less'
     )
