@@ -254,17 +254,26 @@ void LinkedStructureListModel::sync() {
         structure_names_ = names;
         emit structureNamesChanged();
     }
-    // A single structure's fraction is always 1 and says nothing: its cell stays empty, as the saved file writes
-    // the column only when two or more structures take part.
+    // A single enabled structure's fraction is exactly 1, as the saved file writes it; it is shown without asking the
+    // engine, which would convert the whole project for a known answer.
     const auto enabled_links = std::count_if(experiment_.linked_structures.begin(), experiment_.linked_structures.end(),
                                              [](const auto& link) { return link->enabled.get(); });
+    const auto fraction = [enabled_links](const edi::LinkedStructure& link) {
+        if (enabled_links > 1) {
+            return weight_fraction_cell(link);
+        }
+        if (link.enabled.get()) {
+            return QVariantMap{{QStringLiteral("value"), 1.0}, {QStringLiteral("uncertainty"), 0.0}};
+        }
+        return QVariantMap();
+    };
     QList<Row> rows;
     for (const auto& link : experiment_.linked_structures) {
         const QString id = QString::fromStdString(link->structure_id.value());
         rows.append({link.get(),
                      {id, parameter_role(registry_, &link->scale), link->enabled.get(),
                       static_cast<int>(names.indexOf(id)),
-                      enabled_links > 1 ? weight_fraction_cell(*link) : QVariantMap()}});
+                      fraction(*link)}});
     }
     setTableRows(rows);
     const auto linked = [this](const QString& name) {

@@ -4226,8 +4226,9 @@ struct WeightFraction {
     std::optional<double> uncertainty;
 };
 /// The weight fraction of `link` in the experiment that holds it, computed by crysta from the
-/// project's structures, scales and last fit's stored correlations. Absent when the link belongs to
-/// no project, takes no part, or a structure's cell mass is unknown.
+/// project's structures, scales and last fit's stored correlations; exactly 1 with no uncertainty for
+/// the only enabled structure. Otherwise absent when the link belongs to no project, takes no part,
+/// or a structure's cell mass is unknown.
 std::optional<WeightFraction> weight_fraction(const LinkedStructure& link);
 std::uint64_t engine_structure_factor_evaluations() noexcept;
 // The chi-square tolerance a fit uses when `_minimizer.chi_square_tolerance` is not declared: the
