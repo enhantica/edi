@@ -17,6 +17,8 @@ TestCase {
     property var appWindow
     property var chart
     property int savedTheme
+    property string savedAnalysisYScale
+    property string savedExperimentYScale
     Component {
         id: application
         Main {}
@@ -37,6 +39,10 @@ TestCase {
     }
     property var animation
     function init() {
+        savedAnalysisYScale = Preferences.analysisYScale;
+        savedExperimentYScale = Preferences.experimentYScale;
+        Preferences.analysisYScale = "linear";
+        Preferences.experimentYScale = "linear";
         savedTheme = Style.Colors.theme;
         Style.Colors.theme = Style.Colors.Themes.LightTheme;
         Session.closeProject();
@@ -50,6 +56,8 @@ TestCase {
         Session.closeProject();
         appWindow.destroy();
         Style.Colors.theme = savedTheme;
+        Preferences.analysisYScale = savedAnalysisYScale;
+        Preferences.experimentYScale = savedExperimentYScale;
     }
     function open(path, page) {
         Session.openProject(Probe.repoUrl(path));
@@ -115,7 +123,18 @@ TestCase {
         });
         const reset = object("chart.toolbar.reset");
         compare(reset.fontIcon, "home", " owner chart item 2 uses the Home reset icon");
-        compare(object("chart.title.residual").text, "Residual", " owner chart item 4 names the drawn residual axis Residual");
+        const residualTitle = object("chart.title.residual").text;
+        compare(residualTitle.replace(/<[^>]*>/g, ""), "meas − calc", "The residual axis names the measured-minus-calculated values");
+        const colouredOperands = [];
+        const operandPattern = /<font color="([^"]+)">([^<]+)<\/font>/g;
+        let operand;
+        while ((operand = operandPattern.exec(residualTitle)) !== null)
+            colouredOperands.push(operand);
+        compare(colouredOperands.length, 2, "Both residual-title operands carry their series colours");
+        compare(colouredOperands[0][2], "meas", "The residual title starts with the measured operand");
+        compare(colouredOperands[1][2], "calc", "The residual title ends with the calculated operand");
+        compare(colouredOperands[0][1].toLowerCase(), String(object("chart.series.meas").color).toLowerCase(), "The measured residual-title operand uses the measured series colour");
+        compare(colouredOperands[1][1].toLowerCase(), String(object("chart.series.calc").color).toLowerCase(), "The calculated residual-title operand uses the calculated series colour");
         verify(chart.topMargin > 0, " owner chart margins keep a positive gap around the toolbar and x title");
         compare(chart.bottomMargin, chart.topMargin, " owner chart margins reserve the same gap below the x-title band as above the toolbar");
         compare(chart.toolbarGap, chart.topMargin, " owner chart margins reserve the same gap below and above the toolbar");
