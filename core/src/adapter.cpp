@@ -2723,13 +2723,21 @@ class PersistenceAdmission {
     std::size_t limit_,remaining_,factor_,scalar_cost_;
     bool payload_;
 };
-void admit_currentness_inputs(const Project& project, PersistenceAdmission& budget) {
+std::size_t admit_currentness_inputs(const Project& project, PersistenceAdmission& budget, bool joins_only=false) {
+    // The late save join reuses this exact borrowed naming bound, excluding
+    // scientific arrays/encodings already owned by its calculation slot.
+    PersistenceAdmission ignored(std::numeric_limits<std::size_t>::max(),true);
+    auto& fields=joins_only?ignored:budget;
+    std::size_t parameter_bound=0;
     constexpr std::uint64_t word = 16;
-    const auto initial_roles = budget.used();
-    const auto text = [&](std::string_view value) { budget.bytes(word + 1); budget.text(value); };
-    const auto written_text = [&](std::string_view value) { text(value); budget.bytes(word); };
+    const auto initial_roles = fields.used();
+    const auto text = [&](std::string_view value) { fields.bytes(word + 1); fields.text(value); };
+    const auto written_text = [&](std::string_view value) { text(value); fields.bytes(word); };
     const auto named = [&](std::string_view block, std::string_view row, std::string_view leaf,
                            std::uint64_t count = 1) {
+        if(count>std::numeric_limits<std::size_t>::max()-parameter_bound)
+            throw std::length_error("Saved parameter join count exceeds capacity");
+        parameter_bound+=static_cast<std::size_t>(count);
         // Longest literal separators/category prefix used by parameter_slots;
         // joined names cannot exceed these borrowed parts plus this literal.
         constexpr std::string_view grammar = "structures[].atom_site_aniso..preferred_orientation..";
@@ -2743,9 +2751,9 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
     };
     // Both encoders' minimum initial reserve belongs to this temporary role.
     // Charging both is conservative even when a source is stale or absent.
-    budget.bytes(1024 + 4096);
-    budget.bytes(2 * word); // structure count + relation collection generations
-    const auto structure_begin = budget.used();
+    fields.bytes(1024 + 4096);
+    fields.bytes(2 * word); // structure count + relation collection generations
+    const auto structure_begin = fields.used();
     for (const auto& held : project.structures) {
         const Structure& structure = *held;
         const auto* owner = static_cast<const detail::KeyedBase&>(structure.atom_sites).host();
@@ -2755,10 +2763,10 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
         text(structure.space_group.coord_system_code.value());
         written_text(structure.space_group.name_h_m.value());
         written_text(structure.space_group.coord_system_code.value());
-        budget.bytes(1 + word); // optional International Tables number
-        budget.rows(6, 4 * word); // six cells in calculation + geometry
-        budget.bytes(3 * word); // structure/cell/space-group epochs
-        budget.bytes(7 * word); // calculation site/tensor/scattering counts + geometry site/tensor counts/generations
+        fields.bytes(1 + word); // optional International Tables number
+        fields.rows(6, 4 * word); // six cells in calculation + geometry
+        fields.bytes(3 * word); // structure/cell/space-group epochs
+        fields.bytes(7 * word); // calculation site/tensor/scattering counts + geometry site/tensor counts/generations
         named(structure.name.value(), {}, "length_a", 6);
         for (const auto& site : structure.atom_sites) {
             // Both geometry and calculation encode all four identity/type texts.
@@ -2766,24 +2774,24 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
                     &site->wyckoff_letter.value(), &site->adp_type.value()}) {
                 text(*value); written_text(*value);
             }
-            budget.rows(5, 4 * word); // value+write/epoch for five scalar fields, both encoders
-            budget.bytes(word); // calculation object epoch
+            fields.rows(5, 4 * word); // value+write/epoch for five scalar fields, both encoders
+            fields.bytes(word); // calculation object epoch
             named(structure.name.value(), site->id.value(), "occupancy", 5);
         }
         for (const auto& tensor : structure.atom_site_aniso) {
             text(tensor->id.value()); written_text(tensor->id.value());
-            budget.rows(6, 4 * word); budget.bytes(word);
+            fields.rows(6, 4 * word); fields.bytes(word);
             named(structure.name.value(), tensor->id.value(), "adp_11", 6);
         }
         for (const auto& [kind, value] : structure.scattering_lengths_fm.get()) {
-            text(kind); budget.bytes(word);
+            text(kind); fields.bytes(word);
         }
-        budget.rows(2, 1 + 2 * word); // optional geometry constants + their write IDs
+        fields.rows(2, 1 + 2 * word); // optional geometry constants + their write IDs
     }
     // calculation_inputs repeats ALL structures for EVERY bank. A fixed
     // once-per-project charge cannot bound that variable Cartesian join.
-    const auto structure_roles = budget.used() - structure_begin;
-    budget.rows(project.experiments.size(), structure_roles);
+    const auto structure_roles = fields.used() - structure_begin;
+    fields.rows(project.experiments.size(), structure_roles);
     for (const auto& held : project.experiments) {
         const ExperimentBase& experiment = *held;
         const auto* rows = experiment.name.owner();
@@ -2807,9 +2815,9 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
             "abscor1", "abscor2", "mu_r"};
         for (const auto leaf : slots) named(experiment.name.value(), {}, leaf);
         // Encoder peak[] label text is emitted for the fourteen fixed TOF slots.
-        for (const auto& slot : detail::kPeakSlots) { text(slot.first); budget.bytes(2 * word); }
-        budget.rows(4, 2 * word); // TOF instrument calibration
-        budget.bytes(2 * word + word); // bank angle + cutoff
+        for (const auto& slot : detail::kPeakSlots) { text(slot.first); fields.bytes(2 * word); }
+        fields.rows(4, 2 * word); // TOF instrument calibration
+        fields.bytes(2 * word + word); // bank angle + cutoff
         const OptionalParameter* optional[] = {
             &experiment.absorption.abscor1, &experiment.absorption.abscor2, &experiment.absorption.mu_r,
             &experiment.peak.broad_gauss_u, &experiment.peak.broad_gauss_v, &experiment.peak.broad_gauss_w,
@@ -2822,64 +2830,66 @@ void admit_currentness_inputs(const Project& project, PersistenceAdmission& budg
             &experiment.instrument.calib_sample_displacement, &experiment.instrument.calib_sample_transparency,
             &experiment.instrument.setup_polarization_coefficient, &experiment.instrument.setup_monochromator_twotheta,
             &experiment.instrument.setup_wavelength_2, &experiment.instrument.setup_wavelength_2_to_1_ratio};
-        for (const auto* field : optional) budget.bytes(1 + (*field ? 2 * word : 0));
+        for (const auto* field : optional) fields.bytes(1 + (*field ? 2 * word : 0));
         text(experiment.name.value()); text(experiment.background_type);
         for (const auto* value : {&experiment.absorption.type, &experiment.xray_form_factor,
                 &experiment.xray_dispersion, &experiment.neutron_scattering_length, &experiment.peak.type}) {
-            budget.bytes(1); if (*value) text(**value);
+            fields.bytes(1); if (*value) text(**value);
         }
         // Four typed selector spellings are fixed enum tokens, not source text.
         // Longest declared spelling is constant-wavelength (model.hpp).
-        budget.rows(4, 1 + word + sizeof("constant-wavelength"));
-        budget.rows(3, 1 + word); // optional background domain constants
-        budget.bytes(5 * word + 2); // collection counts, calculation-only and data presence
-        budget.bytes(5 * word); // experiment/type/peak/instrument/absorption epochs
+        fields.rows(4, 1 + word + sizeof("constant-wavelength"));
+        fields.rows(3, 1 + word); // optional background domain constants
+        fields.bytes(5 * word + 2); // collection counts, calculation-only and data presence
+        fields.bytes(5 * word); // experiment/type/peak/instrument/absorption epochs
         for (const auto& link : experiment.linked_structures) {
-            budget.bytes(3 * word); text(link->structure_id.value()); text("disabled");
+            fields.bytes(3 * word); text(link->structure_id.value()); text("disabled");
             const auto& actual = link->structure_id.value().empty() && !project.structures.empty()
                 ? project.structures.front()->name.value() : link->structure_id.value();
             named(experiment.name.value(), actual, "linked_structure.scale");
         }
         for (const auto& row : experiment.background) {
-            text(row->id.value()); budget.bytes(4 * word);
+            text(row->id.value()); fields.bytes(4 * word);
             named(experiment.name.value(), row->id.value(), "background.intensity");
         }
         for (const auto& row : experiment.background_terms) {
-            budget.bytes(4 * word); named(experiment.name.value(), row->id.value(), "background.coef");
+            fields.bytes(4 * word); named(experiment.name.value(), row->id.value(), "background.coef");
         }
         for (const auto& row : experiment.preferred_orientation) {
-            text(row->structure_id.value()); budget.bytes(8 * word);
+            text(row->structure_id.value()); fields.bytes(8 * word);
             named(experiment.name.value(), row->structure_id.value(), "march_random_fract", 2);
         }
-        for (const auto& row : experiment.excluded_regions) { text(row->id.value()); budget.bytes(2 * word); }
+        for (const auto& row : experiment.excluded_regions) { text(row->id.value()); fields.bytes(2 * word); }
         if (experiment.data) {
             // Both engaged axes are encoded even if axis() chooses just one.
             // Hidden chart/data/reflection groups do not bypass this admission.
             for (const auto* axis : {&experiment.data->two_theta, &experiment.data->time_of_flight}) {
-                budget.bytes(1 + word);
-                if (*axis) budget.rows((*axis)->size(), sizeof(double));
+                fields.bytes(1 + word);
+                if (*axis) fields.rows((*axis)->size(), sizeof(double));
             }
             for (const auto* values : {&experiment.data->intensity_meas, &experiment.data->intensity_meas_su}) {
-                budget.bytes(word); budget.rows(values->size(), sizeof(double));
+                fields.bytes(word); fields.rows(values->size(), sizeof(double));
             }
-            budget.bytes(2 * word); // actual data epoch/write stamp
+            fields.bytes(2 * word); // actual data epoch/write stamp
         }
     }
-    budget.bytes(4 * word); // alias/constraint generations and counts
+    fields.bytes(4 * word); // alias/constraint generations and counts
     for (const auto& alias : project.aliases) {
         text(alias->id.value()); written_text(alias->parameter_unique_name.value());
-        budget.bytes(3 * word); // resolution presence + possible aliased value/write
+        fields.bytes(3 * word); // resolution presence + possible aliased value/write
     }
     for (const auto& constraint : project.constraints) {
         text(constraint->id.value()); written_text(constraint->expression.value());
-        budget.bytes(2 * word); // enabled VALUE and write, disabled drafts included
+        fields.bytes(2 * word); // enabled VALUE and write, disabled drafts included
     }
     // Original/currentness comparisons, retained WorkStamps, prepared sources
     // and calculation/publication temporaries each own complete encodings.
     // The same finite construction-copy policy covers these derived roles;
     // multiplication remains checked even for long multi-bank source strings.
-    const auto complete_roles = budget.used() - initial_roles;
-    budget.rows(7, complete_roles);
+    if(joins_only)return parameter_bound;
+    const auto complete_roles = fields.used() - initial_roles;
+    fields.rows(7, complete_roles);
+    return parameter_bound;
 }
 
 void persistence_owner_graph(const Project& project) {
@@ -3035,7 +3045,9 @@ PersistenceSnapshot snapshot_for_persistence(const Project& live,const Persisten
     out.calculation_bytes=result.used();
     out.model=std::make_unique<Project>(live);out.model->metadata.update_last_modified();return out;
 }
-std::vector<std::pair<std::string,std::string>> prepare_project_documents(const PersistenceSnapshot& source,const PersistenceLimits& limits) {
+namespace {
+std::vector<std::pair<std::string,std::string>> persistence_documents(const PersistenceSnapshot& source,const PersistenceLimits& limits,
+    std::optional<std::string_view> carried_record) {
     if(!source.model || source.construction_bytes!=limits.construction_bytes ||
        source.geometry_current.size()!=source.model->structures.size() || source.computed_current.size()!=source.model->experiments.size())
         throw std::invalid_argument("Save snapshot is incomplete");
@@ -3043,8 +3055,18 @@ std::vector<std::pair<std::string,std::string>> prepare_project_documents(const 
         crysta::PersistenceColumns columns;columns.structures.resize(source.geometry_current.size());columns.experiments.resize(source.computed_current.size());
         for(std::size_t i=0;i<columns.structures.size();++i)if(source.geometry_current[i])columns.structures[i]=persistence_geometry(source.model->structures[i]->geometry);
         for(std::size_t i=0;i<columns.experiments.size();++i)if(source.computed_current[i])columns.experiments[i]=persistence_computed(*source.model->experiments[i]);
-        return crysta::prepare_project_documents(converted,columns,{limits.construction_bytes,limits.file_bytes,limits.collection_bytes,limits.files});
+        const crysta::PersistenceLimits admitted{limits.construction_bytes,limits.file_bytes,limits.collection_bytes,limits.files};
+        if (carried_record) return crysta::prepare_project_documents(converted,columns,admitted,*carried_record);
+        return crysta::prepare_project_documents(converted,columns,admitted);
     });
+}
+} // namespace
+std::vector<std::pair<std::string,std::string>> prepare_project_documents(const PersistenceSnapshot& source,const PersistenceLimits& limits) {
+    return persistence_documents(source,limits,std::nullopt);
+}
+std::vector<std::pair<std::string,std::string>> prepare_project_documents(const PersistenceSnapshot& source,const PersistenceLimits& limits,
+    std::string_view carried_record) {
+    return persistence_documents(source,limits,carried_record);
 }
 
 CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
@@ -3094,7 +3116,52 @@ struct PreparedSavedValues::State {
     std::string destination,metadata_path,last_modified;
 };
 PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,WorkStamps stamps,CalculationResult calculated,std::string destination)
-    :state_(std::make_unique<State>()) {
+    :PreparedSavedValues(live,saved,stamps,std::move(calculated),std::move(destination),std::numeric_limits<std::size_t>::max()) {}
+PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,const WorkStamps& stamps,
+    CalculationResult calculated,std::string destination,std::size_t metadata_limit) {
+    using Key=std::tuple<std::string,std::string,std::string>;
+    using Coefficients=std::map<Key,std::string>;
+    // Only NEW metadata ownership belongs here. Calculated arrays and their
+    // original stamps move from the caller's separately admitted payload slot.
+    // Admit the complete simultaneous join/row/source role before its first
+    // owning container, encoding or state allocation.
+    PersistenceAdmission held(metadata_limit,true);
+    held.bytes(sizeof(State)+2*sizeof(void*)+2*sizeof(CalculationResult)+sizeof(detail::PreparedPublication)+sizeof(std::string));
+    held.bytes(sizeof(std::map<std::string,double>)+sizeof(std::map<std::string,const Parameter*>)+
+        sizeof(Coefficients)+3*sizeof(std::vector<NamedParameter>)+sizeof(std::vector<NamedSlot>));
+    const auto parameter_bound=admit_currentness_inputs(live,held,true);
+    (void)admit_currentness_inputs(saved,held,true);
+    held.rows(parameter_bound,sizeof(State::ParameterValue));
+    held.rows(calculated.completed.size(),sizeof(std::pair<const std::string,double>)+4*sizeof(void*));
+    for(const auto& value:calculated.completed) {held.text(value.first);held.bytes(1);}
+    held.rows(saved.fit_result.correlations.size(),sizeof(Coefficients::value_type)+4*sizeof(void*));
+    for(const auto& row:saved.fit_result.correlations) {
+        if(!row)throw std::invalid_argument("Saved correlation row is empty");
+        for(const auto* text:{&row->parameter_unique_name_i.value(),&row->parameter_unique_name_j.value(),
+                &row->file_path.value(),&row->correlation.value()}) {held.text(*text);held.bytes(1);}
+        // A replacement coefficient may briefly coexist with the old copied
+        // coefficient while the shared ordinary field assignment lands.
+        held.text(row->correlation.value());held.bytes(1);
+    }
+    held.value(live.fit_result.correlations); // Actual copied row/column/anchor owners, no model copy.
+    held.rows(stamps.experiment_inputs.size(),sizeof(std::shared_ptr<detail::ComputedSource>));
+    held.rows(stamps.structure_inputs.size(),sizeof(std::shared_ptr<detail::GeometrySource>));
+    for(const auto& input:stamps.experiment_inputs) {
+        held.bytes(sizeof(detail::ComputedSource)+2*sizeof(void*));held.text(input);held.bytes(1);
+        held.text(stamps.relations);held.bytes(1);
+    }
+    for(const auto& input:stamps.structure_inputs) {
+        held.bytes(sizeof(detail::GeometrySource)+2*sizeof(void*));held.text(input);held.bytes(1);
+        held.text(stamps.relations);held.bytes(1);
+    }
+    held.rows(live.aliases.size(),sizeof(detail::RelationValueSlot));
+    // Currentness comparisons and relation preparation own one temporary
+    // encoding at a time; admitting their actual original total covers each.
+    for(const auto& input:stamps.experiment_inputs) {held.text(input);held.bytes(1);}
+    for(const auto& input:stamps.structure_inputs) {held.text(input);held.bytes(1);}
+    held.text(stamps.relations);held.bytes(1);
+    held.text(destination,2);held.bytes(2);held.text(saved.metadata.last_modified);held.bytes(1);
+    state_=std::make_unique<State>();
     state_->owner=&live;
     if(!unchanged_since(live,stamps) || live.structures.size()!=saved.structures.size() ||
        live.experiments.size()!=saved.experiments.size())
@@ -3112,6 +3179,7 @@ PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,Work
     for(const auto& slot:named_dependents(saved))retain_saved_parameter(slot);
     const auto slots=named_slots(live);
     if(slots.size()!=written.size())throw std::invalid_argument("Saved parameter set differs from the displayed project");
+    if(slots.size()>parameter_bound)throw std::length_error("Saved parameter join exceeded its admitted shape");
     state_->parameters.reserve(slots.size());
     for(const auto& slot:slots) {
         const auto found=written.find(slot.unique_name);
@@ -3122,7 +3190,6 @@ PreparedSavedValues::PreparedSavedValues(Project& live,const Project& saved,Work
         const auto dependent=completed.find(slot.unique_name);
         state_->parameters.push_back({slot.parameter,dependent==completed.end()?source.value.get():dependent->second,source.uncertainty.get()});
     }
-    using Key=std::tuple<std::string,std::string,std::string>;
     const auto key=[](const FitParameterCorrelation& r){return Key{r.parameter_unique_name_i.value(),r.parameter_unique_name_j.value(),r.file_path.value()};};
     std::map<Key,std::string> coefficients;
     for(const auto& row:saved.fit_result.correlations)coefficients.emplace(key(*row),row->correlation.value());

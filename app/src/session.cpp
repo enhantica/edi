@@ -159,6 +159,11 @@ struct Session::SaveIntent {
     edi::WorkStamps stamps;
     std::shared_ptr<ImmutableAssistantResult> result;
     bool fresh;
+    bool native = false;
+    QUrl parent;
+    QString leaf;
+    std::function<bool()> current, start;
+    std::function<void()> cancelled;
 };
 
 Session::Session(QObject* parent)
@@ -272,16 +277,28 @@ bool Session::needsSaveAs() const {
 }
 
 bool Session::save() {
+    if (save_intent_ && save_intent_->native) {
+        auto intent = std::move(save_intent_); // Consume before the real button action can reenter.
+        const bool matches = !intent->fresh;
+        return consumeAssistantSave(std::move(intent), matches);
+    }
     if (project_ == nullptr || needsSaveAs()) {
         setLastError(QStringLiteral("this project has no directory of its own yet: save it as"));
         return false;
     }
-    const QString error = project_->saveTo(project_->path());
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> original(project_);
+    const auto replacement = replacement_generation_;
+    const auto current = [&] { return receiver && original && project_ == original && replacement_generation_ == replacement; };
+    QString error;
+    try { error = original->saveTo(original->path()); }
+    catch (...) { error = tr("Saving could not confirm its full result. Inspect the saved directory before repeating."); }
+    const bool saved = error.isEmpty();
+    if (!current()) return saved;
     setLastError(error);
-    if (error.isEmpty()) {
-        emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
-    }
-    return error.isEmpty();
+    if (!current()) return saved;
+    if (saved) emit projectDirectoryUsed(QFileInfo(original->path()).absoluteFilePath());
+    return saved;
 }
 
 bool Session::saveAs(const QUrl& directory) {
@@ -295,21 +312,31 @@ bool Session::saveAs(const QUrl& directory) {
         setLastError(QStringLiteral("cannot save to %1: only local directories (file: URLs)").arg(directory.toString()));
         return false;
     }
-    const QString error = project_->saveTo(directory.toLocalFile());
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> original(project_);
+    const auto replacement = replacement_generation_;
+    const auto current = [&] { return receiver && original && project_ == original && replacement_generation_ == replacement; };
+    const QString destination = directory.toLocalFile();
+    QString error;
+    try { error = original->saveTo(destination); }
+    catch (...) { error = tr("Saving could not confirm its full result. Inspect the saved directory before repeating."); }
+    const bool saved = error.isEmpty();
+    if (!current()) return saved;
     setLastError(error);
-    if (!error.isEmpty()) {
-        return false;
-    }
-    // Saved where the user chose, the project is no longer the example's or the read-only tree's temporary copy.
+    if (!saved || !current()) return saved;
+    // Saved where the user chose; only this original owner changes its presentation.
     read_only_copy_ = false;
     if (!opened_example_.isEmpty()) {
         opened_example_.clear();
         emit openedExampleChanged();
+        if (!current()) return saved;
     }
     emit projectLocationChanged();
+    if (!current()) return saved;
     emit needsSaveAsChanged();
-    emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
-    return true;
+    if (!current()) return saved;
+    emit projectDirectoryUsed(QFileInfo(destination).absoluteFilePath());
+    return saved;
 }
 
 bool Session::openExampleNamed(const QString& exampleId) {
@@ -467,9 +494,11 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     const bool has_target = project != nullptr;
     if (replacement_generation_ == UINT64_MAX) throw std::length_error("Session replacement identity is exhausted");
     const auto replacement = ++replacement_generation_;
-    const auto current = [&] { return replacement_generation_ == replacement && (!has_target || target); };
+    const QPointer<Session> receiver(this);
+    const auto current = [&] { return receiver && replacement_generation_ == replacement && (!has_target || target); };
     const QPointer<ProjectViewModel> original(project_);
     retireAssistantIntent();
+    if (!current()) return false;
     if (managedResult) {
         try { if (!assistant_->attachProject(target, true)) return false; }
         catch (...) {
@@ -568,11 +597,15 @@ bool Session::presentAssistantCurrentSave(ProjectViewModel* original,quint64 epo
     emit projectDirectoryUsed(original->path());return current();
 }
 
-void Session::retireExportIntent() noexcept { save_intent_.reset(); }
+void Session::retireExportIntent() noexcept {
+    const bool native = save_intent_ && save_intent_->native;
+    save_intent_.reset();
+    if (native) try { emit assistantSaveChanged(); } catch (...) {}
+}
 void Session::retireAssistantIntent() noexcept {
     if (assistant_epoch_ == UINT64_MAX) assistant_epoch_exhausted_ = true;
     else ++assistant_epoch_;
-    save_intent_.reset();
+    retireExportIntent(); // Terminal publication; callers fence any continuation.
 }
 bool Session::emptyAssistantOwner(quint64 epoch) const noexcept {
     return !assistant_epoch_exhausted_ && assistant_epoch_ == epoch && !project_;
@@ -653,7 +686,57 @@ bool Session::commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model
     }
 }
 
+QString Session::armAssistantSave(const QString& id, ProjectViewModel* original, quint64 epoch, bool fresh,
+    const QUrl& parent, const QString& leaf, std::function<bool()> current,
+    std::function<bool()> start, std::function<void()> cancelled) {
+    if (id.isEmpty() || !original || project_ != original || assistant_epoch_exhausted_ || assistant_epoch_ != epoch ||
+        save_intent_ || !current || !start || !cancelled || (fresh && (!parent.isLocalFile() || leaf.isEmpty()))) return {};
+    auto intent = std::make_unique<SaveIntent>();
+    intent->id = id;
+    intent->project = original; intent->epoch = epoch; // The original task owns its already admitted full stamps.
+    intent->result = assistant_result_; intent->fresh = fresh; intent->native = true;
+    intent->parent = parent; intent->leaf = leaf; intent->current = std::move(current);
+    intent->start = std::move(start); intent->cancelled = std::move(cancelled);
+    const QPointer<Session> receiver(this);
+    const bool currentIntent = saveIntentCurrent(*intent);
+    if (!receiver || !currentIntent || save_intent_ || project_ != original || assistant_epoch_exhausted_ || assistant_epoch_ != epoch) return {};
+    const auto token = intent->id;
+    save_intent_ = std::move(intent);
+    emit assistantSaveChanged();
+    return receiver && save_intent_ && save_intent_->id == token ? token : QString();
+}
+quint64 Session::assistantSaveIntentBytes() noexcept {
+    // The adapter separately retains actual text/URL roles. Each original callback
+    // capture is compile-time bounded there to two function-wrapper sizes.
+    return sizeof(SaveIntent) + 6 * sizeof(std::function<bool()>);
+}
+bool Session::consumeAssistantSave(std::unique_ptr<SaveIntent> intent, bool selectionMatches) noexcept {
+    const QPointer<Session> receiver(this);
+    bool started = false;
+    try {
+        const bool current = selectionMatches && saveIntentCurrent(*intent);
+        if (!receiver) return false;
+        if (current) started = intent->start();
+    } catch (...) {} // Worker submission fails before queue admission; no fabricated completion.
+    if (!receiver) return started;
+    if (!started) try { intent->cancelled(); } catch (...) {}
+    if (receiver) try { emit assistantSaveChanged(); } catch (...) {}
+    return started;
+}
+bool Session::assistantSaveReady() const { return save_intent_ && save_intent_->native; }
+bool Session::assistantSaveAs() const { return assistantSaveReady() && save_intent_->fresh; }
+QUrl Session::saveAsParent(const QString& token) const {
+    return save_intent_ && save_intent_->native && save_intent_->fresh && save_intent_->id == token
+        ? save_intent_->parent : QUrl();
+}
 QString Session::beginSaveAs() {
+    if (save_intent_ && save_intent_->native) {
+        const auto token = save_intent_->id;
+        const QPointer<Session> receiver(this);
+        bool current = false;
+        try { current = save_intent_->fresh && saveIntentCurrent(*save_intent_); } catch (...) {}
+        return receiver && current && save_intent_ && save_intent_->id == token ? token : QString();
+    }
     save_intent_.reset();
     if (!project_ || assistant_epoch_exhausted_ || project_->fit()->running() || !assistant_->resultSettledReady()) {
         setLastError(tr("Finish the current operation before choosing a Save As destination.")); return {};
@@ -672,24 +755,49 @@ QString Session::beginSaveAs() {
     } catch (...) { setLastError(tr("Save As could not capture the current project.")); return {}; }
 }
 void Session::cancelSaveAs(const QString& intent) {
-    if (save_intent_ && save_intent_->id == intent) save_intent_.reset();
+    if (!save_intent_ || save_intent_->id != intent) return;
+    auto captured = std::move(save_intent_);
+    const QPointer<Session> receiver(this);
+    if (captured->native) {
+        try { captured->cancelled(); } catch (...) {} // Exact original callback; never recapture a replacement.
+        if (receiver) try { emit assistantSaveChanged(); } catch (...) {}
+    }
 }
 bool Session::saveIntentCurrent(const SaveIntent& intent) const {
+    if (intent.native) {
+        if (assistant_epoch_exhausted_ || intent.epoch != assistant_epoch_ || !intent.project ||
+            intent.project != project_ || intent.result != assistant_result_ || project_->fit()->running()) return false;
+        const auto current = intent.current; // Reentrant retirement may destroy the stored intent.
+        return current(); // External callback is terminal: no member access afterward.
+    }
     return !assistant_epoch_exhausted_ && intent.epoch == assistant_epoch_ && intent.project &&
         intent.project == project_ && intent.result == assistant_result_ && intent.fresh == fresh_result_ &&
         !project_->fit()->running() && assistant_->resultSettledReady() &&
         edi::unchanged_since(*project_->assistantProject(), intent.stamps);
 }
 bool Session::saveAsCurrent(const QString& token) const {
-    return save_intent_ && save_intent_->id == token && saveIntentCurrent(*save_intent_);
+    try { return save_intent_ && save_intent_->id == token && saveIntentCurrent(*save_intent_); }
+    catch (...) { return false; }
 }
 bool Session::completeSaveAs(const QString& token, const QUrl& parent, const QString& leaf) {
     if (!save_intent_ || save_intent_->id != token) {
         setLastError(tr("This Save As request is no longer current; no project was exported.")); return false;
     }
     auto intent = std::move(save_intent_); // One-shot even if preparation refuses.
-    const auto current = [&] { return saveIntentCurrent(*intent); };
-    if (!parent.isLocalFile() || !current()) { setLastError(tr("Save As was cancelled by a project or operation change.")); return false; }
+    const QPointer<Session> receiver(this);
+    const auto current = [&] { return receiver && saveIntentCurrent(*intent); };
+    if (intent->native) {
+        const bool matches = intent->fresh && parent == intent->parent && leaf == intent->leaf;
+        return consumeAssistantSave(std::move(intent), matches);
+    }
+    bool admitted = false;
+    try { admitted = parent.isLocalFile() && current(); } catch (...) {}
+    if (!receiver) return false;
+    if (!admitted) {
+        if (project_ == intent->project && assistant_epoch_ == intent->epoch)
+            setLastError(tr("Save As was cancelled or its original state could not be verified."));
+        return false;
+    }
     if (!intent->fresh) {
         // Same initiating-owner guard for the pre-existing native picker path.
         if (!leaf.isEmpty()) { setLastError(tr("This project uses the ordinary directory Save As.")); return false; }
@@ -708,31 +816,35 @@ bool Session::completeSaveAs(const QString& token, const QUrl& parent, const QSt
         QString exported = prepared->destination();
         QJsonArray files = prepared->files();
         prepared->publish(current);
-        exported_result_.swap(exported); exported_files_.swap(files); // Nonallocating retention after commit.
-        if (!current()) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
+        if (!receiver) return false;
+        const bool published_current = current();
+        if (!receiver || !published_current) return false; // Committed old files persist; never overwrite a replacement's presentation.
+        exported_result_.swap(exported); exported_files_.swap(files); // Nonallocating retention for this exact original owner.
         auto model = std::make_unique<ProjectViewModel>(prepared->reopen(), this);
-        if (!current()) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
+        const bool reopened_current = current();
+        if (!receiver) return false;
+        if (!reopened_current) { setLastError(tr("Exported, but not opened: %1").arg(exported_result_)); return false; }
         const QPointer<ProjectViewModel> opened(model.release());
         if (replacement_generation_ == UINT64_MAX) { delete opened.data(); throw std::length_error("Session replacement identity is exhausted"); }
         replacement = replacement_generation_ + 1;
         const auto release_unattached = [&] {
-            if (opened && project_ != opened && !opened->retired_) delete opened.data();
+            if (opened && (!receiver || project_ != opened) && !opened->retired_) delete opened.data();
         };
         try {
             if (!replaceProject(opened, {}, {}, true)) {
                 release_unattached();
                 // Actual export persists even when Clear cancels the managed
                 // reopen. Only this same replacement may report that outcome.
-                if (replacement_generation_ == replacement)
+                if (receiver && replacement_generation_ == replacement)
                     setLastError(tr("Exported, but not opened: %1").arg(exported_result_));
                 return false;
             }
         } catch (...) { release_unattached(); throw; }
-        if (!opened || project_ != opened) return false;
+        if (!receiver || !opened || project_ != opened) return false;
         emit projectDirectoryUsed(exported_result_);
-        return opened && project_ == opened;
+        return receiver && opened && project_ == opened;
     } catch (...) {
-        if (replacement_generation_ != replacement) return false;
+        if (!receiver || replacement_generation_ != replacement) return false;
         if (prepared && prepared->committed()) setLastError(tr("Exported, but not opened: %1").arg(prepared->destination()));
         else setLastError(tr("Save As was refused. Use a fresh folder name in a writable parent; the displayed project and existing destinations are preserved. An unpublished temporary export folder may remain for recovery."));
         return false;

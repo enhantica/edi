@@ -134,7 +134,7 @@ EaComponents.ApplicationWindow {
         // 2026-09-29): Ctrl/Cmd+Shift+S, and Get started's "Save project as…".
         EaElements.ToolButton {
             objectName: "appBar.button.save"
-            enabled: Session.project !== null && Session.project.modified
+            enabled: Session.project !== null && (Session.project.modified || Session.assistantSaveReady)
             highlighted: true
             fontIcon: "save"
             ToolTip.text: qsTr("Save current state of the project")
@@ -458,33 +458,61 @@ EaComponents.ApplicationWindow {
     function saveProject() {
         if (Session.project === null)
             return;
-        if (Session.needsSaveAs) {
+        if (Session.assistantSaveAs || Session.needsSaveAs) {
             window.saveProjectAs();
             return;
         }
-        if (!Session.save())
-            saveError.open();
-        else if (WebFiles.available)
-            WebFiles.downloadProject(Session.project.path);
+        const originalOwner = Session.project;
+        const nativeIntent = Session.assistantSaveReady;
+        const accepted = Session.save();
+        if (!Qt.isQtObject(window) || Session.project !== originalOwner) return;
+        // The original native RPC owns asynchronous Save results; no generic modal can overwrite its refusal.
+        if (!accepted && !nativeIntent) saveError.open();
+        else if (accepted && WebFiles.available) WebFiles.downloadProject(originalOwner.path);
     }
     // In the browser (edi ADR-0023) a project saves into the page's memory under its name and goes to the
     // user as a .zip download: no folder on the user's disk is reachable from the page.
     function saveProjectAs() {
-        if (Session.project === null)
-            return;
+        const originalWindow = window;
+        const originalOwner = Session.project;
+        const picker = saveFolder;
+        const form = freshProjectFolder;
+        const sameOwner = function() {
+            return Qt.isQtObject(originalWindow) && Qt.isQtObject(originalOwner) && Qt.isQtObject(picker) &&
+                Qt.isQtObject(form) && Session.project === originalOwner;
+        };
+        const originalIntent = function(token) {
+            if (!sameOwner() || picker.intent !== token) return false;
+            const admitted = Session.saveAsCurrent(token);
+            return sameOwner() && picker.intent === token && admitted;
+        };
+        if (!sameOwner()) return;
         if (!WebFiles.available) {
             if (saveFolder.visible || freshProjectFolder.visible) return;
             const intent = Session.beginSaveAs();
+            if (!sameOwner()) return;
             if (!intent.length) { saveError.open(); return; }
+            const admittedParent = Session.saveAsParent(intent);
+            const valid = Session.saveAsCurrent(intent);
+            if (!sameOwner() || !valid || saveFolder.intent.length || freshProjectFolder.intent.length) {
+                Session.cancelSaveAs(intent);
+                return;
+            }
+            if (admittedParent.toString().length) {
+                if (!freshProjectFolder.openOriginalSave(intent, admittedParent)) Session.cancelSaveAs(intent);
+                return;
+            }
             saveFolder.intent = intent;
+            if (!originalIntent(intent)) { Session.cancelSaveAs(intent); return; }
             saveFolder.fresh = Session.needsFreshSaveAs;
+            if (!originalIntent(intent)) { Session.cancelSaveAs(intent); return; }
             saveFolder.open();
             return;
         }
-        if (Session.saveAs(WebFiles.saveLocation(Session.project.name)))
-            WebFiles.downloadProject(Session.project.path);
-        else
-            saveError.open();
+        const saved = Session.saveAs(WebFiles.saveLocation(originalOwner.name));
+        if (!sameOwner()) return;
+        if (saved) WebFiles.downloadProject(originalOwner.path);
+        else saveError.open();
     }
 
     Shortcut {
@@ -507,38 +535,145 @@ EaComponents.ApplicationWindow {
         property string intent: ""
         property bool fresh: false
         title: fresh ? qsTr("Choose a parent directory for a new project folder") : qsTr("Save the project into a directory")
-        onRejected: { Session.cancelSaveAs(intent); intent = ""; }
+        onRejected: { const token = intent; intent = ""; Session.cancelSaveAs(token); }
+        Component.onDestruction: { const token = intent; intent = ""; Session.cancelSaveAs(token); }
         onAccepted: {
+            const picker = saveFolder;
+            const originalOwner = Session.project;
             const token = intent;
+            const parent = selectedFolder;
+            const needsFresh = fresh;
+            const nativeIntent = Session.assistantSaveReady;
             intent = "";
-            // Validate the captured initiating owner before presenting a second
-            // form or reading its project name. The final action rechecks too.
-            if (!Session.saveAsCurrent(token)) { Session.cancelSaveAs(token); return; }
-            if (fresh) {
-                freshProjectFolder.intent = token;
-                freshProjectFolder.destinationParent = selectedFolder;
-                freshFolderName.text = Session.project ? Session.project.name : "";
-                freshProjectFolder.open();
-            } else if (!Session.completeSaveAs(token, selectedFolder, "")) saveError.open();
+            if (!Qt.isQtObject(picker) || !Qt.isQtObject(originalOwner) || Session.project !== originalOwner || picker.intent.length) {
+                Session.cancelSaveAs(token); return;
+            }
+            const valid = Session.saveAsCurrent(token);
+            if (!Qt.isQtObject(picker) || !Qt.isQtObject(originalOwner) || Session.project !== originalOwner ||
+                picker.intent.length || !valid) { Session.cancelSaveAs(token); return; }
+            if (needsFresh) {
+                if (!freshProjectFolder.openOriginalSave(token, parent)) Session.cancelSaveAs(token);
+            } else {
+                const saved = Session.completeSaveAs(token, parent, "");
+                if (!Qt.isQtObject(picker) || !Qt.isQtObject(originalOwner) || Session.project !== originalOwner || picker.intent.length) return;
+                if (!saved && !nativeIntent) saveError.open();
+            }
         }
     }
+
     AppDialog {
         id: freshProjectFolder
         objectName: "assistant.resultSaveAs"
         parent: Overlay.overlay
         property string intent: ""
+        property string presentedIntent: ""
+        function openOriginalSave(token, parentFolder) {
+            const form = freshProjectFolder;
+            const originalOwner = Session.project;
+            const current = function() {
+                if (!Qt.isQtObject(form) || !Qt.isQtObject(originalOwner) || Session.project !== originalOwner ||
+                    form.presentedIntent !== token || form.intent !== token) return false;
+                const valid = Session.saveAsCurrent(token);
+                return Qt.isQtObject(form) && Qt.isQtObject(originalOwner) && valid && Session.project === originalOwner &&
+                    form.presentedIntent === token && form.intent === token;
+            };
+            const admitted = Session.saveAsCurrent(token);
+            if (!Qt.isQtObject(form) || !Qt.isQtObject(originalOwner) || !admitted ||
+                Session.project !== originalOwner || form.visible || (form.intent.length && form.intent !== token)) return false;
+            presentedIntent = token;
+            if (!Qt.isQtObject(form) || !Qt.isQtObject(originalOwner) || form.presentedIntent !== token ||
+                Session.project !== originalOwner || (form.intent.length && form.intent !== token)) return false;
+            const stillAdmitted = Session.saveAsCurrent(token);
+            if (!Qt.isQtObject(form) || !stillAdmitted || form.presentedIntent !== token || Session.project !== originalOwner) return false;
+            intent = token;
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            destinationParent = parentFolder;
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            const suggestion = originalOwner.name;
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            freshFolderName.assistantEditing = false;
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            freshFolderName.assistantStage = "";
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            freshFolderName.initialText = suggestion;
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            freshFolderName.text = suggestion;
+            if (!current()) { if (Qt.isQtObject(form)) form.retireAssistantSave(token, false); return false; }
+            open();
+            return current();
+        }
         property url destinationParent
+        function retireAssistantSave(token, preserveDraft) {
+            if (intent !== token) return;
+            const form = freshProjectFolder;
+            const originalPresentation = presentedIntent;
+            intent = "";
+            if (!Qt.isQtObject(form) || form.presentedIntent !== originalPresentation || form.intent.length) return;
+            // Manual takeover keeps the same visible target and text until its original event returns.
+            if (preserveDraft) {
+                freshFolderName.assistantEditing = false;
+                if (!Qt.isQtObject(form) || form.presentedIntent !== originalPresentation || form.intent.length) return;
+                freshFolderName.assistantStage = "";
+            } else form.close();
+        }
         title: qsTr("Save in a fresh project folder")
-        standardButtons: Dialog.Save | Dialog.Cancel
+        standardButtons: Dialog.NoButton
+        function completeOriginalSave() {
+            const form = freshProjectFolder;
+            const originalOwner = Session.project;
+            const presentation = presentedIntent;
+            const token = intent;
+            const parent = destinationParent;
+            const leaf = freshFolderName.text;
+            const nativeIntent = Session.assistantSaveReady;
+            if (!token.length) return;
+            const samePresentation = function() {
+                return Qt.isQtObject(form) && Qt.isQtObject(originalOwner) && Session.project === originalOwner &&
+                    form.presentedIntent === presentation && !form.intent.length;
+            };
+            intent = "";
+            if (!samePresentation()) { Session.cancelSaveAs(token); return; }
+            const valid = Session.saveAsCurrent(token);
+            if (!samePresentation() || !valid) { Session.cancelSaveAs(token); return; }
+            const saved = Session.completeSaveAs(token, parent, leaf);
+            if (!samePresentation()) return;
+            form.close();
+            if (!samePresentation()) return;
+            // The original assistant RPC owns its asynchronous result and refusal.
+            if (!saved && !nativeIntent) saveError.open();
+        }
+        footer: DialogButtonBox {
+            EaElements.Button {
+                objectName: "assistant.resultFolderSave"
+                text: qsTr("Save")
+                enabled: freshProjectFolder.intent.length > 0
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: freshProjectFolder.completeOriginalSave()
+            }
+            EaElements.Button {
+                text: qsTr("Cancel")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: freshProjectFolder.reject()
+            }
+        }
         contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: freshFolderContent.implicitHeight
-        onOpened: freshFolderName.forceActiveFocus()
-        onRejected: { Session.cancelSaveAs(intent); intent = ""; }
-        onAccepted: {
+        onOpened: {
+            const token = intent;
+            const form = freshProjectFolder;
+            if (!Qt.isQtObject(form) || !form.visible || !token.length || form.presentedIntent !== token) return;
+            const valid = Session.saveAsCurrent(token);
+            if (Qt.isQtObject(form) && form.visible && form.intent === token && form.presentedIntent === token && valid)
+                freshFolderName.forceActiveFocus();
+        }
+        onAboutToHide: {
             const token = intent;
             intent = "";
-            if (!Session.completeSaveAs(token, destinationParent, freshFolderName.text)) saveError.open();
+            Session.cancelSaveAs(token);
         }
+        onRejected: { const token = intent; intent = ""; Session.cancelSaveAs(token); }
+        Component.onDestruction: { const token = intent; intent = ""; Session.cancelSaveAs(token); }
+        // Only the explicit Save control consumes the one-shot intent; any other close revokes it.
         Column {
             id: freshFolderContent
             width: freshProjectFolder.contentWidth
@@ -547,7 +682,9 @@ EaComponents.ApplicationWindow {
                 width: parent.width
                 wrapMode: Text.Wrap
                 textFormat: Text.PlainText
-                text: qsTr("Existing folders are preserved. Choose a new project folder name.")
+                text: freshProjectFolder.intent.length
+                    ? qsTr("Existing folders are preserved. Choose a new project folder name.")
+                    : qsTr("This Save As request stopped. Your draft is retained; close and reopen Save As before saving.")
             }
             EaElements.TextField {
                 id: freshFolderName
@@ -555,6 +692,47 @@ EaComponents.ApplicationWindow {
                 width: parent.width
                 placeholderText: qsTr("New project folder")
                 selectByMouse: true
+                property bool assistantEditing: false
+                property string assistantOriginalText: ""
+                property string assistantStage: ""
+                property string initialText: ""
+                readonly property string editText: text
+                readonly property bool assistantManualDraft: inputMethodComposing ||
+                    (!assistantEditing && assistantStage !== freshProjectFolder.intent && text !== initialText) ||
+                    (!assistantEditing && !assistantStage.length && text !== initialText)
+                function beginAssistantEdit() {
+                    const field = freshFolderName;
+                    const form = freshProjectFolder;
+                    const token = form.intent;
+                    if (assistantEditing || assistantManualDraft || !token.length || !Session.assistantSaveReady) return false;
+                    const current = function() { return Qt.isQtObject(field) && Qt.isQtObject(form) && form.intent === token; };
+                    assistantOriginalText = text;
+                    if (!current()) return false;
+                    assistantStage = token;
+                    if (!current()) return false;
+                    assistantEditing = true;
+                    return current() && field.assistantStage === token;
+                }
+                function allowAssistantCommit() {
+                    const field = freshFolderName;
+                    const form = freshProjectFolder;
+                    const token = assistantStage;
+                    if (!token.length || token !== form.intent) return false;
+                    assistantEditing = false;
+                    return Qt.isQtObject(field) && Qt.isQtObject(form) && field.assistantStage === token && form.intent === token;
+                }
+                function cancelAssistantEdit() {
+                    if (!assistantEditing) return;
+                    const field = freshFolderName;
+                    const form = freshProjectFolder;
+                    const token = assistantStage;
+                    const original = assistantOriginalText;
+                    assistantEditing = false;
+                    if (!Qt.isQtObject(field) || !Qt.isQtObject(form) || form.intent !== token || field.assistantStage !== token) return;
+                    assistantStage = "";
+                    if (!Qt.isQtObject(field) || !Qt.isQtObject(form) || form.intent !== token || field.assistantStage.length) return;
+                    text = original;
+                }
                 Accessible.name: qsTr("New project folder name")
             }
         }

@@ -95,6 +95,8 @@ class Session : public QObject {
     Q_PROPERTY(QString projectLocation READ projectLocation NOTIFY projectLocationChanged)
     // Whether Save must ask where (edi ADR-0017 §13): a project with no directory yet, or a bundled example's
     // temporary working copy, is saved as.
+    Q_PROPERTY(bool assistantSaveReady READ assistantSaveReady NOTIFY assistantSaveChanged)
+    Q_PROPERTY(bool assistantSaveAs READ assistantSaveAs NOTIFY assistantSaveChanged)
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
     Q_PROPERTY(bool needsFreshSaveAs READ needsFreshSaveAs NOTIFY needsSaveAsChanged)
 
@@ -116,6 +118,9 @@ class Session : public QObject {
     QString projectLocation() const;
     bool needsSaveAs() const;
     bool needsFreshSaveAs() const { return fresh_result_; }
+    bool assistantSaveReady() const;
+    bool assistantSaveAs() const;
+    Q_INVOKABLE QUrl saveAsParent(const QString& intent) const;
     Q_INVOKABLE QString beginSaveAs();
     Q_INVOKABLE bool saveAsCurrent(const QString& intent) const;
     Q_INVOKABLE bool completeSaveAs(const QString& intent, const QUrl& parent, const QString& leaf);
@@ -155,6 +160,7 @@ class Session : public QObject {
     void openedExampleChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    void assistantSaveChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op.
@@ -182,7 +188,12 @@ class Session : public QObject {
     bool commitAssistantCurrentSave(ProjectViewModel* original, quint64 epoch,
         ProjectViewModel::NativeSavedState& prepared) noexcept;
     bool presentAssistantCurrentSave(ProjectViewModel* original, quint64 epoch);
+    QString armAssistantSave(const QString& id, ProjectViewModel* original, quint64 epoch, bool fresh,
+        const QUrl& parent, const QString& leaf, std::function<bool()> current,
+        std::function<bool()> start, std::function<void()> cancelled);
     struct SaveIntent;
+    static quint64 assistantSaveIntentBytes() noexcept;
+    bool consumeAssistantSave(std::unique_ptr<SaveIntent> intent, bool selectionMatches) noexcept;
     bool saveIntentCurrent(const SaveIntent& intent) const;
     std::unique_ptr<SaveIntent> save_intent_;
     std::shared_ptr<ImmutableAssistantResult> assistant_result_;

@@ -43,9 +43,10 @@ QJsonArray assistant_native_tool_specs() {
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
     add("create_cwl_project", "Create a native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe, or populate the SAME scientifically empty current project with one Undo while preserving its identity/metadata/settings/path. Never replaces a nonempty project. Show actions uses the same ordinary typed import form and real final Apply; normal mode uses the native preparation directly. recipe project_name/description apply only when no project is open. No fit or save is implied; existing-directory saving is not this operation.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
-    add("save_project", "Save the actual settled current fitted single/joint native project into a fresh child of the genuinely chosen working folder, verify reopen and make it the active saved project. Normal mode only; no overwrite, scan or external report assets.",
-        {{"name", Object{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(edi::assistant::SelectedFileLimits::name_bytes)},
-            {"description","Fresh single child directory name under the genuine chosen folder; spaces and Unicode are supported within the shared 512 UTF-8-byte Save As limit. No separators, dot components, NUL, trailing dot/space or existing destination. A chat path never grants access."}}}}, {"name"});
+    add("save_project", "Save the settled current single/joint native project, verify reopen and keep the same active owner. The default is a fresh named child under the genuine chosen folder. Explicit destination=current saves only its genuine already-owned directory, without a name or path. Show actions uses the genuine Save button and fresh-name Save As form; normal mode uses the same bounded writer directly. No unrelated overwrite, scan or external report assets.",
+        {{"destination", Object{{"type","string"},{"enum",Array{"fresh","current"}},{"description","Omit for the existing fresh-name Save As contract. current requires a genuine current Session-owned directory and forbids name/path."}}},
+         {"name", Object{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(edi::assistant::SelectedFileLimits::name_bytes)},
+            {"description","Fresh single child directory name under the genuine chosen folder; spaces and Unicode are supported within the shared 512 UTF-8-byte Save As limit. No separators, dot components, NUL, trailing dot/space or existing destination. A chat path never grants access. Required only for fresh destination; omit for current."}}}}, {});
     add("add_relations", "Append a complete validated affine alias/constraint batch to the displayed project through the native relation editor and Undo. Existing relations/composition are preserved; this edit is not a trial or fit.",
         {{"aliases", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"path", text}}, {"id", "path"})}}},
@@ -80,7 +81,12 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         else shape(args,{"purpose","experiment","operation","id","position","intensity","free"});
     } else if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
     else if (name == "add_relations") shape(args, {"purpose", "aliases", "constraints"});
-    else if(name=="save_project") shape(args,{"purpose","name"});
+    else if(name=="save_project") {
+        if (!args.contains("destination")) shape(args,{"purpose","name"});
+        else if (args.value("destination") == "current") shape(args,{"purpose","destination"});
+        else if (args.value("destination") == "fresh") shape(args,{"purpose","destination","name"});
+        else throw std::invalid_argument("Save destination must be fresh or current");
+    }
     else if (name == "set_parameters") shape(args, {"purpose", "values"});
     else if (name == "set_free") shape(args, {"purpose", "flags"});
     else if (assistant_native_tool(name)) shape(args, {"purpose"});

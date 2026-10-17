@@ -267,6 +267,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // All rounding/row/path/source preparation precedes destination publication.
     std::shared_ptr<NativeSavedState> prepareNativeSaved(const edi::Project& reopened,
         const edi::WorkStamps& original, edi::CalculationResult calculation, const QString& destination);
+    std::shared_ptr<NativeSavedState> prepareNativeSaved(const edi::Project& reopened,
+        const edi::WorkStamps&, edi::CalculationResult, const QString& destination, std::size_t metadata_limit);
     bool commitNativeSaved(NativeSavedState&) noexcept;
     bool presentNativeSaved(NativeSavedState&);
 

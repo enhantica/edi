@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include "edi/calculation.hpp"
@@ -31,6 +32,13 @@ PersistenceSnapshot snapshot_for_persistence(const Project&, const PersistenceLi
 // Worker-safe; the one existing native formatter, no calculation or file IO.
 std::vector<std::pair<std::string,std::string>> prepare_project_documents(
     const PersistenceSnapshot&, const PersistenceLimits&);
+/// Prepare the same native documents using an admitted captured project record.
+/// The immutable scalar UTF-8 view belongs to the caller until return; no path
+/// is opened and no view is retained. The same SDK formatter owns metadata/SU
+/// merging. Existing limits apply before growth; malformed input, insufficient
+/// capacity and stream/allocation errors propagate without returning a partial set.
+std::vector<std::pair<std::string,std::string>> prepare_project_documents(
+    const PersistenceSnapshot&, const PersistenceLimits&, std::string_view carried_record);
 // Worker-side ordinary calculation of a strict native reopen. Inputs and
 // copied stamps are admitted first; cancellation/refusal never publishes data.
 // The returned immutable staged units must fit the caller's preowned retained
@@ -43,6 +51,12 @@ CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& o
 class PreparedSavedValues {
  public:
     PreparedSavedValues(Project&, const Project& reopened, WorkStamps, CalculationResult, std::string destination);
+    // Bounded owner-thread preparation. New joins, copied rows/currentness and
+    // publication metadata are admitted before allocation against this role;
+    // CalculationResult's already owned buffers are moved, never charged as a
+    // second model. The caller retains this reservation through presentation.
+    PreparedSavedValues(Project&, const Project& reopened, const WorkStamps&, CalculationResult,
+        std::string destination, std::size_t metadata_limit);
     ~PreparedSavedValues();
     PreparedSavedValues(const PreparedSavedValues&)=delete;
     PreparedSavedValues& operator=(const PreparedSavedValues&)=delete;

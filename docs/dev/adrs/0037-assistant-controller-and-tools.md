@@ -610,7 +610,7 @@ Prior art: create_cwl_project originally required a null Session owner, prepared
 
 The complete prepared scientific pair enters the same PVM applyEdit/preview/publication path with one dedicated preowned Undo, rather than membership-preserving applyRecordedEdit. Exact own-edit token suppression ends immediately on return/throw; ordinary unrelated edits and retirement retain their original semantics. The closed core commit latch owns actual applied outcome before observers, and original-only response cleanup cannot answer a newer call. Native finish advances only the same actual receipt through its complete-context/currentness/resource admission. Cancellation before commit leaves the owner empty; cancellation after an actual commit cannot manufacture a no-write result or roll back manual edits.
 
-The result can report completed_existing, adopted, presentation_complete, calculation_pending and saved=false. This unit does not save files: a named owned directory remains at its original path and modified=true. Fresh-child save_project is not same-directory Save and must not silently nest a new project or claim the existing folder saved. That native owned-path save is a separate required follow-up, alongside carried metadata preservation. Visible creation/completion/save stays unavailable until its genuine widget route is delivered. No new tool/capability identifier or bootstrap allowlist entry is added; actual recipe/profile/input declarations and skill1.5.11/index digest remain synchronized.
+The result can report completed_existing, adopted, presentation_complete, calculation_pending and saved=false. This unit does not save files: a named owned directory remains at its original path and modified=true. Creation alone does not save files. Saving that named owner uses the distinct explicit current-directory Save contract described below; fresh-child Save As must not silently nest a project or claim the original directory saved. Visible creation/completion and saving use their respective genuine forms. No new tool/capability identifier or bootstrap allowlist entry is added; actual recipe/profile/input declarations and skill1.5.11/index digest remain synchronized.
 
 
 ### Temporary backend conversations
@@ -834,3 +834,100 @@ All literal drafts, recipe admission, selected-file authority, original Apply,
 worker/commit/Undo and once-only outcome boundaries remain unchanged. The prior
 relation form uses the same id/definition/enabled roles in both of its models; it
 does not need an alternate role mapping or a new shared staging framework.
+
+### Save form intent and recovery
+
+The ordinary Save and Save As controls consume one original intent. The fresh-name
+form retains its original owner, presentation token, chosen parent and literal
+name before any notification can reenter it. Apply consumes that token before
+closing; Close, rejection and destruction cancel only the exact original token.
+A later form or project never inherits the earlier action. Genuine manual or IME
+drafts survive assistant takeover retirement; cleanup restores only assistant-owned
+staging. Assistant results and refusals belong to the original RPC, so the shared
+footer does not add a second generic Save error modal for that operation.
+
+Same-directory native saving publishes through the bounded ordinary formatter,
+then verifies the published bytes and lands saved values on the same PVM. Full
+loaded verification models are released before owner presentation callbacks.
+Ordinary Save/Save As caller continuations retain weak original Session/PVM and
+replacement identity across the common writer and every subsequent signal. A
+retired presentation does not alter the writer's factual return or update a newer
+owner's error, location or save-state presentation.
+
+An exchanged current directory leaves its previous exact tree at the returned
+recovery_directory sibling. Each captured/staged tree obeys the existing per-save
+file/count/byte limits. Recovery trees remain on disk until the user removes them;
+this is a conservative per-operation recovery policy, not a claim of globally
+bounded disk use across repeated saves. No pathname-based automatic recursive
+cleanup attempts to distinguish the old tree from a substituted foreign object.
+Publication reports committed uncertainty immediately after a successful namespace
+operation even if identity verification, reopen or presentation later refuses.
+
+### Prepared saved-value metadata admission
+
+The bounded Save landing admits new joins, copied correlation rows/columns,
+parameter landing slots, temporary completed/written name maps, relation slots
+and per-bank/per-structure source strings before constructing them. It reuses
+the original borrowed parameter-name admission walk in join-only mode; ordinary
+full source admission keeps its original counts. Actual calculation buffers and
+original stamps move from their preowned result slot, with no second model
+charge. The PVM wrapper also admits its object/control block and exact UTF-8
+destination scratch before creating them. The legacy core entrypoint keeps its
+existing behavior; assistant saving explicitly passes a finite remaining role.
+
+The role is owned through the existing combined native/item/progress scope
+reservation, including reentrant presentation and failure unwinding. Its limit
+is the actual remaining capacity after source, calculation, UI and prepared
+outcomes, never the scientific construction cap. No new capacity is introduced.
+
+
+### Save final-delivery payload ownership
+
+Worker settlement and retained payload lifetime are separate. Final Save delivery
+holds a strong original task and a stack-scoped accounting link until its frame
+returns. The ordinary active-worker slot still retires at the existing boundary;
+this link never makes an old worker admitted or cancels a replacement. Active and
+delivery aliases count each task, original receipt and record once. A discarded
+row does not erase the original frame's payload charge, and an original final
+context slot remains admitted while that frame can still use it. Nested delivery
+unwinds in call order and cleanup touches only the same surviving receiver/State.
+
+Final link removal is callback-free. The agent can conservatively retain its
+prior larger output charge until the next ordinary charge; this can temporarily
+refuse otherwise available capacity. A reentrant lowering call while the original
+frame still owns payload would be unsafe. Immediate reduction is not a Save
+completion requirement, and no old worker stays admitted to obtain it.
+
+Receipt export now has an allocation-free byte/depth/token prepass over the
+existing closed schema, before toStdString or strict-parser growth. Native Save
+preowns input, AST/key/reader workspace through its original scoped metadata
+role before constructing the exporter. This is admission only: the original JSON
+parser, exact keys, UTF-8, hashes, file closure and original authority still decide
+validity. Trailing malformed punctuation cannot discount an allocated prefix.
+Exporter entry vectors, exact UTF-8 paths/hashes, JSON files/root/receipt,
+closed verification sets and directory/Unicode work, protected readback and
+publication paths share a finite preparation peak. The caller preowns its actual
+remaining retained capacity before construction, then transfers to that counted
+peak without a callback; the role remains through original final delivery.
+The generated protected receipt uses the existing JSON formatter and borrowed
+encoded-size walker. A larger readback receipt admits only the positive parser
+workspace difference beside the already owned original parser role.
+
+Typed picker/current-directory capabilities already carry physical paths. Their
+export, namespace revalidation and protected loading use the common no-follow
+component reader directly; the ordinary raw-parent Save As path keeps its
+canonicalization and reserved-storage checks. The current-directory constructor
+admits its known parent/leaf copies before splitting, including a filesystem-root
+parent. No unknown replacement canonical string or guessed path expansion slot
+is created by bounded export.
+
+Protected readback reuses the first host-owned result snapshot factory at the
+original admitted lease's physical parent, with parent/source/result descriptor
+bonds before and after creation. It uses the explicit ordinary temporary-name
+template, with exact text/UTF-8/split roles admitted before construction. Actual
+committed bytes are still copied and hash/closure verified there before the real
+loader; the original source snapshot never substitutes for postcommit readback.
+The first snapshot factory retains its existing host-storage policy, and ordinary
+manual exporters use that same implementation. No arbitrary filesystem seed,
+new capacity, extra full model, alternate serializer, mutable-path cleanup or
+claim of a perfect filesystem compare-and-swap is introduced.

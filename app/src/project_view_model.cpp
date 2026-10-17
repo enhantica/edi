@@ -2717,21 +2717,46 @@ void ProjectViewModel::setModified(bool modified) {
 // saved-state contract without re-entering its writer/projectEdited boundary.
 struct ProjectViewModel::NativeSavedState {
     edi::Project* owner=nullptr;
-    edi::WorkStamps original;
     std::unique_ptr<edi::PreparedSavedValues> values;
     bool committed=false;
     bool modified_changed=false;
 };
 std::shared_ptr<ProjectViewModel::NativeSavedState> ProjectViewModel::prepareNativeSaved(
     const edi::Project& reopened,const edi::WorkStamps& original,edi::CalculationResult calculation,const QString& destination) {
+    return prepareNativeSaved(reopened,original,std::move(calculation),destination,std::numeric_limits<std::size_t>::max());
+}
+std::shared_ptr<ProjectViewModel::NativeSavedState> ProjectViewModel::prepareNativeSaved(
+    const edi::Project& reopened,const edi::WorkStamps& original,edi::CalculationResult calculation,const QString& destination,
+    std::size_t metadata_limit) {
     const PublicationScope publication(*this);
     if(retired_ || editing_ || edit_publication_failed_ || scan_template_ || calculating_ ||
-       (fit_ && fit_->running()) || !edi::unchanged_since(*project_,original))
-        throw std::invalid_argument("The project is not a settled current save owner");
-    auto ready=std::make_shared<NativeSavedState>();ready->owner=project_.get();ready->original=original;
-    ready->values=std::make_unique<edi::PreparedSavedValues>(*project_,reopened,original,std::move(calculation),destination.toStdString());
+       (fit_ && fit_->running()))throw std::invalid_argument("The project is not a settled current save owner");
+    const auto fixed=sizeof(NativeSavedState)+2*sizeof(void*)+sizeof(edi::PreparedSavedValues)+sizeof(QByteArray)+
+        sizeof(QString)+sizeof(QByteArray)+2*sizeof(QChar)+4;
+    if(metadata_limit<fixed)throw std::length_error("Saved-state presentation metadata exceeds capacity");
+    metadata_limit-=fixed;
+    std::size_t encoded_bytes=0;
+    // Same bounded one-code-point Qt counter as native import admission: no
+    // full owning UTF-8 path exists before its complete scratch role is owned.
+    for(qsizetype i=0;i<destination.size();) {
+        const auto c=destination.at(i);
+        const qsizetype width=c.isHighSurrogate() && i+1<destination.size() && destination.at(i+1).isLowSurrogate()?2:1;
+        const auto bytes=static_cast<std::size_t>(destination.mid(i,width).toUtf8().size());
+        if(bytes>metadata_limit-encoded_bytes)throw std::length_error("Saved destination metadata exceeds capacity");
+        encoded_bytes+=bytes;i+=width;
+    }
+    // QByteArray scratch plus destination and metadata.path's future owning
+    // strings coexist. Their logical byte roles are admitted before encoding.
+    if(metadata_limit<3 || encoded_bytes>(metadata_limit-3)/3)
+        throw std::length_error("Saved destination metadata exceeds capacity");
+    metadata_limit-=encoded_bytes+1; // QByteArray scratch; core owns both final strings below.
+    const auto encoded=destination.toUtf8();
+    auto ready=std::make_shared<NativeSavedState>();ready->owner=project_.get();
+    ready->values=std::make_unique<edi::PreparedSavedValues>(*project_,reopened,original,std::move(calculation),
+        std::string(encoded.constData(),static_cast<std::size_t>(encoded.size())),metadata_limit);
     return ready;
 }
+
 bool ProjectViewModel::commitNativeSaved(NativeSavedState& ready) noexcept {
     // Caller has rechecked the prepared stamps immediately before its actual
     // no-overwrite publication/reopen. No signal/callback occurs in this landing.
