@@ -1095,6 +1095,11 @@ def test_import267_real_main_manual_visible_creation_and_retirement(case, tmp_pa
     (tmp_path / 'import267-process.json').write_text(json.dumps({'argv': argv,
         'returncode': result.returncode, 'case': case, 'budget': budget}, indent=2))
     output = result.stdout + result.stderr
+    assert not any('NativeCwlImportDialog.qml:' in line and (
+        'Cannot assign [undefined] to QString' in line
+    ) for line in output.splitlines()), (
+        'IMPORT285: genuine import row loading never assigns undefined text to a QString control\n' + output
+    )
     assert result.returncode == 0 and 'FAIL!' not in output and (
         'PASS   : edi_app::AssistantPopup::test_import265_actual_manual_and_visible_creation('
         + case + ')' in output
