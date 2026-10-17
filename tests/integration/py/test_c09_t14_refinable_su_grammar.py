@@ -347,7 +347,7 @@ def test_c09_t14_writer_tokens_always_reparse_bit_exactly(
         float(value_token).hex(),
         None if su_token is None else float(su_token).hex(),
         True,
-    )
+    ), 'Legacy decimal input must retain the exact value, uncertainty and free state before saving'
 
     value, su = rounded_pair(float(value_token), None if su_token is None else float(su_token))
     expected = (value.hex(), None if su is None else su.hex(), True)

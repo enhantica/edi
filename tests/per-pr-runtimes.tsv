@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-17T13:14:36Z
+# measured_utc = 2026-10-17T13:21:25Z
 #
-# Recorded from: measured test run (81 node(s) measured once, 10999 banked, 0 stale row(s) dropped)
-# Collected tests: 12069; with a reported duration: 6549
+# Recorded from: measured test run (30 node(s) measured once, 11086 banked, 0 stale row(s) dropped)
+# Collected tests: 12078; with a reported duration: 6591
 # Module-scoped fixture costs recorded: 47
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 12069
+# inventory_python = 12078
 # inventory_cpp = 333
-# inventory_measured = 11080
-# inventory_unmeasured = 1322
+# inventory_measured = 11116
+# inventory_unmeasured = 1295
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -541,32 +541,32 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000000000000000000000000000000000001-0.0000001]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000000000000000000000000000000000001-0.9]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000000000000000000000000000000000001-100000000000000000000]
-0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000000000000000000000000000000000001-100]
+0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000000000000000000000000000000000001-100]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000000000000000000000000000000000001-383.2]
-0.110	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-0.000000000001]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-0.0000001]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-0.9]
+0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-0.000000000001]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-0.0000001]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-0.9]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-100000000000000000000]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-100]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-383.2]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.0000000001-383.2]
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-0.000000000001]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-0.0000001]
-0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-0.9]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-0.0000001]
+0.120	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-0.9]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-100000000000000000000]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-100]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[0.05-383.2]
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-0.000000000001]
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-0.0000001]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-0.9]
-0.110	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-100000000000000000000]
+0.120	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-0.9]
+0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-100000000000000000000]
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-100]
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[2.5-383.2]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-0.000000000001]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-0.0000001]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-0.0000001]
 0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-0.9]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100000000000000000000]
-0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100]
-0.150	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-383.2]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100000000000000000000]
+0.110	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-100]
+0.090	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_writer_tokens_always_reparse_bit_exactly[None-383.2]
 0.140	tests/integration/py/test_c09_t16_verification_notebooks.py::test_ci_runs_notebooks_for_every_result_changing_surface
 0.050	tests/integration/py/test_c09_t16_verification_notebooks.py::test_fullprof_files_resolve_and_feed_every_page_comparison
 0.010	tests/integration/py/test_c09_t16_verification_notebooks.py::test_owner_added_bank_flow_refuses_wrong_reference_or_candidate[candidate-oracle]
@@ -5797,41 +5797,50 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_core_reuse.py::te
 0.000	tests/integration/py/test_report_data_block.py::test_data_default_and_explicit_include_all_reach_report_and_html[explicit-empty]
 0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[Co"Si" <b>&amp;</b></script><script>alert(1)</script>\u2028\u2029]
 0.000	tests/integration/py/test_report_html_text.py::test_html_embeds_json_without_script_or_entity_injection[\U0001d6c2 & "quotes" and 'apostrophe']
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_absent_rule_defaults_and_unknown_rule_refuses
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_authors_roundtrip_keeps_utf8_and_semicolon_separator
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_19]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_99]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[309-3-3e-309-iucr_19]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[309-3-3e-309-iucr_99]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[324-5-5e-324-iucr_19]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[324-5-5e-324-iucr_99]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330--None-iucr_19]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330--None-iucr_99]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-0-0-iucr_19]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-0-0-iucr_99]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-1-None-iucr_19]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-1-None-iucr_99]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-0.02134-0.00151-iucr_19--0.0213(16)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-1.2345-0.015-iucr_19--1.235(15)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0-0.0123-iucr_19-0.000(13)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0-2e-310-iucr_19-0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000(2)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.4637-0.0196-iucr_19-0.46(2)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.4637-0.0196-iucr_99-0.464(20)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[1.2345-0.015-iucr_19-1.235(15)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[1.54249-0.01532-iucr_19-1.542(16)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[10.30925-0.00157-iucr_19-10.3093(16)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_19-2.164(5)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_99-2.1635(49)]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[54912-1234-iucr_19-54900(1300)]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[False-0.001]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-0.0]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-None]
-0.000	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-nan]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.0234--0.023]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.99987--1.00]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9449-0.94]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9512-0.951]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[1-1.00]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_absent_rule_defaults_and_unknown_rule_refuses
+0.090	tests/integration/py/test_report_iucr_persistence.py::test_authors_roundtrip_keeps_utf8_and_semicolon_separator
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_19]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[300-3-3e-300-iucr_99]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[309-3-3e-309-iucr_19]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[309-3-3e-309-iucr_99]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[324-5-5e-324-iucr_19]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[324-5-5e-324-iucr_99]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330--None-iucr_19]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330--None-iucr_99]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-0-0-iucr_19]
+0.110	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-0-0-iucr_99]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-1-None-iucr_19]
+0.000	tests/integration/py/test_report_iucr_persistence.py::test_both_rules_read_and_resave_integer_su_without_underflow[330-1-None-iucr_99]
+0.070	tests/integration/py/test_report_iucr_persistence.py::test_cell_length_with_larger_uncertainty_remains_loadable
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-0.0001-0.02-iucr_19--0.0001(0.02)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-0.02134-0.00151-iucr_19--0.0213(16)]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[-1.2345-0.015-iucr_19--1.235(15)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0-0.0123-iucr_19-0.000(13)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0-2e-310-iucr_19-0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000(2)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.000000000001-0.0000000001-iucr_19-0.0000000000010(0.00000000010)]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.0000001-2.5-iucr_19-0.0000001(3.)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.0001-0.02-iucr_19-0.0001(0.02)]
+0.060	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.0023-0.019-iucr_19-0.002(19)]
+0.070	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.0023-0.025-iucr_19-0.002(0.03)]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.4637-0.0196-iucr_19-0.46(2)]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[0.4637-0.0196-iucr_99-0.464(20)]
+0.080	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[1.2345-0.015-iucr_19-1.235(15)]
+0.030	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[1.54249-0.01532-iucr_19-1.542(16)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[10.30925-0.00157-iucr_19-10.3093(16)]
+0.170	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_19-2.164(5)]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[2.16352-0.00481-iucr_99-2.1635(49)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[3.88-0.0123-iucr_19-3.880(13)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[3.88-1e20-iucr_19-3.9(100000000000000000000.)]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_every_writer_uses_the_project_iucr_rule[54912-1234-iucr_19-54900(1300)]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[False-0.001]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-0.0]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-None]
+0.020	tests/integration/py/test_report_iucr_persistence.py::test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions[True-nan]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.0234--0.023]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[-0.99987--1.00]
+0.050	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9449-0.94]
+0.010	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[0.9512-0.951]
+0.130	tests/integration/py/test_report_iucr_persistence.py::test_written_correlations_follow_significant_digits[1-1.00]
 0.000	tests/integration/py/test_report_option_resolution.py::test_cli_override_flags_leave_project_options_and_bytes_unchanged
 0.140	tests/integration/py/test_report_option_resolution.py::test_explicit_false_native_zero_and_empty_overrides_replace_stored_options_without_writes
 0.000	tests/integration/py/test_report_option_resolution.py::test_shared_threshold_filter_keeps_ties_and_restores_saved_selection[clique-0.0-expected5]
