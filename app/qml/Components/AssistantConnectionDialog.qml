@@ -148,7 +148,15 @@ AppDialog {
                 id: details
                 objectName: "assistant.contextDetailsToggle"
                 checkable: true
-                text: checked ? qsTr("Hide details") : qsTr("Details")
+                text: checked ? qsTr("Hide details") : qsTr("Show details")
+                contentItem: EaElements.Label {
+                    text: details.text
+                    font: details.font
+                    color: details.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onCheckedChanged: if (!checked) technicalData.checked = false
                 Accessible.name: text
             }
             Column {
@@ -173,7 +181,7 @@ AppDialog {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     textFormat: Text.PlainText
-                    text: qsTr("The context can include project settings, parameter paths, values, uncertainties, units, free flags, dependence, diagnostics, structures, datasets, observations, weighting, exclusions, phases and relations. Bundled Edi workflow instructions are registered with the runtime. The exact current outgoing context is shown below.")
+                    text: qsTr("The context can include project settings, parameter paths, values, uncertainties, units, free flags, dependence, diagnostics, structures, datasets, observations, weighting, exclusions, phases and relations. Bundled Edi workflow instructions are registered with the runtime. The exact current outgoing context is available under Show technical data.")
                 }
                 EaElements.Label {
                     width: parent.width
@@ -197,7 +205,29 @@ AppDialog {
                         ? qsTr("Approval covers the current account, project and input scope. Routine parameter and fit updates do not require repeat consent. Changed account, project or input content requires fresh disclosure. Paths typed in chat do not currently grant runtime file access.")
                         : qsTr("Sign in opens OpenAI's sign-in page. Cancel returns to Edi without sending a pending message. Review the context before approving its use.")
                 }
+                EaElements.Button {
+                    id: technicalData
+                    objectName: "assistant.contextTechnicalToggle"
+                    checkable: true
+                    text: checked ? qsTr("Hide technical data") : qsTr("Show technical data")
+                    Accessible.name: text
+                    contentItem: EaElements.Label {
+                        text: technicalData.text
+                        font: technicalData.font
+                        color: technicalData.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+                EaElements.Label {
+                    visible: technicalData.checked
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: qsTr("Exact outgoing context (technical data). Read-only; you can select and copy it.")
+                }
                 ScrollView {
+                    visible: technicalData.checked
                     ScrollBar.vertical: EaElements.ScrollBar {
                         policy: ScrollBar.AsNeeded
                         interactive: false

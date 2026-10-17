@@ -1209,3 +1209,7 @@ observations remain original backend facts.
 ### Used allowance and native header presentation
 
 The header and allowance details consistently display the actual supplied percent used, including values above 100; threshold colors still use the remaining allowance. Missing and stale observations remain explicit, and the most constraining supplied window governs the header. The clear glyph matches the composer action glyph size while retaining its full button target. Assistant action backgrounds use neutral keyboard-focus cues rather than blue outlines; the Show actions eye retains its checked glyph accent without a checked outline. The Assistant title strip uses the original Main/Extra TabButton resting `contentBackground` semantic color, separately from the body and passive divider.
+
+### Human details and exact technical context
+
+The outgoing-context dialog's Show details/Hide details link uses the native accent color in both states. Human-readable disclosure appears first. The exact current context remains unmodified, read-only and selectable, initially collapsed behind a separate Show technical data/Hide technical data link within Details. Closing Details closes that technical presentation too. These controls only change disclosure presentation; authentication, approval, cancellation and the current data-exposure warning retain their original behavior.
