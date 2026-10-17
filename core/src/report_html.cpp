@@ -426,8 +426,9 @@ table { margin-top: 2.1px; margin-bottom: 12.7px; }
 constexpr const char* kRowShade = "#ebf0f8";
 constexpr const char* kPaper = "#ffffff";
 // The static tables' borders: finer and lighter than the HTML report's, which print bolder (the owner, 2026-10-14).
+// Written as a side's shorthand, as Qt rounds a side's width alone to whole pixels.
 constexpr const char* kTableBorder = "#d3d9df";
-constexpr const char* kDocumentBorderWidth = "0.25px";
+constexpr const char* kDocumentBorderWidth = "0.5px";
 
 // A cell of a static table: its HTML, its alignment, the columns it spans and its padding at each side, in px.
 struct DocumentCell {
@@ -623,8 +624,8 @@ private:
         const std::size_t total = rows.size() + (header != nullptr ? 1 : 0);
         std::size_t at = 0;
         const auto edge = [framed](const char* side) {
-            return framed ? std::string("border-") + side + "-width: " + kDocumentBorderWidth + "; border-" + side +
-                                "-style: solid; border-" + side + "-color: " + kTableBorder + "; "
+            return framed ? std::string("border-") + side + ": " + kDocumentBorderWidth + " solid " + kTableBorder +
+                                "; "
                           : std::string();
         };
         const auto row_html = [&](const std::vector<DocumentCell>& row, bool head, std::size_t body_index) {
@@ -826,8 +827,8 @@ private:
         const std::size_t count = matrix.labels.size();
         std::string border;
         for (const char* side : {"top", "right", "bottom", "left"}) {
-            border += std::string("border-") + side + "-width: " + kDocumentBorderWidth + "; border-" + side +
-                      "-style: solid; border-" + side + "-color: " + kTableBorder + "; ";
+            border +=
+                std::string("border-") + side + ": " + kDocumentBorderWidth + " solid " + kTableBorder + "; ";
         }
         out_ += "<table cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse: collapse\">\n<thead>\n<tr><th></th>";
         for (std::size_t column = 0; column < count; ++column) {
