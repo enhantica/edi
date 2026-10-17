@@ -17,6 +17,7 @@ hand and its output is committed:
 """
 
 import argparse
+import functools
 import itertools
 import math
 import sys
@@ -48,8 +49,9 @@ STRUCTURE_LIGHTNESS = {
     'dark': [0.70, 0.76, 0.82, 0.88, 0.94],
 }
 STRUCTURE_HUE_STEP = 25.0
-# Earth tones from the Design Seeds nature palettes (stone, wheat, plum, slate, sage, lichen, rose,
-# artichoke), tried after a scheme's own candidates for its structure colours.
+# Earth tones from the Design Seeds and peaceful palettes (stone, wheat, plum, slate, sage, lichen,
+# rose, artichoke, ochre, clay, lavender, lake teal), tried after a scheme's own candidates for its
+# structure colours; the neutral ones never qualify.
 EARTH_TONES = [
     '#A49693',
     '#B09F85',
@@ -59,6 +61,10 @@ EARTH_TONES = [
     '#CEC88A',
     '#A57B7C',
     '#6A4D83',
+    '#B7946A',
+    '#A67969',
+    '#9389BD',
+    '#7BA9A9',
 ]
 # A gradient's ends: the first dataset at this lightness in the light theme and the last at the
 # lightest that keeps 3:1; in the dark theme the first at the darkest that keeps 3:1 and the last
@@ -67,6 +73,9 @@ GRADIENT_FIRST_LIGHT = 0.36
 GRADIENT_LAST_DARK = 0.92
 # The step of the search for the smallest passing lightness shift; a passing range can be narrow.
 LIGHTNESS_STEP = 0.0005
+# How far, in 8-bit units per channel, the search for the passing 8-bit colour reaches from the
+# exact one: near the gamut's edge a channel can move several units with the hue barely moving.
+SEARCH_REACH = 10
 
 # A source colour is one value for both themes, or a (light, dark) pair where the source gives
 # its own dark colours.
@@ -153,8 +162,8 @@ SCHEMES: dict[str, dict] = {
     'tableau': {
         'title': 'Tableau 10',
         'pattern': [
-            '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7',
-            '#9C755F', '#BAB0AC',
+            '#4E79A7', '#F28E2C', '#E15759', '#76B7B2', '#59A14F', '#EDC949', '#AF7AA1', '#FF9DA7',
+            '#9C755F', '#BAB0AB',
         ],
         'gradient': ('#4E79A7', '#59A14F'),
     },
@@ -394,22 +403,68 @@ def rounding_error(colour: str, target: Lab, published: str) -> list[float]:
     return errors
 
 
-def nearest_8_bit(target: Lab, published: str, passes: Callable[[str], bool]) -> str | None:
-    """Return the passing 8-bit colour nearest the exact adapted colour, measured by its rounding.
+def keeps_hue_and_chroma(published: str, colour: str) -> bool:
+    """Tell whether the colour has the published hue and the gamut's chroma within its rounding.
 
-    Rounding the exact colour can fail, or land further than a neighbour that also passes. A
-    colour that keeps the hue and chroma within its rounding comes first.
+    The rounding is how far lightness, chroma and hue move across the colour's half-unit box of
+    8-bit channel values; the chroma may be the gamut's at any lightness within that box.
+    """
+    values = channels(colour)
+    lightness, chroma, hue = polar(values)
+    box = [(max(0.0, v - 0.5 / 255), min(1.0, v + 0.5 / 255)) for v in values]
+    corners = [polar(list(corner)) for corner in itertools.product(*box)]
+    # A little more than floating-point noise, so a colour at the edge of its rounding counts.
+    lightness_error = max(abs(c[0] - lightness) for c in corners) + 1e-7
+    chroma_error = max(abs(c[1] - chroma) for c in corners) + 1e-7
+    hue_error = max(hue_difference(c[2], hue) for c in corners) + 1e-5
+    _, a, b = oklab(published)
+    expected = [
+        math.hypot(*on_gamut((min(1.0, max(0.0, level)), a, b))[1:])
+        for level in (lightness - lightness_error, lightness, lightness + lightness_error)
+    ]
+    _, published_chroma, published_hue = polar(channels(published))
+    return min(expected) - chroma_error <= chroma <= max(expected) + chroma_error and (
+        published_chroma < 1e-5 or hue_difference(published_hue, hue) <= hue_error
+    )
+
+
+def nearest_8_bit(
+    target: Lab, published: str, passes: Callable[[str], bool], origin: float | None = None
+) -> str | None:
+    """Return the passing 8-bit colour for the exact adapted colour `target`.
+
+    Rounding the exact colour can fail, or land further than a neighbour that also passes. With
+    `origin`, the colour that keeps the published hue and chroma within its rounding at the
+    smallest lightness shift from it, no smaller than the exact colour's; else the one nearest
+    `target`, measured by its rounding, one that keeps the hue and chroma first.
     """
     base = [round(v * 255) for v in channels(hex_clamped(target))]
+    reach = SEARCH_REACH if origin is not None else 3
     found = []
-    for offset in itertools.product(range(-3, 4), repeat=3):
+    for offset in itertools.product(range(-reach, reach + 1), repeat=3):
         values = [v + o for v, o in zip(base, offset, strict=True)]
         if all(0 <= v <= 255 for v in values):
             colour = '#' + ''.join(f'{v:02X}' for v in values)
             if passes(colour):
-                errors = rounding_error(colour, target, published)
-                found.append((max(errors[1:]) > 1, max(errors), sum(errors), colour))
-    return min(found)[-1] if found else None
+                found.append(colour)
+    if not found:
+        return None
+    if origin is not None:
+        # Never closer to the origin than the exact colour: an 8-bit colour can pass by its own
+        # rounding while its lightness falls short of the shift the rules ask for.
+        beyond = [c for c in found if (oklab(c)[0] - target[0]) * (origin - target[0]) <= 0]
+        found = sorted(beyond or found, key=lambda c: (abs(oklab(c)[0] - origin), c))
+        return next((c for c in found if keeps_hue_and_chroma(published, c)), found[0])
+    scored = []
+    for colour in found:
+        errors = rounding_error(colour, target, published)
+        scored.append((
+            not keeps_hue_and_chroma(published, colour),
+            max(errors),
+            sum(errors),
+            colour,
+        ))
+    return min(scored)[-1]
 
 
 def apart_from_calculated(colour: str, theme: str) -> bool:
@@ -439,6 +494,32 @@ def passes_8_bit(colour: str, background: str, earlier: list[Lab], calculated: L
     )
 
 
+@functools.cache
+def adapt_colour(colour: str, theme: str, earlier: tuple[str, ...], *, moved: bool) -> str:
+    """Return one set colour adapted after the set's `earlier` colours (adapt_set)."""
+    background = BACKGROUND[theme]
+    away = -LIGHTNESS_STEP if theme == 'light' else LIGHTNESS_STEP
+    rules = {
+        'background': background,
+        'earlier': [oklab(c) for c in earlier],
+        'calculated': oklab(CALCULATED[theme]) if moved else None,
+    }
+    passes = partial(passes_8_bit, **rules)
+    if passes(colour):
+        return colour
+    published = oklab(colour)
+    steps = (away, -away) if moved else (away,)
+    exact = [nearest_passing(published, step, partial(passes_exact, **rules)) for step in steps]
+    found = [
+        c
+        for lab in exact
+        if lab and (c := nearest_8_bit(lab, colour, passes, published[0])) is not None
+    ]
+    if not found:
+        sys.exit(f'{colour} ({theme}): no lightness meets the palette rules')
+    return min(found, key=lambda c: abs(oklab(c)[0] - published[0]))
+
+
 def adapt_set(colours: list[str], theme: str, moved: list[bool] | None = None) -> list[str]:
     """Adapt each colour by the smallest lightness shift that passes.
 
@@ -446,31 +527,10 @@ def adapt_set(colours: list[str], theme: str, moved: list[bool] | None = None) -
     shifts away from the background. A moved colour, at the end of its set, must also keep apart
     from the calculated colour, and takes the smaller shift of the two directions.
     """
-    background = BACKGROUND[theme]
-    away = -LIGHTNESS_STEP if theme == 'light' else LIGHTNESS_STEP
     moved = moved or [False] * len(colours)
     out: list[str] = []
     for colour, data in zip(colours, moved, strict=True):
-        rules = {
-            'background': background,
-            'earlier': [oklab(c) for c in out],
-            'calculated': oklab(CALCULATED[theme]) if data else None,
-        }
-        passes = partial(passes_8_bit, **rules)
-        adapted = colour
-        if not passes(colour):
-            published = oklab(colour)
-            steps = (away, -away) if data else (away,)
-            exact = [
-                nearest_passing(published, step, partial(passes_exact, **rules)) for step in steps
-            ]
-            found = [
-                c for lab in exact if lab and (c := nearest_8_bit(lab, colour, passes)) is not None
-            ]
-            if not found:
-                sys.exit(f'{colour} ({theme}): no lightness meets the palette rules')
-            adapted = min(found, key=lambda c: abs(oklab(c)[0] - published[0]))
-        out.append(adapted)
+        out.append(adapt_colour(colour, theme, tuple(out), moved=data))
     return out
 
 
@@ -511,17 +571,34 @@ def passing_colour(target: Lab, theme: str, step: float) -> str:
 def set_order(pattern: list[Source]) -> tuple[list[Source], list[bool]]:
     """Return the set in order and which of its colours are moved to its end.
 
-    A colour in the calculated hue range or near the calculated colour goes to the end, and the set
-    is cut to MAX_PATTERN colours.
+    A colour in the calculated hue range or near the calculated colour, as published or once
+    adapted, goes to the end, the nearest last: those moved for their hue first, the farthest in
+    hue first, then those near the calculated colour itself. The set is cut to MAX_PATTERN colours.
     """
-    moved = {
+    in_range = {
         i
         for i, s in enumerate(pattern)
         if any(in_calculated_hue_range(side(s, t)) for t in BACKGROUND)
     }
+    near = {
+        i
+        for i, s in enumerate(pattern)
+        if any(not apart_from_calculated(side(s, t), t) for t in BACKGROUND)
+    }
+
+    def hue_gap(source: Source) -> float:
+        gaps = []
+        for theme in BACKGROUND:
+            chroma, hue = chroma_hue(side(source, theme))
+            if chroma >= NEUTRAL_CHROMA:
+                gaps.append(hue_difference(hue, chroma_hue(CALCULATED[theme])[1]))
+        return min(gaps, default=180.0)
+
     while True:
+        moved = in_range | near
         order = [i for i in range(len(pattern)) if i not in moved]
-        order = (order + [i for i in range(len(pattern)) if i in moved])[:MAX_PATTERN]
+        order += sorted(moved, key=lambda i: (i in near, -hue_gap(pattern[i]), i))
+        order = order[:MAX_PATTERN]
         failing = {
             i
             for theme in BACKGROUND
@@ -530,9 +607,9 @@ def set_order(pattern: list[Source]) -> tuple[list[Source], list[bool]]:
             )
             if not apart_from_calculated(colour, theme)
         }
-        if failing <= moved:
+        if failing <= near:
             return [pattern[i] for i in order], [i in moved for i in order]
-        moved |= failing
+        near |= failing
 
 
 def structure_set(
@@ -542,23 +619,21 @@ def structure_set(
 
     Each takes its candidate's hue at STRUCTURE_CHROMA at most and the first free step of
     STRUCTURE_LIGHTNESS where it keeps MIN_DISTANCE from every measured colour and earlier
-    structure colour in both themes, shifted only to keep 3:1. A candidate is skipped when its hue
-    is within STRUCTURE_HUE_STEP of an earlier structure colour's (one neutral colour at most), or
-    when no free step keeps it apart. Also returns the candidates taken.
+    structure colour in both themes, shifted only to keep 3:1. A candidate is skipped when it is
+    neutral (each structure colour has its own hue), when its hue is within STRUCTURE_HUE_STEP of
+    an earlier structure colour's, or when no free step keeps it apart. Also returns the
+    candidates taken.
     """
     out: dict[str, list[str]] = {theme: [] for theme in BACKGROUND}
     taken_from: list[Source] = []
-    hues: list[float | None] = []
+    hues: list[float] = []
     taken: set[int] = set()
     for source in candidates:
         if len(hues) == MAX_STRUCTURE:
             break
         chroma, hue = chroma_hue(side(source, 'light'))
-        neutral = chroma < NEUTRAL_CHROMA
-        if neutral and None in hues:
-            continue
-        if not neutral and any(
-            h is not None and hue_difference(hue, h) < STRUCTURE_HUE_STEP for h in hues
+        if min(chroma, STRUCTURE_CHROMA) < NEUTRAL_CHROMA or any(
+            hue_difference(hue, h) < STRUCTURE_HUE_STEP for h in hues
         ):
             continue
         for step in range(len(STRUCTURE_LIGHTNESS['light'])):
@@ -579,7 +654,7 @@ def structure_set(
             ):
                 taken.add(step)
                 taken_from.append(source)
-                hues.append(None if neutral else hue)
+                hues.append(hue)
                 for theme in BACKGROUND:
                     out[theme].append(made[theme])
                 break
@@ -641,9 +716,12 @@ def build(
     pattern = {
         theme: adapt_set([side(s, theme) for s in order], theme, moved) for theme in BACKGROUND
     }
-    # The structure colours take a published scheme's hues from its last colour back, then the
-    # earth tones.
-    candidates = (scheme.get('structure') or list(reversed(scheme['pattern']))) + EARTH_TONES
+    # edi's own schemes take their structure candidates, then the earth tones; a published scheme
+    # takes its own colours from the last back.
+    if 'structure' in scheme:
+        candidates = scheme['structure'] + EARTH_TONES
+    else:
+        candidates = list(reversed(scheme['pattern']))
     structure, structure_sources = structure_set(candidates, pattern)
     for theme in BACKGROUND:
         for colour in pattern[theme]:
