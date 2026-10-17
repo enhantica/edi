@@ -117,13 +117,15 @@ def test_toggles_disable_for_unfitted_and_filtered_empty_matrices():
     assert all(expressions), 'Both actual toggle buttons must bind their enabled state'
     bindings = re.findall(r'(?:readonly )?property (?:bool|int|var) (\w+):\s*([^\n]+)', source)
     setup = ''.join(
-        f'Object.defineProperty(chart,{json.dumps(name)},{{get:()=>({expr})}});'
+        f'Object.defineProperty(chart,{json.dumps(name)},'
+        f'{{get(){{with(chart){{return ({expr});}}}}}});'
         for name, expr in bindings
-        if name in {'available', 'count', 'labels'}
+        if name in {'available', 'count', 'labels', 'showsAny'}
     )
     script = 'const observations=[];'
     script += (
-        'for(const correlations of [null,{available:3,labels:["a","b","c"]},'
+        'for(const correlations of [null,{available:1,labels:["a","b","c"]},'
+        '{available:3,labels:["a","b","c"]},{available:3,labels:["a"]},'
         '{available:3,labels:[]},{available:3,labels:["a","b","c"]}]){'
     )
     script += 'const chart={correlations};' + setup
@@ -133,7 +135,14 @@ def test_toggles_disable_for_unfitted_and_filtered_empty_matrices():
         + ']);}'
     )
     script += 'process.stdout.write(JSON.stringify(observations));'
-    assert evaluate(script) == [[False, False], [True, True], [False, False], [True, True]], (
+    assert evaluate(script) == [
+        [False, False],
+        [False, False],
+        [True, True],
+        [False, False],
+        [False, False],
+        [True, True],
+    ], (
         'Both toggles must disable whenever no correlations are displayed, including a filter '
         'hiding every pair, and re-enable when pairs return'
     )

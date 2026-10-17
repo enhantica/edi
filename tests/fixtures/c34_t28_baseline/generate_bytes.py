@@ -23,6 +23,7 @@ from tests.conftest import crysta_reference_source
 from tests.fixtures.c34_t28_baseline.closure import require_baseline_closure
 from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.report_units.iucr_reference import without_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
 BASE = 'f3ea7afea400639f2a66d6acb8d922163f1ef128'
@@ -124,7 +125,7 @@ def without_saved_calculator(name, contents):
     # Exact canonical block from 's independent CIF contract and retained
     # main-tree byte witness; this is not a new engine-output regression pin.
     if not (name.startswith('experiments/') and name.endswith('.edi')):
-        return contents
+        return without_default_rule(name, contents)
     declaration = b'_calculator.type crysta\n\n'
     assert contents.count(declaration) == 1, (
         ' I22 each saved experiment has exactly one canonical calculator block'

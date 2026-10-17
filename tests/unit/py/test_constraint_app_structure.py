@@ -177,9 +177,15 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'the Analysis Text tab must read the canonical saved analysis block'
     )
     project = source('src/project_view_model.cpp')
-    # Saving uses the template when a dataset is shown; ordinary projects save themselves.
-    assert 'edi::project_edi_files(scanTemplateOrModel())' in project, (
-        'the text provider must use the canonical writer on the same template or model as saving'
+    saved = re.search(
+        r'ProjectViewModel::savedFiles\(\)\s+const\s*\{(.*?)\n\}', project, re.DOTALL
+    )
+    assert saved, 'the shared Text snapshot provider must remain inspectable'
+    assert re.search(r'edi::project_edi_files\(\s*\*project_\s*\)', saved.group(1)) and (
+        'scanTemplateOrModel' not in saved.group(1)
+    ), (
+        'ADR-0015 makes Text use the shown model, including selected scan values; '
+        'the save routes still write the scan template or ordinary project'
     )
     assert (
         'edi::save_project_as(*scan_template_' in project

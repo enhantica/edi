@@ -384,6 +384,10 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
     legacy = ordinal_copy(source, tmp_path / 'saved', tmp_path / 'ordinal-pin')
     analysis = legacy / 'analysis/analysis.edi'
     analysis.write_bytes(historical_analysis(source, analysis.read_bytes()))
+    from tests.fixtures.report_units.iucr_reference import without_default_rule  # noqa: PLC0415
+
+    record = legacy / 'project.edi'
+    record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
     assert snapshot(legacy) == expected, (
         'without relation loops saved files must retain their pre-feature regression bytes, '
         'normalizing the metadata clocks, stored keys and declared inactive Joint weights'
