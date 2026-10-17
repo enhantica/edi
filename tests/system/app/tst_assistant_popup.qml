@@ -5419,19 +5419,34 @@ TestCase {
         gui398_nativeDialog(dialog);
         return dialog;
     }
-    function gui392_button(button) {
+    function gui392_button(button, dialog, retainReceipt407) {
         verify(button !== null && button.enabled, "GUI392: original standard action is enabled");
         ux356_fullyExposed(button);
         const point = Ui.clickPoint(button);
-        mouseClick(button, point.x, point.y);
-        rendered();
+        const receipt407 = gui407_nativeReceipt(button, dialog, point);
+        let returned407 = false;
+        try {
+            receipt407.sample("before-original-mouse",false);
+            verify(receipt407.current(), "GUI407: original native receiver/dialog/window/controller/owner are current before SAME mouse action");
+            mouseClick(button, point.x, point.y);
+            rendered();
+            receipt407.sample("original-helper-return",false);
+            verify(receipt407.current(), "GUI407: original surviving native receiver/dialog/window/controller/owner cannot be replaced at helper return");
+            returned407 = true;
+            if (retainReceipt407) return receipt407;
+        } finally {
+            if (!retainReceipt407 || !returned407) {
+                const evidence407 = receipt407.finish(returned407 ? "standard-return" : "standard-failure");
+                if (returned407) verify(evidence407, "GUI407: successful original native action requires complete passive input/frame receipt");
+            }
+        }
     }
     function gui392_signIn() {
         if (assistant.connected) return;
         Ui.click(this, Probe, window, "assistant.connection");
         const dialog = ux356_dialog();
         tryCompare(dialog, "opened", true, 2000, "GUI392: actual header Sign in opens original provider dialog");
-        gui392_button(dialog.standardButton(Dialog.Ok));
+        gui392_button(dialog.standardButton(Dialog.Ok), dialog);
         report187_ready("gui392-genuine-header-signin", false);
         tryCompare(dialog, "visible", false, 2000, "GUI398: original ready sign-in dialog genuinely finishes native exit before reuse");
     }
@@ -5500,7 +5515,7 @@ TestCase {
         console.log("GUI395_SIGNIN_OPEN");
         gui398_details(signIn);
         compare(Session.project, before.owner, "GUI395: genuine Sign in click preserves SAME original scientific owner");
-        gui392_button(signIn.standardButton(Dialog.Cancel));
+        gui392_button(signIn.standardButton(Dialog.Cancel), signIn);
         tryCompare(signIn, "visible", false, 2000, "GUI395: ordinary Cancel actually closes ORIGINAL sign-in dialog");
         compare(assistant.connected, false, "GUI392: real authentication Cancel does not create account authority");
         gui392_unchanged(before);
@@ -5529,7 +5544,7 @@ TestCase {
         gui398_account(account);
         ux356_fullyExposed(account.contentItem); ux356_fullyExposed(account.footer);
         capture("gui392-ready-account");
-        gui392_button(account.standardButton(Dialog.Close));
+        gui392_button(account.standardButton(Dialog.Close), account);
         tryCompare(account, "visible", false, 2000, "GUI399: SAME original Account exit settles before actual later reopen");
         compare(assistant.contextConsentRequired, consent, "GUI392: avatar never approves outgoing project scope");
         compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selected, "GUI392: avatar never grants selected files");
@@ -5564,7 +5579,7 @@ TestCase {
         ];
     }
     function gui392_closeUsage(dialog) {
-        gui392_button(dialog.standardButton(Dialog.Close));
+        gui392_button(dialog.standardButton(Dialog.Close), dialog);
         tryCompare(dialog, "visible", false, 2000, "GUI392: original Usage dialog actually closes before next open refresh");
     }
     function test_gui392_usage_actual_windows(data) {
@@ -5650,7 +5665,7 @@ TestCase {
         function onRejected() { ++rejected; }
         selector.accepted.connect(onAccepted); selector.rejected.connect(onRejected);
         try {
-            if (cancel) gui392_button(panel.standardButton(Dialog.Cancel));
+            if (cancel) gui392_button(panel.standardButton(Dialog.Cancel), panel);
             else {
                 keyClick(Qt.Key_L, Qt.ControlModifier);
                 const field = window.activeFocusItem;
@@ -5665,7 +5680,7 @@ TestCase {
                 keyClick(Qt.Key_Return);
                 verify(alive313(panelLife) && panel.visible && alive313(selectorLife),
                     "GUI392: directory navigation retains same live original chooser before actual Open");
-                gui392_button(panel.standardButton(Dialog.Open));
+                gui392_button(panel.standardButton(Dialog.Open), panel);
             }
             tryVerify(() => !selector.visible, 2000, "GUI392: actual original chooser closes from genuine Cancel/Open");
             compare(accepted, cancel ? 0 : 1, "GUI392: exact original selector has one expected acceptance, never synthesized");
@@ -5722,7 +5737,7 @@ TestCase {
         import265_click("preferences.ai.source.enabled." + local.id);
         compare(gui392_sources().filter(row => row.id === local.id)[0].id, local.id,
             "GUI392: toggling retains exact opaque source identity");
-        gui392_button(preferences.standardButton(Dialog.Ok));
+        gui392_button(preferences.standardButton(Dialog.Ok), preferences);
         gui393_sourceApproval();
         const account = JSON.stringify(Probe.rows(assistant.models));
         if (assistant.contextConsentRequired) assistant.signIn();
@@ -5746,7 +5761,7 @@ TestCase {
             verify(!button.enabled, "GUI392: genuine active work disables original source row actions");
         }
         verify(!item("preferences.ai.sources.add").enabled, "GUI392: genuine active work disables source Add");
-        gui392_button(preferencesBusy.standardButton(Dialog.Ok));
+        gui392_button(preferencesBusy.standardButton(Dialog.Ok), preferencesBusy);
         assistant.refreshUsage(); // Existing original optional-read barrier releases exact received input.
         tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
             && row.status === "completed" && row.text === "Original fileauth reply 1"), 2000,
@@ -5766,7 +5781,7 @@ TestCase {
         verify(!JSON.stringify(JSON.parse(assistant.contextPreview).skills).includes("GUI392 independent"),
             "GUI392: removed local source contributes no next disclosed instructions");
         import265_click("preferences.ai.source.enabled.builtin");
-        gui392_button(preferencesAgain.standardButton(Dialog.Ok));
+        gui392_button(preferencesAgain.standardButton(Dialog.Ok), preferencesAgain);
         console.log("GUI392_SOURCE", JSON.stringify({id: local.id, path: local.path, selected: gui392_json(Probe.rows(assistant.selectedFiles))}));
         gui392_unchanged(before);
     }
@@ -5788,7 +5803,7 @@ TestCase {
             "GUI392: actual invalid/missing/duplicate/link source selection refuses before any configuration write");
         verify(typeof assistant.skillSourceError === "string" && assistant.skillSourceError.length > 0,
             "GUI392: exact actual source refusal reports explicit original error");
-        gui392_button(preferences.standardButton(Dialog.Ok));
+        gui392_button(preferences.standardButton(Dialog.Ok), preferences);
         gui392_unchanged(before);
     }
     // GUI393: additive PUBLIC333-v3, never a private producer implementation oracle.
@@ -5959,7 +5974,7 @@ TestCase {
             "GUI393: original approval receipt contains only two bounded actual independent fixture guidance entries");
         console.log("GUI393_APPROVED_SOURCE", JSON.stringify({skills: original.skills.map(row =>
             ({id: row.id, sha256: row.sha256, content: row.content}))}));
-        gui392_button(dialog.standardButton(Dialog.Ok));
+        gui392_button(dialog.standardButton(Dialog.Ok), dialog);
         report187_ready("gui393-original-approved-source", false);
     }
     function test_gui393_original_combined_chooser_data() {
@@ -6149,7 +6164,7 @@ TestCase {
             compare(JSON.stringify(gui392_json(Probe.rows(assistant.messages))), historyBefore,
                 "GUI404: requesting approval cannot admit an input before actual approval");
             cancel = dialog.standardButton(Dialog.Cancel); cancelLife = lifetime313(cancel); cancel.clicked.connect(canceled);
-            gui392_button(cancel);
+            gui392_button(cancel, dialog);
             tryCompare(dialog, "visible", false, 2000, "GUI404: real original Cancel settles its native exit");
             compare(editor.text, originalText, "GUI404: Cancel retains exact original draft");
             compare(composer.textRevision, canceledRevision, "GUI404: Cancel is not draft editing or ACK");
@@ -6170,7 +6185,7 @@ TestCase {
             compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), selectedBefore,
                 "GUI404: exact current attachments remain original at approval");
             capture("gui404-send-required-approval");
-            gui392_button(approve);
+            gui392_button(approve, dialog);
             // No Send after this original approval. A second-Send requirement MUST fail here.
             tryVerify(() => assistant.canCancel && Probe.rows(assistant.messages).filter(row => !oldIds.has(row.id)
                 && row.kind === "user" && row.text === originalText && row.status === "pending").length === 1, 2000,
@@ -6548,45 +6563,59 @@ TestCase {
             compare(labels.length, 1, "GUI398: original enabled Details link has ONE actually painted label");
             compare(labels[0].color, EaStyle.Colors.themeAccent, "GUI398: original enabled Details link paints native blue text");
         }
+        let lastReceipt407 = null, completed407 = false;
         function input(button) {
-            Ui.scrollIntoView(button); rendered(); gui392_button(button);
+            Ui.scrollIntoView(button); rendered();
+            if (lastReceipt407 !== null) {
+                const previous407 = lastReceipt407; lastReceipt407 = null;
+                verify(previous407.finish("details-before-next-input"), "GUI407: previous original disclosure interval retains complete passive evidence");
+            }
+            lastReceipt407 = gui392_button(button, dialog, true);
             verify(Session.project === original.owner && Session.assistant === original.assistant
                 && dialog.assistant === original.assistant,
                 "GUI398: genuine disclosure toggle preserves SAME original owner/controller/dialog");
             compare(assistant.contextPreview, original.raw, "GUI398: presentation toggles do not alter original exact outgoing payload");
         }
-        link(human, "Show details"); input(human);
-        tryCompare(human, "checked", true, 2000, "GUI398: genuine original Show details exposes human-readable Details");
-        link(human, "Hide details");
-        ux356_fullyExposed(technical); link(technical, "Show technical data");
-        compare(technical.checked, false, "GUI398: opening human Details NEVER automatically expands raw technical data");
-        verify(!Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
-        capture("gui398-signin-human-details");
-        input(technical);
-        tryCompare(technical, "checked", true, 2000, "GUI398: genuine Show technical data exposes original exact payload");
-        link(technical, "Hide technical data");
-        verify(Ui.rendered(preview) && preview.readOnly && preview.selectByMouse,
-            "GUI398: actually exposed original raw payload is read-only/selectable, not substituted summary");
-        compare(preview.text, original.raw, "GUI398: independently observed disclosed text is byte-exact original current payload");
-        compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(original.raw)),
-            "GUI398: original dialog owns exact same structured disclosure while technical text is visible");
-        input(technical);
-        tryCompare(technical, "checked", false, 2000, "GUI398: genuine Hide technical data hides original raw presentation");
-        link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: raw field really hides after its own toggle");
-        input(technical);
-        tryCompare(technical, "checked", true, 2000, "GUI398: original technical interval reopens before human-collapse reset witness");
-        input(human);
-        tryCompare(human, "checked", false, 2000, "GUI398: genuine Hide details collapses human presentation");
-        compare(technical.checked, false, "GUI398: collapsing human Details retires original expanded technical state");
-        verify(!Ui.rendered(technical) && !Ui.rendered(preview), "GUI398: collapsed human Details exposes no raw content");
-        input(human);
-        tryCompare(human, "checked", true, 2000, "GUI398: genuine later Show details restores human view only");
-        compare(technical.checked, false, "GUI398: later human open cannot resurrect old technical expansion");
-        link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: later human Details again keeps technical payload collapsed");
-        input(human);
-        tryCompare(human, "checked", false, 2000, "GUI398: original compact Sign in is restored before genuine Cancel");
-        link(human, "Show details");
-        ux356_fullyExposed(dialog.standardButton(Dialog.Cancel));
+        try {
+            link(human, "Show details"); input(human);
+            tryCompare(human, "checked", true, 2000, "GUI398: genuine original Show details exposes human-readable Details");
+            link(human, "Hide details");
+            ux356_fullyExposed(technical); link(technical, "Show technical data");
+            compare(technical.checked, false, "GUI398: opening human Details NEVER automatically expands raw technical data");
+            verify(!Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
+            capture("gui398-signin-human-details");
+            input(technical);
+            tryCompare(technical, "checked", true, 2000, "GUI398: genuine Show technical data exposes original exact payload");
+            link(technical, "Hide technical data");
+            verify(Ui.rendered(preview) && preview.readOnly && preview.selectByMouse,
+                "GUI398: actually exposed original raw payload is read-only/selectable, not substituted summary");
+            compare(preview.text, original.raw, "GUI398: independently observed disclosed text is byte-exact original current payload");
+            compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(original.raw)),
+                "GUI398: original dialog owns exact same structured disclosure while technical text is visible");
+            input(technical);
+            tryCompare(technical, "checked", false, 2000, "GUI398: genuine Hide technical data hides original raw presentation");
+            link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: raw field really hides after its own toggle");
+            input(technical);
+            tryCompare(technical, "checked", true, 2000, "GUI398: original technical interval reopens before human-collapse reset witness");
+            input(human);
+            tryCompare(human, "checked", false, 2000, "GUI398: genuine Hide details collapses human presentation");
+            compare(technical.checked, false, "GUI398: collapsing human Details retires original expanded technical state");
+            verify(!Ui.rendered(technical) && !Ui.rendered(preview), "GUI398: collapsed human Details exposes no raw content");
+            input(human);
+            tryCompare(human, "checked", true, 2000, "GUI398: genuine later Show details restores human view only");
+            compare(technical.checked, false, "GUI398: later human open cannot resurrect old technical expansion");
+            link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: later human Details again keeps technical payload collapsed");
+            input(human);
+            tryCompare(human, "checked", false, 2000, "GUI398: original compact Sign in is restored before genuine Cancel");
+            link(human, "Show details");
+            ux356_fullyExposed(dialog.standardButton(Dialog.Cancel));
+            completed407 = true;
+        } finally {
+            if (lastReceipt407 !== null) {
+                const evidence407 = lastReceipt407.finish(completed407 ? "details-return" : "details-failure");
+                if (completed407) verify(evidence407, "GUI407: original successful disclosure sequence retains mandatory input/final framebuffer evidence");
+            }
+        }
     }
     // GUI399: owner geometry measured from original public native items, not source348 output.
     function gui399_track(dialog, track, fill, used) {
@@ -6812,5 +6841,105 @@ TestCase {
                 capture("gui404-native-table-window-"+palette);
             }
         } finally { EaStyle.Colors.theme = theme; rendered(); }
+    }
+    // GUI407: passive original native input receipts; childAt is VISUAL, never event acceptance.
+    function gui407_nativeReceipt(button, dialog, point) {
+        const original = {button:button, dialog:dialog, window:window, owner:Session.project, controller:Session.assistant};
+        const objects = [button, dialog, original.window, original.owner, original.controller];
+        const lives = objects.map(lifetime313), identities = lives.map(identity313);
+        const events = [], connected = [], errors = [];
+        let finished = false;
+        function current() {
+            return lives.every(life => life === null || alive313(life)) && window === original.window
+                && Session.project === original.owner && Session.assistant === original.controller
+                && (gui393_under(button, dialog.contentItem) || gui393_under(button, dialog.footer));
+        }
+        function sample(stage, frame) {
+            // No test assertion is caught here: only diagnostic reads/save. An original
+            // failed predicate stays first; missing diagnostics can never bless a PASS.
+            try {
+                const alive = lives.map(life => life === null || alive313(life));
+                const receipt = {stage:stage, sequence:events.length, at:Date.now(), originalIdentities:identities,
+                    alive:alive, sameWindow:window === original.window, sameOwner:Session.project === original.owner,
+                    sameController:Session.assistant === original.controller, localPoint:[point.x,point.y]};
+                if (alive[0] && alive[1] && alive[2]) {
+                    const scene = button.mapToItem(original.window.contentItem,point.x,point.y);
+                    const root = Ui.windowRoot(original.window), rootPoint = button.mapToItem(root,point.x,point.y);
+                    receipt.scenePoint=[scene.x,scene.y]; receipt.rootPoint=[rootPoint.x,rootPoint.y];
+                    receipt.button={name:button.objectName, pressed:button.pressed, down:button.down, checked:button.checked,
+                        checkable:button.checkable, hovered:button.hovered, activeFocus:button.activeFocus,
+                        visible:button.visible, enabled:button.enabled, width:button.width, height:button.height};
+                    receipt.dialog={visible:dialog.visible, opened:dialog.opened, x:dialog.x, y:dialog.y,
+                        width:dialog.width, height:dialog.height, modal:dialog.modal, focus:dialog.focus,
+                        contentWidth:dialog.contentWidth,contentHeight:dialog.contentHeight};
+                    receipt.currentOriginal=current();
+                    receipt.window={visible:original.window.visible, active:original.window.active,
+                        width:original.window.width,height:original.window.height,
+                        focus:original.window.activeFocusItem ? String(original.window.activeFocusItem) : null};
+                    const ancestors=[];
+                    for(let parent=button;parent;parent=parent.parent) {
+                        const mapped=button.mapToItem(parent,0,0,button.width,button.height);
+                        const record={name:parent.objectName,type:String(parent),visible:parent.visible,enabled:parent.enabled,
+                            clip:parent.clip,z:parent.z,opacity:parent.opacity,width:parent.width,height:parent.height,
+                            receiverRect:[mapped.x,mapped.y,mapped.width,mapped.height]};
+                        for(const name of ["pressDelay","contentX","contentY","contentWidth","contentHeight","originX","originY","moving","dragging","flicking","interactive"])
+                            record[name]=(typeof parent[name] === "number" || typeof parent[name] === "boolean") ? parent[name] : null;
+                        ancestors.push(record);
+                    }
+                    receipt.ancestors=ancestors;
+                    const visual=[];let parent=root,position=rootPoint;
+                    for(let depth=0;parent && depth<32;++depth) {
+                        const hit=parent.childAt(position.x,position.y);if(!hit)break;
+                        const mapped=hit.mapToItem(original.window.contentItem,0,0);
+                        visual.push({name:hit.objectName,type:String(hit),visible:hit.visible,enabled:hit.enabled,z:hit.z,
+                            geometry:[mapped.x,mapped.y,hit.width,hit.height]});
+                        position=hit.mapFromItem(parent,position.x,position.y);parent=hit;
+                    }
+                    receipt.visualHitPath=visual;receipt.visualPathIsNotNativeReceipt=true;
+                }
+                events.push({stage:stage,sequence:receipt.sequence,at:receipt.at,alive:alive,
+                    sameWindow:receipt.sameWindow,sameOwner:receipt.sameOwner,sameController:receipt.sameController,
+                    pressed:receipt.button ? receipt.button.pressed : null,
+                    checked:receipt.button ? receipt.button.checked : null,opened:receipt.dialog ? receipt.dialog.opened : null});
+                console.log("GUI407_NATIVE_INPUT",JSON.stringify(receipt));
+                if(frame) {
+                    if(!alive[2] || window !== original.window)throw Error("original window unavailable for failure-time framebuffer");
+                    const image=grabImage(original.window.contentItem);
+                    if(image.width<=0 || image.height<=0)throw Error("original framebuffer empty");
+                    const stem="gui407-original-input-"+lives[0].handle+"-"+stage;
+                    image.save(stem+".png");console.log("GUI407_INPUT_FRAME",JSON.stringify({stem:stem,width:image.width,height:image.height,originalIdentities:identities}));
+                }
+            } catch(error) { errors.push(String(error));console.log("GUI407_DIAGNOSTIC_ERROR",JSON.stringify({stage:stage,originalIdentities:identities,error:String(error)})); }
+        }
+        function pressedChanged(){sample("native-pressedChanged",false);}
+        function released(){sample("native-released",false);}
+        function clicked(){sample("native-clicked",false);}
+        function canceled(){sample("native-canceled",false);}
+        function checkedChanged(){sample("native-checkedChanged",false);}
+        function openedChanged(){sample("dialog-openedChanged",false);}
+        function closed(){sample("dialog-closed",false);}
+        function disconnect() {
+            for(const pair of connected) {
+                try { disconnect313(pair.life,pair.object,pair.signal,pair.callback); }
+                catch(error){errors.push(String(error));console.log("GUI407_DISCONNECT_ERROR",String(error),identities);}
+            }
+        }
+        try {
+            // pressed/opened are public BOOL properties in QML; their Changed signals
+            // give actual state edges, never the inaccessible same-name signal/property.
+            for(const pair of [[button,lives[0],"pressedChanged",pressedChanged],[button,lives[0],"released",released],
+                [button,lives[0],"clicked",clicked],[button,lives[0],"canceled",canceled],
+                [button,lives[0],"checkedChanged",checkedChanged],[dialog,lives[1],"openedChanged",openedChanged],
+                [dialog,lives[1],"closed",closed]]) {
+                pair[0][pair[2]].connect(pair[3]);connected.push({object:pair[0],life:pair[1],signal:pair[2],callback:pair[3]});
+            }
+        } catch(error){sample("partial-hookup-failure",false);disconnect();throw error;}
+        return {sample:sample, current:current, finish:function(stage){
+            if(finished)throw Error("original native receipt finished twice");finished=true;
+            try {sample(stage,true);}finally{disconnect();}
+            const stillCurrent=current();
+            console.log("GUI407_INPUT_SUMMARY",JSON.stringify({originalIdentities:identities,events:events,diagnosticErrors:errors,currentOriginal:stillCurrent}));
+            return errors.length===0 && stillCurrent;
+        }};
     }
 }
