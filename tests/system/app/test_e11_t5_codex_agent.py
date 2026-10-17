@@ -7872,8 +7872,22 @@ def test_reuse280_failed_archive_clear_cannot_claim_fresh_memory(generic):
     connect(actor)
     native145_approve(actor)
     first = reuse269_send(actor, trace, 'Original durable history before real storage refusal')
+    # Original input acknowledgement/idle is not final public-history publication.
+    # The independent fileauth peer's first response has this exact declared text.
+    first = settle(actor, lambda value: (
+        value['connected'] and not value['can_cancel'] and not value['last_error']
+        and all(row in value['messages'] for row in first['messages'])
+        and any(row.get('kind') == 'assistant' and row.get('status') == 'completed'
+                and row.get('text') == 'Original fileauth reply 1'
+                for row in value['messages'])
+    ))
     old_thread = started_requests(trace)[-1]['params']['threadId']
-    before_rows = actor.command('archive')['reply']['rows']
+    baseline = actor.command('archive')
+    before_rows = baseline['reply']['rows']
+    assert baseline['vm']['messages'] == first['messages'] == before_rows, (
+        'REUSE SETUP: the complete original response is paired with exactly its durable public archive'
+    )
+    first = baseline['vm']
     barrier = actor.command('persistence_barrier')
     assert barrier['archive']['is_directory'] and barrier['reply']['preserved_sha256'], (
         'REUSE SETUP: actual QSaveFile target is blocked with original archive bytes preserved'
