@@ -274,8 +274,8 @@ least 3:1 contrast against its theme's chart background (`#FFFFFF`, `#444444`); 
 
 | Block | Icon | Colour by its place in the project's list (light / dark theme), Coast scheme |
 |---|---|---|
-| structure | `layer-group` | wheat `#94846A` / `#AD9C82`, plum `#916678` / `#D0A2B5`, stone `#5C4F4D` / `#E3D4D0`, sage `#38482A` / `#DEF3CE`, then round again |
-| experiment | `microscope` | sea blue `#2C90D7` / `#71BFFF`, then teal `#079E92` / `#44D0C1`, green `#3CA059` / `#87D999`, violet `#8978D7` / `#B6AAFF` and cyan `#01869D` / `#57DBF8`; past the set's five, a gradient from indigo `#39336F` / `#8A88CC` to green `#03A97A` / `#8EFFD0` along the order |
+| structure | `layer-group` | wheat `#94846A` / `#AD9C82`, plum `#916678` / `#D0A2B5`, sage `#47593A` / `#CBE0BA`, artichoke `#4B395B` / `#F2E5FF`, then round again |
+| experiment | `microscope` | sea blue `#2C90D7` / `#71BFFF`, then teal `#079E92` / `#44D0C1`, green `#3CA059` / `#87D999`, violet `#8978D7` / `#B6AAFF` and cyan `#05859C` / `#58DCF9`; past the set's five, a gradient from indigo `#39336F` / `#8A88CC` to green `#03A97A` / `#8EFFD0` along the order |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -606,7 +606,7 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 | Calculated | `#F44336` / `#EF9A9A` | 2 px line |
 | Background | `#607D8B` / `#B0BEC5` | 1 px line |
 | Residual | `#8BC34A` / `#C5E1A5` | 1 px line (the owner, 2026-10-02) |
-| Bragg ticks, by the structure's place (Coast scheme) | `#94846A` / `#AD9C82`, then `#916678` / `#D0A2B5`, then `#5C4F4D` / `#E3D4D0` | 1 px ticks (the owner, 2026-10-02) |
+| Bragg ticks, by the structure's place (Coast scheme) | `#94846A` / `#AD9C82`, then `#916678` / `#D0A2B5`, then `#47593A` / `#CBE0BA` | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.
