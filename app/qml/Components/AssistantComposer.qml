@@ -20,13 +20,6 @@ Rectangle {
     readonly property alias actionsControl: showActionsControl
     readonly property real actionSize: EaStyle.Sizes.toolButtonHeight * 0.75
     function closeChoices() { if (Qt.isQtObject(choicePopup)) choicePopup.close(); }
-    function choiceX(control, menuWidth) {
-        return Math.max(0, Math.min(popupBoundary.width - menuWidth, control.mapToItem(popupBoundary, 0, 0).x));
-    }
-    function choiceY(control, menuHeight) {
-        return Math.max(0, Math.min(popupBoundary.height - menuHeight, control.mapToItem(popupBoundary, 0, 0).y - menuHeight));
-    }
-
     readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
     readonly property color lightActionBackground: EaStyle.Colors.themeBackgroundHovered2
     readonly property var effortChoices: [""].concat(assistant.availableEfforts).map(token => ({token: token, label: effortLabel(token)}))
@@ -65,30 +58,29 @@ Rectangle {
     FontMetrics { id: choiceMetrics; font.family: EaStyle.Fonts.fontFamily; font.pixelSize: EaStyle.Sizes.fontPixelSize }
     ButtonGroup { id: modelSelection; exclusive: true }
     ButtonGroup { id: effortSelection; exclusive: true }
-    Popup {
+    AppDialog {
         id: choicePopup
         objectName: "assistant.modelEffort.popup"
-        parent: composer.popupBoundary
+        title: qsTr("Model and reasoning effort")
+        standardButtons: Dialog.NoButton
         property var intent: null
-        readonly property real viewportHeight: Math.max(0,composer.popupBoundary.height-AppSizes.unit*2)
-        readonly property real radioColumnWidth: Math.min(AppSizes.iconColumnWidth,Math.max(0,availableWidth/3))
+        readonly property real viewportHeight: Math.max(0,parent.height-AppSizes.unit*2)
+        readonly property real radioColumnWidth: AppSizes.iconColumnWidth
         readonly property real desiredLabelWidth: {
-            let measured=choiceMetrics.advanceWidth(composer.modelLabel+" · "+composer.selectedEffortLabel);
+            let measured=Math.max(choiceMetrics.advanceWidth(qsTr("Model")),choiceMetrics.advanceWidth(qsTr("Reasoning effort")));
             for(let i=0;i<composer.assistant.models.count;++i)measured=Math.max(measured,choiceMetrics.advanceWidth(composer.assistant.models.text(i,"displayName")));
             for(const row of composer.effortChoices)measured=Math.max(measured,choiceMetrics.advanceWidth(row.label));
-            return measured;
+            return Math.ceil(measured)+AppSizes.fieldSpacing*2;
         }
-        width: Math.min(Math.max(modelEffortButton.width,desiredLabelWidth+AppSizes.iconColumnWidth+AppSizes.unit*3),Math.max(0,composer.popupBoundary.width-AppSizes.unit*2))
-        contentHeight: Math.min(choiceContent.implicitHeight,Math.max(0,viewportHeight-topPadding-bottomPadding))
-        height: contentHeight+topPadding+bottomPadding
-        x: composer.choiceX(modelEffortButton,width)
-        y: composer.choiceY(modelEffortButton,height)
-        padding: AppSizes.unit*0.5
+        readonly property real tableWidth: radioColumnWidth+desiredLabelWidth+EaStyle.Sizes.tableColumnSpacing+modelTable.rowPadding*2+EaStyle.Sizes.borderThickness*2
+        width: Math.min(choiceContent.implicitWidth+leftPadding+rightPadding,Math.max(0,parent.width-AppSizes.unit*2))
+        height: Math.min(implicitHeight,viewportHeight)
+        contentWidth: Math.max(0,width-leftPadding-rightPadding)
+        contentHeight: Math.min(choiceContent.implicitHeight,Math.max(0,viewportHeight-topPadding-bottomPadding
+            -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
         focus: true
         modal: true
-        dim: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        background: Rectangle { color: EaStyle.Colors.dialogBackground; radius: AppSizes.unit*0.5; border.color: EaStyle.Colors.appBorder; border.width: EaStyle.Sizes.borderThickness }
         function current(original) {
             return original && intent===original && visible && Qt.isQtObject(composer) && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled;
         }
@@ -98,7 +90,16 @@ Rectangle {
             Qt.callLater(function() {
                 if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original) || !Qt.isQtObject(table))return;
                 const row=table.itemAtIndex(index);
-                if(Qt.isQtObject(row) && row.selector.enabled)row.selector.forceActiveFocus();
+                if(!Qt.isQtObject(row) || !row.selector.enabled)return;
+                const flick=choiceScroll.contentItem;
+                if(!Qt.isQtObject(flick) || !Qt.isQtObject(flick.contentItem))return;
+                const point=row.selector.mapToItem(flick.contentItem,0,0);
+                const horizontal=point.x < flick.contentX ? point.x : Math.max(flick.contentX,point.x+row.selector.width-flick.width);
+                const vertical=point.y < flick.contentY ? point.y : Math.max(flick.contentY,point.y+row.selector.height-flick.height);
+                flick.contentX=Math.max(0,Math.min(horizontal,flick.contentWidth-flick.width));
+                if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original) || !Qt.isQtObject(row))return;
+                flick.contentY=Math.max(0,Math.min(vertical,flick.contentHeight-flick.height));
+                if(Qt.isQtObject(choicePopup) && choicePopup.current(original) && Qt.isQtObject(row) && row.selector.enabled)row.selector.forceActiveFocus();
             });
         }
         function modelAvailable(model,index) { return model.text(index,"available")==="true"; }
@@ -154,22 +155,32 @@ Rectangle {
             if(Qt.isQtObject(choicePopup) && choicePopup.intent===null && Qt.isQtObject(composer) && original && original.owner===composer.assistant && composer.choicesEnabled && modelEffortButton.visible)modelEffortButton.forceActiveFocus();
         }
         ScrollView {
-            anchors.fill: parent
+            id: choiceScroll
+            width: choicePopup.contentWidth
+            height: choicePopup.contentHeight
+            contentWidth: choiceContent.implicitWidth
+            contentHeight: choiceContent.implicitHeight
             clip: true
-            Column {
+            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.horizontal: EaElements.ScrollBar { policy: ScrollBar.AsNeeded }
+            Row {
                 id: choiceContent
-                width: Math.max(0,choicePopup.availableWidth-AppSizes.unit)
-                spacing: AppSizes.unit*0.5
-                EaElements.Label { text: qsTr("Model"); font.bold: true; width: parent.width }
+                spacing: AppSizes.unit * 1.5
+                Column {
+                    width: choicePopup.tableWidth
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Label { text: qsTr("Model"); font.bold: true; width: parent.width }
                 DataTable {
                     id: modelTable
                     objectName: "assistant.choice.models"
-                    width: parent.width
+                    width: choicePopup.tableWidth
                     sourceModel: composer.assistant.models
-                    maxRowCountShow: 4
+                    maxRowCountShow: Math.max(1,count)
+                    interactive: false
+                    scrollBarPolicy: ScrollBar.AlwaysOff
                     marksCurrentRow: true
                     currentRow: composer.selectedModelRow
-                    columnWidths: [choicePopup.radioColumnWidth,-1]
+                    columnWidths: [choicePopup.radioColumnWidth,choicePopup.desiredLabelWidth]
                     delegate: EaComponents.ListViewDelegate {
                         id: modelRow
                         required property int index
@@ -206,23 +217,29 @@ Rectangle {
                             text: modelRow.model.displayName
                             textFormat: Text.PlainText
                             horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideMiddle
+                            elide: Text.ElideNone
                             color: modelRow.model.available ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                             ToolTip.text: text
                             TapHandler { enabled: composer.choicesEnabled && modelRow.model.available; onTapped: choicePopup.chooseModel(modelRow.modelId) }
                         }
                     }
                 }
-                EaElements.Label { text: qsTr("Reasoning effort"); font.bold: true; width: parent.width }
+                }
+                Column {
+                    width: choicePopup.tableWidth
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Label { text: qsTr("Reasoning effort"); font.bold: true; width: parent.width }
                 DataTable {
                     id: effortTable
                     objectName: "assistant.choice.efforts"
-                    width: parent.width
+                    width: choicePopup.tableWidth
                     sourceModel: composer.effortChoices
-                    maxRowCountShow: 4
+                    maxRowCountShow: Math.max(1,count)
+                    interactive: false
+                    scrollBarPolicy: ScrollBar.AlwaysOff
                     marksCurrentRow: true
                     currentRow: composer.effortChoices.findIndex(row=>row.token===composer.assistant.selectedEffort)
-                    columnWidths: [choicePopup.radioColumnWidth,-1]
+                    columnWidths: [choicePopup.radioColumnWidth,choicePopup.desiredLabelWidth]
                     delegate: EaComponents.ListViewDelegate {
                         id: effortRow
                         required property int index
@@ -259,11 +276,12 @@ Rectangle {
                             text: effortRow.modelData.label
                             textFormat: Text.PlainText
                             horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideMiddle
+                            elide: Text.ElideNone
                             ToolTip.text: text
                             TapHandler { enabled: composer.choicesEnabled; onTapped: choicePopup.chooseEffort(effortRow.modelData.token) }
                         }
                     }
+                }
                 }
             }
         }
@@ -524,13 +542,18 @@ Rectangle {
             id: composerToolbar
             readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth
                 - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0)
-                - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * 6)
+                - previousUserButton.implicitWidth - nextUserButton.implicitWidth
+                - spacing * (5+(sendButton.visible ? 1 : 0)+(stopButton.visible ? 1 : 0)))
             width: parent.width
             spacing: AppSizes.unit * 0.5
             EaElements.ToolButton {
                 id: addFilesButton
                 objectName: "assistant.files.add"
                 fontIcon: "plus"
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
                 implicitWidth: composer.actionSize
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
@@ -555,6 +578,10 @@ Rectangle {
             EaElements.ToolButton {
                 id: showActionsControl
                 objectName: "assistant.showActions"
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
                 implicitWidth: composer.actionSize
                 implicitHeight: composer.actionSize
                 fontIcon: "eye"
@@ -574,8 +601,8 @@ Rectangle {
                     implicitWidth: composer.actionSize; implicitHeight: implicitWidth
                     radius: width*0.5
                     color: showActionsControl.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
-                    border.width: showActionsControl.checked || showActionsControl.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeAccent
+                    border.width: showActionsControl.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                    border.color: EaStyle.Colors.themeForegroundMinor
                 }
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: qsTr("Show actions")
@@ -589,7 +616,7 @@ Rectangle {
             EaElements.Button {
                 id: modelEffortButton
                 objectName: "assistant.modelEffort"
-                Layout.preferredWidth: choiceMetrics.advanceWidth(composer.modelLabel+" · "+composer.selectedEffortLabel)+leftPadding+rightPadding+AppSizes.unit*0.4
+                Layout.preferredWidth: choiceMetrics.advanceWidth(composer.modelLabel+" "+composer.selectedEffortLabel)+leftPadding+rightPadding
                 Layout.maximumWidth: composerToolbar.choiceWidth
                 implicitHeight: composer.actionSize
                 leftPadding: AppSizes.unit*0.75
@@ -600,23 +627,29 @@ Rectangle {
                     radius: height*0.5
                     color: modelEffortButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                     border.width: modelEffortButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeAccent
+                    border.color: EaStyle.Colors.themeForegroundMinor
                 }
-                contentItem: RowLayout {
+                contentItem: Row {
                     id: modelEffortText
-                    spacing: AppSizes.unit*0.4
+                    spacing: choiceMetrics.advanceWidth(" ")
                     EaElements.Label {
+                        id: modelPillLabel
+                        height: parent.height
+                        verticalAlignment: Text.AlignVCenter
                         text: composer.modelLabel
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
-                        Layout.fillWidth: true
+                        width: Math.max(0,Math.min(implicitWidth,modelEffortButton.availableWidth-effortPillLabel.width-modelEffortText.spacing))
                     }
                     EaElements.Label {
+                        id: effortPillLabel
+                        height: parent.height
+                        verticalAlignment: Text.AlignVCenter
                         text: composer.selectedEffortLabel
                         textFormat: Text.PlainText
                         color: EaStyle.Colors.themeForegroundMinor
                         elide: Text.ElideRight
-                        Layout.maximumWidth: modelEffortButton.availableWidth*0.45
+                        width: Math.max(0,Math.min(implicitWidth,modelEffortButton.availableWidth*0.45))
                     }
                 }
                 ToolTip.text: qsTr("Model: %1 · Reasoning effort: %2").arg(composer.modelLabel).arg(composer.selectedEffortLabel)
@@ -640,6 +673,10 @@ Rectangle {
             Item { Layout.fillWidth: true }
             EaElements.ToolButton {
                 id: previousUserButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
                 implicitWidth: composer.actionSize
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
@@ -663,6 +700,10 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: nextUserButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
                 implicitWidth: composer.actionSize
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
@@ -686,6 +727,10 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: stopButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
                 implicitWidth: composer.actionSize
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
@@ -718,6 +763,10 @@ Rectangle {
             }
             EaElements.ToolButton {
                 id: sendButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
                 implicitWidth: composer.actionSize
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75

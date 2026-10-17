@@ -1172,3 +1172,40 @@ context signal can resume the exact captured draft once. Authentication,
 connectionAttempt, current-owner/account/conversation checks, refusal, Cancel,
 IME, ACK and native save/science behavior are unchanged. No second approval
 window or scientific form is added.
+
+
+### Account, allowance and model chooser use the ordinary dialog layout
+
+The connected header initial is inside a fixed square native button with a
+contrasting circular background, native foreground hover/pressed/disabled state
+and focus ring. The account card uses the actual email and supplied plan (initial
+capitalization, muted), tight identity spacing and a separate, more distant
+icon-font Sign out action. The supported account response supplies email/planType
+only: no full personal name is invented or derived from an address.
+
+Model/effort uses the original app-centered AppDialog, standard margins/colors
+and two side-by-side original DataTables. Shared measured radio/label columns
+show full labels and all rows at natural size; only actual viewport overflow
+scrolls. Keyboard focus reveals its real selector in that viewport. Existing
+selection, unavailable-row skip, genuine inputs, owner/retirement and Escape
+semantics remain. The composer pill has one measured text-space between model
+and muted effort. Fixed circular action rectangles and the same layout spacing
+keep previous/next/visible Stop/Send edge gaps equal; the width budget counts
+whichever Stop/Send controls are actually visible.
+
+Usage has only Session limit and Weekly allowance rows, actual percent used,
+rounded accent bars and relative reset. The supported five-hour and seven-day
+windows map by reported duration, never primary/secondary position. The most
+constrained matching actual window is selected across buckets. Missing windows
+show Unavailable, stale snapshots Last known. Other durations remain actual
+constraints in the header's all-window minimum and its accessible tooltip,
+without inventing a Session row. Bars turn orange below25 percent remaining and
+red below5; otherwise use the accent. Reset labels derive only from supplied
+reset time, updated once per minute only while the authenticated dialog is
+visible. No context-occupancy, credits, balance, raw timestamp or duplicated
+technical summary is presented. Account epochs, refresh-on-open and quota
+observations remain original backend facts.
+
+### Used allowance and native header presentation
+
+The header and allowance details consistently display the actual supplied percent used, including values above 100; threshold colors still use the remaining allowance. Missing and stale observations remain explicit, and the most constraining supplied window governs the header. The clear glyph matches the composer action glyph size while retaining its full button target. Assistant action backgrounds use neutral keyboard-focus cues rather than blue outlines; the Show actions eye retains its checked glyph accent without a checked outline. The Assistant title strip uses the original Main/Extra TabButton resting `contentBackground` semantic color, separately from the body and passive divider.

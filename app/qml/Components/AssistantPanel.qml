@@ -40,40 +40,34 @@ Popup {
         return known.join(", ");
     }
     readonly property string accountInitial: accountData.email ? Array.from(accountData.email)[0].toUpperCase() : ""
-    function usageResetLabel(value) {
-        if (typeof value !== "number") return "";
-        const reset = new Date(value*1000);
-        return isNaN(reset.getTime()) ? qsTr("Reset timestamp: %1").arg(value) : qsTr("Resets: %1").arg(reset.toISOString());
-    }
     function usageWindowLabel(bucket, window) {
-        const name = bucket.limitName || bucket.limitId || bucket.id || qsTr("Allowance");
-        const kind = window.kind === "primary" ? qsTr("Primary window") : qsTr("Secondary window");
-        const duration = typeof window.windowDurationMins === "number" ? qsTr(" · %1 minutes").arg(window.windowDurationMins) : "";
-        return name + " · " + kind + duration;
+        const label = window.windowDurationMins === 300 ? qsTr("Session limit")
+                    : window.windowDurationMins === 10080 ? qsTr("Weekly") : qsTr("Other allowance");
+        const name = bucket.limitName || bucket.limitId || bucket.id || "";
+        return name.length ? name + " · " + label : label;
     }
     function usageCaption() {
-        const prefix = usageData.stale ? qsTr("Last observed: ") : "";
-        if (usageWindow) return prefix + qsTr("%1 · %2% remaining").arg(usageWindow.label).arg(Math.max(0, 100 - usageWindow.usedPercent));
-        return usageData.available ? prefix + qsTr("Usage details available") : qsTr("Usage data unavailable");
+        const prefix = usageData.stale ? qsTr("Last known · ") : "";
+        if (usageWindow) return prefix + qsTr("%1 · %2% used").arg(usageWindow.label).arg(usageWindow.usedPercent);
+        return qsTr("Usage unavailable");
     }
-    function usageBucketText(bucket) {
-        let lines = [];
-        for (const window of bucket.windows || []) {
-            let line = usageWindowLabel(bucket, window) + "\n" + qsTr("%1% used · %2% remaining").arg(window.usedPercent).arg(Math.max(0, 100 - window.usedPercent));
-            if (typeof window.resetsAt === "number") {
-                const reset = new Date(window.resetsAt * 1000);
-                line += "\n" + (isNaN(reset.getTime()) ? qsTr("Reset timestamp: %1").arg(window.resetsAt) : qsTr("Resets: %1").arg(reset.toISOString()));
-            }
-            lines.push(line);
-        }
-        if (bucket.credits) {
-            const name = bucket.limitName || bucket.limitId || bucket.id || qsTr("Allowance");
-            let credits = name + " · " + (bucket.credits.unlimited ? qsTr("Credits: unlimited") : bucket.credits.hasCredits ? qsTr("Credits available") : qsTr("No credits available"));
-            if (typeof bucket.credits.balance === "string") credits += "\n" + qsTr("Balance: %1").arg(bucket.credits.balance);
-            lines.push(credits);
-        }
-        return lines.join("\n\n");
+    function allowanceWindow(minutes) {
+        let selected = null;
+        for (const bucket of usageData.buckets || []) for (const window of bucket.windows || [])
+            if (window.windowDurationMins === minutes && (!selected || window.usedPercent > selected.usedPercent)) selected = window;
+        return selected;
     }
+    function usageResetLabel(value, now) {
+        if (typeof value !== "number" || !isFinite(new Date(value * 1000).getTime())) return qsTr("Reset unavailable");
+        const minutes = Math.ceil((value * 1000 - now) / 60000);
+        if (minutes <= 0) return qsTr("Reset time reached");
+        const days = Math.floor(minutes / 1440);
+        const hours = Math.floor((minutes % 1440) / 60);
+        if (days > 0) return qsTr("Resets in %1d %2h").arg(days).arg(hours);
+        if (hours > 0) return qsTr("Resets in %1h %2min").arg(hours).arg(minutes % 60);
+        return qsTr("Resets in %1min").arg(minutes);
+    }
+    readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
     function workingFolderCaption(path) {
         if (path.length === 0) return qsTr("Temporary workspace");
         const normalized = path.replace(/\\/g, "/");
@@ -186,6 +180,10 @@ Popup {
                 id: header
                 width: parent.width
                 height: EaStyle.Sizes.tabBarHeight
+                Rectangle {
+                    anchors.fill: parent
+                    color: EaStyle.Colors.contentBackground
+                }
                 EaElements.Label {
                     anchors.left: parent.left
                     anchors.leftMargin: EaStyle.Sizes.fontPixelSize * 0.5
@@ -208,6 +206,9 @@ Popup {
                         visible: panel.assistant.connected
                         objectName: "assistant.clear"
                         fontIcon: "eraser"
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                        implicitWidth: EaStyle.Sizes.toolButtonHeight
+                        implicitHeight: EaStyle.Sizes.toolButtonHeight
                         showBackground: false
                         ToolTip.text: qsTr("Clear conversation")
                         Accessible.name: ToolTip.text
@@ -220,7 +221,7 @@ Popup {
                         id: usageButton
                         visible: panel.assistant.connected
                         objectName: "assistant.usage"
-                        text: panel.remainingPercent < 0 ? "–" : qsTr("%1%").arg(panel.remainingPercent)+(panel.usageData.stale ? " · "+qsTr("stale") : "")
+                        text: !panel.usageWindow ? "–" : qsTr("%1% used").arg(panel.usageWindow.usedPercent)+(panel.usageData.stale ? " · "+qsTr("stale") : "")
                         font.bold: false
                         contentItem: EaElements.Label {
                             text: usageButton.text
@@ -249,7 +250,21 @@ Popup {
                             verticalAlignment: Text.AlignVCenter
                             color: connectionButton.foregroundColor()
                         }
-                        Layout.maximumWidth: header.width * 0.4
+                        Layout.preferredWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : implicitWidth
+                        Layout.minimumWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : 0
+                        Layout.maximumWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : header.width * 0.4
+                        Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
+                        Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
+                        Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
+                        background: Rectangle {
+                            visible: panel.assistant.connected
+                            implicitWidth: EaStyle.Sizes.toolButtonHeight
+                            implicitHeight: implicitWidth
+                            radius: width * 0.5
+                            color: connectionButton.hovered || connectionButton.down ? EaStyle.Colors.themeBackgroundHovered1 : EaStyle.Colors.themeBackgroundHovered2
+                            border.width: connectionButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
+                            border.color: EaStyle.Colors.themeForegroundMinor
+                        }
                         ToolTip.text: panel.assistant.connected ? qsTr("Account") : text
                         Accessible.name: ToolTip.text
                         KeyNavigation.priority: KeyNavigation.BeforeItem
@@ -568,96 +583,75 @@ Popup {
             objectName: "assistant.usageDialog"
             title: qsTr("Usage")
             standardButtons: Dialog.Close
+            property real resetClock: Date.now()
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
             width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
-            contentWidth: Math.max(0, width - leftPadding - rightPadding)
-            contentHeight: Math.min(usageContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding
-                - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
-                - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
-            onOpened: panel.assistant.refreshUsage()
+            contentWidth: Math.max(0, width-leftPadding-rightPadding)
+            contentHeight: Math.min(usageContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
+                -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            onOpened: { resetClock = Date.now(); panel.assistant.refreshUsage(); }
+            Timer {
+                interval: 60000
+                repeat: true
+                running: usageDialog.visible && panel.assistant.connected
+                onTriggered: usageDialog.resetClock = Date.now()
+            }
             ScrollView {
-                id: usageScroll
                 width: usageDialog.contentWidth
                 height: usageDialog.contentHeight
                 clip: true
-                ScrollBar.vertical: EaElements.ScrollBar { id: usageBar; policy: ScrollBar.AsNeeded; interactive: false }
+                ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
                 Column {
                     id: usageContent
-                    width: Math.max(0, usageDialog.contentWidth - usageBar.implicitWidth)
-                    spacing: AppSizes.unit
+                    width: Math.max(0, usageDialog.contentWidth-AppSizes.unit)
+                    spacing: AppSizes.unit * 1.5
                     EaElements.Label {
-                        width: parent.width
-                        text: panel.usageCaption()
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                    }
-                    EaElements.Label {
-                        width: parent.width
-                        text: qsTr("Context window occupancy: unavailable")
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
+                        visible: panel.usageData.stale
+                        text: qsTr("Last known")
+                        color: EaStyle.Colors.themeForegroundMinor
                     }
                     Repeater {
-                        model: panel.usageData.buckets || []
+                        model: [{title: qsTr("Session limit"), minutes: 300, key: "session"}, {title: qsTr("Weekly"), minutes: 10080, key: "weekly"}]
                         Column {
-                            id: bucketView
+                            id: allowance
                             required property var modelData
+                            readonly property var window: panel.allowanceWindow(modelData.minutes)
+                            objectName: "assistant.usage."+modelData.key
                             width: usageContent.width
-                            spacing: AppSizes.unit * 0.5
-                            Repeater {
-                                model: bucketView.modelData.windows || []
-                                Column {
-                                    id: windowView
-                                    required property var modelData
-                                    width: bucketView.width
-                                    spacing: AppSizes.unit * 0.25
-                                    EaElements.Label {
-                                        width: parent.width
-                                        text: panel.usageWindowLabel(bucketView.modelData, windowView.modelData)
-                                        textFormat: Text.PlainText
-                                        wrapMode: Text.WrapAnywhere
-                                    }
-                                    ProgressBar {
-                                        objectName: "assistant.usage.windowBar"
-                                        width: parent.width
-                                        from: 0; to: 100
-                                        value: Math.max(0, Math.min(100, windowView.modelData.usedPercent))
-                                        contentItem: Rectangle {
-                                            implicitHeight: AppSizes.unit * 0.35
-                                            color: EaStyle.Colors.themeBackgroundDisabled
-                                            Rectangle {
-                                                width: parent.width * Math.max(0, Math.min(1, windowView.modelData.usedPercent / 100))
-                                                height: parent.height
-                                                color: panel.allowanceColor(Math.max(0, 100-windowView.modelData.usedPercent))
-                                            }
-                                        }
-                                        Accessible.name: panel.usageWindowLabel(bucketView.modelData, windowView.modelData)
-                                    }
-                                    EaElements.Label {
-                                        width: parent.width
-                                        text: qsTr("%1% used · %2% remaining").arg(windowView.modelData.usedPercent).arg(Math.max(0, 100-windowView.modelData.usedPercent))
-                                            + (typeof windowView.modelData.resetsAt === "number" ? "\n" + panel.usageResetLabel(windowView.modelData.resetsAt) : "")
-                                        textFormat: Text.PlainText
-                                        wrapMode: Text.WrapAnywhere
-                                    }
+                            spacing: AppSizes.unit * 0.35
+                            RowLayout {
+                                width: parent.width
+                                EaElements.Label { text: allowance.modelData.title; Layout.fillWidth: true }
+                                EaElements.Label {
+                                    objectName: allowance.objectName+".percent"
+                                    text: allowance.window ? qsTr("%1% used").arg(allowance.window.usedPercent) : qsTr("Unavailable")
+                                }
+                            }
+                            Rectangle {
+                                objectName: allowance.objectName+".bar"
+                                width: parent.width
+                                height: AppSizes.unit * 0.5
+                                radius: height * 0.5
+                                color: EaStyle.Colors.themeBackgroundHovered2
+                                Rectangle {
+                                    objectName: allowance.objectName+".fill"
+                                    width: allowance.window ? parent.width * Math.max(0,Math.min(1,allowance.window.usedPercent/100)) : 0
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: allowance.window && 100-allowance.window.usedPercent < 5 ? EaStyle.Colors.red
+                                         : allowance.window && 100-allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
                                 }
                             }
                             EaElements.Label {
-                                width: parent.width
-                                visible: !!bucketView.modelData.credits
-                                text: bucketView.modelData.credits ? (bucketView.modelData.credits.unlimited ? qsTr("Credits: unlimited") : bucketView.modelData.credits.hasCredits ? qsTr("Credits available") : qsTr("No credits available"))+(typeof bucketView.modelData.credits.balance === "string" ? "\n"+qsTr("Balance: %1").arg(bucketView.modelData.credits.balance) : "") : ""
+                                objectName: allowance.objectName+".reset"
+                                visible: allowance.window !== null
+                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
+                                color: EaStyle.Colors.themeForegroundMinor
                                 textFormat: Text.PlainText
-                                wrapMode: Text.WrapAnywhere
+                                wrapMode: Text.WordWrap
                             }
                         }
-                    }
-                    EaElements.Label {
-                        width: parent.width
-                        text: panel.usageData.observedAt ? qsTr("Read at %1. Different allowance windows are listed separately; the percentage shows the most constrained supplied window.").arg(panel.usageData.observedAt)
-                            : qsTr("No account usage snapshot is available. No quota or context percentage is inferred from conversation length or time.")
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
                     }
                 }
             }
@@ -700,27 +694,44 @@ Popup {
                 Column {
                     id: accountContent
                     width: Math.max(0, accountDialog.contentWidth-AppSizes.unit)
-                    spacing: AppSizes.unit
-                    EaElements.Label {
-                        objectName: "assistant.accountIdentity"
+                    spacing: 0
+                    Column {
                         width: parent.width
-                        text: panel.accountData.email || qsTr("Account email unavailable")
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WrapAnywhere
+                        spacing: AppSizes.unit * 0.25
+                        EaElements.Label {
+                            objectName: "assistant.accountIdentity"
+                            width: parent.width
+                            text: panel.accountData.email || qsTr("Account email unavailable")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WrapAnywhere
+                        }
+                        EaElements.Label {
+                            objectName: "assistant.accountPlan"
+                            width: parent.width
+                            visible: panel.accountPlanLabel.length > 0
+                            text: panel.accountPlanLabel
+                            color: EaStyle.Colors.themeForegroundMinor
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WrapAnywhere
+                        }
                     }
-                    EaElements.Label {
-                        width: parent.width
-                        visible: panel.accountPlan.length>0
-                        text: panel.accountPlan
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WrapAnywhere
-                    }
+                    Item { width: 1; height: AppSizes.unit * 1.5 }
                     EaElements.Button {
                         id: signOutButton
                         objectName: "assistant.signOut"
                         text: qsTr("Sign out")
+                        contentItem: Row {
+                            spacing: AppSizes.unit * 0.5
+                            EaElements.Label {
+                                text: "sign-out-alt"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: signOutButton.foregroundColor()
+                            }
+                            EaElements.Label { text: signOutButton.text; color: signOutButton.foregroundColor() }
+                        }
                         width: Math.min(implicitWidth,parent.width)
                         enabled: panel.assistant.connected
+                        Accessible.name: text
                         onClicked: panel.assistant.signOut()
                     }
                 }
