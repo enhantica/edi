@@ -164,15 +164,15 @@ Rectangle {
         }
         function calcHue(colour) {
             const lab = oklab(colour);
-            if (Math.hypot(lab[1], lab[2]) <= quantisationBounds(colour).chroma)
+            if (Math.hypot(lab[1], lab[2]) < 0.04)
                 return false;
-            const limits = [hue("#f44336"), hue("#ef9a9a")].sort((a, b) => a - b);
-            const margin = Math.max(quantisationBounds("#f44336").hue, quantisationBounds("#ef9a9a").hue);
-            return hue(colour) >= limits[0] - margin && hue(colour) <= limits[1] + margin;
+            return ["#f44336", "#ef9a9a"].some(calc => hueDistance(hue(colour), hue(calc)) <= 45);
         }
         function test_independent_hue_observer_reaches_calc_and_safe_controls() {
             verify(calcHue("#f44336") && calcHue("#ef9a9a"), "Both independent light/dark calculated colours lie in the calculated hue range");
             verify(!calcHue("#0055a0") && !calcHue("#808080"), "An independently blue hue and hue-less neutral stay outside the calculated hue range");
+            verify(calcHue("#d08000") && calcHue("#d500a0"), "ADR-0038 includes orange inside only the light calc range and wraparound pink inside only the dark calc range");
+            verify(!calcHue("#d500c0") && !calcHue("#d09000") && !calcHue("#887878"), "ADR-0038 excludes hues beyond 45 degrees and PROVENANCE.md excludes chroma below 0.04");
         }
         function test_coast_is_the_new_reversible_default() {
             Preferences.resetToDefaults();
@@ -238,6 +238,8 @@ Rectangle {
             for (let i = 0; i < table.structure.length; ++i) {
                 const colour = String(ApplicationInfo.structureColour(data.scheme, i, data.dark)).toLowerCase();
                 compare(colour, table.structure[i][theme].toLowerCase(), "The actual structure API consumes each stored structure place");
+                if (Math.hypot(...oklab(colour).slice(1)) > 0.06 + quantisationBounds(colour).chroma)
+                    failures.push("Structure exceeds the declared muted chroma at " + i);
                 for (let j = i + 1; j < table.structure.length; ++j) {
                     const other = String(ApplicationInfo.structureColour(data.scheme, j, data.dark)).toLowerCase();
                     const a = quantisationBounds(colour), b = quantisationBounds(other);
@@ -246,8 +248,8 @@ Rectangle {
                     if (Math.abs(oklab(colour)[0] - oklab(other)[0]) <= a.lightness + b.lightness)
                         failures.push("Structures share a lightness step at " + i + "/" + j);
                 }
-                if (table.pattern.some(row => row[theme].toLowerCase() === colour))
-                    failures.push("Structure duplicates a measured colour at " + i);
+                if (table.pattern.some(row => oklabDistance(row[theme], colour) < 0.08))
+                    failures.push("Structure falls within 0.08 Oklab of a measured colour at " + i);
             }
             compare(failures.length, 0, "All eighteen schemes retain distinct bounded roles and a rising, calc-hue-avoiding gradient with strict contrast at every actual API sample in both themes; scheme=" + data.scheme + " failures=" + failures.slice(0, 5).join("; ") + "; total=" + failures.length);
         }

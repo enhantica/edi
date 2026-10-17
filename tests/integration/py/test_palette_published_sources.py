@@ -120,15 +120,11 @@ def source_pair(scheme, row, section):
 
 
 def in_calc_hue(colour):
-    # The short OKLCH arc spanning the independently specified light/dark calc
-    # colours, enlarged only by their half-LSB hue uncertainty. Neutral has no hue.
-    if polar(colour)[1] <= quantisation_tolerance(colour)[0]:
+    # ADR-0038 decision 2; PROVENANCE.md excludes chroma below 0.04.
+    _, chroma, hue = polar(colour)
+    if chroma < 0.04:
         return False
-    hues = [polar(value)[2] for value in ('#F44336', '#EF9A9A')]
-    margin = max(quantisation_tolerance(value)[1] for value in ('#F44336', '#EF9A9A'))
-    start, end = sorted(hues)
-    hue = polar(colour)[2]
-    return start - margin <= hue <= end + margin
+    return any(angle_difference(hue, polar(value)[2]) <= 45 for value in ('#F44336', '#EF9A9A'))
 
 
 def test_exactly_eighteen_schemes_are_published_with_coast_default():
@@ -141,7 +137,14 @@ def test_exactly_eighteen_schemes_are_published_with_coast_default():
 
 
 @pytest.mark.parametrize('scheme', REFERENCE['schemes'], ids=itemgetter('id'))
-def test_each_palette_retains_its_cited_published_source_coordinates(scheme):
+@pytest.mark.parametrize(
+    ('theme', 'background', 'calculated'),
+    [('light', '#FFFFFF', '#F44336'), ('dark', '#444444', '#EF9A9A')],
+    ids=['light', 'dark'],
+)
+def test_each_palette_retains_its_cited_published_source_coordinates(
+    scheme, theme, background, calculated
+):
     rows = palette_rows(scheme)
     section = cited_section(scheme)
     assert section, (
@@ -161,33 +164,27 @@ def test_each_palette_retains_its_cited_published_source_coordinates(scheme):
         assert row['role'] in {'pattern', 'structure', 'gradient'} and all(
             re.fullmatch(r'#[0-9A-Fa-f]{6}', row[t]) for t in ('light', 'dark')
         ), f'Each stored row has a known role and explicit 8-bit RGB coordinates: {row}'
-        if row['role'] == 'gradient' or scheme['kind'] == 'design':
+        # Structure fills use ADR-0038 decision 5's muted, stepped colours.
+        if row['role'] != 'pattern' or scheme['kind'] == 'design':
             continue
         sources = source_pair(scheme, row, section)
-        for source, theme, background in zip(
-            sources, ('light', 'dark'), ('#FFFFFF', '#444444'), strict=True
-        ):
-            actual = row[theme]
-            calculated = (
-                ('#F44336' if theme == 'light' else '#EF9A9A')
-                if row['role'] == 'pattern'
-                else None
-            )
-            ideal = smallest_adaptation(source, background, calculated)
-            others = [r[theme] for r in rows if r['role'] == row['role'] and r != row]
-            if not gamut_hue_chroma_preserved(source, actual):
-                failures.append(('hue/maximal gamut chroma', source, actual, theme))
-            if contrast(actual, background) < 3:
-                failures.append(('WCAG 3:1', actual, theme))
-            if all(
-                math.dist(ideal, oklab(other)) >= 0.08 for other in others
-            ) and not nearest_passing_lightness(source, actual, background, calculated):
-                failures.append((
-                    'nearest passing one-sided lattice lightness',
-                    source,
-                    actual,
-                    theme,
-                ))
+        source = sources[0 if theme == 'light' else 1]
+        actual = row[theme]
+        ideal = smallest_adaptation(source, background, calculated)
+        others = [r[theme] for r in rows if r['role'] == row['role'] and r != row]
+        if not gamut_hue_chroma_preserved(source, actual):
+            failures.append(('hue/maximal gamut chroma', source, actual, theme))
+        if contrast(actual, background) < 3:
+            failures.append(('WCAG 3:1', actual, theme))
+        if all(
+            math.dist(ideal, oklab(other)) >= 0.08 for other in others
+        ) and not nearest_passing_lightness(source, actual, background, calculated):
+            failures.append((
+                'nearest passing one-sided lattice lightness',
+                source,
+                actual,
+                theme,
+            ))
     assert not failures, (
         'Published adaptations retain source hue/maximal gamut chroma and nearest passing '
         f'8-bit lightness with strict contrast; scheme={scheme["label"]}, actual={failures}'
@@ -382,6 +379,10 @@ def test_fixed_and_structure_sets_are_bounded_distinct_and_indexed(scheme):
         structures = [r[theme] for r in roles['structure']]
         measured = [r[theme] for r in roles['pattern']]
         for i, first in enumerate(structures):
+            assert polar(first)[1] <= 0.06 + quantisation_tolerance(first)[0], (
+                f'Structure fills keep the declared muted Oklab chroma of at most 0.06 '
+                f'within half-LSB rounding: {scheme["label"]}/{theme}/{first}'
+            )
             for other in structures[i + 1 :]:
                 assert angle_difference(polar(first)[2], polar(other)[2]) > sum(
                     quantisation_tolerance(c)[1] for c in (first, other)
@@ -395,11 +396,9 @@ def test_fixed_and_structure_sets_are_bounded_distinct_and_indexed(scheme):
                     f'Each structure colour has its own lightness step beyond half-LSB '
                     f'uncertainty: {scheme["label"]}/{theme}'
                 )
-            assert all(
-                distance(first, c) > sum(lightness_quantisation_tolerance(v) for v in (first, c))
-                for c in measured
-            ), (
-                f'Every structure colour is distinct from every measured-data '
+            assert all(distance(first, c) >= 0.08 for c in measured), (
+                f'Every structure colour keeps the declared 0.08 Oklab distance from every '
+                f'measured-data '
                 f'colour in both themes: {scheme["label"]}/{theme}'
             )
 
@@ -441,10 +440,20 @@ def test_one_sided_quantisation_matches_exhaustive_independent_lattice(witness):
 
 @pytest.mark.parametrize(
     ('colour', 'expected'),
-    [('#F44336', True), ('#EF9A9A', True), ('#0055A0', False), ('#808080', False)],
+    [
+        ('#F44336', True),
+        ('#EF9A9A', True),
+        ('#D08000', True),
+        ('#D500A0', True),
+        ('#D500C0', False),
+        ('#D09000', False),
+        ('#887878', False),
+        ('#0055A0', False),
+        ('#808080', False),
+    ],
 )
 def test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls(colour, expected):
     assert in_calc_hue(colour) is expected, (
-        'The independent OKLCH observer identifies both calculated hues, excludes blue '
-        'and treats neutral quantisation uncertainty as hue-less'
+        'ADR-0038 includes hues within 45 degrees of either calculated colour across '
+        'the circular seam, excludes more distant hues, and treats chroma below 0.04 as hue-less'
     )
