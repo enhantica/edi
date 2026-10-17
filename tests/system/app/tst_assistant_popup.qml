@@ -4512,4 +4512,261 @@ TestCase {
         }
     }
 
+    function save349_science(project) {
+        return JSON.stringify({values: JSON.parse(visible185_values(project)),
+            inputs: JSON.parse(visible185_inputs(project)),
+            declarations: JSON.parse(relation245_declarations(project)),
+            sites: Probe.rows(project.currentStructure.atomSites).map(row => [row.label, row.typeSymbol,
+                row.adpType, row.fractX.value, row.fractY.value, row.fractZ.value, row.occupancy.value]),
+            results: Probe.rows(project.fit.results), outcome: project.fit.outcome,
+            iterations: project.fit.iterations, goodnessOfFit: project.fit.goodnessOfFit});
+    }
+    function test_save349_visible_real_save_and_retirement_data() {
+        return ["fresh", "current", "no-grant", "collision", "stop", "close-owner"].map(tag => ({tag: tag}));
+    }
+    function test_save349_visible_real_save_and_retirement(data) {
+        const leaf = "Original μ 🧪 saved project";
+        verify(Session.openProject(Probe.referenceUrl("input")),
+            "SAVE349 SETUP: actual independently owned complete native input opens");
+        let project = Session.project;
+        const parameters = visible185_parameters(project);
+        const cell = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
+        compare(cell.length, 1, "SAVE349 SETUP: independent original fit cell is unique");
+        // Existing VA185 lawful fit-subset setup, never credited as visible editing/Save delivery.
+        for (const parameter of parameters) parameter.free = false;
+        cell[0].free = true;
+        project.currentExperiment.scale.free = true;
+        project.analysis.maxIterations = 8;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE349 SETUP: actual complete native science is current before real fitting");
+        const beforeFit = visible185_values(project), originalInputs = visible185_inputs(project);
+        visible185_page("analysis");
+        Ui.click(this, Probe, window, "sideBar.tab.basic");
+        let fitStarts = 0, fitFinishes = 0;
+        const fit = project.fit, fitLife = lifetime313(fit);
+        function started() { if (alive313(fitLife) && fit.running) ++fitStarts; }
+        function finished() { ++fitFinishes; }
+        fit.runningChanged.connect(started);
+        fit.finished.connect(finished);
+        try {
+            Ui.click(this, Probe, window, "fitting.start");
+            tryVerify(() => fitFinishes === 1 && !fit.running && !project.calculating
+                && Probe.computedCurrent(project.currentExperiment), 10000,
+                "SAVE349 SETUP: genuine ordinary FitJob finishes and publishes actual current science");
+            compare(fitStarts, 1, "SAVE349 SETUP: the real manual Fit button starts exactly one worker");
+            verify(["success", "maxIterations"].includes(fit.outcome),
+                "SAVE349 SETUP: actual fitted outcome is successful or bounded max-iterations, never stopped/failed");
+            verify(visible185_values(project) !== beforeFit && Probe.rows(fit.results).length > 0,
+                "SAVE349 SETUP: moving real fitted result, never no-step/cached/fabricated success");
+            verify(visible185_parameters(project).some(parameter => parameter.free && parameter.hasUncertainty && parameter.uncertainty > 0),
+                "SAVE349 SETUP: genuine fitted uncertainties exercise ordinary writer rounding");
+            compare(visible185_inputs(project), originalInputs,
+                "SAVE349: actual fit retains every measured coordinate/intensity/sigma/weight/exclusion/phase link");
+        } finally {
+            disconnect313(fitLife, fit, "runningChanged", started);
+            disconnect313(fitLife, fit, "finished", finished);
+        }
+        // Ordinary public writer/readback is the independent pre-existing SU-rounding control.
+        // Neither call is credited as delegated visible Save.
+        verify(Session.saveAs(Probe.referenceUrl("ordinary")), "SAVE349 SETUP: ordinary fitted writer establishes reference tree");
+        verify(Session.saveAs(Probe.referenceUrl("current")), "SAVE349 SETUP: separate genuinely owned current directory exists");
+        verify(Session.openProject(Probe.referenceUrl("current")), "SAVE349 SETUP: normal reader establishes rounded current model");
+        project = Session.project;
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE349 SETUP: ordinary real readback is current before Save admission");
+        const science = save349_science(project), owner = lifetime313(project);
+        const currentPath = project.path;
+        const sourceDocuments = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
+        const currentBytes = sourceDocuments.map(name => Probe.readReferenceFile("current/" + name));
+        visible185_page("project");
+        Ui.click(this, Probe, window, "mainArea.project.tab.description");
+        Ui.click(this, Probe, window, "project.title");
+        visible185_type("Original visible Save " + data.tag);
+        keyClick(Qt.Key_Return);
+        compare(project.title, "Original visible Save " + data.tag, "SAVE349 SETUP: genuine user title edit makes current model dirty");
+        verify(project.modified && !Session.needsSaveAs,
+            "SAVE349 SETUP: ordinary current Save is eligible for the real fitted owned project");
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "SAVE349 SETUP: genuine title commit is settled before native Save admission");
+        compare(save349_science(project), science, "SAVE349 SETUP: title edit changes no fitted scientific fact");
+        const metadata = JSON.parse(import265_owner(project));
+        delete metadata.path;
+        const undoBefore = item("appBar.button.undo").enabled;
+        toggle();
+        assistant.signIn();
+        visible185_ready("save349-bootstrap");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        visible185_ready("save349-disclosed");
+        if (!["no-grant", "current"].includes(data.tag)) {
+            const intent = assistant.beginWorkingFolderSelection();
+            verify(intent.length > 0 && assistant.completeWorkingFolderSelection(intent, Probe.referenceUrl("selected")),
+                "SAVE349 SETUP: real original picker intent grants exactly the owned parent");
+            compare(assistant.workingFolder, ApplicationInfo.localPath(Probe.referenceUrl("selected")),
+                "SAVE349 SETUP: native grant is the independently selected physical parent");
+            if (assistant.contextConsentRequired) assistant.signIn();
+            visible185_ready("save349-folder-disclosed");
+        } else compare(assistant.workingFolder, "", "SAVE349 SETUP: current/no-grant cases have no unrelated fresh-parent grant");
+        const show = item("assistant.showActions");
+        verify(show.enabled && show.visible, "SAVE349 SETUP: actual Show actions control is actionable");
+        mouseClick(show);
+        verify(assistant.showActions, "SAVE349 SETUP: real checkbox admits visible mode");
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        const beforeIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const save = Ui.control(Probe, window, "appBar.button.save");
+        verify(save !== null && save.enabled && Ui.exposed(save), "SAVE349 SETUP: genuine ordinary Save button is physically enabled");
+        let saveClicks = 0, finalClicks = 0, typed = 0, finalName = null;
+        let editor = null, finalSave = null, editorLife = null, finalLife = null;
+        let originalDialog = null, dialogLife = null, originalFooter = null, openedEvents = 0;
+        function savedClicked() { ++saveClicks; }
+        function finalPressed() {
+            verify(alive313(dialogLife) && alive313(editorLife) && alive313(finalLife),
+                "SAVE352: original dialog/editor/footer receiver remain alive at real final press");
+            verify(originalDialog.opened && originalDialog.visible && finalSave.enabled
+                && Ui.rendered(finalSave) && Ui.exposed(finalSave),
+                "SAVE352: genuine final Save is physically exposed in its actual opened original form");
+            let parent = finalSave;
+            while (parent && parent !== originalFooter) parent = parent.parent;
+            compare(parent, originalFooter, "SAVE352: pressed Save belongs to the exact original Dialog.footer");
+            let windowParent = finalSave;
+            while (windowParent && windowParent !== Ui.windowRoot(window)) windowParent = windowParent.parent;
+            compare(windowParent, Ui.windowRoot(window), "SAVE352: final receiver belongs to the original physical window");
+            const point = Ui.clickPoint(finalSave);
+            verify(point !== null, "SAVE352: actual footer button has an unclipped click point");
+            const position = finalSave.mapToItem(window.contentItem, point.x, point.y);
+            verify(position.x >= 0 && position.y >= 0 && position.x < window.contentItem.width
+                && position.y < window.contentItem.height, "SAVE352: original final press lies inside the actual window");
+            finalName = editor.text;
+        }
+        function openedChanged() {
+            if (alive313(dialogLife) && originalDialog.opened) ++openedEvents;
+        }
+        function finalClicked() { ++finalClicks; }
+        function textEdited() { ++typed; }
+        save.clicked.connect(savedClicked);
+        const call = "save349-" + data.tag;
+        const observation = visible237_observationMs([{path: "", text: leaf}]);
+        try {
+            if (["fresh", "collision", "stop", "close-owner"].includes(data.tag)) {
+                // Passive original receiver binding, including collision. A closed
+                // form need not be rendered/exposed and no open interval is forced.
+                const forms = Probe.objectsWithProperty(window, "opened").filter(object =>
+                    object.objectName === "assistant.resultSaveAs");
+                compare(forms.length, 1, "SAVE352 SETUP: exact original window owns one Save dialog receiver");
+                originalDialog = forms[0]; dialogLife = lifetime313(originalDialog);
+                const content = originalDialog.contentItem;
+                originalFooter = originalDialog.footer;
+                verify(content !== null && originalFooter !== null,
+                    "SAVE352 SETUP: original dialog has its distinct content and footer owners");
+                const names = Ui.itemsWithProperty(content, "objectName").filter(object =>
+                    object.objectName === "assistant.resultFolderName");
+                const buttons = Ui.itemsWithProperty(originalFooter, "objectName").filter(object =>
+                    object.objectName === "assistant.resultFolderSave");
+                compare(names.length, 1, "SAVE352 SETUP: exact content owns one original name editor");
+                compare(buttons.length, 1, "SAVE352 SETUP: exact footer owns one original final Save receiver");
+                editor = names[0]; finalSave = buttons[0];
+                editorLife = lifetime313(editor); finalLife = lifetime313(finalSave);
+                editor.textEdited.connect(textEdited);
+                finalSave.pressed.connect(finalPressed); finalSave.clicked.connect(finalClicked);
+                originalDialog.openedChanged.connect(openedChanged);
+                console.log("SAVE352_ORIGINAL_RECEIVERS", JSON.stringify({case: data.tag,
+                    dialog: identity313(dialogLife), editor: identity313(editorLife),
+                    finalSave: identity313(finalLife), originallyOpened: originalDialog.opened}));
+            }
+            assistant.send("Save this actual fitted displayed project using original visible Save " + data.tag);
+            if (!["current", "no-grant", "collision"].includes(data.tag)) {
+                tryVerify(() => {
+                    if (!alive313(dialogLife) || !alive313(editorLife) || !alive313(finalLife)
+                        || !originalDialog.opened || !originalDialog.visible) return false;
+                    const forms = Probe.objectsWithProperty(window, "opened").filter(object =>
+                        object.objectName === "assistant.resultSaveAs");
+                    compare(forms.length, 1, "SAVE352: no second dialog can replace the original Save receiver");
+                    compare(forms[0], originalDialog, "SAVE352: actual opened form is the bound original dialog");
+                    let ancestor = editor;
+                    while (ancestor && ancestor !== Ui.windowRoot(window)) ancestor = ancestor.parent;
+                    if (ancestor !== Ui.windowRoot(window)) return false;
+                    return saveClicks === 1 && assistant.showingActions && assistant.canCancel
+                        && editor.visible && Ui.rendered(editor) && Ui.exposed(editor)
+                        && typed > 0 && editor.text.length > 0 && editor.text !== leaf;
+                }, observation, "SAVE349 INTERVAL: real Save opens its unique form and genuine partial original name typing is reached");
+                console.log("SAVE349_PARTIAL", JSON.stringify({case: data.tag, saveClicks: saveClicks,
+                    typed: typed, text: editor.text, finalClicks: finalClicks, currentOwner: Session.project === project}));
+                if (data.tag === "stop") {
+                    const stop = item("assistant.stopVisibleAction");
+                    verify(stop.enabled && Ui.exposed(stop), "SAVE349 STOP: genuine original Stop is exposed in reached interval");
+                    mouseClick(stop);
+                } else if (data.tag === "close-owner") Session.closeProject();
+            }
+            const refused = ["no-grant", "collision", "stop", "close-owner"].includes(data.tag);
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions
+                && (data.tag === "close-owner" ? Session.project === null : visible185_outcome(call, beforeIds) !== null),
+                observation, "SAVE349: original whole request settles without a fabricated native receipt");
+            const outcome = visible185_outcome(call, beforeIds);
+            if (!refused) verify(alive313(owner) && Session.project === project,
+                "SAVE352: successful Save keeps the exact original live displayed owner before any inspection");
+            console.log("SAVE349_TERMINAL", JSON.stringify({case: data.tag, outcome: outcome,
+                saveClicks: saveClicks, finalClicks: finalClicks, typed: typed,
+                originalReceiversBound: dialogLife !== null, openedEvents: openedEvents,
+                originalDialogAlive: alive313(dialogLife),
+                currentPath: Session.project ? Session.project.path : null,
+                modified: Session.project ? Session.project.modified : null,
+                connected: assistant.connected, originalOwnerAlive: alive313(owner)}));
+            if (refused) {
+                if (data.tag !== "close-owner") verify(outcome !== null && outcome.status !== "succeeded" && outcome.committed !== true,
+                    "SAVE349: precommit refusal/cancel truthfully denies disk commit");
+                if (data.tag !== "collision") compare(finalClicks, 0,
+                    "SAVE349: missing authority/retired original helper cannot click final Save later");
+                if (data.tag === "no-grant") compare(saveClicks, 0,
+                    "SAVE352: absent parent authority refuses before ordinary Save action");
+                // Collision is always a negative no-write result, with factual
+                // bound control receipts; no earlier/later discovery point is invented.
+                for (let index = 0; index < sourceDocuments.length; ++index)
+                    compare(Probe.readReferenceFile("current/" + sourceDocuments[index]), currentBytes[index],
+                        "SAVE349: refusal/retirement preserves existing native document bytes");
+                if (data.tag !== "close-owner") {
+                    compare(Session.project, project, "SAVE349: refused Save retains original displayed owner");
+                    compare(save349_science(project), science, "SAVE349: refused Save retains complete fitted science");
+                    compare(project.path, currentPath, "SAVE349: refused Save cannot change owned path");
+                    verify(project.modified, "SAVE349: refused Save cannot falsely clear actual dirty state");
+                }
+            } else {
+                verify(outcome !== null && outcome.status === "succeeded" && outcome.committed === true
+                    && outcome.reopened === true && outcome.active === true && outcome.presentation_complete === true,
+                    "SAVE349: success requires actual commit/verified reopen/displayed adoption and complete UI presentation");
+                compare(saveClicks, 1, "SAVE349: one real ordinary Save action owns the operation");
+                compare(finalClicks, data.tag === "current" ? 0 : 1,
+                    "SAVE349: fresh confirms once through real final Save; current has no invented name form");
+                if (data.tag === "fresh") {
+                    verify(typed > 0, "SAVE349: literal fresh Unicode/spaces name was genuinely typed");
+                    compare(finalName, leaf, "SAVE349: real final Save receives the exact spaces/BMP/non-BMP spelling");
+                }
+                verify(alive313(owner) && Session.project === project && !project.modified, "SAVE349: actual displayed saved owner is unmodified");
+                compare(project.path, data.tag === "current" ? currentPath
+                    : ApplicationInfo.localPath(Probe.referenceUrl("selected/" + leaf)), "SAVE349: active directory is exactly the authorized destination");
+                compare(outcome.destination, project.path, "SAVE349: original outcome tells the exact active saved path");
+                tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+                    "SAVE349: actual saved/reopened scientific model is current");
+                compare(save349_science(project), science, "SAVE349: actual visible Save preserves rounded fitted science and declarations");
+                const afterMetadata = JSON.parse(import265_owner(project)); delete afterMetadata.path;
+                compare(JSON.stringify(afterMetadata), JSON.stringify(metadata), "SAVE349: every displayed metadata/settings fact survives actual save/reopen");
+                verify(!Session.needsSaveAs, "SAVE349: real adopted saved directory no longer needs Save As");
+                if (data.tag === "fresh") {
+                    for (let index = 0; index < sourceDocuments.length; ++index)
+                        compare(Probe.readReferenceFile("current/" + sourceDocuments[index]), currentBytes[index],
+                            "SAVE349: fresh-child Save cannot also overwrite the previously owned current native input");
+                }
+            }
+            if (data.tag !== "close-owner") compare(item("appBar.button.undo").enabled, undoBefore,
+                "SAVE349: Save/refusal does not manufacture or consume an ordinary Undo step");
+            verify(assistant.connected, "SAVE349: save/cancel/retirement preserves genuine managed account");
+            compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE349: original account/model catalog is unchanged");
+        } finally {
+            save.clicked.disconnect(savedClicked);
+            if (dialogLife !== null) disconnect313(dialogLife, originalDialog, "openedChanged", openedChanged);
+            if (editorLife !== null) disconnect313(editorLife, editor, "textEdited", textEdited);
+            if (finalLife !== null) {
+                disconnect313(finalLife, finalSave, "pressed", finalPressed);
+                disconnect313(finalLife, finalSave, "clicked", finalClicked);
+            }
+        }
+    }
 }

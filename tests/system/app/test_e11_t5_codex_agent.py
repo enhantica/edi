@@ -8781,3 +8781,144 @@ def test_ux319_actual_final_failure_publication_preserves_factual_cause(generic)
     assert config_path.read_bytes() == original_config and save211_files(source) == original_files, (
         'UX319: fatal publication and nested policy refusal preserve original config and every source file byte'
     )
+
+
+@pytest.mark.parametrize('case', ['fresh', 'current', 'no-grant', 'collision', 'stop', 'close-owner'])
+def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noqa: PLR0914, PLR0915 -- finite existing Main/ordinary writer/loader receipts
+    from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
+
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
+    reference = tmp_path / 'Original349 reference'
+    reference.mkdir()
+    fixture = reference / 'input'
+    shutil.copytree(source, fixture)
+    analysis = fixture / 'analysis/analysis.edi'
+    original_analysis = analysis.read_text()
+    assert original_analysis.count('_edi.schema_version 2') == 1, (
+        'SAVE349 SETUP: independent committed native input has its original schema'
+    )
+    # Exactly the existing SAVE211 independently declared enabled/disabled relations.
+    analysis.write_text(original_analysis.replace('_edi.schema_version 2', '_edi.schema_version 3') + (
+        '\nloop_\n_alias.id\n_alias.parameter_unique_name\n'
+        'original_o1_occupancy cosio.atom_site.O1.occupancy\n'
+        'original_co1_biso cosio.atom_site.Co1.adp_iso\n'
+        'loop_\n_constraint.id\n_constraint.expression\n_constraint.enabled\n'
+        'original_oxygen_full "original_o1_occupancy = 1" true\n'
+        'original_inactive_co "original_co1_biso = 0.5" false\n'
+    ))
+    original_source = save211_files(source)
+    original_inputs = save211_files(fixture)
+    for directory in ['ordinary', 'current', 'selected']:
+        (reference / directory).mkdir()
+    selected = reference / 'selected'
+    sentinel = selected / 'Original unrelated user bytes.txt'
+    sentinel.write_bytes(b'Original349 directory grant is not overwrite authority\n')
+    leaf = 'Original μ 🧪 saved project'
+    collision = selected / leaf
+    if case == 'collision':
+        collision.mkdir()
+        (collision / 'Original existing child.txt').write_bytes(b'Original349 collision remains exact\n')
+    selected_before = save211_files(selected)
+    call = {'tool': 'save_project', 'call_id': 'save349-' + case, 'arguments': {
+        'purpose': 'Save original fitted displayed project through actual visible controls',
+        'destination': 'current' if case == 'current' else 'fresh',
+        **({} if case == 'current' else {'name': leaf}),
+    }}
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[[call]])
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'SAVE349 SETUP: actual coherent Main consumer is required'
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_save349_visible_real_save_and_retirement:' + case, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ['stdout', 'stderr']:
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            destination = tmp_path / ('save349-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'save349.stdout.log').write_text(result.stdout)
+    (tmp_path / 'save349.stderr.log').write_text(result.stderr)
+    (tmp_path / 'save349-process.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode,
+                                                            'timeout': 90, 'case': case}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_save349_visible_real_save_and_retirement(' + case + ')' in output
+    ), 'SAVE349: every real control, currentness, fitted science and truthful outcome premise must execute\n' + output
+    assert config_path.read_bytes() == original_config, 'SAVE349: original objective/peer configuration stays exact'
+    assert save211_files(source) == original_source and save211_files(fixture) == original_inputs, (
+        'SAVE349: original committed and owned scientific inputs remain byte-exact'
+    )
+    trace = Path(config['trace'])
+    requests = records(trace)
+    inputs = [row for row in requests if row.get('method') in {'turn/start', 'turn/steer'}]
+    assert len(inputs) == 1 and inputs[0]['method'] == 'turn/start' and inputs[0]['params'].get('clientUserMessageId'), (
+        'SAVE349: exactly one genuinely admitted original objective, never a steer/retry substitute'
+    )
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(replies) == 1 and not native_records(trace, '.native-wrong-envelope.jsonl'), (
+        'SAVE349: original reverse RPC replies exactly once, including genuine cancellation/owner close'
+    )
+    receipt = replies[0]
+    original, response = receipt['original'], receipt['response']
+    assert original['params']['tool'] == call['tool'] and original['params']['callId'] == call['call_id'] and (
+        original['params']['arguments'] == call['arguments'] and response['id'] == original['id'] != call['call_id']
+    ), 'SAVE349: complete original purpose/destination/name and actual RPC envelope survive visible staging'
+    returned = response['result']
+    assert type(returned['success']) is bool and len(returned['contentItems']) == 1 and (
+        returned['contentItems'][0]['type'] == 'inputText'
+    ), 'SAVE349: actual original native response retains the typed official envelope'
+    outcome = json.loads(returned['contentItems'][0]['text'])
+    if case in {'fresh', 'current'}:
+        destination = reference / 'current' if case == 'current' else selected / leaf
+        assert returned['success'] is True and outcome['status'] == 'succeeded' and all(
+            outcome.get(key) is True for key in ['committed', 'reopened', 'active', 'presentation_complete']
+        ), 'SAVE349: only committed/reopened/active/fully presented actual save is success'
+        assert Path(outcome['destination']).resolve() == destination.resolve(), (
+            'SAVE349: truthful destination is exactly existing current directory or authorized fresh Unicode basename'
+        )
+        assert destination.is_dir() and not destination.is_symlink() and (destination / 'project.edi').is_file(), (
+            'SAVE349: actual native files must exist; a staged receipt is not disk publication'
+        )
+        loader, _ = generic('fileauth')
+        assert loader.command('native_science_enable')['reply']['enabled'], (
+            'SAVE349: existing independent Session loader exposes full actual native science'
+        )
+        assert loader.command('open', path=str(reference / 'ordinary'))['reply']['opened'], (
+            'SAVE349: independent real reader loads pre-Save ordinary fitted writer reference'
+        )
+        expected = native145_science_settled(loader)
+        assert loader.command('open', path=str(destination))['reply']['opened'], (
+            'SAVE349: independent real reader loads actual visibly saved native files'
+        )
+        actual = native145_science_settled(loader)
+        save211_compare_model(expected, actual)
+        title = [shlex.split(line)[1:] for line in (destination / 'project.edi').read_text().splitlines()
+                 if line.startswith('_metadata.title ') or line.startswith('_metadata.title\t')]
+        assert title == [['Original visible Save ' + case]], (
+            'SAVE349: exact public metadata scalar persists the real user title, not merely painted state'
+        )
+        assert sentinel.read_bytes() == selected_before[sentinel.name], 'SAVE349: unrelated grant bytes remain exact'
+        assert sorted(path.name for path in selected.iterdir()) == sorted(
+            [sentinel.name] + ([leaf] if case == 'fresh' else [])
+        ), 'SAVE349: only the one requested fresh child may be published under the selected grant'
+    else:
+        assert returned['success'] is False and outcome.get('status') != 'succeeded' and outcome.get('committed') is not True and (
+            isinstance(outcome.get('message'), str) and outcome['message']
+        ), 'SAVE349: refusal/cancel/retirement cannot manufacture successful commit or suppress its reason'
+        assert save211_files(selected) == selected_before, (
+            'SAVE349: no-grant/collision/Stop/owner retirement never partially publishes or overwrites user files'
+        )
+    assert not any(row.get('method') in {'account/login/start', 'account/logout'} for row in requests), (
+        'SAVE349: scientific saving never substitutes account login/logout repair'
+    )
