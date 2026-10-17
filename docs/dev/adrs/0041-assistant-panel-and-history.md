@@ -1114,3 +1114,15 @@ Rows.text is explicitly interpreted as the string “true” for availability in
 both focus traversal and choice admission; disabled middle rows are skipped.
 The pill's real Return/Enter press calls the same guarded opener once, consumes
 auto-repeat and release, and leaves native Space/pointer activation unchanged.
+
+
+### Sign-in entry preserves the original control and divider
+
+The disconnected header entry retires only the pending context-send intent and
+opens the existing AssistantConnectionDialog through its declared API. It writes
+no undeclared dialog property. Account access remains the separate authenticated
+branch, and genuine dialog accept/reject and context-approved send handling stay
+unchanged. Its custom label delegates foreground color to the original Button
+contract, including hover, pressed and disabled states. The passive sidebar edge
+paints above both signed-out and authenticated backgrounds on either sidebar
+side; it adds no input surface or changed button geometry.

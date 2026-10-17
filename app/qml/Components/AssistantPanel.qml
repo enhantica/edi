@@ -176,6 +176,7 @@ Popup {
                 color: EaStyle.Colors.appBarBackground
             }
             Rectangle {
+                z: 3
                 width: EaStyle.Sizes.borderThickness
                 height: parent.height
                 x: Preferences.sideBarOnLeft ? parent.width - width : 0
@@ -246,7 +247,7 @@ Popup {
                             font.pixelSize: EaStyle.Sizes.fontPixelSize
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
-                            color: EaStyle.Colors.themeForeground
+                            color: connectionButton.foregroundColor()
                         }
                         Layout.maximumWidth: header.width * 0.4
                         ToolTip.text: panel.assistant.connected ? qsTr("Account") : text
@@ -258,7 +259,6 @@ Popup {
                             if (panel.assistant.connected) accountDialog.open();
                             else {
                                 panel.retireConsentSend();
-                                connectionDialog.sendIntent = null;
                                 connectionDialog.open();
                             }
                         }
