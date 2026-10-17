@@ -4544,9 +4544,12 @@ TestCase {
         compare(payload.success, false, "SAVE380: original pre-admission result cannot claim success");
         verify(!Object.prototype.hasOwnProperty.call(payload, "nativeOutcome"),
             "SAVE380: pre-admission refusal does not fabricate an admitted native record");
-        verify(Array.isArray(payload.contentItems) && payload.contentItems.length === 1,
+        // Existing retained-public-JSON convention: QVariantList proxies are
+        // JSON arrays without necessarily being native JavaScript Array objects.
+        const contentItems384 = JSON.parse(JSON.stringify(payload.contentItems));
+        verify(Array.isArray(contentItems384) && contentItems384.length === 1,
             "SAVE380: original refusal retains exactly one typed result item");
-        const content = payload.contentItems[0];
+        const content = contentItems384[0];
         compare(content.type, "inputText", "SAVE380: original refused result uses the public text item type");
         verify(typeof content.text === "string", "SAVE380: original typed refusal contains actual JSON text");
         const result = JSON.parse(content.text);
