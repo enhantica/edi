@@ -1,5 +1,6 @@
 """Real Main popup checks under owner 99d50f71f; no provider fixture."""
 
+import hashlib
 import json
 import os
 import subprocess
@@ -46,6 +47,12 @@ def popup171_owned_environment(captures):
         directory = owned / leaf
         directory.mkdir(exist_ok=True)
         environment[key] = str(directory.resolve())
+    # AcceptanceProbe verifies actual fresh Qt test destinations before an engine/Session;
+    # the owned invocation path also gives this process a unique Qt application identity.
+    environment['EDI_TEST_APP_STORAGE_ROOT'] = str(owned.resolve())
+    environment['EDI_TEST_APP_STORAGE_ID'] = 'acceptance-' + hashlib.sha256(
+        str(owned.resolve()).encode('utf-8')
+    ).hexdigest()
     return environment
 
 

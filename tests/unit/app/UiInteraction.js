@@ -88,6 +88,37 @@ function find(root, name, forScrolling = false) {
 }
 
 function control(probe, window, name) {
+    if (/^assistant\./.test(name)) {
+        // Main's Popup.Item lives in its overlay/fallback host, outside the workflow Loader.
+        // Resolve the original window-owned popup and its genuine appbar opener, never a page copy.
+        const root = windowRoot(window);
+        const openers = itemsWithProperty(root, "objectName").filter(item =>
+            item.objectName === "assistant.toggle" && rendered(item));
+        if (openers.length !== 1) return null;
+        let candidates;
+        if (name === "assistant.toggle") {
+            candidates = openers;
+        } else {
+            const owners = probe.objectsWithProperty(window, "opened").filter(object =>
+                object.objectName === "assistant.popup");
+            if (owners.length !== 1 || owners[0].toggleControl !== openers[0]
+                || !owners[0].visible || !owners[0].contentItem) return null;
+            const content = owners[0].contentItem;
+            let ancestor = content;
+            while (ancestor && ancestor !== root) ancestor = ancestor.parent;
+            if (ancestor !== root) return null;
+            candidates = itemsWithProperty(content, "objectName").filter(item =>
+                item.objectName === name && rendered(target(item)));
+        }
+        // Ambiguous rendered controls fail closed; hidden copies never confer input authority.
+        if (candidates.length !== 1) return null;
+        const point = clickPoint(target(candidates[0]));
+        if (!point) return null;
+        const position = target(candidates[0]).mapToItem(window.contentItem, point.x, point.y);
+        if (position.x < 0 || position.y < 0 || position.x >= window.contentItem.width
+            || position.y >= window.contentItem.height) return null;
+        return candidates[0];
+    }
     const root = /^(appBar|home|warning|warnings|statusBar)\./.test(name) ? windowRoot(window) : page(window);
     return find(root, name);
 }

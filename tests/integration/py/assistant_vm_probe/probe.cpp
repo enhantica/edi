@@ -461,8 +461,16 @@ int main(int argc,char** argv) {
                     {"peak_profile",QString::fromStdString(edi::effective_peak_type(*experiment))},
                     {"wavelength",experiment->instrument.setup_wavelength
                         ?QJsonValue(experiment->instrument.setup_wavelength->value.get()):QJsonValue()}});
+                Array pattern_errors;
+                for (auto* model : session->project()->experimentModels())
+                    pattern_errors.push_back(Object{{"name",model->name()},
+                        {"calculation_error",model->pattern()->calculationError()}});
                 science={{"structures",structures},{"aliases",aliases},{"constraints",constraints},
-                    {"calculations",calculations},{"calculating",session->project()->calculating()}};
+                    {"calculations",calculations},{"calculating",session->project()->calculating()},
+                    {"owner_identity",QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(session->project())),16)},
+                    {"project_last_error",session->project()->lastError()},
+                    {"session_last_error",session->lastError()},
+                    {"pattern_errors",pattern_errors},{"session_warnings",rows(session->loadWarnings())}};
             }
             const auto native_observer=project.value("native_observer");
             project={{"parameters",parameters},{"mode",QString::fromStdString(value.fitting_mode)},
