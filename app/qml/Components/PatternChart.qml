@@ -337,6 +337,8 @@ Item {
         braggSeries0: bragg0
         braggSeries1: bragg1
         braggSeries2: bragg2
+        braggSeries3: bragg3
+        braggSeries4: bragg4
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -589,6 +591,18 @@ Item {
             objectName: "chart.series.bragg.2"
             color: controller.braggColor2
             width: 1  // edi::pattern_style_table's `bragg.2` (ADR-0017 §15)
+        }
+        LineSeries {
+            id: bragg3
+            objectName: "chart.series.bragg.3"
+            color: controller.braggColor3
+            width: 1  // edi::pattern_style_table's `bragg.3` (ADR-0017 §15)
+        }
+        LineSeries {
+            id: bragg4
+            objectName: "chart.series.bragg.4"
+            color: controller.braggColor4
+            width: 1  // edi::pattern_style_table's `bragg.4` (ADR-0017 §15)
         }
     }
 

@@ -121,6 +121,8 @@ std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {
 
 std::size_t pattern_colour_count(ColourScheme scheme) { return palette_of(scheme).pattern.size(); }
 
+std::size_t structure_colour_count(ColourScheme scheme) { return palette_of(scheme).structure.size(); }
+
 std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
     const Palette& palette = palette_of(scheme);
     const std::size_t side = dark ? 1 : 0;

@@ -2,6 +2,7 @@
 #include "pattern_chart_controller.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <limits>
 #include <QStringList>
@@ -78,6 +79,18 @@ void replace(const QPointer<QXYSeries>& target, const QList<QPointF>& list) {
     }
 }
 
+// The tick series: one per structure colour of the scheme with the most (five).
+constexpr std::size_t kBraggSeries = 5;
+
+// The tick series a `bragg.<place>` style draws in: the place taken round the scheme's structure colours.
+std::size_t bragg_slot(const std::string& style, edi::ColourScheme scheme) {
+    std::size_t place = 0;
+    if (style.starts_with("bragg.")) {
+        std::from_chars(style.data() + 6, style.data() + style.size(), place);
+    }
+    return place % std::min(edi::structure_colour_count(scheme), kBraggSeries);
+}
+
 }  // namespace
 
 PatternChartController::PatternChartController(QObject* parent)
@@ -87,7 +100,8 @@ PatternChartController::PatternChartController(QObject* parent)
          {&PatternChartController::measuredSeriesChanged, &PatternChartController::measuredLayerChanged,
           &PatternChartController::calculatedSeriesChanged, &PatternChartController::backgroundSeriesChanged,
           &PatternChartController::residualSeriesChanged, &PatternChartController::braggSeries0Changed,
-          &PatternChartController::braggSeries1Changed, &PatternChartController::braggSeries2Changed}) {
+          &PatternChartController::braggSeries1Changed, &PatternChartController::braggSeries2Changed,
+          &PatternChartController::braggSeries3Changed, &PatternChartController::braggSeries4Changed}) {
         connect(this, changed, this, &PatternChartController::invalidate);
     }
     // Qt Charts' series animation easing, as easydiffractionbeta's charts moved.
@@ -182,6 +196,8 @@ void PatternChartController::publishColors() {
     emit braggColor0Changed();
     emit braggColor1Changed();
     emit braggColor2Changed();
+    emit braggColor3Changed();
+    emit braggColor4Changed();
 }
 
 void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
@@ -278,13 +294,16 @@ void PatternChartController::setColourScheme(const QString& scheme) {
     }
 }
 
+edi::ColourScheme PatternChartController::scheme() const {
+    return edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::kDefaultColourScheme);
+}
+
 std::vector<edi::SeriesStyle> PatternChartController::styles() const {
     if (report_) {
         return report_->reportModel().pattern_styles;
     }
     const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
-    return edi::pattern_style_table(
-        edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::kDefaultColourScheme), experiments);
+    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0);
 }
 
 void PatternChartController::setPlotWidth(qreal width) {
@@ -421,7 +440,7 @@ void PatternChartController::refresh() {
     const edi::PatternSeries* calculated = nullptr;
     const edi::PatternSeries* background = nullptr;
     const edi::PatternSeries* residual = nullptr;
-    QList<QPointF> ticks[3];
+    QList<QPointF> ticks[kBraggSeries];
     QList<ChartLegendModel::Entry> legend;
     const auto entry = [&](const edi::PatternSeries& series) {
         const bool bragg = series.kind == edi::SeriesKind::BraggTicks;
@@ -442,10 +461,8 @@ void PatternChartController::refresh() {
             case edi::SeriesKind::Background: background = &series; break;
             case edi::SeriesKind::Residual: residual = &series; break;
             case edi::SeriesKind::BraggTicks: {
-                // The three tick series are the palette's three colours; a fourth structure shares the
-                // first one's colour and keeps its own row.
-                const int slot = series.style.empty() ? 0 : (series.style.back() - '0') % 3;
-                ticks[slot] += points_of(series);
+                // A structure's ticks join the series of its colour, its own row kept.
+                ticks[bragg_slot(series.style, scheme())] += points_of(series);
                 ++rows;
                 break;
             }
@@ -536,6 +553,8 @@ void PatternChartController::refresh() {
     replace(bragg_series_0_, ticks[0]);
     replace(bragg_series_1_, ticks[1]);
     replace(bragg_series_2_, ticks[2]);
+    replace(bragg_series_3_, ticks[3]);
+    replace(bragg_series_4_, ticks[4]);
 
     QList<ChartBandModel::Band> bands;
     for (const edi::ExcludedBand& band : shown_.excluded) {

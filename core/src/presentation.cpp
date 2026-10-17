@@ -190,10 +190,8 @@ void fill_points(PatternSeries& series, const Kept& kept, const std::vector<doub
     }
 }
 
-// An experiment's style row is its place's; the Bragg rows cycle over three, as their series do.
-std::string style_key(const char* base, std::size_t place) {
-    return std::string(base) + "." + std::to_string(std::string_view(base) == "bragg" ? place % kPaletteSize : place);
-}
+// An experiment's or a structure's style row is its place's.
+std::string style_key(const char* base, std::size_t place) { return std::string(base) + "." + std::to_string(place); }
 
 // Six significant digits, as `%.6g` spells them in the C locale, whatever the process's locale is (I21): a
 // label has a decimal point, never a comma.
@@ -262,12 +260,12 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
     return decimate(x, low, high, x_min, x_max, columns).rows;
 }
 
-std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments) {
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures) {
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02) and its role colours. The measured and tick
     // colours are the blocks' own, from the scheme's palette by the block's place.
-    // At least three of each, as the table always listed; the experiments' colours depend on how many there are only
-    // past the palette's own.
+    // At least three measured rows, as the table always listed; the experiments' colours depend on how many there are
+    // only past the palette's own.
     std::vector<SeriesStyle> table;
     const std::size_t count = std::max<std::size_t>(experiments, 1);
     for (std::size_t place = 0; place < std::max(count, kPaletteSize); ++place) {
@@ -277,7 +275,8 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     table.push_back({"calc", "#F44336", "#EF9A9A", "line", 2.0, 1.0, 0.0});
     table.push_back({"bkg", "#607D8B", "#B0BEC5", "line", 1.0, 1.0, 0.0});
     table.push_back({"resid", "#8BC34A", "#C5E1A5", "line", 1.0, 1.0, 0.0});
-    for (std::size_t place = 0; place < kPaletteSize; ++place) {
+    // A structure's ticks take the colour its row in the structure lists has (edi::structure_colour).
+    for (std::size_t place = 0; place < std::max(structures, structure_colour_count(scheme)); ++place) {
         table.push_back({"bragg." + std::to_string(place), structure_colour(scheme, place, false),
                          structure_colour(scheme, place, true), "ticks", 1.0, 1.0, 0.0});
     }

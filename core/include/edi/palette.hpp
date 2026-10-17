@@ -57,4 +57,7 @@ std::string structure_colour(ColourScheme scheme, std::size_t place, bool dark);
 /// The number of pattern colours a scheme lists, before the gradient takes over.
 std::size_t pattern_colour_count(ColourScheme scheme);
 
+/// The number of structure colours a scheme lists; structure_colour takes them round again past it.
+std::size_t structure_colour_count(ColourScheme scheme);
+
 }  // namespace edi

@@ -82,6 +82,8 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QXYSeries* braggSeries0 MEMBER bragg_series_0_ NOTIFY braggSeries0Changed)
     Q_PROPERTY(QXYSeries* braggSeries1 MEMBER bragg_series_1_ NOTIFY braggSeries1Changed)
     Q_PROPERTY(QXYSeries* braggSeries2 MEMBER bragg_series_2_ NOTIFY braggSeries2Changed)
+    Q_PROPERTY(QXYSeries* braggSeries3 MEMBER bragg_series_3_ NOTIFY braggSeries3Changed)
+    Q_PROPERTY(QXYSeries* braggSeries4 MEMBER bragg_series_4_ NOTIFY braggSeries4Changed)
     // What the three panes show.
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
@@ -117,10 +119,13 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QColor backgroundColor READ backgroundColor NOTIFY backgroundColorChanged)
     Q_PROPERTY(QColor residualColor READ residualColor NOTIFY residualColorChanged)
     Q_PROPERTY(QColor excludedColor READ excludedColor NOTIFY excludedColorChanged)
-    // The three tick colours, by the structure's place in the project (the palette of ADR-0017 §8).
+    // The tick colours: the scheme's structure colours, one series each (no scheme has more than five), by the
+    // structure's place in the project taken round the scheme's colours, as the structure lists take them.
     Q_PROPERTY(QColor braggColor0 READ braggColor0 NOTIFY braggColor0Changed)
     Q_PROPERTY(QColor braggColor1 READ braggColor1 NOTIFY braggColor1Changed)
     Q_PROPERTY(QColor braggColor2 READ braggColor2 NOTIFY braggColor2Changed)
+    Q_PROPERTY(QColor braggColor3 READ braggColor3 NOTIFY braggColor3Changed)
+    Q_PROPERTY(QColor braggColor4 READ braggColor4 NOTIFY braggColor4Changed)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -188,6 +193,8 @@ class PatternChartController : public QObject {
     QColor braggColor0() const { return color(QStringLiteral("bragg.0")); }
     QColor braggColor1() const { return color(QStringLiteral("bragg.1")); }
     QColor braggColor2() const { return color(QStringLiteral("bragg.2")); }
+    QColor braggColor3() const { return color(QStringLiteral("bragg.3")); }
+    QColor braggColor4() const { return color(QStringLiteral("bragg.4")); }
     int revision() const { return revision_; }
 
     // A style key's colour in the current theme, with the table's opacity.
@@ -237,6 +244,8 @@ class PatternChartController : public QObject {
     void braggSeries0Changed();
     void braggSeries1Changed();
     void braggSeries2Changed();
+    void braggSeries3Changed();
+    void braggSeries4Changed();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -266,6 +275,8 @@ class PatternChartController : public QObject {
     void braggColor0Changed();
     void braggColor1Changed();
     void braggColor2Changed();
+    void braggColor3Changed();
+    void braggColor4Changed();
 
    private:
     void invalidate();
@@ -308,6 +319,8 @@ class PatternChartController : public QObject {
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     std::vector<edi::SeriesStyle> styles() const;
+    // The colour scheme the chart is drawn in.
+    edi::ColourScheme scheme() const;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
     YScale y_scale_ = Linear;
     bool d_spacing_ = false;
@@ -321,7 +334,7 @@ class PatternChartController : public QObject {
     double from_[4] = {}, to_[4] = {};
     std::optional<double> target_[4];
     QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_,
-        bragg_series_0_, bragg_series_1_, bragg_series_2_;
+        bragg_series_0_, bragg_series_1_, bragg_series_2_, bragg_series_3_, bragg_series_4_;
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;

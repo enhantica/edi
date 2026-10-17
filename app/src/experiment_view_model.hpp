@@ -180,6 +180,8 @@ class ExperimentViewModel : public QObject {
     // scan's datasets, as the Project page lists them (setColourPlace).
     std::size_t colourPlace() const { return colour_place_.value_or(place()); }
     std::size_t colourCount() const { return colour_place_ ? colour_count_ : project_.experiments.size(); }
+    // The project's structures, whose ticks the pattern shows.
+    std::size_t structureCount() const { return project_.structures.size(); }
     void setColourPlace(std::optional<std::size_t> place, std::size_t count);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest

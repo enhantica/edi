@@ -95,7 +95,7 @@ struct PatternSeries {
     Pane pane{};
     std::string id;     // "meas", "calc", "bkg", "resid", "bragg/<structure id>"
     std::string label;  // the legend text
-    std::string style;  // a key of pattern_style_table(): `meas.<experiment place>`, `bragg.<structure place mod 3>`
+    std::string style;  // a key of pattern_style_table(): `meas.<experiment place>`, `bragg.<structure place>`
     std::vector<PresentedPoint> points;
     // Per point: its `_data` row, or its `_refln` row; kNoRow for a gap or a tick's end.
     std::vector<std::size_t> rows;
@@ -150,11 +150,12 @@ struct SeriesStyle {
     double opacity = 1.0;
     double marker_px = 0.0;
 };
-// The style table of a project of `experiments` experiments in `scheme`: a `meas.<place>` row per experiment (at
-// least three) and three `bragg.<place>` rows (a structure past the third shares its place's row), each colour the
-// palette's (edi::pattern_colour, edi::structure_colour), and the role rows, the calculated, background, residual and
-// excluded-region styles. With the defaults it is the table the app always drew.
-std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3);
+// The style table of a project of `experiments` experiments and `structures` structures in `scheme`: a
+// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least the scheme's
+// structure colours), each colour the palette's (edi::pattern_colour, edi::structure_colour, which takes the structure
+// colours round again), and the role rows, the calculated, background, residual and excluded-region styles.
+std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
+                                             std::size_t structures = 0);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

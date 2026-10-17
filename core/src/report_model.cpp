@@ -901,7 +901,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     // A scan reports its template dataset at its place among the scan's datasets, in the colour the app's pages give
     // it there; the table has a measured row for each dataset.
     model.pattern_styles = pattern_style_table(options.colour_scheme,
-                                               scan && scan->place ? scan->files : project.experiments.size());
+                                               scan && scan->place ? scan->files : project.experiments.size(),
+                                               project.structures.size());
     model.structure_styles = structure_style_table();
     return model;
 }
