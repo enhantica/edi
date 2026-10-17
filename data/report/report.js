@@ -247,18 +247,25 @@ function drawPattern(figure, pattern) {
   const bottom = 'residual' in domains ? 'y3' : 'bragg' in domains ? 'y2' : 'y';
   const excluded = patternStyle('excluded');
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false };
+  // Each Bragg row's label at its left, the structure's name in its colour, as the app draws it.
+  const braggLabels = 'bragg' in domains
+    ? (pattern.bragg_labels ?? []).map(label => ({
+        text: inColour(label.text, patternStyle(label.style).light), xref: 'paper', yref: 'y2', x: 0, y: label.centre,
+        xanchor: 'right', xshift: -6, showarrow: false, font: { family: font } }))
+    : [];
   const layout = {
     height: figure.clientHeight,
     margin,
     font: { family: font },
-    showlegend: true,
+    // The model says whether a legend is drawn; without one the y titles name the series in their colours.
+    showlegend: pattern.legend,
     legend: { x: 1, xanchor: 'right', y: 1, yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)' },
     hovermode: 'closest',
     // The experiment's reliability in its last fit, above the plot's top left, as the app's selector shows it.
-    annotations: pattern.title
+    annotations: (pattern.title
       ? [{ text: pattern.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
            showarrow: false, font: { family: font } }]
-      : [],
+      : []).concat(braggLabels),
     xaxis: { ...axis, title: { text: pattern.x.title }, range: [pattern.x.min, pattern.x.max], anchor: bottom },
     yaxis: { ...axis, title: { text: axisTitle(pattern.y_main) }, domain: domains.main ?? [0, 1] },
     shapes: pattern.excluded.map(([x0, x1]) => ({
