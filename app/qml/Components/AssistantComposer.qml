@@ -73,11 +73,20 @@ Rectangle {
             return Math.ceil(measured)+AppSizes.fieldSpacing*2;
         }
         readonly property real tableWidth: radioColumnWidth+desiredLabelWidth+EaStyle.Sizes.tableColumnSpacing+modelTable.rowPadding*2+EaStyle.Sizes.borderThickness*2
-        width: Math.min(choiceContent.implicitWidth+leftPadding+rightPadding,Math.max(0,parent.width-AppSizes.unit*2))
+        readonly property real maximumContentWidth: Math.max(0,parent.width-AppSizes.unit*2-leftPadding-rightPadding)
+        readonly property real maximumContentHeight: Math.max(0,viewportHeight-topPadding-bottomPadding
+            -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0))
+        readonly property var scrollbarExtents: {
+            let vertical=choiceContent.implicitHeight > maximumContentHeight;
+            let horizontal=choiceContent.implicitWidth > maximumContentWidth-(vertical ? choiceVerticalScrollBar.implicitWidth : 0);
+            vertical=vertical || choiceContent.implicitHeight > maximumContentHeight-(horizontal ? choiceHorizontalScrollBar.implicitHeight : 0);
+            horizontal=horizontal || choiceContent.implicitWidth > maximumContentWidth-(vertical ? choiceVerticalScrollBar.implicitWidth : 0);
+            return {vertical: vertical ? choiceVerticalScrollBar.implicitWidth : 0, horizontal: horizontal ? choiceHorizontalScrollBar.implicitHeight : 0};
+        }
+        width: Math.min(choiceContent.implicitWidth+choiceVerticalScrollBar.implicitWidth,maximumContentWidth)+leftPadding+rightPadding
         height: Math.min(implicitHeight,viewportHeight)
         contentWidth: Math.max(0,width-leftPadding-rightPadding)
-        contentHeight: Math.min(choiceContent.implicitHeight,Math.max(0,viewportHeight-topPadding-bottomPadding
-            -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+        contentHeight: Math.min(choiceContent.implicitHeight+scrollbarExtents.horizontal,maximumContentHeight)
         focus: true
         modal: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -160,9 +169,27 @@ Rectangle {
             height: choicePopup.contentHeight
             contentWidth: choiceContent.implicitWidth
             contentHeight: choiceContent.implicitHeight
+            rightPadding: choicePopup.scrollbarExtents.vertical
+            bottomPadding: choicePopup.scrollbarExtents.horizontal
             clip: true
-            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded }
-            ScrollBar.horizontal: EaElements.ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.vertical: EaElements.ScrollBar {
+                id: choiceVerticalScrollBar
+                parent: choiceScroll
+                x: choiceScroll.mirrored ? 0 : choiceScroll.width-width
+                y: choiceScroll.topPadding
+                height: choiceScroll.availableHeight
+                visible: choicePopup.scrollbarExtents.vertical > 0
+                policy: ScrollBar.AsNeeded
+            }
+            ScrollBar.horizontal: EaElements.ScrollBar {
+                id: choiceHorizontalScrollBar
+                parent: choiceScroll
+                x: choiceScroll.leftPadding
+                y: choiceScroll.height-height
+                width: choiceScroll.availableWidth
+                visible: choicePopup.scrollbarExtents.horizontal > 0
+                policy: ScrollBar.AsNeeded
+            }
             Row {
                 id: choiceContent
                 spacing: AppSizes.unit * 1.5
@@ -176,6 +203,9 @@ Rectangle {
                     width: choicePopup.tableWidth
                     sourceModel: composer.assistant.models
                     maxRowCountShow: Math.max(1,count)
+                    topMargin: EaStyle.Sizes.borderThickness
+                    bottomMargin: EaStyle.Sizes.borderThickness
+                    height: (count === 0 ? tableRowHeight*2 : tableRowHeight*visibleRowCount+_headerHeight)+topMargin+bottomMargin
                     interactive: false
                     scrollBarPolicy: ScrollBar.AlwaysOff
                     marksCurrentRow: true
@@ -235,6 +265,9 @@ Rectangle {
                     width: choicePopup.tableWidth
                     sourceModel: composer.effortChoices
                     maxRowCountShow: Math.max(1,count)
+                    topMargin: EaStyle.Sizes.borderThickness
+                    bottomMargin: EaStyle.Sizes.borderThickness
+                    height: (count === 0 ? tableRowHeight*2 : tableRowHeight*visibleRowCount+_headerHeight)+topMargin+bottomMargin
                     interactive: false
                     scrollBarPolicy: ScrollBar.AlwaysOff
                     marksCurrentRow: true
@@ -561,10 +594,8 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
-                    color: addFilesButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: addFilesButton.hovered || addFilesButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                     radius: width * 0.5
-                    border.width: addFilesButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeForeground
                 }
                 enabled: composer.assistant.connected && !WebFiles.available && !composer.assistant.canCancel
                 ToolTip.text: WebFiles.available ? qsTr("Browser file selection is not available yet") : qsTr("Add files")
@@ -600,9 +631,7 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize; implicitHeight: implicitWidth
                     radius: width*0.5
-                    color: showActionsControl.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
-                    border.width: showActionsControl.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeForegroundMinor
+                    color: showActionsControl.hovered || showActionsControl.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: qsTr("Show actions")
@@ -625,9 +654,7 @@ Rectangle {
                 background: Rectangle {
                     implicitHeight: composer.actionSize
                     radius: height*0.5
-                    color: modelEffortButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
-                    border.width: modelEffortButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                    border.color: EaStyle.Colors.themeForegroundMinor
+                    color: modelEffortButton.hovered || modelEffortButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 contentItem: Row {
                     id: modelEffortText
@@ -687,9 +714,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: previousUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
-                    border.width: previousUserButton.activeFocus ? 1 : 0
-                    border.color: EaStyle.Colors.themeForeground
+                    color: previousUserButton.hovered || previousUserButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 ToolTip.text: qsTr("Previous user message")
                 Accessible.name: ToolTip.text
@@ -714,9 +739,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: nextUserButton.hovered ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
-                    border.width: nextUserButton.activeFocus ? 1 : 0
-                    border.color: EaStyle.Colors.themeForeground
+                    color: nextUserButton.hovered || nextUserButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 ToolTip.text: qsTr("Next user message")
                 Accessible.name: ToolTip.text

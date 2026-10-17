@@ -64,8 +64,8 @@ Popup {
         const days = Math.floor(minutes / 1440);
         const hours = Math.floor((minutes % 1440) / 60);
         if (days > 0) return qsTr("Resets in %1d %2h").arg(days).arg(hours);
-        if (hours > 0) return qsTr("Resets in %1h %2min").arg(hours).arg(minutes % 60);
-        return qsTr("Resets in %1min").arg(minutes);
+        if (hours > 0) return qsTr("Resets in %1h %2 min").arg(hours).arg(minutes % 60);
+        return qsTr("Resets in %1 min").arg(minutes);
     }
     readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
     function workingFolderCaption(path) {
@@ -256,14 +256,21 @@ Popup {
                         Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
-                        background: Rectangle {
+                        background: Item {
                             visible: panel.assistant.connected
                             implicitWidth: EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
-                            radius: width * 0.5
-                            color: connectionButton.hovered || connectionButton.down ? EaStyle.Colors.themeBackgroundHovered1 : EaStyle.Colors.themeBackgroundHovered2
-                            border.width: connectionButton.activeFocus ? EaStyle.Sizes.borderThickness : 0
-                            border.color: EaStyle.Colors.themeForegroundMinor
+                            Rectangle {
+                                objectName: "assistant.avatarCircle"
+                                anchors.centerIn: parent
+                                width: EaStyle.Sizes.toolButtonHeight * 0.75
+                                height: width
+                                radius: width * 0.5
+                                color: connectionButton.hovered || connectionButton.down || connectionButton.activeFocus
+                                    ? EaStyle.Colors.themeBackgroundHovered1 : EaStyle.Colors.themeBackground
+                                border.width: EaStyle.Sizes.borderThickness
+                                border.color: Qt.darker(color, 1.1)
+                            }
                         }
                         ToolTip.text: panel.assistant.connected ? qsTr("Account") : text
                         Accessible.name: ToolTip.text
@@ -611,8 +618,17 @@ Popup {
                         text: qsTr("Last known")
                         color: EaStyle.Colors.themeForegroundMinor
                     }
+                    EaElements.Label {
+                        objectName: "assistant.usageUnavailable"
+                        visible: usageAllowances.count === 0
+                        width: parent.width
+                        text: qsTr("Session and weekly usage unavailable")
+                        wrapMode: Text.WordWrap
+                    }
                     Repeater {
+                        id: usageAllowances
                         model: [{title: qsTr("Session limit"), minutes: 300, key: "session"}, {title: qsTr("Weekly"), minutes: 10080, key: "weekly"}]
+                            .filter(row => panel.allowanceWindow(row.minutes) !== null)
                         Column {
                             id: allowance
                             required property var modelData
@@ -633,12 +649,16 @@ Popup {
                                 width: parent.width
                                 height: AppSizes.unit * 0.5
                                 radius: height * 0.5
-                                color: EaStyle.Colors.themeBackgroundHovered2
+                                color: EaStyle.Colors.themeBackground
+                                border.width: EaStyle.Sizes.borderThickness
+                                border.color: EaStyle.Colors.themeForegroundMinor
                                 Rectangle {
                                     objectName: allowance.objectName+".fill"
-                                    width: allowance.window ? parent.width * Math.max(0,Math.min(1,allowance.window.usedPercent/100)) : 0
-                                    height: parent.height
-                                    radius: parent.radius
+                                    x: parent.border.width
+                                    y: parent.border.width
+                                    width: allowance.window ? Math.max(0,parent.width-parent.border.width*2) * Math.max(0,Math.min(1,allowance.window.usedPercent/100)) : 0
+                                    height: Math.max(0,parent.height-parent.border.width*2)
+                                    radius: height * 0.5
                                     color: allowance.window && 100-allowance.window.usedPercent < 5 ? EaStyle.Colors.red
                                          : allowance.window && 100-allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
                                 }
@@ -723,11 +743,12 @@ Popup {
                         contentItem: Row {
                             spacing: AppSizes.unit * 0.5
                             EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
                                 text: "sign-out-alt"
                                 font.family: EaStyle.Fonts.iconsFamily
                                 color: signOutButton.foregroundColor()
                             }
-                            EaElements.Label { text: signOutButton.text; color: signOutButton.foregroundColor() }
+                            EaElements.Label { anchors.verticalCenter: parent.verticalCenter; text: signOutButton.text; color: signOutButton.foregroundColor() }
                         }
                         width: Math.min(implicitWidth,parent.width)
                         enabled: panel.assistant.connected

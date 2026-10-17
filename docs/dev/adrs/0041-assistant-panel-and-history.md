@@ -1213,3 +1213,11 @@ The header and allowance details consistently display the actual supplied percen
 ### Human details and exact technical context
 
 The outgoing-context dialog's Show details/Hide details link uses the native accent color in both states. Human-readable disclosure appears first. The exact current context remains unmodified, read-only and selectable, initially collapsed behind a separate Show technical data/Hide technical data link within Details. Closing Details closes that technical presentation too. These controls only change disclosure presentation; authentication, approval, cancellation and the current data-exposure warning retain their original behavior.
+
+### Avatar, allowance tracks and native table extents
+
+The avatar circle is smaller than its unchanged native button target, with a contrasting resting fill and a permanent border slightly darker than that fill. Allowance rows exist only for supplied Session/Weekly windows; when neither is supplied a single compact message explains their absence. The rounded track is always outlined, with its colored fraction inset inside the border. Relative minutes include a separating space. Sign out follows the first native SideBarButton row's vertical-center icon/text convention and keeps the same left edge as account identity.
+
+The chooser accounts for the original table border using actual native top/bottom margins and positions the original attached scrollbars using the standard native ScrollView geometry and reserves their measured implicit width/height only when the application viewport requires them. Its natural dialog extent includes those real dimensions, bounded only by the application viewport; scrollbars do not overlay the last row or the right edge. Column widths, row heights and fonts remain the original native values.
+
+Composer actions and the model pill have no border in any state; keyboard focus uses the existing neutral hover fill, and Show actions keeps its active glyph accent. The avatar and allowance track retain their separately requested faint outlines.
