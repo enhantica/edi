@@ -613,27 +613,48 @@ void ProjectViewModel::publishMetadata() {
 }
 
 bool ProjectViewModel::loadStructure(const QUrl& file) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_) return false;
     if (!file.isLocalFile()) {
-        const QString message = QStringLiteral("not a local file: %1").arg(file.toString());
-        emit refused(message);
+        emit refused(QStringLiteral("not a local file: %1").arg(file.toString()));
         return false;
     }
-    edi::Project& project = *project_;
-    // The file is read first: a file that is refused adds nothing, and what is added is one edit.
-    QString error;
+    EditOutcome result;
+    bool reserved_undo = false;
     try {
-        error = apply(edi::Edit::add_structure(project, edi::load_structure_edi_file(file.toLocalFile().toStdString())),
-                      true);
+        // The first ordinary Load owns native and supported CIF admission. The
+        // file is parsed before live mutation; project metadata/path stay owned.
+        auto structure = edi::load_structure_file(file.toLocalFile().toStdString());
+        if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) {
+            emit refused(refusal); return false;
+        }
+        auto before = edi::capture_structures(*project_);
+        undo_history_.reserve(undo_history_.size() + 1);
+        undo_history_.emplace_back(std::move(before)); reserved_undo = true;
+        result = applyEdit(edi::Edit::add_structure(*project_, std::move(structure)), true);
+        if (!self || retired_) return result.applied;
+        if (!result.applied) { undo_history_.pop_back(); reserved_undo = false; }
+        if (result.applied) {
+            syncUndo();
+            if (!self || retired_) return true;
+            setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+            return true; // Actual addition; calculation/presentation is separate.
+        }
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
-        setLastError(error);
+        if (!self || retired_) return result.applied;
+        if (reserved_undo && !result.applied) undo_history_.pop_back();
+        if (result.applied) {
+            holdPublicationFailure(tr("The structure and its Undo were retained; final presentation was incomplete"));
+            return true;
+        }
+        result.message = QString::fromUtf8(refusal.what());
     }
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
-    }
-    setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
-    return true;
+    if (!self || retired_) return result.applied;
+    const auto message = result.message;
+    setLastError(message);
+    if (self && !retired_) emit refused(message);
+    return false;
 }
 
 bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
@@ -1991,118 +2012,31 @@ void ProjectViewModel::pinTimestamps(const QString& timestamp) {
     setModified(modified);
 }
 
-std::shared_ptr<ProjectViewModel::WidgetRelationInput> ProjectViewModel::prepareWidgetRelations(const QJsonObject& arguments) {
+std::shared_ptr<ProjectViewModel::WidgetRelationInput> ProjectViewModel::prepareWidgetRelations(const ProjectEditor::RelationAction& action) {
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
     auto input = std::make_shared<WidgetRelationInput>();
-    input->arguments = arguments; input->arguments.remove("purpose");
-    input->outcome.message = tr("The staged relation form was not applied");
+    input->expected = action;
+    input->outcome.message = tr("The original relation control did not commit");
     widget_relation_input_ = input;
     return input;
 }
 void ProjectViewModel::finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept {
     if (widget_relation_input_ == input) widget_relation_input_.reset();
 }
-QVariantMap ProjectViewModel::appendRelationForm(const QVariantList& aliasRows, const QVariantList& constraintRows) {
+QString ProjectViewModel::apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) {
     const PublicationScope publication(*this);
-    const QPointer<ProjectViewModel> self(this);
     const auto input = widget_relation_input_;
-    EditOutcome result;
-    try {
-        using Limits = edi::assistant::Limits;
-        if (aliasRows.size() > static_cast<qsizetype>(Limits::stream_items) || constraintRows.isEmpty() ||
-            constraintRows.size() > static_cast<qsizetype>(Limits::stream_items))
-            throw std::invalid_argument("Invalid relation form row count");
-        if (!input) if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty())
-            throw std::runtime_error(refusal.toStdString());
-        // Borrow Qt-shared strings, bound aggregate content BEFORE JSON/core
-        // preparation. The existing encoded-size walker owns exact UTF8/escape.
-        quint64 units = 0;
-        const auto text = [&](const QVariantMap& row, const QString& key, quint64 limit) {
-            const auto value = row.value(key);
-            if (value.metaType().id() != QMetaType::QString) throw std::invalid_argument("Invalid relation form text");
-            const auto s = value.toString();
-            if (s.isEmpty() || static_cast<quint64>(s.size()) > limit ||
-                static_cast<quint64>(s.size()) > Limits::context_bytes - units || s.contains(QChar(0)))
-                throw std::length_error("Relation form text exceeds capacity");
-            units += static_cast<quint64>(s.size());
-        };
-        for (const auto& value : aliasRows) {
-            const auto row = value.toMap();
-            if (row.size() != 2 || !row.contains("id") || !row.contains("path")) throw std::invalid_argument("Invalid alias fields");
-            text(row, "id", Limits::id_bytes); text(row, "path", Limits::id_bytes);
-        }
-        for (const auto& value : constraintRows) {
-            const auto row = value.toMap();
-            if (row.size() != 3 || !row.contains("id") || !row.contains("expression") ||
-                row.value("enabled").metaType().id() != QMetaType::Bool) throw std::invalid_argument("Invalid constraint fields");
-            text(row, "id", Limits::id_bytes); text(row, "expression", Limits::context_bytes);
-        }
-        // Same transport-independent preparation as the native/controller
-        // path. Row/UTF16 preflight above bounds conversion BEFORE allocation;
-        // the existing core helper owns exact UTF8/encoded/grammar admission.
-        std::vector<edi::assistant::detail::NativeAliasInput> aliases;
-        std::vector<edi::assistant::detail::NativeConstraintInput> constraints;
-        aliases.reserve(static_cast<std::size_t>(aliasRows.size()));
-        constraints.reserve(static_cast<std::size_t>(constraintRows.size()));
-        for (const auto& value : aliasRows) {
-            const auto row = value.toMap();
-            aliases.push_back({row.value("id").toString().toStdString(), row.value("path").toString().toStdString()});
-        }
-        for (const auto& value : constraintRows) {
-            const auto row = value.toMap();
-            constraints.push_back({row.value("id").toString().toStdString(), row.value("expression").toString().toStdString(), row.value("enabled").toBool()});
-        }
-        if (input) {
-            const QJsonObject actual{{"aliases", QJsonArray::fromVariantList(aliasRows)}, {"constraints", QJsonArray::fromVariantList(constraintRows)}};
-            if (input->consumed || input->arguments != actual)
-                throw std::invalid_argument("The relation form differs from its original prepared input");
-            input->consumed = true;
-        }
-        const auto edit = edi::assistant::detail::prepare_relation_append(*project_, aliases, constraints);
-        // Prepare exact native path -> unique-name readback before the live
-        // write, using the same existing public walk as relation validation.
-        std::vector<std::pair<std::string, std::string>> expectedAliases;
-        expectedAliases.reserve(static_cast<std::size_t>(aliasRows.size()));
-        if (!aliasRows.isEmpty()) {
-            const auto entries = edi::parameter_entries(*project_);
-            const auto namedSlots = edi::named_slots(*project_);
-            for (const auto& row : aliases) {
-                const auto found = std::find_if(entries.begin(), entries.end(), [&](const auto& entry) { return entry.path == row.path; });
-                if (found == entries.end()) throw std::invalid_argument("Unknown relation parameter path");
-                const auto named = std::find_if(namedSlots.begin(), namedSlots.end(), [&](const auto& slot) { return slot.parameter == found->parameter; });
-                if (named == namedSlots.end()) throw std::invalid_argument("Unnamed relation parameter");
-                expectedAliases.emplace_back(row.id, named->unique_name);
-            }
-        }
-        const bool previous = widget_input_executing_; widget_input_executing_ = true;
-        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
-        result = applyRecordedEdit(edit, true);
-        if (input) input->outcome = result; // Actual applied latch before fallible readback.
-        if (self && !retired_ && result.applied && result.published && input) {
-            bool verified = true;
-            for (const auto& [id, unique] : expectedAliases) {
-                const auto found = std::find_if(project_->aliases.begin(), project_->aliases.end(), [&](const auto& a) {
-                    return a->id.value() == id && a->parameter_unique_name.value() == unique;
-                });
-                verified = verified && found != project_->aliases.end();
-            }
-            for (const auto& row : constraints) {
-                const auto found = std::find_if(project_->constraints.begin(), project_->constraints.end(), [&](const auto& a) {
-                    return a->id.value() == row.id && a->expression.value() == row.expression && a->enabled.get() == row.enabled;
-                });
-                verified = verified && found != project_->constraints.end();
-            }
-            input->verified = verified;
-        }
-    } catch (...) {
-        if (input && input->outcome.applied) result = input->outcome;
-        result.published = false;
-        result.message = result.applied ? tr("The relation batch was applied; its final presentation could not be confirmed")
-            : tr("The relation batch was refused; check explicit alias IDs, parameter paths and affine expressions");
-        if (input) input->outcome = result;
-    }
-    try { return {{"applied", result.applied}, {"published", result.published}, {"message", result.message}}; }
-    catch (...) { return {}; } // Actual prearmed outcome survives presentation allocation failure.
+    if (!input) return apply_relation_edit(change);
+    if (input->consumed || input->expected.kind != action.kind || input->expected.row != action.row ||
+        input->expected.text != action.text || input->expected.enabled != action.enabled)
+        return tr("A different relation control cannot enter the original native event");
+    input->consumed = true;
+    const QPointer<ProjectViewModel> self(this);
+    const bool previous = widget_input_executing_;
+    widget_input_executing_ = true;
+    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+    input->outcome = applyRecordedEdit(change, true);
+    return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
 std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetValue(const edi::Parameter& parameter, double value) {
@@ -2181,8 +2115,15 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     editing_ = true;
     const auto release = qScopeGuard([self] { if (self) self->editing_ = false; });
     pending_structural_ = structural;
+    const auto relation_input = widget_input_executing_ ? widget_relation_input_ : nullptr;
+    const auto background_input = widget_input_executing_ ? widget_background_input_ : nullptr;
+    const auto parameter_input = widget_input_executing_ ? widget_input_ : nullptr;
+    bool* applied = relation_input && relation_input->consumed ? &relation_input->outcome.applied
+        : background_input && background_input->consumed ? &background_input->outcome.applied
+        : parameter_input && parameter_input->consumed ? &parameter_input->outcome.applied : &result.applied;
     try {
-        preview_->apply(change, &result.applied);
+        preview_->apply(change, applied);
+        result.applied = *applied;
         if (retired_) { result.message = applied_warning; return result; }
         // An admitted edit while a scan dataset is shown (edi ADR-0017 §19): a project-wide setting goes to the
         // template too; an edit of the experiment or the structures makes the shown values the template's, over the
@@ -2224,6 +2165,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
         result.published = true;
         result.message.clear();
     } catch (...) {
+        result.applied = *applied;
         if (!self || retired_) {
             result.message = result.applied ? applied_warning : result.message;
             return result;
@@ -2418,7 +2360,21 @@ std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepa
     edi::ExperimentBase& experiment, const edi::BackgroundPointInput& expected) {
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
     auto input = std::make_shared<WidgetBackgroundInput>(); input->experiment = &experiment; input->expected = expected;
-    input->outcome.message = tr("The actual background Apply was not committed");
+    if (expected.action != edi::BackgroundPointInput::Action::Add) {
+        const auto row = std::find_if(experiment.background.begin(), experiment.background.end(),
+            [&](const auto& point) { return point->id.value() == expected.id; });
+        if (row == experiment.background.end()) throw std::invalid_argument("The original background member is unavailable");
+        input->row = row->get();
+    }
+    input->outcome.message = tr("The original background control did not commit");
+    widget_background_input_ = input; return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackgroundRename(
+    edi::ExperimentBase& experiment, edi::LineSegment& point, const std::string& id) {
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetBackgroundInput>();
+    input->experiment = &experiment; input->row = &point; input->rename = true; input->expected.id = id;
+    input->outcome.message = tr("The original background ID control did not commit");
     widget_background_input_ = input; return input;
 }
 void ProjectViewModel::finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>& input) noexcept {
@@ -2437,10 +2393,14 @@ ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
         using Limits = edi::assistant::Limits;
         if (input) {
             const auto& expected = input->expected;
-            if (input->consumed || input->experiment != &experiment || request.action != expected.action || request.id != expected.id ||
+            if (input->rename || input->consumed || input->experiment != &experiment || request.action != expected.action || request.id != expected.id ||
                 (request.action != edi::BackgroundPointInput::Action::Remove && (request.position != expected.position ||
                  request.intensity != expected.intensity || request.free != expected.free)))
-                throw std::invalid_argument("The actual background form differs from its original request");
+                throw std::invalid_argument("The actual background control differs from its original request");
+            if (request.action != edi::BackgroundPointInput::Action::Add &&
+                std::none_of(experiment.background.begin(), experiment.background.end(), [&](const auto& point) {
+                    return point.get() == input->row && point->id.value() == request.id;
+                })) throw std::invalid_argument("The original background member was replaced");
             input->consumed = true; widget_input_executing_ = true;
         }
         const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
@@ -2449,12 +2409,17 @@ ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
             throw std::invalid_argument("The requested background bank is not the selected experiment");
         // Native packet/source/domain policy is caller-owned. Ordinary manual
         // simulation/extrapolation and stored keys use this same Edit/Undo path.
-        native_bounded = native_bounded || bool(input);
         const auto unbounded = std::numeric_limits<std::size_t>::max();
         prepared = edi::prepare_background_point(*project_, experiment, request,
             native_bounded ? Limits::stream_items : unbounded, native_bounded ? Limits::id_bytes : unbounded,
             native_bounded ? edi::assistant::SelectedFileLimits::collection_bytes / sizeof(double) : unbounded,
             native_bounded ? Limits::stream_items : unbounded, native_bounded);
+        if (input && request.action != edi::BackgroundPointInput::Action::Remove) {
+            const auto row = std::find_if(prepared->after.begin(), prepared->after.end(),
+                [&](const auto& point) { return point->id.value() == request.id; });
+            if (row == prepared->after.end()) throw std::invalid_argument("The prepared background row is unavailable");
+            input->result_row = row->get(); // Exact preowned replacement, before any model callback.
+        }
         const auto edit = edi::Edit::background_point(*project_, prepared);
         const auto index = undo_history_.size(); undo_history_.reserve(index + 1);
         undo_history_.emplace_back(BackgroundPointUndo{prepared});
@@ -2463,10 +2428,6 @@ ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
         if (input) input->outcome = result; // Actual committed/applied latch before presentation/readback.
         if (!self || retired_) return result;
         if (!prepared->committed) undo_history_.pop_back();
-        else if (input) {
-            const auto& rows = experiment.background;
-            input->verified = rows.size() == prepared->after.size() && std::equal(rows.begin(), rows.end(), prepared->after.begin());
-        }
         try { syncUndo(); }
         catch (...) {
             if (!result.applied) throw;
@@ -2490,6 +2451,15 @@ ProjectEditor::BackgroundOutcome ProjectViewModel::edit_background_point(edi::Ex
 }
 QString ProjectViewModel::rename_background_point(edi::ExperimentBase& experiment, edi::LineSegment& point, const std::string& id) {
     const PublicationScope publication(*this);
+    const auto input = widget_background_input_;
+    const QPointer<ProjectViewModel> original(this);
+    const bool previous = widget_input_executing_;
+    if (input) {
+        if (!input->rename || input->consumed || input->experiment != &experiment || input->row != &point || input->expected.id != id)
+            return tr("A different background ID cannot enter the original control");
+        input->consumed = true; widget_input_executing_ = true;
+    }
+    const auto release = qScopeGuard([original, previous] { if (original) original->widget_input_executing_ = previous; });
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refusal;
     if (!currentExperiment() || currentExperiment()->experiment() != &experiment ||
         std::none_of(project_->experiments.begin(), project_->experiments.end(), [&](const auto& bank) { return bank.get() == &experiment; }))
@@ -2505,6 +2475,7 @@ QString ProjectViewModel::rename_background_point(edi::ExperimentBase& experimen
     EditOutcome result;
     try { result = applyEdit(edi::Edit::background_id(point, id), true); }
     catch (...) { if (self) undo_history_.pop_back(); throw; }
+    if (input) input->outcome = result;
     if (!self || retired_) return result.applied ? QString{} : result.message;
     if (!result.applied) undo_history_.pop_back();
     try { syncUndo(); } catch (...) { if (!result.applied) throw; holdPublicationFailure(tr("The background rename and Undo are retained")); }
@@ -2513,6 +2484,7 @@ QString ProjectViewModel::rename_background_point(edi::ExperimentBase& experimen
 
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
     const PublicationScope publication(*this);
+    if (widget_relation_input_) return tr("A different relation action cannot enter the original native control");
     const EditOutcome result = applyRecordedEdit(change, true);
     if (!retired_ && !result.applied) setLastError(result.message);
     return result.applied ? QString{} : result.message;

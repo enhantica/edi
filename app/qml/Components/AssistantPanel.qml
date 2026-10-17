@@ -205,7 +205,7 @@ Popup {
                             text: connectionButton.text
                             visible: (connectionButton.hovered || connectionButton.activeFocus) && EaGlobals.Vars.showToolTips
                         }
-                        onClicked: connectionDialog.open()
+                        onClicked: panel.assistant.connected ? usageDialog.open() : connectionDialog.open()
                     }
                     EaElements.ToolButton {
                         id: signOutButton
@@ -590,7 +590,8 @@ Popup {
         }
         AppDialog {
             id: usageDialog
-            title: qsTr("Usage")
+            objectName: "assistant.usageDialog"
+            title: qsTr("Account and usage")
             standardButtons: Dialog.Close
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
             width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
@@ -610,6 +611,14 @@ Popup {
                     id: usageContent
                     width: usageScroll.availableWidth
                     spacing: AppSizes.unit
+                    EaElements.Label {
+                        objectName: "assistant.accountIdentity"
+                        width: parent.width
+                        visible: panel.assistant.connected
+                        text: panel.assistant.connected ? panel.assistant.connectionLabel : ""
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
                     EaElements.Label {
                         width: parent.width
                         text: panel.usageCaption()

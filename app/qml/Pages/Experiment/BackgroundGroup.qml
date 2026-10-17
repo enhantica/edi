@@ -19,6 +19,7 @@ import edi.app
 Column {
     id: group
 
+    objectName: "background.rows"
     property ExperimentViewModel experiment: null
     readonly property BackgroundListModel points: experiment ? experiment.background : null
     readonly property BackgroundTermListModel terms: experiment ? experiment.backgroundTerms : null
@@ -131,12 +132,18 @@ Column {
                         text: row.index + 1
                     }
                     TextCell {
+                        editMember: row
+                        editModel: group.points
+                        editIndex: row.index
                         horizontalAlignment: Text.AlignLeft
                         objectName: `background.id.${row.index}`
                         value: row.model.id
                         onCommitted: text => group.points.setId(row.index, text)
                     }
                     TextCell {
+                        editMember: row
+                        editModel: group.points
+                        editIndex: row.index
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.position.${row.index}`
                         value: row.position
@@ -156,137 +163,6 @@ Column {
                         onClicked: group.points.remove(row.index)
                     }
                 }
-            }
-
-            Column {
-                id: backgroundStage
-                objectName: "background.stage"
-                width: parent.width
-                spacing: AppSizes.inputSpacing
-                visible: false
-                property string assistantStage: ""
-                property bool manualDraft: false
-                property bool loading: false
-                property string outcome: ""
-                property int revision: 0
-                property var draftSource: null
-                readonly property bool assistantManualDraft: manualDraft
-                readonly property string operation: action.currentValue ?? "add"
-                readonly property var sourceModel: group.points
-                function reset(hide = false) {
-                    loading = true; ++revision;
-                    identity.text = ""; position.text = ""; intensity.text = ""; free.checked = false;
-                    identity.assistantEditing = false; position.assistantEditing = false; intensity.assistantEditing = false;
-                    assistantStage = ""; draftSource = null; manualDraft = false;
-                    if (hide) visible = false;
-                    loading = false; // Terminal: a new intent may start from this notification.
-
-                }
-                Component.onCompleted: reset()
-                function beginAssistantStage(key) {
-                    if (loading || !sourceModel || key === "" || assistantStage !== "" || manualDraft) return false;
-                    const source = sourceModel;
-                    assistantStage = key;
-                    if (assistantStage !== key || loading) return false;
-                    draftSource = source;
-                    if (assistantStage !== key || loading || sourceModel !== source) return false;
-                    outcome = "";
-                    if (assistantStage !== key || loading || sourceModel !== source) return false;
-                    visible = true;
-                    return assistantStage === key && !loading && sourceModel === source;
-                }
-                function cancelAssistantStage(key) {
-                    if (assistantStage === key && !manualDraft) reset(true);
-                }
-                function takeAssistantStage(key) {
-                    if (assistantStage !== key) return;
-                    manualDraft = true; assistantStage = "";
-                    identity.assistantEditing = false; position.assistantEditing = false; intensity.assistantEditing = false;
-                }
-                function changed(own) { if (!loading) { ++revision; if (!own && assistantStage === "") manualDraft = true; } }
-                function apply() {
-                    const source = sourceModel, original = assistantStage, version = revision;
-                    if (!source || source !== draftSource) { outcome = qsTr("The original experiment changed. Close this draft and reopen it for the selected experiment."); return; }
-                    if (operation !== "remove") {
-                        const error = TypedInput.refusal(position.text, "number") || TypedInput.refusal(intensity.text, "number");
-                        if (error !== "") { outcome = error; return; }
-                    }
-                    const result = source.changeDefined(operation, identity.text, operation === "remove" ? 0 : Number(position.text),
-                        operation === "remove" ? 0 : Number(intensity.text), free.checked);
-                    if (sourceModel !== source || assistantStage !== original || revision !== version) return;
-                    outcome = result.message || (result.applied && result.published ? qsTr("Background edited with Undo; calculation is asynchronous.") :
-                        result.applied ? qsTr("The edit and Undo were retained; final presentation was not confirmed.") : qsTr("Background edit refused."));
-                    if (result.applied) reset();
-                }
-                Connections {
-                    target: group.points
-                    function onInsertionRequested() {
-                        if (backgroundStage.loading || backgroundStage.assistantStage !== "") return;
-                        if (!backgroundStage.visible) {
-                            backgroundStage.reset();
-                            if (backgroundStage.loading || backgroundStage.assistantStage !== "") return;
-                            backgroundStage.draftSource = backgroundStage.sourceModel;
-                        }
-                        if (!backgroundStage.loading && backgroundStage.assistantStage === "") backgroundStage.visible = true;
-                    }
-                }
-                ComboBox {
-                    id: action
-                    objectName: "background.stage.operation"
-                    width: parent.width
-                    model: [ {label: qsTr("Add point"), value: "add"}, {label: qsTr("Update point"), value: "update"}, {label: qsTr("Remove point"), value: "remove"} ]
-                    textRole: "label"; valueRole: "value"
-                    onActivated: backgroundStage.changed(false)
-                }
-                EaElements.TextInput {
-                    id: identity; objectName: "background.stage.id"; width: parent.width
-                    placeholderText: qsTr("Exact point ID")
-                    property bool assistantEditing: false
-                    readonly property string editText: text
-                    readonly property bool assistantManualDraft: backgroundStage.manualDraft
-                    onTextChanged: backgroundStage.changed(assistantEditing)
-                    onInputMethodComposingChanged: if (inputMethodComposing) backgroundStage.changed(assistantEditing)
-                    function beginAssistantEdit() { assistantEditing = true; }
-                    function allowAssistantCommit() { assistantEditing = false; }
-                    function cancelAssistantEdit() { assistantEditing = false; }
-                }
-                EaElements.TextInput {
-                    id: position; objectName: "background.stage.position"; width: parent.width
-                    visible: backgroundStage.operation !== "remove"; maximumLength: 64
-                    placeholderText: group.experiment && group.experiment.beamMode === ExperimentViewModel.ConstantWavelength ? qsTr("Position (2θ degrees)") : qsTr("Position (TOF μs)")
-                    property bool assistantEditing: false
-                    readonly property string editText: text
-                    readonly property bool assistantManualDraft: backgroundStage.manualDraft
-                    onTextChanged: backgroundStage.changed(assistantEditing)
-                    onInputMethodComposingChanged: if (inputMethodComposing) backgroundStage.changed(assistantEditing)
-                    function beginAssistantEdit() { assistantEditing = true; }
-                    function allowAssistantCommit() { assistantEditing = false; }
-                    function cancelAssistantEdit() { assistantEditing = false; }
-                }
-                EaElements.TextInput {
-                    id: intensity; objectName: "background.stage.intensity"; width: parent.width
-                    visible: backgroundStage.operation !== "remove"; maximumLength: 64
-                    placeholderText: qsTr("Intensity (measured-data units)")
-                    property bool assistantEditing: false
-                    readonly property string editText: text
-                    readonly property bool assistantManualDraft: backgroundStage.manualDraft
-                    onTextChanged: backgroundStage.changed(assistantEditing)
-                    onInputMethodComposingChanged: if (inputMethodComposing) backgroundStage.changed(assistantEditing)
-                    function beginAssistantEdit() { assistantEditing = true; }
-                    function allowAssistantCommit() { assistantEditing = false; }
-                    function cancelAssistantEdit() { assistantEditing = false; }
-                }
-                EaElements.CheckBox {
-                    id: free; objectName: "background.stage.free"; text: qsTr("Refine intensity")
-                    visible: backgroundStage.operation !== "remove"
-                    onToggled: backgroundStage.changed(false)
-                }
-                Row {
-                    spacing: AppSizes.inputSpacing
-                    EaElements.SideBarButton { objectName: "background.stage.apply"; text: qsTr("Apply"); onClicked: backgroundStage.apply() }
-                    EaElements.SideBarButton { text: qsTr("Close draft"); onClicked: backgroundStage.reset(true) }
-                }
-                EaElements.Label { width: parent.width; wrapMode: Text.Wrap; text: backgroundStage.outcome; visible: text !== "" }
             }
 
             // Append; name every point by its position, rounded as strongly as keeps the names apart (the owner,
@@ -425,6 +301,9 @@ Column {
                         text: termRow.index + 1
                     }
                     TextCell {
+                        editMember: termRow
+                        editModel: group.terms
+                        editIndex: termRow.index
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.order.${termRow.index}`
                         value: termRow.order

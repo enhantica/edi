@@ -6,6 +6,8 @@
 #include <QVariant>
 #include <QVariantMap>
 #include <stdexcept>
+#include <algorithm>
+#include <limits>
 namespace edi_app {
 // ItemVec::assign prepares candidate/admissibility keys, new columns, row holds,
 // anchors, three hash indexes and kept-column references before its one commit.
@@ -26,6 +28,21 @@ inline constexpr quint64 background_preparation_bytes() {
         sizeof(edi::detail::RowColumns<Row>) + sizeof(crysta::detail::AnchorList) + sizeof(edi::detail::Membership) +
         sizeof(edi::detail::TableNotes) + 7 * (sizeof(void*) + sizeof(std::uint64_t)) +
         Limits::stream_items * (numeric + indexes + pointers + strings + rows + ui);
+}
+// The original Add starts a real editable row with ordinary defaults, not a form.
+inline edi::BackgroundPointInput background_append_input(const edi::ExperimentBase& experiment) {
+    edi::BackgroundPointInput input;
+    for (std::size_t ordinal = 1; input.id.empty(); ++ordinal) {
+        if (ordinal == std::numeric_limits<std::size_t>::max()) throw std::length_error("Background identities are exhausted");
+        const auto candidate = std::to_string(ordinal);
+        if (std::none_of(experiment.background.begin(), experiment.background.end(), [&](const auto& point) { return point->id.value() == candidate; }))
+            input.id = candidate;
+    }
+    if (!experiment.background.empty()) {
+        input.position = experiment.background[experiment.background.size() - 1]->position.get();
+        input.intensity = experiment.background[experiment.background.size() - 1]->intensity.value.get();
+    }
+    return input;
 }
 inline std::string background_text(const QString& text, bool native_bounded = true) {
     using Limits = edi::assistant::Limits;

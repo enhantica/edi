@@ -16,6 +16,7 @@ import edi.app
 Column {
     id: group
 
+    objectName: "relations.aliases"
     property AnalysisViewModel analysis: null
     readonly property AliasListModel aliases: analysis ? analysis.aliases : null
 
@@ -59,6 +60,9 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.aliases
+                editIndex: row.index
                 objectName: `alias.id.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 value: row.model.id
@@ -97,6 +101,8 @@ Column {
 
         EaElements.SideBarButton {
             objectName: "aliases.append"
+            enabled: group.aliases !== null && group.aliases.parameterNames.length > 0
+            ToolTip.text: enabled ? qsTr("Append an alias for an offered parameter") : qsTr("No parameter is available for an alias")
             fontIcon: "plus-circle"
             text: qsTr("Append new alias")
             onClicked: group.aliases.append()

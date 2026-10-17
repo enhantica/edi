@@ -85,7 +85,15 @@ bool BackgroundListModel::setPosition(int row, double position) {
     input.position = position; input.intensity = point->intensity.value.get(); input.free = point->intensity.free.get();
     return applyDefined(input).value("applied").toBool();
 }
-void BackgroundListModel::append() { emit insertionRequested(); }
+void BackgroundListModel::append() {
+    const QPointer<BackgroundListModel> self(this);
+    try { (void)applyDefined(background_append_input(experiment_)); }
+    catch (...) {
+        if (!self) return;
+        const QString message = tr("A background point could not be appended");
+        if (operation_error_ != message) { operation_error_ = message; emit operationErrorChanged(); }
+    }
+}
 QVariantMap BackgroundListModel::changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free) {
     std::optional<edi::BackgroundPointInput> input;
     try { input = background_input(operation, id, position, intensity, free, false); }

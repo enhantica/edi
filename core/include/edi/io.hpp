@@ -49,13 +49,17 @@ class IoError : public std::runtime_error {
 using WarningSink = std::function<void(const std::string&)>;
 Project load_project(const std::string& directory, const WarningSink& on_warning = {});
 
-// Structures and experiments enter an open project only from `.edi` block files. Each load
+// The strict native block entries below load structures and experiments from `.edi` files. Each load
 // refuses a path without the `.edi` extension and content without the project format's
 // `_edi.schema_version` (so a classic CIF is refused, although the from-text entries below read
 // that vocabulary too), then builds through the loader's own block builder. An experiment file
 // must also declare its type — all four `_experiment_type` axes — and a type edi's experiment
 // class implements (powder + bragg); a project directory keeps the loader's presence-tracked
 // axes. Nothing is changed by a load: adding is the separate step below.
+// Ordinary Structure Load accepts native .edi or supported single-structure .cif.
+// The existing strict .edi entry below retains its format/schema contract.
+// Both use the same file reader and existing structure builders; no conversion.
+Structure load_structure_file(const std::string& path);
 Structure load_structure_edi_file(const std::string& path);
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
 // A batch, checked as a whole before anything is added: every file as above, and each name

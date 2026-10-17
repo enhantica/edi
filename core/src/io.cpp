@@ -3122,6 +3122,13 @@ bool holds_experiment(const Project& project, const std::string& name) {
 
 }  // namespace
 
+Structure load_structure_file(const std::string& path) {
+    const auto extension = fs::path(path).extension();
+    if (extension == ".edi") return load_structure_edi_file(path);
+    if (extension == ".cif") return structure_from_edi_text(read_file(path));
+    throw IoError(path + ": choose a native .edi structure or a supported .cif file");
+}
+
 Structure load_structure_edi_file(const std::string& path) {
     return structure_from_block(edi_file_block(path), path);
 }

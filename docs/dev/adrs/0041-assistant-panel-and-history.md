@@ -1041,3 +1041,13 @@ These are the existing guarded-helper and transport-deadline caller rules.
 No callback is suppressed, proof recaptured, deadline changed or request
 replayed. Original admitted replies, consumed identifiers, native Worker
 completion and required offline/destructor retirement remain unchanged.
+
+## Account identity and outgoing-context entry
+
+The original connected account label opens the existing account/usage dialog,
+which shows the current connected identity as literal wrapping text and retains
+its existing read-only usage refresh. It does not invoke sign-in, approve
+outgoing context, capture a draft or alter file/context permissions. The
+disconnected Sign in control retains its original connection-dialog entrance;
+Send retains the existing required-context approval flow. Sign-out and actual
+account changes update the same identity binding, without a stored email copy.

@@ -77,12 +77,18 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.rows
+                editIndex: row.index
                 objectName: `preferredOrientation.structureId.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 value: row.structureId
                 onCommitted: text => group.rows.setStructureId(row.index, text)
             }
             TextCell {
+                editMember: row
+                editModel: group.rows
+                editIndex: row.index
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexH.${row.index}`
                 value: row.indexH
@@ -90,6 +96,9 @@ Column {
                 onCommitted: text => group.rows.setIndex(row.index, "h", Number(text))
             }
             TextCell {
+                editMember: row
+                editModel: group.rows
+                editIndex: row.index
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexK.${row.index}`
                 value: row.indexK
@@ -97,6 +106,9 @@ Column {
                 onCommitted: text => group.rows.setIndex(row.index, "k", Number(text))
             }
             TextCell {
+                editMember: row
+                editModel: group.rows
+                editIndex: row.index
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.indexL.${row.index}`
                 value: row.indexL

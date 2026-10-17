@@ -1062,55 +1062,43 @@ The optional navigation sink introduced above is removed entirely after its enab
 The actual behavior stays: scope Main to the requested workflow, skip page/Main when already checked, use genuine input when different and require the captured expected selection before scientific control lookup. No direct selection assignment, extra click/retry or timing/device exemption. The original release sequence stamp is captured before dispatch so even existing synchronous button handlers cannot clear a genuinely newer held sequence. This is independent of optional logging. The physical Extra-to-Main failure remains unproved pending actual event evidence; an earlier precise refusal is not success.
 
 
-### Complete staged relation append form (E11-T5, 2026-10-16)
+### Relations through the existing human row controls
 
-Prior art: Analysis AliasesGroup/ConstraintsGroup ordinary per-row edits and the
-native add_relations complete batch validator/recorded Undo. A common inline
-Analysis Extra form stages selectable alias and constraint rows, with ordinary
-Add/Remove, exact ID/path/expression inputs, enabled checkbox and one Apply. It
-accepts the same native range: zero to 256 aliases and one to 256 constraints,
-subject to the existing aggregate UTF8/context/retained limits. Those constants
-come from assistant::Limits::stream_items/context_bytes/id_bytes. No scientific
-edit occurs on typing, selection, Return or blur. Apply reuses the existing
-native relation preparation and applyRecordedEdit; existing declarations and
-ordinary per-row controls remain authoritative. IDs are not scientific guesses.
+The first implementation is AliasesGroup/ConstraintsGroup, their original
+AliasListModel/ConstraintListModel setters and ProjectEditor.apply_relation_edit
+(ADR-0024). The duplicate RelationAppendGroup, its registration/insertion and
+appendRelationForm entrance are removed. There is no extra Apply or hidden
+staging model. The normal native add_relations tool keeps its complete validated
+batch and one Undo; Show actions is a sequence of the same real human edits.
 
-The original visible call uses genuine navigation, row Add, key input, enabled
-click and final Apply in this same manual form. It prearms exact array equality
-only immediately before Apply, and requires consumed/applied/published plus
-actual declaration readback. A native path is resolved by the same public
-parameter_entries/named_slots walk, not compared to a stored unique name. No
-backend mutation decorates pointer movement, direct checked/index write, mode
-switch or secondary expression parser. Already selected tabs are skipped and
-captured current selections are required before row entry.
+The visible route conditionally selects Analysis/Extra, expands the original
+category header and reveals its exact current row through real wheel input.
+Alias append, ID commit, parameter choice, constraint append, ID/expression
+commit and activation each use their original model/editor. Existing parameter
+popups use real searchable keyboard input or their finite ordinary choices.
+An exact original action/member/value receipt is installed immediately before
+the final genuine event. No direct model edit decorates a pointer action, no
+synthetic clicked/accepted signal is emitted, and no widget index/scroll/group
+state is assigned by the assistant. TextCell shares the original numeric editor's
+paced draft/commit/cancel ownership; ordinary manual blur/Return still uses the
+same model setter. Existing manual drafts and IME are preserved.
 
-A nonempty manual stage refuses assistant admission before navigation/focus.
-Stop/retirement clears only the original keyed assistant stage. Genuine manual
-input first retires original tool authority and hands that exact staged form to
-manual ownership without changing enabled controls, text or geometry under the
-same event. Staged text has no implicit scientific commit. A replaced form or a
-new stage cannot be cleared by old callbacks; a reentrant draft revision cannot
-be reset by the completed Apply. Multiline staged text uses genuine text keys
-and no extra final Return; actual exact string readback is required. Numeric
-prepared Return and existing draft/IME/input-device ownership stay unchanged.
+A newly appended manual constraint starts disabled, and its ID/expression cells
+remain editable while disabled. This applies equally to humans and assistant
+input: a complete declaration is entered before the existing toggle activates
+it through the actual validator. Existing loaded enabled flags are unchanged.
 
+Each real change retains its own normal recorded Undo. Current member identity,
+actual model values and the original request/account/owner/window are checked
+between steps; receipt refresh follows each own applied edit. Stop, takeover,
+refusal or replacement preserves completed changes and answers the original
+call once. Outcomes distinguish complete edited from partial/refused, expose
+atomic:false and actual steps_completed, and retain uncertainty rather than
+claiming unchanged science after a failed publication. These steps are not an
+isolated trial, automatic rollback or a single-Undo transaction. Single-line
+editor spellings and existing resource/deadline/viewport limits may refuse
+before or during the sequence; never silently use normal mode instead.
 
-### Shared relation form platform and terminal cleanup (E11-T5, 2026-10-16)
-
-The ordinary staged relation form belongs to the shared GUI, including WASM.
-It prepares NativeAliasInput/NativeConstraintInput through the existing core
-prepare_relation_append helper, which already owns UTF8/encoded bounds and
-actual relation validation. It does not link desktop Codex/tool frontends or
-bring their process transport into the browser. Qt field/row preflight remains
-before conversion; desktop prearmed original arrays remain exactly compared.
-
-Original helper/fit/input cleanup precedes the new reentrant QML stage reset.
-That exact-stage reset is terminal in widget_end. Original identity fences also
-cover the helper's own completion/pointer callbacks and the outer stop
-presentation continuation. New input/window/project/call/receipt/epoch or
-ledger admissions cannot be cancelled/hidden by old cleanup, even on the same
-surviving Assistant. Held original press release and prepared outcomes stay
-owned. Manual draft transfer and exact keyed clear retain their prior meanings.
 
 ### Original-request manual input and ordinary parameter reveal (E11-T5, source217)
 
@@ -1179,3 +1167,89 @@ open/capture finishes. Cleanup balances the original helper before terminal
 external QML cleanup and cannot resume against a reentrant newer operation.
 One existing fixed total deadline remains; actual delivered characters refresh
 idle activity without extending that total or exposing their contents.
+
+
+### Background through its original row controls
+
+BackgroundGroup's original Add, ID/position/intensity rows, parameter context
+menu and Remove are the manual and visible entrances (ADR-0043). The duplicate
+background setup form is removed; Add creates the ordinary default editable row
+through the same closed editor and recorded Undo. Native normal mode retains
+one strict operation; genuine visible actions prevalidate the final request and
+perform separately prearmed real human edits, retaining each actual Undo and
+complete/partial outcome. Exact row/bank/source/request identity, manual drafts,
+Stop and replacement are checked between events. The existing private mouse
+owner balances the actual button, including right-button retirement/deferred
+cleanup; the exact parameter menu is dismissed by real Escape. No control state
+is assigned to manufacture visibility, activation or a scientific result.
+
+
+### Shared text draft and ordinary alias defaults
+
+TextCell's first manual table entrances own the same draft rules as its paced
+assistant input. A clean display binding is removed with RestoreNone when real
+text/IME begins, without assigning over preedit. A draft captures its original
+project/delegate/model/index/control context; value-role publication cannot
+retarget or erase it. Each actual user text/preedit event replaces its revision
+record. Commit is single-entry and checks that original record/lifetime before
+any post-signal diagnostic or cleanup. A newer draft, IME, owner or member
+leaves the old continuation with no presentation authority. Cleanup releases
+only its own in-progress latch; clean formatting resumes through the binding
+only when there is no draft. Refused/no-op/Return/blur use the original model
+setter and formatting. Explicit human Escape can discard an obsolete draft;
+late assistant cleanup cannot discard newer manual input.
+
+The original Alias Add uses the actual offered independent parameter list. It
+chooses the first target with no alias, otherwise the first offered target: more
+than one alias for a real parameter is lawful. With no offered target, the
+ordinary button is disabled and the model refuses before admitting an Edit or
+Undo. All successful operations retain the same validator and recorded Undo;
+no alternate scientific executor or parallel form is added.
+
+
+### Original structure and experiment file entrances
+
+The first Structure Load button and FileDialog now accept native .edi and
+supported single-structure .cif. Native blocks keep the strict existing schema
+loader; CIF calls the already existing structure_from_edi_text reader through
+the same file reader. No alternate parser, conversion or scientific setup form
+is introduced. The ordinary load preowns its structural Undo before the same
+closed addition and retains actual applied state through presentation failure.
+It adds to the original project, preserving its identity/metadata/settings/path.
+
+Original structure, experiment-block and measured-data choosers capture the
+project and exact data target when opened. Each native/browser answer consumes
+its one original intent before invoking the same loader; replacement/duplicate
+answers cannot target a new owner or clear a newer chooser. Existing browser
+request IDs and native picker behavior are preserved. The existing FileDialog
+instances have stable semantic identities for genuine subsequent input; these
+changes do not claim native macOS-panel automation or a completed visible
+creation route. The duplicate import-window removal and complete original
+creation/field sequence remain a separate connected continuation.
+
+The existing browser chooser's synchronous cancellation also retains its exact
+receiver/request serial. If a callback deletes it or admits a new request, the
+old begin refuses with zero; all existing callers stop before further member or
+filesystem access. This preserves a newer browser picker rather than overwriting
+its active ID. A never-opened original QML intent is consumed on refusal, so it
+cannot block the next ordinary Load. This changes no file grant or science.
+
+
+### One text terminal entrance and explicit row ownership
+
+A TextCell commits only from editingFinished. Pinned Qt emits that signal before
+accepted for the same Return; accepted keeps only the original base visual
+feedback. It cannot capture/commit/clear a newer changed, identical or committed
+IME draft admitted during the first synchronous publication. A genuine later
+Return or focus loss still has its own editingFinished and commits normally.
+The existing single-frame latch continues to prevent recursive notification
+entry; it is not mistaken for proof against the later accepted signal tail.
+
+The base ListViewDelegate places contentRow inside a FocusScope. TextCell's
+immediate visual parent therefore is not the data delegate. Every original
+TextCell declaration supplies its actual lexical delegate, source model and row
+index explicitly. These bindings, current Session project, semantic control name
+and lifetime retire original ownership on actual changes; value-role publication
+does not become a new owner. No parent.model/index inference or synthetic input
+is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
+and all unrelated original controls remain unchanged.

@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.15",
+      "version": "1.5.17",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save a current native CW project through actual offered tools and the genuine chosen folder.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "4d941a5797b18a508cbb40374fdf1832c3a634b766df5d337e9ae319e1255b6b",
+      "sha256": "9a9b21c58e7167c2a5912ea6026a1c548aaa6418ddc745b0ee8aad2b222622f6",
       "requires": [],
       "capabilities": [
         "inspect_project",

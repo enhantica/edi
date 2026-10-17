@@ -87,7 +87,6 @@ WorkflowPage {
     }
     extrasItem: Component {
         EaComponents.SideBarColumn {
-            RelationAppendGroup { project: page.project }
             Repeater {
                 model: page.analysis ? page.analysis.categories : null
                 delegate: CategoryGroup {

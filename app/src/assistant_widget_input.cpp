@@ -80,8 +80,9 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
     void deferHeldCleanup(quint64 stamp) noexcept {
         if (sequence != stamp || cleanup_pending) return;
         cleanup_pending = stamp; accepting = false;
+        const auto original_button = held_button;
         try {
-            QTimer::singleShot(0, this, [this, stamp] {
+            QTimer::singleShot(0, this, [this, stamp, original_button] {
                 if (cleanup_pending != stamp || sequence != stamp) return;
                 const QPointer<MouseOwnership> self(this);
                 const QPointer<QQuickWindow> target(window);
@@ -90,7 +91,7 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
                     cleanup_delivery = eventStamp(QEvent::MouseButtonRelease);
                     QMouseEvent release(QEvent::MouseButtonRelease, QPointF(-1, -1),
                         target ? target->mapToGlobal(QPointF(-1, -1)) : QPointF(-1, -1),
-                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier, &device);
+                        original_button, Qt::NoButton, Qt::NoModifier, &device);
                     release.setTimestamp(cleanup_delivery);
                     if (target) QCoreApplication::sendEvent(target, &release);
                     else {
@@ -161,6 +162,7 @@ struct AssistantWidgetInput::MouseOwnership final : QObject {
     QPointer<AssistantWidgetInput> owner;
     quint64 sequence = 0, cleanup_pending = 0, cleanup_delivery = 0, last_event_stamp = 0;
     std::array<quint64, 4> stamps{};
+    Qt::MouseButton held_button = Qt::LeftButton;
     bool accepting = false, held = false;
 };
 bool AssistantWidgetInput::ownMouseEvent(const QEvent* event) const noexcept {
@@ -248,9 +250,9 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     QPointF center;
     if (!request.current() || !visibleCenter(*request.target, center, request.kind == Kind::Scroll))
         throw std::runtime_error("The genuine input control is not visible and current");
-    const qsizetype text_limit = request.kind == Kind::StagedText
+    const qsizetype text_limit = (request.kind == Kind::StagedText || request.kind == Kind::Text)
         ? static_cast<qsizetype>(edi::assistant::Limits::context_bytes) : 256;
-    if ((request.kind == Kind::Value || request.kind == Kind::ParameterFilter || request.kind == Kind::StagedText) &&
+    if (((request.kind == Kind::Value || request.kind == Kind::Text) || request.kind == Kind::ParameterFilter || request.kind == Kind::StagedText) &&
         (request.value.isEmpty() || request.value.size() > text_limit))
         throw std::runtime_error("The numeric input spelling is unavailable");
     // Applies to navigation/free/fit too: their click can commit an unrelated
@@ -258,10 +260,11 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (manualDraftPresent()) throw std::runtime_error("Finish the current manual input first");
     if (request.kind == Kind::Scroll && request.scrollDirection != 1 && request.scrollDirection != -1)
         throw std::runtime_error("The bounded viewport scroll is unavailable");
-    original_text_ = (request.kind == Kind::Value || request.kind == Kind::StagedText) ? request.target->property("editText").toString() : QString{};
+    original_text_ = ((request.kind == Kind::Value || request.kind == Kind::Text) || request.kind == Kind::StagedText) ? request.target->property("editText").toString() : QString{};
     if (original_text_.size() > text_limit) throw std::runtime_error("The original numeric draft exceeds the visible input bound");
-    if (request.kind == Kind::Choose && (request.option < 0 || request.option >= request.target->property("count").toInt() ||
-        request.target->property("count").toInt() > static_cast<int>(edi::assistant::Limits::stream_items)))
+    if ((request.kind == Kind::Choose || request.kind == Kind::SearchChoice) && (request.option < 0 || request.option >= request.target->property("count").toInt() ||
+        (request.kind == Kind::Choose && request.target->property("count").toInt() > static_cast<int>(edi::assistant::Limits::stream_items)) ||
+        (request.kind == Kind::SearchChoice && (!request.target->property("searchable").toBool() || request.value.isEmpty() || request.value.size() > static_cast<qsizetype>(edi::assistant::Limits::id_bytes)))))
         throw std::runtime_error("The actual ComboBox option is unavailable");
     auto prepared = std::make_shared<Request>(std::move(request)); // All job/callback allocation precedes visibility.
     if (!mouse_owner_) throw std::runtime_error("The visible mouse window is unavailable");
@@ -295,6 +298,7 @@ bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
     const auto buttons = type == QEvent::MouseButtonRelease ? Qt::NoButton : button;
     QMouseEvent event(type, center_, window->mapToGlobal(center_), button, buttons, Qt::NoModifier, &mouse_owner_->device);
+    if (type == QEvent::MouseButtonPress) mouse_owner_->held_button = button;
     event.setTimestamp(mouse_owner_->eventStamp(type));
     QCoreApplication::sendEvent(window, &event);
     if (self && mouse_owner_ && type == QEvent::MouseButtonRelease) mouse_owner_->releaseFinished(*this, original_stamp);
@@ -316,10 +320,13 @@ bool AssistantWidgetInput::scroll() {
 }
 bool AssistantWidgetInput::choiceKeyboardOwned() const {
     if (!window_ || !request_ || !request_->target) return false;
-    if (request_->target->hasActiveFocus()) return true;
-    if (request_->kind != Kind::Choose || !choice_popup_ || !choice_popup_->property("visible").toBool()) return false;
+    if (request_->kind != Kind::SearchChoice && request_->kind != Kind::DismissMenu && request_->target->hasActiveFocus()) return true;
+    if ((request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::DismissMenu) || !choice_popup_ || !choice_popup_->property("visible").toBool() ||
+        request_->target->property(request_->kind == Kind::DismissMenu ? "contextMenu" : "popup").value<QObject*>() != choice_popup_) return false;
     const auto* content = choice_popup_->property("contentItem").value<QQuickItem*>();
-    for (auto* item = window_->activeFocusItem(); item; item = item->parentItem()) if (item == content) return content->window() == window_;
+    const auto* focus = window_->activeFocusItem();
+    if (request_->kind == Kind::SearchChoice && (!focus || focus->objectName() != "comboBox.search")) return false;
+    for (auto* item = focus; item; item = item->parentItem()) if (item == content) return content->window() == window_;
     return false;
 }
 bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const QString& text) {
@@ -331,9 +338,10 @@ bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const 
     const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
     // Accepted numeric controls deliberately drop focus. Only the prepared
     // final Return permits that transition; ordinary typing stays focus-bound.
-    const bool terminal = code == Qt::Key_Return && commit_prepared_ &&
-        ((step_ == Step::Commit && (original->kind == Kind::Value || original->kind == Kind::ParameterFilter || original->kind == Kind::StagedText)) ||
-         (step_ == Step::ChooseCommit && original->kind == Kind::Choose));
+    const bool terminal = (code == Qt::Key_Escape && original->kind == Kind::DismissMenu && commit_prepared_) ||
+        (code == Qt::Key_Return && commit_prepared_ &&
+        ((step_ == Step::Commit && ((original->kind == Kind::Value || original->kind == Kind::Text) || original->kind == Kind::ParameterFilter || original->kind == Kind::StagedText || original->kind == Kind::SearchChoice)) ||
+         (step_ == Step::ChooseCommit && original->kind == Kind::Choose)));
     const QPointer<QQuickItem> target(original->target);
     if (terminal && target->window() != window) return false;
     QKeyEvent press(QEvent::KeyPress, code, modifiers, text);
@@ -374,6 +382,11 @@ void AssistantWidgetInput::advance() noexcept {
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
             step_ = Step::Press; timer_.start(move_ms); return;
         case Step::Press:
+            if (request->kind == Kind::DismissMenu) {
+                choice_popup_ = request->target->property("contextMenu").value<QObject*>();
+                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !choiceKeyboardOwned()) { stop(false, tr("The original parameter menu lost keyboard ownership"), false); return; }
+                step_ = Step::ChooseCommit; timer_.start(0); return;
+            }
             if (request->kind == Kind::Scroll) {
                 // Wheel movement changes only the actual existing viewport; it
                 // never focuses/blurs an editor or synthesizes a button click.
@@ -390,11 +403,11 @@ void AssistantWidgetInput::advance() noexcept {
             { const bool valid = self->current(id); if (!self) return;
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
-            if (!mouse(QEvent::MouseButtonPress, Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its press"), true); return; }
+            if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its press"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Release; timer_.start(press_ms); return;
         case Step::Release:
-            if (request->kind != Kind::Value && request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose) {
+            if ((request->kind != Kind::Value && request->kind != Kind::Text) && request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose && request->kind != Kind::SearchChoice) {
                 commit_prepared_ = true; // Exact finish is owed even if preparation reenters/cancels.
                 if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The native input could not be prepared"), false); return; }
                 if (!self) return;
@@ -402,14 +415,15 @@ void AssistantWidgetInput::advance() noexcept {
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
             }
             pressed_ = false;
-            if (!mouse(QEvent::MouseButtonRelease, Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its release"), true); return; }
+            if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its release"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            if (request_->kind == Kind::Choose) {
+            if (request_->kind == Kind::Choose || request_->kind == Kind::SearchChoice) {
                 choice_popup_ = request_->target->property("popup").value<QObject*>();
                 if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { stop(false, tr("The genuine ComboBox popup did not open"), false); return; }
-                step_ = Step::ChooseHome; timer_.start(click_relaxation_ms); return;
+                step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChooseHome;
+                timer_.start(click_relaxation_ms); return;
             }
-            if (request_->kind != Kind::Value && request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose) { stop(true, {}, false); return; }
+            if ((request_->kind != Kind::Value && request_->kind != Kind::Text) && request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice) { stop(true, {}, false); return; }
             step_ = Step::Select; timer_.start(click_relaxation_ms); return;
         case Step::ChooseHome:
             if (!key(Qt::Key_Home)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
@@ -426,21 +440,25 @@ void AssistantWidgetInput::advance() noexcept {
             commit_prepared_ = true;
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox choice was retired"), false); return; }
             if (!self || serial_ != id || request_ != request) return;
-            if (!current(id) || !key(Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The actual ComboBox choice could not be delivered"), false); return; }
+            if (!current(id) || !key(request->kind == Kind::DismissMenu ? Qt::Key_Escape : Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The actual menu key could not be delivered"), false); return; }
             if (self && serial_ == id && request_ == request)
-                stop(request->target && request->target->property("currentIndex").toInt() == request->option, {}, false);
+                stop(request->kind == Kind::DismissMenu ? choice_popup_ && !choice_popup_->property("visible").toBool()
+                    : request->target && request->target->property("currentIndex").toInt() == request->option, {}, false);
             return;
         case Step::Select:
-            if ((request->kind == Kind::Value || request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The numeric control has no safe draft owner"), true); return; }
+            if (((request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The numeric control has no safe draft owner"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            draft_ = request->kind == Kind::Value || request->kind == Kind::StagedText;
+            if (request->kind == Kind::Text && (!request->target || !request->target->property("assistantEditing").toBool())) {
+                stop(false, tr("The original text draft did not admit assistant input"), false); return;
+            }
+            draft_ = (request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText;
             if (!selectAll()) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input did not acquire focus"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Delete; timer_.start(character_ms); return;
         case Step::Delete:
             // A filter's text is immediate presentation state, not a deferred
             // scientific edit. Never restore/reflow it before a manual event.
-            draft_ = request->kind == Kind::Value || request->kind == Kind::StagedText;
+            draft_ = (request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText;
             if (!key(Qt::Key_Backspace)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input changed focus"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Type; timer_.start(character_ms); return;
@@ -464,14 +482,18 @@ void AssistantWidgetInput::advance() noexcept {
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
-            if ((request->kind == Kind::Value || request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
+            if (((request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             // Staged fields publish presentation text on each real key. They
             // have no scientific blur/Return commit; an extra Return would
             // append a newline to a genuine multiline expression. Only Apply
             // below owns the prearmed scientific batch.
             if (request->kind != Kind::StagedText && !key(Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input commit was not confirmed"), true); return; }
-            if (self && serial_ == id && request_ == request) { draft_ = false; stop(true, {}, false); }
+            if (self && serial_ == id && request_ == request) {
+                draft_ = false;
+                const bool selected = request->kind != Kind::SearchChoice || (request->target && request->target->property("currentIndex").toInt() == request->option);
+                stop(selected, {}, false);
+            }
             return;
         }
     } catch (...) { if (self && serial_ == id && request_ == request) stop(false, failed_, true); }
@@ -502,7 +524,7 @@ void AssistantWidgetInput::stop(bool delivered, const QString& diagnostic, bool 
         center_ = QPointF(-1, -1);
         cleanup_release_ = true;
         const auto release_cleanup = qScopeGuard([self] { if (self) self->cleanup_release_ = false; });
-        try { (void)mouse(QEvent::MouseButtonRelease, Qt::LeftButton); }
+        try { (void)mouse(QEvent::MouseButtonRelease, original->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton); }
         catch (...) {
             delivered = false;
             if (self && mouse_owner_) mouse_owner_->deferHeldCleanup(mouse_stamp_);

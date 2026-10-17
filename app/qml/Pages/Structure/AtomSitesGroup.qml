@@ -101,6 +101,9 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.sites
+                editIndex: row.index
                 objectName: `atomSite.label.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 value: row.label

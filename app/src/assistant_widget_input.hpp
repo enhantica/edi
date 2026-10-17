@@ -21,13 +21,13 @@ namespace edi_app {
 class AssistantWidgetInput final : public QObject {
     Q_OBJECT
  public:
-    enum class Kind { Value, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose };
+    enum class Kind { Value, Text, Free, Fit, Navigate, ParameterFilter, StagedText, Scroll, Choose, SearchChoice, ContextMenu, DismissMenu };
     struct Request {
         Kind kind;
         QPointer<QQuickItem> target;
         int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
         int option = -1; // Actual finite ComboBox option.
-        QString value; // Native NumberText/full numeric spelling; never a shell/DSL.
+        QString value; // Actual numeric spelling, declaration text or popup search; never executable input.
         std::function<bool()> current;
         std::function<bool()> restoreCurrent; // Same exact widget/owner; independent of retired mutation authority.
         // These narrowly wrap the genuine final input event. The adapter must

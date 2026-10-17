@@ -65,7 +65,6 @@ class BackgroundListModel : public RowTableModel {
     QString operationError() const { return operation_error_; }
     Q_INVOKABLE void remove(int row);
  signals:
-    void insertionRequested();
     void operationErrorChanged();
 
    protected:

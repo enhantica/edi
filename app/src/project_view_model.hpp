@@ -313,9 +313,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
-    // The ordinary staged Analysis form appends the complete bounded native
-    // alias/constraint batch as one validated, recorded edit; never on blur.
-    Q_INVOKABLE QVariantMap appendRelationForm(const QVariantList& aliases, const QVariantList& constraints);
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -342,6 +339,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString assign_parameter_value(edi::Parameter& parameter, double value) override;
     QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
     QString apply_relation_edit(const edi::Edit& change) override;
+    QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
     QString rename_structure(edi::Structure& structure, const std::string& name) override;
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
@@ -465,21 +463,24 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         EditOutcome outcome;
     };
     struct WidgetRelationInput {
-        QJsonObject arguments;
-        bool consumed = false, verified = false;
+        ProjectEditor::RelationAction expected;
+        bool consumed = false;
         EditOutcome outcome;
     };
     struct WidgetBackgroundInput {
         const edi::ExperimentBase* experiment = nullptr;
         edi::BackgroundPointInput expected;
-        bool consumed = false, verified = false;
+        const edi::LineSegment* row = nullptr;
+        const edi::LineSegment* result_row = nullptr;
+        bool rename = false, consumed = false;
         EditOutcome outcome;
     };
     std::shared_ptr<WidgetBackgroundInput> widget_background_input_;
     std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackground(edi::ExperimentBase&, const edi::BackgroundPointInput&);
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundRename(edi::ExperimentBase&, edi::LineSegment&, const std::string&);
     void finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>&) noexcept;
     std::shared_ptr<WidgetRelationInput> widget_relation_input_;
-    std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const QJsonObject& arguments);
+    std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const ProjectEditor::RelationAction& action);
     void finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept;
     std::shared_ptr<WidgetParameterInput> widget_input_;
     bool widget_input_executing_ = false;

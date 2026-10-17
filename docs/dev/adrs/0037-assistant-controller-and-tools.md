@@ -565,44 +565,50 @@ create/background/relation/batch/save support. Source197 own-event/clipRect
 prerequisite remains separately reviewed/applied before runtime qualification.
 
 
-### Native relation mode parity through the shared staged form (E11-T5, 2026-10-16)
+### Relations through the existing human row controls
 
-The existing globally advertised native add_relations tool/schema is unchanged.
-Show actions now stages its complete admitted arrays through ordinary Analysis
-Extra controls, including zero aliases, varied enabled flags and row counts up
-to the same Limits::stream_items cap. This replaces the private interim fixed
-six-field experiment, which was never shipped. Exact scientific text/arrays and
-original call/account/project/window/receipt own each continuation; no direct
-native fallback is labelled visible. Currentness, real manual drafts and Stop
-refuse/interrupt before the final one-shot shared editor. Existing native
-structural Undo/publication owns applied versus uncertain results. Already
-applied results are never described as an untouched refusal after readback
-failure. Staging/model/editor/helper text and prepared-array roles are charged
-before presentation; final validation uses the same bounded native input door.
+The first implementation is AliasesGroup/ConstraintsGroup, their original
+AliasListModel/ConstraintListModel setters and ProjectEditor.apply_relation_edit
+(ADR-0024). The duplicate RelationAppendGroup, its registration/insertion and
+appendRelationForm entrance are removed. There is no extra Apply or hidden
+staging model. The normal native add_relations tool keeps its complete validated
+batch and one Undo; Show actions is a sequence of the same real human edits.
 
-Compiled instructions and project-assistance version 1.5.10 describe only this
-actual supported addition. The restricted capability index remains unchanged:
-app-only native registration is composed at its existing app boundary, never
-injected into the strict core compatibility allowlist. Loaded-project free
-flags/absent relations are initial state, not implicit user prohibitions;
-explicit keep-fixed/no-sharing/composition instructions remain authoritative.
-This is live editing with Undo, not an isolated accepted-best trial/checkpoint.
-Create/import, visible saving, value/free batches and other unmapped workflows
-remain unsupported here and are not silently executed in normal mode.
+The visible route conditionally selects Analysis/Extra, expands the original
+category header and reveals its exact current row through real wheel input.
+Alias append, ID commit, parameter choice, constraint append, ID/expression
+commit and activation each use their original model/editor. Existing parameter
+popups use real searchable keyboard input or their finite ordinary choices.
+An exact original action/member/value receipt is installed immediately before
+the final genuine event. No direct model edit decorates a pointer action, no
+synthetic clicked/accepted signal is emitted, and no widget index/scroll/group
+state is assigned by the assistant. TextCell shares the original numeric editor's
+paced draft/commit/cancel ownership; ordinary manual blur/Return still uses the
+same model setter. Existing manual drafts and IME are preserved.
 
+A newly appended manual constraint starts disabled, and its ID/expression cells
+remain editable while disabled. This applies equally to humans and assistant
+input: a complete declaration is entered before the existing toggle activates
+it through the actual validator. Existing loaded enabled flags are unchanged.
 
-### Original relation input authority and shared preparation (E11-T5, 2026-10-16)
+Each real change retains its own normal recorded Undo. Current member identity,
+actual model values and the original request/account/owner/window are checked
+between steps; receipt refresh follows each own applied edit. Stop, takeover,
+refusal or replacement preserves completed changes and answers the original
+call once. Outcomes distinguish complete edited from partial/refused, expose
+atomic:false and actual steps_completed, and retain uncertainty rather than
+claiming unchanged science after a failed publication. These steps are not an
+isolated trial, automatic rollback or a single-Undo transaction. Single-line
+editor spellings and existing resource/deadline/viewport limits may refuse
+before or during the sequence; never silently use normal mode instead.
 
-Every staged relation click/type/row/Apply predicate includes widget_current in
-addition to actual page/form/key/selected-row conditions. Resolved/retiring
-server requests cannot continue UI input merely because their retained owner
-still exists for settlement. Once/outcome authority is not renewed. Manual
-shared-GUI preparation directly reuses the existing core relation helper, not
-desktop-only assistant_native_edit/codex_encoded_size symbols. Native and manual
-validation/recorded Undo semantics remain equal. The globally registered native
-catalog is unchanged at nine names (including save_project); prior private
-notes saying eight were stale counts, not a registration change.
-
+The compiled instructions/tool description and bundled skill distinguish normal
+batch semantics from visible human steps. No new tool name, capability or core
+bootstrap requirement is added. Explicit keep-fixed/no-sharing/composition
+instructions remain authoritative; existing free flags and missing declarations
+are initial state, not implied prohibitions. The rejected parallel creation window remains a separate pending replacement,
+not a completed human-route capability. Background follows its original row
+controls as described in ADR-0043.
 
 ### Complete the same named empty project
 
@@ -931,3 +937,78 @@ The first snapshot factory retains its existing host-storage policy, and ordinar
 manual exporters use that same implementation. No arbitrary filesystem seed,
 new capacity, extra full model, alternate serializer, mutable-path cleanup or
 claim of a perfect filesystem compare-and-swap is introduced.
+
+
+### Background through its original row controls
+
+BackgroundGroup's original Add, ID/position/intensity rows, parameter context
+menu and Remove are the manual and visible entrances (ADR-0043). The duplicate
+background setup form is removed; Add creates the ordinary default editable row
+through the same closed editor and recorded Undo. Native normal mode retains
+one strict operation; genuine visible actions prevalidate the final request and
+perform separately prearmed real human edits, retaining each actual Undo and
+complete/partial outcome. Exact row/bank/source/request identity, manual drafts,
+Stop and replacement are checked between events. The existing private mouse
+owner balances the actual button, including right-button retirement/deferred
+cleanup; the exact parameter menu is dismissed by real Escape. No control state
+is assigned to manufacture visibility, activation or a scientific result.
+
+
+### Original text input ownership at commit callbacks
+
+The shared TextCell manual/draft/IME and synchronous commit boundaries follow
+ADR-0017/ADR-0024: genuine preedit/text detaches the clean binding without text
+assignment, captures original delegate/project context and revises its draft
+record for every real input. A single-entry commit retains that record and
+lifetime across the model callback, reads only its captured current owner's
+diagnostic and abandons obsolete cleanup. The helper verifies that the original
+TextCell actually admitted assistant ownership before selection/typing. Actual
+prearm/model validation/Undo and per-control applied outcomes remain unchanged.
+
+
+### Original structure and experiment file entrances
+
+The first Structure Load button and FileDialog now accept native .edi and
+supported single-structure .cif. Native blocks keep the strict existing schema
+loader; CIF calls the already existing structure_from_edi_text reader through
+the same file reader. No alternate parser, conversion or scientific setup form
+is introduced. The ordinary load preowns its structural Undo before the same
+closed addition and retains actual applied state through presentation failure.
+It adds to the original project, preserving its identity/metadata/settings/path.
+
+Original structure, experiment-block and measured-data choosers capture the
+project and exact data target when opened. Each native/browser answer consumes
+its one original intent before invoking the same loader; replacement/duplicate
+answers cannot target a new owner or clear a newer chooser. Existing browser
+request IDs and native picker behavior are preserved. The existing FileDialog
+instances have stable semantic identities for genuine subsequent input; these
+changes do not claim native macOS-panel automation or a completed visible
+creation route. The duplicate import-window removal and complete original
+creation/field sequence remain a separate connected continuation.
+
+The existing browser chooser's synchronous cancellation also retains its exact
+receiver/request serial. If a callback deletes it or admits a new request, the
+old begin refuses with zero; all existing callers stop before further member or
+filesystem access. This preserves a newer browser picker rather than overwriting
+its active ID. A never-opened original QML intent is consumed on refusal, so it
+cannot block the next ordinary Load. This changes no file grant or science.
+
+
+### One text terminal entrance and explicit row ownership
+
+A TextCell commits only from editingFinished. Pinned Qt emits that signal before
+accepted for the same Return; accepted keeps only the original base visual
+feedback. It cannot capture/commit/clear a newer changed, identical or committed
+IME draft admitted during the first synchronous publication. A genuine later
+Return or focus loss still has its own editingFinished and commits normally.
+The existing single-frame latch continues to prevent recursive notification
+entry; it is not mistaken for proof against the later accepted signal tail.
+
+The base ListViewDelegate places contentRow inside a FocusScope. TextCell's
+immediate visual parent therefore is not the data delegate. Every original
+TextCell declaration supplies its actual lexical delegate, source model and row
+index explicitly. These bindings, current Session project, semantic control name
+and lifetime retire original ownership on actual changes; value-role publication
+does not become a new owner. No parent.model/index inference or synthetic input
+is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
+and all unrelated original controls remain unchanged.

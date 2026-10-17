@@ -41,7 +41,17 @@ class ProjectEditor {
     }
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.
+    struct RelationAction {
+        enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled };
+        Kind kind = Kind::Other;
+        const void* row = nullptr;
+        QString text;
+        bool enabled = false;
+    };
     virtual QString apply_relation_edit(const edi::Edit& change) = 0;
+    virtual QString apply_relation_control(const edi::Edit& change, const RelationAction&) {
+        return apply_relation_edit(change);
+    }
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }

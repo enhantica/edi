@@ -109,3 +109,67 @@ The existing scan file set-aside helper reserves its bounded moved-file ledger a
 The app-only add_relations action uses the existing AliasListModel/ConstraintListModel representation, Edit::restore_relations, complete_relations and preowned ProjectViewModel::applyRecordedEdit/RelationsUndo. It appends actual parameter-path aliases and explicit id/expression/enabled constraints to a complete copied declaration; existing rows and composition are not replaced. The actual SDK parser/graph validates before returning the live Edit. The shared joint relation replacement and exact changed-parameter Undo remain unchanged; no rollback with guessed values or second expression parser exists. Structureless projects refuse because that existing completion seam cannot validate them. Unsupported/invalid batches refuse before mutation; postwrite presentation uncertainty keeps real Undo and the recovery fence.
 
 This supplies a relationship mechanism for a justified same-phase co-occupied-site ADP/coordinate model. It does not decide scientific equivalence, create an automatic equality from high uncertainty, run a fit or implement accepted-best/checkpoint restoration. Explicit user no-sharing instructions and known occupancy/composition remain authoritative.
+
+
+### Original manual declaration entry and visible sequencing
+
+Prior art is the existing AliasesGroup/ConstraintsGroup tables and their
+append/setText/setEnabled/remove model methods. Constraint Add now creates a
+disabled declaration; disabled ID/expression fields remain editable. The same
+actual enable toggle validates/applies the intended rule after entry, instead
+of activating a guessed default equality while the user is still editing.
+This changes only newly appended rows, never persisted flags or engine defaults.
+Each manual operation still records its own Undo through apply_relation_edit.
+
+The assistant uses those original controls, not another form. Its app-private
+RelationAction metadata names the exact model member, field and requested value
+at the final real event; a different control cannot consume that receipt.
+The preowned action captures actual applied state at the existing Preview write
+latch before model/publication callbacks. Normal native batches retain their
+one-edit/Undo semantics; a visible sequence reports genuine complete/partial
+steps and preserves all completed individual edits on interruption. Existing
+core expression parsing, validation, physical completion and Undo remain the
+only scientific authority. Details are in ADR-0037 and the GUI ADR-0017.
+
+
+### Shared text draft and ordinary alias defaults
+
+TextCell's first manual table entrances own the same draft rules as its paced
+assistant input. A clean display binding is removed with RestoreNone when real
+text/IME begins, without assigning over preedit. A draft captures its original
+project/delegate/model/index/control context; value-role publication cannot
+retarget or erase it. Each actual user text/preedit event replaces its revision
+record. Commit is single-entry and checks that original record/lifetime before
+any post-signal diagnostic or cleanup. A newer draft, IME, owner or member
+leaves the old continuation with no presentation authority. Cleanup releases
+only its own in-progress latch; clean formatting resumes through the binding
+only when there is no draft. Refused/no-op/Return/blur use the original model
+setter and formatting. Explicit human Escape can discard an obsolete draft;
+late assistant cleanup cannot discard newer manual input.
+
+The original Alias Add uses the actual offered independent parameter list. It
+chooses the first target with no alias, otherwise the first offered target: more
+than one alias for a real parameter is lawful. With no offered target, the
+ordinary button is disabled and the model refuses before admitting an Edit or
+Undo. All successful operations retain the same validator and recorded Undo;
+no alternate scientific executor or parallel form is added.
+
+
+### One text terminal entrance and explicit row ownership
+
+A TextCell commits only from editingFinished. Pinned Qt emits that signal before
+accepted for the same Return; accepted keeps only the original base visual
+feedback. It cannot capture/commit/clear a newer changed, identical or committed
+IME draft admitted during the first synchronous publication. A genuine later
+Return or focus loss still has its own editingFinished and commits normally.
+The existing single-frame latch continues to prevent recursive notification
+entry; it is not mistaken for proof against the later accepted signal tail.
+
+The base ListViewDelegate places contentRow inside a FocusScope. TextCell's
+immediate visual parent therefore is not the data delegate. Every original
+TextCell declaration supplies its actual lexical delegate, source model and row
+index explicitly. These bindings, current Session project, semantic control name
+and lifetime retire original ownership on actual changes; value-role publication
+does not become a new owner. No parent.model/index inference or synthetic input
+is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
+and all unrelated original controls remain unchanged.
