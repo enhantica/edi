@@ -341,6 +341,13 @@ std::optional<NumberParts> number_parts(std::string_view text) {
     return parts;
 }
 
+// A number's part after its point, escaped. Units right after the whole digits (90 deg) keep the space before them,
+// which a cell or a grid item would drop at its start.
+std::string right_html(const NumberParts& parts) {
+    return parts.right.starts_with(' ') ? "&#160;" + escaped(std::string_view(parts.right).substr(1))
+                                        : escaped(parts.right);
+}
+
 // A column of numbers when every cell of it that has text is a number and one is: its widest parts, in characters.
 struct ColumnLayout {
     bool numeric = false;
@@ -605,7 +612,7 @@ private:
             return {{escaped(text), "right", 2, pad, pad}};
         }
         return {{escaped(parts->left), "right", 1, pad, 0.0},
-                {(parts->dot ? "." : "") + escaped(parts->right), "left", 1, 0.0, pad}};
+                {(parts->dot ? "." : "") + right_html(*parts), "left", 1, 0.0, pad}};
     }
 
     // A static table: the frame on its outer cells' edges (unless `framed` is false), the header shaded with a line
@@ -694,7 +701,7 @@ private:
         } else {
             out_ += "<span class=\"number-right number-joined\">";
         }
-        out_ += escaped(parts->right) + "</span></span></td>";
+        out_ += right_html(*parts) + "</span></span></td>";
     }
 
     void key_values(const std::vector<std::pair<std::string, std::string>>& rows) {
