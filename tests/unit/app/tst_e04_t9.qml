@@ -17,6 +17,8 @@ TestCase {
     property var appWindow
     property var chart
     property int savedTheme
+    property string savedAnalysisYScale
+    property string savedExperimentYScale
     Component {
         id: application
         Main {}
@@ -37,6 +39,10 @@ TestCase {
     }
     property var animation
     function init() {
+        savedAnalysisYScale = Preferences.analysisYScale;
+        savedExperimentYScale = Preferences.experimentYScale;
+        Preferences.analysisYScale = "linear";
+        Preferences.experimentYScale = "linear";
         savedTheme = Style.Colors.theme;
         Style.Colors.theme = Style.Colors.Themes.LightTheme;
         Session.closeProject();
@@ -50,6 +56,8 @@ TestCase {
         Session.closeProject();
         appWindow.destroy();
         Style.Colors.theme = savedTheme;
+        Preferences.analysisYScale = savedAnalysisYScale;
+        Preferences.experimentYScale = savedExperimentYScale;
     }
     function open(path, page) {
         Session.openProject(Probe.repoUrl(path));
@@ -115,7 +123,18 @@ TestCase {
         });
         const reset = object("chart.toolbar.reset");
         compare(reset.fontIcon, "home", " owner chart item 2 uses the Home reset icon");
-        compare(object("chart.title.residual").text, "Residual", " owner chart item 4 names the drawn residual axis Residual");
+        const residualTitle = object("chart.title.residual").text;
+        compare(residualTitle.replace(/<[^>]*>/g, ""), "meas − calc", "The residual axis names the measured-minus-calculated values");
+        const colouredOperands = [];
+        const operandPattern = /<font color="([^"]+)">([^<]+)<\/font>/g;
+        let operand;
+        while ((operand = operandPattern.exec(residualTitle)) !== null)
+            colouredOperands.push(operand);
+        compare(colouredOperands.length, 2, "Both residual-title operands carry their series colours");
+        compare(colouredOperands[0][2], "meas", "The residual title starts with the measured operand");
+        compare(colouredOperands[1][2], "calc", "The residual title ends with the calculated operand");
+        compare(colouredOperands[0][1].toLowerCase(), String(object("chart.series.meas").color).toLowerCase(), "The measured residual-title operand uses the measured series colour");
+        compare(colouredOperands[1][1].toLowerCase(), String(object("chart.series.calc").color).toLowerCase(), "The calculated residual-title operand uses the calculated series colour");
         verify(chart.topMargin > 0, " owner chart margins keep a positive gap around the toolbar and x title");
         compare(chart.bottomMargin, chart.topMargin, " owner chart margins reserve the same gap below the x-title band as above the toolbar");
         compare(chart.toolbarGap, chart.topMargin, " owner chart margins reserve the same gap below and above the toolbar");
@@ -123,7 +142,9 @@ TestCase {
         const main = object("chart.view.main");
         const mainAt = main.mapToItem(chart, 0, 0);
         verify(Math.abs(resetAt.y - chart.topMargin) < 1, " owner chart margin is realised above the actual toolbar button");
-        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - chart.toolbarGap) < 1, " owner chart margin is realised between the toolbar button and actual top plot border");
+        const rightInset = chart.width - mainAt.x - main.plotArea.x - main.plotArea.width;
+        verify(rightInset > 0, "The plot's right margin and the matching toolbar gap remain positive");
+        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - rightInset) < 1, "The gap below the toolbar equals the actual plot's right margin");
         const title = object("chart.title.x");
         // The label is centred in its reserved title band; its normal leading
         // is distinct from the owner's equal margin outside that band.
@@ -137,7 +158,7 @@ TestCase {
         ["legend", "hover", "pan", "zoom", "reset"].forEach(key => {
             const button = object("chart.toolbar." + key);
             const point = button.mapToItem(chart, 0, 0);
-            verify(scaleAt.x > point.x + button.width, " owner y-scale drop-down follows every button at the toolbar's far right");
+            verify(scaleAt.x + scale.width < point.x, "The y-scale drop-down precedes every toolbar button at the far left");
         });
         verify(object("chart.toolbar.zoom").checked, " I27 box zoom starts active");
         verify(!object("chart.toolbar.pan").checked, " I27 pan and box zoom exclude each other");
