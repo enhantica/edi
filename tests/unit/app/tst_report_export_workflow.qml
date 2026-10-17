@@ -466,15 +466,11 @@ Rectangle {
                 const at = chart.mapToItem(preview.contentItem, 0, 0);
                 if (i > 0) {
                     const previous = charts[i - 1].mapToItem(preview.contentItem, 0, 0);
-                    if (data.narrow && !(at.y >= previous.y + charts[i - 1].height - 1))
-                        failures.push("narrow chart " + i + " is not on the next whole row");
-                    if (!data.narrow && i % 2 === 1 && (Math.abs(at.y - previous.y) > 1 || at.x < previous.x + charts[i - 1].width - 1 || Math.abs(chart.width - charts[i - 1].width) > 1))
-                        failures.push("wide chart pair " + i + " does not share a row with equal half-column widths");
-                    if (!data.narrow && i % 2 === 0 && at.y <= previous.y)
-                        failures.push("wide chart " + i + " does not start the next row");
+                    if (at.y < previous.y + charts[i - 1].height - 1 || Math.abs(at.x - previous.x) > 1 || Math.abs(chart.width - charts[i - 1].width) > 1)
+                        failures.push("chart " + i + " does not occupy the next aligned whole row");
                 }
             }
-            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses two charts per wide row or one per narrow row, and leaves Evolution out only when excluded; actual " + failures.join("; "));
+            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses one chart per row at every width, and leaves Evolution out only when excluded; actual " + failures.join("; "));
         }
         function test_browser_observer_reaches_independent_plot_geometry_data() {
             return [
@@ -553,16 +549,12 @@ Rectangle {
                         failures.push(view + " chart " + i + " leaves the actual text viewport " + JSON.stringify(box));
                     if (i > 0) {
                         const previous = plots[i - 1].box;
-                        if (view === "narrow" && box[1] < previous[1] + previous[3] - 1)
-                            failures.push("narrow chart " + i + " does not occupy its own row");
-                        if (view === "wide" && i % 2 === 1 && (Math.abs(box[1] - previous[1]) > 1 || box[0] < previous[0] + previous[2] - 1 || Math.abs(box[2] - previous[2]) > 1))
-                            failures.push("wide chart pair " + i + " does not occupy equal half columns");
-                        if (view === "wide" && i % 2 === 0 && box[1] <= previous[1])
-                            failures.push("wide chart " + i + " does not start the next row");
+                        if (box[1] < previous[1] + previous[3] - 1 || Math.abs(box[0] - previous[0]) > 1 || Math.abs(box[2] - previous[2]) > 1)
+                            failures.push(view + " chart " + i + " does not occupy the next aligned whole row");
                     }
                 }
             }
-            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, two equal wide columns or one narrow column, and no excluded charts; actual " + failures.join("; "));
+            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, one chart per row at every width, and no excluded charts; actual " + failures.join("; "));
         }
         function test_pdf_keeps_all_evolution_charts_whole_data() {
             return [
@@ -598,18 +590,18 @@ Rectangle {
                 const draw = draws[i], image = draw.image, b = image.bounds, clip = image.clip;
                 if (b[0] < 25 * mm - 1 || b[2] > 185 * mm + 1 || b[1] < 25 * mm - 1 || b[3] > draw.box[3] - 25 * mm + 1 || b[0] < clip[0] - 0.1 || b[1] < clip[1] - 0.1 || b[2] > clip[2] + 0.1 || b[3] > clip[3] + 0.1)
                     failures.push("chart " + i + " is cut across a page/body clip: " + JSON.stringify(draw));
-                if (image.edge_width > 80 * mm + 1)
-                    failures.push("chart " + i + " exceeds its half of the 160 mm column");
+                if (image.edge_width > 160 * mm + 1)
+                    failures.push("chart " + i + " exceeds the 160 mm text column");
                 const pixel = Math.max(image.edge_width / image.pixels[0], image.edge_height / image.pixels[1]);
                 if (Math.abs(image.edge_width - image.edge_height * image.pixels[0] / image.pixels[1]) > 2 * pixel)
                     failures.push("chart " + i + " lost its actual raster aspect");
-                if (i % 2 === 1) {
+                if (i > 0) {
                     const previous = draws[i - 1];
-                    if (draw.page !== previous.page || Math.abs(b[1] - previous.image.bounds[1]) > 1 || b[0] < previous.image.bounds[2] - 1)
-                        failures.push("chart pair " + i + " is not kept whole together in two half-width columns");
+                    if (draw.page < previous.page || (draw.page === previous.page && (b[1] < previous.image.bounds[3] - 1 || Math.abs(b[0] - previous.image.bounds[0]) > 1)))
+                        failures.push("chart " + i + " does not occupy the next whole row or page");
                 }
             }
-            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, two per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
+            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, one per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
         }
         function test_export_rows_default_formats_and_disabled_actions() {
             prepare();
