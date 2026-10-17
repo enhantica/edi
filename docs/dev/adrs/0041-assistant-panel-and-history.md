@@ -1221,3 +1221,7 @@ The avatar circle is smaller than its unchanged native button target, with a con
 The chooser accounts for the original table border using actual native top/bottom margins and positions the original attached scrollbars using the standard native ScrollView geometry and reserves their measured implicit width/height only when the application viewport requires them. Its natural dialog extent includes those real dimensions, bounded only by the application viewport; scrollbars do not overlay the last row or the right edge. Column widths, row heights and fonts remain the original native values.
 
 Composer actions and the model pill have no border in any state; keyboard focus uses the existing neutral hover fill, and Show actions keeps its active glyph accent. The avatar and allowance track retain their separately requested faint outlines.
+
+### Native border and chooser margin balance
+
+The Usage track uses the existing application `appBorder` token in both palettes, retaining its thin rounded outline and inset actual fill. The chooser's natural width includes only content and its original side padding, without an invisible scrollbar gutter. Bottom padding matches the original native side-padding dimension. The same native scrollbars occupy those outer padding areas only for actual overflow; the table viewport remains clipped, so neither bar covers a row or steals the right edge. This removes the earlier cross-axis extent calculation while preserving native fonts, border-safe table rows, controls and currentness.

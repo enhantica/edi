@@ -73,20 +73,12 @@ Rectangle {
             return Math.ceil(measured)+AppSizes.fieldSpacing*2;
         }
         readonly property real tableWidth: radioColumnWidth+desiredLabelWidth+EaStyle.Sizes.tableColumnSpacing+modelTable.rowPadding*2+EaStyle.Sizes.borderThickness*2
-        readonly property real maximumContentWidth: Math.max(0,parent.width-AppSizes.unit*2-leftPadding-rightPadding)
-        readonly property real maximumContentHeight: Math.max(0,viewportHeight-topPadding-bottomPadding
-            -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0))
-        readonly property var scrollbarExtents: {
-            let vertical=choiceContent.implicitHeight > maximumContentHeight;
-            let horizontal=choiceContent.implicitWidth > maximumContentWidth-(vertical ? choiceVerticalScrollBar.implicitWidth : 0);
-            vertical=vertical || choiceContent.implicitHeight > maximumContentHeight-(horizontal ? choiceHorizontalScrollBar.implicitHeight : 0);
-            horizontal=horizontal || choiceContent.implicitWidth > maximumContentWidth-(vertical ? choiceVerticalScrollBar.implicitWidth : 0);
-            return {vertical: vertical ? choiceVerticalScrollBar.implicitWidth : 0, horizontal: horizontal ? choiceHorizontalScrollBar.implicitHeight : 0};
-        }
-        width: Math.min(choiceContent.implicitWidth+choiceVerticalScrollBar.implicitWidth,maximumContentWidth)+leftPadding+rightPadding
+        bottomPadding: leftPadding
+        width: Math.min(choiceContent.implicitWidth+leftPadding+rightPadding,Math.max(0,parent.width-AppSizes.unit*2))
         height: Math.min(implicitHeight,viewportHeight)
         contentWidth: Math.max(0,width-leftPadding-rightPadding)
-        contentHeight: Math.min(choiceContent.implicitHeight+scrollbarExtents.horizontal,maximumContentHeight)
+        contentHeight: Math.min(choiceContent.implicitHeight,Math.max(0,viewportHeight-topPadding-bottomPadding
+            -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
         focus: true
         modal: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -169,25 +161,24 @@ Rectangle {
             height: choicePopup.contentHeight
             contentWidth: choiceContent.implicitWidth
             contentHeight: choiceContent.implicitHeight
-            rightPadding: choicePopup.scrollbarExtents.vertical
-            bottomPadding: choicePopup.scrollbarExtents.horizontal
-            clip: true
+            clip: false
+            contentItem.clip: true
             ScrollBar.vertical: EaElements.ScrollBar {
                 id: choiceVerticalScrollBar
                 parent: choiceScroll
-                x: choiceScroll.mirrored ? 0 : choiceScroll.width-width
-                y: choiceScroll.topPadding
+                x: choiceScroll.mirrored ? -(choicePopup.leftPadding+width)/2 : choiceScroll.width+(choicePopup.rightPadding-width)/2
+                y: 0
                 height: choiceScroll.availableHeight
-                visible: choicePopup.scrollbarExtents.vertical > 0
+                visible: choiceScroll.contentHeight > choiceScroll.availableHeight
                 policy: ScrollBar.AsNeeded
             }
             ScrollBar.horizontal: EaElements.ScrollBar {
                 id: choiceHorizontalScrollBar
                 parent: choiceScroll
-                x: choiceScroll.leftPadding
-                y: choiceScroll.height-height
+                x: 0
+                y: choiceScroll.height+(choicePopup.bottomPadding-height)/2
                 width: choiceScroll.availableWidth
-                visible: choicePopup.scrollbarExtents.horizontal > 0
+                visible: choiceScroll.contentWidth > choiceScroll.availableWidth
                 policy: ScrollBar.AsNeeded
             }
             Row {

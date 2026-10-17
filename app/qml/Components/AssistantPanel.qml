@@ -651,7 +651,7 @@ Popup {
                                 radius: height * 0.5
                                 color: EaStyle.Colors.themeBackground
                                 border.width: EaStyle.Sizes.borderThickness
-                                border.color: EaStyle.Colors.themeForegroundMinor
+                                border.color: EaStyle.Colors.appBorder
                                 Rectangle {
                                     objectName: allowance.objectName+".fill"
                                     x: parent.border.width
