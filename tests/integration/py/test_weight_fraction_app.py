@@ -72,6 +72,32 @@ def test_linked_structure_table_displays_weight_fraction_without_an_editor():
             check_cell(cell.replace(old, new))
 
 
+def check_fraction_routing(model):
+    direct = re.search(
+        r'static_cast<int>\(names.indexOf\(id\)\),\s*weight_fraction_cell\(\*link\)', model
+    )
+    fast_single = (
+        re.search(
+            r'if\s*\(enabled_links\s*>\s*1\)\s*\{\s*'
+            r'return weight_fraction_cell\(link\);\s*\}',
+            model,
+        )
+        and re.search(r'return QVariantMap\(\);\s*\};', model)
+        and (
+            re.search(
+                r'if\s*\(link.enabled.get\(\)\)\s*\{\s*return QVariantMap\{\{'
+                r'QStringLiteral\("value"\), 1.0\}',
+                model,
+            )
+            and re.search(r'QStringLiteral\("uncertainty"\), 0.0', model)
+            and re.search(r'static_cast<int>\(names.indexOf\(id\)\),\s*fraction\(\*link\)', model)
+        )
+    )
+    assert direct or fast_single, (
+        'Enabled rows supply their live fraction or exact single-phase unity without s.u.'
+    )
+
+
 def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_unity():
     model = source('app/src/experiment_models.cpp')
     assert re.search(r'fraction\s*=\s*edi::weight_fraction\(link\)', model), (
@@ -83,21 +109,17 @@ def test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phas
     assert re.search(r'QStringLiteral\("uncertainty"\)\s*,\s*fraction->uncertainty', model), (
         'The weight-fraction role must carry the live derived uncertainty'
     )
-    direct = re.search(
-        r'static_cast<int>\(names.indexOf\(id\)\),\s*weight_fraction_cell\(\*link\)', model
-    )
-    fast_single = (
-        re.search(
-            r'if\s*\(link.enabled.get\(\)\)\s*\{\s*return QVariantMap\{\{'
-            r'QStringLiteral\("value"\), 1.0\}',
-            model,
-        )
-        and re.search(r'QStringLiteral\("uncertainty"\), 0.0', model)
-        and re.search(r'static_cast<int>\(names.indexOf\(id\)\),\s*fraction\(\*link\)', model)
-    )
-    assert direct or fast_single, (
-        'Enabled rows supply their live fraction or exact single-phase unity without s.u.'
-    )
+    check_fraction_routing(model)
+    if 'fraction(*link)' in model:
+        for old, new in (
+            ('enabled_links > 1', 'enabled_links > 0'),
+            ('link.enabled.get()', 'true'),
+            ('QStringLiteral("value"), 1.0', 'QStringLiteral("value"), 0.5'),
+            ('QStringLiteral("uncertainty"), 0.0', 'QStringLiteral("uncertainty"), 0.1'),
+        ):
+            assert old in model, 'Fraction routing escapes must reach their actual model branch'
+            with pytest.raises(AssertionError):
+                check_fraction_routing(model.replace(old, new))
     control = source('app/qml/Base/Gui/Components/TableViewParameter.qml')
     assert 'control.openContextMenu(menuArea)' in control, (
         'The read-only parameter must retain its ordinary value context menu'
