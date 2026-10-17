@@ -19,8 +19,11 @@ EaElements.StatusBar {
 
     readonly property ProjectViewModel project: Session.project
     property bool assistantChatShown: false
+    property bool assistantManualTakeover: false
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || (assistantArea.presented && assistantArea.working)
+    readonly property bool assistantStatusNeeded: (assistantArea.presented && assistantArea.working)
+        || Session.assistant.showingActions || assistantManualTakeover || visibleStop.pressed
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || assistantStatusNeeded
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -38,7 +41,7 @@ EaElements.StatusBar {
         }
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
         const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : 0;
-        const assistantWidth = assistantArea.visible ? assistantArea.implicitWidth + spacing : 0;
+        const assistantWidth = assistantGroup.visible ? assistantGroup.implicitWidth + spacing : 0;
         return width + Math.max(0, shown - 1) * spacing + fitWidth + assistantWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
@@ -46,7 +49,7 @@ EaElements.StatusBar {
     readonly property int roomFor: {
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
         const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0)
-            - (assistantArea.visible ? assistantArea.width + spacing : 0);
+            - (assistantGroup.visible ? assistantGroup.width + spacing : 0);
         let width = 0;
         for (let i = 0; i < items.length; ++i) {
             if (!items[i].shown)
@@ -135,18 +138,54 @@ EaElements.StatusBar {
         valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
     }
-    AssistantWorking {
-        id: assistantArea
-        objectName: "statusBar.assistant.working"
+    Item {
+        id: assistantGroup
         parent: bar
-        assistant: Session.assistant
-        presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
-        width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
-            - (fitArea.visible ? fitArea.compactWidth + EaStyle.Sizes.fontPixelSize * 1.2 : 0)))
-        height: Math.max(implicitHeight, iconExtent)
+        readonly property bool stopShown: Session.assistant.showingActions || bar.assistantManualTakeover
+        readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+        // Keep the original Stop receiver and its text slot in place through
+        // manual takeover and the native press/release which caused it.
+        visible: bar.assistantStatusNeeded
+        implicitWidth: assistantArea.implicitWidth + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
+        width: Math.max(visibleStop.visible ? visibleStop.implicitWidth : 0,
+            Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
+            - (fitArea.visible ? fitArea.compactWidth + EaStyle.Sizes.fontPixelSize * 1.2 : 0))))
+        height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
         anchors.right: fitArea.visible ? fitArea.left : parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize * (fitArea.visible ? 1.2 : 1)
         anchors.verticalCenter: parent.verticalCenter
+        AssistantWorking {
+            id: assistantArea
+            objectName: "statusBar.assistant.working"
+            assistant: Session.assistant
+            presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
+            width: Math.max(0, parent.width - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
+            height: Math.max(implicitHeight, iconExtent)
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+        }
+        EaElements.ToolButton {
+            id: visibleStop
+            objectName: "assistant.stopVisibleAction"
+            visible: assistantGroup.stopShown || pressed
+            enabled: Session.assistant.canCancel
+            implicitWidth: Math.round(EaStyle.Sizes.fontPixelSize * 1.8)
+            implicitHeight: implicitWidth
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            fontIcon: "stop-circle"
+            contentItem: EaElements.Label {
+                text: visibleStop.fontIcon
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: visibleStop.foregroundColor()
+            }
+            ToolTip.text: bar.assistantManualTakeover && !enabled ? qsTr("Manual control; open assistant to return") : qsTr("Stop assistant action")
+            Accessible.name: ToolTip.text
+            onClicked: Session.assistant.cancel()
+        }
     }
     // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
     // the ones on the left (the owner, 2026-10-13), and while a fit runs its live values with the progress bar at the

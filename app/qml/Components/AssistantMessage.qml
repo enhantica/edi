@@ -216,6 +216,7 @@ Rectangle {
             width: parent.width
             visible: !row.summarizedActivity
             AssistantMarkdown {
+                anchors.fill: parent
                 document: body.textDocument
                 source: row.summarizedActivity ? "" : row.text
                 accentColor: EaStyle.Colors.link

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
-#include <QObject>
+#include <QQuickItem>
+#include <QRectF>
+#include <vector>
+#include <cstdint>
 #include <QColor>
 #include <QFont>
 #include <QPointer>
@@ -11,7 +14,7 @@
 
 namespace edi_app {
 /// Passive presentation of an already-retained reply, never a file/network resource door.
-class AssistantMarkdown : public QObject {
+class AssistantMarkdown : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument)
@@ -23,7 +26,7 @@ class AssistantMarkdown : public QObject {
     Q_PROPERTY(QColor tableBorderColor READ tableBorderColor WRITE setTableBorderColor)
     Q_PROPERTY(QColor tableShadeColor READ tableShadeColor WRITE setTableShadeColor)
  public:
-    explicit AssistantMarkdown(QObject* parent = nullptr);
+    explicit AssistantMarkdown(QQuickItem* parent = nullptr);
     QQuickTextDocument* document() const;
     QString source() const;
     bool markdown() const;
@@ -40,7 +43,15 @@ class AssistantMarkdown : public QObject {
     void setDocument(QQuickTextDocument* document);
     void setSource(const QString& source);
     void setMarkdown(bool markdown);
+ protected:
+    void updatePolish() override;
+    QSGNode* updatePaintNode(QSGNode*, UpdatePaintNodeData*) override;
+    void geometryChange(const QRectF&, const QRectF&) override;
  private:
+    struct Decoration { QRectF rect; QColor color; };
+    std::vector<Decoration> decorations_;
+    std::size_t decoration_high_water_ = 0;
+    std::uint64_t presentation_revision_ = 0;
     void render() noexcept;
     void formatPresentation();
     QPointer<QQuickTextDocument> target_;

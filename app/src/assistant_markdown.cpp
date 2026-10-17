@@ -2,8 +2,12 @@
 #include "assistant_markdown.hpp"
 
 #include <QImage>
+#include <QAbstractTextDocumentLayout>
+#include <QSGSimpleRectNode>
+#include "edi/assistant_limits.hpp"
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <QFontMetricsF>
 #include <QTextBlock>
 #include <QTextList>
@@ -29,7 +33,101 @@ class PassiveDocument final : public QTextDocument {
     }
 };
 }
-AssistantMarkdown::AssistantMarkdown(QObject* parent) : QObject(parent) {}
+AssistantMarkdown::AssistantMarkdown(QQuickItem* parent) : QQuickItem(parent) {
+    setFlag(ItemHasContents, true);
+    setAcceptedMouseButtons(Qt::NoButton);
+    setZ(-1);
+}
+void AssistantMarkdown::geometryChange(const QRectF& next, const QRectF& previous) {
+    QQuickItem::geometryChange(next, previous);
+    polish();
+}
+void AssistantMarkdown::updatePolish() {
+    const QPointer<AssistantMarkdown> receiver(this);
+    const QPointer<QTextDocument> document(document_);
+    const auto revision = presentation_revision_;
+    if (!document) { decorations_.clear(); update(); return; }
+    const auto current = [&] { return receiver && document && receiver->document_ == document && receiver->presentation_revision_ == revision; };
+    try {
+        std::size_t count = 0;
+        QTextTable* previous = nullptr;
+        const auto limit = edi::assistant::Limits::ui_history_bytes - sizeof(QSGNode);
+        constexpr auto nodeBytes = sizeof(QSGSimpleRectNode) + 4*sizeof(QSGGeometry::Point2D);
+        for (auto block = document->begin(); block.isValid(); block = block.next()) {
+            auto* table = QTextCursor(block).currentTable();
+            if (!table || table == previous) continue;
+            previous = table;
+            const auto rows = static_cast<std::size_t>(table->rows());
+            if (rows >= limit/sizeof(Decoration) || count > limit/sizeof(Decoration)-rows-1)
+                throw std::length_error("Table presentation exceeds its existing UI capacity");
+            count += rows+1;
+        }
+        const auto maximum = std::max(decoration_high_water_,count);
+        if (maximum > limit/nodeBytes || count > (limit-maximum*nodeBytes)/sizeof(Decoration) ||
+            decorations_.capacity() > (limit-maximum*nodeBytes-count*sizeof(Decoration))/sizeof(Decoration))
+            throw std::length_error("Table presentation exceeds its existing UI capacity");
+        std::vector<Decoration> next;
+        next.reserve(count);
+        const QPointer<QAbstractTextDocumentLayout> layout(document->documentLayout());
+        if (!current() || !layout) return;
+        previous = nullptr;
+        for (auto block = document->begin(); block.isValid(); block = block.next()) {
+            auto* table = QTextCursor(block).currentTable();
+            if (!table || table == previous) continue;
+            previous = table;
+            const auto frame = layout->frameBoundingRect(table);
+            if (!current() || !layout) return; // Native layout may synchronously publish document size.
+            // Qt's table frame origin is the first cell's padded content
+            // origin. Its percentage width already includes both cell edges.
+            const auto inset = table->cellAt(0,0).format().toTableCellFormat().leftPadding();
+            const auto rowLeft = frame.left() - inset;
+            const auto headerRows = table->format().headerRowCount();
+            for (int row = 0; row < table->rows(); ++row) {
+                qreal top = frame.bottom(), bottom = frame.top();
+                for (int column = 0; column < table->columns(); ++column) {
+                    const auto cell = table->cellAt(row,column);
+                    if (cell.row() != row) continue;
+                    const auto first = cell.firstCursorPosition().block();
+                    const auto last = cell.lastCursorPosition().block();
+                    const auto firstRect = layout->blockBoundingRect(first);
+                    if (!current() || !layout) return;
+                    const auto lastRect = layout->blockBoundingRect(last);
+                    if (!current() || !layout) return;
+                    const auto format = cell.format().toTableCellFormat();
+                    top = std::min(top,firstRect.top()-first.blockFormat().topMargin()-format.topPadding());
+                    bottom = std::max(bottom,lastRect.bottom()+last.blockFormat().bottomMargin()+format.bottomPadding());
+                }
+                if (bottom <= top) continue;
+                if (table_shade_color_.isValid() && (row < headerRows || (row-headerRows)%2 == 1))
+                    next.push_back({QRectF(rowLeft,top,frame.width(),bottom-top).intersected(boundingRect()),table_shade_color_});
+                if (table_border_color_.isValid() && row+1 == headerRows)
+                    next.push_back({QRectF(rowLeft,bottom-0.5,frame.width(),0.5).intersected(boundingRect()),table_border_color_});
+            }
+        }
+        if (!current() || !layout) return;
+        decorations_.swap(next);
+        decoration_high_water_ = maximum;
+        update();
+    } catch (...) {
+        if (!current()) return;
+        decorations_.clear(); update();
+        // Preserve the complete original as literal text when decoration cannot be admitted.
+        try { document->setPlainText(source_); } catch (...) {}
+    }
+}
+QSGNode* AssistantMarkdown::updatePaintNode(QSGNode* old, UpdatePaintNodeData*) {
+    auto* root = old ? old : new QSGNode;
+    auto* node = root->firstChild();
+    for (const auto& decoration : decorations_) {
+        auto* rectangle = node ? static_cast<QSGSimpleRectNode*>(node) : new QSGSimpleRectNode;
+        if (!node) root->appendChildNode(rectangle);
+        rectangle->setRect(decoration.rect);
+        rectangle->setColor(decoration.color);
+        node = rectangle->nextSibling();
+    }
+    while (node) { auto* next = node->nextSibling(); root->removeChildNode(node); delete node; node = next; }
+    return root;
+}
 QQuickTextDocument* AssistantMarkdown::document() const { return target_; }
 QString AssistantMarkdown::source() const { return source_; }
 bool AssistantMarkdown::markdown() const { return markdown_; }
@@ -37,6 +135,7 @@ QColor AssistantMarkdown::accentColor() const { return accent_color_; }
 void AssistantMarkdown::setAccentColor(const QColor& color) {
     if (accent_color_ == color) return;
     accent_color_ = color;
+    ++presentation_revision_;
     if (document_ && markdown_) {
         try { formatPresentation(); } catch (...) {}
     }
@@ -48,32 +147,45 @@ QColor AssistantMarkdown::tableShadeColor() const { return table_shade_color_; }
 void AssistantMarkdown::setBodyFont(const QFont& font) {
     if (body_font_set_ && body_font_ == font) return;
     body_font_ = font; body_font_set_ = true;
+    ++presentation_revision_;
     if (document_) {
-        document_->setDefaultFont(font);
+        const QPointer<AssistantMarkdown> receiver(this);
+        const QPointer<QTextDocument> document(document_);
+        const auto revision = presentation_revision_;
+        document->setDefaultFont(font);
+        if (!receiver || !document || receiver->document_ != document || receiver->presentation_revision_ != revision) return;
         if (markdown_) try { formatPresentation(); } catch (...) {}
     }
 }
 void AssistantMarkdown::setMonoFontFamily(const QString& family) {
     if (mono_font_family_ == family) return;
     mono_font_family_ = family;
+    ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
 void AssistantMarkdown::setTableBorderColor(const QColor& color) {
     if (table_border_color_ == color) return;
     table_border_color_ = color;
+    ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
 void AssistantMarkdown::setTableShadeColor(const QColor& color) {
     if (table_shade_color_ == color) return;
     table_shade_color_ = color;
+    ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
 void AssistantMarkdown::formatPresentation() {
-    if (!document_) return;
-    auto option = document_->defaultTextOption();
+    const QPointer<AssistantMarkdown> receiver(this);
+    const QPointer<QTextDocument> document(document_);
+    const auto revision = presentation_revision_;
+    if (!document) return;
+    const auto current = [&] { return receiver && document && receiver->document_ == document && receiver->presentation_revision_ == revision; };
+    auto option = document->defaultTextOption();
     option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    document_->setDefaultTextOption(option);
-    const auto body_font = document_->defaultFont();
+    document->setDefaultTextOption(option);
+        if (!current()) return;
+    const auto body_font = document->defaultFont();
     const QFontMetricsF body_metrics(body_font);
     const qreal line = body_metrics.height();
     auto mono_font = body_font;
@@ -84,12 +196,13 @@ void AssistantMarkdown::formatPresentation() {
     const qreal scale = mono_x > 0 && body_metrics.xHeight() > 0 ? body_metrics.xHeight() / mono_x : 1;
     if (body_font.pixelSize() > 0) mono_font.setPixelSize(std::max(1, qRound(body_font.pixelSize() * scale)));
     else if (body_font.pointSizeF() > 0) mono_font.setPointSizeF(body_font.pointSizeF() * scale);
-    document_->setIndentWidth(line * 1.25);
+    document->setIndentWidth(line * 1.25);
+        if (!current()) return;
     // QTextDocument retains the semantic list/code/table structure. Relax only
     // parsed no-wrap block presentation, never inject characters into content.
     std::vector<std::pair<int, int>> anchors, code;
     std::vector<QTextTable*> tables;
-    for (auto block = document_->begin(); block.isValid(); block = block.next()) {
+    for (auto block = document->begin(); block.isValid(); block = block.next()) {
         auto format = block.blockFormat();
         format.setNonBreakableLines(false);
         const bool listed = block.textList() != nullptr;
@@ -97,6 +210,7 @@ void AssistantMarkdown::formatPresentation() {
         format.setBottomMargin(listed && block.next().textList() == block.textList() ? 0 : line * 0.4);
         QTextCursor cursor(block);
         cursor.setBlockFormat(format);
+        if (!current()) return;
         if (auto* table = cursor.currentTable(); table && std::find(tables.begin(), tables.end(), table) == tables.end()) tables.push_back(table);
         for (auto it = block.begin(); !it.atEnd(); ++it) {
             const auto fragment = it.fragment();
@@ -107,7 +221,7 @@ void AssistantMarkdown::formatPresentation() {
         }
     }
     for (const auto& [position, length] : code) {
-        QTextCursor cursor(document_);
+        QTextCursor cursor(document);
         cursor.setPosition(position); cursor.setPosition(position + length, QTextCursor::KeepAnchor);
         auto format = cursor.charFormat();
         format.setFontFamilies(mono_font.families()); format.setFontFixedPitch(true);
@@ -119,9 +233,10 @@ void AssistantMarkdown::formatPresentation() {
             format.clearProperty(QTextFormat::FontPixelSize); format.setFontPointSize(mono_font.pointSizeF());
         }
         cursor.setCharFormat(format);
+        if (!current()) return;
     }
-    // Existing report_html.cpp: thin outside/header rules, zero vertical
-    // padding, 6pt horizontal spacing at 20.4pt line height, shaded header/even rows.
+    // The original report uses horizontal rules and restrained row shading.
+    // Reply tables add breathing room and keep every column left aligned.
     for (auto* table : tables) {
         auto format = table->format();
         // These tables come exclusively from setMarkdown(MarkdownNoHTML).
@@ -134,6 +249,7 @@ void AssistantMarkdown::formatPresentation() {
         format.setTopMargin(line * 0.6); format.setBottomMargin(line * 0.6);
         if (table_border_color_.isValid()) format.setBorderBrush(table_border_color_);
         table->setFormat(format);
+        if (!current()) return;
         for (int r = 0; r < table->rows(); ++r) for (int column = 0; column < table->columns(); ++column) {
             auto cell = table->cellAt(r, column);
             if (cell.row() != r || cell.column() != column) continue; // Keep parsed merged-cell semantics.
@@ -148,6 +264,7 @@ void AssistantMarkdown::formatPresentation() {
                 cell_format.setBackground(table_shade_color_);
             else cell_format.clearBackground();
             cell.setFormat(cell_format);
+        if (!current()) return;
             // Qt imports Markdown's column alignment into each block. The
             // Assistant deliberately presents every header/value left aligned.
             const auto end = cell.lastCursorPosition().position();
@@ -155,23 +272,28 @@ void AssistantMarkdown::formatPresentation() {
                 auto block_format = block.blockFormat();
                 block_format.setAlignment(Qt::AlignLeft);
                 QTextCursor cursor(block); cursor.setBlockFormat(block_format);
+                if (!current()) return;
             }
         }
     }
+    polish();
     if (!accent_color_.isValid()) return;
     QTextCharFormat accent;
     accent.setForeground(accent_color_);
     for (const auto& [position, length] : anchors) {
-        QTextCursor cursor(document_);
+        QTextCursor cursor(document);
         cursor.setPosition(position);
         cursor.setPosition(position + length, QTextCursor::KeepAnchor);
         cursor.mergeCharFormat(accent);
+        if (!current()) return;
     }
 }
 void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
     if (target_ == target) return;
     target_ = target;
+    ++presentation_revision_;
     document_ = nullptr;
+    decorations_.clear(); update();
     if (!target) return;
     // QQuickTextDocument retains no ownership. Parent the replacement to that
     // actual editor wrapper, so it outlives this binding helper and cannot dangle
@@ -184,42 +306,62 @@ void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
         replacement->setTextWidth(previous->textWidth());
     }
     if (body_font_set_) replacement->setDefaultFont(body_font_);
+    const QPointer<AssistantMarkdown> receiver(this);
+    const QPointer<QQuickTextDocument> original(target);
+    const auto revision = presentation_revision_;
     target->setTextDocument(replacement);
+    if (!receiver || !original || receiver->target_ != original || receiver->presentation_revision_ != revision) return;
     document_ = replacement;
+    connect(replacement, &QTextDocument::contentsChanged, this, [this,replacement] {
+        if (document_ == replacement) polish();
+    });
+    const QPointer<QAbstractTextDocumentLayout> layout(replacement->documentLayout());
+    if (!receiver || !original || receiver->target_ != original || receiver->document_ != replacement || receiver->presentation_revision_ != revision || !layout) return;
+    connect(layout, &QAbstractTextDocumentLayout::update, this, [this,replacement](const QRectF&) {
+        if (document_ == replacement) polish();
+    });
     render();
 }
 void AssistantMarkdown::setSource(const QString& source) {
     if (source_ == source) return;
     source_ = source;
+    ++presentation_revision_;
     render();
 }
 void AssistantMarkdown::setMarkdown(bool markdown) {
     if (markdown_ == markdown) return;
     markdown_ = markdown;
+    ++presentation_revision_;
     render();
 }
 void AssistantMarkdown::render() noexcept {
-    if (!document_) return;
+    const QPointer<AssistantMarkdown> receiver(this);
+    const QPointer<QTextDocument> document(document_);
+    const auto revision = presentation_revision_;
+    if (!document) return;
+    const auto current = [&] { return receiver && document && receiver->document_ == document && receiver->presentation_revision_ == revision; };
     try {
-        if (!markdown_) { document_->setPlainText(source_); return; }
-        document_->setMarkdown(source_, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
+        if (!markdown_) { document->setPlainText(source_); return; }
+        document->setMarkdown(source_, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
+        if (!current()) return;
         // Qt owns Markdown parsing. Replace only its parsed image objects with
         // literal alternative text; no URI is fetched or second HTML parse made.
-        QTextCursor cursor(document_);
+        QTextCursor cursor(document);
         for (;;) {
-            auto image = document_->find(QString(QChar::ObjectReplacementCharacter), cursor);
+            auto image = document->find(QString(QChar::ObjectReplacementCharacter), cursor);
             if (image.isNull()) break;
             cursor = image;
             if (!image.charFormat().isImageFormat()) continue;
             const auto alternative = image.charFormat().stringProperty(QTextFormat::ImageAltText);
             image.insertText(alternative, QTextCharFormat{});
+            if (!current()) return;
             cursor = image;
         }
         formatPresentation();
     } catch (...) {
-        // Formatting failure cannot alter canonical history or manufacture a
-        // provider result. Preserve the exact original as literal text if possible.
-        try { document_->setPlainText(source_); } catch (...) {}
+        if (!current()) return;
+        // Preserve the complete original as literal text on presentation failure.
+        try { document->setPlainText(source_); } catch (...) {}
     }
 }
 } // namespace edi_app

@@ -24,6 +24,8 @@ EaElements.Label {
     onAnimatingChanged: if (!animating) workGlyph.rotation = 0
     readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
     leftPadding: iconExtent + AppSizes.unit * 0.5
+    topPadding: Math.max(0, (iconExtent - contentHeight) / 2)
+    bottomPadding: topPadding
     onVisibleChanged: {
         if (visible) variant = Math.floor(Math.random() * 3);
         else workGlyph.rotation = 0;
@@ -47,14 +49,29 @@ EaElements.Label {
                 fillMode: Image.PreserveAspectFit
                 Accessible.ignored: true
             }
-            EaElements.Label {
+            TextMetrics {
+                id: robotMetrics
+                text: robotGlyph.text
+                font: robotGlyph.font
+            }
+            Item {
                 anchors.centerIn: parent
                 visible: workStatus.variant === 2
-                text: "robot"
-                font.family: EaStyle.Fonts.iconsFamily
-                font.pixelSize: workStatus.iconExtent
-                color: EaStyle.Colors.themeAccent
-                Accessible.ignored: true
+                width: robotMetrics.tightBoundingRect.width
+                height: robotMetrics.tightBoundingRect.height
+                // Centre the actual native ink, including its font bearings,
+                // then contain its diagonal throughout the original rotation.
+                scale: Math.min(1, workStatus.iconExtent / Math.hypot(width, height))
+                EaElements.Label {
+                    id: robotGlyph
+                    x: -robotMetrics.tightBoundingRect.x
+                    y: -robotMetrics.tightBoundingRect.y - baselineOffset
+                    text: "robot"
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75 * 1.25
+                    color: EaStyle.Colors.themeAccent
+                    Accessible.ignored: true
+                }
             }
         }
     }

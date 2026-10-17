@@ -169,17 +169,6 @@ EaComponents.ApplicationWindow {
 
     appBarRightButtons: [
         EaElements.ToolButton {
-            objectName: "assistant.stopVisibleAction"
-            // Keep this slot during manual takeover: removing it before the
-            // original press/release would move the adjacent app-bar controls.
-            visible: Session.assistant.showingActions || window.assistantManualTakeover
-            enabled: Session.assistant.canCancel
-            fontIcon: "stop-circle"
-            ToolTip.text: window.assistantManualTakeover && !enabled ? qsTr("Manual control; open assistant to return") : qsTr("Stop assistant action")
-            Accessible.name: ToolTip.text
-            onClicked: Session.assistant.cancel()
-        },
-        EaElements.ToolButton {
             id: assistantToggle
             KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
@@ -358,7 +347,10 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    statusBar: StatusBar { assistantChatShown: assistantPanel.shown }
+    statusBar: StatusBar {
+        assistantChatShown: assistantPanel.shown
+        assistantManualTakeover: window.assistantManualTakeover
+    }
 
     AppPreferencesDialog {}
 
