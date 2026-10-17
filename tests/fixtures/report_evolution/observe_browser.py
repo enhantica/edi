@@ -16,12 +16,13 @@ OBSERVER = r"""<script>
 const errors = [];
 window.addEventListener('error', e => errors.push(String(e.message)));
 window.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
-window.addEventListener('load', () => {
-  const report = () => {
+const observeLoaded = () => {
+  const deadline = performance.now() + RENDER_TIMEOUT;
+  const report = ready => {
     const plots = [...document.querySelectorAll('.js-plotly-plot')]
       .filter(plot => plot.closest('.evolution-figure'));
     const result = {selectors: document.querySelectorAll('.evolution-figure select').length,
-      viewport: innerWidth, errors,
+      viewport: innerWidth, errors, ready,
       patterns: [...document.querySelectorAll('.js-plotly-plot')]
         .filter(plot => plot.closest('.pattern-figure')).map(plot => ({
         traces: (plot.data || []).map(trace => ({
@@ -38,14 +39,41 @@ window.addEventListener('load', () => {
       })};
     fetch('/proof?case=CASE', {method: 'POST', body: JSON.stringify(result)});
   };
-  // A bounded clock gives deferred modules and asynchronous Plotly draws time
-  // in both included and excluded controls; completion never depends on success.
-  setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(report)), 5000);
-});
+  const inspect = () => {
+    const plots = [...document.querySelectorAll('.js-plotly-plot')];
+    const figures = [...document.querySelectorAll('.pattern-figure,.evolution-figure')];
+    const ready = figures.every(figure => figure.matches('.js-plotly-plot')
+      || figure.querySelector('.js-plotly-plot') !== null)
+      && plots.every(plot => Array.isArray(plot.data)
+        && plot.querySelector('svg,canvas') !== null);
+    if (ready || performance.now() >= deadline) report(ready);
+    else setTimeout(inspect, 25);
+  };
+  inspect();
+};
+if (document.readyState === 'complete') observeLoaded();
+else window.addEventListener('load', observeLoaded, {once: true});
 </script>"""
 
 
-def observe(html):
+def receive_pages(received, process, deadline):
+    results = {}
+    while set(results) != {'wide', 'narrow'}:
+        try:
+            name, facts = received.get(timeout=max(0.01, deadline - time.monotonic()))
+        except queue.Empty as error:
+            missing = sorted({'wide', 'narrow'} - results.keys())
+            message = f'Browser pages did not report: {missing}; exit={process.poll()}'
+            raise RuntimeError(message) from error
+        if name not in {'wide', 'narrow'} or name in results:
+            raise RuntimeError('Browser proof must identify each viewport exactly once')
+        results[name] = facts
+    return results
+
+
+def observe(html, *, render_timeout_ms=5000):
+    if type(render_timeout_ms) is not int or not 0 < render_timeout_ms <= 5000:
+        raise ValueError('The browser drawing deadline must be an integer from 1 to 5000 ms')
     candidates = [shutil.which(name) for name in ('firefox', 'chromium', 'google-chrome')]
     candidates += [
         '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -58,7 +86,10 @@ def observe(html):
         raise RuntimeError('The actual HTML layout observer requires Firefox or Chromium')
     temporary = Path(tempfile.mkdtemp(prefix='edi-evolution-browser-'))
     documents = {
-        '/' + name: (html + OBSERVER.replace('CASE', name)).encode() for name in ('wide', 'narrow')
+        '/' + name: (
+            html + OBSERVER.replace('CASE', name).replace('RENDER_TIMEOUT', str(render_timeout_ms))
+        ).encode()
+        for name in ('wide', 'narrow')
     }
     documents['/'] = (
         b'<!doctype html><iframe width="1200" height="2400" src="/wide"></iframe>'
@@ -111,10 +142,7 @@ def observe(html):
             args, stdout=log, stderr=log, env={**os.environ, 'MOZ_HEADLESS': '1'}
         )
         try:
-            deadline = time.monotonic() + 15
-            results = dict(
-                received.get(timeout=max(0.01, deadline - time.monotonic())) for _ in range(2)
-            )
+            results = receive_pages(received, process, time.monotonic() + 15)
         finally:
             process.terminate()
             try:

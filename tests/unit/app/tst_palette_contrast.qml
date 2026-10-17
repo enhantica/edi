@@ -307,6 +307,7 @@ Rectangle {
             const html = SettingsProof.htmlEvolutionFacts(SettingsProof.childUrl(folder, base + ".html"));
             verify(!html.error, "The actual saved HTML renderer loads in an independent browser: " + html.error);
             for (const view of ["wide", "narrow"]) {
+                verify(html[view].ready, "The independent browser must reach initialized plot data and actual SVG or canvas drawing in the " + view + " report");
                 const patterns = html[view].patterns;
                 if (!patterns || patterns.length !== 1) {
                     failures.push(view + " actual HTML patterns=" + JSON.stringify(patterns));
