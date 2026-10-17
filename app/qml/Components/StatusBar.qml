@@ -18,8 +18,9 @@ EaElements.StatusBar {
     id: bar
 
     readonly property ProjectViewModel project: Session.project
+    property bool assistantChatShown: false
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || (assistantArea.presented && assistantArea.working)
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -37,13 +38,15 @@ EaElements.StatusBar {
         }
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
         const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : 0;
-        return width + Math.max(0, shown - 1) * spacing + fitWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
+        const assistantWidth = assistantArea.visible ? assistantArea.implicitWidth + spacing : 0;
+        return width + Math.max(0, shown - 1) * spacing + fitWidth + assistantWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
     readonly property int roomFor: {
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0);
+        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0)
+            - (assistantArea.visible ? assistantArea.width + spacing : 0);
         let width = 0;
         for (let i = 0; i < items.length; ++i) {
             if (!items[i].shown)
@@ -131,6 +134,19 @@ EaElements.StatusBar {
         keyText: qsTr("Parameters")
         valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
+    }
+    AssistantWorking {
+        id: assistantArea
+        objectName: "statusBar.assistant.working"
+        parent: bar
+        assistant: Session.assistant
+        presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
+        width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
+            - (fitArea.visible ? fitArea.compactWidth + EaStyle.Sizes.fontPixelSize * 1.2 : 0)))
+        height: Math.max(implicitHeight, iconExtent)
+        anchors.right: fitArea.visible ? fitArea.left : parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize * (fitArea.visible ? 1.2 : 1)
+        anchors.verticalCenter: parent.verticalCenter
     }
     // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
     // the ones on the left (the owner, 2026-10-13), and while a fit runs its live values with the progress bar at the

@@ -56,6 +56,13 @@ Popup {
         }
         return lines.join("\n\n");
     }
+    function workingFolderCaption(path) {
+        if (path.length === 0) return qsTr("Temporary workspace");
+        const normalized = path.replace(/\\/g, "/");
+        const trimmed = normalized.replace(/\/+$/, "");
+        if (trimmed.length === 0) return path; // A filesystem root remains visible.
+        return trimmed.substring(trimmed.lastIndexOf("/") + 1);
+    }
     property bool sendAfterConsent: false
     property string consentDraft: ""
     property string consentContext: ""
@@ -345,13 +352,6 @@ Popup {
                             onClicked: panel.assistant.useTemporaryWorkingFolder()
                         }
                     }
-                    EaElements.Label {
-                        Layout.fillWidth: true
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                        color: EaStyle.Colors.themeForegroundMinor
-                        text: panel.assistant.workingFolder.length ? qsTr("Read/write scope: %1").arg(panel.assistant.workingFolder) : qsTr("Working folder: app-owned temporary workspace")
-                    }
                 }
                 ListView {
                     id: conversation
@@ -363,6 +363,7 @@ Popup {
                     model: panel.assistant.messages
                     reuseItems: true
                     delegate: AssistantMessage {
+                        assistant: panel.assistant
                         required property var model
                         width: conversation.width
                         kind: model.kind
@@ -509,64 +510,12 @@ Popup {
                     text: qsTr("Inspect outgoing project context")
                     onClicked: connectionDialog.open()
                 }
-                EaElements.Label {
-                    id: workStatus
+                AssistantWorking {
                     objectName: "assistant.working"
                     Layout.fillWidth: true
-                    visible: panel.shown && panel.visible && panel.assistant.state === "agent_active"
-                        && Object.keys(panel.assistant.pendingQuestion).length === 0
-                        && Object.keys(panel.assistant.pendingPlan).length === 0
-                    text: qsTr("Working…")
-                    textFormat: Text.PlainText
-                    color: EaStyle.Colors.themeAccent
-                    Accessible.name: qsTr("Assistant is working")
-                    property bool branded: false
-                    readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
                     Layout.minimumHeight: iconExtent
-                    leftPadding: iconExtent + AppSizes.unit * 0.5
-                    onVisibleChanged: {
-                        if (visible) branded = Math.random() < 0.5;
-                        else workGlyph.rotation = 0;
-                    }
-                    Item {
-                        width: workStatus.iconExtent
-                        height: width
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        ControlsImpl.IconImage {
-                            id: workGlyph
-                            width: workStatus.iconExtent
-                            height: width
-                            anchors.centerIn: parent
-                            source: workStatus.branded ? "../../resources/logo/AssistantWorking.svg" : "../../resources/logo/AssistantSpinner.svg"
-                            sourceSize: Qt.size(width, height)
-                            color: EaStyle.Colors.themeAccent
-                            fillMode: Image.PreserveAspectFit
-                            Accessible.ignored: true
-                        }
-                    }
-                    RotationAnimation {
-                        target: workGlyph
-                        property: "rotation"
-                        running: workStatus.visible && workStatus.branded && EaStyle.Times.translationChange > 0
-                        loops: Animation.Infinite
-                        from: 0
-                        to: 360 * 6
-                        duration: 2000
-                        easing.type: Easing.OutInElastic
-                        easing.amplitude: 1
-                        easing.period: 0.3
-                    }
-                    RotationAnimation {
-                        target: workGlyph
-                        property: "rotation"
-                        running: workStatus.visible && !workStatus.branded && EaStyle.Times.translationChange > 0
-                        loops: Animation.Infinite
-                        from: 0
-                        to: 360
-                        duration: 1600
-                        easing.type: Easing.Linear
-                    }
+                    assistant: panel.assistant
+                    presented: panel.shown && panel.visible
                 }
                 Rectangle {
                     Layout.fillWidth: true
@@ -575,18 +524,37 @@ Popup {
                     implicitHeight: EaStyle.Sizes.borderThickness
                     color: EaStyle.Colors.appBorder
                 }
-                EaElements.CheckBox {
-                    id: showActionsControl
-                    objectName: "assistant.showActions"
-                    KeyNavigation.priority: KeyNavigation.BeforeItem
-                    KeyNavigation.backtab: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
-                        : chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton : usageButton
-                    KeyNavigation.tab: composer.firstFocusItem
-                    text: qsTr("Show actions")
-                    checked: panel.assistant.showActions
-                    enabled: !panel.assistant.canCancel
-                    onToggled: panel.assistant.showActions = checked
-                    Accessible.description: qsTr("Use real visible controls for supported single-parameter edits and fits. Normal mode has no pointer or typing delays.")
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.CheckBox {
+                        id: showActionsControl
+                        objectName: "assistant.showActions"
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: temporaryWorkingFolderButton.visible && temporaryWorkingFolderButton.enabled ? temporaryWorkingFolderButton
+                            : chooseWorkingFolderButton.visible && chooseWorkingFolderButton.enabled ? chooseWorkingFolderButton : usageButton
+                        KeyNavigation.tab: composer.firstFocusItem
+                        text: qsTr("Show actions")
+                        checked: panel.assistant.showActions
+                        enabled: !panel.assistant.canCancel
+                        onToggled: panel.assistant.showActions = checked
+                        Accessible.description: qsTr("Use real visible controls for supported actions. Normal mode has no pointer or typing delays.")
+                    }
+                    EaElements.Label {
+                        objectName: "assistant.workingFolder.caption"
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        Layout.preferredWidth: 0
+                        text: panel.workingFolderCaption(panel.assistant.workingFolder)
+                        textFormat: Text.PlainText
+                        elide: Text.ElideMiddle
+                        horizontalAlignment: Text.AlignRight
+                        color: EaStyle.Colors.themeForegroundMinor
+                        ToolTip.text: panel.assistant.workingFolder.length ? panel.assistant.workingFolder : qsTr("App-owned temporary workspace")
+                        ToolTip.visible: folderHover.hovered
+                        Accessible.name: qsTr("Working folder: %1").arg(ToolTip.text)
+                        HoverHandler { id: folderHover }
+                    }
                 }
                 AssistantComposer {
                     id: composer

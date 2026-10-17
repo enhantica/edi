@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
@@ -11,8 +12,37 @@ Rectangle {
     required property string kind
     required property string text
     property var payload: ({})
+    readonly property var inputFiles: {
+        if (kind !== "user" || !payload || payload.type !== "ediInput" || !payload.files) return [];
+        const files = payload.files;
+        // Existing SelectedFileLimits::files/name_bytes and Limits::id_bytes.
+        if (!Number.isInteger(files.length) || files.length < 0 || files.length > 32) return [];
+        const result = [];
+        for (let i = 0; i < files.length; ++i) {
+            const file = files[i];
+            if (!file || typeof file.id !== "string" || file.id.length === 0 || file.id.length > 256
+                || typeof file.name !== "string" || file.name.length > 512
+                || typeof file.bytes !== "number" || !Number.isFinite(file.bytes) || file.bytes < 0
+                || typeof file.textReadable !== "boolean" || typeof file.format !== "string") return [];
+            result.push(file); // Bounded presentation references, not copied source bytes or another archive.
+        }
+        return result;
+    }
     property string status: ""
     property string rowId: ""
+    property AssistantViewModel assistant: null
+    property int filePresentationRevision: 0
+    Connections {
+        target: row.assistant ? row.assistant.selectedFiles : null
+        function onCountChanged() { ++row.filePresentationRevision; }
+        function onDataChanged() { ++row.filePresentationRevision; }
+    }
+    function fileIsSelected(id, revision) {
+        if (!assistant) return false;
+        for (let i = 0; i < assistant.selectedFiles.count; ++i)
+            if (assistant.selectedFiles.text(i, "id") === id) return true;
+        return false;
+    }
     property bool highlighted: false
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
     readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
@@ -210,6 +240,43 @@ Rectangle {
             Accessible.role: Accessible.StaticText
             Accessible.ignored: !visible
             Accessible.name: visible ? (row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")) + ": " + row.text : ""
+        }
+        Flow {
+            width: parent.width
+            spacing: AppSizes.unit * 0.25
+            visible: row.kind === "user" && row.status === "completed" && row.inputFiles.length > 0
+            Repeater {
+                model: row.inputFiles
+                delegate: RowLayout {
+                    required property var modelData
+                    objectName: "assistant.sentFile." + modelData.id
+                    width: Math.min(implicitWidth, parent.width)
+                    spacing: AppSizes.unit * 0.125
+                    EaElements.Label {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: qsTr("%1 (%2 bytes)%3").arg(modelData.name).arg(modelData.bytes)
+                            .arg(modelData.textReadable ? "" : qsTr(" · text export required"))
+                        textFormat: Text.PlainText
+                        elide: Text.ElideMiddle
+                        color: EaStyle.Colors.themeForegroundMinor
+                        Accessible.name: qsTr("Sent file snapshot: %1, %2 bytes").arg(modelData.name).arg(modelData.bytes)
+                    }
+                    EaElements.ToolButton {
+                        objectName: "assistant.sentFile.remove." + modelData.id
+                        fontIcon: "times"
+                        implicitWidth: EaStyle.Sizes.toolButtonHeight * 0.75
+                        implicitHeight: implicitWidth
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
+                        showBackground: false
+                        visible: row.fileIsSelected(modelData.id, row.filePresentationRevision)
+                        enabled: row.assistant !== null && !row.assistant.canCancel
+                        ToolTip.text: qsTr("Remove %1 from future assistant requests").arg(modelData.name)
+                        Accessible.name: ToolTip.text
+                        onClicked: row.assistant.removeSelectedFile(modelData.id)
+                    }
+                }
+            }
         }
         EaElements.Button {
             id: commandDisclosure

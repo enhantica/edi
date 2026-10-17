@@ -87,6 +87,7 @@ qt_add_qml_module(edi_app_module
     QML_FILES
         qml/Main.qml
         qml/Components/AssistantPanel.qml
+        qml/Components/AssistantWorking.qml
         qml/Components/AssistantMessage.qml
         qml/Components/AssistantComposer.qml
         qml/Components/AssistantPlan.qml

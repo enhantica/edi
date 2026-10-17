@@ -781,3 +781,263 @@ validate or restore a manual draft. Existing parameter assistant-owned draft
 exclusion and cancellation/commit rules remain unchanged. Read-only tools and
 non-navigating saving acquire no new restriction or permission. This closes a
 prior-art common-editor gap, not a general property/navigation executor.
+
+
+### Compact genuine working-folder caption
+
+The existing native working-folder selection and temporary-workspace actions
+retain their actual intent/grant/currentness boundary and keyboard chain. Their
+caption now shares the Show actions row: the actual chosen path's basename is a
+single plain-text, middle-elided label, with the full actual path in its tooltip
+and accessible name. An empty path explicitly names the app-owned temporary
+workspace; a filesystem root retains its nonempty root spelling. A long basename
+has no minimum/preferred layout width and gives way to the existing checkbox.
+This is presentation only: it does not turn text into a grant, alter selected
+files or conversation authority, toggle action mode, add a path editor, or open
+a file. Sent-attachment acknowledgement and hidden-chat Working remain separate
+UX changes, rather than being claimed by this compact caption.
+
+
+### Acknowledged input presentation retains file authority
+
+The original void send entrance is preserved. The composer uses a narrow
+submitDraft entrance returning the actual admitted public user-row UUID; that
+return is not acknowledgement. It consumes text only when that exact row has
+reached durable completed status through its original successful input response,
+and only if the actual editor revision/text and presentation owner still match.
+Refusal, uncertain write, failed archive retention, rebind and a newer identical
+draft do not erase unsent text. Real IME preedit/composition changes also advance
+the editor revision, and acknowledgement never clears an active composition.
+Independent steering acknowledgements keep their
+own original row IDs rather than matching an arbitrary new equal-text row.
+
+A user row owns bounded plain descriptor snapshots in its ordinary history
+payload: actual selected ID, filename, byte length, readability and format. It
+contains no copied file bytes, source path, credentials or provider reasoning.
+Existing complete row/history admission and durable publication apply to this
+payload. Pending/refused rows do not display it as sent. Only the exact durable
+completed row makes those descriptors sent presentation. Old history without
+descriptors remains valid. Fresh selected-file UUIDs distinguish later additions.
+
+The selected-file model gains a presentation-only pending role derived from
+actual completed history; its canonical Controller collection, immutable bytes,
+hashes, native receipts and scope consent are unchanged. Sent chips move to the
+user bubble rather than calling removeSelectedFile to hide them. An explicit
+idle Remove remains available on each still-selected sent snapshot and uses that
+same ordinary removal/currentness door; historical descriptors remain after
+revocation and claim no current read lease. New files and refused-send chips stay
+in the composer. Presentation is bounded by existing selection/history limits,
+with no unbounded sent-ID store or duplicate archive.
+
+### Shared genuine Working cue outside the hidden conversation
+
+AssistantWorking extracts the existing panel cue, assets, accent, per-appearance
+choice, exact rotations and reduced-motion/hidden-stop rules. Both panel and
+statusbar use its actual agent_active/no-question/no-plan predicate. The hidden
+chat instance reserves its measured width beside the independent fit area in
+keysFit and roomFor; it neither replaces fit results nor infers activity from fit
+progress or canCancel. Home may show this genuine active status too. The actual
+Main panel visibility remains request-wide through showingActions, original
+workflow host and user preference/manual-takeover precedence: final request
+settlement returns the temporarily hidden panel once, while a later explicit hide
+or genuine manual takeover is not overridden. No idle transition from sign-in,
+picker, Stop or stale callbacks is treated as a successful completion trigger.
+
+
+### Selected-file projection retains its original continuation
+
+The ordinary picker, explicit removal and acknowledged-input presentation share
+one selected-row publisher. Before model notification it owns a bounded serial
+and the original receiver, State, project, Controller, generation, file epoch,
+connection epoch and desktop account/input identity. Every post-notification dirty
+flag, error and caller continuation checks that original proof, including catches.
+A nested projection in the same project supersedes the old continuation even if
+it later fails to prepare its rows. A deleted or rebound receiver is never used
+for old presentation cleanup. Serial exhaustion refuses further projection.
+
+Picker creation expects only its own prepared retirement epoch and cannot install
+a chooser for a reentrant replacement. Selected-file admission finishes staging
+and transfers the admitted descriptor before any context/model/retirement signal.
+Later presentation failure or receiver replacement does not turn an already
+admitted selection/removal into a false result, and old cleanup cannot release a
+new chooser's staging. The real core selection policy, immutable source ownership,
+file limits and explicit removal semantics remain authoritative. Send likewise
+returns its actual admitted row independently of a later presentation failure;
+only the original successful response and durable completion acknowledge it.
+
+
+### Own retirement and original pre-write admission
+
+Ordinary selected-file admission and offline import use the existing context and
+workspace cleanup. Their original local continuation is advanced only where
+usage_retire actually commits its own account epoch, before usageChanged is
+emitted. Every subsequent helper/caller checks that same proof. No epoch delta is
+inferred and no post-callback owner is recaptured. Genuine account/input/project,
+selection or projection replacement still retires A; offline use needs no login.
+The existing sign-in, account-update, sign-out and failure cleanup callers share
+this exact transition boundary rather than guessing an increment in a caller.
+
+The first managed transport in this ADR already prepares each input before its
+physical write. That prepare callback now checks the original receiver/scope,
+input receipt, thread/turn, disclosure and folder before inserting any pending
+owner. Each inserted RPC/result/native entry is associated with its actual
+original value. Retention, pending-row publication and catch cleanup recheck the
+original proof and those entries; cleanup never removes B's ownership or fences
+B after an old retention failure. Optional usage may become unavailable without
+retiring a healthy request, but a real observer's scope replacement prevents A's
+encoded request from being admitted or written. Successful durable response ACK
+remains distinct from original row admission and transport uncertainty.
+
+CodexAgent keeps local QObject/process-generation lifetime checks across its
+existing optional-usage preemption, deadline, before-write prepare, deferred
+flush and request/discard boundaries. Receiver destruction, synchronous failure
+or replacement stops the original continuation before another member access.
+This does not add a hook or provider method, alter framing, limits, optional-ID
+late ownership, physical holding slots or first deadlines, replay a request, or
+replace the existing process/account policy. These changes extend the original
+ordinary selection and managed transport implementations together.
+
+
+### Required retirement and original process callbacks
+
+Required account revocation has a different owner from a selected-row
+projection. A fatal transport failure, explicit sign-out or required workspace
+retirement first records its existing retiring/disconnected admission state,
+then carries the original receiver, State, controller, project, generation and
+account identity through notifications. A refused Send, picker or same-owner
+presentation update cannot cancel that retirement. Real account or project
+replacement still ends the old continuation. The ordinary selected-file/import
+and before-write paths retain their stricter file, connection, input and
+projection identities. Actual admitted selections, message acknowledgements and
+Worker final settlement remain factual; retirement does not manufacture an ACK,
+erase canonical selected bytes or undo scientific work. The existing retiring
+state remains set through the last retirement callback; a nested admitted file
+change keeps its factual source update but cannot restart cancellation or create
+a second account epoch for that same retiring transport. Once cleanup has ended,
+ordinary offline selection remains available. The original fatal explanation is
+retained independently of later presentation changes.
+
+The first managed official-agent transport owns the same boundary in both its
+helpers and their callers. Read/deadline and receive/preemption loops retain the
+original QObject, QProcess and generation through synchronous callbacks before
+another map, record or channel access. Started, stderr and finished callbacks,
+including catches, cannot fail or detach a replacement transport. Failure
+revokes its original maps before notification and publishes its original cause
+before process termination can synchronously report exit; after that notification
+only the captured process may be stopped. Explicit retirement detaches its old
+process first and thereafter cleans up only that guarded process, including its
+existing bounded shutdown timer. No new provider operation, public API, capacity,
+ID class, deadline, replay, holding slot or scientific mutation is introduced.
+
+
+### Common publication and factual refusal diagnostics
+
+The common state publisher evaluates each property lazily: its original weak
+receiver/State, controller/project, generation, account and admitted-input owner
+must still match before a getter, after it and after its signal. A destroyed or
+replaced receiver stops the old loop and its catch before any later member read.
+Synchronization, model/catalog assignment and their actual continuation/catch
+callers use the same rule. Catalog scalar selection commits before model signals,
+so a nested explicit selection is not overwritten by the old post-signal path.
+A sync already publishes its final state; an old caller does not enter a second
+redundant notify after that common publisher returns from a replacement.
+
+A refused input has no new factual-error ownership. For an already disconnected,
+blocked official account, ordinary not-admitted Send and known picker/removal
+policy refusals preserve the current nonempty factual error rather than replacing
+it with a context-consent/busy message during that error's own notification.
+This reuses the existing error value, not a new fatal cache or a changed native
+error slot. Real new transport/native/calculation/storage/IO failures retain their
+existing factual setters and may supersede it. An actually admitted input/source,
+explicit Clear and genuine recovery retain their existing clears and owner fences;
+no old diagnostic is rebound to another account or Session. Newer factual errors
+are not suppressed, and refusal neither acknowledges input nor grants recovery.
+The public lastError getter and ordinary signal set are unchanged.
+
+Common history/model publication retains actual committed facts after observer
+failure. Lifetime catches suppress only the already-retired original continuation;
+an exception in the surviving original scope follows its existing handling. The
+existing working-folder commit remains factual while its weak original cleanup
+cannot clear a newer owner's transition. No callback ban, extra public hook,
+capacity, scientific mutation, provider protocol or error-history store is added.
+
+
+### Ownership after synchronous publication returns
+
+The common lazy notification and row-model publishers can safely stop after an
+observer retires their original receiver. Their normal return does not prove
+that a calling bootstrap, control, provider or Worker stack still owns that
+receiver. Each actual continuation carries the original weak receiver, State,
+binding, account and admitted input proof and checks it before its next member
+read, predicate, cleanup, outgoing request or catch. A replacement cannot become
+current merely because an inner publisher returned without throwing.
+
+The existing file proof separates admitted input identity from presentation
+supersession. `input_current` retains the original receiver/State/controller/
+project/generation/account/native-input/file/connection checks; `current` also
+requires the original projection serial. Notification keeps its original broader
+publication predicate. Strict selection/admission operations retain `current`;
+normal protocol/control caller continuations use input identity, so a refused UI
+attempt cannot acquire authority or unnecessarily retire a factual result.
+Own file retirement updates the same carried proof at the actual epoch increment
+before any chooser callback. Own sign-in/logout and offline scientific-context
+retirement carry their existing exact account transition through the helper;
+there is no guessed delta or recapture of a newer owner. Scientific project/fit
+connectors keep their previous required offline cleanup behavior; ordinary
+selection context operations retain their stricter presentation predicate.
+
+Bootstrap model and skills settlement, question rejection/answers, cancellation,
+turn/item/terminal handling, usage request/update/catches, queued core delivery,
+project/fit connectors and their actual failure tails check the caller's original
+proof. Queued core work captures that proof at the original event/request boundary,
+not after it reaches a later owner. Immediate transport results remain local until
+the caller proves scope; a request/answer that already transferred its original
+ID is not repeated, relabelled as unwritten or assigned into a replacement.
+
+Native terminal and creation predicates themselves check the weak receiver and
+original State before reading ledger/current-call members. Exact original edit-id
+and attachment cleanup remains identity-based even when presentation retires;
+no later helper/call is cancelled. Permanent native teardown still works when
+publication is disabled. Actual completed Worker reports, committed creation/save
+and discarded archive facts remain owned by their original local records/latches.
+An old continuation cannot invent failure, roll back science, release a newer
+owner or abandon the real final-delivery/once boundary to improve presentation.
+
+Session attachment returns also check their original weak State before any
+post-bind/post-drain member read or catch. The existing attachment-depth and
+explicit deferred-Clear boundary intentionally belongs to the actual Session:
+it may reconcile the current canonical history after a real discard, while
+independent Session replacement tokens and exact target checks still decide
+whether the originating candidate attached. No stale stack force-clears a newer
+history or turns a committed discard into failure. A redundant second sync after
+successful bind is removed because bind already synchronizes its owned result.
+
+This extends the prior common publication, prepared save/manual-completion and
+transport ownership patterns. There is no new observer ban, signal suppression,
+callback executor, model API, protocol/deadline/capacity change or error cache.
+The factual error/refusal lifetime policy above is unchanged: original causes
+survive known refused attempts; genuine new failures, admitted inputs, explicit
+Clear and real recovery retain their existing ownership and reset rules.
+
+
+### Guarded preparation and deadline returns
+
+A successful inner publication return does not grant its caller a new owner.
+Send honors the existing thread-preparation result and rechecks its original
+strict draft proof before publishing a preparing message. Definite preparation
+refusal preserves its actual diagnostic and the unsent draft; it does not claim
+that a new conversation is being prepared. Working-folder adoption likewise
+stops optional readiness publication after failed preparation while returning
+the factual already-committed folder choice.
+
+Clear retains its real archive-discard latch before cancellation or readiness
+work. Starting a cancellation deadline can synchronously publish expiration,
+so Clear checks the same original input proof before entering its next
+settlement helper. An expired, deleted or replaced caller cannot read or update
+another owner. Terminal preparation attempts after a committed Clear retain
+that committed fact without interpreting preparation refusal as success.
+
+These are the existing guarded-helper and transport-deadline caller rules.
+No callback is suppressed, proof recaptured, deadline changed or request
+replayed. Original admitted replies, consumed identifiers, native Worker
+completion and required offline/destructor retirement remain unchanged.

@@ -340,7 +340,7 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    statusBar: StatusBar {}
+    statusBar: StatusBar { assistantChatShown: assistantPanel.shown }
 
     AppPreferencesDialog {}
 

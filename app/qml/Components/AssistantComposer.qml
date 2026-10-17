@@ -38,10 +38,11 @@ Rectangle {
     property int selectionRevision: -1
     property int savedSelectionStart: 0
     property int savedSelectionEnd: 0
-    property string submittedText: ""
+    property var submittedDrafts: []
+    property int draftOwnerRevision: 0
+    property int pendingFileCount: 0
     readonly property bool canSteer: assistant.state === "agent_active"
     readonly property bool hasDraft: editor.text.trim().length > 0
-    property var previousMessageIds: []
     function chooseFiles() {
         if (WebFiles.available || assistant.canCancel) return;
         const request = assistant.beginFileSelection();
@@ -76,22 +77,48 @@ Rectangle {
         }
     }
     function acknowledgeVisiblePrompt() {
-        if (submittedText.length === 0)
-            return;
-        for (let i = 0; i < assistant.messages.count; ++i) {
-            if (previousMessageIds.indexOf(assistant.messages.text(i, "id")) < 0 && assistant.messages.text(i, "kind") === "user" && assistant.messages.text(i, "text") === submittedText) {
-                if (editor.text === submittedText)
-                    editor.clear();
-                submittedText = "";
-                return;
-            }
+        const original = submittedDrafts;
+        const ownerRevision = draftOwnerRevision;
+        const pending = [];
+        let acknowledged = null;
+        for (const draft of original) {
+            let status = "";
+            for (let i = 0; i < assistant.messages.count; ++i)
+                if (assistant.messages.text(i, "id") === draft.id && assistant.messages.text(i, "kind") === "user") {
+                    status = assistant.messages.text(i, "status"); break;
+                }
+            if (status === "completed") {
+                if (draft.revision === textRevision && draft.text === editor.text
+                    && !editor.inputMethodComposing && editor.preeditText.length === 0) acknowledged = draft;
+            } else if (status !== "refused" && status !== "interrupted") pending.push(draft);
         }
+        if (submittedDrafts !== original || draftOwnerRevision !== ownerRevision) return;
+        submittedDrafts = pending; // Retire old bookkeeping before text notification can admit a new draft.
+        if (acknowledged && draftOwnerRevision === ownerRevision && textRevision === acknowledged.revision
+            && editor.text === acknowledged.text && !editor.inputMethodComposing
+            && editor.preeditText.length === 0) editor.clear();
+    }
+    function refreshFilePresentation() {
+        let pending = 0;
+        for (let i = 0; i < assistant.selectedFiles.count; ++i)
+            if (assistant.selectedFiles.text(i, "pending") !== "false") ++pending;
+        pendingFileCount = pending;
     }
     Connections {
         target: composer.assistant.messages
         function onCountChanged() { composer.acknowledgeVisiblePrompt(); }
         function onDataChanged() { composer.acknowledgeVisiblePrompt(); }
     }
+    Connections {
+        target: composer.assistant.selectedFiles
+        function onCountChanged() { composer.refreshFilePresentation(); }
+        function onDataChanged() { composer.refreshFilePresentation(); }
+    }
+    Connections {
+        target: composer.assistant
+        function onConversationRetired() { ++composer.draftOwnerRevision; composer.submittedDrafts = []; }
+    }
+    Component.onCompleted: refreshFilePresentation()
     implicitHeight: composerContent.implicitHeight + AppSizes.unit * 1.5
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.appBorder
@@ -123,13 +150,14 @@ Rectangle {
             contextApprovalRequested(editor.text);
             return;
         }
-        submittedText = editor.text;
-        const ids = [];
-        for (let i = 0; i < assistant.messages.count; ++i)
-            ids.push(assistant.messages.text(i, "id"));
-        previousMessageIds = ids;
-        assistant.send(submittedText);
-        acknowledgeVisiblePrompt();
+        const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
+        const rowId = assistant.submitDraft(text);
+        if (rowId.length && draftOwnerRevision === ownerRevision) {
+            const pending = submittedDrafts.slice();
+            pending.push({id: rowId, text: text, revision: revision});
+            submittedDrafts = pending;
+            acknowledgeVisiblePrompt();
+        }
     }
     Column {
         id: composerContent
@@ -145,7 +173,7 @@ Rectangle {
             id: selectedFilesScroll
             width: parent.width
             height: visible ? Math.min(selectedChips.implicitHeight, AppSizes.unit * 5) : 0
-            visible: composer.assistant.selectedFiles.count > 0
+            visible: composer.pendingFileCount > 0
             clip: true
             Flow {
                 id: selectedChips
@@ -157,6 +185,7 @@ Rectangle {
                 delegate: RowLayout {
                     required property var model
                     objectName: "assistant.file." + model.id
+                    visible: model.pending !== false
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.maximumWidth: composerContent.width * 0.6
@@ -211,6 +240,8 @@ Rectangle {
                 KeyNavigation.tab: addFilesButton
                 KeyNavigation.backtab: composer.previousFocusItem
                 onTextChanged: ++composer.textRevision
+                onPreeditTextChanged: ++composer.textRevision
+                onInputMethodComposingChanged: ++composer.textRevision
                 onSelectionStartChanged: composer.rememberSelection()
                 onSelectionEndChanged: composer.rememberSelection()
                 color: EaStyle.Colors.themeForeground

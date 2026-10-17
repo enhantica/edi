@@ -93,6 +93,8 @@ class AssistantViewModel : public QObject {
     /// Attach the live project through its existing worker and edit door; nullptr keeps a conversational session.
     void setProject(ProjectViewModel* project);
     Q_INVOKABLE void send(const QString& text);
+    /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
+    Q_INVOKABLE QString submitDraft(const QString& text);
     Q_INVOKABLE bool openReport(const QString& rowId, const QString& link);
     Q_INVOKABLE void selectSkill(const QString& id);
     Q_INVOKABLE void approvePlan(const QString& id);

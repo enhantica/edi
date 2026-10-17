@@ -198,10 +198,67 @@ struct AssistantViewModel::State {
     QString selected_skill, workflow_error;
     QByteArray skill_catalog_binding;
     QJsonArray selected_rows;
-    Rows selected_files{{"id", "name", "bytes", "textReadable", "format"}, &owner, &selected_rows};
+    Rows selected_files{{"id", "name", "bytes", "textReadable", "format", "pending"}, &owner, &selected_rows};
     std::string selected_reply; // bounded descriptors only; canonical bytes belong solely to Controller
     bool selected_rows_dirty = false, file_staging = false, file_authority_exhausted = false;
     std::uint64_t file_epoch = 0, file_connection_epoch = 0;
+    std::uint64_t selected_projection_serial = 0;
+    struct FileProjection {
+        QPointer<AssistantViewModel> receiver;
+        State* host = nullptr;
+        QPointer<ProjectViewModel> project;
+        edi::assistant::Controller* controller = nullptr;
+        std::uint64_t generation = 0, files = 0, connection = 0, serial = 0;
+        bool has_project = false;
+#ifndef __EMSCRIPTEN__
+        quint64 account = 0, input = 0;
+#endif
+        bool retirement_current() const noexcept {
+            return receiver && receiver->state_.get() == host && host->publishing &&
+                host->generation == generation && host->controller.get() == controller &&
+                (!has_project || project) && host->project == project
+#ifndef __EMSCRIPTEN__
+                && host->usage_epoch == account
+#endif
+                ;
+        }
+        bool publication_current() const noexcept {
+            return retirement_current()
+#ifndef __EMSCRIPTEN__
+                && host->native_serial == input
+#endif
+                ;
+        }
+        bool input_current() const noexcept {
+            return publication_current() && host->file_epoch == files && host->file_connection_epoch == connection;
+        }
+        bool current() const noexcept {
+            return input_current() && host->selected_projection_serial == serial;
+        }
+    };
+    FileProjection file_projection() {
+        FileProjection proof;
+        proof.receiver = &owner; proof.host = this; proof.project = project; proof.has_project = project != nullptr;
+        proof.controller = controller.get(); proof.generation = generation; proof.files = file_epoch;
+        proof.connection = file_connection_epoch; proof.serial = selected_projection_serial;
+#ifndef __EMSCRIPTEN__
+        proof.account = usage_epoch; proof.input = native_serial;
+#endif
+        return proof;
+    }
+    bool claim_file_projection(FileProjection& proof) {
+        if (!proof.current()) return false;
+        if (selected_projection_serial == UINT64_MAX) return false;
+        proof.serial = ++selected_projection_serial;
+        return true;
+    }
+    bool publish_selected_rows(QJsonArray rows, FileProjection& proof) {
+        if (!claim_file_projection(proof)) return false;
+        selected_rows.swap(rows);
+        try { selected_files.assign(selected_rows); }
+        catch (...) { if (!proof.current()) return false; throw; }
+        return proof.current();
+    }
     struct FileSelection {
         QString id, collection_id, next_collection_id, connection_id, native_status;
         std::uint64_t owner_generation = 0, epoch = 0, connection_epoch = 0, selection_generation = 0;
@@ -549,15 +606,20 @@ struct AssistantViewModel::State {
         return intent;
     }
     void retire_working_folder_selection() noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
         const bool transitioning = working_folder_transition;
         working_folder_transition = true;
-        struct Release { bool& flag; bool previous; ~Release() { flag = previous; } } release{working_folder_transition, transitioning};
+        const auto release = qScopeGuard([this, receiver, transitioning] {
+            if (receiver && receiver->state_.get() == this) working_folder_transition = transitioning;
+        });
         QString id;
         if (working_folder_selection) { id = std::move(working_folder_selection->id); working_folder_selection.reset(); }
         // Consume before a native dialog close can synchronously deliver a callback.
         if (!id.isEmpty()) try { emit owner.workingFolderSelectionRetired(id); } catch (...) {}
     }
     bool change_working_folder(const WorkingFolderSelection& intent, std::shared_ptr<AssistantWorkingFolder> next) {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto current = [&] { return receiver && receiver->state_.get() == this && generation == intent.generation && project == intent.project && controller.get() == intent.controller; };
         bool committed = false;
         try {
             if (!working_folder_current(intent) || (next && !next->current()))
@@ -566,12 +628,14 @@ struct AssistantViewModel::State {
             if (!working_folder_current(intent) || (next && !next->current()))
                 throw std::runtime_error("The working-folder choice changed");
             working_folder_transition = true;
-            struct Release { bool& flag; ~Release() { flag = false; } } release{working_folder_transition};
+            const auto release = qScopeGuard([this, current] {
+                if (current()) working_folder_transition = false;
+            });
             working_folder.swap(next); committed = true;
             const bool ready = generic_context_changed();
-            if (generation != intent.generation) return true;
+            if (!current()) return true;
             emit owner.conversationRetired();
-            if (generation != intent.generation) return true;
+            if (!current()) return true;
             working_folder_transition = false;
             // Same owner/data consent survives the genuine picker grant. This
             // does not approve changed data or skip a first outgoing disclosure.
@@ -580,13 +644,14 @@ struct AssistantViewModel::State {
                 if (!context.contains("error")) {
                     approved_scope = current_disclosure(&context);
                     consented_context.clear();
-                    if (generic_authenticated && generic_thread.isEmpty()) (void)generic_prepare_thread();
+                    if (generic_authenticated && generic_thread.isEmpty() && !generic_prepare_thread()) return true;
                 }
             }
-            sync(); notify();
+            if (!current()) return true;
+            sync();
             return true; // The actual folder choice committed; readiness is separate.
         } catch (...) {
-            if (generation == intent.generation && project == intent.project && controller.get() == intent.controller)
+            if (current())
                 try {
                     if (error.isEmpty()) error = committed
                         ? QObject::tr("The working folder changed, but its new execution context is not ready.")
@@ -1962,8 +2027,9 @@ struct AssistantViewModel::State {
     }
     void native_charge() { native_charge(generic_item_bytes); }
     void native_restore_charge() noexcept {
+        const auto publication = file_projection();
         try { native_charge(); }
-        catch (...) { if (generic_authenticated && !generic_retiring) native_fence(); }
+        catch (...) { if (publication.input_current() && generic_authenticated && !generic_retiring) native_fence(); }
     }
     void native_complete_discard() noexcept {
         if (!native_discard_pending || native_worker_admitted() || (native_fit && native_fit->nativeRunning())) return;
@@ -1979,7 +2045,10 @@ struct AssistantViewModel::State {
         return response;
     }
     void native_reply(const QJsonValue& id, bool success, const Object& outcome) {
-        if (!agent->answer(id, native_response(success, outcome))) throw std::runtime_error("The native action response could not be delivered");
+        const auto publication = file_projection();
+        const bool delivered = agent->answer(id, native_response(success, outcome));
+        if (!publication.input_current()) return;
+        if (!delivered) throw std::runtime_error("The native action response could not be delivered");
         agent->activity();
     }
     static Object native_row(const NativeRecord& record, const Object& outcome, bool success) {
@@ -2002,7 +2071,6 @@ struct AssistantViewModel::State {
         return false;
     }
     void native_retire(bool respond, bool closing = false, bool discard = false) {
-        retire_manual_import();
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto binding = generation; const auto serial = native_serial; const auto account = usage_epoch;
         const auto receipt = native_receipt;
@@ -2010,6 +2078,11 @@ struct AssistantViewModel::State {
         const auto entries = native_records.size();
         const auto window = action_window; const auto target = project;
         const QPointer<AssistantWidgetInput> helper(widget_input.get());
+        const auto widget = native_widget;
+        retire_manual_import();
+        if (!receiver || receiver->state_.get() != this || generation != binding || native_serial != serial || usage_epoch != account ||
+            native_receipt != receipt || (native_call ? native_call->record : nullptr) != record || native_widget != widget ||
+            native_records.size() != entries || action_window != window || project != target || widget_input.get() != helper) return;
         native_stop_widgets();
         if (!receiver || generation != binding || native_serial != serial || usage_epoch != account ||
             native_receipt != receipt || (native_call ? native_call->record : nullptr) != record ||
@@ -2064,10 +2137,13 @@ struct AssistantViewModel::State {
         if (receipt->serial > native_accepted_serial) { native_accepted_serial = receipt->serial; native_receipt = std::move(receipt); }
     }
     void native_refresh(const NativeCall& call) {
+        const auto publication = file_projection();
         if (!call.may_have_written || !native_owner(call.receipt)) return;
         auto stamps = edi::work_stamps(*project->assistantProject());
         if (controller) controller->notify_changed();
+        if (!publication.input_current()) return;
         const auto context = outgoing_context();
+        if (!publication.input_current()) return;
         if (context.contains("error")) throw std::length_error("Complete native context is unavailable");
         if (!native_owner(call.receipt) || !native_call || native_call->record != call.record || native_call->receipt != call.receipt) return;
         if (!same_disclosure(call.receipt->disclosure, approved_scope)) throw std::runtime_error("The original native disclosure retired");
@@ -2094,12 +2170,14 @@ struct AssistantViewModel::State {
     // Scope its remaining controls to the existing original call and ledger;
     // explicit successful discard may legitimately empty that original ledger.
     auto native_settlement_scope(const NativeCall& call) const {
+        const QPointer<AssistantViewModel> receiver(&owner);
         const auto binding = generation;
         const auto serial = native_serial;
         const auto account = usage_epoch;
         const auto thread = generic_thread;
         const auto entries = native_records.size();
-        return [this, binding, serial, account, thread, entries, record = call.record, receipt = call.receipt, rpc = call.rpc] {
+        return [this, receiver, binding, serial, account, thread, entries, record = call.record, receipt = call.receipt, rpc = call.rpc] {
+            if (!receiver || receiver->state_.get() != this) return false;
             const bool ledger = (native_records.size() == entries && native_records.value(record->key) == record) ||
                 (native_records.isEmpty() && !native_discard_pending);
             return publishing && generation == binding && native_serial == serial && usage_epoch == account && generic_thread == thread && ledger &&
@@ -2111,7 +2189,7 @@ struct AssistantViewModel::State {
         return [this, receiver, captured, original_call](const edi::FitReport& report, bool presented) noexcept {
                     // Reentrant replacement may already have retired this exact
                     // worker/call. It cannot settle a later owner's native call.
-                    if (!receiver || !captured || native_fit != captured) return;
+                    if (!receiver || receiver->state_.get() != this || !captured || native_fit != captured) return;
                     const auto completion_scope = native_settlement_scope(original_call);
                     if (!native_call || native_call->record != original_call.record || native_call->receipt != original_call.receipt || native_call->rpc != original_call.rpc) {
                         native_fit.clear(); // This exact worker finished even when its old RPC/account retired.
@@ -2133,10 +2211,11 @@ struct AssistantViewModel::State {
     }
     void native_finish(bool success, const Object& outcome) noexcept {
         if (!native_call) return;
+        const QPointer<AssistantViewModel> receiver(&owner);
         auto call = *native_call; // Stable owner across synchronous transport failure/reentrant retirement.
         auto record = call.record;
         const auto original_call = [&] {
-            return native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc;
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc;
         };
         bool retained = false;
         try {
@@ -2173,7 +2252,6 @@ struct AssistantViewModel::State {
             if (retained) { record->maximum_row = {}; record->maximum_response = {}; }
             if (native_call && native_call->record == record) native_call.reset();
             const auto settled = native_settlement_scope(call);
-            const QPointer<AssistantViewModel> receiver(&owner);
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
             if (!receiver || !settled()) return;
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
@@ -2185,7 +2263,6 @@ struct AssistantViewModel::State {
             // A failed post-write allocation is uncertainty, not account loss or
             // a fabricated durable success. Clear can explicitly discard it.
             if (!original_call()) return;
-            const QPointer<AssistantViewModel> receiver(&owner);
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
             if (!receiver || !original_call()) return;
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
@@ -2213,7 +2290,7 @@ struct AssistantViewModel::State {
         if (!receiver || !completion_scope()) return;
         native_fit.clear(); // The exact actual completed report, not running=false.
         const auto original_call = [&] {
-            return native_call && native_call->record == original.record && native_call->receipt == original.receipt && native_call->rpc == original.rpc;
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == original.record && native_call->receipt == original.receipt && native_call->rpc == original.rpc;
         };
         if (original_call()) try {
             const char* status = "unavailable";
@@ -2431,7 +2508,9 @@ struct AssistantViewModel::State {
     quint64 usage_snapshot_epoch = UINT64_MAX, usage_update_serial = 0, usage_pending_update_serial = 0;
     bool usage_account_ready = false, usage_epoch_exhausted = false;
     bool usage_snapshot_valid = false, usage_fresh = false, usage_observation_available = false;
-    void usage_retire() noexcept {
+    bool usage_retire(FileProjection& projection, bool required = false) noexcept {
+        const auto current = [&] { return required ? projection.retirement_current() : projection.current(); };
+        if (!current()) return false;
         approved_scope.reset(); backend_scope.reset(); bootstrap_scope.reset(); clear_scope.reset(); disclosure_cache.reset();
         generic_context_reuse = false; login_scope.reset();
         // Account authority/visibility retire without allocating; old JSON is
@@ -2440,7 +2519,9 @@ struct AssistantViewModel::State {
         usage_update_serial = 0; usage_rpc.clear();
         if (usage_epoch == UINT64_MAX) usage_epoch_exhausted = true;
         else ++usage_epoch;
+        projection.account = usage_epoch; // Exact own transition, before any observer can publish B.
         try { usage_cache = {{"available", false}, {"stale", false}, {"buckets", QJsonArray{}}}; emit owner.usageChanged(); } catch (...) {}
+        return current();
     }
     void usage_unavailable() noexcept {
         usage_fresh = false; usage_observation_available = false;
@@ -2448,22 +2529,27 @@ struct AssistantViewModel::State {
         try { usage_cache["stale"] = true; usage_cache["available"] = false; emit owner.usageChanged(); } catch (...) {}
     }
     void usage_refresh() noexcept {
+        const auto publication = file_projection();
         if (!publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted || generic_retiring || !usage_rpc.isEmpty()) return;
         try {
             usage_pending_epoch = usage_epoch; usage_pending_update_serial = usage_update_serial;
             usage_fresh = false;
-            usage_rpc = agent->request("account/rateLimits/read", {});
+            const auto request = agent->request("account/rateLimits/read", {});
+            if (!publication.input_current()) return;
+            usage_rpc = request;
             if (usage_rpc.isEmpty()) { usage_unavailable(); return; }
             usage_cache["stale"] = true; emit owner.usageChanged();
-        } catch (...) { usage_unavailable(); }
+        } catch (...) { if (publication.input_current()) usage_unavailable(); }
     }
     void usage_updated() noexcept {
+        const auto publication = file_projection();
         // Sparse notification data is not a complete replacement snapshot. A
         // newer observation cannot disappear behind an already-outstanding read.
         usage_fresh = false;
         if (usage_update_serial == UINT64_MAX) { usage_snapshot_valid = false; return; }
         ++usage_update_serial;
         try { emit owner.usageChanged(); } catch (...) {}
+        if (!publication.input_current()) return;
         usage_refresh(); // Coalesced; no completion-triggered polling/retry loop.
     }
     static bool usage_integer(const QJsonValue& value, double minimum, double maximum) {
@@ -2479,6 +2565,7 @@ struct AssistantViewModel::State {
     }
     void usage_response(const QString& id, const Object& envelope) noexcept {
         if (id != usage_rpc || !usage_account_ready || usage_pending_epoch != usage_epoch || usage_epoch_exhausted || generic_retiring) return;
+        const auto publication = file_projection();
         usage_rpc.clear();
         try {
             if (envelope.contains("error") || !envelope.value("result").isObject()) { usage_unavailable(); return; }
@@ -2539,7 +2626,7 @@ struct AssistantViewModel::State {
             usage_cache = std::move(snapshot); usage_snapshot_epoch = usage_epoch;
             usage_snapshot_valid = true; usage_fresh = fresh; usage_observation_available = available;
             emit owner.usageChanged();
-        } catch (...) { usage_unavailable(); }
+        } catch (...) { if (publication.input_current()) usage_unavailable(); }
     }
 
     // A genuine form submission owns an empty Session and admitted source IDs;
@@ -2737,7 +2824,6 @@ struct AssistantViewModel::State {
             emit owner.nativeImportChanged();
             if (!receiver || native_import_ui.value("id") != intent->id || generation != intent->binding || native_serial != intent->input || project != committed_target) return;
             sync();
-            if (receiver && generation == intent->binding && native_serial == intent->input && project == committed_target) notify();
         } catch (...) {
             if (!receiver) return;
             const bool same_attachment_projection = same_committed_projection(committed_target);
@@ -2851,21 +2937,25 @@ struct AssistantViewModel::State {
             return;
         }
         if (!publishing || native_creation != creation) return; // Permanently retired owner, never a replacement's action.
+        const QPointer<AssistantViewModel> receiver(&owner);
         const auto completion_generation = generation;
+        const auto completion_account = usage_epoch;
         const auto completion_serial = native_serial;
         const auto completion_thread = generic_thread;
         NativeAttachment* installed_attachment = nullptr;
         const auto original_call = [&] {
             // The once-owned record/receipt binds the original transport ID.
-            return native_call && native_call->record == creation->record && native_call->receipt == creation->receipt;
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == creation->record && native_call->receipt == creation->receipt;
         };
         const auto release_original = [&] {
+            if (!receiver || receiver->state_.get() != this) return;
             if (native_attachment && native_attachment.get() == installed_attachment && native_attachment->creation == creation)
                 native_attachment.reset(); // Keep the old Controller through the actual Session pointer commit.
+            if (!receiver || receiver->state_.get() != this) return;
             if (native_creation == creation) native_creation.reset();
         };
         const auto completion_scope = [&] {
-            return publishing && generation == completion_generation && native_serial == completion_serial && generic_thread == completion_thread &&
+            return receiver && receiver->state_.get() == this && publishing && usage_epoch == completion_account && generation == completion_generation && native_serial == completion_serial && generic_thread == completion_thread &&
                 (!native_call || original_call()) && (!native_creation || native_creation == creation) &&
                 (!native_attachment || native_attachment->creation == creation);
         };
@@ -2916,7 +3006,7 @@ struct AssistantViewModel::State {
                 if (original_call()) native_finish(creation->adopted && result.published, outcome);
             } else {
                 auto* session = result_session();
-                const auto current = [this, creation] { return native_creation_current(creation); };
+                const auto current = [this, receiver, creation] { return receiver && receiver->state_.get() == this && native_creation_current(creation); };
                 auto outcome = native_creation_outcome(*creation->candidate);
                 auto model = session->prepareAssistantNativeModel(std::move(creation->candidate->project), creation->epoch, current);
                 creation->candidate.reset();
@@ -3609,17 +3699,18 @@ struct AssistantViewModel::State {
         return rpc; // Transfer response ownership; no transport write.
     }
     bool generic_retire_question() noexcept {
+        const auto publication = file_projection();
         const auto epoch = generation;
         const auto thread = generic_thread;
         const bool authenticated = generic_authenticated, retiring = generic_retiring;
         const auto rpc = generic_detach_question();
         if (agent && !rpc.isNull() && !rpc.isUndefined()) {
             try { (void)agent->reject(rpc); }
-            catch (...) { generic_fail(QStringLiteral("The question refusal could not be delivered.")); return false; }
+            catch (...) { if (!publication.input_current()) return false; generic_fail(QStringLiteral("The question refusal could not be delivered.")); return false; }
         }
         // A refusal can synchronously emit failed and retire this owner.
         // Callers must stop rather than overwrite that real failure diagnostic.
-        return publishing && generation == epoch && generic_thread == thread &&
+        return publication.input_current() && generation == epoch && generic_thread == thread &&
             generic_authenticated == authenticated && generic_retiring == retiring;
     }
     bool generic_interrupt_rows() noexcept {
@@ -3636,24 +3727,41 @@ struct AssistantViewModel::State {
         } catch (...) { error = storage_error; return false; }
     }
     void generic_fail(const QString& explanation) noexcept {
-        usage_retire();
-        try { native_retire(false); } catch (...) {}
-        generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
-        retire_result();
-        generic_authenticated = false; generic_retiring = false; generic_revoke_pending = false;
-        generic_busy = false; generic_connecting = false; generic_blocked = true;
-        retire_file_selection(); consented_context.clear(); (void)generic_detach_question();
-        if (agent) try { agent->retire(); } catch (...) {}
-        generic_interrupt_rows();
-        generic_rpc_rows.clear(); generic_rpc_turns.clear();
-        generic_turn.clear(); generic_thread.clear();
+        FileProjection projection;
         try {
+            projection = file_projection();
+            const auto original_explanation = explanation;
+            // Revocation is already factual before any presentation observer.
+            generic_authenticated = false; generic_busy = false; generic_connecting = false;
+            generic_retiring = true; generic_revoke_pending = true; generic_blocked = true;
+            if (!usage_retire(projection, true)) return;
+            try { native_retire(false); } catch (...) {}
+            if (!projection.retirement_current()) return;
+            generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
+            retire_result();
+            if (!projection.retirement_current()) return;
+            generic_authenticated = false;
+            generic_busy = false; generic_connecting = false; generic_blocked = true;
+            projection.files = file_epoch == UINT64_MAX ? UINT64_MAX : file_epoch + 1;
+            retire_file_selection();
+            if (!projection.retirement_current()) return;
+            consented_context.clear(); (void)generic_detach_question();
+            if (agent) try { agent->retire(); } catch (...) {}
+            if (!projection.retirement_current()) return;
+            generic_interrupt_rows();
+            if (!projection.retirement_current()) return;
+            generic_rpc_rows.clear(); generic_rpc_turns.clear();
+            generic_turn.clear(); generic_thread.clear();
             generic_native["status"] = "disconnected"; native = generic_native;
-            error = bounded_error(explanation); notify();
-        } catch (...) {}
+            error = bounded_error(original_explanation);
+            generic_retiring = false; generic_revoke_pending = false;
+            notify();
+        } catch (...) {} // Original failure cannot unwind a receiver or clean up B.
     }
     QString generic_request(const QString& method, const Object& params = {}) {
+        const auto publication = file_projection();
         const auto id = agent->request(method, params);
+        if (!publication.input_current()) return id;
         if (id.isEmpty()) throw std::runtime_error("Agent request could not be delivered");
         return id;
     }
@@ -3734,36 +3842,58 @@ struct AssistantViewModel::State {
         if (skills.isEmpty()) throw std::runtime_error("No bundled skills are available");
         generic_skill_paths = std::move(skills); generic_workspace = workspace;
     }
-    void generic_revoke_workspace() noexcept {
-        usage_retire();
-        try { native_retire(false); } catch (...) {}
-        generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
-        retire_result();
-        generic_authenticated = false; generic_retiring = false; generic_revoke_pending = false;
-        if (agent) try { agent->retire(); } catch (...) {}
-        generic_busy = false; generic_connecting = false;
-        generic_interrupt_rows();
-        generic_thread.clear(); generic_turn.clear(); generic_login.clear(); generic_terminal_turn.clear();
-        generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_rpc_rows.clear(); generic_rpc_turns.clear();
-        (void)generic_detach_question();
-        generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); generic_workspace.clear(); generic_skill_paths.clear();
-        // Keep retired workspace artifacts for explicit recovery; no live writer
-        // is adopted, and no files are published back to the current project.
-        try { generic_native["status"] = "disconnected"; } catch (...) {}
+    bool generic_revoke_workspace(FileProjection* continuation = nullptr, bool required = false) noexcept {
+        FileProjection local;
+        try {
+            if (!continuation) { local = file_projection(); continuation = &local; }
+            auto& projection = *continuation;
+            const auto current = [&] { return required ? projection.retirement_current() : projection.current(); };
+            if (!current()) return false;
+            if (required) {
+                generic_authenticated = false; generic_busy = false; generic_connecting = false;
+                generic_retiring = true; generic_revoke_pending = true;
+            }
+            if (!usage_retire(projection, required)) return false;
+            try { native_retire(false); } catch (...) {}
+            if (!current()) return false;
+            generic_clear_pending = false; generic_context_pending = false; generic_clear_interrupt_sent = false; generic_interrupt_rpc.clear(); generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
+            retire_result();
+            if (!current()) return false;
+            generic_authenticated = false;
+            if (!required) { generic_retiring = false; generic_revoke_pending = false; }
+            if (agent) try { agent->retire(); } catch (...) {}
+            if (!current()) return false;
+            generic_busy = false; generic_connecting = false;
+            generic_interrupt_rows();
+            if (!current()) return false;
+            generic_thread.clear(); generic_turn.clear(); generic_login.clear(); generic_terminal_turn.clear();
+            generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_rpc_rows.clear(); generic_rpc_turns.clear();
+            (void)generic_detach_question();
+            generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); generic_workspace.clear(); generic_skill_paths.clear();
+            // Retired artifacts stay available for explicit recovery; no provider data is adopted.
+            generic_native["status"] = "disconnected";
+            if (required) { generic_retiring = false; generic_revoke_pending = false; }
+            return current();
+        } catch (...) { return false; }
     }
     void generic_settle_revoke() {
+        const auto publication = file_projection();
         if (!generic_revoke_pending || generic_clear_pending || generic_context_pending || native_fit || native_worker_admitted() || generic_busy || generic_connecting ||
             !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) return;
         agent->settleOperation();
+        if (!publication.input_current()) return;
         generic_revoke_pending = false;
         generic_clear_interrupt_sent = false;
     }
     void generic_advance_clear() {
+        const auto publication = file_projection();
         if (!generic_clear_pending && !generic_context_pending && !generic_revoke_pending) return;
         if (!generic_authenticated || generic_retiring) return; // Real account/failure retirement remains authoritative.
         if (generic_busy && !generic_turn.isEmpty() && !generic_clear_interrupt_sent && generic_interrupt_rpc.isEmpty()) {
             generic_clear_interrupt_sent = true;
-            generic_interrupt_rpc = generic_request("turn/interrupt", {{"threadId", generic_thread}, {"turnId", generic_turn}});
+            const auto interrupt = generic_request("turn/interrupt", {{"threadId", generic_thread}, {"turnId", generic_turn}});
+            if (!publication.input_current()) return;
+            generic_interrupt_rpc = interrupt;
             generic_interrupt_thread = generic_thread; generic_interrupt_turn = generic_turn;
         }
         // Stop/manual takeover can precede the original turn/start ACK.
@@ -3774,6 +3904,7 @@ struct AssistantViewModel::State {
         // interrupt replies. Keep their actual IDs and the first revoke deadline.
         if (native_fit || native_worker_admitted() || generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) return;
         agent->settleOperation(); // Terminal plus every owned input/control reply has now settled.
+        if (!publication.input_current()) return;
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto binding = generation; const auto account = usage_epoch; const auto input = native_serial;
         const bool clear = generic_clear_pending;
@@ -3791,7 +3922,7 @@ struct AssistantViewModel::State {
             auto approved = std::move(clear_scope);
             // bind clears live memory/sources. Restore only the preowned actual
             // remaining scope, after its exact original attachment completed.
-            if (bind(rebind_project(), true) && receiver && approved) try {
+            if (bind(rebind_project(), true) && receiver && receiver->state_.get() == this && approved) try {
                 if (same_disclosure(approved, current_disclosure())) {
                     approved_scope = std::move(approved);
                     if (generic_authenticated && generic_thread.isEmpty()) (void)generic_prepare_thread();
@@ -3824,14 +3955,20 @@ struct AssistantViewModel::State {
         // Retained staging is not rewritten from GUI data and is never adopted
         // as current scientific truth. Every next input carries fresh context.
     }
-    bool generic_context_changed(bool scientific = false) noexcept {
+    bool generic_context_changed(bool scientific = false, FileProjection* continuation = nullptr) noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto original_project = project;
         const auto binding = generation; const auto account = usage_epoch; const auto input = native_serial;
         const auto current = [&] {
-            return receiver && generation == binding && usage_epoch == account && native_serial == input && project == original_project;
+            return receiver && generation == binding && usage_epoch == account && native_serial == input && project == original_project &&
+                (!continuation || (scientific ? continuation->input_current() : continuation->current()));
         };
         try {
+            if (!current()) return false;
+            if (generic_retiring) {
+                approved_scope.reset();
+                return false; // Existing required retirement owns cancellation; admitted file facts remain.
+            }
             const bool same_scope = scientific && disclosure_approved();
             const bool reuse = same_scope && same_disclosure(backend_scope, approved_scope);
             // Revocation only upgrades: a later routine edit cannot downgrade an
@@ -3840,9 +3977,11 @@ struct AssistantViewModel::State {
             if (!scientific || !same_scope) approved_scope.reset();
             native_retire(true, false, true);
             if (!current()) return false;
-            retire_result(); consented_context.clear();
+            retire_result();
+            if (!current()) return false;
+            consented_context.clear();
             if (!generic_authenticated || generic_retiring) {
-                generic_revoke_workspace(); return true;
+                return generic_revoke_workspace(continuation, continuation == nullptr || scientific);
             }
             if (generic_context_pending || generic_clear_pending) return !generic_blocked;
             generic_context_pending = true;
@@ -3885,8 +4024,10 @@ struct AssistantViewModel::State {
         generic_report_bytes = 0;
     }
     void generic_clear(bool* discarded = nullptr) {
-        if (discarded) *discarded = false;
+        auto publication = file_projection();
+        if (discarded) *discarded = generic_clear_pending;
         native_retire(true, false, true);
+        if (!publication.input_current()) return;
         if (generic_clear_pending) {
             if (discarded) *discarded = true; // The original archive discard already committed.
             return; // Repeated Clear never refreshes cancellation deadlines.
@@ -3910,18 +4051,31 @@ struct AssistantViewModel::State {
         generic_clear_reports();
         generic_context_retention_pending = false; generic_context_retention_error.clear();
         emit owner.conversationRetired();
-        retire_result(); retire_file_selection(); consented_context.clear(); ++generation;
+        if (!publication.input_current()) return;
+        retire_result();
+        if (!publication.input_current()) return;
+        retire_file_selection(&publication);
+        if (!publication.input_current()) return;
+        consented_context.clear();
+        publication.generation = ++generation;
         generic_clear_pending = true; generic_context_pending = false;
         generic_clear_interrupt_sent = generic_interrupt_thread == generic_thread &&
             !generic_turn.isEmpty() && generic_interrupt_turn == generic_turn;
-        generic_held_row.reset(); if (!generic_retire_question()) return; plan = {};
-        selected_rows = {}; selected_files.assign(selected_rows); selected_rows_dirty = false;
+        generic_held_row.reset(); if (!generic_retire_question()) return;
+        if (!publication.input_current()) return;
+        plan = {};
+        auto projection = file_projection();
+        if (!publish_selected_rows({}, projection)) return;
+        selected_rows_dirty = false;
         error.clear();
         if (generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) {
             generic_revoke_pending = true;
             agent->beginOperation(Limits::revoke_ms, 0);
         }
-        generic_advance_clear(); sync(); notify();
+        if (!projection.input_current()) return;
+        generic_advance_clear();
+        if (!projection.publication_current()) return;
+        sync();
     }
     static const char* generic_bootstrap_stage(const QString& method) noexcept {
         if (method == "initialize") return "starting the official agent";
@@ -3933,6 +4087,7 @@ struct AssistantViewModel::State {
         return nullptr;
     }
     void generic_response_failure(const QString& method, const char* reason) noexcept {
+        const auto publication = file_projection();
         try {
             if (const auto* stage = generic_bootstrap_stage(method)) {
                 generic_fail(QObject::tr("ChatGPT sign-in could not continue while %1 [%2: %3].")
@@ -3942,14 +4097,15 @@ struct AssistantViewModel::State {
             generic_fail(QObject::tr("The official agent reply is invalid or exceeds its limits."));
             return;
         } catch (...) {}
-        generic_fail(QStringLiteral("The official agent reply could not be processed [UNEXPECTED_PROCESSING]."));
+        if (publication.input_current()) generic_fail(QStringLiteral("The official agent reply could not be processed [UNEXPECTED_PROCESSING]."));
     }
     void generic_initialize() {
         agent = std::make_unique<CodexAgent>(&owner);
         QObject::connect(agent.get(), &CodexAgent::started, &owner, [this] {
+            const auto publication = file_projection();
             try {
                 generic_request("initialize", {{"clientInfo", Object{{"name", "edi"}, {"title", "Edi"}, {"version", "1"}}}, {"capabilities", Object{{"experimentalApi", true}}}});
-            } catch (...) { generic_fail(QObject::tr("The official agent could not be initialized.")); }
+            } catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent could not be initialized.")); }
         });
         QObject::connect(agent.get(), &CodexAgent::optionalUsageUnavailable, &owner, [this](const QString& id) {
             if (id == usage_rpc) usage_unavailable();
@@ -3957,30 +4113,31 @@ struct AssistantViewModel::State {
         QObject::connect(agent.get(), &CodexAgent::failed, &owner, [this](const QString& message) { generic_fail(message); });
         QObject::connect(agent.get(), &CodexAgent::response, &owner,
             [this](const QString& id, const QString& method, const Object& reply) {
+                auto publication = file_projection();
                 const char* reason = "UNEXPECTED_PROCESSING";
-                try { generic_response(id, method, reply, reason); }
-                catch (...) { generic_response_failure(method, reason); }
+                try { generic_response(id, method, reply, reason, publication); }
+                catch (...) { if (publication.input_current()) generic_response_failure(method, reason); }
             });
         QObject::connect(agent.get(), &CodexAgent::event, &owner, [this](const QString& method, const Object& params) {
+            const auto publication = file_projection();
             try { generic_event(method, params); }
-            catch (...) { generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits.")); }
+            catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits.")); }
         });
         QObject::connect(agent.get(), &CodexAgent::serverRequest, &owner,
             [this](const QJsonValue& id, const QString& method, const Object& params) {
+                const auto publication = file_projection();
                 try { generic_server_request(id, method, params); }
-                catch (...) { generic_fail(QObject::tr("The official agent request could not be retained.")); }
+                catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent request could not be retained.")); }
             });
     }
-    void generic_sign_in(std::shared_ptr<DisclosureScope> approval) {
+    void generic_sign_in(std::shared_ptr<DisclosureScope> approval, FileProjection& projection) {
         if (project && project->fit()->running()) throw std::runtime_error("Finish the active manual fit first");
         if (generic_busy || generic_connecting || generic_held_row) throw std::runtime_error("Finish or clear the active agent operation first");
         generic_blocked = false; error.clear(); generic_login_attempted = false;
-        const QPointer<AssistantViewModel> receiver(&owner);
-        const auto binding = generation; const auto old_account = usage_epoch;
         const auto approval_role = reserve_disclosure(disclosure_shell_bytes);
-        generic_revoke_workspace(); // Never relabel a modified recovery directory as a fresh snapshot.
-        if (!receiver || generation != binding || old_account == UINT64_MAX || usage_epoch != old_account + 1 || usage_epoch_exhausted)
-            throw std::runtime_error("The original sign-in scope retired");
+        if (!generic_revoke_workspace(&projection, true) || !projection.retirement_current()) return;
+        if (usage_epoch_exhausted) throw std::runtime_error("The original sign-in scope retired");
+        // Never relabel a provider-modified recovery directory as a fresh snapshot.
         approval->account = usage_epoch;
         if (!same_disclosure(approval, current_disclosure())) throw std::runtime_error("The original sign-in disclosure changed");
         disclosure_room(disclosure_shell_bytes);
@@ -3993,10 +4150,13 @@ struct AssistantViewModel::State {
             generic_fail(QObject::tr("The bundled official agent is unavailable. Rebuild or reinstall this Edi candidate.")); return;
         }
         generic_connecting = true;
-        if (!agent->start(executable, generic_workspace)) throw std::runtime_error("The official agent could not be started");
+        const bool started = agent->start(executable, generic_workspace);
+        if (!projection.retirement_current()) return;
+        if (!started) throw std::runtime_error("The official agent could not be started");
         notify();
     }
     bool generic_prepare_thread() {
+        const auto publication = file_projection();
         // Workspace/root preparation is a definite pre-RPC refusal. A missing
         // folder or failed local copy is not evidence of an account failure.
         try {
@@ -4006,14 +4166,17 @@ struct AssistantViewModel::State {
             error = QObject::tr("The new working context could not be prepared. Check the chosen folder and selected files; your account and conversation are preserved.");
             notify(); return false;
         }
+        if (!publication.input_current()) return false;
         try {
             generic_connecting = true;
             agent->beginOperation(Limits::sign_in_ms, 0);
+            if (!publication.input_current()) return false;
             generic_request("skills/list", {{"cwds", QJsonArray{generic_workspace}}, {"forceReload", true}});
-            return true;
-        } catch (...) { generic_fail(QObject::tr("The fresh agent context could not be started safely.")); return false; }
+            return publication.input_current();
+        } catch (...) { if (!publication.input_current()) return false; generic_fail(QObject::tr("The fresh agent context could not be started safely.")); return false; }
     }
     void generic_start_thread() {
+        const auto publication = file_projection();
         if (!disclosure_approved() || usage_read_epoch != usage_epoch)
             throw std::runtime_error("The approved account/project disclosure changed during bootstrap");
         bootstrap_scope = approved_scope;
@@ -4023,8 +4186,9 @@ struct AssistantViewModel::State {
             // No thread request was admitted. A removed root is not evidence
             // of a failed managed account or uncertain provider delivery.
             generic_connecting = false; agent->settleOperation();
+            if (!publication.input_current()) return;
             error = QObject::tr("The chosen working folder changed or is unavailable. Choose it again or use the temporary folder before starting work.");
-            sync(); notify(); return;
+            sync(); return;
         }
         Object params{{"cwd", generic_workspace}, {"ephemeral", true}, {"sandbox", "workspace-write"},
             {"approvalPolicy", "on-request"}, {"approvalsReviewer", "user"}, {"modelProvider", "openai"},
@@ -4046,7 +4210,7 @@ struct AssistantViewModel::State {
         if (!model.isEmpty()) params["model"] = model;
         generic_request("thread/start", params);
     }
-    void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code) {
+    void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code, FileProjection& publication) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
         if (reply.contains("error")) {
@@ -4100,11 +4264,19 @@ struct AssistantViewModel::State {
                     auto row = value.toObject(); row["status"] = retainSession ? "refused" : "interrupted";
                     retained = generic_present(row); break;
                 }
+                if (!publication.input_current()) return;
                 if (!retained) { generic_fail(storage_error); return; }
             }
             if (retainSession) {
                 if (method == "turn/start") { generic_busy = false; if (!generic_revoke_pending) agent->settleOperation(); }
-                error = diagnostic; generic_settle_revoke(); generic_advance_clear(); sync(); notify(); offer_result(); return;
+                if (!publication.input_current()) return;
+                error = diagnostic; generic_settle_revoke();
+                if (!publication.input_current()) return;
+                generic_advance_clear();
+                if (!publication.input_current()) return;
+                sync();
+                if (publication.input_current()) offer_result();
+                return;
             }
             // Unknown/uncertain, stale, account and handshake errors retain the
             // existing revocation fence. This is not proof of lost credentials.
@@ -4115,8 +4287,13 @@ struct AssistantViewModel::State {
         const auto result = reply.value("result").toObject();
         if (method == "initialize") {
             reason_code = "INITIALIZED_NOTIFICATION";
-            if (!agent->notification("initialized")) throw std::runtime_error("Agent handshake failed");
-            agent->settleOperation(); agent->beginOperation(Limits::sign_in_ms, 0);
+            const bool initialized = agent->notification("initialized");
+            if (!publication.input_current()) return;
+            if (!initialized) throw std::runtime_error("Agent handshake failed");
+            agent->settleOperation();
+            if (!publication.input_current()) return;
+            agent->beginOperation(Limits::sign_in_ms, 0);
+            if (!publication.input_current()) return;
             reason_code = "REQUEST_ADMISSION";
             generic_request("account/read", {{"refreshToken", false}});
         } else if (method == "account/read") {
@@ -4185,6 +4362,7 @@ struct AssistantViewModel::State {
                 generic_request("model/list", {{"includeHidden", true}, {"cursor", result.value("nextCursor")}});
             else {
                 native = generic_native; sync();
+                if (!publication.input_current()) return;
                 if (!usage_epoch_exhausted && usage_read_epoch == usage_epoch) usage_account_ready = true;
                 generic_request("skills/list", {{"cwds", QJsonArray{generic_workspace}}, {"forceReload", true}});
             }
@@ -4245,7 +4423,11 @@ struct AssistantViewModel::State {
             reason_code = "BUNDLED_SKILL_MISSING";
             if (found.size() != generic_skill_paths.size()) throw std::runtime_error("Not all bundled skills are registered");
             reason_code = "SKILL_CAPACITY";
-            generic_size(catalog, Limits::context_bytes); skills.assign(catalog); selected_skill.clear();
+            generic_size(catalog, Limits::context_bytes);
+            selected_skill.clear();
+            try { skills.assign(catalog); }
+            catch (...) { if (!publication.input_current()) return; throw; }
+            if (!publication.input_current()) return;
             reason_code = "REQUEST_ADMISSION";
             generic_start_thread();
         } else if (method == "thread/start") {
@@ -4310,18 +4492,27 @@ struct AssistantViewModel::State {
             generic_interrupt_rpc.clear();
         }
         else if (method == "account/logout") {
-            generic_revoke_workspace(); generic_blocked = false; error.clear();
+            if (!generic_revoke_workspace(&publication, true)) return;
+            generic_blocked = false; error.clear();
         }
         reason_code = "BOOTSTRAP_PUBLICATION";
-        generic_settle_revoke(); generic_advance_clear(); sync(); notify();
+        if (!publication.input_current()) return;
+        generic_settle_revoke();
+        if (!publication.input_current()) return;
+        generic_advance_clear();
+        if (!publication.input_current()) return;
+        sync();
     }
     void generic_acknowledge(const QString& id, const QString& turn) {
+        const auto publication = file_projection();
         native_acknowledge(id, turn);
         if (!generic_rpc_rows.contains(id)) return;
         const auto rowId = generic_rpc_rows.take(id);
         for (const auto& value : history) if (value.toObject().value("id") == rowId) {
             auto row = value.toObject(); row["status"] = "completed";
-            if (!generic_present(row)) { generic_fail(storage_error); return; }
+            const bool retained = generic_present(row);
+            if (!publication.input_current()) return;
+            if (!retained) { generic_fail(storage_error); return; }
             acknowledge_result(id, turn);
             return;
         }
@@ -4342,6 +4533,7 @@ struct AssistantViewModel::State {
             (type == "collabAgentToolCall" && status == "interrupted");
     }
     bool generic_item(const Object& item, bool completed, bool snapshot = false) {
+        const auto publication = file_projection();
         const auto id = generic_id(item.value("id")), type = generic_id(item.value("type"));
         if (type == "ediOutcome") throw std::runtime_error("Host outcome type is reserved for Edi");
         if (!generic_items.contains(id) && generic_items.size() >= static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Agent item limit exceeded");
@@ -4403,6 +4595,7 @@ struct AssistantViewModel::State {
             generic_items[id] = item;
             generic_item_bytes = nextBytes;
         } catch (...) {
+            if (!publication.input_current()) return false;
             if (record) {
                 record->canonical = std::move(previousCanonical); record->maximum_row = std::move(previousMaximum); record->row_bytes = previousLimit;
             }
@@ -4411,6 +4604,7 @@ struct AssistantViewModel::State {
             native_restore_charge(); throw;
         }
         if (completed) { generic_final_items.insert(id); if (generic_question_item == id && !generic_retire_question()) return false; }
+        if (!publication.input_current()) return false;
         if (type == "userMessage" || type == "reasoning") return true;
         if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
         const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
@@ -4424,7 +4618,9 @@ struct AssistantViewModel::State {
                 row["payload"] = payload;
             }
         }
-        if (!generic_present(row)) {
+        const bool retained = generic_present(row);
+        if (!publication.input_current()) return false;
+        if (!retained) {
             if (type == "dynamicToolCall" && native_records.contains(native_key(generic_thread, generic_turn, id))) native_fence();
             else generic_fail(storage_error);
             return false;
@@ -4433,6 +4629,7 @@ struct AssistantViewModel::State {
     }
     void generic_event(const QString& method, const Object& params) {
         if (!publishing) return;
+        const auto publication = file_projection();
         if (method == "account/rateLimits/updated") {
             if (usage_account_ready && !generic_retiring) usage_updated();
             return;
@@ -4449,20 +4646,21 @@ struct AssistantViewModel::State {
             const auto update_roles = reserve_disclosure(requested_login ? 2 * disclosure_shell_bytes : 0);
             auto next_update = requested_login ? std::make_shared<DisclosureScope>(*login_scope) : nullptr;
             auto approval = std::move(login_scope);
-            const auto old_account = usage_epoch;
-            const QPointer<AssistantViewModel> receiver(&owner);
-            const auto binding = generation;
-            usage_retire();
-            if (!receiver || generation != binding) return;
-            if (requested_login && old_account != UINT64_MAX && usage_epoch == old_account + 1 && !usage_epoch_exhausted) {
-                approval->account = usage_epoch;
-                next_update->account = usage_epoch;
-                if (same_disclosure(approval, current_disclosure())) {
-                    approved_scope = std::move(approval); login_scope = std::move(next_update);
+            auto projection = file_projection();
+            if (!usage_retire(projection, true)) return;
+            try {
+                if (requested_login && !usage_epoch_exhausted) {
+                    approval->account = usage_epoch;
+                    next_update->account = usage_epoch;
+                    if (same_disclosure(approval, current_disclosure())) {
+                        approved_scope = std::move(approval); login_scope = std::move(next_update);
+                    }
                 }
+                if (!requested_login || !approved_scope)
+                    generic_fail(QObject::tr("The agent account changed. Reconnect to approve the current account and a fresh working copy."));
+            } catch (...) {
+                if (projection.publication_current()) generic_fail(QObject::tr("The official agent event is invalid or exceeds its limits."));
             }
-            if (!requested_login || !approved_scope)
-                generic_fail(QObject::tr("The agent account changed. Reconnect to approve the current account and a fresh working copy."));
             return;
         }
         if (method == "serverRequest/resolved") {
@@ -4473,8 +4671,10 @@ struct AssistantViewModel::State {
                 native_call->record->reserved = false;
                 native_call->resolved = true; native_call->retiring = true;
                 if (native_fit) native_fit->cancel();
+                if (!publication.input_current()) return;
                 native_cancel_creation();
-        native_cancel_save();
+                if (!publication.input_current()) return;
+                native_cancel_save();
                 return; // The stored originating scope remains valid even after visible thread retirement.
             }
             if (!generic_authenticated || params.value("threadId") != generic_thread) return;
@@ -4487,13 +4687,19 @@ struct AssistantViewModel::State {
             const auto id = generic_id(params.value("turn").toObject().value("id"));
             if (!generic_turn.isEmpty() && generic_turn != id) throw std::runtime_error("Agent turn changed");
             if (id == generic_terminal_turn || id == generic_turn) return;
-            generic_turn = id; agent->activity(); generic_advance_clear(); notify(); return;
+            generic_turn = id; agent->activity();
+            if (!publication.input_current()) return;
+            generic_advance_clear();
+            if (!publication.input_current()) return;
+            notify(); return;
         }
         if (method == "turn/completed") {
             if (!generic_authenticated || generic_retiring || params.value("threadId") != generic_thread || generic_turn.isEmpty()) return;
         } else if (!generic_bound(params)) return;
         if (method == "item/started" || method == "item/completed") {
-            if (generic_item(params.value("item").toObject(), method == "item/completed")) agent->activity();
+            const bool changed = generic_item(params.value("item").toObject(), method == "item/completed");
+            if (!publication.input_current()) return;
+            if (changed) agent->activity();
         } else if (method == "item/agentMessage/delta") {
             const auto id = generic_id(params.value("itemId"));
             if (!params.value("delta").isString()) throw std::runtime_error("Agent delta is invalid");
@@ -4510,7 +4716,9 @@ struct AssistantViewModel::State {
                     throw std::length_error("Agent text exceeds message limit");
                 row["text"] = old + delta;
                 generic_size(row, Limits::message_bytes);
-                if (!generic_present(row)) generic_fail(storage_error);
+                const bool retained = generic_present(row);
+                if (!publication.input_current()) return;
+                if (!retained) generic_fail(storage_error);
                 else if (!delta.isEmpty()) agent->activity();
                 break;
             }
@@ -4576,7 +4784,10 @@ struct AssistantViewModel::State {
             if (status != "completed" && status != "interrupted" && status != "failed") throw std::runtime_error("Agent terminal status is invalid");
             if (native_fit || native_worker_admitted()) {
                 if (status == "completed") throw std::runtime_error("Agent completed before its native action result");
-                native_retire(true); generic_revoke_pending = true; agent->beginOperation(Limits::revoke_ms, 0);
+                native_retire(true);
+                if (!publication.input_current()) return;
+                generic_revoke_pending = true; agent->beginOperation(Limits::revoke_ms, 0);
+                if (!publication.input_current()) return;
             }
             if (turn.contains("items")) {
                 if (!turn.value("items").isArray()) throw std::runtime_error("Agent terminal snapshot is invalid");
@@ -4584,7 +4795,8 @@ struct AssistantViewModel::State {
                     const auto item = value.toObject(); const auto type = generic_id(item.value("type"));
                     const bool final = status == "completed" || generic_final_items.contains(generic_id(item.value("id"))) ||
                         (generic_status_item(type) && generic_final_status(type, item.value("status")));
-                    generic_item(item, final, true); if (!generic_authenticated) return;
+                    generic_item(item, final, true);
+                    if (!publication.input_current() || !generic_authenticated) return;
                 }
             }
             if (status == "completed") for (auto it = generic_items.constBegin(); it != generic_items.constEnd(); ++it)
@@ -4598,6 +4810,7 @@ struct AssistantViewModel::State {
             // Retired UI context settles its real protocol without a new archive write.
             const bool discarded = generic_clear_pending || generic_context_pending;
             const bool retained = !discarded && publish(std::move(next));
+            if (!publication.input_current()) return;
             if (!discarded && !retained) { generic_fail(storage_error); return; }
             if (retained && status == "completed" && !generic_revoke_pending) {
                 for (auto it = generic_item_rows.constBegin(); it != generic_item_rows.constEnd(); ++it)
@@ -4622,21 +4835,27 @@ struct AssistantViewModel::State {
             if (native_receipt) native_receipt->retired = true;
             native_receipt.reset();
             agent->retainOutput(native_bytes());
+            if (!publication.input_current()) return;
             if (generic_revoke_pending) generic_settle_revoke();
             else agent->settleOperation();
+            if (!publication.input_current()) return;
             if (status != "completed") { result_current.reset(); if (!generic_clear_pending) error = QObject::tr("The official agent turn was interrupted or failed. Retained work is preserved."); }
             offer_result();
         }
-        generic_advance_clear(); notify();
+        if (!publication.input_current()) return;
+        generic_advance_clear();
+        if (!publication.input_current()) return;
+        notify();
     }
     void generic_server_request(const QJsonValue& id, const QString& method, const Object& params) {
+        const auto publication = file_projection();
         if (!generic_bound(params) || generic_revoke_pending) { agent->reject(id); return; }
         if (method == "item/tool/call") {
             const auto binding = generation;
             const auto serial = native_serial;
             const auto account = usage_epoch;
             const auto thread = generic_thread, turn = generic_turn;
-            const auto request_scope = [&] { return publishing && generation == binding && native_serial == serial &&
+            const auto request_scope = [&] { return publication.input_current() && publishing && generation == binding && native_serial == serial &&
                 usage_epoch == account && generic_thread == thread && generic_turn == turn; };
             const char* save_stage = "DISPATCH"; // Original invocation's stack; nested requests cannot overwrite it.
             try { native_dispatch(id, params, save_stage); }
@@ -4680,7 +4899,10 @@ struct AssistantViewModel::State {
             const auto row = public_row("activity", QObject::tr("The agent requested authority beyond the admitted working copy. Edi declined it."),
                 {{"item_id", item}, {"decision", "decline"}}, "refused");
             if (!generic_present(row)) { generic_fail(storage_error); return; }
-            if (!agent->answer(id, {{"decision", "decline"}})) generic_fail(QObject::tr("The agent refusal could not be delivered."));
+            if (!publication.input_current()) return;
+            const bool delivered = agent->answer(id, {{"decision", "decline"}});
+            if (!publication.input_current()) return;
+            if (!delivered) generic_fail(QObject::tr("The agent refusal could not be delivered."));
         } else if (method == "item/tool/requestUserInput") {
             if (!question.isEmpty() || !params.value("questions").isArray() || params.value("questions").toArray().size() != 1) { agent->reject(id); return; }
             const auto itemId = generic_id(params.value("itemId"));
@@ -4701,38 +4923,39 @@ struct AssistantViewModel::State {
             generic_question_rpc = id; generic_question_id = qid; generic_question_item = itemId; generic_question_thread = generic_thread; generic_question_turn = generic_turn; agent->activity(); notify();
         } else agent->reject(id); // No fabricated result for unsupported callbacks.
     }
-    void generic_send(const QString& text) {
+    QString generic_send(const QString& text, FileProjection& projection) {
         if (working_folder_transition || working_folder_selection) {
-            error = QObject::tr("Finish choosing the working folder first. Your draft is preserved."); notify(); return;
+            error = input_refusal(QObject::tr("Finish choosing the working folder first. Your draft is preserved.")); notify(); return {};
         }
         if (generic_revoke_pending || generic_context_pending || generic_clear_pending || !generic_interrupt_rpc.isEmpty()) {
-            error = QObject::tr("The previous interruption is still settling. Your draft is retained; send when ready.");
-            notify(); return; // No new input or turn can reuse an older control's authority.
+            error = input_refusal(QObject::tr("The previous interruption is still settling. Your draft is retained; send when ready."));
+            notify(); return {}; // No new input or turn can reuse an older control's authority.
         }
         if (generic_connecting && generic_authenticated && generic_thread.isEmpty()) {
-            error = QObject::tr("A fresh project working copy is being prepared. Your draft is retained; send when ready."); notify(); return;
+            error = input_refusal(QObject::tr("A fresh project working copy is being prepared. Your draft is retained; send when ready.")); notify(); return {};
         }
         if (!generic_authenticated || generic_retiring || generic_revoke_pending || generic_blocked || generic_connecting || generic_native.value("status") != "ready" || generic_held_row)
             throw std::runtime_error("Connect the official agent or clear its interrupted conversation first");
         if (generic_thread.isEmpty()) {
             if (disclosure_approved()) {
-                (void)generic_prepare_thread();
-                error = QObject::tr("A fresh conversation is being prepared for the approved scope. Your draft is retained; send when ready.");
-            } else error = QObject::tr("Approve the current project context to prepare a fresh agent working copy.");
-            notify(); return;
+                if (!generic_prepare_thread() || !projection.current()) return {};
+                error = input_refusal(QObject::tr("A fresh conversation is being prepared for the approved scope. Your draft is retained; send when ready."));
+            } else error = input_refusal(QObject::tr("Approve the current project context to prepare a fresh agent working copy."));
+            notify(); return {};
         }
         try { (void)generic_writable_roots(); }
         catch (...) {
-            error = QObject::tr("The chosen working folder changed or is unavailable. Choose it again or use the temporary folder; your draft was not admitted.");
-            notify(); return;
+            error = input_refusal(QObject::tr("The chosen working folder changed or is unavailable. Choose it again or use the temporary folder; your draft was not admitted."));
+            notify(); return {};
         }
         const auto completeContext = outgoing_context();
         if (native_blocked || completeContext.contains("error")) throw std::runtime_error("Complete native context is unavailable; no request was admitted");
         const auto disclosure = current_disclosure(&completeContext);
         if (!same_disclosure(approved_scope, disclosure) || !same_disclosure(backend_scope, disclosure)) {
             (void)generic_context_changed();
-            error = QObject::tr("The project input scope changed. Approve its current disclosure before sending; your draft is preserved.");
-            notify(); return;
+            if (!projection.current()) return {};
+            error = input_refusal(QObject::tr("The project input scope changed. Approve its current disclosure before sending; your draft is preserved."));
+            notify(); return {};
         }
         const auto contextBytes = QJsonDocument(completeContext).toJson(QJsonDocument::Compact);
         const auto context = QString::fromUtf8(contextBytes);
@@ -4743,8 +4966,8 @@ struct AssistantViewModel::State {
             // No steer has been admitted or written. Keep the draft and the
             // original running request alive; a preflight refusal is not a
             // transport/retention failure and must not retire its process.
-            error = QObject::tr("The agent is starting this turn. Submit the retained draft when its turn is ready.");
-            notify(); return;
+            error = input_refusal(QObject::tr("The agent is starting this turn. Submit the retained draft when its turn is ready."));
+            notify(); return {};
         }
         // Stable UserInput::Text preserves the complete approved context in the
         // user/data role. Keep the actual draft and its public history row exact.
@@ -4768,11 +4991,12 @@ struct AssistantViewModel::State {
         if (!steering) native_records.clear(); // No native worker/call or old control can survive the guards above.
         auto native = std::make_shared<NativeReceipt>();
         native->serial = ++native_serial;
+        projection.input = native_serial; // Exact own admission, before any transport/publication callback.
         native->objective = text; native->approved_context = contextBytes; native->disclosure = disclosure;
         native->project = project; native->generation = generation; native->thread = generic_thread;
         native->selected_context = file_context(); native->selected_hashes = generic_input_hashes;
         if (project) native->stamps = edi::work_stamps(*project->assistantProject());
-        const auto row = public_row("user", text, {}, "pending");
+        const auto row = public_row("user", text, input_file_payload(), "pending");
         params["clientUserMessageId"] = row.value("id");
         if (steering) params["expectedTurnId"] = generic_turn;
         else {
@@ -4791,40 +5015,94 @@ struct AssistantViewModel::State {
             params["approvalPolicy"] = "on-request"; params["approvalsReviewer"] = "user";
             agent->beginOperation(Limits::inference_total_ms, Limits::inference_idle_ms);
         }
-        const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params, [this, row, steering, result, native](const QString& id) {
-            try {
-                if (steering) generic_rpc_turns.insert(id, PendingSteer{generic_thread, generic_turn, false});
-                generic_rpc_rows.insert(id, row.value("id").toString());
-                if (result) result_pending.insert(id, result);
-                native_pending.insert(id, native);
-                native_charge(); // Pending receipt immediately participates in assembly/record admission.
-                if (!generic_present(row)) {
-                    generic_rpc_rows.remove(id); generic_rpc_turns.remove(id); result_pending.remove(id); native_pending.remove(id);
-                    native_restore_charge(); return false;
+        if (!projection.current()) return {}; // beginOperation can synchronously retire the original input.
+        const auto publicId = row.value("id").toString();
+        const auto originalThread = generic_thread, originalTurn = generic_turn;
+        const auto originalApproval = approved_scope, originalBackend = backend_scope;
+        const auto originalFolder = working_folder;
+        const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params,
+            [this, row, publicId, steering, result, native, projection,
+             originalThread, originalTurn, originalApproval, originalBackend, originalFolder](const QString& id) {
+            // This is the actual before-write boundary, after optional usage may have notified observers.
+            const auto current = [&] {
+                return projection.current() && native_serial == native->serial && !native->retired &&
+                    native->generation == generation && native->project == project &&
+                    native->thread == originalThread && generic_thread == originalThread && generic_turn == originalTurn &&
+                    approved_scope == originalApproval && backend_scope == originalBackend && working_folder == originalFolder;
+            };
+            const auto admissible = [&] {
+                return current() && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
+                    !generic_context_pending && !generic_clear_pending && !generic_blocked && !native_blocked &&
+                    generic_busy == steering && (!originalFolder || originalFolder->current());
+            };
+            bool turn_owned = false, row_owned = false, result_owned = false, native_owned = false;
+            const auto entries_current = [&] {
+                if (!current()) return false;
+                if (turn_owned) {
+                    const auto at = generic_rpc_turns.constFind(id);
+                    if (at == generic_rpc_turns.cend() || at->thread != originalThread || at->turn != originalTurn) return false;
                 }
-                generic_writing_input = true; generic_busy = true; return true;
+                return (!row_owned || generic_rpc_rows.value(id) == publicId) &&
+                    (!result_owned || result_pending.value(id) == result) &&
+                    (!native_owned || native_pending.value(id) == native);
+            };
+            const auto release = [&] {
+                if (!entries_current()) return;
+                if (turn_owned) generic_rpc_turns.remove(id);
+                if (row_owned) generic_rpc_rows.remove(id);
+                if (result_owned) result_pending.remove(id);
+                if (native_owned) native_pending.remove(id);
+                // Retention can synchronously fail/retire/reenter. Never fence B from its catch.
+                try { native_charge(); }
+                catch (...) { if (current()) native_fence(); }
+            };
+            try {
+                if (!admissible()) return false;
+                if (generic_rpc_rows.contains(id) || generic_rpc_turns.contains(id) ||
+                    result_pending.contains(id) || native_pending.contains(id)) return false;
+                if (steering) { generic_rpc_turns.insert(id, PendingSteer{originalThread, originalTurn, false}); turn_owned = true; }
+                generic_rpc_rows.insert(id, publicId); row_owned = true;
+                if (result) { result_pending.insert(id, result); result_owned = true; }
+                native_pending.insert(id, native); native_owned = true;
+                native_charge(); // The original pending receipt is charged before archive/wire admission.
+                if (!entries_current() || !admissible()) { release(); return false; }
+                if (!generic_present(row)) { release(); return false; }
+                if (!entries_current() || !admissible()) { release(); return false; }
+                generic_writing_input = true; generic_busy = true;
+                return true;
             } catch (...) {
-                generic_rpc_rows.remove(id); generic_rpc_turns.remove(id); result_pending.remove(id); native_pending.remove(id);
-                native_restore_charge(); return false;
+                release(); return false;
             }
         });
+        if (!projection.current()) return rpc.isEmpty() ? QString{} : publicId;
         if (rpc.isEmpty()) { if (!steering && !generic_writing_input) agent->settleOperation(); throw std::runtime_error("Agent input could not be admitted"); }
-        error.clear(); notify();
+        generic_writing_input = false;
+        error.clear();
+        try { notify(); } catch (...) {} // Presentation cannot revoke a real admitted row.
+        return publicId;
     }
 #endif
 
-    void retire_file_selection() noexcept {
+    void retire_file_selection(FileProjection* continuation = nullptr) noexcept {
+        if (continuation && !continuation->input_current()) return;
 #ifndef __EMSCRIPTEN__
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto binding = generation;
         const bool transitioning = working_folder_transition;
         working_folder_transition = true;
-        struct Release { bool& flag; bool previous; ~Release() { flag = previous; } } release{working_folder_transition, transitioning};
+        const auto release = qScopeGuard([this, receiver, transitioning] {
+            if (receiver && receiver->state_.get() == this) working_folder_transition = transitioning;
+        });
 #endif
         if (file_epoch == UINT64_MAX) file_authority_exhausted = true;
         else ++file_epoch;
+        if (continuation) continuation->files = file_epoch;
         QString id;
         if (file_selection) { id = std::move(file_selection->id); file_selection.reset(); }
 #ifndef __EMSCRIPTEN__
+        const auto retired_epoch = file_epoch;
         retire_working_folder_selection();
+        if (!receiver || receiver->state_.get() != this || generation != binding || file_epoch != retired_epoch) return;
 #endif
         // Authority is already gone before receiver cleanup can allocate or reenter.
         if (!id.isEmpty()) try { emit owner.fileSelectionRetired(id); } catch (...) {}
@@ -4871,9 +5149,46 @@ struct AssistantViewModel::State {
         return descriptor.value("collection_id").toString() == scope.collection_id &&
             file_generation(descriptor) == scope.selection_generation;
     }
-    bool flush_selected_rows() {
+    bool file_was_sent(const QString& id) const {
+        for (const auto& value : history) {
+            const auto row = value.toObject();
+            if (row.value("kind") != "user" || row.value("status") != "completed") continue;
+            const auto payload = row.value("payload").toObject();
+            if (payload.value("type") != "ediInput") continue;
+            const auto files = payload.value("files").toArray();
+            if (files.size() > static_cast<qsizetype>(edi::assistant::SelectedFileLimits::files)) continue;
+            for (const auto& file : files)
+                if (file.toObject().value("id") == id) return true;
+        }
+        return false;
+    }
+    Object input_file_payload() const {
+        QJsonArray files;
+        for (const auto& value : selected_rows) {
+            auto row = value.toObject();
+            if (file_was_sent(row.value("id").toString())) continue;
+            row.remove("pending");
+            files.append(row); // Already bounded descriptors, never content bytes or source paths.
+        }
+        return files.isEmpty() ? Object{} : Object{{"type", "ediInput"}, {"files", files}};
+    }
+    bool refresh_file_presentation(FileProjection& proof) {
+        if (!proof.current()) return false;
+        auto rows = selected_rows;
+        for (qsizetype i = 0; i < rows.size(); ++i) {
+            auto row = rows[i].toObject();
+            row["pending"] = !file_was_sent(row.value("id").toString());
+            rows[i] = row;
+        }
+        if (rows == selected_rows) return proof.current();
+        return publish_selected_rows(std::move(rows), proof); // Presentation only; no Controller operation.
+    }
+    bool flush_selected_rows(FileProjection& proof) {
+        if (!proof.current()) return false;
         if (!selected_rows_dirty) return true;
         try {
+            // Even a failed nested projection attempt supersedes outer cleanup.
+            if (!claim_file_projection(proof)) return false;
             if (selected_reply.size() > edi::assistant::Limits::context_bytes) throw std::length_error("Selected-file descriptor exceeds limit");
             QJsonParseError parsing;
             const auto document = QJsonDocument::fromJson(QByteArray::fromStdString(selected_reply), &parsing);
@@ -4884,25 +5199,88 @@ struct AssistantViewModel::State {
             for (const auto& value : descriptor.value("files").toArray()) {
                 const auto file = value.toObject();
                 rows.append(Object{{"id", file.value("id")}, {"name", file.value("name")}, {"bytes", file.value("bytes")},
-                                   {"textReadable", file.value("text_readable")}, {"format", file.value("format")}});
+                                   {"textReadable", file.value("text_readable")}, {"format", file.value("format")},
+                                   {"pending", !file_was_sent(file.value("id").toString())}});
             }
-            selected_rows.swap(rows);
-            selected_files.assign(selected_rows);
+            if (!publish_selected_rows(std::move(rows), proof)) return false;
             selected_rows_dirty = false;
             if (error == QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.")) error.clear();
             return true;
         } catch (...) {
-            error = QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.");
+            if (proof.current()) error = QObject::tr("Selected files were retained, but their list could not be displayed. Sending is blocked until the list recovers or the conversation is cleared.");
             return false;
         }
     }
-    void observe_file_connection(const Object& incoming) {
+    bool add_selected_files(const QString& requestId, const QList<QUrl>& urls, FileProjection& projection) {
+        if (QThread::currentThread() != owner.thread() || !file_selection || file_selection->id != requestId) return false;
+        bool admitted = false;
+        try {
+            if (!claim_file_projection(projection)) return false;
+            if (!file_current(*file_selection)) { retire_file_selection(); return false; }
+            auto scope = std::move(*file_selection); file_selection.reset();
+            file_staging = true; // No notification occurs until this original staging interval has ended.
+            try {
+                if (urls.isEmpty()) throw std::runtime_error("No files were selected");
+                if (project && project->fit()->running()) throw std::runtime_error("Finish the active operation before selecting files");
+                auto files = read_selected_urls(urls, file_context());
+    #ifndef __EMSCRIPTEN__
+                auto generic_stage = generic_mode ? generic_stage_files(files) : nullptr;
+    #endif
+                if (!file_current(scope)) throw std::runtime_error("The selected-file owner changed");
+                auto result = controller->update_selected_files(scope.next_collection_id.toStdString(), scope.selection_generation, std::move(files), {});
+                admitted = result.ok;
+                if (admitted) {
+    #ifndef __EMSCRIPTEN__
+                    if (generic_stage) {
+                        generic_input_paths.swap(generic_stage->paths);
+                        generic_input_hashes.swap(generic_stage->hashes);
+                        generic_stage->fresh.clear();
+                    }
+    #endif
+                    selected_reply = std::move(result.value); // Preserve the actual admitted descriptor before any notification.
+                    selected_rows_dirty = true;
+                    consented_context.clear(); error.clear();
+                } else error = State::bounded_error(object(result.value).value("message").toString());
+            } catch (const std::exception& exception) { error = bounded_error(QString::fromUtf8(exception.what())); }
+            catch (...) { error = QObject::tr("Selected files could not be retained. Existing files are preserved."); }
+            file_staging = false;
+            // Everything after this point can reenter or delete the receiver; A never cleans up B's staging.
+    #ifndef __EMSCRIPTEN__
+            if (admitted && generic_mode) {
+                (void)generic_context_changed(false, &projection);
+                if (!projection.current()) return admitted;
+                native = generic_native;
+            }
+    #endif
+            if (admitted && !flush_selected_rows(projection) && !projection.current()) return admitted;
+            if (!projection.current()) return admitted;
+            try { emit owner.fileSelectionRetired(requestId); } catch (...) {}
+            if (!projection.current()) return admitted;
+            try { notify(); } catch (...) {}
+            return admitted;
+        } catch (...) {
+            if (!projection.current()) return admitted;
+            file_staging = false;
+            error = QObject::tr("Selected files could not be retained. Inspect the file list before retrying.");
+            if (file_selection && file_selection->id == requestId) {
+                projection.files = file_epoch == UINT64_MAX ? UINT64_MAX : file_epoch + 1;
+                retire_file_selection();
+                if (!projection.current()) return admitted;
+            }
+            try { notify(); } catch (...) {}
+            return admitted;
+        }
+    }
+    void observe_file_connection(const Object& incoming, FileProjection& publication) {
         if (incoming.value("type") != "connection") return;
         const auto next = incoming.value("connection_id").toString();
         if (next != connection_scope || incoming.value("status") != "ready") {
             if (file_connection_epoch == UINT64_MAX) file_authority_exhausted = true;
             else ++file_connection_epoch;
-            retire_file_selection(); consented_context.clear();
+            publication.connection = file_connection_epoch;
+            retire_file_selection(&publication);
+            if (!publication.input_current()) return;
+            consented_context.clear();
         }
     }
     static void read_selected_bytes(QFile& file, std::vector<std::uint8_t>& bytes, std::size_t size) {
@@ -5010,6 +5388,12 @@ struct AssistantViewModel::State {
         }
         return true;
     }
+    QString input_refusal(const QString& explanation) const {
+#ifndef __EMSCRIPTEN__
+        if (generic_mode && generic_blocked && !generic_authenticated && !error.isEmpty()) return error;
+#endif
+        return explanation;
+    }
     static QString bounded_error(const QString& source) {
         QByteArray bytes;
         for (qsizetype i = 0; i < source.size();) {
@@ -5025,10 +5409,13 @@ struct AssistantViewModel::State {
         return QString::fromUtf8(bytes);
     }
     void reconcile_history() noexcept {
+        const auto projection = file_projection();
         try {
             messages.assign(history);
+            if (!projection.current()) return;
             render_dirty = false;
         } catch (...) {
+            if (!projection.current()) return;
             // The actual archive discard already committed. Failure to present
             // it is a UI/storage warning, never an invented failed discard.
             render_dirty = true; error = storage_error;
@@ -5042,10 +5429,15 @@ struct AssistantViewModel::State {
         render_queued = QMetaObject::invokeMethod(&owner, [this] {
             render_queued = false;
             if (!publishing) return;
+            auto projection = file_projection();
             try {
-                messages.assign(history); render_dirty = false;
+                if (!refresh_file_presentation(projection)) return;
+                if (!projection.current()) return;
+                messages.assign(history);
+                if (!projection.current()) return;
+                render_dirty = false;
                 sync();
-            } catch (...) { error = storage_error; render_dirty = true; }
+            } catch (...) { if (projection.current()) { error = storage_error; render_dirty = true; } }
         }, Qt::QueuedConnection);
         return render_queued;
     }
@@ -5189,50 +5581,61 @@ struct AssistantViewModel::State {
     }
 
     void notify() {
-        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto projection = file_projection();
+        const auto current = [&] { return projection.publication_current(); };
+        if (!current()) return;
+        try {
 #ifndef __EMSCRIPTEN__
-        if (native_widget && !question.isEmpty()) {
-            const auto run = native_widget;
-            widget_refuse(run, QObject::tr("The visible action was interrupted by a question; inspect its actual outcome"));
-            if (!receiver) return;
+            if (native_widget && !question.isEmpty()) {
+                const auto run = native_widget;
+                widget_refuse(run, QObject::tr("The visible action was interrupted by a question; inspect its actual outcome"));
+                if (!current()) return;
+            }
+            if (showing_actions && (!generic_busy || generic_revoke_pending || generic_clear_pending ||
+                generic_context_pending || !generic_authenticated || generic_retiring || !question.isEmpty())) {
+                widget_showing(false); // One terminal/question restoration; never per successful tool.
+                if (!current()) return;
+            }
+#endif
+#ifndef __EMSCRIPTEN__
+            // Pending protocol/UI continuations cannot acknowledge a failed archive
+            // write. Genuine account/failure retirement still exposes its own cause.
+            if (generic_mode && generic_authenticated && generic_context_retention_pending)
+                error = generic_context_retention_error;
+#endif
+#ifndef __EMSCRIPTEN__
+            if (generic_mode && native_blocked && !(generic_blocked && !generic_authenticated && !error.isEmpty()))
+                error = native_capacity_error;
+#endif
+            const auto property = [&](const QString& name, auto getter, auto signal) {
+                if (!current()) return false;
+                const auto value = (projection.receiver.data()->*getter)();
+                if (!current()) return false;
+                const QVariant next = QVariant::fromValue(value);
+                if (!observed.contains(name) || observed.value(name) != next) {
+                    observed[name] = next;
+                    (projection.receiver.data()->*signal)();
+                }
+                return current();
+            };
+            if (!property("state", &AssistantViewModel::state, &AssistantViewModel::stateChanged)) return;
+            if (!property("connected", &AssistantViewModel::connected, &AssistantViewModel::connectedChanged)) return;
+            if (!property("connectionLabel", &AssistantViewModel::connectionLabel, &AssistantViewModel::connectionLabelChanged)) return;
+            if (!property("selectedModel", &AssistantViewModel::selectedModel, &AssistantViewModel::selectedModelChanged)) return;
+            if (!property("selectedSkill", &AssistantViewModel::selectedSkill, &AssistantViewModel::selectedSkillChanged)) return;
+            if (!property("selectedEffort", &AssistantViewModel::selectedEffort, &AssistantViewModel::selectedEffortChanged)) return;
+            if (!property("availableEfforts", &AssistantViewModel::availableEfforts, &AssistantViewModel::availableEffortsChanged)) return;
+            if (!property("pendingPlan", &AssistantViewModel::pendingPlan, &AssistantViewModel::pendingPlanChanged)) return;
+            if (!property("pendingQuestion", &AssistantViewModel::pendingQuestion, &AssistantViewModel::pendingQuestionChanged)) return;
+            if (!property("activeJobId", &AssistantViewModel::activeJobId, &AssistantViewModel::activeJobIdChanged)) return;
+            if (!property("canCancel", &AssistantViewModel::canCancel, &AssistantViewModel::canCancelChanged)) return;
+            if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
+            if (!property("workingFolder", &AssistantViewModel::workingFolder, &AssistantViewModel::workingFolderChanged)) return;
+            if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
+            if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextPreviewChanged)) return;
+        } catch (...) {
+            if (current()) throw; // Never unwind into an old caller after deletion/rebind.
         }
-        if (showing_actions && (!generic_busy || generic_revoke_pending || generic_clear_pending ||
-            generic_context_pending || !generic_authenticated || generic_retiring || !question.isEmpty())) {
-            const auto before = generation;
-            widget_showing(false); // One terminal/question restoration; never per successful tool.
-            if (!receiver || generation != before) return;
-        }
-#endif
-#ifndef __EMSCRIPTEN__
-        // Pending protocol/UI continuations cannot acknowledge a failed archive
-        // write. Genuine account/failure retirement still exposes its own cause.
-        if (generic_mode && generic_authenticated && generic_context_retention_pending)
-            error = generic_context_retention_error;
-#endif
-#ifndef __EMSCRIPTEN__
-        if (generic_mode && native_blocked) error = native_capacity_error;
-#endif
-        const auto scope = generation;
-        auto property = [this, scope](const QString& name, const auto& value, auto signal) {
-            if (scope != generation) return;
-            const QVariant next = QVariant::fromValue(value);
-            if (!observed.contains(name) || observed.value(name) != next) { observed[name] = next; (owner.*signal)(); }
-        };
-        property("state", owner.state(), &AssistantViewModel::stateChanged);
-        property("connected", owner.connected(), &AssistantViewModel::connectedChanged);
-        property("connectionLabel", owner.connectionLabel(), &AssistantViewModel::connectionLabelChanged);
-        property("selectedModel", owner.selectedModel(), &AssistantViewModel::selectedModelChanged);
-        property("selectedSkill", owner.selectedSkill(), &AssistantViewModel::selectedSkillChanged);
-        property("selectedEffort", owner.selectedEffort(), &AssistantViewModel::selectedEffortChanged);
-        property("availableEfforts", owner.availableEfforts(), &AssistantViewModel::availableEffortsChanged);
-        property("pendingPlan", owner.pendingPlan(), &AssistantViewModel::pendingPlanChanged);
-        property("pendingQuestion", owner.pendingQuestion(), &AssistantViewModel::pendingQuestionChanged);
-        property("activeJobId", owner.activeJobId(), &AssistantViewModel::activeJobIdChanged);
-        property("canCancel", owner.canCancel(), &AssistantViewModel::canCancelChanged);
-        property("lastError", owner.lastError(), &AssistantViewModel::lastErrorChanged);
-        property("workingFolder", owner.workingFolder(), &AssistantViewModel::workingFolderChanged);
-        property("contextPreview", owner.contextPreview(), &AssistantViewModel::contextPreviewChanged);
-        property("contextConsentRequired", owner.contextConsentRequired(), &AssistantViewModel::contextPreviewChanged);
     }
     ~State() {
         publishing = false; retire_file_selection(); timer.stop(); ++generation;
@@ -5278,31 +5681,40 @@ struct AssistantViewModel::State {
         }
         messages.assign(history);
 #ifndef __EMSCRIPTEN__
-        const auto sink = [this](const std::string& text) {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto sink = [this, receiver](const std::string& text) {
+            if (!receiver || receiver->state_.get() != this) return;
+            auto publication = file_projection();
             const auto incoming_generation = generation;
             Object incoming;
-            try { incoming = object(text); observe_file_connection(incoming); }
-            catch (...) { retire_file_selection(); throw; }
+            try { incoming = object(text); observe_file_connection(incoming, publication); }
+            catch (...) { if (publication.input_current()) { retire_file_selection(&publication); throw; } return; }
+            if (!publication.input_current()) return;
             // Snapshot native diagnostics at the exact terminal emission, not
             // after queued callbacks can change the connection's last error.
             QString emitted_code;
             if (incoming.value("type") == "turn_finished" && connection) {
                 const auto emitted_state = object(connection->state());
+                if (!publication.input_current()) return;
                 const auto code = emitted_state.value("last_error_code").toString();
                 if (incoming.value("connection_id") == emitted_state.value("connection_id") &&
                     code.startsWith("edi.assistant.") && static_cast<std::uint64_t>(code.toUtf8().size()) <= Limits::id_bytes)
                     emitted_code = code;
             }
-            QMetaObject::invokeMethod(&owner, [this, text, incoming, emitted_code, incoming_generation] {
-                if (!publishing || !controller || incoming_generation != generation) return;
+            QMetaObject::invokeMethod(&owner, [this, publication, text, incoming, emitted_code, incoming_generation] {
+                if (!publication.input_current() || !controller || incoming_generation != generation) return;
                 try {
-                    native = object(connection->state());
+                    const auto next_native = object(connection->state());
+                    if (!publication.input_current()) return;
+                    native = next_native;
                     const auto current_turn = object(controller->state()).value("active_turn_id").toString();
+                    if (!publication.input_current()) return;
                     const bool terminal = incoming.value("type") == "turn_finished" &&
                         incoming.value("connection_id") == native.value("connection_id") &&
                         incoming.value("turn_id").toString() == current_turn &&
                         failure_slot && failure_slot->request_id == incoming.value("request_id").toString();
                     const auto reply = controller->provider_event(text);
+                    if (!publication.input_current()) return;
                     if (!reply.ok) error = bounded_error(object(reply.value).value("message").toString());
                     if (terminal) {
                         if (incoming.value("status") == "completed" && reply.ok) failure_slot.reset();
@@ -5318,8 +5730,10 @@ struct AssistantViewModel::State {
                     }
                     sync();
                 } catch (...) {
+                    if (!publication.input_current()) return;
                     error = storage_error;
                     controller->cancel();
+                    if (!publication.input_current()) return;
                     (void)queue_render();
                 }
             }, Qt::QueuedConnection);
@@ -5329,12 +5743,20 @@ struct AssistantViewModel::State {
 #endif
         timer.setInterval(200);
         QObject::connect(&timer, &QTimer::timeout, &owner, [this] {
+            auto projection = file_projection();
             try {
                 if (controller) controller->poll();
-                if (render_dirty) { messages.assign(history); render_dirty = false; }
-                if (selected_rows_dirty) (void)flush_selected_rows();
+                if (!projection.current()) return;
+                if (render_dirty) {
+                    if (!refresh_file_presentation(projection)) return;
+                    messages.assign(history);
+                    if (!projection.current()) return;
+                    render_dirty = false;
+                }
+                if (selected_rows_dirty && !flush_selected_rows(projection)) return;
+                if (!projection.current()) return;
                 sync();
-            } catch (...) { error = storage_error; render_dirty = true; }
+            } catch (...) { if (projection.current()) { error = storage_error; render_dirty = true; } }
         });
         timer.start();
     }
@@ -5577,12 +5999,16 @@ struct AssistantViewModel::State {
         }
     }
     void select_from_catalog(const QJsonArray& choices) {
+        const auto projection = file_projection();
+        const auto current = [&] { return projection.publication_current(); };
         if (native.value("status") != "ready" || choices.isEmpty()) {
             restore_choice_pending = true;
             return; // Sign-out/empty catalogs must neither erase nor persist an automatic fallback.
         }
-        if (owner.canCancel()) return;
+        const bool busy = owner.canCancel();
+        if (!current() || busy) return;
         load_choice_preference();
+        if (!current()) return;
         const auto available = [&](const QString& id) {
             for (const auto& value : choices) {
                 const auto row = value.toObject();
@@ -5622,11 +6048,15 @@ struct AssistantViewModel::State {
         }
     }
     void sync_skills() {
+        const auto projection = file_projection();
+        const auto current = [&] { return projection.publication_current(); };
+        if (!current()) return;
         try {
-            if (!controller) { skills.assign({}); selected_skill.clear(); skill_catalog_binding.clear(); workflow_error.clear(); return; }
+            if (!controller) { selected_skill.clear(); skill_catalog_binding.clear(); workflow_error.clear(); skills.assign({}); return; }
             // This bounded host door is independent of project-context size or
             // scientific validity; it must remain usable for smaller-skill recovery.
             const auto reply = controller->user_command(json(Object{{"schema", "edi.assistant/1"}, {"type", "skill_catalog"}}));
+            if (!current()) return;
             if (!reply.ok) {
                 workflow_error = bounded_error(object(reply.value).value("message").toString()); return;
             }
@@ -5640,85 +6070,102 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("Workflow catalog exceeds its bounded model");
             auto binding = id.toUtf8();
             for (const auto& row : rows) binding.append(row.toObject().value("available").toBool() ? '1' : '0');
-            if (binding != skill_catalog_binding) { skills.assign(rows); selected_skill = id; skill_catalog_binding = binding; }
             workflow_error.clear();
+            if (binding != skill_catalog_binding) {
+                selected_skill = id; skill_catalog_binding = binding;
+                skills.assign(rows); // Terminal: nested selection owns any newer scalar/catalog state.
+            }
         } catch (...) {
+            if (!current()) return;
             // A normal assistant-capacity/catalog refusal cannot unwind manual
             // Session project replacement or prevent other state synchronization.
             workflow_error = QObject::tr("Workflow guidance is unavailable within the assistant limits.");
         }
     }
     void sync() {
-        const auto scope = generation;
-        const Object next_core = controller ? object(controller->state()) : Object{};
+        const auto projection = file_projection();
+        const auto current = [&] { return projection.publication_current(); };
+        if (!current()) return;
+        try {
+            const Object next_core = controller ? object(controller->state()) : Object{};
+            if (!current()) return;
 #ifndef __EMSCRIPTEN__
-        const Object next_native = generic_mode ? generic_native : object(connection->state());
+            const Object next_native = generic_mode ? generic_native : object(connection->state());
 #else
-        const Object next_native{{"status", "disconnected"}};
+            const Object next_native{{"status", "disconnected"}};
 #endif
-        core = next_core; native = next_native;
-        QJsonArray choices;
-        for (const auto& value : native.value("models").toArray()) {
-            const auto item = value.toObject(); choices.append(Object{{"id", item.value("id")},
-                {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", item.value("available").toBool()}});
-        }
+            if (!current()) return;
+            core = next_core; native = next_native;
+            QJsonArray choices;
+            for (const auto& value : native.value("models").toArray()) {
+                const auto item = value.toObject(); choices.append(Object{{"id", item.value("id")},
+                    {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", item.value("available").toBool()}});
+            }
 #ifndef __EMSCRIPTEN__
-        if (!generic_mode) sync_skills();
+            if (!generic_mode) sync_skills();
 #else
-        sync_skills();
+            sync_skills();
 #endif
-        if (scope != generation) return;
-        models.assign(choices);
-        if (scope != generation) return;
-        select_from_catalog(choices);
-        if (scope != generation) return;
-        if (core.value("pending_plan_id").toString().isEmpty()) plan = {};
-        #ifndef __EMSCRIPTEN__
-        if (!generic_mode)
+            if (!current()) return;
+            models.assign(choices);
+            if (!current()) return;
+            select_from_catalog(choices);
+            if (!current()) return;
+            if (core.value("pending_plan_id").toString().isEmpty()) plan = {};
+            #ifndef __EMSCRIPTEN__
+            if (!generic_mode)
 #endif
-        if (core.value("pending_question_id").toString().isEmpty()) question = {};
-        const auto native_error = native.value("last_error").toString();
-        if (auth_pending && (native.value("status") == "ready" || !native_error.isEmpty())) auth_pending = false;
-        if (native_error != observed_native_error) {
-            observed_native_error = native_error;
-            if (!native_error.isEmpty()) error = bounded_error(native_error);
+            if (core.value("pending_question_id").toString().isEmpty()) question = {};
+            const auto native_error = native.value("last_error").toString();
+            if (auth_pending && (native.value("status") == "ready" || !native_error.isEmpty())) auth_pending = false;
+            if (native_error != observed_native_error) {
+                observed_native_error = native_error;
+                if (!native_error.isEmpty()) error = bounded_error(native_error);
+            }
+            notify();
+        } catch (...) {
+            if (current()) throw;
         }
-        notify();
     }
     edi::assistant::Reply command(Object command) {
+        const auto publication = file_projection();
         if (!controller) return {false, "edi.assistant.interrupted", "{}"};
         command["schema"] = "edi.assistant/1";
         auto reply = controller->user_command(json(command));
+        if (!publication.input_current()) return reply;
         if (!reply.ok) error = object(reply.value).value("message").toString();
         else error.clear();
-        sync(); notify();
+        sync();
         return reply;
     }
     std::unique_ptr<edi::assistant::Controller> make_controller(ProjectViewModel* target, std::uint64_t binding,
                                                                std::shared_ptr<bool> active = {}) {
+        const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> bound_project(target);
         edi::assistant::Hooks hooks;
-        hooks.reserve_terminal = [this, binding, bound_project, active](const std::string& input) {
-            if (generation != binding || (active && !*active) || project != bound_project) throw std::runtime_error("The assistant owner was replaced");
+        hooks.reserve_terminal = [this, receiver, binding, bound_project, active](const std::string& input) {
+            if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || project != bound_project) throw std::runtime_error("The assistant owner was replaced");
             return reserve(input);
         };
-        hooks.event = [this, binding, bound_project, active](const std::string& text) { if (generation == binding && (!active || *active) && project == bound_project) event(text); };
-        hooks.apply = [this, binding, bound_project, active](const edi::Edit& edit, bool structural) {
-            if (generation != binding || (active && !*active) || !bound_project || project != bound_project) return std::string("The project was closed or replaced");
+        hooks.event = [this, receiver, binding, bound_project, active](const std::string& text) { if (receiver && receiver->state_.get() == this && generation == binding && (!active || *active) && project == bound_project) event(text); };
+        hooks.apply = [this, receiver, binding, bound_project, active](const edi::Edit& edit, bool structural) {
+            if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return std::string("The project was closed or replaced");
             const auto edit_scope = begin_own_edit();
             try {
                 const auto error_text = bound_project->apply(edit, structural);
-                end_own_edit(edit_scope);
+                if (receiver && receiver->state_.get() == this) end_own_edit(edit_scope);
                 return error_text.toStdString();
-            } catch (...) { end_own_edit(edit_scope); throw; }
+            } catch (...) { if (receiver && receiver->state_.get() == this) end_own_edit(edit_scope); throw; }
         };
-        hooks.provider_request = [this, binding, bound_project, active](const std::string& text) {
-            if (generation != binding || (active && !*active) || project != bound_project) return;
+        hooks.provider_request = [this, receiver, binding, bound_project, active](const std::string& text) {
+            if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || project != bound_project) return;
+            const auto publication = file_projection();
             const auto scope = generation;
             const auto captured = object(text);
-            if (!QMetaObject::invokeMethod(&owner, [this, text, scope, captured] {
-                if (!publishing || !controller || scope != generation) return;
+            if (!QMetaObject::invokeMethod(&owner, [this, publication, text, scope, captured] {
+                if (!publication.input_current() || !controller || scope != generation) return;
                 const auto current_turn = object(controller->state()).value("active_turn_id").toString();
+                if (!publication.input_current()) return;
                 if (captured.value("turn_id").toString() != current_turn || current_turn.isEmpty() ||
                     captured.value("request_id").toString() != queued_request) return;
                 try {
@@ -5726,25 +6173,33 @@ struct AssistantViewModel::State {
                     failure_slot->request_id = captured.value("request_id").toString();
 #ifndef __EMSCRIPTEN__
                     const auto current_native = object(connection->state());
+                    if (!publication.input_current()) return;
                     if (captured.value("connection_id") != current_native.value("connection_id")) return;
                     const auto requested_context = QJsonDocument(captured.value("context").toObject()).toJson(QJsonDocument::Compact);
                     if (requested_context != consented_context) {
                         error = QObject::tr("Project context changed. Inspect and approve the current outgoing context before continuing.");
                         retain_failure(captured, "edi.assistant.interrupted", error);
-                        controller->cancel(); sync(); return;
+                        controller->cancel();
+                        if (!publication.input_current()) return;
+                        sync(); return;
                     }
                     const auto reply = connection->send(text);
+                    if (!publication.input_current()) return;
                     if (!reply.ok) {
                         error = bounded_error(object(reply.value).value("message").toString());
                         retain_failure(captured, QString::fromStdString(reply.code), error);
-                        controller->cancel(); sync();
+                        controller->cancel();
+                        if (!publication.input_current()) return;
+                        sync();
                     }
 #else
                     error = QObject::tr("Browser AI connection is unavailable in this build.");
                     retain_failure(captured, "edi.assistant.connection_required", error);
-                    controller->cancel(); sync();
+                    controller->cancel();
+                    if (!publication.input_current()) return;
+                    sync();
 #endif
-                } catch (...) { error = storage_error; controller->cancel(); (void)queue_render(); }
+                } catch (...) { if (publication.input_current()) { error = storage_error; controller->cancel(); if (publication.input_current()) (void)queue_render(); } }
             }, Qt::QueuedConnection)) throw std::runtime_error("Assistant dispatch queue is unavailable");
         };
         auto prepared = std::make_unique<edi::assistant::Controller>(target ? target->assistantWorker() : *idle_worker, std::move(hooks));
@@ -5752,64 +6207,78 @@ struct AssistantViewModel::State {
             const auto reply = prepared->attach(bound_project->assistantProject(), QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString());
             if (!reply.ok) throw std::runtime_error("Native project context could not be prepared");
         }
-        if (generation != binding || (target && !bound_project)) throw std::runtime_error("Native project attachment was superseded");
+        if (!receiver || receiver->state_.get() != this || generation != binding || (target && !bound_project)) throw std::runtime_error("Native project attachment was superseded");
         return prepared;
     }
     void connect_project(ProjectViewModel* target, std::uint64_t binding, std::shared_ptr<bool> active = {}) {
+        const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> bound_project(target);
         if (target) {
-            QObject::connect(target, &ProjectViewModel::projectEdited, &owner, [this, binding, bound_project, active] {
-                if (generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
+            QObject::connect(target, &ProjectViewModel::projectEdited, &owner, [this, receiver, binding, bound_project, active] {
+                if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
+                auto publication = file_projection();
                 if (controller && !applying_own_edit()) {
 #ifndef __EMSCRIPTEN__
                     if (generic_mode) retire_result();
 #endif
-                    retire_file_selection();
-                    if (generation != binding || (active && !*active) || !bound_project || project != bound_project || !controller) return;
-                    controller->notify_changed(); plan = {}; question = {};
+                    if (!publication.input_current()) return;
+                    retire_file_selection(&publication);
+                    if (!publication.input_current()) return;
+                    if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project || !controller) return;
+                    controller->notify_changed();
+                    if (!publication.input_current()) return;
+                    plan = {}; question = {};
 #ifndef __EMSCRIPTEN__
-                    if (generic_mode) (void)generic_context_changed(true);
+                    if (generic_mode) (void)generic_context_changed(true, &publication);
 #endif
+                    if (!publication.input_current()) return;
                     sync();
                 }
             });
 #ifndef __EMSCRIPTEN__
-            QObject::connect(target->fit(), &FitViewModel::iterationsChanged, &owner, [this, binding, bound_project, active] {
-                if (generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
+            QObject::connect(target->fit(), &FitViewModel::iterationsChanged, &owner, [this, receiver, binding, bound_project, active] {
+                if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
                 if (generic_mode && native_fit && native_call && native_current(native_call->receipt)) agent->activity();
             });
 #endif
-            QObject::connect(target->fit(), &FitViewModel::finished, &owner, [this, binding, bound_project, active] {
-                if (generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
+            QObject::connect(target->fit(), &FitViewModel::finished, &owner, [this, receiver, binding, bound_project, active] {
+                if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
 #ifndef __EMSCRIPTEN__
                 if (generic_mode && native_fit) return;
 #endif
+                auto publication = file_projection();
 #ifndef __EMSCRIPTEN__
                 if (generic_mode) retire_result();
 #endif
-                retire_file_selection();
-                if (generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
+                if (!publication.input_current()) return;
+                retire_file_selection(&publication);
+                if (!publication.input_current()) return;
+                if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
                 if (controller) controller->notify_changed();
+                if (!publication.input_current()) return;
 #ifndef __EMSCRIPTEN__
-                if (generic_mode) (void)generic_context_changed(true);
+                if (generic_mode) (void)generic_context_changed(true, &publication);
 #endif
+                if (!publication.input_current()) return;
                 sync();
             });
         }
     }
     bool bind(ProjectViewModel* next, bool managedResult = false, bool preserveNativeSettlement = false) {
+        const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> target(next);
         const bool has_target = next != nullptr;
         if (generation == UINT64_MAX) throw std::length_error("Assistant owner identity is exhausted");
         const auto binding = ++generation;
 #ifndef __EMSCRIPTEN__
+        working_folder_transition = false;
         approved_scope.reset(); backend_scope.reset(); bootstrap_scope.reset(); disclosure_cache.reset(); generic_context_reuse = false;
 #endif
         own_edit.reset();
-        const auto current = [&] { return generation == binding && (!has_target || target); };
+        const auto current = [&] { return receiver && receiver->state_.get() == this && generation == binding && (!has_target || target); };
 #ifndef __EMSCRIPTEN__
         const bool replacedNativeOwner = target != project;
-        if (generic_mode) try { native_retire(true, true); } catch (...) { generic_fail(QObject::tr("The native request could not be retired during project replacement.")); }
+        if (generic_mode) try { native_retire(true, true); } catch (...) { if (!current()) return false; generic_fail(QObject::tr("The native request could not be retired during project replacement.")); }
         if (!current()) return false;
         if (!preserveNativeSettlement) { native_fit.clear(); native_creation.reset(); native_attachment.reset(); }
         if (generic_mode && replacedNativeOwner && native_discard_pending) {
@@ -5831,6 +6300,7 @@ struct AssistantViewModel::State {
             if (managedResult) {
                 if (!result_idle()) throw std::runtime_error("The current agent operation is not settled for result adoption");
                 retire_result();
+                if (!current()) return false;
                 generic_thread.clear(); generic_turn.clear(); generic_terminal_turn.clear();
                 generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear();
                 if (!generic_retire_question() || !current()) return false;
@@ -5858,10 +6328,15 @@ struct AssistantViewModel::State {
         controller.reset();
         if (!current()) return false;
         retentions.clear(); failure_slot.reset(); queued_request.clear();
-        skill_catalog_binding.clear(); selected_skill.clear(); if (!managedResult) skills.assign({});
+        skill_catalog_binding.clear(); selected_skill.clear();
+        if (!managedResult) {
+            try { skills.assign({}); }
+            catch (...) { if (!current()) return false; throw; }
+        }
         if (!current()) return false;
-        selected_reply.clear(); selected_rows = {}; selected_files.assign(selected_rows);
-        if (!current()) return false;
+        selected_reply.clear();
+        auto projection = file_projection();
+        if (!publish_selected_rows({}, projection) || !current()) return false;
         selected_rows_dirty = false;
         project = target; plan = {}; question = {};
         auto attached = make_controller(target, binding);
@@ -5870,6 +6345,7 @@ struct AssistantViewModel::State {
         connect_project(target, binding);
 #ifndef __EMSCRIPTEN__
         const auto state = generic_mode ? generic_native : object(connection->state());
+        if (!current()) return false;
         connection_scope = state.value("connection_id").toString();
         QJsonArray capabilities;
         for (const auto& row : state.value("models").toArray()) {
@@ -5882,7 +6358,6 @@ struct AssistantViewModel::State {
         controller_project = target; controller_attached = true;
         sync();
         if (!current()) return false;
-        notify();
         return current();
     }
 };
@@ -6141,6 +6616,7 @@ QString AssistantViewModel::workingFolder() const {
 }
 QString AssistantViewModel::beginWorkingFolderSelection() {
 #ifndef __EMSCRIPTEN__
+    const auto publication = state_->file_projection();
     try {
         if (QThread::currentThread() != thread() || !state_->generic_mode || state_->working_folder_selection)
             return {};
@@ -6148,7 +6624,7 @@ QString AssistantViewModel::beginWorkingFolderSelection() {
         const auto id = intent.id;
         state_->working_folder_selection.emplace(std::move(intent));
         return id;
-    } catch (...) { if (state_->error.isEmpty()) state_->error = tr("The working-folder choice could not be prepared. The current scope is preserved."); try { state_->notify(); } catch (...) {} }
+    } catch (...) { if (!publication.input_current()) return {}; if (state_->error.isEmpty()) state_->error = tr("The working-folder choice could not be prepared. The current scope is preserved."); try { state_->notify(); } catch (...) {} }
 #endif
     return {};
 }
@@ -6165,6 +6641,7 @@ void AssistantViewModel::cancelWorkingFolderSelection(const QString& id) {
 bool AssistantViewModel::completeWorkingFolderSelection(const QString& id, const QUrl& directory) {
 #ifndef __EMSCRIPTEN__
     if (QThread::currentThread() != thread() || !state_->working_folder_selection || state_->working_folder_selection->id != id) return false;
+    const auto publication = state_->file_projection();
     auto intent = std::move(*state_->working_folder_selection); state_->working_folder_selection.reset();
     try {
         if (!state_->working_folder_current(intent) || !directory.isLocalFile() || !directory.host().isEmpty() || directory.hasQuery() || directory.hasFragment())
@@ -6172,7 +6649,7 @@ bool AssistantViewModel::completeWorkingFolderSelection(const QString& id, const
         auto grant = std::make_shared<AssistantWorkingFolder>(directory.toLocalFile());
         return state_->change_working_folder(intent, std::move(grant));
     } catch (...) {
-        if (state_->generation == intent.generation)
+        if (publication.input_current() && state_->generation == intent.generation)
             try { if (state_->error.isEmpty()) state_->error = tr("The folder is unavailable or its initiating project changed. The previous working folder is preserved."); state_->notify(); } catch (...) {}
         return false;
     }
@@ -6183,10 +6660,11 @@ bool AssistantViewModel::completeWorkingFolderSelection(const QString& id, const
 bool AssistantViewModel::useTemporaryWorkingFolder() {
 #ifndef __EMSCRIPTEN__
     if (QThread::currentThread() != thread() || !state_->generic_mode || !state_->working_folder || state_->working_folder_selection) return false;
+    const auto publication = state_->file_projection();
     try {
         const auto intent = state_->make_working_folder_intent();
         return state_->change_working_folder(intent, {});
-    } catch (...) { if (state_->error.isEmpty()) state_->error = tr("The working folder could not be changed. The current scope is preserved."); try { state_->notify(); } catch (...) {} }
+    } catch (...) { if (!publication.input_current()) return false; if (state_->error.isEmpty()) state_->error = tr("The working folder could not be changed. The current scope is preserved."); try { state_->notify(); } catch (...) {} }
 #endif
     return false;
 }
@@ -6231,13 +6709,18 @@ void AssistantViewModel::selectSkill(const QString& id) {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) return; // Automatic runtime discovery, optional catalog inspection only.
 #endif
+    const auto publication = state_->file_projection();
     try {
         const auto reply = state_->command({{"type", "select_skill"}, {"id", id}});
+        if (!publication.input_current()) return;
         if (reply.ok) { state_->consented_context.clear(); state_->sync(); }
-    } catch (...) { state_->error = state_->storage_error; state_->notify(); }
+    } catch (...) { if (!publication.input_current()) return; state_->error = state_->storage_error; state_->notify(); }
 }
 void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(project); }
 bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedResult) {
+    const QPointer<AssistantViewModel> receiver(this);
+    auto* const original = state_.get();
+    const auto receiver_current = [&] { return receiver && receiver->state_.get() == original; };
     const QPointer<ProjectViewModel> target(project);
     const bool has_target = project != nullptr;
     if (state_->session_attachment_depth == std::numeric_limits<unsigned>::max())
@@ -6253,6 +6736,7 @@ bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedRe
         (void)state_->bind(target);
 #endif
     } catch (...) { failure = std::current_exception(); }
+    if (!receiver_current()) return false;
     const bool clear_requested = state_->attachment_clear_requested;
     const bool cancelled_candidate = managedResult && clear_requested;
     if (cancelled_candidate) {
@@ -6262,17 +6746,20 @@ bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedRe
             const QPointer<ProjectViewModel> actual(state_->rebind_project());
             if (!state_->attached_to(actual)) (void)state_->bind(actual);
         } catch (...) { if (!failure) failure = std::current_exception(); }
+        if (!receiver_current()) return false;
         if (!state_->attached_to(state_->rebind_project()) && (state_->controller_project == target || state_->project == target)) {
             // A failed restoration may not leave a Controller borrowing the
             // candidate that its caller will destroy. The existing Session catch
             // owns restoration/refusal; no mutation/account success is invented.
             state_->controller_attached = false; state_->controller_project.clear();
             state_->controller.reset();
+            if (!receiver_current()) return false;
             state_->project = state_->rebind_project();
         }
     }
     --state_->session_attachment_depth;
     const auto clear = drainAttachmentClear();
+    if (!receiver_current()) return false;
     if (cancelled_candidate) {
         if (state_->attached_to(state_->rebind_project())) return false;
         if (failure) std::rethrow_exception(failure);
@@ -6288,15 +6775,19 @@ bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedRe
 AssistantViewModel::AttachmentClear AssistantViewModel::drainAttachmentClear() noexcept {
     if (state_->session_attachment_depth || state_->attachment_clear_draining || !state_->attachment_clear_requested)
         return AttachmentClear::NotRequested;
+    const QPointer<AssistantViewModel> receiver(this);
+    auto* const original = state_.get();
+    const auto receiver_current = [&] { return receiver && receiver->state_.get() == original; };
     state_->attachment_clear_requested = false;
     state_->attachment_clear_draining = true;
     bool discarded = false;
     try { (void)clearHistoryNow(&discarded); }
     catch (...) {
-        try { state_->error = state_->storage_error; (void)state_->queue_render(); } catch (...) {}
+        if (receiver_current()) try { state_->error = state_->storage_error; (void)state_->queue_render(); } catch (...) {}
     }
     // Nested requests coalesce, but failure remains a meaningful result separate
     // from Controller/project identity and cannot authorize managed adoption.
+    if (!receiver_current()) return discarded ? AttachmentClear::Discarded : AttachmentClear::Failed;
     state_->attachment_clear_requested = false;
     state_->attachment_clear_draining = false;
     return discarded ? AttachmentClear::Discarded : AttachmentClear::Failed;
@@ -6311,33 +6802,45 @@ bool AssistantViewModel::resultSettledReady() const {
     return !canCancel();
 }
 void AssistantViewModel::send(const QString& text) {
-    if (text.trimmed().isEmpty()) return;
-    if (state_->attachment_clear_requested || state_->attachment_clear_draining) return; // Actual Clear owns this attachment boundary.
+    (void)submitDraft(text);
+}
+QString AssistantViewModel::submitDraft(const QString& text) {
+    if (text.trimmed().isEmpty()) return {};
+    if (state_->attachment_clear_requested || state_->attachment_clear_draining) return {}; // Actual Clear owns this attachment boundary.
+    State::FileProjection projection;
     try {
+        projection = state_->file_projection();
+        if (!state_->claim_file_projection(projection)) return {};
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
             if (state_->generic_context_retention_pending) {
-                state_->error = state_->generic_context_retention_error; state_->notify(); return;
+                state_->error = state_->generic_context_retention_error; state_->notify(); return {};
             }
             state_->generic_writing_input = false;
             if (static_cast<quint64>(text.size()) > State::Limits::message_bytes || static_cast<quint64>(text.toUtf8().size()) > State::Limits::message_bytes)
                 throw std::length_error("Agent message exceeds limit");
-            if (contextConsentRequired()) { state_->error = tr("Approve the current outgoing context before sending."); state_->notify(); return; }
-            if (state_->file_selection || state_->file_staging) { state_->error = tr("Finish file selection first."); state_->notify(); return; }
-            state_->generic_send(text); state_->generic_writing_input = false; return;
+            if (contextConsentRequired()) { state_->error = state_->input_refusal(tr("Approve the current outgoing context before sending.")); state_->notify(); return {}; }
+            if (state_->file_selection || state_->file_staging) { state_->error = state_->input_refusal(tr("Finish file selection first.")); state_->notify(); return {}; }
+            if (state_->selected_rows_dirty && !state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return {}; }
+            if (!projection.current()) return {};
+            const auto rowId = state_->generic_send(text, projection);
+            if (projection.current()) state_->generic_writing_input = false;
+            return rowId;
         }
 #endif
         if (static_cast<std::uint64_t>(text.size()) > State::Limits::message_bytes ||
             static_cast<std::uint64_t>(text.toUtf8().size()) > State::Limits::message_bytes) {
-            state_->error = state_->capacity_error; state_->notify(); return;
+            state_->error = state_->input_refusal(state_->capacity_error); state_->notify(); return {};
         }
-        if (state_->selected_rows_dirty && !state_->flush_selected_rows()) { state_->notify(); return; }
-        if (canCancel()) { state_->error = tr("Stop the active operation before sending another message."); state_->notify(); return; }
-        if (contextConsentRequired()) { state_->error = tr("Inspect and approve the outgoing project context before sending."); state_->notify(); return; }
-        if (!state_->flush_failure() || !state_->reserve_failure()) { state_->notify(); return; }
+        if (state_->selected_rows_dirty && !state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return {}; }
+        if (!projection.current()) return {};
+        if (canCancel()) { state_->error = state_->input_refusal(tr("Stop the active operation before sending another message.")); state_->notify(); return {}; }
+        if (contextConsentRequired()) { state_->error = state_->input_refusal(tr("Inspect and approve the outgoing project context before sending.")); state_->notify(); return {}; }
+        if (!state_->flush_failure() || !state_->reserve_failure()) { state_->notify(); return {}; }
         auto prospective = state_->history;
-        prospective.append(State::public_row("user", text, {}, "completed"));
-        if (!state_->admit(prospective)) { state_->failure_slot.reset(); state_->notify(); return; }
+        const auto row = State::public_row("user", text, state_->input_file_payload(), "completed");
+        prospective.append(row);
+        if (!state_->admit(prospective)) { state_->failure_slot.reset(); state_->notify(); return {}; }
         // Prepare filesystem/encoding work before core user admission. The
         // temporary file is not committed if the controller rejects the input.
         const auto bytes = QJsonDocument(prospective).toJson(QJsonDocument::Compact);
@@ -6350,35 +6853,44 @@ void AssistantViewModel::send(const QString& text) {
         command["schema"] = "edi.assistant/1";
         const auto wire = json(command);
         const auto reply = state_->controller->user_command(wire);
+        if (!projection.current()) return {};
         if (!reply.ok) {
             staged.cancelWriting(); state_->failure_slot.reset();
             state_->error = State::bounded_error(object(reply.value).value("message").toString());
-            (void)state_->queue_render(); return;
+            (void)state_->queue_render(); return {};
         }
         if (!staged.commit()) {
-            state_->controller->cancel(); state_->queued_request.clear();
-            state_->error = state_->storage_error; state_->failure_slot.reset(); state_->sync(); return;
+            state_->controller->cancel();
+            if (!projection.current()) return {};
+            state_->queued_request.clear();
+            state_->error = state_->storage_error; state_->failure_slot.reset(); state_->sync(); return {};
         }
         state_->history.swap(prospective);
         state_->error.clear(); // explicit acknowledgement, independent of prior native last_error
-        // The already-prepared queued render now observes the admitted prompt.
+        // The queued render observes the exact acknowledged controller input.
+        return row.value("id").toString();
 
     } catch (...) {
+        if (!projection.current()) return {};
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
             if (state_->generic_writing_input) state_->generic_fail(tr("Agent input delivery is uncertain. Inspect the retained message before retrying."));
-            else { state_->error = tr("The new input was not admitted. The existing operation and draft are preserved."); try { state_->notify(); } catch (...) {} }
-            state_->generic_writing_input = false; return;
+            else { state_->error = state_->input_refusal(tr("The new input was not admitted. The existing operation and draft are preserved.")); try { state_->notify(); } catch (...) {} }
+            if (projection.current()) state_->generic_writing_input = false;
+            return {};
         }
 #endif
         if (state_->controller) state_->controller->cancel();
+        if (!projection.current()) return {};
         state_->queued_request.clear();
         if (state_->failure_slot && !state_->failure_slot->pending) state_->failure_slot.reset();
         state_->error = state_->storage_error; (void)state_->queue_render();
     }
+    return {};
 }
 bool AssistantViewModel::openReport(const QString& rowId, const QString& link) {
 #ifndef __EMSCRIPTEN__
+    const auto publication = state_->file_projection();
     try {
         if (QThread::currentThread() != thread() || !state_->publishing || !state_->generic_report_roots.contains(rowId))
             throw std::runtime_error("Report ownership is unavailable");
@@ -6410,6 +6922,7 @@ bool AssistantViewModel::openReport(const QString& rowId, const QString& link) {
         if (!QDesktopServices::openUrl(target)) throw std::runtime_error("Report viewer is unavailable");
         return true;
     } catch (...) {
+        if (!publication.input_current()) return false;
         state_->error = tr("This report is unavailable, outside its retained workspace, or cannot be opened. No external link was followed.");
         state_->notify(); return false;
     }
@@ -6425,16 +6938,19 @@ void AssistantViewModel::approvePlan(const QString& id) {
 void AssistantViewModel::answerQuestion(const QString& id, const QString& answer) {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
+        const auto publication = state_->file_projection();
         try {
             if (id != state_->generic_question_public_id || state_->generic_question_rpc.isUndefined() || !state_->generic_authenticated || state_->generic_retiring || state_->generic_revoke_pending || !state_->generic_busy || state_->generic_turn.isEmpty() ||
                 state_->generic_question_thread != state_->generic_thread || state_->generic_question_turn != state_->generic_turn || !state_->generic_items.contains(state_->generic_question_item) || state_->generic_final_items.contains(state_->generic_question_item) ||
                 answer.toUtf8().size() > static_cast<qsizetype>(State::Limits::question_answer_bytes)) return;
             const auto key = state_->generic_question_id;
             const auto rpc = state_->generic_detach_question();
-            if (!state_->agent->answer(rpc, {{"answers", Object{{key, Object{{"answers", QJsonArray{answer}}}}}}}))
-                state_->generic_fail(tr("The question answer could not be delivered."));
+            const bool delivered = state_->agent->answer(rpc, {{"answers", Object{{key, Object{{"answers", QJsonArray{answer}}}}}}});
+            if (!publication.input_current()) return;
+            if (!delivered) state_->generic_fail(tr("The question answer could not be delivered."));
+            if (!publication.input_current()) return;
             state_->notify();
-        } catch (...) { state_->generic_fail(tr("The question answer could not be retained.")); }
+        } catch (...) { if (publication.input_current()) state_->generic_fail(tr("The question answer could not be retained.")); }
         return;
     }
 #endif
@@ -6501,13 +7017,17 @@ bool AssistantViewModel::completeManualControlInput(QQuickItem* control, const Q
     } catch (...) { return false; }
 }
 void AssistantViewModel::cancel() {
+    auto publication = state_->file_projection();
 #ifndef __EMSCRIPTEN__
     if (!state_->cancel_manual_import(state_->manual_import)) return;
 #endif
 #ifndef __EMSCRIPTEN__
+    if (!publication.input_current()) return;
     state_->retire_result();
 #endif
-    state_->retire_file_selection();
+    if (!publication.input_current()) return;
+    state_->retire_file_selection(&publication);
+    if (!publication.input_current()) return;
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         const QPointer<AssistantViewModel> self(this);
@@ -6524,8 +7044,11 @@ void AssistantViewModel::cancel() {
                 state_->generic_revoke_pending = true;
                 if (!state_->generic_retire_question()) return;
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);
+                if (!publication.input_current()) return;
                 state_->generic_clear_interrupt_sent = true;
-                state_->generic_interrupt_rpc = state_->generic_request("turn/interrupt", {{"threadId", state_->generic_thread}, {"turnId", state_->generic_turn}});
+                const auto interrupt = state_->generic_request("turn/interrupt", {{"threadId", state_->generic_thread}, {"turnId", state_->generic_turn}});
+                if (!publication.input_current()) return;
+                state_->generic_interrupt_rpc = interrupt;
                 state_->generic_interrupt_thread = state_->generic_thread; state_->generic_interrupt_turn = state_->generic_turn;
             } else if (state_->generic_busy && !state_->generic_connecting) {
                 // A submitted turn/start has no turn ID yet. Retire its native
@@ -6535,9 +7058,10 @@ void AssistantViewModel::cancel() {
                 if (!state_->generic_retire_question()) return;
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);
             } else if (state_->generic_connecting) state_->generic_fail(tr("Agent sign-in or input was interrupted."));
+            if (!publication.input_current()) return;
             state_->notify();
         } catch (...) {
-            if (self && state_->generation == binding && state_->native_serial == serial && state_->usage_epoch == account &&
+            if (publication.input_current() && self && state_->generation == binding && state_->native_serial == serial && state_->usage_epoch == account &&
                 state_->native_records.size() == entries && !state_->native_widget &&
                 (!state_->native_call || state_->native_call->record == record))
                 state_->generic_fail(tr("The agent interruption could not be delivered."));
@@ -6552,9 +7076,13 @@ void AssistantViewModel::cancel() {
         state_->connection->sign_out(); // existing native teardown fences browser/loopback generations
     } else state_->connection->cancel(state_->core.value("active_turn_id").toString().toStdString());
 #endif
-    state_->controller->cancel(); state_->sync(); state_->notify();
+    if (!publication.input_current()) return;
+    state_->controller->cancel();
+    if (!publication.input_current()) return;
+    state_->sync();
 }
 void AssistantViewModel::signIn() {
+    auto publication = state_->file_projection();
     if (!state_->controller) return;
 #ifndef __EMSCRIPTEN__
     // A retained-history failure is not repaired by opening another thread or
@@ -6565,9 +7093,11 @@ void AssistantViewModel::signIn() {
 #endif
     if (canCancel()) { state_->error = tr("Stop the active operation before connecting."); state_->notify(); return; }
     auto context = object(state_->controller->context());
+    if (!publication.input_current()) return;
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) context = state_->outgoing_context();
 #endif
+    if (!publication.input_current()) return;
     if (context.contains("error")) {
         const auto failure = context.value("error");
         const auto code = failure.toObject().value("code").toString();
@@ -6591,10 +7121,11 @@ void AssistantViewModel::signIn() {
                 if (!receiver || state_->generation != binding || !State::same_disclosure(approval, state_->current_disclosure())) return;
                 state_->approved_scope = std::move(approval); state_->consented_context.clear();
                 if (state_->generic_thread.isEmpty() && !state_->generic_prepare_thread()) return;
+                if (!publication.input_current()) return;
                 state_->error.clear(); state_->notify(); return;
             }
-            state_->generic_sign_in(std::move(approval));
-        } catch (...) { if (receiver && state_->generation == binding) state_->generic_fail(tr("The approved account/project scope could not be prepared safely.")); }
+            state_->generic_sign_in(std::move(approval), publication);
+        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("The approved account/project scope could not be prepared safely.")); }
         return;
     }
 #endif
@@ -6608,46 +7139,75 @@ void AssistantViewModel::signIn() {
     }
 #ifndef __EMSCRIPTEN__
     const auto reply = state_->connection->sign_in();
+    if (!publication.input_current()) return;
     state_->auth_pending = reply.ok;
     state_->error = reply.ok ? QString() : State::bounded_error(object(reply.value).value("message").toString());
 #else
     state_->error = tr("Browser AI connection is unavailable in this build.");
 #endif
-    state_->sync(); state_->notify();
+    state_->sync();
 }
 void AssistantViewModel::signOut() {
+    auto projection = state_->file_projection();
 #ifndef __EMSCRIPTEN__
-    if (!state_->cancel_manual_import(state_->manual_import)) return;
+    const bool required = state_->generic_mode;
+#else
+    constexpr bool required = false;
 #endif
-#ifndef __EMSCRIPTEN__
-    state_->retire_result();
-#endif
-    state_->retire_file_selection(); state_->consented_context.clear();
+    const auto current = [&] { return required ? projection.retirement_current() : projection.current(); };
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         if (state_->generic_retiring) return;
-        state_->usage_retire();
+        state_->generic_authenticated = false; state_->generic_busy = false; state_->generic_connecting = false;
+        state_->generic_retiring = true; state_->generic_revoke_pending = true;
+    }
+    const bool cancelled = state_->cancel_manual_import(state_->manual_import);
+    if (!current() || (!required && !cancelled)) return;
+#endif
+#ifndef __EMSCRIPTEN__
+    state_->retire_result();
+    if (!current()) return;
+#endif
+    projection.files = state_->file_epoch == UINT64_MAX ? UINT64_MAX : state_->file_epoch + 1;
+    state_->retire_file_selection();
+    if (!current()) return;
+    state_->consented_context.clear();
+#ifndef __EMSCRIPTEN__
+    if (state_->generic_mode) {
+        if (!state_->usage_retire(projection, true)) return;
         try { state_->native_retire(true); }
-        catch (...) { state_->generic_fail(tr("The native action could not be retired during sign-out.")); return; }
+        catch (...) { if (current()) state_->generic_fail(tr("The native action could not be retired during sign-out.")); return; }
+        if (!current()) return;
         state_->generic_clear_pending = false; state_->generic_context_pending = false; state_->generic_clear_interrupt_sent = false;
         state_->generic_interrupt_thread.clear(); state_->generic_interrupt_turn.clear();
         state_->generic_authenticated = false; state_->generic_retiring = true; state_->generic_revoke_pending = true;
         state_->generic_busy = false; state_->generic_connecting = false;
-        if (!state_->generic_retire_question()) return;
+        if (!state_->generic_retire_question() || !current()) return;
         state_->generic_interrupt_rows();
+        if (!current()) return;
         state_->generic_rpc_rows.clear(); state_->generic_rpc_turns.clear(); state_->generic_turn.clear();
-        try { state_->agent->beginOperation(State::Limits::revoke_ms, 0); state_->generic_request("account/logout"); }
-        catch (...) { state_->generic_revoke_workspace(); }
-        state_->sync(); state_->notify(); return;
+        try {
+            state_->agent->beginOperation(State::Limits::revoke_ms, 0);
+            if (!current()) return;
+            state_->generic_request("account/logout");
+        }
+        catch (...) { if (!current() || !state_->generic_revoke_workspace(&projection, true)) return; }
+        if (!current()) return;
+        state_->sync();
+        return;
     }
 #endif
     state_->queued_request.clear(); state_->auth_pending = false;
 #ifndef __EMSCRIPTEN__
     state_->connection->sign_out();
 #endif
-    state_->controller->cancel(); state_->sync(); state_->notify();
+    if (!current()) return;
+    state_->controller->cancel();
+    if (!current()) return;
+    state_->sync();
 }
 void AssistantViewModel::clearHistory() {
+    const auto publication = state_->file_projection();
 #ifndef __EMSCRIPTEN__
     const QPointer<AssistantViewModel> alive(this);
     const bool previous_manual_clear = state_->manual_import_clearing;
@@ -6656,9 +7216,10 @@ void AssistantViewModel::clearHistory() {
         if (alive) state_->manual_import_clearing = previous_manual_clear;
     });
     if (!state_->cancel_manual_import(state_->manual_import)) return; // Before archive, chooser notification or deferred attachment.
-    if (!alive) return;
+    if (!publication.input_current()) return;
     state_->retire_working_folder_selection();
 #endif
+    if (!publication.input_current()) return;
     if (state_->session_attachment_depth || state_->attachment_clear_draining) {
         state_->attachment_clear_requested = true;
         return; // The actual request is drained at the existing attachment boundary.
@@ -6668,12 +7229,14 @@ void AssistantViewModel::clearHistory() {
 bool AssistantViewModel::clearHistoryNow(bool* committed) {
     bool local = false;
     bool& discarded = committed ? *committed : local;
+    auto publication = state_->file_projection();
     discarded = false; // The caller owns this actual latch even if later diagnostics throw.
 #ifndef __EMSCRIPTEN__
     // Direct callers retain manual_import_clearing; deferred drain retains
     // attachment_clear_draining. Neither can admit a newer manual request.
     if (!state_->cancel_manual_import(state_->manual_import)) return false;
 #endif
+    if (!publication.input_current()) return discarded;
     const QPointer<AssistantViewModel> alive(this);
     const auto present_discard = qScopeGuard([this, alive, &discarded] {
         // All successful explicit Clear paths share this boundary, including a
@@ -6691,6 +7254,7 @@ bool AssistantViewModel::clearHistoryNow(bool* committed) {
 #ifndef __EMSCRIPTEN__
         if (state_->auth_pending && state_->connection) state_->connection->sign_out();
 #endif
+        if (!publication.input_current()) return discarded;
         state_->auth_pending = false;
 #ifndef __EMSCRIPTEN__
         const bool nativeSettling = state_->generic_mode && (state_->native_worker_admitted() || (state_->native_fit && state_->native_fit->nativeRunning()));
@@ -6706,6 +7270,7 @@ bool AssistantViewModel::clearHistoryNow(bool* committed) {
             // Persisted explicit discard, independently of later UI allocation.
             state_->native_discard_pending = true;
             state_->native_complete_discard();
+            if (!publication.input_current()) return discarded;
             state_->generic_clear_reports();
             state_->generic_context_retention_pending = false; state_->generic_context_retention_error.clear();
 #endif
@@ -6716,8 +7281,9 @@ bool AssistantViewModel::clearHistoryNow(bool* committed) {
 #else
         if (!state_->bind(state_->rebind_project())) return discarded;
 #endif
-        state_->sync();
-    } catch (...) { state_->error = state_->storage_error; (void)state_->queue_render(); }
+    } catch (...) {
+        if (publication.input_current()) { state_->error = state_->storage_error; (void)state_->queue_render(); }
+    }
     return discarded;
 }
 
@@ -6882,9 +7448,9 @@ bool AssistantViewModel::applyNativeImport(const QString& id, const QString& cif
 QString AssistantViewModel::completeNativeImportFiles(const QString& requestId, const QList<QUrl>& urls) {
 #ifndef __EMSCRIPTEN__
     if (QThread::currentThread() != thread() || (state_->project && !edi::empty_for_population(*state_->project->assistantProject()))) return {};
-    const auto binding = state_->generation; const QPointer<ProjectViewModel> original(state_->project);
-    if (!addSelectedFiles(requestId, urls) || state_->generation != binding || state_->project != original ||
-        (original && !edi::empty_for_population(*original->assistantProject()))) return {};
+    auto projection = state_->file_projection();
+    if (!state_->add_selected_files(requestId, urls, projection) || !projection.current() ||
+        (state_->project && !edi::empty_for_population(*state_->project->assistantProject()))) return {};
     return beginNativeImport(); // Only this genuine own file admission advances the form's source proof.
 #else
     Q_UNUSED(requestId); Q_UNUSED(urls); return {};
@@ -6921,12 +7487,15 @@ QString AssistantViewModel::beginFileSelection() {
 #ifdef __EMSCRIPTEN__
     state_->error = tr("File selection is unavailable until the browser transfer is implemented."); state_->notify(); return {};
 #else
+    auto projection = state_->file_projection();
+    bool refused = false;
     try {
+        if (!state_->claim_file_projection(projection)) return {};
         if (!state_->publishing || !state_->controller || state_->file_staging || state_->file_authority_exhausted || state_->file_epoch == UINT64_MAX)
-            throw std::runtime_error("The selected-file owner is unavailable");
+            { refused = true; throw std::runtime_error("The selected-file owner is unavailable"); }
         if (state_->working_folder_selection || state_->working_folder_transition || state_->attachment_clear_requested || state_->attachment_clear_draining || state_->auth_pending || (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) || (state_->project && state_->project->fit()->running()))
-            throw std::runtime_error("Finish the active operation before selecting files");
-        if (!state_->flush_selected_rows()) { state_->notify(); return {}; }
+            { refused = true; throw std::runtime_error("Finish the active operation before selecting files"); }
+        if (!state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return {}; }
         const auto descriptor = state_->file_context();
         const auto native = state_->file_native_state();
         State::FileSelection scope;
@@ -6940,84 +7509,51 @@ QString AssistantViewModel::beginFileSelection() {
         scope.connection_id = native.value("connection_id").toString(); scope.native_status = native.value("status").toString();
         // The existing core door supplies the one policy decision, with an empty no-op that cannot alter bytes.
         const auto check = state_->controller->update_selected_files(scope.next_collection_id.toStdString(), scope.selection_generation, {}, {});
-        if (!check.ok) { state_->error = State::bounded_error(object(check.value).value("message").toString()); state_->notify(); return {}; }
+        if (!projection.current()) return {};
+        if (!check.ok) { state_->error = state_->input_refusal(State::bounded_error(object(check.value).value("message").toString())); state_->notify(); return {}; }
         const auto id = scope.id;
+        projection.files = scope.epoch; // Only this exact, already-prepared retirement is expected.
         state_->retire_file_selection();
-        // A reentrant retirement receiver cannot be overwritten by the outer prepared begin.
-        if (scope.epoch != state_->file_epoch || state_->file_selection || state_->working_folder_selection || scope.owner_generation != state_->generation) return {};
+        if (!projection.current() || state_->file_selection || state_->working_folder_selection) return {};
         state_->file_selection.emplace(std::move(scope));
         state_->error.clear();
-        try { state_->notify(); } catch (...) {} // a committed capability still returns its actual ID
+        try { state_->notify(); } catch (...) {} // A committed capability still returns its actual ID.
         return id;
-    } catch (...) { state_->error = tr("File selection could not be prepared. Existing files are preserved."); try { state_->notify(); } catch (...) {} return {}; }
+    } catch (...) {
+        if (projection.current()) {
+            const auto explanation = tr("File selection could not be prepared. Existing files are preserved.");
+            state_->error = refused ? state_->input_refusal(explanation) : explanation;
+            try { state_->notify(); } catch (...) {}
+        }
+        return {};
+    }
 #endif
 }
 bool AssistantViewModel::addSelectedFiles(const QString& requestId, const QList<QUrl>& urls) {
-    if (QThread::currentThread() != thread() || !state_->file_selection || state_->file_selection->id != requestId) return false;
-    bool admitted = false;
-    bool context_preserved = true;
-    const auto owner_at_entry = state_->generation, epoch_at_entry = state_->file_epoch;
-    try {
-        if (!state_->file_current(*state_->file_selection)) { state_->retire_file_selection(); return false; }
-        auto scope = std::move(*state_->file_selection); state_->file_selection.reset();
-        state_->file_staging = true; // consumed once, but Stop/rebind can still retire its epoch
-        try {
-            if (urls.isEmpty()) throw std::runtime_error("No files were selected");
-            if (state_->project && state_->project->fit()->running()) throw std::runtime_error("Finish the active operation before selecting files");
-            auto files = state_->read_selected_urls(urls, state_->file_context());
-#ifndef __EMSCRIPTEN__
-            auto generic_stage = state_->generic_mode ? state_->generic_stage_files(files) : nullptr;
-#endif
-            if (!state_->file_current(scope)) throw std::runtime_error("The selected-file owner changed");
-            auto result = state_->controller->update_selected_files(scope.next_collection_id.toStdString(), scope.selection_generation, std::move(files), {});
-            admitted = result.ok;
-            if (admitted) {
-#ifndef __EMSCRIPTEN__
-                if (generic_stage) {
-                    state_->generic_input_paths.swap(generic_stage->paths);
-                    state_->generic_input_hashes.swap(generic_stage->hashes);
-                    generic_stage->fresh.clear();
-                    context_preserved = state_->generic_context_changed();
-                    state_->native = state_->generic_native;
-                }
-#endif
-                state_->selected_reply = std::move(result.value); // noexcept transfer of the core-prepared descriptor
-                state_->selected_rows_dirty = true;
-                state_->consented_context.clear(); if (context_preserved) state_->error.clear();
-                (void)state_->flush_selected_rows();
-            } else state_->error = State::bounded_error(object(result.value).value("message").toString());
-        } catch (const std::exception& error) { state_->error = State::bounded_error(QString::fromUtf8(error.what())); }
-        catch (...) { state_->error = tr("Selected files could not be retained. Existing files are preserved."); }
-        state_->file_staging = false;
-        // All staging has ended before temporary chooser/transport ownership may be released.
-        try { emit fileSelectionRetired(requestId); } catch (...) {}
-        try { state_->notify(); } catch (...) {}
-        return admitted; // actual admission, including a recoverable post-admission presentation failure
-    } catch (...) {
-        if (state_->generation != owner_at_entry || state_->file_epoch != epoch_at_entry ||
-            (state_->file_selection && state_->file_selection->id != requestId)) return admitted;
-        state_->file_staging = false;
-        if (state_->file_selection && state_->file_selection->id == requestId) state_->retire_file_selection();
-        state_->error = tr("Selected files could not be retained. Inspect the file list before retrying.");
-        try { state_->notify(); } catch (...) {}
-        return admitted;
-    }
+    auto projection = state_->file_projection();
+    return state_->add_selected_files(requestId, urls, projection);
 }
+
 void AssistantViewModel::cancelFileSelection(const QString& requestId) {
     if (QThread::currentThread() != thread() || !state_->file_selection || state_->file_selection->id != requestId) return;
-    state_->retire_file_selection(); state_->notify();
+    auto projection = state_->file_projection();
+    if (!state_->claim_file_projection(projection)) return;
+    projection.files = state_->file_epoch == UINT64_MAX ? UINT64_MAX : state_->file_epoch + 1;
+    state_->retire_file_selection();
+    if (projection.current()) state_->notify();
 }
 bool AssistantViewModel::removeSelectedFile(const QString& id) {
     if (QThread::currentThread() != thread() || !state_->publishing) return false;
-    bool admitted = false;
-    bool context_preserved = true;
+    auto projection = state_->file_projection();
+    bool admitted = false, refused = false;
     try {
+        if (!state_->claim_file_projection(projection)) return false;
         if (state_->attachment_clear_requested || state_->attachment_clear_draining || state_->file_selection || state_->file_staging || state_->auth_pending ||
 #ifndef __EMSCRIPTEN__
             (state_->generic_mode && (state_->generic_busy || state_->generic_connecting || state_->generic_retiring || state_->generic_revoke_pending || state_->generic_context_retention_pending || state_->generic_clear_pending || state_->generic_context_pending)) ||
 #endif
-            (state_->project && state_->project->fit()->running())) throw std::runtime_error("Finish the active operation before changing files");
-        if (!state_->flush_selected_rows()) { state_->notify(); return false; }
+            (state_->project && state_->project->fit()->running())) { refused = true; throw std::runtime_error("Finish the active operation before changing files"); }
+        if (!state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return false; }
         const auto current = state_->file_context();
 #ifndef __EMSCRIPTEN__
         auto generic_paths = state_->generic_input_paths;
@@ -7031,15 +7567,27 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
             if (state_->generic_mode) {
                 state_->generic_input_paths.swap(generic_paths); state_->generic_input_hashes.swap(generic_hashes);
                 if (!generic_removed.isEmpty()) QFile::remove(generic_removed);
-                context_preserved = state_->generic_context_changed();
-                state_->native = state_->generic_native;
             }
 #endif
             state_->selected_reply = std::move(result.value); state_->selected_rows_dirty = true;
-            state_->consented_context.clear(); if (context_preserved) state_->error.clear(); (void)state_->flush_selected_rows();
-        } else state_->error = State::bounded_error(object(result.value).value("message").toString());
-        state_->notify();
-    } catch (...) { state_->error = tr("Selected file could not be removed. Inspect the retained file list before retrying."); try { state_->notify(); } catch (...) {} }
+            state_->consented_context.clear(); state_->error.clear();
+#ifndef __EMSCRIPTEN__
+            if (state_->generic_mode) {
+                (void)state_->generic_context_changed(false, &projection);
+                if (!projection.current()) return admitted;
+                state_->native = state_->generic_native;
+            }
+#endif
+            (void)state_->flush_selected_rows(projection);
+        } else state_->error = state_->input_refusal(State::bounded_error(object(result.value).value("message").toString()));
+        if (projection.current()) state_->notify();
+    } catch (...) {
+        if (projection.current()) {
+            const auto explanation = tr("Selected file could not be removed. Inspect the retained file list before retrying.");
+            state_->error = refused ? state_->input_refusal(explanation) : explanation;
+            try { state_->notify(); } catch (...) {}
+        }
+    }
     return admitted;
 }
 
