@@ -361,6 +361,7 @@ TestCase {
         const point = main.mapToItem(window.contentItem, main.width / 2, main.height / 2);
         mouseClick(window.contentItem, point.x, point.y);
         compare(popup.visible, true, "I16/popup: genuine outside click leaves eligible workflow chat open");
+        gui392_signIn();
         const editor = item("assistant.composer");
         editor.insert(0, "Original Home-hidden draft");
         editor.select(2, 9);
@@ -466,6 +467,7 @@ TestCase {
         compare(manual.opacity, painted.opacity, "I16/popup: covering never fades the ordinary manual colors");
         coveredManualInput(manual, coveredTab);
         compare(window.appBarCentralTabs.currentIndex, 1, "I16/popup: covered input never navigates the workflow");
+        gui392_signIn();
         const composer = item("assistant.composer");
         composer.forceActiveFocus();
         composer.insert(0, "PbSO4 — unsent\ncell 5.43");
@@ -510,6 +512,7 @@ TestCase {
         const button = item("assistant.toggle");
         const closedIcon = button.fontIcon;
         toggle();
+        gui392_signIn();
         verify(/manual|sidebar|controls/i.test(button.Accessible.name), "NAV1: shown-state appbar action truthfully names return to manual controls");
         verify(button.fontIcon !== closedIcon, "NAV1: shown-state real appbar icon distinguishes returning from opening Assistant");
         Preferences.toolTips = true;
@@ -638,6 +641,8 @@ TestCase {
         keyClick(Qt.Key_Space);
         keyboardObservation("after-space-" + data.tag, button);
         tryCompare(popup, "visible", true, 500, "I16/POP1: real keyboard appbar activation opens chat");
+        gui392_signIn();
+        Ui.click(this, Probe, window, "assistant.composer");
         const composer = item("assistant.composer");
         tryVerify(() => composer.activeFocus, 500, "I16/POP1: traversal starts from the actual focused composer");
         const visited = [];
@@ -723,7 +728,7 @@ TestCase {
         toggle();
         const button = item("assistant.toggle");
         const editor = item("assistant.composer");
-        tryVerify(() => editor.activeFocus, 500, "I16/HDR1: normal opening places real input focus in the actual composer");
+        verify(!Ui.rendered(editor), "GUI392/HDR1: signed-out composer is unavailable before genuine keyboard Sign in traversal");
         // Establish keyboard-only entry through the existing actual opener, without forceFocus.
         for (let step = 0; step < 32 && !button.activeFocus; ++step)
             keyClick(Qt.Key_Tab, Qt.ShiftModifier);
@@ -774,6 +779,7 @@ TestCase {
         Preferences.sideBarSide = "Right";
         window.appBarCentralTabs.currentIndex = 1;
         rendered();
+        toggle(); gui392_signIn(); closeAssistant388();
         const main = item("workflow.project.mainContent");
         const host = item("workflow.project.sidebarHost");
         const manual = item("workflow.project.manualSidebar");
@@ -5387,5 +5393,861 @@ TestCase {
             verify(!Session.needsSaveAs && assistant.connected, "SAVE359: genuine current Save retains account and current-directory ownership");
             compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE359: original managed account/model catalog stays exact");
         } finally { disconnect313(saveLife, save, "clicked", clicked); }
+    }
+    // GUI392: owner/public331 interfaces; source-authored, not a runtime result.
+    function gui392_json(value) { return JSON.parse(JSON.stringify(value)); }
+    function gui392_labels(root) {
+        return Ui.itemsWithProperty(root, "text").filter(control => control.visible
+            && typeof control.text === "string" && typeof control.textFormat === "number");
+    }
+    function gui392_dialog(name) {
+        const dialogs = Probe.objectsWithProperty(window, "opened").filter(object =>
+            object.objectName === name && object.visible);
+        compare(dialogs.length, 1, "GUI392: one exact current Main-owned visible dialog: " + name);
+        verify(dialogs[0].opened, "GUI392: original named dialog has actually opened");
+        return dialogs[0];
+    }
+    function gui392_button(button) {
+        verify(button !== null && button.enabled, "GUI392: original standard action is enabled");
+        ux356_fullyExposed(button);
+        const point = Ui.clickPoint(button);
+        mouseClick(button, point.x, point.y);
+        rendered();
+    }
+    function gui392_signIn() {
+        if (assistant.connected) return;
+        Ui.click(this, Probe, window, "assistant.connection");
+        const dialog = ux356_dialog();
+        tryCompare(dialog, "opened", true, 2000, "GUI392: actual header Sign in opens original provider dialog");
+        gui392_button(dialog.standardButton(Dialog.Ok));
+        report187_ready("gui392-genuine-header-signin", false);
+        verify(!dialog.visible, "GUI392: actual ready account closes original sign-in modal");
+    }
+    function gui392_science() {
+        const project = Session.project;
+        return {owner: project, life: lifetime313(project), metadata: import265_owner(project),
+            values: visible185_values(project), inputs: visible185_inputs(project),
+            relations: relation245_declarations(project), undo: project.canUndo, modified: project.modified};
+    }
+    function gui392_unchanged(before) {
+        verify(alive313(before.life) && Session.project === before.owner,
+            "GUI392: GUI/configuration does not replace or retire the original scientific owner");
+        compare(import265_owner(before.owner), before.metadata, "GUI392: original metadata/path/settings stay exact");
+        compare(visible185_values(before.owner), before.values, "GUI392: every physical value/free/SU stays exact");
+        compare(visible185_inputs(before.owner), before.inputs, "GUI392: whole measured triples/weights/exclusions/links stay exact");
+        compare(relation245_declarations(before.owner), before.relations, "GUI392: aliases/constraints stay exact");
+        compare(before.owner.canUndo, before.undo, "GUI392: GUI/source configuration creates no scientific Undo");
+        compare(before.owner.modified, before.modified, "GUI392: GUI/source configuration creates no scientific dirty state");
+    }
+    function gui392_setup() {
+        verify(Session.openProject(Probe.referenceUrl("project")), "GUI392 SETUP: owned lawful default-table fixture opens normally");
+        tryVerify(() => !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment), 10000,
+            "GUI392 SETUP: original lawful scientific calculation is actually current before GUI preservation baseline");
+        toggle();
+        return gui392_science();
+    }
+    function test_gui392_signed_out_native_empty_and_real_account() {
+        const before = gui392_setup();
+        compare(assistant.connected, false, "GUI392: owned actor begins genuinely signed out");
+        const empty = gui392_labels(popup.contentItem).filter(label => label.text === "Sign in to use the assistant");
+        compare(empty.length, 1, "GUI392: exactly one native signed-out empty-state label is painted");
+        ux356_fullyExposed(empty[0]);
+        const emptyOwner = empty[0].parent;
+        const region = empty[0].mapToItem(emptyOwner, 0, 0, empty[0].width, empty[0].height);
+        verify(emptyOwner.height >= popup.contentItem.height / 2
+            && Math.abs(region.y + region.height / 2 - emptyOwner.height / 2) < 0.5,
+            "GUI392: native empty state is vertically centered in its actual sidebar body, not a second sign-in toolbar");
+        compare(empty[0].font.family, EaStyle.Fonts.secondFontFamily,
+            "GUI395: original native EmptyStateLabel uses independent second font family");
+        compare(empty[0].font.pixelSize, EaStyle.Sizes.fontPixelSize * 3,
+            "GUI395: original native EmptyStateLabel uses three existing font units");
+        compare(empty[0].font.weight, Font.ExtraLight,
+            "GUI395: original native EmptyStateLabel uses independent extra-light weight");
+        compare(empty[0].enabled, false, "GUI395: native empty-state text is semantically disabled");
+        compare(empty[0].color, EaStyle.Colors.themeForegroundDisabled,
+            "GUI395: original native disabled Label resolves disabled theme foreground");
+        compare(empty[0].horizontalAlignment, Text.AlignHCenter, "GUI395: native empty-state text is horizontally centered");
+        compare(empty[0].wrapMode, Text.WordWrap, "GUI395: native empty-state retains original word wrapping");
+        const links = Ui.itemsWithProperty(popup.contentItem, "clicked").filter(control =>
+            control.visible && control.enabled && control.text === "Sign in");
+        compare(links.length, 1, "GUI392: ONLY one actual header Sign in action, no centered duplicate");
+        compare(links[0].objectName, "assistant.connection", "GUI392: sole Sign in is original connection entrance");
+        for (const name of ["assistant.composer", "assistant.files.add", "assistant.send", "assistant.clear", "assistant.usage", "assistant.showActions", "assistant.modelEffort"]) {
+            const controls = Ui.itemsWithProperty(popup.contentItem, "objectName").filter(control => control.objectName === name);
+            verify(controls.every(control => !Ui.rendered(control)), "GUI392: signed-out ordinary action is physically unavailable: " + name);
+        }
+        verify(!Ui.itemsWithProperty(popup.contentItem, "objectName").some(control => control.objectName === "assistant.workflow"),
+            "GUI392: retired per-skill chat browser is absent");
+        capture("gui392-signed-out-native-empty");
+        gui395_dividers("signed-out");
+        gui395_signInHover(links[0]);
+        console.log("GUI395_SIGNIN_BEFORE");
+        Ui.click(this, Probe, window, "assistant.connection");
+        const signIn = ux356_dialog();
+        tryCompare(signIn, "opened", true, 2000, "GUI392: genuine Sign in reaches original dialog");
+        console.log("GUI395_SIGNIN_OPEN");
+        compare(Session.project, before.owner, "GUI395: genuine Sign in click preserves SAME original scientific owner");
+        gui392_button(signIn.standardButton(Dialog.Cancel));
+        tryCompare(signIn, "visible", false, 2000, "GUI395: ordinary Cancel actually closes ORIGINAL sign-in dialog");
+        compare(assistant.connected, false, "GUI392: real authentication Cancel does not create account authority");
+        gui392_unchanged(before);
+        gui392_signIn();
+        verify(item("assistant.composer").visible && item("assistant.composer").enabled,
+            "GUI392: real authenticated readiness reveals usable original composer");
+        compare(gui392_labels(popup.contentItem).filter(label => label.text === "Sign in to use the assistant").length, 0,
+            "GUI392: ready state hides signed-out presentation");
+        gui395_dividers("authenticated");
+        const avatar = item("assistant.connection"), usage = item("assistant.usage"), clear = item("assistant.clear");
+        for (const control of [clear, usage, avatar]) ux356_fullyExposed(control);
+        verify(rect(clear)[0] < rect(usage)[0] && rect(usage)[0] < rect(avatar)[0],
+            "GUI392: real header order is Clear, actual remaining percentage, avatar at far right");
+        compare(avatar.text, "O", "GUI392: actual Original@example.invalid email yields its email initial, not invented name");
+        verify(clear.fontIcon === "eraser" && /clear/i.test(clear.Accessible.name),
+            "GUI392: actual Clear has icon and accessible action name");
+        const consent = assistant.contextConsentRequired, selected = JSON.stringify(Probe.rows(assistant.selectedFiles));
+        Ui.click(this, Probe, window, "assistant.connection");
+        const account = gui392_dialog("assistant.accountDialog");
+        const accountText = gui392_labels(account.contentItem).map(label => label.text).join("\n");
+        verify(accountText.includes("Original@example.invalid") && /plus/i.test(accountText),
+            "GUI392: Account shows exact actual owned email and supported plan");
+        verify(!Probe.objectsWithProperty(window, "opened").some(object => object.objectName === "assistant.usageDialog" && object.visible),
+            "GUI392: Account is distinct from Usage");
+        ux356_fullyExposed(account.contentItem); ux356_fullyExposed(account.footer);
+        capture("gui392-ready-account");
+        gui392_button(account.standardButton(Dialog.Close));
+        compare(assistant.contextConsentRequired, consent, "GUI392: avatar never approves outgoing project scope");
+        compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selected, "GUI392: avatar never grants selected files");
+        Ui.click(this, Probe, window, "assistant.connection");
+        import265_click("assistant.signOut");
+        tryCompare(assistant, "connected", false, 2000, "GUI392: real Account sign out retires actual account");
+        tryCompare(account, "visible", false, 2000, "GUI392: actual sign out closes original account popup");
+        verify(!Ui.rendered(item("assistant.composer")), "GUI392: signed-out composer becomes physically unavailable again");
+        gui392_unchanged(before);
+    }
+    function gui392_usageLabel(expected) {
+        const control = item("assistant.usage");
+        const labels = gui392_labels(control).filter(label => label.text === expected);
+        compare(labels.length, 1, "GUI392: one actual painted usage value equals independent supplied allowance: " + expected);
+        compare(labels[0].font.pixelSize, EaStyle.Sizes.fontPixelSize, "GUI392: usage uses normal native font size");
+        ux356_fullyExposed(labels[0]);
+        return labels[0];
+    }
+    function gui392_usageData() { return gui392_json(assistant.usage); }
+    function test_gui392_usage_actual_windows_data() {
+        return [
+            {tag: "remaining25", remaining: 25, used: [75, 32], color: "normal"},
+            {tag: "remaining24", remaining: 24, used: [76, 32], color: "amber"},
+            {tag: "remaining5", remaining: 5, used: [95, 32], color: "amber"},
+            {tag: "remaining4", remaining: 4, used: [96, 32], color: "red"},
+            {tag: "remaining100", remaining: 100, used: [0, 0], color: "normal"},
+            {tag: "over100", remaining: 0, used: [137, 32], color: "red"},
+            {tag: "unknown", remaining: null, used: [], color: "normal"},
+            {tag: "stale", remaining: 17, used: [17, 83], color: "amber"},
+            {tag: "zero-missing-recovered", remaining: 100, used: [0], color: "normal"}
+        ];
+    }
+    function gui392_closeUsage(dialog) {
+        gui392_button(dialog.standardButton(Dialog.Close));
+        tryCompare(dialog, "visible", false, 2000, "GUI392: original Usage dialog actually closes before next open refresh");
+    }
+    function test_gui392_usage_actual_windows(data) {
+        const before = gui392_setup(); gui392_signIn();
+        tryVerify(() => !!gui392_usageData().observedAt, 2000, "GUI392: first genuine account usage reply is actually observed");
+        mouseMove(window.contentItem, 0, 0); rendered();
+        let label = gui392_usageLabel(data.remaining === null ? "–" : data.remaining + "%");
+        tryCompare(label, "color", data.color === "red" ? EaStyle.Colors.red : data.color === "amber" ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground, 2000,
+            "GUI392: actual painted remaining threshold is below25 amber, below5 red, equality outside lower band");
+        if (data.tag === "zero-missing-recovered") {
+            capture("gui392-usage-actual-zero");
+            Ui.click(this, Probe, window, "assistant.usage");
+            let dialog = gui392_dialog("assistant.usageDialog");
+            tryVerify(() => !gui392_usageData().available && !gui392_usageData().stale
+                && gui392_usageData().buckets.length === 0, 2000,
+                "GUI392: real dialog-open optional read observes actual empty provider windows, not zero");
+            gui392_usageLabel("–"); capture("gui392-usage-missing"); gui392_closeUsage(dialog);
+            Ui.click(this, Probe, window, "assistant.usage"); dialog = gui392_dialog("assistant.usageDialog");
+            tryVerify(() => gui392_usageData().available && !gui392_usageData().stale, 2000,
+                "GUI392: actual third optional reply recovers genuine zero usage");
+            gui392_usageLabel("100%"); capture("gui392-usage-recovered-zero"); gui392_closeUsage(dialog);
+        } else {
+            const observedBefore = gui392_usageData().observedAt;
+            Ui.click(this, Probe, window, "assistant.usage");
+            const dialog = gui392_dialog("assistant.usageDialog");
+            if (data.tag === "stale") tryVerify(() => gui392_usageData().stale === true, 2000,
+                "GUI392: genuine optional read failure marks retained current-account observation stale");
+            else tryVerify(() => gui392_usageData().available === (data.remaining !== null)
+                && gui392_usageData().observedAt !== observedBefore, 2000,
+                "GUI392: real dialog read retains exact known versus unknown provider semantics");
+            const text = gui392_labels(dialog.contentItem).map(label => label.text).join("\n");
+            if (data.tag === "stale") verify(/last observed|stale/i.test(text), "GUI392: stale observation is explicitly disclosed");
+            else if (data.remaining === null) verify(/unavailable|unknown/i.test(text), "GUI392: unknown usage is explicit, never inferred from history");
+            else {
+                verify(text.includes("Original owned limit") && text.includes("300") && text.includes("10080")
+                    && text.includes("12.50"), "GUI392: actual supplied window labels/durations/credits remain independently recognizable");
+                verify(text.includes("2027-01-15") || text.includes("1800000000"),
+                    "GUI392: actual supplied primary reset is disclosed, not a guessed reset");
+                const bars = Ui.itemsWithProperty(dialog.contentItem, "value").filter(control => control.visible
+                    && typeof control.from === "number" && typeof control.to === "number" && control.to > control.from
+                    && typeof control.position === "number");
+                compare(bars.length, data.used.length, "GUI392: exactly one actual allowance bar per independently supplied window");
+                for (let index = 0; index < data.used.length; ++index) {
+                    verify(Math.abs((bars[index].value - bars[index].from) / (bars[index].to - bars[index].from)
+                        - Math.min(100, Math.max(0, data.used[index])) / 100) < 0.000001,
+                        "GUI392: actual bar fill is supplied USED fraction, including honest presentation clamp");
+                    const remaining = 100 - data.used[index];
+                    const expected = remaining < 5 ? EaStyle.Colors.red : remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground;
+                    const fills = Ui.itemsWithProperty(bars[index].contentItem, "color").filter(control =>
+                        control.visible && control.width > 0 && control.height > 0 && control.color === expected);
+                    verify(fills.length > 0 || data.used[index] === 0,
+                        "GUI392: nonempty actual used bar uses matching independently derived remaining threshold color");
+                }
+            }
+            ux356_fullyExposed(dialog.contentItem); ux356_fullyExposed(dialog.footer);
+            capture("gui392-usage-" + data.tag); gui392_closeUsage(dialog);
+        }
+        console.log("GUI392_USAGE", JSON.stringify({tag: data.tag, usage: gui392_usageData()}));
+        gui392_unchanged(before);
+    }
+    function gui392_preferences() {
+        Ui.click(this, Probe, window, "appBar.button.preferences");
+        const preferences = gui392_dialog("preferences");
+        import265_click("preferences.tab.aiAssistance");
+        verify(import265_control("preferences.ai.sources").visible,
+            "GUI392: genuine Preferences tab exposes original source DataTable");
+        return preferences;
+    }
+    function gui392_sources() { return gui392_json(Probe.rows(assistant.skillSources)); }
+    function gui392_sourceControl(name) {
+        const preferences = gui392_dialog("preferences");
+        const tables = Ui.itemsWithProperty(preferences.contentItem, "objectName").filter(control =>
+            control.objectName === "preferences.ai.sources" && Ui.rendered(control));
+        compare(tables.length, 1, "GUI392: one current Preferences source table owns row controls");
+        compare(tables[0].sourceModel, assistant.skillSources, "GUI392: actual table is bound to original VM source model");
+        const controls = Ui.itemsWithProperty(tables[0], "objectName").filter(control =>
+            control.objectName === name && Ui.rendered(control));
+        compare(controls.length, 1, "GUI392: exact current model/table owns unique opaque-ID row control: " + name);
+        ux356_fullyExposed(controls[0]);
+        return controls[0];
+    }
+
+    function gui392_folder(relative, cancel) {
+        const before = gui392_sources();
+        import265_click("preferences.ai.sources.add");
+        const selectors = Probe.objectsWithProperty(window, "visible").filter(object =>
+            object.objectName === "preferences.ai.sources.folder" && object.visible);
+        compare(selectors.length, 1, "GUI392: actual Add opens original single named FolderDialog");
+        const selector = selectors[0], selectorLife = lifetime313(selector);
+        const panels = Probe.visibleDialogs(window).filter(panel => panel.objectName !== "preferences"
+            && typeof panel.standardButton === "function" && panel.standardButton(Dialog.Open) !== null);
+        compare(panels.length, 1, "GUI392: same genuine FolderDialog owns exactly one current standard Open panel");
+        const panel = panels[0], panelLife = lifetime313(panel);
+        let accepted = 0, rejected = 0;
+        function onAccepted() { ++accepted; }
+        function onRejected() { ++rejected; }
+        selector.accepted.connect(onAccepted); selector.rejected.connect(onRejected);
+        try {
+            if (cancel) gui392_button(panel.standardButton(Dialog.Cancel));
+            else {
+                keyClick(Qt.Key_L, Qt.ControlModifier);
+                const field = window.activeFocusItem;
+                verify(field !== null && field.activeFocus && Ui.rendered(field) && Ui.exposed(field),
+                    "GUI392: genuine Ctrl+L focuses original exposed native folder breadcrumb");
+                let owned = false;
+                for (let parent = field; parent; parent = parent.parent) owned = owned || parent === panel.contentItem;
+                verify(owned && alive313(panelLife), "GUI392: exact focused breadcrumb belongs to SAME original folder panel");
+                const path = String(Probe.referenceUrl(relative)).replace(/^file:\/\//, "");
+                visible185_type(decodeURIComponent(path));
+                compare(field.text, decodeURIComponent(path), "GUI392: actual focused folder spelling equals independently owned full path");
+                keyClick(Qt.Key_Return);
+                verify(alive313(panelLife) && panel.visible && alive313(selectorLife),
+                    "GUI392: directory navigation retains same live original chooser before actual Open");
+                gui392_button(panel.standardButton(Dialog.Open));
+            }
+            tryVerify(() => !selector.visible, 2000, "GUI392: actual original chooser closes from genuine Cancel/Open");
+            compare(accepted, cancel ? 0 : 1, "GUI392: exact original selector has one expected acceptance, never synthesized");
+            compare(rejected, cancel ? 1 : 0, "GUI392: exact original selector has one expected rejection");
+        } finally {
+            disconnect313(selectorLife, selector, "accepted", onAccepted);
+            disconnect313(selectorLife, selector, "rejected", onRejected);
+        }
+        if (cancel) compare(JSON.stringify(gui392_sources()), JSON.stringify(before),
+            "GUI392: actual folder Cancel changes no source descriptor/configuration");
+    }
+    function test_gui392_preferences_real_sources() {
+        const before = gui392_setup(), preferences = gui392_preferences();
+        const original = gui392_sources();
+        compare(original.length, 1, "GUI392 SETUP: isolated original source configuration has only builtin");
+        compare(original[0].id, "builtin", "GUI392: builtin has public fixed identity");
+        verify(original[0].builtin && original[0].enabled, "GUI392: builtin is initially enabled");
+        const label = gui392_sourceControl("preferences.ai.source.label.builtin");
+        compare(label.text, "EasyDiffraction", "GUI392: builtin label exposes ONLY product name, never repository path");
+        const remove = gui392_sourceControl("preferences.ai.source.remove.builtin");
+        verify(!remove.enabled && remove.ToolTip.text === "The built-in source cannot be removed",
+            "GUI392: original builtin delete is physically unavailable with truthful tooltip");
+        const toggle = gui392_sourceControl("preferences.ai.source.enabled.builtin");
+        verify(toggle.Accessible.checkable && toggle.Accessible.checked
+            && toggle.Accessible.name === "Disable this skill source", "GUI392: builtin uses actual accessible table toggle policy");
+        import265_click(toggle.objectName);
+        compare(gui392_sources()[0].enabled, false, "GUI392: genuine builtin toggle disables actual source");
+        compare(gui392_json(JSON.parse(assistant.contextPreview).skills).length, 0,
+            "GUI392: all-disabled configuration honestly discloses no skills");
+        gui392_folder("skills/collection", true);
+        gui392_folder("skills/collection", false);
+        let rows = gui392_sources();
+        compare(rows.length, 2, "GUI392: one real folder selection admits exactly one collection source");
+        const locals = rows.filter(row => !row.builtin);
+        compare(locals.length, 1, "GUI392: collection is one actual source row, not guessed per-package rows");
+        const local = locals[0];
+        verify(typeof local.id === "string" && local.id.length > 0 && local.id !== "builtin" && local.enabled,
+            "GUI392: local identity is genuine nonempty opaque app-issued source ID");
+        const path = decodeURIComponent(String(Probe.referenceUrl("skills/collection")).replace(/^file:\/\//, ""));
+        compare(local.path, path, "GUI392: local model path is exact genuinely selected owned collection");
+        const localLabel = gui392_sourceControl("preferences.ai.source.label." + local.id);
+        compare(localLabel.text, path, "GUI392: local row labels actual path rather than invented name");
+        compare(localLabel.ToolTip.text, path, "GUI392: complete local path remains accessible in tooltip");
+        const disclosed = JSON.parse(assistant.contextPreview);
+        const serialized = JSON.stringify(disclosed.skills);
+        verify(serialized.includes("GUI392 independent alpha guidance") && serialized.includes("GUI392 independent beta guidance"),
+            "GUI392: enabled collection contributes BOTH independently authored complete guidance packages");
+        capture("gui392-preferences-local-source");
+        import265_click("preferences.ai.source.enabled." + local.id);
+        compare(gui392_sources().filter(row => row.id === local.id)[0].enabled, false,
+            "GUI392: original opaque-ID table toggle actually disables local source");
+        compare(JSON.parse(assistant.contextPreview).skills.length, 0,
+            "GUI392: disabled local plus disabled builtin contribute no instructions");
+        import265_click("preferences.ai.source.enabled." + local.id);
+        compare(gui392_sources().filter(row => row.id === local.id)[0].id, local.id,
+            "GUI392: toggling retains exact opaque source identity");
+        gui392_button(preferences.standardButton(Dialog.Ok));
+        gui393_sourceApproval();
+        const account = JSON.stringify(Probe.rows(assistant.models));
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("gui392-local-source-disclosed", true);
+        Ui.click(this, Probe, window, "assistant.showActions");
+        const eye = item("assistant.showActions");
+        verify(eye.checked && eye.Accessible.checkable && eye.Accessible.checked
+            && eye.Accessible.name === "Show actions" && eye.ToolTip.text === "Show actions" && eye.fontIcon === "eye",
+            "GUI392: original eye action is genuinely checkable/named and presentation only");
+        mouseMove(window.contentItem, 0, 0); rendered();
+        const icons = gui392_labels(eye);
+        verify(icons.some(label => label.color === EaStyle.Colors.themeAccent),
+            "GUI392: checked original eye has an actual painted accent state");
+        Ui.click(this, Probe, window, "assistant.composer"); visible185_type("GUI392 original held source request");
+        Ui.click(this, Probe, window, "assistant.send");
+        tryVerify(() => assistant.canCancel, 2000, "GUI392: original actual transport input is genuinely pending before busy checks");
+        verify(!eye.enabled, "GUI392: original Show actions eye is disabled during real original work");
+        const preferencesBusy = gui392_preferences();
+        for (const id of ["builtin", local.id]) for (const action of ["enabled", "remove"]) {
+            const button = gui392_sourceControl("preferences.ai.source." + action + "." + id);
+            verify(!button.enabled, "GUI392: genuine active work disables original source row actions");
+        }
+        verify(!item("preferences.ai.sources.add").enabled, "GUI392: genuine active work disables source Add");
+        gui392_button(preferencesBusy.standardButton(Dialog.Ok));
+        assistant.refreshUsage(); // Existing original optional-read barrier releases exact received input.
+        tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
+            && row.status === "completed" && row.text === "Original fileauth reply 1"), 2000,
+            "GUI392: original held input settles with exact real peer reply, not idle alone");
+        const selected = JSON.stringify(Probe.rows(assistant.selectedFiles));
+        const usage = JSON.stringify(gui392_usageData());
+        Ui.click(this, Probe, window, "assistant.clear");
+        tryCompare(assistant.messages, "count", 0, 2000, "GUI392: actual eraser Clear removes original conversation");
+        verify(assistant.connected, "GUI392: Clear retains connected account");
+        compare(JSON.stringify(Probe.rows(assistant.models)), account, "GUI392: Clear retains original model catalog");
+        compare(JSON.stringify(Probe.rows(assistant.selectedFiles)), selected, "GUI392: Clear retains original selected-source authority semantics");
+        compare(JSON.stringify(gui392_usageData()), usage, "GUI392: Clear retains current account-owned allowance");
+        const preferencesAgain = gui392_preferences();
+        import265_click("preferences.ai.source.remove." + local.id);
+        compare(gui392_sources().length, 1, "GUI392: genuine local Remove leaves only protected builtin");
+        compare(gui392_sources()[0].id, "builtin", "GUI392: removing local cannot remove builtin");
+        verify(!JSON.stringify(JSON.parse(assistant.contextPreview).skills).includes("GUI392 independent"),
+            "GUI392: removed local source contributes no next disclosed instructions");
+        import265_click("preferences.ai.source.enabled.builtin");
+        gui392_button(preferencesAgain.standardButton(Dialog.Ok));
+        console.log("GUI392_SOURCE", JSON.stringify({id: local.id, path: local.path, selected: gui392_json(Probe.rows(assistant.selectedFiles))}));
+        gui392_unchanged(before);
+    }
+    function test_gui392_source_refusals_data() {
+        return ["missing-skill", "malformed", "duplicate-names", "linked-skill", "duplicate-source"].map(tag => ({tag: tag}));
+    }
+    function test_gui392_source_refusals(data) {
+        const before = gui392_setup(), preferences = gui392_preferences();
+        if (["duplicate-source", "duplicate-names"].includes(data.tag)) {
+            const initialCount = gui392_sources().length;
+            gui392_folder("skills/collection", false);
+            compare(gui392_sources().length, initialCount + 1,
+                "GUI393: original duplicate refusal starts from genuinely admitted healthy name-matched collection");
+            compare(assistant.skillSourceError, "", "GUI393: healthy duplicate-control collection has no masked source error");
+        }
+        const original = JSON.stringify(gui392_sources());
+        gui392_folder(data.tag === "duplicate-source" ? "skills/collection" : "skills/" + data.tag, false);
+        compare(JSON.stringify(gui392_sources()), original,
+            "GUI392: actual invalid/missing/duplicate/link source selection refuses before any configuration write");
+        verify(typeof assistant.skillSourceError === "string" && assistant.skillSourceError.length > 0,
+            "GUI392: exact actual source refusal reports explicit original error");
+        gui392_button(preferences.standardButton(Dialog.Ok));
+        gui392_unchanged(before);
+    }
+    // GUI393: additive PUBLIC333-v3, never a private producer implementation oracle.
+    function gui393_under(control, root) {
+        for (let parent = control; parent; parent = parent.parent) if (parent === root) return true;
+        return false;
+    }
+    function gui393_control(choice, name) {
+        const matches = Ui.itemsWithProperty(choice.contentItem, "objectName").filter(control =>
+            control.objectName === name && Ui.rendered(control));
+        compare(matches.length, 1, "GUI393: exact original chooser owns one current radio/row/label: " + name);
+        ux356_fullyExposed(matches[0]);
+        return matches[0];
+    }
+    function gui393_effortName(token) {
+        return token === "" ? "assistant.choice.effort.default" : "assistant.choice.effort.value." + token;
+    }
+    function gui393_layout(choice, expectedEfforts) {
+        const models = gui392_json(Probe.rows(assistant.models));
+        compare(JSON.stringify(models.map(row => [row.id, row.displayName, row.available])), JSON.stringify([
+            ["gpt-6.1-sol", "Original primary model", true],
+            ["gpt-6-luna", "Original unavailable model", false],
+            ["gpt-6-sol", "Original alternate model", true]
+        ]), "GUI393: actual model rows equal complete independent provider catalogue in source order");
+        const modelTable = gui393_control(choice, "assistant.choice.models");
+        const effortTable = gui393_control(choice, "assistant.choice.efforts");
+        compare(modelTable.sourceModel, assistant.models, "GUI393: original model table uses actual VM rows");
+        verify(rect(modelTable)[1] < rect(effortTable)[1], "GUI393: actual models table precedes dependent effort table");
+        const modelRadios = models.map(row => gui393_control(choice, "assistant.choice.model." + row.id));
+        const effortRadios = expectedEfforts.map(token => gui393_control(choice, gui393_effortName(token)));
+        const all = Ui.itemsWithProperty(choice.contentItem, "objectName");
+        compare(all.filter(control => /^assistant\.choice\.model\.[^.]+/.test(control.objectName)
+            && control.objectName !== "assistant.choice.models" && typeof control.checked === "boolean").length,
+            modelRadios.length, "GUI393: model table offers no extra invented radio choice");
+        compare(all.filter(control => /^assistant\.choice\.effort\./.test(control.objectName)
+            && typeof control.checked === "boolean").length, effortRadios.length,
+            "GUI393: effort table offers ONLY original default plus actual dependent choices");
+        compare(modelRadios.filter(control => control.checked).length, 1,
+            "GUI393: models are genuine single selection");
+        compare(effortRadios.filter(control => control.checked).length, 1,
+            "GUI393: efforts are genuine single selection");
+        const radioRects = [], labelRects = [];
+        for (let index = 0; index < models.length; ++index) {
+            const row = models[index], radio = modelRadios[index];
+            compare(radio.checked, row.id === assistant.selectedModel, "GUI393: checked model is exact actual selected ID");
+            compare(radio.enabled, row.available, "GUI394: both healthy model controls and disabled middle match independent offered availability");
+            const label = gui393_control(choice, "assistant.choice.model.label." + row.id);
+            compare(label.text, row.displayName, "GUI393: model label is exact independent provider text");
+            const originalRow = gui393_control(choice, "assistant.choice.model.row." + row.id);
+            verify(gui393_under(originalRow, modelTable) && gui393_under(radio, originalRow) && gui393_under(label, originalRow),
+                "GUI393: SAME original model row/table owns its exact radio and label controls");
+            radioRects.push(rect(radio)); labelRects.push(rect(label));
+        }
+        const labels = {"": "Auto", "medium": "Medium", "high": "High"};
+        for (let index = 0; index < expectedEfforts.length; ++index) {
+            const token = expectedEfforts[index], radio = effortRadios[index];
+            compare(radio.checked, token === assistant.selectedEffort, "GUI393: checked effort is exact actual token");
+            const label = gui393_control(choice, gui393_effortName(token) + ".label");
+            compare(label.text, labels[token], "GUI393: default and known effort labels use independent original meanings");
+            const originalRow = gui393_control(choice, gui393_effortName(token) + ".row");
+            verify(gui393_under(originalRow, effortTable) && gui393_under(radio, originalRow) && gui393_under(label, originalRow),
+                "GUI393: SAME original dependent effort row/table owns its exact radio and label");
+            radioRects.push(rect(radio)); labelRects.push(rect(label));
+        }
+        for (const bounds of radioRects) verify(Math.abs(bounds[0] - radioRects[0][0]) < 0.5
+            && Math.abs(bounds[2] - radioRects[0][2]) < 0.5,
+            "GUI393: actual radio columns align across both tables");
+        for (const bounds of labelRects) verify(Math.abs(bounds[0] - labelRects[0][0]) < 0.5
+            && Math.abs(bounds[2] - labelRects[0][2]) < 0.5,
+            "GUI393: actual label columns align across both tables");
+        ux356_fullyExposed(choice.contentItem);
+        return {models: models, modelRadios: modelRadios, effortRadios: effortRadios,
+            modelTable: modelTable, effortTable: effortTable};
+    }
+    function gui393_open() {
+        const pill = item("assistant.modelEffort");
+        verify(pill.enabled, "GUI393: original combined pill is available only at genuine ready state");
+        Ui.click(this, Probe, window, "assistant.modelEffort");
+        const choice = gui392_dialog("assistant.modelEffort.popup");
+        const actual = gui393_control(choice, "assistant.choice.model." + assistant.selectedModel);
+        compare(window.activeFocusItem, actual, "GUI393: actual popup opening focuses selected available model radio");
+        verify(!Probe.objectsWithProperty(window, "objectName").some(control =>
+            ["assistant.model", "assistant.effort"].includes(control.objectName)),
+            "GUI393: superseded combo controls are absent, including hidden compatibility controls");
+        return choice;
+    }
+    function gui393_pill(modelName, effortLabel) {
+        const pill = item("assistant.modelEffort");
+        const labels = gui392_labels(pill);
+        const model = labels.filter(label => label.text === modelName);
+        const effort = labels.filter(label => label.text === effortLabel);
+        compare(model.length, 1, "GUI393: one painted pill model label shows actual chosen model");
+        compare(effort.length, 1, "GUI393: one painted pill effort label shows actual chosen effort");
+        verify(pill.enabled && effort[0].enabled, "GUI393: muted effort remains semantically enabled");
+        verify(pill.Accessible.name.includes(modelName) && pill.Accessible.name.includes(effortLabel)
+            && pill.ToolTip.text.includes(modelName) && pill.ToolTip.text.includes(effortLabel),
+            "GUI393: accessible name and tooltip disclose BOTH exact selected values");
+        const background = pill.background;
+        verify(background && background.visible && background.color.a > 0,
+            "GUI393: real pill has painted light rounded background");
+        verify(background.radius >= Math.min(background.width, background.height) / 2 - 0.5,
+            "GUI393: original combined control is a rounded pill");
+        function contrast(label) {
+            const alpha = label.color.a * label.opacity;
+            return Math.pow((label.color.r - background.color.r) * alpha, 2)
+                + Math.pow((label.color.g - background.color.g) * alpha, 2)
+                + Math.pow((label.color.b - background.color.b) * alpha, 2);
+        }
+        verify(contrast(effort[0]) < contrast(model[0]),
+            "GUI393: actual effort ink is less pronounced against SAME real background than model ink");
+        return pill;
+    }
+    function gui393_roundFooter() {
+        const send = item("assistant.send");
+        verify(send.enabled && send.visible && send.background.color.a > 0,
+            "GUI393: independent real typed draft enables original strong Send");
+        for (const name of ["assistant.files.add", "assistant.showActions",
+                            "assistant.previousUserMessage", "assistant.nextUserMessage"]) {
+            const control = item(name), background = control.background;
+            ux356_fullyExposed(control);
+            verify(background && background.visible && background.color.a > 0
+                && Math.abs(background.width - background.height) < 0.5
+                && background.radius >= background.height / 2 - 0.5,
+                "GUI393: actual original footer action has circular painted background: " + name);
+            verify(background.color !== send.background.color,
+                "GUI393: light footer treatment remains distinct from stronger original Send fill: " + name);
+        }
+    }
+    function gui393_sourceApproval() {
+        Ui.click(this, Probe, window, "assistant.connection");
+        const dialog = ux356_dialog();
+        tryCompare(dialog, "opened", true, 2000, "GUI393: source approval witness belongs to actual original sign-in dialog");
+        const original = gui392_json(dialog.disclosedContext);
+        compare(JSON.stringify(original), JSON.stringify(JSON.parse(assistant.contextPreview)),
+            "GUI393: actual original displayed disclosure equals exact current context before approval");
+        verify(Array.isArray(original.skills) && original.skills.length === 2
+            && original.skills.every(row => typeof row.id === "string" && row.id.length > 0 && row.id.length <= 1024
+                && typeof row.sha256 === "string" && /^[0-9a-f]{64}$/.test(row.sha256)
+                && typeof row.content === "string" && row.content.length <= 4096),
+            "GUI393: original approval receipt contains only two bounded actual independent fixture guidance entries");
+        console.log("GUI393_APPROVED_SOURCE", JSON.stringify({skills: original.skills.map(row =>
+            ({id: row.id, sha256: row.sha256, content: row.content}))}));
+        gui392_button(dialog.standardButton(Dialog.Ok));
+        report187_ready("gui393-original-approved-source", false);
+    }
+    function test_gui393_original_combined_chooser_data() {
+        return ["pointer", "space", "return", "enter", "retirement"].map(tag => ({tag: tag}));
+    }
+    function test_gui393_original_combined_chooser(data) {
+        const before = gui392_setup(); gui392_signIn();
+        compare(assistant.selectedModel, "gpt-6.1-sol", "GUI393 SETUP: independently declared provider-default original model is selected");
+        compare(assistant.selectedEffort, "", "GUI393 SETUP: original empty token means provider Auto");
+        compare(JSON.stringify(gui392_json(assistant.availableEfforts)), JSON.stringify(["medium", "high"]),
+            "GUI393 SETUP: actual initial efforts equal independent original catalogue");
+        const modelCatalog = JSON.stringify(gui392_json(Probe.rows(assistant.models)));
+        const selected = JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles)));
+        const pill = gui393_pill("Original primary model", "Auto"), pillLife = lifetime313(pill);
+        let choice = gui393_open();
+        gui393_layout(choice, ["", "medium", "high"]);
+        capture("gui393-original-two-table-choice-" + data.tag);
+        if (data.tag === "retirement") {
+            const originalChoice = lifetime313(choice);
+            assistant.signOut(); // Genuine existing public account retirement, no fabricated state/signal.
+            tryVerify(() => !assistant.connected && (!alive313(originalChoice) || !choice.visible), 2000,
+                "GUI393: actual account retirement closes exact old chooser before any replacement authority");
+            verify(!Ui.rendered(pill) || !pill.enabled, "GUI393: old pill cannot authorize signed-out model changes");
+            gui392_unchanged(before);
+            return;
+        }
+        if (["space", "return", "enter"].includes(data.tag)) {
+            keyClick(Qt.Key_Escape);
+            tryCompare(choice, "visible", false, 2000, "GUI393: real Escape closes original chooser");
+            compare(window.activeFocusItem, pill, "GUI393: actual Escape returns focus to SAME enabled original pill");
+            const opening = choice, openingLife = lifetime313(choice), openingOwner = Session.project;
+            let openings = 0;
+            function opened394() {
+                verify(alive313(openingLife) && Session.project === openingOwner && Session.assistant === assistant,
+                    "GUI394: opening receipt belongs to same original receiver/owner after actual key");
+                if (opening.opened) ++openings;
+            }
+            opening.openedChanged.connect(opened394);
+            try {
+                keyClick(data.tag === "space" ? Qt.Key_Space : data.tag === "enter" ? Qt.Key_Enter : Qt.Key_Return);
+                choice = gui392_dialog("assistant.modelEffort.popup");
+                compare(choice, opening, "GUI394: genuine key opens SAME original popup, no replacement blessing");
+                compare(openings, 1, "GUI394: ONE actual Space/Return/Enter press-release opens original popup exactly once");
+            } finally { disconnect313(openingLife, opening, "openedChanged", opened394); }
+            let layout = gui393_layout(choice, ["", "medium", "high"]);
+            if (data.tag === "space") {
+                gui394_sameCurrent(choice, layout.modelRadios[0], "space", false);
+                // Original bounded real keyboard traversal; no forceFocus or state setter.
+                const autoRadio = gui393_control(choice, gui393_effortName(""));
+                for (let step = 0; step < 32 && !autoRadio.activeFocus; ++step) keyClick(Qt.Key_Tab);
+                compare(window.activeFocusItem, autoRadio, "GUI394: genuine traversal reaches actual current Auto radio");
+                gui394_sameCurrent(choice, autoRadio, "space", true);
+                choice = gui393_open(); layout = gui393_layout(choice, ["", "medium", "high"]);
+            }
+            const radios = [layout.modelRadios[0], layout.modelRadios[2]].concat(layout.effortRadios);
+            compare(window.activeFocusItem, radios[0], "GUI393: genuine Space/Return opening focuses original selected model");
+            for (let index = 1; index < radios.length; ++index) {
+                keyClick(Qt.Key_Tab);
+                compare(window.activeFocusItem, radios[index], "GUI393: genuine Tab traverses models then efforts without stale combo neighbor");
+            }
+            if (data.tag === "space") {
+                for (let index = radios.length - 2; index >= 0; --index) {
+                    keyClick(Qt.Key_Tab, Qt.ShiftModifier);
+                    compare(window.activeFocusItem, radios[index],
+                        "GUI394: genuine Backtab also skips unavailable middle and preserves enabled-table order");
+                }
+                for (let index = 1; index < radios.length; ++index) {
+                    keyClick(Qt.Key_Tab);
+                    compare(window.activeFocusItem, radios[index], "GUI394: same original forward traversal remains usable after Backtab");
+                }
+            }
+            keyClick(Qt.Key_Space);
+            tryCompare(assistant, "selectedEffort", "high", 2000, "GUI393: actual final focused High radio changes original effort");
+            tryCompare(choice, "visible", false, 2000, "GUI393: actual effort selection closes chooser");
+            compare(window.activeFocusItem, pill, "GUI393: actual effort choice returns focus to SAME pill");
+            gui393_pill("Original primary model", "High");
+        } else {
+            let currentLayout = gui393_layout(choice, ["", "medium", "high"]);
+            gui394_unavailable(choice, currentLayout.modelRadios[1], gui393_control(choice, "assistant.choice.model.label.gpt-6-luna"));
+            gui394_sameCurrent(choice, currentLayout.modelRadios[0], "mouse", false);
+            gui393_layout(choice, ["", "medium", "high"]);
+            gui394_sameCurrent(choice, gui393_control(choice, gui393_effortName("")), "mouse", true);
+            choice = gui393_open();
+            const high = gui393_control(choice, gui393_effortName("high"));
+            compare(import265_click(high.objectName), high, "GUI393: genuine original high-radio click reaches exact live control");
+            tryCompare(assistant, "selectedEffort", "high", 2000, "GUI393: genuine original High selection is non-noop");
+            tryCompare(choice, "visible", false, 2000, "GUI393: selected High closes actual chooser");
+            choice = gui393_open();
+            const beta = gui393_control(choice, "assistant.choice.model.label.gpt-6-sol");
+            compare(import265_click(beta.objectName), beta, "GUI393: original model LABEL is a genuine activation entrance");
+            tryCompare(assistant, "selectedModel", "gpt-6-sol", 2000, "GUI393: real model label changes selected model without an index guess");
+            verify(choice.visible && choice.opened, "GUI393: model choice keeps SAME popup open for dependent effort choice");
+            compare(assistant.selectedEffort, "", "GUI393: unsupported old High falls back to original provider-default token");
+            compare(JSON.stringify(gui392_json(assistant.availableEfforts)), JSON.stringify(["medium"]),
+                "GUI393: model choice replaces dependent options with actual sole supported effort");
+            const dependent = gui393_layout(choice, ["", "medium"]);
+            verify(gui393_under(window.activeFocusItem, dependent.effortTable),
+                "GUI393: model selection genuinely moves focus into original effort table");
+            const medium = gui393_control(choice, gui393_effortName("medium") + ".label");
+            compare(import265_click(medium.objectName), medium, "GUI393: actual effort LABEL also selects through genuine pointer input");
+            tryCompare(assistant, "selectedEffort", "medium", 2000, "GUI393: exact original Medium is selected");
+            tryCompare(choice, "visible", false, 2000, "GUI393: genuine effort label closes original popup");
+            compare(window.activeFocusItem, pill, "GUI393: label activation restores SAME actual pill focus");
+            gui393_pill("Original alternate model", "Medium");
+            if (assistant.contextConsentRequired) assistant.signIn();
+            report187_ready("gui393-current-choice-disclosed", true);
+            Ui.click(this, Probe, window, "assistant.composer"); visible185_type("GUI393 actual chosen model request");
+            gui393_roundFooter();
+            Ui.click(this, Probe, window, "assistant.send");
+            tryVerify(() => assistant.canCancel, 2000, "GUI393: actual original user request is genuinely held before busy check");
+            verify(alive313(pillLife) && !pill.enabled && !choice.visible,
+                "GUI393: original live busy state disables pill and retains no active chooser");
+            const stop = item("assistant.stop"), eye = item("assistant.showActions");
+            verify(stop.visible && stop.enabled && stop.background.color.a > 0
+                && stop.background.color !== eye.background.color,
+                "GUI393: original busy Stop retains stronger treatment than light footer actions");
+            assistant.refreshUsage(); // Same original received-input release door as GUI392.
+            tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
+                && row.status === "completed" && row.text === "Original fileauth reply 1"), 2000,
+                "GUI393: original selected-model request really completes before re-enabling choices");
+            verify(pill.enabled, "GUI393: genuine completed original work re-enables original combined chooser");
+            compare(assistant.selectedModel, "gpt-6-sol", "GUI393: actual request retains independently chosen model");
+            compare(assistant.selectedEffort, "medium", "GUI393: actual request retains independently chosen effort");
+        }
+        compare(JSON.stringify(gui392_json(Probe.rows(assistant.models))), modelCatalog,
+            "GUI393: ordinary choices preserve actual original catalogue/account");
+        compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), selected,
+            "GUI393: model/effort presentation grants no selected file authority");
+        gui392_unchanged(before);
+        console.log("GUI393_CHOICE", JSON.stringify({tag: data.tag, model: assistant.selectedModel, effort: assistant.selectedEffort}));
+    }
+    function test_gui393_first_delivery_eye_clear() {
+        const before = gui392_setup(); gui392_signIn();
+        const account = JSON.stringify(gui392_json(Probe.rows(assistant.models)));
+        // Existing public fixture admission is setup only, not native picker proof.
+        const token = assistant.beginFileSelection();
+        verify(token.length > 0 && assistant.addSelectedFiles(token,
+            [Probe.referenceUrl("project/structures/lbco.edi")]),
+            "GUI393 SETUP: one independently owned original source is genuinely admitted before Clear");
+        tryCompare(assistant.selectedFiles, "count", 1, 2000,
+            "GUI393 SETUP: actual canonical source grant exists, not an empty Clear assertion");
+        const originalFile = gui392_json(Probe.rows(assistant.selectedFiles))[0];
+        verify(originalFile.id.length > 0 && originalFile.pending,
+            "GUI393 SETUP: real canonical pending ID is app issued");
+        if (assistant.contextConsentRequired) assistant.signIn();
+        report187_ready("gui393-eye-current-context", true);
+        const eye = item("assistant.showActions");
+        compare(eye.checked, false, "GUI393 SETUP: original isolated presentation starts with actions off");
+        Ui.click(this, Probe, window, "assistant.showActions");
+        verify(eye.checked && eye.Accessible.checkable && eye.Accessible.checked
+            && eye.Accessible.name === "Show actions" && eye.ToolTip.text === "Show actions" && eye.fontIcon === "eye",
+            "GUI393: genuine eye toggle is checked, named, accessible and presentation-only");
+        mouseMove(window.contentItem, 0, 0); rendered();
+        verify(gui392_labels(eye).some(label => label.color === EaStyle.Colors.themeAccent),
+            "GUI393: original checked eye actually paints accent ink");
+        Ui.click(this, Probe, window, "assistant.composer"); visible185_type("GUI393 first delivery original Clear request");
+        gui393_roundFooter();
+        Ui.click(this, Probe, window, "assistant.send");
+        tryVerify(() => assistant.canCancel, 2000, "GUI393: actual original input is held before eye/chooser busy observation");
+        verify(!eye.enabled && !item("assistant.modelEffort").enabled,
+            "GUI393: real original work disables presentation and choice changes");
+        const pending = Probe.rows(assistant.messages).filter(row => row.kind === "user"
+            && row.text === "GUI393 first delivery original Clear request");
+        compare(pending.length, 1, "GUI393: held input has one actual original user row");
+        verify(pending[0].id.length > 0 && pending[0].status === "pending",
+            "GUI393: mandatory real GUI user ID is still pending before original ACK release");
+        const originalUserId = pending[0].id;
+        assistant.refreshUsage();
+        tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "user"
+            && row.id === originalUserId && row.status === "completed")
+            && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
+                && row.status === "completed" && row.text === "Original fileauth reply 1"), 2000,
+            "GUI393: original completed user plus original completed reply settle before Clear baseline");
+        const selected = gui392_json(Probe.rows(assistant.selectedFiles));
+        compare(selected.length, 1, "GUI393: ACK retains actual canonical source authority before Clear");
+        compare(selected[0].id, originalFile.id, "GUI393: actual original ACK preserves exact source ID");
+        compare(selected[0].pending, false, "GUI393: actual matching ACK consumes pending source presentation");
+        const usage = JSON.stringify(gui392_usageData());
+        console.log("GUI393_CLEAR_IDS", JSON.stringify({user: originalUserId, file: originalFile.id}));
+        Ui.click(this, Probe, window, "assistant.clear");
+        tryCompare(assistant.messages, "count", 0, 2000, "GUI393: actual eraser Clear removes original conversation");
+        compare(assistant.selectedFiles.count, 0, "GUI393: original Clear retires actual selected-file grants");
+        verify(assistant.connected && !assistant.canCancel && !assistant.contextConsentRequired,
+            "GUI393: original Clear preserves genuine account and unchanged remaining-scope consent");
+        compare(JSON.stringify(gui392_json(Probe.rows(assistant.models))), account,
+            "GUI393: actual Clear preserves original model catalogue");
+        compare(JSON.stringify(gui392_usageData()), usage, "GUI393: actual Clear preserves account-owned usage");
+        gui392_unchanged(before);
+        capture("gui393-first-delivery-eye-clear");
+    }
+    function gui394_sameCurrent(choice, radio, mode, effort) {
+        const original = {assistant: assistant, project: Session.project, choice: choice,
+            model: assistant.selectedModel, effort: assistant.selectedEffort};
+        const lives = [assistant, original.project, choice, radio].map(lifetime313);
+        verify(radio.enabled && radio.checked && gui393_under(radio, choice.contentItem),
+            "GUI394 SETUP: original independently selected current radio is exposed, checked and enabled");
+        let presses = 0, releases = 0, falseChecks = 0, hides = 0;
+        const hideChecks = [], connected = [];
+        function current() {
+            verify(lives.every(alive313) && assistant === original.assistant && Session.assistant === original.assistant
+                && Session.project === original.project && choice === original.choice,
+                "GUI394: genuine original native-radio signal retains exact live owner/control/popup");
+        }
+        function pressed() { current(); if (radio.pressed) ++presses; }
+        function released() { current(); ++releases; }
+        function checked() { current(); if (!radio.checked) ++falseChecks; }
+        function hiding() {
+            current(); ++hides;
+            hideChecks.push({checked: radio.checked, model: assistant.selectedModel, effort: assistant.selectedEffort});
+        }
+        try {
+            for (const pair of [[radio, "pressedChanged", pressed], [radio, "released", released],
+                                [radio, "checkedChanged", checked], [choice, "aboutToHide", hiding]]) {
+                pair[0][pair[1]].connect(pair[2]); connected.push(pair);
+            }
+            if (mode === "mouse") compare(import265_click(radio.objectName), radio,
+                "GUI394: same-current native mouse action uses exact original physical radio");
+            else {
+                compare(window.activeFocusItem, radio, "GUI394: genuine same-current Space targets original focused radio");
+                keyClick(Qt.Key_Space);
+            }
+            compare(presses, 1, "GUI394: one real true press, not a synthetic clicked signal");
+            compare(releases, 1, "GUI394: one real original release completes native signal tail");
+            compare(falseChecks, 0, "GUI394: current radio NEVER falsely clears during same-value native mouse/Space tail");
+            compare(assistant.selectedModel, original.model, "GUI394: same-current activation preserves exact selected model");
+            compare(assistant.selectedEffort, original.effort, "GUI394: same-current activation preserves exact selected effort");
+            if (effort) {
+                tryCompare(choice, "visible", false, 2000, "GUI394: same-current effort still performs original genuine popup close");
+                compare(hides, 1, "GUI394: exact original effort activation has one real pre-hide delivery witness");
+                compare(JSON.stringify(hideChecks), JSON.stringify([{checked: true, model: original.model, effort: original.effort}]),
+                    "GUI394: mandatory live ORIGINAL pre-hide checked/selection receipt precedes any close/recreation repair");
+            } else {
+                compare(hides, 0, "GUI394: same-current model retains original open chooser");
+                verify(alive313(lives[3]) && radio.checked && choice.opened,
+                    "GUI394: actual current model remains checked in SAME original open table after native tail");
+            }
+        } finally {
+            for (const pair of connected)
+                disconnect313(pair[0] === choice ? lives[2] : lives[3], pair[0], pair[1], pair[2]);
+        }
+    }
+    function gui394_unavailable(choice, radio, label) {
+        verify(!radio.enabled && !radio.checked && Ui.rendered(radio) && Ui.exposed(radio),
+            "GUI394 SETUP: independently offered MIDDLE model is genuinely visible, disabled and unselected");
+        const model = assistant.selectedModel, effort = assistant.selectedEffort, error = assistant.lastError;
+        const life = lifetime313(radio);
+        let clicks = 0;
+        function clicked() { ++clicks; }
+        radio.clicked.connect(clicked);
+        try {
+            for (const target of [radio, label]) {
+                verify(gui393_under(target, choice.contentItem) && Ui.rendered(target) && Ui.exposed(target),
+                    "GUI394: actual unavailable radio AND label are observable original input targets");
+                const point = Ui.clickPoint(target);
+                mouseClick(target, point.x, point.y); rendered();
+                compare(clicks, 0, "GUI394: actual disabled middle radio/label refuse genuine pointer activation");
+                compare(assistant.selectedModel, model, "GUI394: disabled offered model cannot change backend selection");
+                compare(assistant.selectedEffort, effort, "GUI394: refused disabled-model activation retains exact current effort");
+                compare(assistant.lastError, error, "GUI394: disabled UI input does not dispatch a setter failure or alter real account error");
+            }
+            verify(choice.opened && alive313(life) && !radio.checked,
+                "GUI394: refusal preserves same current popup and unavailable radio state");
+        } finally { disconnect313(life, radio, "clicked", clicked); }
+    }
+    // GUI395: original native Button/EmptyState and divider contracts, not producer339 output.
+    function gui395_signInHover(connection) {
+        verify(connection.enabled && Ui.rendered(connection) && Ui.exposed(connection),
+            "GUI395: SAME original signed-out header Sign in is physically actionable");
+        const labels = gui392_labels(connection).filter(label => label.text === "Sign in");
+        compare(labels.length, 1, "GUI395: original Sign in owns one actual painted text label");
+        mouseMove(window.contentItem, 0, 0); rendered();
+        tryCompare(labels[0], "color", EaStyle.Colors.themeForeground, 2000,
+            "GUI395: original native unhovered enabled button uses ordinary foreground");
+        const point = Ui.clickPoint(connection);
+        mouseMove(connection, point.x, point.y); rendered();
+        tryCompare(labels[0], "color", EaStyle.Colors.themeForegroundHovered, 2000,
+            "GUI395: genuine mouse hover paints original native hovered foreground, not a hardcoded label color");
+        capture("gui395-real-sign-in-hover");
+        mouseMove(window.contentItem, 0, 0); rendered();
+        tryCompare(labels[0], "color", EaStyle.Colors.themeForeground, 2000,
+            "GUI395: genuine pointer leave restores native foreground");
+    }
+    function gui395_divider(stage) {
+        verify(popup.opened && popup.visible, "GUI395: divider observation uses actual open sidebar");
+        const host = item("workflow.project.sidebarHost");
+        sameRect(rect(popup.contentItem), rect(host));
+        const width = EaStyle.Sizes.borderThickness;
+        const expectedX = Preferences.sideBarOnLeft ? popup.contentItem.width - width : 0;
+        const candidates = Ui.itemsWithProperty(popup.contentItem, "color").filter(control => {
+            if (!control.visible || String(control.color).toLowerCase() !== String(EaStyle.Colors.appBorder).toLowerCase()
+                || Math.abs(control.width - width) >= 0.5
+                || Math.abs(control.height - popup.contentItem.height) >= 0.5) return false;
+            const point = control.mapToItem(popup.contentItem, 0, 0);
+            return Math.abs(point.x - expectedX) < 0.5 && Math.abs(point.y) < 0.5;
+        });
+        compare(candidates.length, 1, "GUI395: exact current assistant owns one full-height native divider at main/sidebar boundary");
+        const line = candidates[0];
+        ux356_fullyExposed(line);
+        const bounds = rect(line), image = grabImage(window.contentItem);
+        verify(image.width > 0 && image.height > 0, "GUI395: passive actual window framebuffer exists");
+        const scaleX = image.width / window.contentItem.width, scaleY = image.height / window.contentItem.height;
+        for (const fraction of [0.25, 0.5, 0.75]) {
+            const x = Math.floor((bounds[0] + bounds[2] / 2) * scaleX);
+            const y = Math.floor((bounds[1] + bounds[3] * fraction) * scaleY);
+            verify(x >= 0 && x < image.width && y >= 0 && y < image.height,
+                "GUI395: original boundary sample belongs to SAME actual window frame");
+            compare(String(image.pixel(x, y)).toLowerCase(), String(EaStyle.Colors.appBorder).toLowerCase(),
+                "GUI395: actual native divider is PAINTED over signed-out/auth content at " + stage + ", not merely declared behind it");
+        }
+    }
+    function gui395_dividers(stage) {
+        const originalSide = Preferences.sideBarSide;
+        try {
+            for (const side of ["Left", "Right"]) {
+                // Same existing public Preference layout fixture as original popup tests.
+                Preferences.sideBarSide = side; rendered();
+                gui395_divider(stage + "-" + side);
+                capture("gui395-divider-" + stage + "-" + side);
+            }
+        } finally { Preferences.sideBarSide = originalSide; }
+        rendered();
     }
 }

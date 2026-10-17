@@ -275,7 +275,7 @@ def test_provider_model_display_name_is_literal_in_both_actual_catalog_views(ui,
     authenticate(ui, signer)
     ui.command('select_model', id='gpt-6.1-sol')
     if popup:
-        ui.command('popup', name='assistant.model')
+        ui.command('click', name='assistant.modelEffort')
     assert_literal_renderer(ui, marker)
 
 
@@ -442,7 +442,7 @@ def test_effort_options_use_reviewed_capabilities_and_ignore_untrusted_catalog_l
     )
     ui.command('select_effort', id='high')
     if popup:
-        ui.command('popup', name='assistant.effort')
+        ui.command('click', name='assistant.modelEffort')
     assert not any(marker in text['text'] for text in ui.last['ui']['texts']), (
         'I12/I16: undocumented provider effort labels never enter collapsed or popup renderers'
     )

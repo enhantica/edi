@@ -108,9 +108,24 @@ TestCase {
         const item = panel();
         tryCompare(item, "overlayMode", true, 500, "I16: narrow windows use a chat overlay drawer");
         verify(item.width <= window.width, "I16: narrow chat cannot exceed the logical viewport");
-        for (const name of ["assistant.composer", "assistant.connection", "assistant.model"]) {
-            const control = Ui.find(window.contentItem, name);
-            verify(control !== null && Ui.exposed(control), "I16: narrow chat retains reachable control " + name);
+        compare(initialAssistant.connected, false, "GUI393 SETUP: this existing narrow actor is genuinely signed out");
+        const popups = Probe.objectsWithProperty(window, "opened").filter(object => object.objectName === "assistant.popup");
+        compare(popups.length, 1, "GUI396: SAME original Main window owns ONE actual assistant Popup");
+        const originalPopup = popups[0];
+        compare(originalPopup.assistant, initialAssistant, "GUI396: assistant property belongs to the original Popup, not its plain content Item");
+        compare(Session.assistant, initialAssistant, "GUI396: current Session retains original controller ownership");
+        compare(originalPopup.contentItem, item, "GUI396: actual Popup content is SAME original assistant.panel Item returned by panel()");
+        for (const name of ["assistant.composer", "assistant.connection", "assistant.modelEffort"]) {
+            verify(originalPopup.assistant === initialAssistant && Session.assistant === initialAssistant
+                && originalPopup.contentItem === item,
+                "GUI396: each hidden/visible inventory observation retains exact original Popup/controller/content ownership");
+            const owned = Ui.itemsWithProperty(originalPopup.contentItem, "objectName").filter(control => control.objectName === name);
+            compare(owned.length, 1, "GUI395: original scoped visual inventory owns ONE exact control, including hidden content: " + name);
+            const control = owned[0];
+            if (name === "assistant.connection") {
+                compare(Ui.find(item, name), control, "GUI395: visible Sign in input lookup resolves SAME original owned control");
+                verify(Ui.exposed(control), "GUI393: narrow signed-out chat keeps sole Sign in reachable");
+            } else verify(!Ui.rendered(control), "GUI393: narrow signed-out chat hides ordinary composer/combined chooser " + name);
         }
         window.width = oldWidth;
         window.minimumWidth = oldMinimum;

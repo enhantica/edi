@@ -3518,47 +3518,10 @@ def test_usage129_normal_clear_preserves_account_owned_usage(generic, tmp_path, 
     )
 
 
-def test_usage129_real_canvas_distinguishes_zero_missing_and_recovered_zero(generic):
-    actor, trace = usage_case(generic, mode='zero-empty', ui=True)
-    state = settle(actor, lambda value: usage_value(value)['available'])
-    assert usage_primary(state) == [0], (
-        'US4 SETUP: genuine explicit zero, not missing provider window'
-    )
-    zero = actor.command('inspect')['ui']['usage']['canvas']
-    assert zero['window_available'] is True, 'US4: actual Canvas treats genuine zero as available'
-    actor.command('refresh_usage')
-    settle(
-        actor,
-        lambda value: (
-            not usage_value(value)['available']
-            and not usage_value(value)['stale']
-            and usage_value(value)['buckets'] == []
-            and bool(usage_value(value).get('observedAt'))
-            and any(
-                event['kind'] == 'usage-result-reply' and event['number'] == 2 and event['empty']
-                for event in clear_control_events(trace)
-            )
-        ),
-    )
-    missing = actor.command('inspect')['ui']['usage']['canvas']
-    assert missing['window_available'] is False, (
-        'US4: actual missing window is distinct from genuine zero'
-    )
-    assert missing['frame']['sha256'] != zero['frame']['sha256'], (
-        'US4: real rendered Canvas invalidates zero-to-missing, beyond a correct '
-        'nonpainted property'
-    )
-    actor.command('refresh_usage')
-    settle(actor, lambda value: usage_primary(value) == [0])
-    recovered = actor.command('inspect')['ui']['usage']['canvas']
-    assert (
-        recovered['window_available'] is True
-        and recovered['frame']['sha256'] != missing['frame']['sha256']
-    ), 'US4: actual rendered Canvas also invalidates missing-to-zero without reopening the dialog'
-    assert all(
-        row['frame']['width'] > 0 and row['frame']['height'] > 0
-        for row in (zero, missing, recovered)
-    ), 'US4 SETUP: actual framebuffer regions are nonempty'
+def test_usage129_real_canvas_distinguishes_zero_missing_and_recovered_zero(tmp_path):
+    # GUI331 replaces the old ring. Preserve zero/missing/recovered *rendered*
+    # distinctions through the actual Main percentage and genuine dialog refresh.
+    gui392_run(tmp_path, 'zero-missing-recovered')
 
 
 def test_usage129_actual_small_enlarged_dialog_scrolls_with_shared_ea_component(generic):
@@ -9151,3 +9114,330 @@ def test_ux356_real_send_compact_scope_short_file_presentation(case, tmp_path):
     assert not any(row.get('method') in {'account/login/start', 'account/logout'} for row in requests), (
         'UX356: genuine owned healthy-account setup never repairs admission by provider login/logout'
     )
+
+# GUI392: public331 standalone GUI on actual production, not deferred core adapters.
+GUI392_USAGE_CASES = ('remaining25', 'remaining24', 'remaining5', 'remaining4',
+                      'remaining100', 'over100', 'unknown', 'stale')
+GUI392_SOURCE_REFUSALS = ('missing-skill', 'malformed', 'duplicate-names',
+                         'linked-skill', 'duplicate-source')
+GUI392_SKILLS = {
+    'alpha': '---\nname: gui392-alpha\ndescription: Original independent alpha guidance\n---\nGUI392 independent alpha guidance\n',
+    'beta': '---\nname: gui392-beta\ndescription: Original independent beta guidance\n---\nGUI392 independent beta guidance\n',
+}
+
+
+def gui392_usage_reply(case):
+    """Independent pinned provider schema operands; no subject normalization oracle."""
+    operands = {'remaining25': (75, 32), 'remaining24': (76, 32),
+                'remaining5': (95, 32), 'remaining4': (96, 32),
+                'remaining100': (0, 0), 'over100': (137, 32)}
+    assert isinstance(case, str) and case in (*operands, 'unknown'), (
+        'GUI392 SETUP: only declared independent usage operand names are valid'
+    )
+    primary, secondary = operands.get(case, (0, 0))
+    value = {'limitId': 'original-codex', 'limitName': 'Original owned limit',
+             'normalModelSlug': None,
+             'primary': {'usedPercent': primary, 'windowDurationMins': 300,
+                         'resetsAt': 1800000000},
+             'secondary': {'usedPercent': secondary, 'windowDurationMins': 10080,
+                           'resetsAt': 1800000900},
+             'credits': {'hasCredits': True, 'unlimited': False, 'balance': '12.50'},
+             'individualLimit': None, 'spendControlReached': None, 'planType': 'plus',
+             'rateLimitReachedType': None}
+    if case == 'unknown':
+        value = {**value, 'primary': None, 'secondary': None, 'credits': None}
+    return {'rateLimits': value,
+            'rateLimitsByLimitId': {} if case == 'unknown' else {'original-codex': value},
+            'accountId': 'original-account', 'ordinaryUsageAllowed': True,
+            'rateLimitResetCredits': None, 'rateLimitUpsell': None}
+
+
+def gui392_run(tmp_path, case):
+    from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
+
+    reference = tmp_path / 'reference'
+    reference.mkdir()
+    lawful = ux345_default_scattering_project(reference)
+    lawful.rename(reference / 'project')
+    for name, content in GUI392_SKILLS.items():
+        target = reference / 'skills/collection' / ('gui392-' + name) / 'SKILL.md'
+        target.parent.mkdir(parents=True)
+        target.write_bytes(content.encode('utf-8'))
+    (reference / 'skills/missing-skill').mkdir()
+    malformed = reference / 'skills/malformed/SKILL.md'
+    malformed.parent.mkdir()
+    malformed.write_bytes(b'---\nname: [broken original yaml\n---\n')
+    target = reference / 'skills/duplicate-names/gui392-alpha/SKILL.md'
+    target.parent.mkdir(parents=True)
+    target.write_bytes(GUI392_SKILLS['alpha'].encode('utf-8'))
+    linked = reference / 'skills/linked-skill/gui392-alpha/SKILL.md'
+    linked.parent.mkdir(parents=True)
+    linked.symlink_to(reference / 'skills/collection/gui392-alpha/SKILL.md')
+    # Snapshot ordinary owned files separately from the deliberately authored link.
+    inputs = {str(path.relative_to(reference)): path.read_bytes()
+              for path in reference.rglob('*') if path.is_file() and not path.is_symlink()}
+    link_target = os.readlink(linked)
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[[]], vm319_record_packets=True,
+                  account_email='Original@example.invalid')
+    if case == 'sources':
+        config['ux289_hold_input'] = True
+        config['gui392_record_skill_bytes'] = True
+    elif case == 'stale':
+        config['usage_mode'] = 'failure'
+    elif case == 'zero-missing-recovered':
+        config['gui392_usage_replies'] = [gui392_usage_reply('remaining100'),
+                                              gui392_usage_reply('unknown'),
+                                              gui392_usage_reply('remaining100')]
+    elif case in GUI392_USAGE_CASES:
+        config['gui392_usage_reply'] = gui392_usage_reply(case)
+    if case.startswith('chooser-'):
+        assert case.removeprefix('chooser-') in GUI393_CHOOSER_CASES, 'GUI393 SETUP: exact declared chooser rows only'
+        config['gui393_model_reply'] = gui393_model_reply()
+        if case == 'chooser-pointer':
+            config['ux289_hold_input'] = True
+    if case == 'first-eye-clear':
+        config['ux289_hold_input'] = True
+    config_path.write_text(json.dumps(config))
+    config_bytes = config_path.read_bytes()
+    function = ('test_gui392_signed_out_native_empty_and_real_account' if case == 'account'
+                else 'test_gui392_preferences_real_sources' if case == 'sources'
+                else 'test_gui392_source_refusals:' + case if case in GUI392_SOURCE_REFUSALS
+                else 'test_gui392_usage_actual_windows:' + case)
+    if case.startswith('chooser-'):
+        function = 'test_gui393_original_combined_chooser:' + case.removeprefix('chooser-')
+    if case == 'first-eye-clear':
+        function = 'test_gui393_first_delivery_eye_clear'
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'GUI392 SETUP: genuine new coherent Main consumer is required'
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::' + function, '-o', '-,txt']
+    (tmp_path / 'gui392-request.json').write_text(json.dumps({
+        'argv': argv, 'case': case, 'timeout': 90,
+        'environment': {key: value for key, value in environment.items()
+                        if key.startswith(('QT_', 'EDI_', 'XDG_')) or key == 'TMPDIR'},
+    }, indent=2))
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            destination = tmp_path / ('gui392-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'gui392.stdout.log').write_text(result.stdout)
+    (tmp_path / 'gui392.stderr.log').write_text(result.stderr)
+    (tmp_path / 'gui392-exit.json').write_text(json.dumps({'returncode': result.returncode}))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::' + function.replace(':', '(', 1) in output
+    ), 'GUI392: actual named real-Main case must reach all original strict premises\n' + output
+    assert not any('Binding loop detected' in line or 'Unable to assign [undefined] to QString' in line
+                   or 'Cannot assign to non-existent property' in line
+                   for line in output.splitlines()), (
+        'GUI392: observed Qt binding/undefined warnings remain failures; QRhi diagnostics remain separate\n' + output
+    )
+    assert config_path.read_bytes() == config_bytes and os.readlink(linked) == link_target and inputs == {
+        str(path.relative_to(reference)): path.read_bytes()
+        for path in reference.rglob('*') if path.is_file() and not path.is_symlink()
+    }, 'GUI392: real GUI/configuration leaves every independently owned input/skill/scientific byte exact'
+    trace = Path(config['trace'])
+    requests = records(trace) if trace.exists() else []
+    if case == 'account':
+        assert output.count('GUI395_SIGNIN_BEFORE') == output.count('GUI395_SIGNIN_OPEN') == 1, (
+            'GUI395: genuine original header click has one bounded original dialog-open interval receipt'
+        )
+        interval = output.split('GUI395_SIGNIN_BEFORE', 1)[1].split('GUI395_SIGNIN_OPEN', 1)[0]
+        assert not any(term in interval for term in ('TypeError:', 'ReferenceError:', 'Error:', 'Unable to assign', 'Cannot assign')), (
+            'GUI395: genuine original Sign in click/open has NO QML property/type/reference warning\n' + interval
+        )
+    if requests:
+        loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+        assert loaded['sha256'] == hashlib.sha256(config_bytes).hexdigest() and loaded['native_turn_calls'] == [[]], (
+            'GUI392 SETUP: real original peer consumed exact independently authored no-native-action configuration'
+        )
+    assert not native_records(trace, '.native-replies.jsonl'), (
+        'GUI392: presentation/source preferences cannot invent a native scientific operation'
+    )
+    if case == 'sources':
+        lines = [line.split('GUI392_SOURCE ', 1)[1] for line in result.stdout.splitlines()
+                 if 'GUI392_SOURCE ' in line]
+        assert len(lines) == 1, 'GUI392: exact reached original source identity receipt is mandatory'
+        receipt = json.loads(lines[0])
+        assert receipt['id'] and receipt['id'] != 'builtin' and (
+            receipt['path'] == str(reference / 'skills/collection')
+        ), 'GUI392: real opaque local source identity is bonded to independent selected directory'
+        turns = [row for row in requests if row.get('method') == 'turn/start']
+        assert len(turns) == 1, 'GUI392: real held input is submitted exactly once'
+        starts = [row['params'] for row in requests if row.get('method') == 'thread/start']
+        assert len(starts) >= 1, 'GUI392: actual source-scoped runtime must really be admitted'
+        for start in starts:
+            workspace = Path(start['cwd'])
+            observed = [row for row in clear_control_events(trace)
+                        if row['kind'] == 'gui392-original-skill-files' and row['cwd'] == str(workspace)]
+            assert observed, 'GUI392: original actual runtime cwd must have an independent live peer file-read witness'
+            original_reads = [row for row in requests if row.get('method') == 'skills/list']
+            for observation in observed:
+                assert observation['request'] in original_reads and str(workspace) in observation['request']['params']['cwds'], (
+                    'GUI392: staged-byte witness belongs to exact original actually received discovery envelope'
+                )
+                assert len(observation['files']) == 2 and sorted(bytes.fromhex(row['hex']) for row in observation['files']) == sorted(
+                    content.encode('utf-8') for content in GUI392_SKILLS.values()
+                ), 'GUI392: original live runtime stages exactly both independent skill bytes, no builtin/disabled extras'
+                assert all(Path(row['path']).parent.parent == workspace / '.agents/skills'
+                           and Path(row['path']).name == 'SKILL.md' for row in observation['files']), (
+                    'GUI392: independently observed actual skill reads stay in exact original scoped workspace'
+                )
+            assert {tool['name'] for tool in start['dynamicTools']} == {
+                'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
+                'run_fit', 'create_cwl_project', 'add_relations', 'save_project', 'edit_background',
+            }, 'GUI392: custom guidance cannot register or expand native tool authority'
+        emitted = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+        # Actual peer request/reply/client IDs, not a guessed process/row ID.
+        folder167_policy(trace, None)
+        turn = turns[0]
+        replies = [row for row in emitted if row.get('id') == turn['id']]
+        assert len(replies) == 1 and 'result' in replies[0], (
+            'GUI392: independently recorded original held request receives exactly one real matching ACK'
+        )
+        approved_lines = [line.split('GUI393_APPROVED_SOURCE ', 1)[1] for line in result.stdout.splitlines()
+                          if 'GUI393_APPROVED_SOURCE ' in line]
+        assert len(approved_lines) == 1, 'GUI393: mandatory original displayed-and-approved source receipt must be delivered'
+        approved = json.loads(approved_lines[0])['skills']
+        assert len(approved) == 2 and all(set(row) == {'id', 'sha256', 'content'} for row in approved), (
+            'GUI393: exact bounded original approved descriptors, no unstated projection fallback'
+        )
+        expected_bytes = sorted(content.encode('utf-8') for content in GUI392_SKILLS.values())
+        assert len({row['id'] for row in approved}) == 2 and all(row['id'] for row in approved) and sorted(
+            row['content'].encode('utf-8') for row in approved
+        ) == expected_bytes and all(hashlib.sha256(row['content'].encode('utf-8')).hexdigest() == row['sha256'] for row in approved), (
+            'GUI393: approved actual ID/content/hash bond equals BOTH independent original source operands'
+        )
+        stage_reads = [row for row in clear_control_events(trace) if row['kind'] == 'gui392-original-skill-files']
+        assert stage_reads and all(sorted(bytes.fromhex(file['hex']) for file in row['files']) == expected_bytes
+                                   for row in stage_reads), (
+            'GUI393: every actually observed staged inventory equals approved AND independent source bytes'
+        )
+        events = clear_control_events(trace)
+        received = [row for row in events if row['kind'] == 'ux289-original-input-received']
+        released = [row for row in events if row['kind'] == 'ux289-original-ack-release']
+        assert len(received) == len(released) == 1 and all(
+            row['request_id'] == turn['id'] and row['client_user_message_id'] == turn['params']['clientUserMessageId']
+            for row in received + released
+        ), 'GUI392: real busy checks and release belong to exact original independently received input envelope'
+    elif case == 'first-eye-clear':
+        receipts = [json.loads(line.split('GUI393_CLEAR_IDS ', 1)[1]) for line in result.stdout.splitlines()
+                    if 'GUI393_CLEAR_IDS ' in line]
+        assert len(receipts) == 1, 'GUI393: exact original GUI user/source identity witness must be delivered'
+        turns = [row for row in requests if row.get('method') == 'turn/start']
+        assert len(turns) == 1 and turns[0]['params']['clientUserMessageId'] == receipts[0]['user'], (
+            'GUI393: real held original user identity equals independent actual wire admission once'
+        )
+        turn = turns[0]
+        context = rpc83_context_inputs(turn['params'])
+        assert len(context) == 1 and len(context[0]['selected_files']['files']) == 1 and (
+            context[0]['selected_files']['files'][0]['id'] == receipts[0]['file']
+        ), 'GUI393: actual original selected-file authority is independently disclosed before real Clear'
+        descriptor = context[0]['selected_files']['files'][0]
+        original_bytes = (reference / 'project/structures/lbco.edi').read_bytes()
+        assert descriptor['name'] == 'lbco.edi' and descriptor['bytes'] == len(original_bytes), (
+            'GUI393: disclosed canonical source descriptor equals exact independently owned input'
+        )
+        replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+        assert sum(reply.get('id') == turn['id'] and 'result' in reply for reply in replies) == 1, (
+            'GUI393: actual original held Clear input has one independently recorded successful ACK'
+        )
+        received = [row for row in clear_control_events(trace) if row['kind'] == 'ux289-original-input-received']
+        released = [row for row in clear_control_events(trace) if row['kind'] == 'ux289-original-ack-release']
+        assert len(received) == len(released) == 1 and all(
+            row['request_id'] == turn['id'] and row['client_user_message_id'] == receipts[0]['user']
+            for row in received + released
+        ), 'GUI393: real busy/ACK/Clear interval bonds to exact original received envelope'
+        folder167_policy(trace, None)
+    elif case.startswith('chooser-'):
+        replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+        reads = [row for row in requests if row.get('method') == 'model/list']
+        assert reads and all(sum(reply.get('id') == read['id'] for reply in replies) == 1 for read in reads), (
+            'GUI393: actual original public model/list envelopes receive exact independently recorded replies'
+        )
+        assert all(next(reply for reply in replies if reply.get('id') == read['id'])['result'] == config['gui393_model_reply'] for read in reads), (
+            'GUI393: actual displayed choices derive from complete literal original provider reply'
+        )
+        turns = [row for row in requests if row.get('method') == 'turn/start']
+        if case == 'chooser-pointer':
+            assert len(turns) == 1 and turns[0]['params']['model'] == 'gpt-6-sol' and turns[0]['params']['effort'] == 'medium', (
+                'GUI393: genuine radio/label choices become exact actual original model/effort wire operands once'
+            )
+            folder167_policy(trace, None)
+            turn = turns[0]
+            assert sum(reply.get('id') == turn['id'] and 'result' in reply for reply in replies) == 1, (
+                'GUI393: exact actual held original input has one independent matching successful ACK'
+            )
+            events = clear_control_events(trace)
+            received = [row for row in events if row['kind'] == 'ux289-original-input-received']
+            released = [row for row in events if row['kind'] == 'ux289-original-ack-release']
+            assert len(received) == len(released) == 1 and all(
+                row['request_id'] == turn['id'] and row['client_user_message_id'] == turn['params']['clientUserMessageId']
+                for row in received + released
+            ), 'GUI393: busy/once checks bond to actual original received and released envelope'
+        else:
+            assert not turns, 'GUI393: ordinary keyboard/retirement model selection does not itself dispatch inference'
+    elif case in GUI392_USAGE_CASES or case == 'zero-missing-recovered':
+        lines = [line.split('GUI392_USAGE ', 1)[1] for line in result.stdout.splitlines()
+                 if 'GUI392_USAGE ' in line]
+        assert len(lines) == 1 and json.loads(lines[0])['tag'] == case, (
+            'GUI392: real reached actual provider-observation receipt belongs to exact independent usage case'
+        )
+        reads = [row for row in requests if row.get('method') == 'account/rateLimits/read']
+        packets = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+        assert len(reads) >= (3 if case == 'zero-missing-recovered' else 2), (
+            'GUI392: opening/reopening actual Usage dialog issues genuine original refresh requests'
+        )
+        assert all(sum(packet.get('id') == read['id'] for packet in packets) == 1 for read in reads), (
+            'GUI392: every observed actual usage read has exactly one independent matching provider reply'
+        )
+        if 'gui392_usage_reply' in config:
+            assert all(next(packet for packet in packets if packet.get('id') == read['id'])['result']
+                       == config['gui392_usage_reply'] for read in reads), (
+                'GUI392: actual read replies contain exact literal independently authored provider fields'
+            )
+
+
+@pytest.mark.parametrize('case', ('account', *GUI392_USAGE_CASES, 'sources', *GUI392_SOURCE_REFUSALS))
+def test_gui392_requested_gui_on_actual_parent(tmp_path, case):
+    gui392_run(tmp_path, case)
+
+# GUI393: same original Main process vehicle, current public chooser contract.
+GUI393_CHOOSER_CASES = ('pointer', 'space', 'return', 'enter', 'retirement')
+
+
+def gui393_model_reply():
+    # Same independent provider schema and original GN6 model/capability operands.
+    return {'data': [
+        {'id': model, 'model': model, 'displayName': label,
+         'description': 'Original independent combined chooser catalogue',
+         'hidden': index == 1, 'isDefault': index == 0, 'defaultReasoningEffort': 'medium',
+         'supportedReasoningEfforts': [{'reasoningEffort': effort, 'description': 'Original ' + effort}
+                                      for effort in efforts]}
+        for index, (model, label, efforts) in enumerate((
+            ('gpt-6.1-sol', 'Original primary model', ('medium', 'high')),
+            ('gpt-6-luna', 'Original unavailable model', ('medium',)),
+            ('gpt-6-sol', 'Original alternate model', ('medium',)),
+        ))
+    ]}
+
+
+@pytest.mark.parametrize('case', GUI393_CHOOSER_CASES)
+def test_gui393_real_combined_model_effort_choice(tmp_path, case):
+    gui392_run(tmp_path, 'chooser-' + case)
+
+
+def test_gui393_first_delivery_eye_clear(tmp_path):
+    gui392_run(tmp_path, 'first-eye-clear')

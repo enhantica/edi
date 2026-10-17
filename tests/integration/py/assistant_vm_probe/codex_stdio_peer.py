@@ -1220,12 +1220,26 @@ def usage_read(request):
         else 17
     )
     result = usage_snapshot(percent, empty=mode == 'zero-empty' and number == 2)
+    if 'gui392_usage_reply' in config or 'gui392_usage_replies' in config:
+        # Optional literal public-protocol operand, not a subject setter/clock.
+        if 'gui392_usage_replies' in config:
+            assert number <= len(config['gui392_usage_replies']), 'GUI392 SETUP: no undeclared extra usage reply'
+            result = config['gui392_usage_replies'][number - 1]
+        else:
+            result = config['gui392_usage_reply']
+        assert isinstance(result, dict) and set(result) == {
+            'rateLimits', 'rateLimitsByLimitId', 'accountId', 'ordinaryUsageAllowed',
+            'rateLimitResetCredits', 'rateLimitUpsell',
+        }, 'GUI392 SETUP: complete independently authored usage reply only'
 
     def finish():
-        clear_observation(
-            'usage-result-reply',
-            {'number': number, 'percent': percent, 'empty': not result['rateLimitsByLimitId']},
-        )
+        if 'gui392_usage_reply' in config or 'gui392_usage_replies' in config:
+            clear_observation('gui392-original-usage-reply', {'number': number, 'id': request['id'], 'result': result})
+        else:
+            clear_observation(
+                'usage-result-reply',
+                {'number': number, 'percent': percent, 'empty': not result['rateLimitsByLimitId']},
+            )
         reply(request, result)
 
     # Bootstrap must deliver the automatic result after the required catalogue/skills work.
@@ -1511,6 +1525,9 @@ for line in sys.stdin:
                 'requiresOpenaiAuth': False,
             },
         )
+    elif method == 'model/list' and 'gui393_model_reply' in config:
+        # Literal independent provider input; every original scenario/default is unchanged.
+        reply(request, config['gui393_model_reply'])
     elif method == 'model/list' and scenario.startswith('gn:effort-'):
         reply(
             request,
@@ -1570,6 +1587,14 @@ for line in sys.stdin:
             },
         )
     elif method == 'skills/list':
+        if config.get('gui392_record_skill_bytes') is True:
+            for cwd in params.get('cwds', []):
+                clear_observation('gui392-original-skill-files', {
+                    'request': request, 'cwd': cwd,
+                    'files': [{'path': str(skill), 'hex': skill.read_bytes().hex()}
+                              for skill in sorted((Path(cwd) / '.agents/skills').glob('*/SKILL.md'))
+                              if skill.is_file() and not skill.is_symlink()],
+                })
         reply(
             request,
             {
