@@ -4355,15 +4355,23 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     for (const auto& row : saved.fit_result.correlations) {
         written.emplace(key_of(*row), row->correlation.value());
     }
-    auto& rows = project.fit_result.correlations;
-    for (std::size_t i = 0; i < rows.size(); ++i) {
-        const auto found = written.find(key_of(*rows[i]));
-        if (found != written.end() && rows[i]->correlation.value() != found->second) {
-            auto row = std::make_shared<FitParameterCorrelation>(*rows[i]);
-            row->correlation = found->second;
-            rows.replace_at(i, std::move(row));
-            changed = true;
+    // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
+    // correlations of a few hundred free parameters.
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows(project.fit_result.correlations.begin(),
+                                                            project.fit_result.correlations.end());
+    bool rows_changed = false;
+    for (auto& row : rows) {
+        const auto found = written.find(key_of(*row));
+        if (found != written.end() && row->correlation.value() != found->second) {
+            auto adopted = std::make_shared<FitParameterCorrelation>(*row);
+            adopted->correlation = found->second;
+            row = std::move(adopted);
+            rows_changed = true;
         }
+    }
+    if (rows_changed) {
+        project.fit_result.correlations.assign(std::move(rows));
+        changed = true;
     }
     for (const auto& [key, text] : written) {
         const auto table = project.fit_result.scan_results.find(std::get<2>(key));
