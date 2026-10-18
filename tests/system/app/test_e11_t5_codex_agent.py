@@ -29,6 +29,7 @@ PEER = ROOT / 'tests/integration/py/assistant_vm_probe/codex_stdio_peer.py'
 
 class Generic(prior.Component):
     def __init__(self, binary, *, ui=False):
+        self.probe_observation_directory = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).parent
         argv = (
             [
                 str(binary),
@@ -58,6 +59,49 @@ class Generic(prior.Component):
             if self.last is not None:
                 self.last['child_exit_observation'] = {'returncode': self.process.poll()}
             raise
+
+
+    def close(self):
+        # Original Native.close input/wait/kill/reap sequence, unchanged.
+        self.process.stdin.close()
+        try:
+            self.process.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.wait()
+        try:
+            # One finite snapshot after direct-child reap, never a blocking drain.
+            # Descendants can still hold the pipe; record EOF/limit rather than wait.
+            import array
+            import fcntl
+            import termios
+
+            descriptor = self.process.stderr.fileno()
+            available = array.array('i', [0])
+            fcntl.ioctl(descriptor, termios.FIONREAD, available, True)
+            assert available[0] >= 0, 'GENERIC504: actual pending stderr byte count is valid'
+            os.set_blocking(descriptor, False)
+            stderr = os.read(descriptor, available[0]) if available[0] else b''
+            eof = False
+            try:
+                tail = os.read(descriptor, 1)
+                stderr += tail
+                eof = tail == b''
+            except BlockingIOError:
+                pass  # Original child is reaped; inherited writer provenance remains unqualified.
+            self.probe_observation_directory.joinpath('original-probe.stderr.bin').write_bytes(stderr)
+            self.probe_observation_directory.joinpath('original-probe-terminal.json').write_text(
+                json.dumps({'pid': self.process.pid, 'argv': self.process.args,
+                            'returncode': self.process.returncode, 'direct_child_reaped': True,
+                            'stderr_pending_at_snapshot': available[0], 'stderr_bytes': len(stderr),
+                            'stderr_eof_observed': eof,
+                            'stderr_limit': None if eof else 'Only original finite pending-byte snapshot and one nonblocking EOF check; no drain/retry'},
+                           indent=2) + '\n')
+        finally:
+            try:
+                self.process.stdout.close()
+            finally:
+                self.process.stderr.close()
 
 
 @pytest.fixture
