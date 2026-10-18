@@ -1,4 +1,5 @@
 import QtQuick
+import QtCore
 import QtQuick.Controls
 import QtTest
 import edi.app
@@ -6,6 +7,7 @@ import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import EdiChartReference 1.0
 import "../../unit/app/UiInteraction.js" as Ui
 
@@ -6941,5 +6943,558 @@ TestCase {
             console.log("GUI407_INPUT_SUMMARY",JSON.stringify({originalIdentities:identities,events:events,diagnosticErrors:errors,currentOriginal:stillCurrent}));
             return errors.length===0 && stillCurrent;
         }};
+    }
+    TextEdit { id: status410Clipboard; visible: false }
+    function test_status410_original_opener_currentness_data() {
+        return [{tag:"new-owner"},{tag:"same-object-reopen"},{tag:"unchanged"}];
+    }
+    function test_status410_original_opener_currentness(data) {
+        const aUrl=Probe.referenceUrl("status410/A"), bUrl=Probe.referenceUrl("status410/B");
+        const savedUrl=Probe.referenceUrl("status410/reopened");
+        const aPath=ApplicationInfo.localPath(aUrl), bPath=ApplicationInfo.localPath(bUrl), savedPath=ApplicationInfo.localPath(savedUrl);
+        verify(Session.openProject(aUrl),"STATUS410 SETUP: independent saved owner opens through original Session");
+        const actions=Probe.objectsWithProperty(window,"objectName").filter(x=>x.objectName==="statusBar.project");
+        const dialogs=Probe.objectsWithProperty(window,"objectName").filter(x=>x.objectName==="statusBar.project.folder");
+        compare(actions.length,1,"STATUS410: actual native status action is unique in original window");
+        compare(dialogs.length,1,"STATUS410: original standard dialog exists uniquely even when hidden");
+        const action=actions[0], dialog=dialogs[0], dialogLife=lifetime313(dialog), windowLife=lifetime313(window);
+        function own(name) {
+            const controls=[dialog.contentItem,dialog.footer].filter(x=>x!==null).flatMap(root=>
+                Ui.itemsWithProperty(root,"objectName").filter(x=>x.objectName===name));
+            compare(controls.length,1,"STATUS410: exact original native content/footer owns one "+name);return controls[0];
+        }
+        const path=own("statusBar.project.path"), copy=own("statusBar.project.copy"), open=own("statusBar.project.open");
+        const pathLife=lifetime313(path);
+        function clickStatus() {
+            verify(alive313(dialogLife) && alive313(windowLife),"STATUS410: same physical native opener receivers remain alive");
+            ux356_fullyExposed(action);const point=Ui.clickPoint(action);mouseClick(action,point.x,point.y);rendered();
+        }
+        function closeStatus() {
+            const close=dialog.standardButton(Dialog.Ok);
+            verify(close!==null && close.enabled,"STATUS413: actual original native Ok dismiss control remains available");gui392_button(close,dialog);
+        }
+        // Learn actual public/metaobject notifications through a genuine unchanged
+        // positive. No implementation property name is an acceptance requirement.
+        clickStatus();tryVerify(()=>dialog.opened && dialog.visible,2000,"STATUS410: original unchanged native positive genuinely settles");
+        compare(path.text,aPath,"STATUS410: independent saved A path is exposed in real positive");
+        verify(path.readOnly && path.selectByMouse && copy.enabled && open.enabled,
+            "STATUS410: unchanged native positive preserves selectable path and Copy/Open usability");
+        const notifyNames=Object.keys(Probe.events(dialogLife.handle)).filter(signal=> {
+            if(!signal.endsWith("Changed") || typeof dialog[signal]!=="function")return false;
+            const property=signal.substring(0,signal.length-7);
+            return dialog[property]===Session.project || dialog[property]===aPath;
+        });
+        verify(notifyNames.length<=32,"STATUS410 SETUP: finite actual owned presentation notify inventory");
+        closeStatus();
+        verify(Session.openProject(aUrl),"STATUS410 SETUP: genuine fresh logical A starts the reentry opener");
+        const ownerA=Session.project, lifeA=lifetime313(ownerA);
+        tryVerify(()=>!ownerA.calculating && Probe.computedCurrent(ownerA.currentExperiment),10000,
+            "STATUS410 SETUP: original scientific owner is current before status input");
+        const scienceA=save349_science(ownerA), inputsA=visible185_inputs(ownerA);
+        let calls=0, returned=false, expectedOwner=ownerA, expectedPath=aPath, expectedLife=lifeA, reentered=false, triggering=null;
+        const bindings=[];let originalFailed413=false;
+        function notification(signal,receiver,property) {
+            if(calls)return;
+            verify(alive313(dialogLife) && alive313(pathLife) && alive313(windowLife),
+                "STATUS410: actual original notify arrives on same surviving native presentation");
+            // A notify must carry this opener's literal owner/path, not arbitrary geometry.
+            if(receiver[property]!==ownerA && receiver[property]!==aPath)return;
+            ++calls;triggering={signal:signal,receiver:receiver===dialog?"original-dialog":"original-public-path"};
+            compare(Session.project,ownerA,"STATUS410: first owned presentation notification belongs to independent A");
+            if(data.tag==="new-owner") {
+                verify(Session.openProject(bUrl),"STATUS410: genuine synchronous Session replaces A with independent B");
+                expectedOwner=Session.project;expectedLife=lifetime313(expectedOwner);expectedPath=bPath;
+                verify(expectedOwner!==ownerA,"STATUS410: B is a distinct real owner, not a renamed A");
+                dialog.openCurrent();reentered=true;
+            } else if(data.tag==="same-object-reopen") {
+                verify(Session.saveAs(savedUrl),"STATUS410: real ordinary writer changes SAME owner's current saved path");
+                compare(Session.project,ownerA,"STATUS410: real Save As retains original owner identity");
+                compare(ownerA.path,savedPath,"STATUS410: literal independently requested new directory is current");
+                expectedPath=savedPath;dialog.openCurrent();reentered=true;
+            }
+            returned=true;
+        }
+        function bind(receiver,life,signal,property) {
+            const callback=function(){notification(signal,receiver,property);};receiver[signal].connect(callback);
+            bindings.push({receiver:receiver,life:life,signal:signal,callback:callback});
+        }
+        try {
+            for(const signal of notifyNames)bind(dialog,dialogLife,signal,signal.substring(0,signal.length-7));
+            verify(typeof path.textChanged==="function","STATUS410 SETUP: actual public path has its real Qt text notification");
+            bind(path,pathLife,"textChanged","text");
+            clickStatus();
+            compare(calls,1,"STATUS410 SETUP: one actual owned presentation notify reaches synchronous callback");
+            verify(returned && (data.tag==="unchanged" || reentered),"STATUS410: actual nested native owner/path/opener action returned inside original notify");
+            verify(alive313(dialogLife) && alive313(windowLife) && alive313(expectedLife),"STATUS410: newest owner and original native dialog/window survive");
+            compare(Session.project,expectedOwner,"STATUS410: old opener cannot restore A over newest actual owner");
+            compare(expectedOwner.path,expectedPath,"STATUS410: newest saved path remains the literal independent destination");
+            tryVerify(()=>dialog.opened && dialog.visible,2000,"STATUS410: genuinely newest native dialog settles under original bound");
+            compare(dialog.title,"Project folder","STATUS410: original standard native title remains");
+            compare(path.text,expectedPath,"STATUS410: old opener cannot overwrite B/same-owner-new-path presentation");
+            verify(copy.enabled && open.enabled,"STATUS410: old opener cannot disable newest saved owner's Copy/Open");
+            ux356_fullyExposed(path);ux356_fullyExposed(copy);ux356_fullyExposed(open);
+            gui392_button(copy,dialog);status410Clipboard.text="";status410Clipboard.paste();
+            compare(status410Clipboard.text,expectedPath,"STATUS410: actual native Copy publishes precisely newest independent path");
+            if(data.tag!=="new-owner") {
+                compare(save349_science(ownerA),scienceA,"STATUS410: status/reopen/ordinary Save As preserves native science");
+                compare(visible185_inputs(ownerA),inputsA,"STATUS410: status reentry preserves original measurements/sigma/weight/phase links");
+            }
+            console.log("STATUS410_RECEIPT",JSON.stringify({tag:data.tag,calls:calls,returned:returned,reentered:reentered,
+                triggering:triggering,learnedNotifyNames:notifyNames,newOwner:identity313(expectedLife),newPath:expectedPath,
+                copyEnabled:copy.enabled,openEnabled:open.enabled}));
+        } catch(error413) {
+            originalFailed413=true;throw error413;
+        } finally {
+            let cleanupFailed413=false,cleanupFailure413;
+            for(const pair of bindings) {
+                try {disconnect313(pair.life,pair.receiver,pair.signal,pair.callback);}
+                catch(error413) {if(!cleanupFailed413)cleanupFailure413=error413;cleanupFailed413=true;console.log("STATUS413_CLEANUP",String(error413));}
+            }
+            try {if(alive313(dialogLife) && dialog.visible)closeStatus();}
+            catch(error413) {if(!cleanupFailed413)cleanupFailure413=error413;cleanupFailed413=true;console.log("STATUS413_CLEANUP",String(error413));}
+            if(cleanupFailed413 && !originalFailed413)throw cleanupFailure413;
+        }
+    }
+    // PREFS417: public intended360 plus original native Preferences/settings prior art.
+    function prefs417_rows() {
+        const rows = gui392_sources();
+        verify(rows.length >= 1 && rows[0].id === "builtin" && rows[0].builtin,
+            "PREFS417: fixed protected builtin is actual first public row");
+        verify(new Set(rows.map(row => row.id)).size === rows.length && rows.every(row =>
+            typeof row.id === "string" && row.id.length > 0 && typeof row.label === "string"
+            && typeof row.path === "string" && typeof row.enabled === "boolean"
+            && typeof row.builtin === "boolean" && typeof row.status === "string"),
+            "PREFS417: all actual source roles have declared types and distinct opaque IDs");
+        return rows;
+    }
+    // Public-v3 configured declarations are identities/digests, not duplicate bodies.
+    function prefs421_declarations(context) {
+        verify(context && Array.isArray(context.skills), "PREFS421: actual configured disclosure has a typed inventory");
+        const rows = context.skills.map(row => {
+            verify(row !== null && typeof row === "object" && !Array.isArray(row)
+                && typeof row.id === "string" && row.id.length > 0
+                && typeof row.sha256 === "string" && /^[0-9a-f]{64}$/.test(row.sha256),
+                "PREFS421: every declaration has mandatory nonempty actual identity and lowercase SHA256");
+            return {id:row.id,sha256:row.sha256};
+        });
+        compare(new Set(rows.map(row => row.id)).size, rows.length,
+            "PREFS421: actual configured instruction identities are unique, never optional/missing or duplicated");
+        return rows;
+    }
+    function prefs417_expected(skills, variant) {
+        const fixture = JSON.parse(Probe.readReferenceFile("prefs417.json"));
+        const expected = variant === "empty" ? [] : [fixture.alphaASha256, fixture.betaSha256];
+        compare(JSON.stringify(skills.map(row => row.sha256).sort()), JSON.stringify(expected.slice().sort()),
+            "PREFS421: exact declaration digests equal independently hashed literal captured files, without builtin/default fallback");
+        compare(new Set(skills.map(row => row.id)).size, skills.length,
+            "PREFS421: exact digests cannot conceal duplicated actual captured instruction identities");
+    }
+    function prefs417_preferences() {
+        const dialog = gui392_preferences(), life = lifetime313(dialog), original = Session.project;
+        tryVerify(() => {
+            if (!alive313(life) || Session.project !== original || !dialog.opened) return false;
+            const tables = Ui.itemsWithProperty(dialog.contentItem, "objectName").filter(control =>
+                control.objectName === "preferences.ai.sources" && control.sourceModel === assistant.skillSources);
+            if (tables.length !== 1 || !Ui.rendered(tables[0]) || !Ui.exposed(tables[0])) return false;
+            const r = tables[0].mapToItem(dialog.contentItem,0,0,tables[0].width,tables[0].height);
+            return r.x >= -0.5 && r.y >= -0.5 && r.x+r.width <= dialog.contentItem.width+0.5
+                && r.y+r.height <= dialog.contentItem.height+0.5;
+        }, 2000, "PREFS417: same original native tab/table settles inside actual dialog viewport before strict row input");
+        return dialog;
+    }
+    function prefs417_closePreferences(dialog) { gui392_button(dialog.standardButton(Dialog.Ok), dialog); }
+    function prefs417_configure(local) {
+        const preferences = prefs417_preferences();
+        const rows = prefs417_rows();
+        compare(rows.length, 1, "PREFS417 SETUP: fresh owned settings start with only builtin");
+        verify(rows[0].enabled, "PREFS417 SETUP: missing preference explicitly defaults builtin enabled");
+        const remove = gui392_sourceControl("preferences.ai.source.remove.builtin");
+        verify(!remove.enabled, "PREFS417: protected builtin has no usable Remove action");
+        compare(gui392_sourceControl("preferences.ai.source.label.builtin").text, "EasyDiffraction",
+            "PREFS417: builtin presentation is product label without internal repo path");
+        import265_click("preferences.ai.source.enabled.builtin");
+        compare(prefs417_rows()[0].enabled, false, "PREFS417: original native toggle really disables builtin");
+        const localUrl = Probe.referenceUrl("skills/collection");
+        if (local) gui392_folder("skills/collection", false);
+        const current = prefs417_rows();
+        compare(current.length, local ? 2 : 1, "PREFS417: genuine Add admits exactly one source row");
+        const added = local ? current.filter(row => !row.builtin) : [];
+        if (local) {
+            compare(added.length, 1, "PREFS417: actual new local row is unique");
+            verify(added[0].id !== "builtin" && added[0].enabled, "PREFS417: enabled local uses app-issued opaque ID");
+            compare(added[0].path, SettingsProof.localPath(localUrl), "PREFS417: actual path bonds genuine selected own folder");
+        }
+        prefs417_closePreferences(preferences);
+        return added.length ? added[0].id : null;
+    }
+    function test_prefs417_sources_data() {
+        return ["lifecycle", "malformed", "retirement", "local", "all-off", "stage-changed"].map(tag => ({tag: tag}));
+    }
+    function test_prefs417_sources(data) {
+        const before = gui392_setup();
+        const settings = EaGlobals.Vars.settingsFile;
+        verify(SettingsProof.temporary(settings), "PREFS417 SETUP: actual settings store is owned fresh test storage");
+        const fixture = JSON.parse(Probe.readReferenceFile("prefs417.json"));
+        if (data.tag === "stage-changed") prefs419_storage();
+        if (data.tag === "malformed") {
+            const originalFacts = SettingsProof.settingFacts(settings, "Assistant", "skillSources");
+            compare(originalFacts.type, "invalid", "PREFS417 SETUP: no preexisting source key is overwritten");
+            try {
+                SettingsProof.seed(settings, "Assistant", "skillSources", "{PREFS417 malformed original value");
+                assistant.refreshSkillSources();
+                verify(typeof assistant.skillSourceError === "string" && assistant.skillSourceError.length > 0,
+                    "PREFS417: malformed/wrong-typed persisted sources report actionable assistant invalidity");
+                const invalidRows = gui392_json(Probe.rows(assistant.skillSources));
+                verify(invalidRows.every(row => row.enabled === false),
+                    "PREFS417: explicit assistant-invalid source state has no implicitly enabled builtin fallback");
+                gui392_unchanged(before);
+                const code = 'import QtQuick; import edi.app; QtObject { property bool opened: false; '
+                    + 'property bool projectPresent: Session.project !== null; property string sourceError: Session.assistant.skillSourceError; '
+                    + 'Component.onCompleted: opened = Session.openProject(' + JSON.stringify(String(Probe.referenceUrl("project"))) + ') }';
+                const restarted = SettingsProof.restart(code);
+                verify(!("error" in restarted) && restarted.opened === true && restarted.projectPresent === true,
+                    "PREFS417: fresh actual Session construction and ordinary project Open remain usable under malformed assistant settings");
+                verify(typeof restarted.sourceError === "string" && restarted.sourceError.length > 0,
+                    "PREFS417: fresh Session keeps actual assistant invalid rather than swallowing the bad preference");
+                console.log("PREFS417_MALFORMED", JSON.stringify({restarted: restarted, mainOwner: identity313(before.life)}));
+            } finally {
+                SettingsProof.erase(settings, "Assistant", "skillSources");
+                assistant.refreshSkillSources();
+            }
+            compare(assistant.skillSourceError, "", "PREFS417: explicit owned correction restores source usability");
+            gui392_unchanged(before);
+            return;
+        }
+        if (data.tag === "retirement") {
+            const originalAssistant = assistant, originalLife = lifetime313(originalAssistant);
+            const a = originalAssistant.beginSkillSourceSelection();
+            verify(a.length > 0, "PREFS417: actual API token A exists before genuine owner replacement");
+            verify(Session.openProject(Probe.referenceUrl("project")), "PREFS417: actual ordinary Open replaces original project owner");
+            verify(Session.project !== before.owner, "PREFS417: token test reaches a genuinely different owner");
+            const current = Session.assistant, currentLife = lifetime313(current);
+            const b = current.beginSkillSourceSelection();
+            verify(b.length > 0 && b !== a, "PREFS417: new owner obtains a distinct actual token B");
+            const baseline = JSON.stringify(gui392_json(Probe.rows(current.skillSources)));
+            if (alive313(originalLife)) {
+                compare(originalAssistant.addSkillSource(a, Probe.referenceUrl("skills/collection")), false,
+                    "PREFS417: exact retired token A cannot complete against replacement owner");
+                originalAssistant.cancelSkillSourceSelection(a);
+            }
+            verify(alive313(currentLife) && Session.assistant === current,
+                "PREFS417: old completion/cancel cannot replace new original receiver");
+            compare(JSON.stringify(gui392_json(Probe.rows(current.skillSources))), baseline,
+                "PREFS417: stale completion changes no configuration row");
+            verify(current.addSkillSource(b, Probe.referenceUrl("skills/collection")),
+                "PREFS417: unchanged actual B token remains usable after old-A cancellation");
+            compare(gui392_json(Probe.rows(current.skillSources)).length, JSON.parse(baseline).length + 1,
+                "PREFS417: positive B admits exactly one real local row");
+            let reentries = 0, newOwner = null;
+            function replaced417() {
+                if (reentries) return;
+                ++reentries;
+                verify(Session.openProject(Probe.referenceUrl("project")), "PREFS417: actual source publication callback performs ordinary replacement");
+                newOwner = Session.project;
+            }
+            current.skillSourcesChanged.connect(replaced417);
+            try { current.setSkillSourceEnabled("builtin", false); }
+            finally { disconnect313(currentLife, current, "skillSourcesChanged", replaced417); }
+            compare(reentries, 1, "PREFS417: real source notification delivered synchronous replacement callback once");
+            verify(newOwner !== null && Session.project === newOwner,
+                "PREFS417: retiring caller cannot replace or retire genuine B after callback return");
+            const replacement = gui392_json(Probe.rows(Session.assistant.skillSources));
+            compare(replacement.filter(row => row.id === "builtin")[0].enabled, false,
+                "PREFS417: factual committed config survives, without stale caller reverting builtin into B");
+            compare(visible185_values(newOwner), before.values, "PREFS417: replacement keeps exact independent loaded scientific values/free/SUs");
+            compare(visible185_inputs(newOwner), before.inputs, "PREFS417: replacement keeps all original measured triples/weights/exclusions/links");
+            compare(relation245_declarations(newOwner), before.relations, "PREFS417: source callback cannot alter declarations");
+            compare(import265_owner(newOwner), before.metadata, "PREFS417: same-file replacement preserves original metadata/settings/path");
+            compare(newOwner.canUndo, before.undo, "PREFS417: source publication cannot manufacture scientific Undo");
+            compare(newOwner.modified, before.modified, "PREFS417: configuration callback creates no scientific dirty state");
+            verify(!newOwner.fit.running, "PREFS417: source configuration never starts a scientific fit");
+            console.log("PREFS417_RETIREMENT", JSON.stringify({a: a, b: b, reentries: reentries, rows: replacement}));
+            return;
+        }
+        const local = prefs417_configure(data.tag !== "all-off");
+        if (data.tag === "lifecycle") {
+            const preferences = prefs417_preferences();
+            const initial = JSON.stringify(prefs417_rows());
+            const revision = assistant.skillSourceRevision;
+            verify(typeof revision === "string" && revision.length > 0, "PREFS417: actual configuration revision is a nonempty opaque identity");
+            assistant.refreshSkillSources();
+            compare(assistant.skillSourceRevision, revision, "PREFS417: unchanged reload does not retire the actual configuration revision");
+            compare(JSON.stringify(prefs417_rows()), initial, "PREFS417: unchanged ordinary reload preserves all exact row identities/configuration");
+            gui392_folder("skills/collection", true);
+            compare(JSON.stringify(prefs417_rows()), initial, "PREFS417: actual FolderDialog Cancel preserves exact rows");
+            const original = prefs421_declarations(JSON.parse(assistant.contextPreview)); prefs417_expected(original, "local");
+            verify(SettingsProof.write(Probe.referenceUrl("skills/collection"), "gui392-alpha/SKILL.md", fixture.alphaB),
+                "PREFS417: own source changes to independently declared lawful B");
+            const changed = prefs421_declarations(JSON.parse(assistant.contextPreview));
+            compare(JSON.stringify(changed.map(row => row.sha256).sort()), JSON.stringify([fixture.alphaBSha256,fixture.betaSha256].sort()),
+                "PREFS421: actual public declaration observes independently hashed captured B, not cached A");
+            verify(SettingsProof.write(Probe.referenceUrl("skills/collection"), "gui392-alpha/SKILL.md", fixture.alphaA),
+                "PREFS417: own source is genuinely restored to original A");
+            const restored = prefs421_declarations(JSON.parse(assistant.contextPreview)); prefs417_expected(restored, "local");
+            const staleRevision = assistant.skillSourceRevision;
+            import265_click("preferences.ai.source.enabled." + local);
+            import265_click("preferences.ai.source.enabled." + local);
+            const sameAgain = JSON.stringify(prefs417_rows());
+            verify(assistant.skillSourceRevision !== staleRevision,
+                "PREFS417: actual config A→B→A creates a new composite operation identity");
+            compare(assistant.removeSkillSource(local, staleRevision), false,
+                "PREFS417: exact stale pre-transition row revision cannot authorize current Remove");
+            compare(JSON.stringify(prefs417_rows()), sameAgain,
+                "PREFS417: refused stale row operation preserves every current descriptor");
+            import265_click("preferences.ai.source.enabled." + local);
+            compare(prefs421_declarations(JSON.parse(assistant.contextPreview)).length, 0,
+                "PREFS417: disabling actual local plus builtin produces zero instructions");
+            const disabled = gui392_sourceControl("preferences.ai.source.enabled." + local);
+            verify(disabled.Accessible.checkable && !disabled.Accessible.checked
+                && disabled.Accessible.name === "Enable this skill source", "PREFS417: native accessibility reflects actual disabled state");
+            const persisted = SettingsProof.settingFacts(settings, "Assistant", "skillSources");
+            verify(persisted.type !== "invalid", "PREFS417: native source action persists in actual original app store");
+            assistant.refreshSkillSources();
+            compare(prefs417_rows().filter(row => row.id === local)[0].enabled, false,
+                "PREFS417: disabled state persists through explicit ordinary reload");
+            import265_click("preferences.ai.source.remove." + local);
+            compare(prefs417_rows().length, 1, "PREFS417: genuine Remove leaves only protected builtin");
+            prefs417_closePreferences(preferences);
+            console.log("PREFS417_LIFECYCLE", JSON.stringify({original: original, changed: changed, restored: restored, rows: prefs417_rows()}));
+            gui392_unchanged(before); return;
+        }
+        // Existing actual signed-out header, no connected-email approval workaround.
+        Ui.click(this, Probe, window, "assistant.connection");
+        const dialog = ux356_dialog(); tryCompare(dialog, "opened", true, 2000,
+            "PREFS417: original native sign-in/disclosure receiver is genuinely open");
+        const approved = prefs421_declarations(gui392_json(dialog.disclosedContext));
+        prefs417_expected(approved, data.tag === "all-off" ? "empty" : "local");
+        console.log("PREFS417_APPROVED", JSON.stringify({tag:data.tag,skills:approved}));
+        gui392_button(dialog.standardButton(Dialog.Ok), dialog);
+        report187_ready("prefs417-current-sources", false);
+        tryCompare(dialog, "visible", false, 2000, "PREFS417: actual original approval completes native exit");
+        const approvedRevision = assistant.skillSourceRevision;
+        const consentBefore = assistant.contextConsentRequired;
+        assistant.refreshSkillSources();
+        compare(assistant.skillSourceRevision, approvedRevision,
+            "PREFS417: unchanged source reload preserves exact approved configuration identity");
+        compare(assistant.contextConsentRequired, consentBefore,
+            "PREFS417: unchanged reload does not invent a new consent requirement");
+        if (data.tag === "stage-changed") {
+            compare(assistant.lastError, "", "PREFS417 SETUP: actual original backend is healthy before stage attack");
+            verify(assistant.connected && !assistant.contextConsentRequired,
+                "PREFS417 SETUP: genuine original account and A approval are ready before attack");
+            verify(SettingsProof.write(Probe.referenceUrl(""), "prefs417-arm", "PREFS417 original stage interval"),
+                "PREFS417: arm only owned provider fixture after actual ready/approval, not during bootstrap");
+            assistant.refreshUsage(); // Genuine existing optional-read transport entrance.
+            tryVerify(() => Probe.readReferenceFile("prefs417-mutated").length > 0, 2000,
+                "PREFS417: actual provider channel reached recorded A→B stage change before SAME original Send");
+        }
+        Ui.click(this, Probe, window, "assistant.composer"); visible185_type("PREFS417 exact current source request");
+        Ui.click(this, Probe, window, "assistant.send");
+        if (data.tag === "stage-changed") {
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions && assistant.lastError.length > 0, 2000,
+                "PREFS417: SAME original real Send refuses changed staged instructions before inference");
+            console.log("PREFS417_STAGE_REFUSAL", JSON.stringify({error:assistant.lastError,owner:identity313(before.life)}));
+            gui392_unchanged(before); return;
+        }
+        tryVerify(() => assistant.canCancel, 2000, "PREFS417: original current request really reaches held transport");
+        const busy = JSON.stringify(prefs417_rows());
+        compare(assistant.setSkillSourceEnabled("builtin", true), false,
+            "PREFS417: actual active work cannot mutate source configuration");
+        compare(JSON.stringify(prefs417_rows()), busy, "PREFS417: refused busy config leaves every row/ID exact");
+        assistant.refreshUsage();
+        tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
+            && row.status === "completed" && row.text === "Original offline reply"), 2000,
+            "PREFS417: exact real acknowledged original reply completes once before preservation");
+        console.log("PREFS417_SENT", JSON.stringify({tag:data.tag,approved:approved,skills:prefs421_declarations(JSON.parse(assistant.contextPreview))}));
+        gui392_unchanged(before);
+    }
+    // PREFS419: actual original public publications, same-stack observations (no timer repair).
+    function prefs419_storage() {
+        const receipt = {application: Qt.application.name, organization: Qt.application.organization,
+            app_local_data: SettingsProof.localPath(StandardPaths.writableLocation(StandardPaths.AppLocalDataLocation))};
+        verify(/^acceptance-[0-9a-f]{64}$/.test(receipt.application)
+            && receipt.organization === "EdiIndependentAcceptance" && receipt.app_local_data.length > 0,
+            "PREFS419 SETUP: public Qt storage query belongs exact original isolated test application");
+        verify(SettingsProof.write(Probe.referenceUrl(""), "prefs419-storage.json", JSON.stringify(receipt)),
+            "PREFS419 SETUP: only own reference receipt conveys actual application-local storage to owned peer");
+        console.log("PREFS419_STORAGE", JSON.stringify(receipt));
+    }
+    // Qt6.11 automatically bridges QByteArray to ArrayBuffer and QString to string.
+    // Preserve the original native values for seed; only the observation gets projected.
+    function prefs421_opaque(value) {
+        if (typeof value === "string") {
+            verify(value.length > 0, "PREFS421 SETUP: actual native QString setting is nonempty");
+            return {carrier:"string",value:value};
+        }
+        verify(value instanceof ArrayBuffer && value.byteLength > 0,
+            "PREFS421 SETUP: actual opaque byte setting is a nonempty native ArrayBuffer, not enumerable JSON or a length-shaped object");
+        const view = new Uint8Array(value), bytes = [];
+        for (let i=0;i<view.length;++i) bytes.push(view[i]);
+        return {carrier:"ArrayBuffer",bytes:bytes};
+    }
+    function prefs419_configs(local, settings) {
+        verify(assistant.setSkillSourceEnabled(local, false),
+            "PREFS419 SETUP: ordinary source operation constructs valid independent all-off configuration B");
+        compare(prefs417_rows().filter(row => row.id === local)[0].enabled, false,
+            "PREFS419 SETUP: actual B meaning is observed from public row, not decoded settings schema");
+        const b = SettingsProof.value(settings, "Assistant", "skillSources");
+        const bProjection = prefs421_opaque(b);
+        verify(assistant.setSkillSourceEnabled(local, true),
+            "PREFS419 SETUP: ordinary source operation restores valid independent local configuration A");
+        const a = SettingsProof.value(settings, "Assistant", "skillSources");
+        compare(prefs417_rows().filter(row => row.id === local)[0].enabled, true,
+            "PREFS421 SETUP: actual A meaning is independently observed after the real native operation");
+        const aProjection = prefs421_opaque(a);
+        compare(aProjection.carrier, bProjection.carrier,
+            "PREFS421 SETUP: ordinary writer retains the same actual native carrier for both lawful settings");
+        compare(JSON.stringify(prefs421_opaque(b)), JSON.stringify(bProjection),
+            "PREFS421 SETUP: original opaque B bytes remain intact across ordinary A restoration");
+        verify(JSON.stringify(aProjection) !== JSON.stringify(bProjection),
+            "PREFS421 SETUP: actual native writer produced distinct contents-preserving opaque lawful A/B values");
+        return {a:a,b:b};
+    }
+    function prefs419_state(receiver) {
+        return {state:receiver.state,error:receiver.lastError,connected:receiver.connected,
+            account:gui392_json(receiver.account),skills:gui392_json(Probe.rows(receiver.skills)),
+            selectedSkill:receiver.selectedSkill,pendingPlan:gui392_json(receiver.pendingPlan),pendingQuestion:gui392_json(receiver.pendingQuestion),model:receiver.selectedModel,effort:receiver.selectedEffort,
+            messages:gui392_json(Probe.rows(receiver.messages)),files:gui392_json(Probe.rows(receiver.selectedFiles)),
+            canCancel:receiver.canCancel,showingActions:receiver.showingActions};
+    }
+    function test_prefs419_sources_data() {
+        return ["publication", "send-retirement"].map(tag => ({tag:tag}));
+    }
+    function test_prefs419_sources(data) {
+        const before = gui392_setup(), settings = EaGlobals.Vars.settingsFile;
+        verify(SettingsProof.temporary(settings), "PREFS419 SETUP: only actual fresh owned settings store is changed");
+        const local = prefs417_configure(true), stored = prefs419_configs(local, settings);
+        const original = assistant, originalLife = lifetime313(original), originalOwner = before.owner;
+        const oldIdentity = identity313(originalLife);
+        if (data.tag === "publication") {
+            compare(original.connected, false, "PREFS419 SETUP: helper-owned account retirement is reached from genuinely signed-out original owner");
+            const account = JSON.stringify(gui392_json(original.account));
+            Ui.click(this, Probe, window, "assistant.connection");
+            const dialog = ux356_dialog(), dialogLife = lifetime313(dialog);
+            tryCompare(dialog, "opened", true, 2000, "PREFS419 SETUP: original live consent offer exists before source change");
+            verify(dialog.assistant === original, "PREFS419 SETUP: original consent property bindings belong exact original receiver");
+            prefs417_expected(prefs421_declarations(gui392_json(dialog.disclosedContext)), "local");
+            const events = [], returns = []; let phase = "", inspecting = false;
+            function published419() {
+                if (!phase || inspecting) return;
+                verify(alive313(originalLife) && Session.assistant === original && Session.project === originalOwner,
+                    "PREFS419: actual context notifier is delivered on original receiver/owner, never replacement authority");
+                inspecting = true;
+                try {
+                    let raw = null, parseError = null;
+                    try { raw = original.contextPreview; JSON.parse(raw); }
+                    catch (error) { parseError = String(error); }
+                    events.push({phase:phase,raw:raw,parseError:parseError,
+                        consent:original.contextConsentRequired,sourceError:original.skillSourceError,
+                        account:gui392_json(original.account),owner:identity313(before.life)});
+                } finally { inspecting = false; }
+            }
+            function returned419(label, empty, invalid) {
+                // FIRST observation at outer API return; no rendering/poll/queued timer between mutation and proof.
+                verify(events.some(event => event.phase === label),
+                    "PREFS419: actual contextPreviewChanged publication occurs synchronously before " + label + " returns");
+                verify(alive313(originalLife) && alive313(before.life) && Session.assistant === original
+                    && Session.project === originalOwner && alive313(dialogLife) && dialog.assistant === original,
+                    "PREFS419: reload/config publication retains exact live original property owners");
+                const bound = gui392_json(dialog.disclosedContext);
+                const declarations = prefs421_declarations({skills:gui392_json(dialog.skills)});
+                prefs417_expected(declarations, empty ? "empty" : "local");
+                verify(original.contextConsentRequired === true,
+                    "PREFS419: changed/invalid signed-out source projection remains unapproved before any timer repair");
+                verify(invalid ? original.skillSourceError.length > 0 : original.skillSourceError === "",
+                    "PREFS419: invalid source error versus healthy correction is a mandatory actual public fact");
+                if (invalid) verify(gui392_json(Probe.rows(original.skillSources)).every(row => row.enabled === false),
+                    "PREFS419: invalid reload cannot fall back to enabled builtin/source rows");
+                compare(JSON.stringify(gui392_json(original.account)), account,
+                    "PREFS419: helper-owned signed-out transition does not become a different account identity");
+                returns.push({phase:label,context:bound,declarations:declarations,consent:original.contextConsentRequired,
+                    sourceError:original.skillSourceError,account:gui392_json(original.account)});
+            }
+            original.contextPreviewChanged.connect(published419);
+            try {
+                phase = "native-off";
+                verify(original.setSkillSourceEnabled(local, false), "PREFS419: real explicit configuration commit reaches helper-owned transition");
+                returned419(phase,true,false);
+                phase = "native-on";
+                verify(original.setSkillSourceEnabled(local, true), "PREFS419: unchanged owner may lawfully restore local instructions");
+                returned419(phase,false,false);
+                phase = "reload-off";
+                SettingsProof.seed(settings,"Assistant","skillSources",stored.b);
+                original.refreshSkillSources();
+                returned419(phase,true,false);
+                phase = "invalid";
+                SettingsProof.seed(settings,"Assistant","skillSources","{PREFS419 invalid external configuration");
+                original.refreshSkillSources();
+                returned419(phase,true,true);
+                phase = "correction";
+                SettingsProof.seed(settings,"Assistant","skillSources",stored.a);
+                original.refreshSkillSources();
+                returned419(phase,false,false);
+                phase = "";
+                const revision = original.skillSourceRevision, context = JSON.stringify(gui392_json(dialog.disclosedContext));
+                original.refreshSkillSources();
+                compare(original.skillSourceRevision, revision, "PREFS419: unchanged good reload remains same actual configuration revision");
+                compare(JSON.stringify(gui392_json(dialog.disclosedContext)), context,
+                    "PREFS419: unchanged good reload preserves original current bound disclosure");
+                console.log("PREFS419_RESULT",JSON.stringify({tag:data.tag,baselineAccount:JSON.parse(account),events:events,returns:returns,owner:identity313(before.life)}));
+            } finally {
+                disconnect313(originalLife,original,"contextPreviewChanged",published419);
+                SettingsProof.seed(settings,"Assistant","skillSources",stored.a);
+                if (alive313(originalLife) && Session.project === originalOwner) original.refreshSkillSources();
+            }
+            if (alive313(dialogLife) && dialog.opened) gui392_button(dialog.standardButton(Dialog.Cancel),dialog);
+            gui392_unchanged(before); return;
+        }
+        // Real original public Send entrance. The source reload must occur INSIDE this call.
+        gui392_signIn();
+        verify(original.connected && !original.contextConsentRequired && !original.canCancel,
+            "PREFS419 SETUP: actual healthy original A account/approval is ready, not a disconnected refusal");
+        Ui.click(this,Probe,window,"assistant.composer");
+        visible185_type("PREFS419 original source-dependent request");
+        const field = Ui.find(window,"assistant.composer"), fieldLife = lifetime313(field);
+        compare(field.text,"PREFS419 original source-dependent request", "PREFS419 SETUP: original real editor owns literal request before callback");
+        let inside = false, replacements = 0, callbackCount = 0, bOwner = null, bReceiver = null,
+            bLife = null, bOwnerLife = null, bState = null, bDraft = null, returned = null;
+        function replace419() {
+            ++callbackCount;
+            if (replacements) return;
+            verify(inside, "PREFS419: actual original source notification reaches synchronous public submitDraft interval");
+            ++replacements;
+            verify(Session.openProject(Probe.referenceUrl("project")), "PREFS419: genuine ordinary owner replacement occurs in original Send callback");
+            bOwner = Session.project; bReceiver = Session.assistant;
+            bLife = lifetime313(bReceiver); bOwnerLife = lifetime313(bOwner);
+            verify(bOwner !== originalOwner, "PREFS419: callback genuinely creates B, never reuses A owner proof");
+            bState = prefs419_state(bReceiver);
+            verify(alive313(fieldLife), "PREFS419: actual original composer receiver survives for B draft observation");
+            bDraft = field.text;
+        }
+        original.skillSourcesChanged.connect(replace419);
+        try {
+            // Opaque valid B was produced by a genuine ordinary source action; schema is never guessed.
+            SettingsProof.seed(settings,"Assistant","skillSources",stored.b);
+            inside = true;
+            try { returned = original.submitDraft("PREFS419 original source-dependent request"); }
+            finally { inside = false; }
+        } finally { disconnect313(originalLife,original,"skillSourcesChanged",replace419); }
+        compare(replacements,1, "PREFS419: actual original public Send reaches one genuine replacement callback, not early-refusal pass");
+        compare(returned,"", "PREFS419: retired original public Send cannot return any admitted user-row authority");
+        verify(alive313(bLife) && alive313(bOwnerLife) && Session.assistant === bReceiver && Session.project === bOwner,
+            "PREFS419: outer original Send cannot retire/replace callback-created B");
+        compare(JSON.stringify(prefs419_state(bReceiver)),JSON.stringify(bState),
+            "PREFS419: no stale Send refusal/state/account/catalogue/model/message/file/action write reaches B after callback return");
+        verify(alive313(fieldLife), "PREFS419: original editor remains live before exact B draft preservation observation");
+        compare(field.text,bDraft,"PREFS419: old Send cannot clear or commit callback-created B current draft");
+        compare(visible185_values(bOwner),before.values,"PREFS419: exact independent same-file physical values/free/PRESENT SUs survive callback");
+        compare(visible185_inputs(bOwner),before.inputs,"PREFS419: every original measured triple/weight/exclusion/phase link survives callback");
+        compare(relation245_declarations(bOwner),before.relations,"PREFS419: no old Send changes scientific aliases/constraints");
+        compare(import265_owner(bOwner),before.metadata,"PREFS419: same-file B preserves original source/path/settings/metadata");
+        compare(bOwner.canUndo,before.undo,"PREFS419: source callback creates no scientific Undo");
+        compare(bOwner.modified,before.modified,"PREFS419: source callback creates no scientific dirty state");
+        verify(!bOwner.fit.running,"PREFS419: source-dependent Send cannot start a scientific fit");
+        console.log("PREFS419_RESULT",JSON.stringify({tag:data.tag,callbacks:callbackCount,replacements:replacements,
+            originalReceiver:oldIdentity,originalOwner:identity313(before.life),newOwner:identity313(bOwnerLife),returned:returned,before:bState,after:prefs419_state(bReceiver),draft:bDraft}));
     }
 }

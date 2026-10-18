@@ -12,6 +12,7 @@
 #include "fit_view_model.hpp"
 #include "experiment_view_model.hpp"
 #include "pattern_model.hpp"
+#include <functional>
 #include <QCryptographicHash>
 #include <QJsonDocument>
 #include <QAbstractItemModel>
@@ -41,8 +42,9 @@ class OwnedUrlRecorder final : public QObject {
 public:
     Array urls;
     int usage_changes=0;
+    std::function<void()> input410_callback;
 public slots:
-    void changed() { ++usage_changes; }
+    void changed() { ++usage_changes; if(input410_callback)input410_callback(); }
     void record(const QUrl& url) { urls.push_back(url.toString(QUrl::FullyEncoded)); }
 };
 namespace {
@@ -378,6 +380,7 @@ int main(int argc,char** argv) {
         return facts;
     };
     // Opt-in real public VM callbacks. Receipts outlive original Session/receiver.
+    Object policy410;bool policy410_armed=false;
     Object callback319;
     bool callback319_armed=false;
     int callback319_depth=0;
@@ -611,6 +614,7 @@ int main(int argc,char** argv) {
                 {"json_depth",static_cast<double>(edi::assistant::Limits::json_depth)},
                 {"ui_messages",static_cast<double>(edi::assistant::Limits::ui_messages)}}}};
 #endif
+        if(!policy410.isEmpty())result["policy410"]=policy410;
         if(!callback319.isEmpty())result["callback319"]=callback319;
         return result;
     };
@@ -854,6 +858,47 @@ int main(int argc,char** argv) {
             else if(codex_mode && op=="publication_create_structure") {
                 if(!session->project())throw std::runtime_error("real project required");
                 result={{"created",session->project()->createStructure()}};
+            }
+            else if(codex_mode && op=="input410_owned_fixture") {
+                // Test data only inside this probe's already isolated AppLocalData.
+                // No real auth/home read, production classifier override or new authority API.
+                const auto base=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/input410-owned";
+                if(!base.startsWith(storage.path()+"/") || !QDir().mkpath(base))
+                    throw std::runtime_error("isolated application storage unavailable");
+                const auto file=base+"/input.txt";QFile owned(file);
+                const QByteArray bytes("INPUT410 OWNED protected sentinel, never credentials\n");
+                if(!owned.open(QIODevice::WriteOnly|QIODevice::Truncate) || owned.write(bytes)!=bytes.size())
+                    throw std::runtime_error("owned protected sentinel fixture unavailable");
+                owned.close();result={{"path",file},{"parent",base},
+                    {"bytes",static_cast<double>(bytes.size())},{"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
+            }
+            else if(codex_mode && op=="policy410_arm") {
+                if(!session->project())throw std::invalid_argument("POLICY410 actual original owner required");
+                report_urls.input410_callback={};
+                const auto trigger=input["signal"].toString(),choice=input["choice"].toString();
+                if(trigger!="usageChanged")
+                    throw std::invalid_argument("actual public policy callback required");
+                if(choice!="model" && choice!="effort" && choice!="unchanged")throw std::invalid_argument("declared original choice required");
+                QPointer<edi_app::AssistantViewModel> original=session->assistant();
+                QPointer<edi_app::Session> original_session=session.get();QPointer<edi_app::ProjectViewModel> owner=session->project();
+                auto* model=original->messages();QPointer<edi_app::RowTableModel> model_life=model;const auto text=input["text"].toString();
+                const auto identity=[](const void* p){return QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(p)),16);};
+                policy410={{"armed",true},{"callbacks",0},{"receiver",identity(original.data())},{"model",identity(model)},
+                    {"project",identity(owner.data())},{"text",text},{"trigger",trigger},{"choice",choice}};policy410_armed=true;
+                auto act=[&,original,original_session,owner,model,model_life,identity,text,choice,trigger] {
+                    if(!policy410_armed || !original || !owner || !model_life || original->messages()!=model_life.data() || !original_session || session.get()!=original_session.data() || session->project()!=owner.data() || original->canCancel())return;
+                    policy410_armed=false;policy410["entered"]=true;policy410["callbacks"]=1;
+                    policy410["owner_current"]=session->project()==owner.data();policy410["rows_at_entry"]=rows(model);
+                    policy410["can_cancel_at_entry"]=original->canCancel();
+                    policy410["old_model"]=original->selectedModel();policy410["old_effort"]=original->selectedEffort();
+                    if(choice=="model")original->setSelectedModel("gpt-6-sol");
+                    else if(choice=="effort")original->setSelectedEffort("high");
+                    else original->setSelectedModel(original->selectedModel());
+                    policy410["returned_inside_callback"]=true;policy410["original_alive"]=!original.isNull();
+                    if(original){policy410["new_model"]=original->selectedModel();policy410["new_effort"]=original->selectedEffort();}
+                };
+                report_urls.input410_callback=act;
+                result=policy410;
             }
             else if(codex_mode && op=="ux319_arm") {
                 QObject::disconnect(callback319_model);QObject::disconnect(callback319_state);QObject::disconnect(callback319_error);

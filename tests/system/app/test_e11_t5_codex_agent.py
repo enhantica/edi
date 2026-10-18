@@ -540,6 +540,7 @@ def test_original_terminal_cannot_release_input_before_its_control_ack(generic):
 )
 def test_effective_thread_mismatch_refuses_before_turn_and_preserves_user_input(generic, scenario):
     actor, trace = generic(scenario)
+    readonly409_configure(trace)
     assert not records(trace), 'GR1: default construction does not probe runtime/account/profile'
     actor.command('sign_in')
     state = settle(actor, lambda value: bool(value['last_error']))
@@ -1559,6 +1560,7 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     generic, tmp_path, remove_one
 ):
     actor, trace = generic('fileauth')
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original retained conversation before file intake')
     before = settle(
@@ -1682,6 +1684,19 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     assert [row for row in records(trace) if row.get('method') in auth_methods] == original_auth, (
         'FILEAUTH: context approval/new work never repairs auth through another account flow'
     )
+    readonly409_policy(trace)
+    contexts409 = rpc83_context_inputs(sent[-1]['params'])
+    assert len(contexts409) == 1, 'INPUT409: actual original admitted input has one independently recorded outgoing context'
+    scopes409 = contexts409[0]['input_scopes']['sources']
+    assert type(scopes409) is list and len(scopes409) == len(expected_names) and all(
+        type(row) is dict and set(row) == {'scope_id', 'ordinal', 'source_kind'}
+        and type(row['scope_id']) is str and row['scope_id']
+        and type(row['ordinal']) is int and row['source_kind'] == 'attachment'
+        for row in scopes409
+    ) and len({row['scope_id'] for row in scopes409}) == len(scopes409), (
+        'INPUT409: current remaining attachments yield distinct closed opaque scopes without pathname/content/hash fields'
+    )
+
 
 
 # Private append proposal only. Uses existing module helpers and no new peer mode.
@@ -5395,28 +5410,7 @@ def test_native145_affine_refusal_is_atomic_for_declarations_and_parameter_state
 
 # Working-folder callbacks are the real public picker route; no OS gesture or
 # official-runtime filesystem enforcement is claimed by this owned stdio peer.
-def folder167_owner(generic, *, loaded):
-    actor, trace = generic('fileauth')
-    if loaded:
-        project = trace.parent / 'Original-folder-owner'
-        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', project)
-        assert actor.command('open', path=str(project))['reply']['opened'], (
-            'FOLDER SETUP: genuine original model opens through actual Session'
-        )
-    connect(actor)
-    state = folder167_send(actor, trace, 'Original conversation before folder selection')
-    surface = state['folder_observer']
-    assert surface['property_present'] and all(
-        surface[key]
-        for key in ('begin_method', 'complete_method', 'cancel_method', 'temporary_method')
-    ), 'FOLDER: the ordinary picker callback surface exists on the actual managed VM'
-    assert isinstance(surface['value'], str) and not surface['value'], (
-        'FOLDER: initial temporary mode discloses no chosen directory'
-    )
-    assert state['connected'] and state['models'] and state['handoff']['account_label'], (
-        'FOLDER SETUP: genuine account/catalog and completed original conversation'
-    )
-    return actor, trace, state
+
 
 
 def folder167_send(actor, trace, text):
@@ -5511,125 +5505,13 @@ def folder167_policy(trace, chosen):
         )
 
 
-@pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
-def test_folder167_actual_picker_callback_grants_only_chosen_scope_and_keeps_owner(
-    generic, tmp_path, loaded
-):
-    actor, trace, before = folder167_owner(generic, loaded=loaded)
-    chosen = tmp_path / 'Original chosen working folder'
-    chosen.mkdir()
-    sentinel = chosen / 'Original existing user bytes.txt'
-    sentinel.write_bytes(b'Original file is not overwrite authorization\n')
-    intent = actor.command('working_folder_begin')['reply']
-    assert intent['invoked'] and intent['intent'], 'FOLDER: actual picker mints one live intent'
-    completed = actor.command(
-        'working_folder_complete', intent=intent['intent'], directory=str(chosen)
-    )
-    assert completed['reply']['invoked'] and completed['reply']['accepted'], (
-        'FOLDER: genuine local-directory callback grants its own current intent'
-    )
-    assert completed['vm']['folder_observer']['value'] == str(chosen.resolve()), (
-        'FOLDER: actual selected physical path is disclosed to the user'
-    )
-    folder167_preserved(before, completed['vm'], trace)
-    state = folder167_send(actor, trace, 'Original task within explicitly chosen folder')
-    folder167_policy(trace, chosen.resolve())
-    folder167_preserved(before, state, trace)
-    assert sentinel.read_bytes() == b'Original file is not overwrite authorization\n', (
-        'FOLDER: selecting a scope alone does not write an existing user file'
-    )
 
 
-@pytest.mark.parametrize('accident', ['cancelled', 'superseded', 'replaced-owner'])
-def test_folder167_stale_picker_callback_cannot_grant_a_different_current_owner(
-    generic, tmp_path, accident
-):
-    actor, trace, before = folder167_owner(generic, loaded=True)
-    rejected = tmp_path / 'Original ungranted stale destination'
-    rejected.mkdir()
-    intent = actor.command('working_folder_begin')['reply']
-    assert intent['invoked'] and intent['intent'], 'FOLDER SETUP: real current picker intent'
-    replacement_intent = None
-    if accident == 'cancelled':
-        assert actor.command('working_folder_cancel', intent=intent['intent'])['reply'][
-            'invoked'
-        ], 'FOLDER SETUP: actual native picker cancellation callback'
-    elif accident == 'superseded':
-        replacement_intent = actor.command('working_folder_begin')['reply']['intent']
-        assert replacement_intent and replacement_intent != intent['intent'], (
-            'FOLDER SETUP: a later genuine picker request owns a distinct one-shot intent'
-        )
-    else:
-        replacement = trace.parent / 'Original replacement native project'
-        shutil.copytree(ROOT / 'tests/fixtures/e04_t1/editable-project', replacement)
-        assert actor.command('open', path=str(replacement))['reply']['opened'], (
-            'FOLDER SETUP: ordinary Session replaces the actual owner before delayed callback'
-        )
-        # This legitimate explicit project replacement is the new comparison owner.
-        state = actor.last['vm']
-        assert state['connected'] and state['models'] == before['models'], (
-            'FOLDER SETUP: explicit owner replacement retains genuine managed account/catalog'
-        )
-        before = state
-    rejected_reply = actor.command(
-        'working_folder_complete', intent=intent['intent'], directory=str(rejected)
-    )
-    assert rejected_reply['reply']['invoked'] and not rejected_reply['reply']['accepted'], (
-        'FOLDER: cancelled/superseded/old-owner callback cannot grant new filesystem authority'
-    )
-    assert (
-        isinstance(rejected_reply['vm']['folder_observer']['value'], str)
-        and not rejected_reply['vm']['folder_observer']['value']
-    ), 'FOLDER: failed callback preserves temporary selection'
-    folder167_preserved(before, rejected_reply['vm'], trace)
-    if replacement_intent:
-        actor.command('working_folder_cancel', intent=replacement_intent)
-    state = folder167_send(actor, trace, 'Original task after refused stale folder callback')
-    folder167_policy(trace, None)
-    folder167_preserved(before, state, trace)
-    assert list(rejected.iterdir()) == [], 'FOLDER: refused destination remains untouched'
 
 
-def test_folder167_consumed_callback_is_once_only_and_temporary_retires_path_authority(
-    generic, tmp_path
-):
-    actor, trace, before = folder167_owner(generic, loaded=True)
-    chosen = tmp_path / 'Original grant'
-    unrelated = tmp_path / 'Original path only mentioned in chat'
-    chosen.mkdir()
-    unrelated.mkdir()
-    intent = actor.command('working_folder_begin')['reply']['intent']
-    assert intent, 'FOLDER SETUP: genuine nonempty picker intent'
-    reply = actor.command('working_folder_complete', intent=intent, directory=str(chosen))
-    assert reply['reply']['invoked'] and reply['reply']['accepted'], (
-        'FOLDER SETUP: genuine chosen scope is admitted before replay'
-    )
-    replayed = actor.command('working_folder_complete', intent=intent, directory=str(unrelated))
-    assert replayed['reply']['invoked'] and not replayed['reply']['accepted'], (
-        'FOLDER: consumed one-shot callback cannot move authority to a second directory'
-    )
-    assert replayed['vm']['folder_observer']['value'] == str(chosen.resolve()), (
-        'FOLDER: refused replay retains only the originally chosen physical path'
-    )
-    temporary = actor.command('working_folder_temporary')
-    assert temporary['reply']['invoked'] and temporary['reply']['accepted'], (
-        'FOLDER: ordinary temporary-mode action revokes the selected external scope'
-    )
-    assert (
-        isinstance(temporary['vm']['folder_observer']['value'], str)
-        and not temporary['vm']['folder_observer']['value']
-    ), 'FOLDER: temporary mode is disclosed by the declared empty selected-path value'
-    folder167_preserved(before, temporary['vm'], trace)
-    state = folder167_send(actor, trace, 'Please use this chat path: ' + str(unrelated))
-    assert (
-        isinstance(state['folder_observer']['value'], str)
-        and not state['folder_observer']['value']
-    ), 'FOLDER: a path in model/user prose cannot mint the native-picker capability'
-    folder167_policy(trace, None)
-    folder167_preserved(before, state, trace)
-    assert list(chosen.iterdir()) == list(unrelated.iterdir()) == [], (
-        'FOLDER: callback replay and prose alone cannot create files in either external path'
-    )
+
+
+
 
 
 SIGNIN206_CANARY = 'SIGNIN206_PRIVATE_REPLY_CANARY'
@@ -9213,6 +9095,9 @@ def gui392_run(tmp_path, case):
     config.pop('report_page_reply')
     config.update(scenario='native:script', native_turn_calls=[[]], vm319_record_packets=True,
                   account_email='Original@example.invalid')
+    # GUI415: app-owned intake has no AI write grant. Only this existing GUI vehicle opts in.
+    if case not in ('sources', *GUI392_SOURCE_REFUSALS):
+        config['gui415_policy'] = {'case': case}
     if case == 'sources':
         config['ux289_hold_input'] = True
         config['gui392_record_skill_bytes'] = True
@@ -9446,7 +9331,7 @@ def gui392_run(tmp_path, case):
         }) == 1 and all(row['row'] and len(row['bands']) == 4 for row in tables404), (
             'GUI404: both actual native palettes observe SAME one completed original response and all FOUR declared ordinary data rows'
         )
-        folder167_policy(trace, None)
+        gui415_policy(trace, config['gui415_policy'])
     elif case.startswith('chooser-'):
         replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         reads = [row for row in requests if row.get('method') == 'model/list']
@@ -9456,12 +9341,12 @@ def gui392_run(tmp_path, case):
         assert all(next(reply for reply in replies if reply.get('id') == read['id'])['result'] == config['gui393_model_reply'] for read in reads), (
             'GUI393: actual displayed choices derive from complete literal original provider reply'
         )
+        gui415_policy(trace, config['gui415_policy'])
         turns = [row for row in requests if row.get('method') == 'turn/start']
         if case == 'chooser-pointer':
             assert len(turns) == 1 and turns[0]['params']['model'] == 'gpt-6-sol' and turns[0]['params']['effort'] == 'medium', (
                 'GUI393: genuine radio/label choices become exact actual original model/effort wire operands once'
             )
-            folder167_policy(trace, None)
             turn = turns[0]
             assert sum(reply.get('id') == turn['id'] and 'result' in reply for reply in replies) == 1, (
                 'GUI393: exact actual held original input has one independent matching successful ACK'
@@ -9527,3 +9412,765 @@ def test_gui393_real_combined_model_effort_choice(tmp_path, case):
 
 def test_gui393_first_delivery_eye_clear(tmp_path):
     gui392_run(tmp_path, 'first-eye-clear')
+
+
+def readonly409_configure(trace):
+    """Opt-in public354 fixture; all original GUI/default peer behavior stays exact."""
+    path = trace.parent / 'peer-input.json'
+    config = json.loads(path.read_text())
+    assert config['scenario'] in {'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, 'INPUT409 SETUP: existing ordinary fileauth vehicle only'
+    config.update(readonly409=True, vm319_record_packets=True)
+    path.write_text(json.dumps(config))
+
+
+def readonly409_policy(trace):
+    traffic = records(trace)
+    packets = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+    starts = [row for row in traffic if row.get('method') == 'thread/start']
+    turns = [row for row in traffic if row.get('method') == 'turn/start']
+    assert starts and turns, 'INPUT409: actual original thread and inference admission are mandatory'
+    effective = {}
+    for request in starts:
+        responses = [row for row in packets if row.get('id') == request['id'] and 'result' in row]
+        assert len(responses) == 1, 'INPUT409: independently recorded original thread gets exactly one full reply'
+        value = responses[0]['result']
+        assert value['approvalPolicy'] == 'never' and value['approvalsReviewer'] == 'user', (
+            'INPUT409: effective original stock policy is never/user, no write-grant approval fallback'
+        )
+        assert value['sandbox'] == {'type': 'readOnly', 'networkAccess': False}, (
+            'INPUT409: exact official effective readOnly/no-network has no hidden writable roots'
+        )
+        assert value['model'] == 'gpt-6.1-sol' and value['reasoningEffort'] == 'medium', (
+            'INPUT409: independently declared actual offered model/effort is effective, not blindly echoed'
+        )
+        assert value['cwd'] == request['params']['cwd'] and Path(value['cwd']).is_absolute(), (
+            'INPUT409: original process workspace identity remains factual without becoming a model write grant'
+        )
+        assert value['thread']['id'] not in effective, 'INPUT409: a new thread has a distinct actual emitted identity'
+        effective[value['thread']['id']] = value
+    for request in turns:
+        params = request['params']
+        assert params['threadId'] in effective, 'INPUT409: actual original turn belongs to independently emitted admitted thread'
+        # Official TurnStartParams optional fields inherit the actual confirmed
+        # original thread. Missing EFFECTIVE metadata is never accepted above.
+        confirmed = effective[params['threadId']]
+        assert params.get('sandboxPolicy', confirmed['sandbox']) == {'type': 'readOnly', 'networkAccess': False}, (
+            'INPUT409: every explicit override or inherited actual policy remains read-only/no-network'
+        )
+        assert params.get('approvalPolicy', confirmed['approvalPolicy']) == 'never' and params.get(
+            'approvalsReviewer', confirmed['approvalsReviewer']) == 'user', (
+            'INPUT409: actual confirmed inheritance and every explicit override preserve never/user'
+        )
+        assert params.get('model', confirmed['model']) == 'gpt-6.1-sol' and params.get(
+            'effort', confirmed['reasoningEffort']) == 'medium', (
+            'INPUT409: explicit or confirmed inherited choices equal independent default catalogue fixture'
+        )
+        assert all('working_folder' not in context for context in rpc83_context_inputs(params)), (
+            'INPUT409: removed persistent write-folder authority cannot reappear in actual context'
+        )
+    updates = [row for row in traffic if row.get('method') == 'thread/settings/update']
+    for request in updates:
+        replies = [row for row in packets if row.get('id') == request['id'] and row.get('result') == {}]
+        notifications = [row for row in packets if row.get('method') == 'thread/settings/updated'
+                         and row['params']['threadId'] == request['params']['threadId']]
+        assert len(replies) == 1 and notifications, 'INPUT409: request ACK alone never counts as effective settings proof'
+        assert all(row['params']['threadSettings']['sandboxPolicy'] == {'type': 'readOnly', 'networkAccess': False}
+                   and row['params']['threadSettings']['approvalPolicy'] == 'never'
+                   and row['params']['threadSettings']['approvalsReviewer'] == 'user'
+                   and row['params']['threadSettings']['model'] == 'gpt-6.1-sol'
+                   and row['params']['threadSettings']['effort'] == 'medium' for row in notifications), (
+            'INPUT409: actual emitted settings notification confirms full current policy and independent choices'
+        )
+
+@pytest.fixture
+def input410_interposer(tmp_path):
+    assert sys.platform.startswith('linux'), 'INPUT410 SETUP: deterministic opened-FD fixture currently requires Linux; other platforms are an explicit unqualified interval'
+    compiler = shutil.which('cc')
+    assert compiler, 'INPUT410 SETUP: existing native IO fixture needs the ordinary C compiler'
+    output = tmp_path / 'input410.so'
+    argv = [compiler, '-shared', '-fPIC', '-Wall', '-Wextra', '-Werror',
+            str(ROOT / 'tests/fixtures/assistant_input_pin410/input_pin.c'), '-ldl', '-pthread', '-o', str(output)]
+    result = subprocess.run(argv, capture_output=True, text=True, timeout=20, check=False)
+    (tmp_path / 'input410-fixture-build.json').write_text(json.dumps({'argv': argv, 'exit': result.returncode,
+        'stdout': result.stdout, 'stderr': result.stderr}, indent=2))
+    assert result.returncode == 0, 'INPUT410 SETUP: original scoped syscall fixture compiles before its receipts count'
+    return output
+
+
+@pytest.mark.parametrize('entrance', ['source', 'selected'])
+@pytest.mark.parametrize('attack,leaf412,route412,logical412', [
+    (False, 'input.txt', 'original', 'input.txt'),
+    (True, 'input.txt', 'original', 'input.txt'),
+    (False, 'input.txt', 'direct', 'input.txt'),
+    (False, 'measurement.', 'direct', 'measurement.'),
+    (False, 'measurement ', 'direct', 'measurement '),
+    (False, 'measurement.', 'stable-alias', 'selected-alias.txt'),
+    (False, 'measurement ', 'stable-alias', 'selected-alias.txt'),
+], ids=['fixed-lawful-positive', 'opened-protected-alias', 'direct-ordinary',
+        'direct-trailing-dot', 'direct-trailing-space',
+        'stable-alias-trailing-dot', 'stable-alias-trailing-space'])
+def test_input410_pinned_opened_identity_cannot_borrow_ordinary_path_classification(
+    generic, monkeypatch, tmp_path, input410_interposer, entrance, attack, leaf412, route412, logical412
+):
+    root = tmp_path / 'input410-owned'; root.mkdir()
+    ordinary = root / 'ordinary'; ordinary.mkdir()
+    ordinary_file = ordinary / leaf412; ordinary_bytes = b'INPUT410 independent ordinary bytes\n'
+    ordinary_file.write_bytes(ordinary_bytes)
+    link = root / 'alias'; target = link if entrance == 'source' else link / 'input.txt'
+    # INPUT-READ-DOMAIN1: literal read operands, never result-writer leaf policy.
+    assert route412 in ['original', 'direct', 'stable-alias'] and (
+        not attack or (leaf412, route412, logical412) == ('input.txt', 'original', 'input.txt')
+    ), 'INPUT412 SETUP: protected ABA remains its original exact operand; suffix variants are mandatory positives'
+    if route412 == 'direct':
+        target = ordinary_file
+    elif route412 == 'stable-alias':
+        target = root / 'selected-alias.txt'
+        target.symlink_to(ordinary_file)
+    if route412 != 'original':
+        assert target.name == logical412 and target.resolve() == ordinary_file and ordinary_file.stat().st_nlink == 1, (
+            'INPUT412 SETUP: exact untrimmed logical spelling names the independent single-link physical input'
+        )
+    log, arm = root / 'receipts.tsv', root / 'armed'
+    switch, restore = root / 'switch-to', root / 'restore-to'
+    monkeypatch.setenv('LD_PRELOAD', str(input410_interposer))
+    for key, value in {'TARGET': target, 'SWAP': link, 'LOG': log, 'ARM': arm,
+                       'EDGE': entrance if attack else 'observe', 'SWITCH_TO': switch, 'RESTORE_TO': restore}.items():
+        monkeypatch.setenv('EDI_INPUT410_' + key, str(value))
+    # Spawn through the SAME original real Session/VM fixture, not a filesystem surrogate.
+    actor, trace = generic('fileauth'); readonly409_configure(trace)
+    if entrance == 'source':
+        config413_path = trace.parent / 'peer-input.json'
+        config413 = json.loads(config413_path.read_text())
+        config413.update(input413=True, input413_arm=str(arm))
+        config413_path.write_text(json.dumps(config413))
+    protected = actor.command('input410_owned_fixture')['reply']
+    protected_file = Path(protected['path']); protected_dir = Path(protected['parent'])
+    protected_bytes = b'INPUT410 OWNED protected sentinel, never credentials\n'
+    assert protected_file.read_bytes() == protected_bytes and protected_file.stat().st_nlink == 1, (
+        'INPUT410 SETUP: fake protected application sentinel is literal OWNED data, never real account/auth bytes'
+    )
+    # Immutable child environment names only these owned operands. Resolve their
+    # symlink targets after the probe reports its own isolated test-data location.
+    switch.symlink_to(protected_file if entrance == 'source' else protected_dir,
+                      target_is_directory=entrance == 'selected')
+    restore.symlink_to(ordinary_file if entrance == 'source' else ordinary,
+                       target_is_directory=entrance == 'selected')
+    if entrance == 'source':
+        link.symlink_to(ordinary_file)
+    else:
+        link.symlink_to(ordinary, target_is_directory=True)
+    project410 = ux345_default_scattering_project(trace.parent)
+    assert actor.command('open', path=str(project410))['reply']['opened'], 'INPUT410 SETUP: original lawful scientific owner is real before source attempt'
+    actor.command('native_science_enable'); native145_science_settled(actor)
+    original_files410 = save211_files(project410)
+    first_good410 = root / 'batch-first.txt'; first_good410.write_bytes(b'INPUT410 independent first batch member\n')
+    if entrance == 'selected':
+        baseline410 = root / 'baseline.txt'; baseline410.write_bytes(b'INPUT410 prior canonical original\n')
+        token410 = actor.command('selected_begin')['reply']['request_id']
+        assert actor.command('selected_add', request_id=token410, urls=[baseline410.as_uri()])['reply']['accepted'], (
+            'INPUT410 SETUP: prior independently admitted collection exists before two-member race batch'
+        )
+    connect(actor); native145_approve(actor)
+    before = actor.last['vm']; original_pid = live_original_peer(actor)
+    pinned = protected_file.stat() if attack else ordinary_file.stat()
+    if entrance == 'selected':
+        arm.touch()
+        token = actor.command('selected_begin')['reply']['request_id']
+        assert token, 'INPUT410: original genuine local selection creates an actual intent'
+        reply = actor.command('selected_add', request_id=token, urls=[first_good410.as_uri(), target.as_uri()])
+        assert reply['reply']['accepted'] is (not attack), (
+            'INPUT410: opened protected source refuses the whole batch; fixed lawful parent alias admits'
+        )
+        if attack:
+            assert reply['vm']['selected_files'] == before['selected_files'], 'INPUT410: protected-FD refusal publishes no partial IDs'
+        else:
+            rows410 = reply['vm']['selected_files']
+            assert all(row in rows410 for row in before['selected_files']) and len(rows410) == 3 and (
+                len({row['id'] for row in rows410}) == 3 and {row['name'] for row in rows410} == {'baseline.txt', 'batch-first.txt', logical412}
+            ), 'INPUT410: lawful fixed alias positive retains prior ID and admits BOTH independent batch members exactly once'
+            admitted410 = next(row for row in rows410 if row['name'] == logical412)
+            assert admitted410['id'] and admitted410['bytes'] == len(ordinary_bytes), (
+                'INPUT410: actual lawful alias ID/byte receipt bonds independent original input bytes'
+            )
+    else:
+        text = 'Source: "' + str(target) + '"'
+        original_count = len(started_requests(trace))
+        submitted413 = actor.command('ux319_submit', text=text)['reply']
+        state = settle(actor, lambda v: not v['can_cancel'] and (
+            bool(native_records(trace, '.native-replies.jsonl')) or bool(v['last_error'])
+        ))
+        turns410 = started_requests(trace)[original_count:]
+        assert submitted413['row_id'] and len(turns410) == 1, (
+            'INPUT413 SETUP: genuine ordinary quoted source yields exactly one admitted user input before acquisition'
+        )
+        offered413 = json.loads(trace.with_suffix('.input413-offered.json').read_text())
+        context413 = rpc83_context_inputs(turns410[0]['params'])
+        assert len(context413) == 1 and context413[0]['input_scopes']['sources'] == [offered413['source']], (
+            'INPUT413: original scope handle bonds the exact original emitted user context; catalog alone is not read authority'
+        )
+        emitted413 = native_records(trace, '.native-emitted.jsonl')
+        replies413 = native_records(trace, '.native-replies.jsonl')
+        assert len(emitted413) == len(replies413) == 1 and not native_records(trace, '.native-wrong-envelope.jsonl'), (
+            'INPUT413: actual acquire_inputs is emitted and settles once on its original full reverse envelope'
+        )
+        request413 = emitted413[0]; reply413 = replies413[0]
+        expected_args413 = {'purpose': 'Original bounded input identity acquisition', 'scope_id': offered413['source']['scope_id']}
+        assert request413['params']['tool'] == 'acquire_inputs' and request413['params']['arguments'] == expected_args413 and (
+            request413['params']['callId'] == 'input413-acquire-original' and request413['params']['namespace'] is None
+            and request413['item']['tool'] == 'acquire_inputs' and request413['item']['arguments'] == expected_args413
+            and reply413['original'] == request413 and reply413['response']['id'] == request413['id']
+            and reply413['response']['id'] != request413['params']['callId']
+        ), 'INPUT413: genuine opaque handle/purpose and every original request/item/RPC identity remain exact, never a fabricated file ID'
+        result413 = reply413['response']['result']; content413 = result413['contentItems']
+        assert type(result413['success']) is bool and type(content413) is list and len(content413) == 1 and (
+            content413[0]['type'] == 'inputText' and type(content413[0]['text']) is str
+        ), 'INPUT413: actual admission/refusal is one typed native JSON result'
+        outcome413 = json.loads(content413[0]['text'])
+        assert type(outcome413) is dict and outcome413['scope_id'] == offered413['source']['scope_id'] and (
+            type(outcome413['files']) is list and type(outcome413['admitted']) is int
+        ), 'INPUT413: actual acquired result, not catalog presence, declares independently observed file-ID admission'
+        if attack:
+            assert result413['success'] is False and outcome413['status'] == 'refused' and (
+                outcome413['admitted'] == 0 and outcome413['files'] == [] and state['selected_files'] == before['selected_files']
+            ), 'INPUT413: opened protected capture refuses BEFORE adoption; no new IDs/bytes or partial replacement, not merely outer failure'
+        else:
+            assert result413['success'] is True and outcome413['status'] == 'admitted' and outcome413['admitted'] == 1 and (
+                len(outcome413['files']) == 1 and len(state['selected_files']) == len(before['selected_files']) + 1
+            ), 'INPUT413: lawful same scoped input is actually acquired/admitted, never an optional earlier refusal/catalog-only pass'
+            acquired413 = outcome413['files'][0]
+            assert type(acquired413) is dict and set(acquired413) == {'file_id', 'ordinal', 'reader_hint'} and (
+                type(acquired413['file_id']) is str and bool(acquired413['file_id']) and
+                type(acquired413['ordinal']) is int and acquired413['reader_hint'] in {'structure', 'measurement', 'unknown'}
+            ), 'INPUT413: acquired opaque ID and literal text reader hint follow the public closed descriptor'
+            expected_source_name413 = 'alias' if route412 == 'original' else logical412
+            matches413 = [row for row in state['selected_files'] if row['id'] == acquired413['file_id']]
+            assert len(matches413) == 1 and matches413[0]['name'] == expected_source_name413 and (
+                matches413[0]['bytes'] == len(ordinary_bytes) and all(row in state['selected_files'] for row in before['selected_files'])
+            ), 'INPUT413: real acquired ID bonds independent untrimmed logical name/literal byte count and preserves original IDs'
+    assert log.is_file(), 'INPUT410 SETUP: actual product syscall channel MUST be reached, never an early optional refusal pass'
+    receipts = [line.split('\t') for line in log.read_text().splitlines()]
+    assert any(row[0] == 'opened' and int(row[3]) == pinned.st_dev and int(row[4]) == pinned.st_ino
+               and Path(row[6]) == (protected_file if attack else ordinary_file) for row in receipts), (
+        'INPUT410 SETUP: actual opened descriptor dev/inode/path matches independent planted physical source'
+    )
+    assert not any(row[0] == 'switch-error' for row in receipts), 'INPUT410 SETUP: real alias mutation succeeds, never a guessed race'
+    if attack:
+        opened413 = [i for i,row in enumerate(receipts) if row[0] == 'opened' and int(row[3]) == pinned.st_dev and int(row[4]) == pinned.st_ino]
+        assert any(row[0] == 'before-open-A' for row in receipts) and len(opened413) >= 1 and any(
+            i > opened413[0] and row[0] == 'alias-restored' for i,row in enumerate(receipts)
+        ) and any(row[0] == 'canonical' and row[5] == str(ordinary_file) for row in receipts), (
+            'INPUT413 SETUP: actual protected opened FD, real ordinary classification and restored alias are all reached; operation order is not assumed'
+        )
+        assert not any(row[0] == 'read-bytes' and int(row[3]) == pinned.st_dev and int(row[4]) == pinned.st_ino for row in receipts), (
+            'INPUT413: protected original descriptor is rejected before any captured sentinel byte can be read/admitted'
+        )
+    else:
+        bytes413 = {}
+        for row in receipts:
+            if row[0] != 'read-bytes' or int(row[3]) != pinned.st_dev or int(row[4]) != pinned.st_ino:
+                continue
+            offset413, hex413 = row[5].split(':', 1);offset413 = int(offset413);part413 = bytes.fromhex(hex413)
+            assert offset413 >= 0 and part413 and offset413 + len(part413) <= len(ordinary_bytes) and (
+                part413 == ordinary_bytes[offset413:offset413 + len(part413)]
+            ), 'INPUT413: actual scoped read bytes/offsets equal literal independent source, never descriptor-only success'
+            for index413, byte413 in enumerate(part413, offset413):
+                assert index413 not in bytes413 or bytes413[index413] == byte413
+                bytes413[index413] = byte413
+        assert set(bytes413) == set(range(len(ordinary_bytes))) and bytes(bytes413[i] for i in range(len(ordinary_bytes))) == ordinary_bytes, (
+            'INPUT413 SETUP: actual SAME opened physical identity read covers every literal byte; missing read/mmap channel cannot pass'
+        )
+    if route412 != 'original':
+        assert any(row[0] == 'opened' and row[5] == str(target) and
+                   int(row[3]) == pinned.st_dev and int(row[4]) == pinned.st_ino and
+                   row[6] == str(ordinary_file) for row in receipts), (
+            'INPUT412: actual original spelled read opens the independent physical suffix leaf; metadata-only/early refusal cannot qualify'
+        )
+        assert target.stat().st_dev == pinned.st_dev and target.stat().st_ino == pinned.st_ino and (
+            target.resolve() == ordinary_file and ordinary_file.name == leaf412 and target.name == logical412
+        ), 'INPUT412: lawful direct/alias identity and untrimmed logical/physical names survive admission unchanged'
+    (tmp_path / 'input410-observed.json').write_text(json.dumps({'entrance': entrance, 'attack': attack, 'physical_leaf': leaf412,
+        'route': route412, 'logical_name': logical412, 'spelled_input': str(target),
+        'literal_bytes_sha256': hashlib.sha256(ordinary_bytes).hexdigest(), 'opened_identity': {'dev': pinned.st_dev, 'ino': pinned.st_ino}, 'receipts': receipts,
+        'completed_ABA': any(row[0] == 'alias-restored' for row in receipts)}, indent=2))
+    assert protected_file.read_bytes() == protected_bytes and ordinary_file.read_bytes() == ordinary_bytes, (
+        'INPUT410: classifier/capture never mutates protected fake bytes or lawful source bytes'
+    )
+    assert original_peer_is_live(original_pid), 'INPUT410: source refusal preserves original actual peer lifetime'
+    assert actor.last['vm']['project'] == before['project'] and save211_files(project410) == original_files410, 'INPUT410: both physical input entrances preserve all original scientific facts and input documents'
+
+
+@pytest.mark.parametrize('signal,choice', [('usageChanged', 'model'), ('usageChanged', 'effort'),
+    ('usageChanged', 'unchanged')])
+def test_policy410_actual_public_callback_cannot_admit_old_settings(generic, tmp_path, signal, choice):
+    actor, trace = generic('fileauth'); readonly409_configure(trace)
+    path = trace.parent / 'peer-input.json'; config = json.loads(path.read_text())
+    target_model = 'gpt-6-sol' if choice == 'model' else 'gpt-6.1-sol'
+    target_effort = 'high' if choice == 'effort' else 'medium'
+    config.update(policy410={'model': target_model, 'effort': target_effort}, usage_mode='control-capacity',
+        gui393_model_reply={'data': [{'id': model, 'model': model, 'displayName': 'Independent ' + model,
+            'description': 'Original bounded policy callback fixture', 'hidden': False,
+            'isDefault': index == 0, 'defaultReasoningEffort': 'medium',
+            'supportedReasoningEfforts': [{'reasoningEffort': effort, 'description': 'Original ' + effort}
+                for effort in ['medium', 'high']]} for index, model in enumerate(['gpt-6.1-sol', 'gpt-6-sol'])]})
+    path.write_text(json.dumps(config))
+    project410 = ux345_default_scattering_project(trace.parent)
+    assert actor.command('open', path=str(project410))['reply']['opened'], 'POLICY410 SETUP: actual lawful owner exists before callback settings change'
+    actor.command('native_science_enable'); native145_science_settled(actor)
+    original_files410 = save211_files(project410)
+    connect(actor); native145_approve(actor)
+    actor.command('select_effort', id='medium')
+    settle(actor, lambda v: v['selected_effort'] == 'medium' and any(
+        row['packet'].get('method') == 'thread/settings/updated' for row in native_records(trace, '.vm319-packets.jsonl')))
+    actor.command('refresh_usage')
+    baseline = actor.last['vm']; identity = live_original_peer(actor)
+    assert any(row.get('method') == 'account/rateLimits/read' for row in records(trace)), (
+        'POLICY410 SETUP: actual optional Usage read is outstanding, not a fabricated pending flag'
+    )
+    text = 'Original410 unadmitted settings-sensitive draft'
+    arm = actor.command('policy410_arm', signal=signal, choice=choice, text=text)['reply']
+    assert arm['armed'], 'POLICY410 SETUP: original real public signal receiver is armed'
+    submitted = actor.command('ux319_submit', text=text)['reply']
+    state = settle(actor, lambda v: v.get('policy410', {}).get('returned_inside_callback') and not v['can_cancel'])
+    event = state['policy410']
+    assert event['entered'] and event['callbacks'] == 1 and event['receiver'] == arm['receiver'] and event['model'] == arm['model'], (
+        'POLICY410 SETUP: exactly one actual synchronous original receiver/model notification reaches selection action'
+    )
+    assert event['owner_current'] and not event['can_cancel_at_entry'] and event['original_alive'], (
+        'POLICY410: genuine callback interval still belongs to original owner before busy admission'
+    )
+    assert event['new_model'] == state['selected_model'] == target_model and event['new_effort'] == state['selected_effort'] == target_effort, (
+        'POLICY410: literal independent genuine new choices survive original continuation; no old preference restore'
+    )
+    if choice == 'unchanged':
+        assert submitted['row_id'] and len(started_requests(trace)) == 1, 'POLICY410: unchanged actual setting positive still admits once'
+    else:
+        assert submitted['row_id'] == '' and not started_requests(trace) and not users(actor, text), (
+            'POLICY410: superseded original input is unadmitted; no old row/wire/ACK authorizes draft consumption'
+        )
+        updates = [row for row in records(trace) if row.get('method') == 'thread/settings/update']
+        packets = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+        assert updates and any(row.get('method') == 'thread/settings/updated' and row['params']['threadSettings']['model'] == target_model
+            and row['params']['threadSettings']['effort'] == target_effort for row in packets), (
+            'POLICY410: actual new settings update/effective notification is preserved before explicit new admission'
+        )
+        fresh = 'Original410 explicit subsequent draft after verified new choice'
+        actor.command('ux319_submit', text=fresh)
+        state = settle(actor, lambda v: not v['can_cancel'] and any(row.get('kind') == 'assistant' and row.get('status') == 'completed' for row in v['messages']))
+        turns = started_requests(trace)
+        assert len(turns) == 1 and turns[0]['params']['model'] == target_model and turns[0]['params']['effort'] == target_effort, (
+            'POLICY410: only genuine later explicit input uses new verified literal settings, once'
+        )
+        assert len(users(actor, fresh)) == 1, 'POLICY410: later explicit admission has one actual user identity'
+    assert state['connected'] and original_peer_is_live(identity) and state['project'] == baseline['project'] and state['selected_files'] == baseline['selected_files'], (
+        'POLICY410: setting callback leaves original account/process/science/selection/Undo authority intact'
+    )
+
+    assert save211_files(project410) == original_files410, 'POLICY410: no callback/settings admission writes original project/analysis/input bytes'
+
+
+@pytest.mark.parametrize('case', ['new-owner', 'same-object-reopen', 'unchanged'])
+def test_status410_genuine_native_folder_dialog_reentry(case, tmp_path):
+    from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
+    reference = tmp_path / 'reference'; reference.mkdir()
+    source = ux345_default_scattering_project(reference)
+    status = reference / 'status410'; status.mkdir(); source.rename(status / 'A')
+    shutil.copytree(status / 'A', status / 'B')
+    original_a, original_b = save211_files(status / 'A'), save211_files(status / 'B')
+    environment = popup171_owned_environment(tmp_path); environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'STATUS410 SETUP: genuine normal rebuilt Main consumer is required'
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_status410_original_opener_currentness:' + case, '-o', '-,txt']
+    result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=90, check=False)
+    (tmp_path / 'status410.stdout.log').write_text(result.stdout)
+    (tmp_path / 'status410.stderr.log').write_text(result.stderr)
+    (tmp_path / 'status410.argv-env.json').write_text(json.dumps({'argv': argv, 'timeout': 90,
+        'environment': {key: value for key, value in environment.items() if key.startswith(('QT_', 'EDI_', 'XDG_')) or key == 'TMPDIR'}}, indent=2))
+    assert result.returncode == 0, 'STATUS410: original native reached callback/owner/path/Copy/science assertions pass\n' + result.stdout + result.stderr
+    receipts = [json.loads(line.split('STATUS410_RECEIPT ', 1)[1]) for line in result.stdout.splitlines() if 'STATUS410_RECEIPT ' in line]
+    assert len(receipts) == 1 and receipts[0]['tag'] == case and receipts[0]['calls'] == 1 and receipts[0]['returned'], (
+        'STATUS410: mandatory reached original synchronous callback receipt, not a final-only or missing observer pass'
+    )
+    assert save211_files(status / 'A') == original_a and save211_files(status / 'B') == original_b, (
+        'STATUS410: status/callback presentation never overwrites either independent source project'
+    )
+
+
+
+
+def gui416_choice_path(case):
+    # Independently declared UNCHANGED original Qt actions; None is native provider Auto.
+    initial = ('gpt-6.1-sol', None)
+    if case == 'chooser-pointer':
+        return [initial, ('gpt-6.1-sol', 'high'), ('gpt-6-sol', None), ('gpt-6-sol', 'medium')]
+    if case in ('chooser-space', 'chooser-return', 'chooser-enter'):
+        return [initial, ('gpt-6.1-sol', 'high')]
+    assert case in ('chooser-retirement', 'account', 'first-eye-clear', 'stale',
+                    'remaining25', 'remaining24', 'remaining5', 'remaining4',
+                    'remaining100', 'over100', 'unknown', 'zero-missing-recovered'), (
+        'GUI416 SETUP: only the existing independent firstGUI operands'
+    )
+    return [initial]
+
+
+def gui416_requested_choice(params, method, previous):
+    if method == 'thread/start':
+        # Pinned official ThreadStartParams: model and generic config override; no invented effort field.
+        config416 = params.get('config')
+        if config416 is None: config416 = {}
+        assert type(config416) is dict, 'GUI416: actual public config is absent/null or a typed mapping'
+        return (params.get('model') or 'gpt-6.1-sol', config416.get('model_reasoning_effort'))
+    model = params.get('model') or previous[0]
+    effort = params.get('effort', previous[1] if model == previous[0] else None)
+    return model, effort
+
+
+def gui415_policy(trace, expected):
+    assert type(expected) is dict and set(expected) == {'case'}, 'GUI416 SETUP: exact independent case descriptor'
+    path = gui416_choice_path(expected['case'])
+    traffic = records(trace)
+    packets = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
+    effective = {}
+    cursor = -1
+    for request in traffic:
+        method = request.get('method')
+        if method not in ('thread/start', 'thread/settings/update', 'turn/start'):
+            continue
+        params = request['params']
+        if method == 'thread/start':
+            actual = gui416_requested_choice(params, method, path[0])
+        else:
+            assert params['threadId'] in effective, 'GUI416: settings/turn belongs to an actually confirmed original thread'
+            actual = gui416_requested_choice(params, method, effective[params['threadId']])
+        assert actual in path and path.index(actual) >= cursor, (
+            'GUI416: actual original history follows independently declared native choice chronology, never final-state rewriting'
+        )
+        cursor = path.index(actual)
+        if method == 'thread/start':
+            replies = [row for row in packets if row.get('id') == request['id'] and 'result' in row]
+            assert len(replies) == 1, 'GUI416: original thread has exactly one actual independent effective reply'
+            value = replies[0]['result']
+            assert value['sandbox'] == {'type': 'readOnly', 'networkAccess': False} and value['approvalPolicy'] == 'never' and value['approvalsReviewer'] == 'user', (
+                'GUI416: every historical original bootstrap policy stays exactly readOnly/no-network/never/user'
+            )
+            assert (value['model'], value['reasoningEffort']) == actual, 'GUI416: original bootstrap confirms its OWN actual declared interval, not a later final pair'
+            assert value['cwd'] == params['cwd'] and Path(value['cwd']).is_absolute(), 'GUI416: original process cwd stays factual, never a write grant'
+            thread = value['thread']['id']
+            assert type(thread) is str and thread and thread not in effective, 'GUI416: actual emitted original thread identities are distinct'
+            effective[thread] = actual
+        elif method == 'thread/settings/update':
+            replies = [row for row in packets if row.get('id') == request['id'] and row.get('result') == {}]
+            # Peer emits this notification immediately after THIS exact settings ACK; preserve emission order.
+            indexes = [i for i,row in enumerate(packets) if row.get('id') == request['id'] and row.get('result') == {}]
+            assert len(replies) == len(indexes) == 1 and indexes[0] + 1 < len(packets), 'GUI416: settings ACK alone is never effective confirmation'
+            publication = packets[indexes[0]+1]
+            assert publication.get('method') == 'thread/settings/updated' and publication['params']['threadId'] == params['threadId'], 'GUI416: actual immediately paired publication belongs to SAME original thread/settings interval'
+            value = publication['params']['threadSettings']
+            assert value['sandboxPolicy'] == {'type':'readOnly','networkAccess':False} and value['approvalPolicy'] == 'never' and value['approvalsReviewer'] == 'user', 'GUI416: every actual historical effective setting stays read-only/no-network/never/user'
+            assert (value['model'],value['effort']) == actual, 'GUI416: actual effective publication confirms its corresponding declared choice, no arbitrary echo or final-state rewrite'
+            effective[params['threadId']] = actual
+        else:
+            assert actual == path[-1] and expected['case'] in ('first-eye-clear','chooser-pointer'), 'GUI416: inference occurs only for the original two sending cases at their strict final actual choice'
+            assert params.get('sandboxPolicy',{'type':'readOnly','networkAccess':False}) == {'type':'readOnly','networkAccess':False} and params.get('approvalPolicy','never') == 'never' and params.get('approvalsReviewer','user') == 'user', 'GUI416: actual final wire cannot expand confirmed effective policy'
+            assert effective[params['threadId']] == actual, 'GUI416: final original turn requires the already confirmed matching effective choice'
+            assert all('working_folder' not in context for context in rpc83_context_inputs(params)), 'GUI416: removed write-folder authority cannot return in approved context'
+    turns = [row for row in traffic if row.get('method') == 'turn/start']
+    assert bool(turns) == (expected['case'] in ('first-eye-clear','chooser-pointer')), 'GUI416: exact original send versus no-send rows preserve their independent inference obligation'
+
+# PREFS417: separate finite source/configuration rows; original firstGUI16 is unchanged.
+PREFS417_CASES = ('lifecycle', 'malformed', 'retirement', 'local', 'all-off', 'stage-changed')
+PREFS417_NATIVE_TOOLS = {'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters',
+                       'set_free', 'run_fit', 'create_cwl_project', 'add_relations',
+                       'save_project', 'edit_background', 'acquire_inputs'}
+
+
+def prefs417_inventory(skills, expected):
+    assert type(skills) is list and len(skills) == len(expected), (
+        'PREFS417: actual instruction inventory has exact independent cardinality'
+    )
+    assert all(type(row) is dict and {'id', 'content', 'sha256'} <= row.keys()
+               and type(row['id']) is str and row['id']
+               and type(row['content']) is str and type(row['sha256']) is str
+               for row in skills), 'PREFS417: actual guidance roles are mandatory typed values, not missing/default operands'
+    assert len({row['id'] for row in skills}) == len(skills), 'PREFS417: real guidance IDs are unique opaque original IDs'
+    assert sorted(row['content'] for row in skills) == sorted(expected), (
+        'PREFS417: exact literal own guidance content, never candidate output as expected instructions'
+    )
+    assert all(row['sha256'] == hashlib.sha256(row['content'].encode('utf-8')).hexdigest() for row in skills), (
+        'PREFS417: every actual text/hash pair has independent whole UTF8 byte integrity'
+    )
+    return sorted((row['id'], row['sha256'], row['content']) for row in skills)
+
+
+def prefs421_declarations(skills, expected):
+    import re
+    assert type(skills) is list and len(skills)==len(expected), (
+        'PREFS421: configured declaration count equals independent captured-body inventory exactly'
+    )
+    assert all(type(row) is dict and {'id','sha256'} <= row.keys()
+               and type(row['id']) is str and row['id']
+               and type(row['sha256']) is str and re.fullmatch(r'[0-9a-f]{64}',row['sha256'])
+               for row in skills), 'PREFS421: unique identity and exact lowercase SHA256 are mandatory public declaration roles'
+    assert len({row['id'] for row in skills})==len(skills), (
+        'PREFS421: actual configured identities cannot be missing or duplicated'
+    )
+    assert sorted(row['sha256'] for row in skills)==sorted(hashlib.sha256(text.encode('utf-8')).hexdigest() for text in expected), (
+        'PREFS421: actual declaration SHA256 must equal exact independent literal SKILL bytes, not producer metadata or optional bodies'
+    )
+    return sorted((row['id'],row['sha256']) for row in skills)
+
+
+def prefs417_run(tmp_path, case):
+    from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
+    assert case in (*PREFS417_CASES,*PREFS419_CASES), 'PREFS417 SETUP: closed existing-vehicle case inventory'
+    reference = tmp_path / 'reference'
+    reference.mkdir()
+    ux345_default_scattering_project(reference).rename(reference / 'project')
+    for name, text in GUI392_SKILLS.items():
+        target = reference / 'skills/collection' / ('gui392-' + name) / 'SKILL.md'
+        target.parent.mkdir(parents=True)
+        target.write_text(text, encoding='utf-8')
+    alpha_a = GUI392_SKILLS['alpha']
+    alpha_b = alpha_a.replace('GUI392 independent alpha guidance', 'GUI417 independently changed guidance')
+    assert alpha_a != alpha_b and alpha_a.startswith('---\nname: gui392-alpha\n'), (
+        'PREFS417 SETUP: distinct lawful same-package literal A/B operands'
+    )
+    fixture = {'alphaA': alpha_a, 'alphaB': alpha_b, 'beta': GUI392_SKILLS['beta']}
+    fixture.update({key+'Sha256':hashlib.sha256(text.encode('utf-8')).hexdigest() for key,text in tuple(fixture.items())})
+    (reference / 'prefs417.json').write_text(json.dumps(fixture))
+    inputs = {str(path.relative_to(reference)): path.read_bytes() for path in reference.rglob('*') if path.is_file()}
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[[]], vm319_record_packets=True,
+                  gui392_record_skill_bytes=True, account_email='Original@example.invalid',
+                  gui415_policy={'case':'first-eye-clear' if case in ('local','all-off') else 'account'})
+    if case in ('local', 'all-off'):
+        config['ux289_hold_input'] = True
+    if case == 'stage-changed':
+        config['prefs417_stage_change'] = {'alphaA':alpha_a, 'alphaB':alpha_b,
+                                          'beta':GUI392_SKILLS['beta'], 'storage_identity':{'application':environment['EDI_TEST_APP_STORAGE_ID'],
+                                              'invocation_root':environment['EDI_TEST_APP_STORAGE_ROOT']},'reference':str(reference)}
+    config_path.write_text(json.dumps(config))
+    config_bytes = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'PREFS417 SETUP: genuinely bound real Main runner required'
+    function = 'AssistantPopup::' + ('test_prefs419_sources:' if case in PREFS419_CASES else 'test_prefs417_sources:') + case
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')), function, '-o', '-,txt']
+    (tmp_path/'prefs417-request.json').write_text(json.dumps({'argv':argv,'timeout':90,'case':case,
+        'environment':{key:value for key,value in environment.items() if key.startswith(('QT_','EDI_','XDG_')) or key=='TMPDIR'}},indent=2))
+    try:
+        result = subprocess.run(argv,cwd=tmp_path,env=environment,capture_output=True,text=True,timeout=90,check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout','stderr'):
+            value = getattr(error,stream) or b''
+            (tmp_path/('prefs417-timeout.'+stream+'.log')).write_bytes(value if isinstance(value,bytes) else value.encode())
+        raise
+    (tmp_path/'prefs417.stdout.log').write_text(result.stdout)
+    (tmp_path/'prefs417.stderr.log').write_text(result.stderr)
+    (tmp_path/'prefs417-exit.json').write_text(json.dumps({'returncode':result.returncode}))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::' + ('test_prefs419_sources(' if case in PREFS419_CASES else 'test_prefs417_sources(') + case + ')' in output
+    ), 'PREFS417: exact registered real Main row reaches all native/config/scientific assertions\n' + output
+    assert not any('Binding loop detected' in line or 'Unable to assign [undefined] to QString' in line
+                   or 'Cannot assign to non-existent property' in line for line in output.splitlines()), (
+        'PREFS417: existing named Qt warnings remain failures, never hidden as success\n' + output
+    )
+    assert config_path.read_bytes() == config_bytes and inputs == {
+        str(path.relative_to(reference)):path.read_bytes() for path in reference.rglob('*') if path.is_file() and str(path.relative_to(reference)) not in {'prefs417-arm','prefs417-mutated'} and (case!='stage-changed' or str(path.relative_to(reference))!='prefs419-storage.json')
+    }, 'PREFS417: all independent scientific/source/fixture/config bytes preserved after lawful A→B→A restoration'
+    trace = Path(config['trace'])
+    requests = records(trace) if trace.exists() else []
+    turns = [row for row in requests if row.get('method')=='turn/start']
+    reads = [row for row in requests if row.get('method')=='skills/list']
+    events = clear_control_events(trace) if trace.exists() else []
+    approved_lines = [json.loads(line.split('PREFS417_APPROVED ',1)[1]) for line in result.stdout.splitlines() if 'PREFS417_APPROVED ' in line]
+    if case in ('local','all-off','stage-changed'):
+        assert len(approved_lines)==1 and approved_lines[0]['tag']==case, 'PREFS417: one actual native original disclosure interval is mandatory'
+        expected = [] if case=='all-off' else [alpha_a,GUI392_SKILLS['beta']]
+        approved = prefs421_declarations(approved_lines[0]['skills'],expected)
+        stage = [row for row in events if row['kind']=='gui392-original-skill-files']
+        assert reads and stage, 'PREFS417: actual runtime discovery and actual owned staged-file byte witness are mandatory, no early-refusal pass'
+        assert all(row['request'] in reads and row['cwd'] in row['request']['params']['cwds'] for row in stage), (
+            'PREFS417: every staged byte witness bonds its exact actual discovery request/cwd'
+        )
+        packets = [row['packet'] for row in native_records(trace,'.vm319-packets.jsonl')]
+        for read in reads:
+            replies = [row for row in packets if row.get('id')==read['id'] and 'result' in row]
+            assert len(replies)==1, 'PREFS417: exact actual discovery request has one independent complete provider reply'
+            discovered = replies[0]['result']['data']
+            witnesses = [row for row in stage if row['request']==read]
+            assert len(discovered)==len(witnesses) and all(not row['errors'] for row in discovered), (
+                'PREFS417: every actual discovery cwd has a staged-byte witness and no suppressed registration error'
+            )
+            for row in discovered:
+                exact = [witness for witness in witnesses if witness['cwd']==row['cwd']]
+                assert len(exact)==1 and len(row['skills'])==len(expected) and all(skill['enabled'] is True for skill in row['skills']), (
+                    'PREFS417: actual enabled discovery count is exact, including zero when all sources are off'
+                )
+                assert {skill['path'] for skill in row['skills']}=={item['path'] for item in exact[0]['files']}, (
+                    'PREFS417: actual discovered package paths bond exact original staged file paths, not expected opaque-name guesses'
+                )
+        if case=='stage-changed':
+            prefs419_storage_bond(result.stdout,events,environment,reference,reads)
+            mutations = [row for row in events if row['kind']=='prefs417-original-stage-changed']
+            assert len(mutations)==1 and mutations[0]['discovery_request'] in reads and mutations[0]['request'] in [row for row in requests if row.get('method')=='account/rateLimits/read'], 'PREFS417: exact actual optional-read mutation follows original discovery once before real Send refusal'
+            assert (reference/'prefs417-arm').read_text()=='PREFS417 original stage interval' and (reference/'prefs417-mutated').read_text()==str(mutations[0]['request']['id']), 'PREFS417: only two declared fixture-output files bond the exact reached original read interval'
+            assert sorted(bytes.fromhex(row['hex']).decode('utf-8') for row in mutations[0]['before'])==sorted(expected), (
+                'PREFS417: actual original staged A inventory equals independent previously approved operands'
+            )
+            assert sorted(bytes.fromhex(row['hex']).decode('utf-8') for row in mutations[0]['after'])==sorted([alpha_b,GUI392_SKILLS['beta']]), (
+                'PREFS417: actual changed B stage is independently reached, not inferred from refusal or source predicate'
+            )
+            assert not turns, 'PREFS417: changed stage B cannot admit actual original inference approved only for A'
+            gui415_policy(trace,config['gui415_policy'])
+            assert output.count('PREFS417_STAGE_REFUSAL ')==1, 'PREFS417: original settled explicit failure must be observed'
+        else:
+            assert all(sorted(bytes.fromhex(row['hex']).decode('utf-8') for row in witness['files'])==sorted(expected) for witness in stage), (
+                'PREFS417: actual staged bytes equal exact approved independent inventory, including genuinely empty all-off'
+            )
+            assert len(turns)==1, 'PREFS417: one original actual approved source request reaches inference once'
+            gui415_policy(trace,config['gui415_policy'])
+            contexts = rpc83_context_inputs(turns[0]['params'])
+            assert len(contexts)==1 and prefs421_declarations(contexts[0]['skills'],expected)==approved, (
+                'PREFS417: exact actual submitted declaration inventory/IDs/hash equals original native approved inventory bonded to exact staged bytes'
+            )
+            assert sum(item.get('type')=='text' and item.get('text')=='PREFS417 exact current source request' for item in turns[0]['params']['input'])==1, (
+                'PREFS417: actual outgoing original objective is independent literal exactly once'
+            )
+            starts = [row for row in requests if row.get('method')=='thread/start']
+            assert starts and all({tool['name'] for tool in row['params']['dynamicTools']} <= PREFS417_NATIVE_TOOLS for row in starts), (
+                'PREFS417: local guidance cannot expand original independently declared native tool authority'
+            )
+            held = [row for row in events if row['kind']=='ux289-original-input-received']
+            released = [row for row in events if row['kind']=='ux289-original-ack-release']
+            assert len(held)==len(released)==1 and all(row['request_id']==turns[0]['id'] and row['client_user_message_id']==turns[0]['params']['clientUserMessageId'] for row in held+released), (
+                'PREFS417: pending/ACK proof bonds exact original envelope and genuine user row once'
+            )
+    else:
+        assert not turns, 'PREFS417: ordinary configuration/settings/owner work alone cannot dispatch inference'
+    if case in PREFS419_CASES:
+        actual=[json.loads(line.split('PREFS419_RESULT ',1)[1]) for line in result.stdout.splitlines() if 'PREFS419_RESULT ' in line]
+        assert len(actual)==1 and actual[0]['tag']==case, 'PREFS419: one exact original public-case receipt is required'
+        if case=='publication':prefs419_publication(actual[0],alpha_a,GUI392_SKILLS['beta'])
+        else:
+            prefs419_retired(actual[0]);gui415_policy(trace,config['gui415_policy'])
+        assert not any(row['kind'] in ('ux289-original-input-received','ux289-original-ack-release') for row in events), 'PREFS419: retired/unapproved original input cannot manufacture held admission or matching ACK'
+    assert not native_records(trace,'.native-replies.jsonl'), 'PREFS417: guidance cannot perform any undeclared native scientific operation'
+
+
+@pytest.mark.parametrize('case', PREFS417_CASES)
+def test_prefs417_source_configuration_and_inventory(tmp_path, case):
+    prefs417_run(tmp_path,case)
+
+# PREFS419: two precise public-source continuations; original417 six rows remain.
+PREFS419_CASES = ('publication', 'send-retirement')
+
+
+def prefs419_publication(record, alpha, beta):
+    phases = ('native-off', 'native-on', 'reload-off', 'invalid', 'correction')
+    assert record['tag']=='publication' and type(record['events']) is list and type(record['returns']) is list, (
+        'PREFS419: actual synchronous publication receipts are mandatory'
+    )
+    assert [row['phase'] for row in record['returns']]==list(phases), (
+        'PREFS419: each exact original API return has one independent observation in literal operation order'
+    )
+    account = record['baselineAccount']
+    for phase, returned in zip(phases,record['returns']):
+        events=[row for row in record['events'] if row['phase']==phase]
+        assert events and all(type(row['consent']) is bool and row['consent'] is True for row in events), (
+            'PREFS419: each original change publishes actual contextConsentRequired before return, not timer repair'
+        )
+        assert returned['consent'] is True and returned['account']==account and all(row['account']==account for row in events), (
+            'PREFS419: helper-owned transition preserves original signed-out account and current approval boundary'
+        )
+        expected=[] if phase in ('native-off','reload-off','invalid') else [alpha,beta]
+        declarations = prefs421_declarations(returned['declarations'],expected)
+        if phase=='invalid':
+            assert type(returned['sourceError']) is str and returned['sourceError'] and all(
+                type(row['sourceError']) is str and row['sourceError'] for row in events
+            ), 'PREFS419: invalid publication requires actual explicit error, never missing-context fallback as proof'
+            for row in events:
+                try: context=json.loads(row['raw'])
+                except (TypeError,ValueError):
+                    assert type(row['parseError']) is str and row['parseError'], (
+                        'PREFS419: nonparseable invalid disclosure has a factual getter/parse error receipt'
+                    )
+                else:
+                    assert type(context) is dict and not context.get('skills'), (
+                        'PREFS419: invalid source projection cannot retain old or builtin instruction inventory'
+                    )
+        else:
+            assert returned['sourceError']=='' and all(row['sourceError']=='' and row['parseError'] is None for row in events), (
+                'PREFS419: healthy reload is not an invalid-configuration early refusal'
+            )
+            for row in events:
+                assert prefs421_declarations(json.loads(row['raw'])['skills'],expected)==declarations, (
+                    'PREFS421: actual original synchronous event declarations retain exact dialog captured identities/digests'
+                )
+            assert prefs421_declarations(returned['context']['skills'],expected)==declarations, (
+                'PREFS421: original cached dialog binding and current context have the same actual captured inventory'
+            )
+
+
+def prefs419_retired(record):
+    assert record['tag']=='send-retirement' and type(record['callbacks']) is int and record['callbacks']>=1, (
+        'PREFS419: actual original public Send source notification must reach in-call callback'
+    )
+    assert record['replacements']==1 and record['returned']=='', (
+        'PREFS419: one genuine callback replacement, no admitted original row or early-refusal shortcut'
+    )
+    assert type(record['originalOwner']) is str and type(record['newOwner']) is str and record['originalOwner']!=record['newOwner'], (
+        'PREFS419: A and B are actual distinct original project identities'
+    )
+    assert record['before']==record['after'] and type(record['draft']) is str, (
+        'PREFS419: outer retired call cannot alter the independently captured B state/draft/account/input catalogue'
+    )
+    assert {'state','error','connected','account','model','effort','messages','files','skills','selectedSkill',
+            'pendingPlan','pendingQuestion','canCancel','showingActions'} <= record['before'].keys(), (
+        'PREFS419: every declared B state domain must be observed, not optional equality of missing snapshots'
+    )
+
+
+def prefs419_storage_bond(stdout, events, environment, reference, reads):
+    receipts=[json.loads(line.split('UX339_STORAGE ',1)[1]) for line in stdout.splitlines() if 'UX339_STORAGE ' in line]
+    assert len(receipts)==1, 'PREFS419: exact original before-Session startup storage witness is mandatory'
+    startup=receipts[0]
+    assert startup['test_mode'] is True and startup['before_session'] is True and (
+        startup['application']==environment['EDI_TEST_APP_STORAGE_ID']
+        and startup['organization']=='EdiIndependentAcceptance'
+        and Path(startup['invocation_root'])==Path(environment['EDI_TEST_APP_STORAGE_ROOT'])
+    ), 'PREFS419: startup independently proves fresh exact application identity, never generic home ownership'
+    observed=json.loads((reference/'prefs419-storage.json').read_text())
+    projection={key:startup[key] for key in ('application','organization','app_local_data')}
+    assert observed==projection, 'PREFS419: before-mutation public Qt query equals original fresh startup receipt exactly'
+    pins=[row for row in events if row['kind']=='prefs419-original-storage-pinned']
+    assert pins and all(row['request'] in reads and row['storage']==projection for row in pins), (
+        'PREFS419: each mutation permission comes from exact original application storage and actual discovery, not supplied cwd'
+    )
+    root=Path(projection['app_local_data'])
+    assert root.is_absolute() and root.parts[-2:]==('EdiIndependentAcceptance',startup['application']), (
+        'PREFS419: no whole-home/broader directory becomes write authority'
+    )
+    for pin in pins:
+        workspace=Path(pin['cwd'])
+        assert workspace!=root and workspace.is_relative_to(root) and pin['request']['params']['cwds']==[str(workspace)], (
+            'PREFS419: exact actual original discovery workspace is within only this fresh application namespace'
+        )
+    assert stdout.index('UX339_STORAGE ')<stdout.index('PREFS417_APPROVED '), (
+        'PREFS419: actual startup freshness proof predates original context approval'
+    )
+    mutations=[row for row in events if row['kind']=='prefs417-original-stage-changed']
+    assert len(mutations)==1 and mutations[0]['storage']==projection, (
+        'PREFS419: one actual read mutates only original physically pinned workspace, never replacement adoption'
+    )
+    original=[row for row in pins if row['request']==mutations[0]['discovery_request']]
+    assert len(original)==1 and original[0]['cwd']==mutations[0]['cwd'] and events.index(original[0])<events.index(mutations[0]), 'PREFS419: exact active original discovery/physical storage pin predates mutation'
+
+
+@pytest.mark.parametrize('case', PREFS419_CASES)
+def test_prefs419_source_publication_and_send_retirement(tmp_path, case):
+    prefs417_run(tmp_path,case)

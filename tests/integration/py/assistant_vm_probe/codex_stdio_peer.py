@@ -40,6 +40,34 @@ experimental_api = False
 clear_prior = None
 
 
+
+# GUI416 opt-in only; native default peer behavior remains exact after reversal.
+gui416_state = {'cursor': -1, 'choice': ('gpt-6.1-sol', None), 'threads': 0}
+def gui416_choose(params, method):
+    expected = config['gui415_policy']
+    assert type(expected) is dict and set(expected) == {'case'} and scenario == 'native:script' and config['native_turn_calls'] == [[]], 'GUI416 SETUP: exact existing firstGUI owned fixture only'
+    initial = ('gpt-6.1-sol', None)
+    case = expected['case']
+    if case == 'chooser-pointer':
+        choices = [initial, ('gpt-6.1-sol','high'), ('gpt-6-sol',None), ('gpt-6-sol','medium')]
+    elif case in ('chooser-space','chooser-return','chooser-enter'):
+        choices = [initial, ('gpt-6.1-sol','high')]
+    else:
+        assert case in ('chooser-retirement','account','first-eye-clear','stale','remaining25','remaining24','remaining5','remaining4','remaining100','over100','unknown','zero-missing-recovered'), 'GUI416 SETUP: closed original GUI operands'
+        choices = [initial]
+    if method == 'thread/start':
+        config416 = params.get('config')
+        if config416 is None: config416 = {}
+        assert type(config416) is dict, 'GUI416 SETUP: nullable official config must be a mapping when present'
+        actual = (params.get('model') or initial[0], config416.get('model_reasoning_effort'))
+    else:
+        previous = gui416_state['choice']
+        model = params.get('model') or previous[0]
+        actual = (model, params.get('effort', previous[1] if model == previous[0] else None))
+    assert actual in choices and choices.index(actual) >= gui416_state['cursor'], 'GUI416 SETUP: wrong-time/backwards/unoffered choice cannot become an effective echo'
+    gui416_state.update(cursor=choices.index(actual),choice=actual)
+    return actual
+
 def emit(value):
     # Opt-in packet declaration closes before the existing real stdout write.
     if config.get('vm319_record_packets') is True:
@@ -916,6 +944,10 @@ def native_emit_next():
     with trace.with_suffix('.native-emitted.jsonl').open('a') as output:
         output.write(json.dumps(native_pending[rpc_id]) + '\n')
     clear_observation('native-call-emitted', {'rpc': rpc_id, 'call': call_id})
+    if config.get('input413') is True:
+        assert spec['tool'] == 'acquire_inputs' and call_id == 'input413-acquire-original'
+        Path(config['input413_arm']).touch()
+        clear_observation('input413-acquisition-armed', {'rpc': rpc_id, 'call': call_id})
     emit({'id': rpc_id, 'method': 'item/tool/call', 'params': params})
     if config.get('native_foreign_resolve'):
         clear_observation(
@@ -929,6 +961,35 @@ def native_emit_next():
 
 def native_start(request):
     global native_start_pending, native_index, turn_id  # noqa: PLW0603 -- original delayed RPC envelope
+    # Opt-in original genuine user scope, then the SAME public native RPC path.
+    # Existing rpc83_context_inputs JSON-domain prior art; never a model path/ID.
+    if config.get('input413') is True:
+        assert scenario == 'fileauth' and turn_number == 1 and not native_pending
+        contexts413 = []
+        for input413 in request['params'].get('input', []):
+            if input413.get('type') != 'text' or type(input413.get('text')) is not str:
+                continue
+            text413 = input413['text']
+            for offset413, char413 in enumerate(text413):
+                if char413 != '{':
+                    continue
+                try:
+                    context413, _ = json.JSONDecoder().raw_decode(text413, offset413)
+                except ValueError:
+                    continue
+                if type(context413) is dict and context413.get('schema') == 'edi.assistant.context/1':
+                    contexts413.append(context413)
+        assert len(contexts413) == 1, 'INPUT413 SETUP: exactly one actual original current context'
+        sources413 = contexts413[0]['input_scopes']['sources']
+        assert type(sources413) is list and len(sources413) == 1
+        source413 = sources413[0]
+        assert type(source413) is dict and set(source413) == {'scope_id', 'ordinal', 'source_kind'}
+        assert type(source413['scope_id']) is str and source413['scope_id'] and source413['source_kind'] == 'file'
+        assert type(source413['ordinal']) is int
+        config['native_calls'] = [{'tool': 'acquire_inputs', 'call_id': 'input413-acquire-original',
+            'arguments': {'purpose': 'Original bounded input identity acquisition', 'scope_id': source413['scope_id']}}]
+        trace.with_suffix('.input413-offered.json').write_text(json.dumps({
+            'original_request': request, 'source': source413, 'literal_call': config['native_calls'][0]}))
     if config.get('native_turn_calls'):
         groups = config['native_turn_calls']
         assert 0 < turn_number <= len(groups), 'CREATE SETUP: only original declared real turns'
@@ -1177,7 +1238,95 @@ def ux289_release_input(read_request):
         native_start(original)
 
 
+# PREFS419: exact Qt application-specific storage proof, never a grant from packet cwd.
+def prefs419_pin_stage(discovery):
+    import os
+    original = config['prefs417_stage_change']
+    receipt_path = Path(original['reference'])/'prefs419-storage.json'
+    assert receipt_path.is_file() and not receipt_path.is_symlink(), 'PREFS419 SETUP: original QML storage observation is an owned regular reference receipt'
+    storage = json.loads(receipt_path.read_text())
+    expected = original['storage_identity']
+    assert expected['application']==os.environ.get('EDI_TEST_APP_STORAGE_ID') and expected['invocation_root']==os.environ.get('EDI_TEST_APP_STORAGE_ROOT'), 'PREFS419 SETUP: exact native parent invocation environment, not arbitrary configuration grant'
+    assert storage['application']==expected['application'] and storage['organization']=='EdiIndependentAcceptance', 'PREFS419 SETUP: actual Qt app identity equals exact launched isolated application'
+    assert storage['application'].startswith('acceptance-') and len(storage['application'])==75 and all(c in '0123456789abcdef' for c in storage['application'][11:]), 'PREFS419 SETUP: original unique application identity, not generic home grant'
+    root = Path(storage['app_local_data'])
+    assert root.is_absolute() and root.parts[-2:]==('EdiIndependentAcceptance',expected['application']) and root.resolve()==root and root.is_dir() and not root.is_symlink(), 'PREFS419 SETUP: exact nonlink application-local root, never broad home or supplied cwd'
+    assert len(discovery['params']['cwds'])==1, 'PREFS419 SETUP: actual original discovery owns exactly one workspace'
+    workspace = Path(discovery['params']['cwds'][0])
+    assert workspace.is_absolute() and workspace.resolve()==workspace and workspace!=root and workspace.is_relative_to(root), 'PREFS419 SETUP: original discovery cwd is physically inside exact fresh app-specific root'
+    chain = [root]+[root.joinpath(*workspace.relative_to(root).parts[:i]) for i in range(1,len(workspace.relative_to(root).parts)+1)]
+    chain += [workspace/'.agents',workspace/'.agents/skills']
+    assert all(p.is_dir() and not p.is_symlink() for p in chain), 'PREFS419 SETUP: no parent-link escape from original owned workspace'
+    dirs = [{'path':str(p),'dev':p.stat().st_dev,'ino':p.stat().st_ino} for p in chain]
+    files = sorted((workspace/'.agents/skills').glob('*/SKILL.md'))
+    assert len(files)==2 and all(p.is_file() and not p.is_symlink() and p.parent.is_dir() and not p.parent.is_symlink() and p.resolve().is_relative_to(workspace) for p in files), 'PREFS419 SETUP: exact two regular nonlink package paths'
+    assert sorted(p.read_bytes().decode('utf-8') for p in files)==sorted([original['alphaA'],original['beta']]), 'PREFS419 SETUP: original healthy staged A is independently predeclared before arming'
+    pins = [{'path':str(p),'dev':p.stat().st_dev,'ino':p.stat().st_ino,
+             'parent_dev':p.parent.stat().st_dev,'parent_ino':p.parent.stat().st_ino} for p in files]
+    result = {'storage':storage,'cwd':str(workspace),'directories':dirs,'files':pins}
+    old = config.get('_prefs419_pin')
+    assert old is None or not (Path(original['reference'])/'prefs417-arm').exists() or old==result, 'PREFS419 SETUP: after genuine arm no replacement workspace/file identity can be adopted'
+    config['_prefs419_pin']=result
+    clear_observation('prefs419-original-storage-pinned',{'request':discovery,**result})
+
+
+def prefs417_stage_read(request):
+    import os, stat
+    original = config.get('prefs417_stage_change')
+    if original is None or config.get('_prefs417_changed'):
+        return
+    reference = Path(original['reference'])
+    if not (reference/'prefs417-arm').exists():
+        return
+    assert scenario=='native:script' and config['native_turn_calls']==[[]], 'PREFS417 SETUP: unchanged no-native script only'
+    discovery = config['_prefs417_discovery']
+    pin = config['_prefs419_pin']
+    workspace = Path(pin['cwd'])
+    assert discovery['params']['cwds']==[str(workspace)], 'PREFS419 SETUP: same originally pinned actual discovery workspace'
+    for row in pin['directories']:
+        path = Path(row['path']); current = path.stat(follow_symlinks=False)
+        assert stat.S_ISDIR(current.st_mode) and (current.st_dev,current.st_ino)==(row['dev'],row['ino']), 'PREFS419 SETUP: original physical directory identity survives until actual read'
+    files = [Path(row['path']) for row in pin['files']]
+    for row,path in zip(pin['files'],files):
+        current = path.stat(follow_symlinks=False); parent = path.parent.stat(follow_symlinks=False)
+        assert stat.S_ISREG(current.st_mode) and current.st_nlink==1 and (current.st_dev,current.st_ino)==(row['dev'],row['ino']) and stat.S_ISDIR(parent.st_mode) and (parent.st_dev,parent.st_ino)==(row['parent_dev'],row['parent_ino']), 'PREFS419 SETUP: original regular file/package parent identity, not replaced path'
+    before = [{'path':str(path),'hex':path.read_bytes().hex()} for path in files]
+    assert sorted(bytes.fromhex(row['hex']).decode('utf-8') for row in before)==sorted([original['alphaA'],original['beta']]), 'PREFS417 SETUP: actual pre-change stage is independently approved A'
+    targets = [row for row in pin['files'] if Path(row['path']).read_bytes()==original['alphaA'].encode('utf-8')]
+    assert len(targets)==1, 'PREFS417 SETUP: exact original A content identifies one actual opaque staged path'
+    target = targets[0]; path = Path(target['path']); descriptors=[]
+    try:
+        # Open every original directory relative to its original parent, no followed links.
+        root = Path(pin['storage']['app_local_data'])
+        fd = os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW);descriptors.append(fd)
+        expected_dirs = {row['path']:row for row in pin['directories']}
+        rootfact = os.fstat(fd); rootpin = expected_dirs[str(root)]
+        assert (rootfact.st_dev,rootfact.st_ino)==(rootpin['dev'],rootpin['ino']), 'PREFS419 SETUP: pinned exact root FD before any write'
+        current = root
+        for component in path.parent.relative_to(root).parts:
+            fd = os.open(component,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd);descriptors.append(fd);current=current/component
+            fact = os.fstat(fd)
+            if str(current) in expected_dirs:
+                row=expected_dirs[str(current)]; wanted=(row['dev'],row['ino'])
+            else:
+                assert current==path.parent, 'PREFS419 SETUP: no unproved intermediate package directory'
+                wanted=(target['parent_dev'],target['parent_ino'])
+            assert (fact.st_dev,fact.st_ino)==wanted, 'PREFS419 SETUP: each original directory descriptor remains exact'
+        filefd=os.open(path.name,os.O_RDWR|os.O_NOFOLLOW,dir_fd=fd);descriptors.append(filefd)
+        fact=os.fstat(filefd)
+        assert stat.S_ISREG(fact.st_mode) and fact.st_nlink==1 and (fact.st_dev,fact.st_ino)==(target['dev'],target['ino']), 'PREFS419 SETUP: exact originally pinned file descriptor authorizes bounded own stimulus'
+        with os.fdopen(os.dup(filefd),'r+b') as stream:
+            assert stream.read()==original['alphaA'].encode('utf-8'), 'PREFS419 SETUP: same exact original body at final FD before mutation'
+            stream.seek(0);stream.write(original['alphaB'].encode('utf-8'));stream.truncate()
+    finally:
+        for fd in reversed(descriptors):os.close(fd)
+    after = [{'path':str(path),'hex':path.read_bytes().hex()} for path in files]
+    config['_prefs417_changed'] = True
+    clear_observation('prefs417-original-stage-changed',{'request':request,'discovery_request':discovery,
+        'storage':pin['storage'],'cwd':str(workspace),'directories':pin['directories'],'before':before,'after':after})
+    (reference/'prefs417-mutated').write_text(str(request['id']))
 def usage_read(request):
+    prefs417_stage_read(request)
     if config.get('ux289_hold_input') is True:
         ux289_release_input(request)
     relation246_resolve_at_original_read()
@@ -1595,6 +1744,9 @@ for line in sys.stdin:
             },
         )
     elif method == 'skills/list':
+        if config.get('prefs417_stage_change') is not None:
+            config['_prefs417_discovery'] = request
+            prefs419_pin_stage(request)
         if config.get('gui392_record_skill_bytes') is True:
             for cwd in params.get('cwds', []):
                 clear_observation('gui392-original-skill-files', {
@@ -1626,6 +1778,68 @@ for line in sys.stdin:
                 ]
             },
         )
+    elif method == 'thread/settings/update' and config.get('gui415_policy') is not None:
+        assert params['threadId'] == thread_id, 'GUI416 SETUP: actual settings belong to original emitted thread'
+        model416, effort416 = gui416_choose(params, method)
+        assert params.get('approvalPolicy','never') == 'never' and params.get('approvalsReviewer','user') == 'user', 'GUI416 SETUP: no approval expansion during actual choice history'
+        assert params.get('sandboxPolicy',{'type':'readOnly','networkAccess':False}) == {'type':'readOnly','networkAccess':False}, 'GUI416 SETUP: no sandbox expansion during actual choice history'
+        reply(request, {})
+        notify('thread/settings/updated', {'threadId': thread_id, 'threadSettings': {
+            'disabledPluginIds': [], 'cwd': cwd, 'approvalPolicy':'never', 'approvalsReviewer':'user',
+            'sandboxPolicy':{'type':'readOnly','networkAccess':False}, 'activePermissionProfile':None,
+            'model':model416, 'modelProvider':'openai', 'serviceTier':None, 'effort':effort416, 'summary':None,
+            'collaborationMode':{'mode':'default','settings':{'model':model416,'reasoning_effort':effort416,'developer_instructions':None}},
+            'multiAgentMode':'explicitRequestOnly','personality':None}})
+    elif method == 'thread/settings/update' and config.get('policy410') is not None:
+        # Complete independently declared offered choices; never accept arbitrary subject settings.
+        expected = config['policy410']
+        assert set(expected) == {'model', 'effort'} and expected['model'] in {'gpt-6.1-sol', 'gpt-6-sol'} and expected['effort'] in {'medium', 'high'}, (
+            'POLICY410 SETUP: only literal independently supplied callback choices'
+        )
+        assert params['threadId'] == thread_id, 'POLICY410 SETUP: actual settings packet targets original emitted thread'
+        pairs = [('gpt-6.1-sol', 'medium'), (expected['model'], expected['effort'])]
+        actual = (params.get('model', 'gpt-6.1-sol'), params.get('effort', 'medium'))
+        assert actual in pairs, 'POLICY410 SETUP: unsupported settings never become an effective echo'
+        model, effort = next(pair for pair in pairs if pair == actual)
+        assert params.get('approvalPolicy', 'never') == 'never' and params.get('approvalsReviewer', 'user') == 'user', (
+            'POLICY410 SETUP: genuine selected choice cannot override read-only approval contract'
+        )
+        assert params.get('sandboxPolicy', {'type': 'readOnly', 'networkAccess': False}) == {'type': 'readOnly', 'networkAccess': False}, (
+            'POLICY410 SETUP: actual requested policy stays read-only/no-network'
+        )
+        reply(request, {})
+        notify('thread/settings/updated', {'threadId': thread_id, 'threadSettings': {
+            'disabledPluginIds': [], 'cwd': cwd, 'approvalPolicy': 'never', 'approvalsReviewer': 'user',
+            'sandboxPolicy': {'type': 'readOnly', 'networkAccess': False},
+            'activePermissionProfile': None, 'model': model, 'modelProvider': 'openai',
+            'serviceTier': None, 'effort': effort, 'summary': None,
+            'collaborationMode': {'mode': 'default', 'settings': {'model': model,
+                'reasoning_effort': effort, 'developer_instructions': None}},
+            'multiAgentMode': 'explicitRequestOnly', 'personality': None,
+        }})
+    elif method == 'thread/settings/update' and config.get('readonly409') is True:
+        # Existing peer, opt-in fixture only. The fixed catalogue operands are
+        # independently declared; an ACK alone is never an effective receipt.
+        assert params['threadId'] == thread_id, 'INPUT409 SETUP: settings target original actual thread'
+        assert params.get('model', 'gpt-6.1-sol') == 'gpt-6.1-sol' and params.get('effort', 'medium') == 'medium', (
+            'INPUT409 SETUP: this unchanged default catalogue offers only the declared model/effort'
+        )
+        assert params.get('approvalPolicy', 'never') == 'never' and params.get('approvalsReviewer', 'user') == 'user', (
+            'INPUT409 SETUP: optional official overrides cannot request another approval policy'
+        )
+        assert params.get('sandboxPolicy', {'type': 'readOnly', 'networkAccess': False}) == {
+            'type': 'readOnly', 'networkAccess': False
+        }, 'INPUT409 SETUP: optional official policy override remains independently read-only'
+        reply(request, {})
+        notify('thread/settings/updated', {'threadId': thread_id, 'threadSettings': {
+            'disabledPluginIds': [], 'cwd': cwd, 'approvalPolicy': 'never', 'approvalsReviewer': 'user',
+            'sandboxPolicy': {'type': 'readOnly', 'networkAccess': False},
+            'activePermissionProfile': None, 'model': 'gpt-6.1-sol', 'modelProvider': 'openai',
+            'serviceTier': None, 'effort': 'medium', 'summary': None,
+            'collaborationMode': {'mode': 'default', 'settings': {'model': 'gpt-6.1-sol',
+                'reasoning_effort': 'medium', 'developer_instructions': None}},
+            'multiAgentMode': 'explicitRequestOnly', 'personality': None,
+        }})
     elif method == 'thread/start':
         cwd = params['cwd']
         if scenario.startswith('result:'):
@@ -1672,6 +1886,20 @@ for line in sys.stdin:
                 'turns': [],
             },
         }
+        if config.get('gui415_policy') is not None:
+            model416, effort416 = gui416_choose(params, method)
+            gui416_state['threads'] += 1
+            thread_id = '019a0290-0000-7000-8000-' + f"{os.getpid() * 1000 + gui416_state['threads']:012d}"
+            value['thread']['id'] = thread_id
+            value.update(approvalPolicy='never', approvalsReviewer='user', model=model416,
+                         reasoningEffort=effort416, sandbox={'type':'readOnly','networkAccess':False})
+        if config.get('readonly409') is True:
+            assert scenario in {'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, (
+                'INPUT409 SETUP: explicit finite preserved fileauth/effective-policy fixture only'
+            )
+            # Independent original catalogue constants, not an echo of subject policy/choices.
+            value.update(approvalPolicy='never', approvalsReviewer='user', model='gpt-6.1-sol',
+                         reasoningEffort='medium', sandbox={'type': 'readOnly', 'networkAccess': False})
         if config.get('roots207_variant'):
             roots207_response(request, value)
         if scenario == 'different-cwd':
@@ -1723,7 +1951,7 @@ for line in sys.stdin:
         if scenario.startswith('usage:'):
             usage_start(request)
             continue
-        if scenario.startswith('native:'):
+        if scenario.startswith('native:') or config.get('input413') is True:
             if config.get('ux289_hold_input') is True:
                 assert ux289_pending_input is None, 'UX289 SETUP: original input has one pending envelope'
                 ux289_pending_input = request
