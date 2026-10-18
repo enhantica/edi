@@ -20,6 +20,8 @@ EaElements.GroupBox {
     property ReportViewModel report: null
     // The preview, whose figures the PDF shows.
     property ReportPreview preview: null
+    // Whether the group is on screen; the saved reports' states build the report, so a hidden group reads none.
+    property bool shown: true
 
     // A save asked for while the project calculates, made when the calculation ends.
     property bool savePending: false
@@ -53,7 +55,7 @@ EaElements.GroupBox {
     // file has not been saved (before the first save, or after the project is renamed). Rows of other names keep
     // their files.
     function savedRow(format) {
-        if (!group.report)
+        if (!group.report || !group.shown)
             return null;
         const name = group.report.fileStem + "." + format;
         for (const row of group.report.savedReports) {

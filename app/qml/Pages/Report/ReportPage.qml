@@ -14,6 +14,8 @@ WorkflowPage {
 
     readonly property ProjectViewModel project: Session.project
     readonly property ReportViewModel report: project ? project.report : null
+    // Export's save that waits for the project's calculation to end.
+    property bool savePending: false
 
     pageName: "report"
     defaultInfo: project ? "" : qsTr("No report generated")
@@ -29,6 +31,8 @@ WorkflowPage {
             id: reportPreview
             objectName: "report.preview"
             report: page.report
+            // Drawn while the page is shown, and while a save waits for a calculation: a PDF takes its figures.
+            drawn: page.current || page.savePending
         }
     ]
     textEnabled: project !== null
@@ -37,9 +41,12 @@ WorkflowPage {
             ExportGroup {
                 report: page.report
                 preview: reportPreview
+                shown: page.current
+                onSavePendingChanged: page.savePending = savePending
             }
             ContentsGroup {
                 report: page.report
+                shown: page.current
             }
         }
     }

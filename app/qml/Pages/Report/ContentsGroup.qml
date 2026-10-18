@@ -17,7 +17,9 @@ EaElements.GroupBox {
     // Only the top group opens on first view, as on the other pages; each remembers its state.
     readonly property string openKey: "Main:reportContents"
     property ReportViewModel report: null
-    readonly property var items: report && report.model.contents ? report.model.contents : []
+    // Whether the group is on screen; reading the model builds the report, so a hidden group reads nothing.
+    property bool shown: true
+    readonly property var items: report && shown && report.model.contents ? report.model.contents : []
     readonly property var hidden: report ? report.hidden : []
 
     objectName: "group.reportContents"

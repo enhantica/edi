@@ -18,7 +18,10 @@ Flickable {
     id: preview
 
     property ReportViewModel report: null
-    readonly property var model: report ? report.model : ({})
+    // Whether the preview is drawn. Reading the model builds the report, so a preview that is not drawn reads
+    // nothing and holds no sections: opening a project builds its report only when the Report page is shown.
+    property bool drawn: true
+    readonly property var model: report && drawn ? report.model : ({})
     readonly property var sections: model.sections ?? []
     // An evolution chart's height to its width: the Evolution tab's at the app's default window size, so a report's
     // chart has the axes' proportions the app shows (the owner, 2026-10-14).
