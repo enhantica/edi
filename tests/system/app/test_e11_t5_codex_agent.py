@@ -10774,3 +10774,231 @@ def test_action495_parsed_long_block_refuses_before_edit_and_keeps_native_inspec
     assert [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
             for row in restored['selected_files']] == descriptors, (
         'RESULT499: history discrimination retains all original selected source identities and descriptors')
+
+
+def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(generic, tmp_path):
+    """One original proper-host owner workflow; no numerical optimum or partial-success substitute."""
+    import math
+
+    actor, trace = native_case(generic, [], connect_now=False, script={'scenario': 'native:script'})
+    directory = tmp_path / 'Original LBCO staged owner'
+    requested = dict(name='Original LBCO owner outcome', title='Original staged LBCO outcome',
+                     description='Authentic LBCO and HRPT, explicit1.49A, shared La Ba Biso',
+                     authors='Independent original input witness', location=str(directory),
+                     su_rule='iucr_99', report_libraries=True)
+    assert actor.command('named_empty_create', **requested)['reply']['created'], (
+        'OUTCOME500 SETUP: original Session creates and saves a genuine scientifically empty owner')
+    assert actor.command('native_science_enable')['reply']['enabled'], 'OUTCOME500 SETUP: original physical model/relations observer is active'
+    assert actor.command('background285_observe')['reply']['enabled'], 'OUTCOME500 SETUP: original live owner/core/physical parameter observer is active'
+    original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
+    provenance = json.loads((original / 'provenance.json').read_text())
+    owned = []
+    for entry in provenance['inputs']:
+        data = (original / entry['path']).read_bytes()
+        assert len(data) == entry['bytes'] and hashlib.sha256(data).hexdigest() == entry['sha256'], (
+            'OUTCOME500 SETUP: authentic independently pinned487B LBCO and83671B HRPT inputs remain exact')
+        destination = tmp_path / entry['path']
+        destination.write_bytes(data)
+        owned.append(destination)
+    originals = {path.name: path.read_bytes() for path in owned}
+    triples = [[float(value) for value in line.split()] for line in owned[1].read_text().splitlines()
+               if line.strip() and not line.lstrip().startswith('#')]
+    assert len(triples) == provenance['measurement_rows'] and triples[0] == provenance['measurement_first'] and (
+        triples[-1] == provenance['measurement_last'] and all(len(row) == 3 and all(math.isfinite(v) for v in row) and row[2] > 0 for row in triples)
+    ), 'OUTCOME500 SETUP: literal independent measured coordinate/intensity/sigma triples are valid and complete'
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert token and actor.command('selected_add', request_id=token, urls=[p.as_uri() for p in owned])['reply']['accepted'], (
+        'OUTCOME500 SETUP: actual original selected-file entrance mints the immutable source IDs')
+    selected = settle(actor, lambda value: len(value['selected_files']) == 2 and not value['can_cancel'])
+    descriptors = [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')} for row in selected['selected_files']]
+    ids = {row['name']: row['id'] for row in descriptors}
+    metadata = provenance['experiment_metadata']
+    recipe = {'project_name': 'Original recipe cannot rename the saved owner',
+              'description': 'Original recipe preserves user metadata', 'experiment_name': 'NPD',
+              'sample_form': 'powder', 'beam_mode': 'constant wavelength', 'radiation_probe': 'neutron',
+              'scattering_type': 'bragg', 'peak_profile': 'cwl-tch-pseudo-voigt', 'wavelength': 1.49,
+              'zero_offset': metadata['zero_offset_degrees'], 'phase_scale': metadata['phase_scale'],
+              'background': [dict(zip(('position', 'intensity'), pair, strict=True)) for pair in metadata['background']],
+              'exclusions': [], 'initial_parameters': [{'path': 'experiment.peak.' + key, 'value': value}
+                                                       for key, value in metadata['profile_parameters'].items()]}
+    adp_paths = ['structure.atom_sites[' + site + '].adp_iso' for site in ('La', 'Ba', 'Co', 'O')]
+    profile_paths = ['experiment.peak.' + key for key in metadata['profile_parameters']]
+    zero_path = 'experiment.instrument.calib_twotheta_offset'
+    relation = native145_relation_args(adp_paths[0], adp_paths[1])
+    scale = {'$original_parameter_suffix': '.scale'}  # Original existing closed selector, actual successful list only.
+    turns = [
+        [native_call('create_cwl_project', cif_file_id=ids['lbco.cif'], data_file_id=ids['hrpt.xye'], recipe=recipe),
+         native_call('list_parameters'), native_call('inspect_project')],
+        [native_call('set_parameters', values=[{'path': path, 'value': .5} for path in adp_paths]),
+         native_call('add_relations', **relation),
+         native_call('set_free', flags=[{'path': scale, 'free': True}, {'path': zero_path, 'free': True}]
+                     + [{'path': path, 'free': True} for path in profile_paths]),
+         native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics')],
+        [native_call('set_free', flags=[{'path': zero_path, 'free': False}]
+                     + [{'path': path, 'free': False} for path in profile_paths]
+                     + [{'path': path, 'free': True} for path in (adp_paths[0], adp_paths[2], adp_paths[3])]),
+         native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics'),
+         native_call('save_project', destination='current')],
+    ]
+    readonly409_configure(trace)
+    native145_configure(actor, trace, turns)
+    initial = actor.last['vm']
+    owner = initial['project']['empty_completion_observer']
+    assert owner['same_owner'] and owner['same_core'] and owner['structures'] == owner['experiments'] == 0 and (
+        Path(owner['path']).resolve() == directory.resolve()
+        and all(owner['metadata'][key] == requested[key] for key in ('name', 'title', 'description', 'authors'))
+    ), 'OUTCOME500 SETUP: original saved empty owner/core/path/literal user metadata are genuinely established'
+    initial_saved = save211_files(directory)
+    _, replies = native_send(actor, trace, 3)
+    imported = native145_science_settled(actor)
+    assert all(row['response']['result']['success'] is True for row in replies) and replies[0]['decoded']['status'] == 'completed', (
+        'OUTCOME500: genuine original LBCO import and healthy current reads complete, never setup/refusal-as-positive')
+    assert imported['project']['empty_completion_observer']['same_owner'] and imported['project']['empty_completion_observer']['same_core'], (
+        'OUTCOME500: native completion populates this original owner/core instead of replacing user metadata')
+    expected_alias_targets = {}
+    for alias in relation['aliases']:
+        matching = [row for row in replies[1]['decoded']['parameters'] if row['path'] == alias['path']]
+        assert len(matching) == 1 and isinstance(matching[0]['unique_name'], str) and matching[0]['unique_name'], (
+            'OUTCOME502 ALIASES: original successful pre-relation list uniquely identifies each literal La/Ba target')
+        expected_alias_targets[alias['id']] = matching[0]['unique_name']
+    assert len(set(expected_alias_targets.values())) == 2, 'OUTCOME502 ALIASES: literal La/Ba declarations target distinct original physical parameters'
+    observations = native_inputs(imported)
+    assert len(observations) == 1 and observations[0]['name'] == 'NPD' and observations[0]['weight'] == 1 and observations[0]['exclusions'] == [], (
+        'OUTCOME500: original single NPD dataset keeps literal unit weighting and no invented masks')
+    for field, column in [('axis', 0), ('intensity', 1), ('sigma', 2)]:
+        assert observations[0][field] == [row[column] for row in triples], (
+            'OUTCOME500: every original HRPT coordinate/intensity/sigma survives the actual reader')
+    assert native_parameter(imported, 'experiment.instrument.setup_wavelength')['value'] == 1.49, (
+        'OUTCOME500: actual native wavelength is explicit user1.49 Angstrom, not substituted metadata1.494')
+    assert all(native_parameter(imported, path)['value'] == 0 for path in adp_paths), (
+        'OUTCOME500: authentic original CIF Biso0 values really precede the explicit positive starting-value edit')
+    assert imported['project']['native_observer']['fit_available'] and save211_files(directory) == initial_saved, (
+        'OUTCOME500: genuine fit backend is available and import cannot silently Save')
+    native145_approve(actor)
+    _, replies = native_send(actor, trace, 10)
+    profiled = native145_science_settled(actor)
+    profile_adps = {path: native_parameter(profiled, path)['value'] for path in adp_paths}
+    assert all(value == .5 for value in profile_adps.values()) and all(
+        native_parameter(profiled, path)['free'] is False for path in adp_paths
+    ) and all(native_parameter(profiled, path)['independent'] is True for path in (adp_paths[0], adp_paths[2], adp_paths[3])) and (
+        native_parameter(profiled, adp_paths[1])['independent'] is False
+    ), 'OUTCOME502 STAGES: actual profile-stage boundary retains every requested0.5 ADP, fixed independent La/Co/O and dependent fixed Ba'
+    profiled_aliases = profiled['project']['science_observer']['aliases']
+    assert len(profiled_aliases) == len(expected_alias_targets) and {
+        row['id']: row['parameter_unique_name'] for row in profiled_aliases
+    } == expected_alias_targets, 'OUTCOME502 ALIASES: actual profile-stage declaration binds complete exact original La/Ba target identities'
+    profile_fit = replies[6]['decoded']
+    assert profile_fit['status'] in {'done', 'max_iterations'} and profile_fit['adopted'] is True and profile_fit['iterations'] > 0, (
+        'OUTCOME500: profile stage must execute/adopt a real moving fit, never no-step/unavailable/error/partial success')
+    profile_scales = [row for row in profiled['project']['parameters'] if row['path'].endswith('.scale')]
+    assert len(profile_scales) == 1, 'OUTCOME500: independent single phase has ONE actual physical scale, never first-match identity'
+    assert any(native_parameter(profiled, 'experiment.peak.' + key)['value'] != value
+               for key, value in metadata['profile_parameters'].items()) or native_parameter(profiled, zero_path)['value'] != 0 or (
+        profile_scales[0]['value'] != 1
+    ), 'OUTCOME500: actual optimized profile/zero/scale differs from independently literal starting values'
+    assert native_inputs(profiled) == observations and save211_files(directory) == initial_saved, (
+        'OUTCOME500: first actual fit preserves original measurements/sigmas/masks/weights and does not Save')
+    native145_approve(actor)
+    _, replies = native_send(actor, trace, 16)
+    saved = save211_settled(actor)
+    adp_fit, saved_result = replies[11]['decoded'], replies[15]['decoded']
+    postfit_adps = {}
+    for path in (adp_paths[0], adp_paths[2], adp_paths[3]):
+        matching = [row for row in replies[12]['decoded']['parameters'] if row['path'] == path]
+        assert len(matching) == 1, 'OUTCOME502 STAGES: original second post-fit list uniquely returns each intended independent ADP before Save'
+        postfit_adps[path] = matching[0]['value']
+    assert any(postfit_adps[path] != profile_adps[path] for path in postfit_adps), (
+        'OUTCOME502 STAGES: an intended independent ADP actually moves in stage two before Save, beyond its observed first-stage value')
+    for fit_index, postfit_indices in [(6, (7, 8, 9)), (11, (12, 13, 14))]:
+        outcome = replies[fit_index]['decoded']
+        assert outcome['status'] in {'done', 'max_iterations'} and outcome['adopted'] is True and outcome['iterations'] > 0, (
+            'OUTCOME500: both staged fits have genuine adopted moving outcomes without an invented optimum')
+        fit_scope = replies[fit_index]['original']['params']
+        following = [replies[index] for index in postfit_indices]
+        assert [row['original']['params']['tool'] for row in following] == ['list_parameters', 'inspect_project', 'diagnostics'] and all(
+            row['response']['result']['success'] is True
+            and row['original']['params']['threadId'] == fit_scope['threadId']
+            and row['original']['params']['turnId'] == fit_scope['turnId'] for row in following
+        ), 'OUTCOME500: actual list/inspect/diagnostics MUST complete immediately after each fit in SAME real thread/turn, no recovery Send'
+        assert following[0]['decoded']['parameters'] and following[1]['decoded']['structures'] and following[1]['decoded']['datasets'] and (
+            'diagnostics' in following[2]['decoded']
+        ), 'OUTCOME500: postfit native reads return genuine current scientific payloads, not merely idle or successful process status'
+    assert all(row['response']['result']['success'] is True for row in replies), (
+        'OUTCOME500: every actual creation/value/relation/free/fit/read/Save call completes on its original RPC')
+    assert saved_result['status'] == 'succeeded' and all(saved_result[key] is True for key in (
+        'committed', 'reopened', 'active', 'presentation_complete'
+    )) and Path(saved_result['destination']).resolve() == directory.resolve(), (
+        'OUTCOME500: current Save genuinely commits/reopens/activates/presents EXACT original Session-owned directory')
+    assert Path(saved['project']['host_snapshot']['path']).resolve() == directory.resolve() and not saved['project']['host_snapshot']['modified'] and (
+        not saved['handoff']['needs_save_as']
+    ), 'OUTCOME500: actual active saved native owner is unmodified and needs no Save As'
+    assert native_inputs(saved) == observations and native_parameter(saved, 'experiment.instrument.setup_wavelength')['value'] == 1.49, (
+        'OUTCOME500: actual Save/reopen preserves all original scans/sigmas/links/weights and explicit wavelength units/value')
+    science = saved['project']['science_observer']
+    assert len(science['structures']) == 1 and science['structures'][0]['space_group'] == 'P m -3 m' and all(
+        row['current'] for row in science['calculations']
+    ) and not saved['project']['native_observer']['fit_running'], 'OUTCOME500: real saved structure/model is current after genuine fit and readback'
+    structure = science['structures'][0]
+    sites = {row['id']: row for row in structure['sites']}
+    assert set(sites) == {'La', 'Ba', 'Co', 'O'} and observations[0]['phases'] == [structure['id']], (
+        'OUTCOME500: one literal original LBCO phase retains every independent crystallographic species')
+    for label, coordinates, occupancy, multiplicity in [('La', [0, 0, 0], .5, 1), ('Ba', [0, 0, 0], .5, 1),
+                                                        ('Co', [.5, .5, .5], 1, 1), ('O', [0, .5, .5], 1, 3)]:
+        site = sites[label]
+        assert site['fractional'] == coordinates and site['occupancy'] == occupancy and site['type_symbol'] == label and (
+            site['adp_type'] == 'Biso' and math.isfinite(site['adp_iso']) and site['adp_iso'] >= 0
+        ), 'OUTCOME500: physical finite Biso and original literal coordinates/composition/occupancies survive staged fit'
+        images = [row for row in structure['expanded'] if row['site_id'] == label]
+        assert len(images) == multiplicity and all(row['occupancy'] == occupancy and row['u_iso'] == pytest.approx(
+            site['adp_iso'] / (8 * math.pi ** 2), abs=1e-12) for row in images), (
+            'OUTCOME500: real expanded physical multiplicity and nontrivial Biso-to-Uiso units obey the independent closed form')
+    assert sites['La']['adp_iso'] == sites['Ba']['adp_iso'], (
+        'OUTCOME500: shared La/Ba Biso remains factual after the separately proven pre-Save structural-ADP movement')
+    assert science['constraints'] == [{'id': relation['constraints'][0]['id'], 'expression': relation['constraints'][0]['expression'], 'enabled': True}] and (
+        len(science['aliases']) == len(expected_alias_targets) and {
+            row['id']: row['parameter_unique_name'] for row in science['aliases']
+        } == expected_alias_targets
+    ), 'OUTCOME500: original exact shared-ADP declaration remains enabled and whole through Save/readback'
+    for path in (adp_paths[0], adp_paths[2], adp_paths[3]):
+        parameter = native_parameter(saved, path)
+        assert parameter['free'] is True and parameter['uncertainty'] is not None and math.isfinite(parameter['uncertainty']) and parameter['uncertainty'] > 0, (
+            'OUTCOME500: actual independent fitted ADPs retain positive finite SUs, never fabricated fit completion')
+    assert not native_parameter(saved, adp_paths[1])['independent'] and not native_parameter(saved, adp_paths[1])['free'] and all(
+        not native_parameter(saved, path)['free'] for path in profile_paths + [zero_path]
+    ), 'OUTCOME500: final stage preserves dependent fixed Ba and independently fixed profile/zero declarations'
+    record = saved['project']['native_observer']['record']
+    assert record['kind'] and record['iterations'] == adp_fit['iterations'] and record['success'] == adp_fit['converged'] and (
+        math.isfinite(record['reduced_chi_square'])
+    ), 'OUTCOME500: actual saved final fit identity/statistic is finite and matches truthful native worker outcome'
+    assert saved['project']['empty_completion_observer']['metadata'] == owner['metadata'] and (
+        saved['project']['empty_completion_observer']['settings'] == owner['settings']
+    ), 'OUTCOME500: user metadata and original settings survive actual commit/reopen'
+    assert {path.name: path.read_bytes() for path in owned} == originals and [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+            for row in saved['selected_files']] == descriptors, 'OUTCOME500: source bytes and selected authority remain immutable'
+    readonly409_policy(trace)
+    emitted = native_records(trace, '.native-emitted.jsonl')
+    assert len(emitted) == len(replies) == 16 and len({row['original']['id'] for row in replies}) == 16 and len([
+        row for row in records(trace) if row.get('method') == 'turn/start'
+    ]) == 3 and not any(row.get('method') in {'turn/interrupt', 'turn/steer'} for row in records(trace)), (
+        'OUTCOME500: exactly three explicit objectives/sixteen original RPC replies, no retry/recovery/implicit stop/extra Send')
+    saved_files = save211_files(directory)
+    control = tmp_path / 'Original ordinary LBCO readback control'
+    control.mkdir()
+    intent = actor.command('save_as_begin')['reply']
+    assert intent['invoked'] and intent['intent'], 'OUTCOME500 CONTROL: original ordinary native Save As captures actual fitted saved model'
+    manual = actor.command('save_as_complete', intent=intent['intent'], parent=str(control), leaf='')
+    assert manual['reply']['invoked'] and manual['reply']['accepted'], 'OUTCOME500 CONTROL: original ordinary writer supplies real serialization control'
+    ordinary = save211_settled(actor)
+    assert save212_ordinary_bytes({name: data for name, data in saved_files.items() if name.endswith('.edi')}) == save212_ordinary_bytes({
+        name: data for name, data in save211_files(control).items() if name.endswith('.edi')
+    }), 'OUTCOME500: current Save uses the same ordinary native writer/readback closure, not an unrounded optimum golden'
+    assert actor.command('open', path=str(directory))['reply']['opened'], 'OUTCOME500: independent original Session reader really reopens committed current directory'
+    reopened = save211_settled(actor)
+    save211_compare_model(ordinary, reopened)
+    reopened_aliases = reopened['project']['science_observer']['aliases']
+    assert len(reopened_aliases) == len(expected_alias_targets) and {
+        row['id']: row['parameter_unique_name'] for row in reopened_aliases
+    } == expected_alias_targets, 'OUTCOME502 ALIASES: original reader retains complete exact original La/Ba target mapping'
+    assert native_inputs(reopened) == observations and Path(reopened['project']['host_snapshot']['path']).resolve() == directory.resolve() and (
+        not reopened['project']['host_snapshot']['modified'] and save211_files(directory) == saved_files
+    ), 'OUTCOME500: independent readback restores actual current saved owner without changing committed science or files'
