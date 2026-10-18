@@ -180,7 +180,7 @@ cross deterministic pattern.linked_structure.alpha.scale pattern.linked_structur
         q[0] * q[1] * scales[1] / denominator**2,
         -q[0] * q[1] * scales[0] / denominator**2,
     )
-    # ADR-0089 writes two significant figures. Reload uses that stored
+    # ADR-0092 writes two significant figures. Reload uses that stored
     # coefficient in the quotient rather than the original fit precision.
     written_rho = {0.625: '0.63', -0.375: '-0.38'}[rho]
     uncorrelated = expected(scales)[1]
@@ -222,7 +222,7 @@ cross deterministic pattern.linked_structure.alpha.scale pattern.linked_structur
                     'pattern.linked_structure.beta.scale',
                     written_rho,
                 ]
-            ], 'Saving must retain the named nonzero cross-scale correlation at ADR-0089 precision'
+            ], 'Saving must retain the named nonzero cross-scale correlation at ADR-0092 precision'
             project = engine.Project.load(saved)
 
     check_correlation_omission(saved, written_rho, wanted, uncorrelated)
