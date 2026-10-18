@@ -62,7 +62,7 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
         'layer': ('value: chart.shown ? layer : null', 'value: null'),
         'coordinates': ('axisY.max - mouse.y / height', 'axisY.min + mouse.y / height'),
         'selection': ('currentExperimentIndex = dataset', 'currentExperimentIndex = 0'),
-        'axis-bounds': ('min: chart.evolution ? chart.evolution.xMin : 0', 'min: 2'),
+        'axis-bounds': ('chart.evolution ? chart.evolution.xMin : 0', 'chart.evolution ? 2 : 0'),
     }[channel]
     changed = good.replace(old, new)
     assert changed != good, (
