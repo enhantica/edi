@@ -10953,6 +10953,17 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         postfit_adps[path] = matching[0]['value']
     assert any(postfit_adps[path] != profile_adps[path] for path in postfit_adps), (
         'OUTCOME502 STAGES: an intended independent ADP actually moves in stage two before Save, beyond its observed first-stage value')
+    pre_save_shared_sus = {}
+    for alias in relation['aliases']:
+        matching = [row for row in replies[12]['decoded']['parameters'] if row['path'] == alias['path']]
+        assert len(matching) == 1 and matching[0]['unique_name'] == expected_alias_targets[alias['id']], (
+            'SU506: pre-Save native list returns each exact original physical La/Ba target, not another fitted parameter')
+        uncertainty = matching[0]['uncertainty']
+        assert type(uncertainty) in (int, float) and math.isfinite(uncertainty) and uncertainty > 0, (
+            'SU506: actual pre-Save independent La and propagated dependent Ba each have a positive finite SU')
+        pre_save_shared_sus[alias['path']] = uncertainty
+    assert len(pre_save_shared_sus) == 2 and pre_save_shared_sus[adp_paths[0]] == pre_save_shared_sus[adp_paths[1]], (
+        'SU506: actual pre-Save B_Ba=B_La propagation gives equal positive SUs before serialization')
     for fit_index, postfit_indices in [(6, (7, 8, 9)), (11, (12, 13, 14))]:
         outcome = replies[fit_index]['decoded']
         assert outcome['status'] in {'done', 'max_iterations'} and outcome['adopted'] is True and outcome['iterations'] > 0, (
@@ -11010,6 +11021,10 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     assert not native_parameter(saved, adp_paths[1])['independent'] and not native_parameter(saved, adp_paths[1])['free'] and all(
         not native_parameter(saved, path)['free'] for path in profile_paths + [zero_path]
     ), 'OUTCOME500: final stage preserves dependent fixed Ba and independently fixed profile/zero declarations'
+    saved_shared_sus = [native_parameter(saved, path)['uncertainty'] for path in adp_paths[:2]]
+    assert all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in saved_shared_sus) and (
+        saved_shared_sus[0] == saved_shared_sus[1]
+    ), 'SU506: actual current Save/reopen retains positive equal independent/dependent La/Ba SUs through ordinary writer rounding'
     record = saved['project']['native_observer']['record']
     assert record['kind'] and record['iterations'] == adp_fit['iterations'] and record['success'] == adp_fit['converged'] and (
         math.isfinite(record['reduced_chi_square'])
@@ -11043,6 +11058,14 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     assert len(reopened_aliases) == len(expected_alias_targets) and {
         row['id']: row['parameter_unique_name'] for row in reopened_aliases
     } == expected_alias_targets, 'OUTCOME502 ALIASES: original reader retains complete exact original La/Ba target mapping'
+    reopened_shared_sus = [native_parameter(reopened, path)['uncertainty'] for path in adp_paths[:2]]
+    assert all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in reopened_shared_sus) and (
+        reopened_shared_sus[0] == reopened_shared_sus[1]
+    ), 'SU506: separate ordinary Session reader retains both positive equal shared-ADP SUs, never fixed-SU zero loss'
+    assert native_parameter(reopened, adp_paths[0])['free'] is True and native_parameter(reopened, adp_paths[0])['independent'] is True and (
+        native_parameter(reopened, adp_paths[1])['free'] is False and native_parameter(reopened, adp_paths[1])['independent'] is False
+    ) and reopened['project']['science_observer']['constraints'] == science['constraints'], (
+        'SU506: independent original La/free and dependent Ba/fixed identities and enabled literal relation survive ordinary readback')
     assert native_inputs(reopened) == observations and Path(reopened['project']['host_snapshot']['path']).resolve() == directory.resolve() and (
         not reopened['project']['host_snapshot']['modified'] and save211_files(directory) == saved_files
     ), 'OUTCOME500: independent readback restores actual current saved owner without changing committed science or files'
