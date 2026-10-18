@@ -619,6 +619,7 @@ Popup {
                 onTriggered: usageDialog.resetClock = Date.now()
             }
             ScrollView {
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 width: usageDialog.contentWidth
                 height: usageDialog.contentHeight
                 clip: true
@@ -722,6 +723,7 @@ Popup {
                 function onConnectedChanged() { if (!panel.assistant.connected) accountDialog.close(); }
             }
             ScrollView {
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 width: accountDialog.contentWidth
                 height: accountDialog.contentHeight
                 clip: true

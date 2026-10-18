@@ -26,6 +26,7 @@ AppDialog {
         - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
     standardButtons: Dialog.Close
     ScrollView {
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         id: scroll
         width: dialog.contentWidth
         height: dialog.contentHeight

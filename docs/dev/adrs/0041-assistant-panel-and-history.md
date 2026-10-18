@@ -1316,3 +1316,15 @@ may be retired only while it is still the same intent; it cannot clear its
 replacement. The original consume-before-submit order also checks its receiver
 and empty slot after the notifying property change. These checks extend the
 existing consent receipt, with no new signal, control or callback suppression.
+
+
+### Vertical-only assistant scrolling
+
+The connection disclosure, its failure and wrapped technical-data views, and
+the equivalent wrapped account, usage, skills, plan, attachment and composer
+views explicitly disable horizontal scrollbars. Their content follows the
+available width and retains native vertical scrolling; an unused horizontal
+track must not intercept the final row's controls. This follows the existing
+assistant message views. The model/effort chooser and fit-status viewport keep
+their intentional horizontal scrolling. Original activation, focus, selection,
+authentication and pending-send receipt behavior remain unchanged.

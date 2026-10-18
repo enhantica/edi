@@ -98,6 +98,7 @@ AppDialog {
             - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
         standardButtons: Dialog.Ok
         ScrollView {
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             id: failureScroll
             width: connectionFailure.contentWidth
             height: connectionFailure.contentHeight
@@ -113,6 +114,7 @@ AppDialog {
         }
     }
     ScrollView {
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         ScrollBar.vertical: EaElements.ScrollBar {
             policy: ScrollBar.AsNeeded
             interactive: false
@@ -240,6 +242,7 @@ AppDialog {
                     text: qsTr("Exact outgoing context (technical data). Read-only; you can select and copy it.")
                 }
                 ScrollView {
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     visible: technicalData.checked
                     ScrollBar.vertical: EaElements.ScrollBar {
                         policy: ScrollBar.AsNeeded

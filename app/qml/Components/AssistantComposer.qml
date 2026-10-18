@@ -518,6 +518,7 @@ Rectangle {
         width: parent.width - AppSizes.unit * 1.5
         spacing: AppSizes.unit * 0.25
         ScrollView {
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical: EaElements.ScrollBar {
                 policy: ScrollBar.AsNeeded
                 interactive: false
@@ -573,6 +574,7 @@ Rectangle {
             }
         }
         ScrollView {
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical: EaElements.ScrollBar {
                 policy: ScrollBar.AsNeeded
                 interactive: false
