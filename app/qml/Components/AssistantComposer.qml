@@ -638,6 +638,7 @@ Rectangle {
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 showBackground: false
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     color: addFilesButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
@@ -676,6 +677,7 @@ Rectangle {
                     color: !showActionsControl.enabled ? EaStyle.Colors.themeForegroundDisabled : showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
                 }
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize; implicitHeight: implicitWidth
                     radius: width*0.5
                     color: showActionsControl.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
@@ -702,6 +704,7 @@ Rectangle {
                 rightPadding: AppSizes.unit*0.75
                 enabled: composer.choicesEnabled
                 background: Rectangle {
+                    border.width: 0
                     implicitHeight: composer.actionSize
                     radius: height*0.5
                     color: modelEffortButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
@@ -767,6 +770,7 @@ Rectangle {
                 fontIcon: "chevron-up"
                 enabled: composer.hasPreviousUserMessage
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
@@ -793,6 +797,7 @@ Rectangle {
                 fontIcon: "chevron-down"
                 enabled: composer.hasNextUserMessage
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
@@ -816,6 +821,7 @@ Rectangle {
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
@@ -853,6 +859,7 @@ Rectangle {
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5

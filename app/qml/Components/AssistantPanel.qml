@@ -325,6 +325,7 @@ Popup {
                             implicitWidth: panel.headerActionExtent
                             implicitHeight: implicitWidth
                             Rectangle {
+                                border.width: 0
                                 anchors.centerIn: parent
                                 width: EaStyle.Sizes.toolButtonHeight * 0.75
                                 height: width
@@ -348,6 +349,7 @@ Popup {
                         leftPadding: AppSizes.unit * 0.75
                         rightPadding: AppSizes.unit * 0.75
                         background: Rectangle {
+                            border.width: 0
                             implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
                             radius: height * 0.5
                             color: usageButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
@@ -394,6 +396,7 @@ Popup {
                             implicitWidth: panel.assistant.connected ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
                             Rectangle {
+                                border.width: 0
                                 objectName: "assistant.avatarCircle"
                                 anchors.centerIn: parent
                                 width: EaStyle.Sizes.toolButtonHeight * 0.75
