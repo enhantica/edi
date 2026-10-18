@@ -9045,6 +9045,7 @@ TestCase {
             objective("Import these original LBCO and HRPT attachments using the explicit original recipe",3);
             verify(alive313(ownerLife) && Session.project===original,"MAIN504: import populates SAME original saved owner");
             compare(import265_owner(original),metadata); compare(original.structures.count,1); compare(original.experiments.count,1);
+            compare(original.currentExperiment.name,"NPD","MAIN528: successful native Text completion retains the independently supplied experiment name in the actual stored model");
             const closed507=outcome(0).selected_files.files;
             verify(Array.isArray(closed507) && closed507.length===2,"MAIN507: genuine successful inspection exposes both closed opaque File operands");
             compare(new Set(closed507.map(row => row.id)).size,2);
