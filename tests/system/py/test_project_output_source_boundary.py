@@ -181,8 +181,114 @@ def test_output_contract_keeps_its_exact_scope_and_helper_allow_list():
         'The source boundary retains its reviewed roots, project '
         'outputs and exact helper allow-list'
     )
-    # Regression pin for the pre-helper non-output source inventory, not a scientific oracle.
+    # Regression pin for the historical inventory; it does not select scanned files.
     assert (
         hashlib.sha256((folder / 'source_inventory.json').read_bytes()).hexdigest()
         == '266697d5c28e3cfb9528bbbb173d45325af3203f287a77942d31b97baad604c3'
-    ), 'The pre-helper source inventory cannot silently exempt a new output writer'
+    ), 'The historical inventory stays unchanged and grants no filename exemption'
+
+
+@pytest.mark.parametrize('language', ['native', 'python'])
+@pytest.mark.parametrize(
+    'location', ['existing-nonwriter', 'existing-allowed', 'declared-writer', 'new-source']
+)
+def test_additions_in_every_production_source_reach_the_scan(tmp_path, language, location):
+    contract = json.loads((ROOT / 'tests/fixtures/project_output/contract.json').read_text())
+    for name in contract['project_output']:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('')
+    engine = 'src/core' in contract['roots']
+    choices = (
+        {
+            'existing-nonwriter': 'src/core/model.cpp' if engine else 'core/src/adapter.cpp',
+            'existing-allowed': 'src/core/fit.cpp' if engine else 'app/src/engine_setup.cpp',
+            'declared-writer': contract['project_output'][0],
+            'new-source': contract['roots'][0] + '/new_raw_writer.cpp',
+        }
+        if language == 'native'
+        else {
+            'existing-nonwriter': 'lib/crysta/_bootstrap.py'
+            if engine
+            else 'lib/edi/verification.py',
+            'existing-allowed': 'lib/crysta/_bootstrap.py'
+            if engine
+            else 'lib/edi/verification.py',
+            'declared-writer': 'lib/crysta/__init__.py' if engine else 'lib/edi/__init__.py',
+            'new-source': 'lib/crysta/new_raw_writer.py'
+            if engine
+            else 'lib/edi/new_raw_writer.py',
+        }
+    )
+    name = choices[location]
+    path = tmp_path / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    original = ROOT / name
+    path.write_text(original.read_text() if original.exists() else '')
+    if language == 'python' and location == 'existing-allowed':
+        with path.open('a') as stream:
+            stream.write('\nimport sys\ndef diagnostic():\n    sys.stderr.write("diagnostic")\n')
+    assert not scan(tmp_path), (
+        'Existing legitimate operations remain admitted before adding a raw writer'
+    )
+    with path.open('a') as stream:
+        stream.write(
+            '\nvoid added_writer() { std::ofstream extra(path); }\n'
+            if language == 'native'
+            else '\ndef added_writer(path):\n    path.write_bytes(b"new project output")\n'
+        )
+    assert any(found == name for found, _ in scan(tmp_path)), (
+        'A raw native or Python writer added to an existing non-writer, '
+        'an allowed operation holder, a declared writer or a new source must be refused'
+    )
+
+
+@pytest.mark.parametrize(
+    'source_name',
+    sorted({
+        item['source']
+        for item in json.loads(
+            (ROOT / 'tests/fixtures/project_output/non_project_operations.json').read_text()
+        )
+    }),
+)
+def test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write(tmp_path, source_name):
+    folder = ROOT / 'tests/fixtures/project_output'
+    operations = json.loads((folder / 'non_project_operations.json').read_text())
+    contract = json.loads((folder / 'contract.json').read_text())
+    for name in contract['project_output']:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('')
+    path = tmp_path / source_name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    original = (ROOT / source_name).read_text()
+    path.write_text(original)
+    assert not scan(tmp_path), (
+        'The bounded existing config, log, scratch and non-file operations remain admitted'
+    )
+    path.write_text(original + '\nvoid additional_write() { std::ofstream extra(path); }\n')
+    assert any(found == source_name for found, _ in scan(tmp_path)), (
+        'Every file containing an operation exception still rejects an additional raw writer'
+    )
+    selected = next(item for item in operations if item['source'] == source_name)
+    path.write_text(original + '\n' + (selected['context'] + ';\n') * (selected['limit'] + 1))
+    assert any(found == source_name for found, _ in scan(tmp_path)), (
+        'An identical allowed operation repeated beyond its reviewed occurrence count is refused'
+    )
+
+
+def test_operation_catalog_retains_each_reviewed_bounded_exception():
+    folder = ROOT / 'tests/fixtures/project_output'
+    operations = json.loads((folder / 'non_project_operations.json').read_text())
+    assert all(
+        set(item) == {'name', 'source', 'context', 'offset', 'limit'}
+        and item['name']
+        and item['context']
+        and 0 < item['limit'] < 20
+        for item in operations
+    ), 'Every exception names an operation, exact context and finite occurrence count'
+    assert (
+        hashlib.sha256((folder / 'non_project_operations.json').read_bytes()).hexdigest()
+        == '7ddd266f8228a6e6c034d5e37d0b392faad08d0a0b4ecee7a0dfdf0ed4979dff'
+    ), 'The reviewed operation catalog cannot silently expand to exempt a new project writer'

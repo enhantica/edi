@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-17T21:56:38Z
+# measured_utc = 2026-10-18T09:38:00Z
 #
-# Recorded from: measured test run (12 node(s) measured once, 11843 banked, 0 stale row(s) dropped)
-# Collected tests: 12907; with a reported duration: 7151
-# Module-scoped fixture costs recorded: 53
+# Recorded from: measured test run (85 node(s) measured once, 12695 banked, 0 stale row(s) dropped)
+# Collected tests: 14056; with a reported duration: 8027
+# Module-scoped fixture costs recorded: 54
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 13971
+# inventory_python = 14056
 # inventory_cpp = 335
-# inventory_measured = 12695
-# inventory_unmeasured = 1611
+# inventory_measured = 12750
+# inventory_unmeasured = 1641
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -10973,6 +10973,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_powder_r_factors.py::test_the_profile_oracle_rejects_each_exercised_numeric_escape[retained-zero-sigma]
 0.000	tests/system/py/test_powder_r_factors.py::test_the_profile_oracle_rejects_each_exercised_numeric_escape[unweighted-corrected]
 0.000	tests/system/py/test_powder_r_factors.py::test_the_profile_oracle_rejects_each_exercised_numeric_escape[unweighted]
+0.030	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[declared-writer-native]
+0.040	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[declared-writer-python]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[existing-allowed-native]
+0.040	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[existing-allowed-python]
+0.320	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[existing-nonwriter-native]
+0.040	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[existing-nonwriter-python]
+0.000	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[new-source-native]
+0.000	tests/system/py/test_project_output_source_boundary.py::test_additions_in_every_production_source_reach_the_scan[new-source-python]
 0.000	tests/system/py/test_project_output_source_boundary.py::test_every_native_output_primitive_and_alias_is_refused[native-00]
 0.000	tests/system/py/test_project_output_source_boundary.py::test_every_native_output_primitive_and_alias_is_refused[native-01]
 0.000	tests/system/py/test_project_output_source_boundary.py::test_every_native_output_primitive_and_alias_is_refused[native-02]
@@ -11019,6 +11027,31 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_project_output_source_boundary.py::test_every_python_output_primitive_and_alias_is_refused[python-16]
 0.000	tests/system/py/test_project_output_source_boundary.py::test_every_python_output_primitive_and_alias_is_refused[python-17]
 0.000	tests/system/py/test_project_output_source_boundary.py::test_new_output_source_is_scanned_and_only_the_named_helper_is_allowed
+0.000	tests/system/py/test_project_output_source_boundary.py::test_operation_catalog_retains_each_reviewed_bounded_exception
+0.030	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/analysis_view_model.cpp]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/analysis_view_model.hpp]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/app_info.cpp]
+0.150	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/demo_driver.cpp]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/engine_setup.cpp]
+0.050	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/experiment_models.cpp]
+0.030	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/experiment_models.hpp]
+0.030	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/experiment_view_model.cpp]
+0.010	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/report_pdf.cpp]
+0.030	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/report_view_model.cpp]
+0.030	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/session.cpp]
+0.040	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/structure_view_model.cpp]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/structure_view_model.hpp]
+0.070	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/test_observer.cpp]
+0.050	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[app/src/web_files.cpp]
+2.350	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/include/edi/model.hpp]
+0.460	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/adapter.cpp]
+0.050	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/fit_job.cpp]
+0.390	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/io.cpp]
+0.030	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/json.cpp]
+0.010	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/json.hpp]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/live_preview.cpp]
+0.070	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/report_json.cpp]
+0.020	tests/system/py/test_project_output_source_boundary.py::test_operation_exceptions_are_bounded_and_cannot_hide_a_second_write[core/src/worker.cpp]
 0.000	tests/system/py/test_project_output_source_boundary.py::test_output_contract_keeps_its_exact_scope_and_helper_allow_list
 0.080	tests/system/py/test_project_output_source_boundary.py::test_project_output_sources_use_only_shared_output_helpers
 0.000	tests/system/py/test_project_output_source_boundary.py::test_python_read_and_diagnostic_controls_remain_valid[diagnostics]
@@ -11038,6 +11071,22 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
 0.003	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[delayed-render]
 0.000	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[never-rendered]
+0.030	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[linked-root-saved]
+0.000	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[linked-root-unsaved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[missing-under-linked-root-saved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[missing-under-linked-root-unsaved]
+0.010	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[existing-absolute-saved]
+0.000	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[existing-absolute-unsaved]
+0.010	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[existing-relative-saved]
+0.000	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[existing-relative-unsaved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[one-missing-absolute-saved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[one-missing-absolute-unsaved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[one-missing-relative-saved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[one-missing-relative-unsaved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[several-missing-absolute-saved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[several-missing-absolute-unsaved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[several-missing-relative-saved]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_path_creates_every_missing_parent[several-missing-relative-unsaved]
 0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[0]
 0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[4294967295]
 0.000	tests/system/py/test_report_index_width.py::test_report_index_accepts_the_32_bit_endpoints_and_nonzero_control[7]
@@ -12389,6 +12438,42 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_sequential_scan_performance.p
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterRename]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterResetUndo]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterReset]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-scan-save-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-scan-save-as-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-scan-save-as-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-scan-save-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-single-save-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-single-save-as-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-single-save-as-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-hard-single-save-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-scan-save-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-scan-save-as-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-scan-save-as-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-scan-save-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-single-save-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-single-save-as-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-single-save-as-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[blocked-symbolic-single-save-core]
+0.200	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-scan-save-api]
+0.200	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-scan-save-as-api]
+0.040	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-scan-save-as-core]
+0.030	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-scan-save-core]
+0.200	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-single-save-api]
+0.210	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-single-save-as-api]
+0.290	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-single-save-as-core]
+0.030	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-hard-single-save-core]
+0.200	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-scan-save-api]
+0.200	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-scan-save-as-api]
+0.030	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-scan-save-as-core]
+0.040	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-scan-save-core]
+0.200	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-single-save-api]
+0.190	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-single-save-as-api]
+0.030	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-single-save-as-core]
+0.040	tests/system/py/test_staging_cleanup.py::test_failed_staging_removal_preserves_outside_and_prior_project[clear-symbolic-single-save-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[hard-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[hard-core]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[symbolic-api]
+UNMEASURED:failed-in-this-run	tests/system/py/test_staging_cleanup.py::test_link_copy_fallback_refuses_failed_cleanup_before_reusing_entries[symbolic-core]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
@@ -14397,6 +14482,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
+# module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py
 # module-cost: 2.483	tests/unit/py/test_e04_t9_latency_ratchet.py
 # module-cost: 0.262	tests/unit/py/test_e09_t55_unit_coverage_contract.py
