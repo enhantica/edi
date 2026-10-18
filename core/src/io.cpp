@@ -19,6 +19,7 @@
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
+#include "number_token.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -418,30 +419,19 @@ int fractional_digits(const std::string& mantissa) {
     return digits;
 }
 
-// Parse a complete numeric token into a double, locale-independently AND portably.
-//
-// An istringstream imbued with the classic ("C") locale always reads a '.' decimal separator
-// whatever the process locale is, so the same project bytes parse identically under, say, a
-// comma-decimal de_DE — the bug the previous std::stod implementation carried, since strtod follows
-// LC_NUMERIC and would have rejected `449.2719` there. Requiring eof() means the WHOLE token was
-// consumed, so trailing characters (including a `(su)` suffix, which is a model-parameter grammar and
-// never valid in a data column) fail rather than silently truncating.
-//
-// Deliberately NOT std::from_chars: libc++ (Apple/macOS AppleClang) `= delete`s the floating-point
-// overload, so that call does not compile there — it broke crysta's own macOS CI (PR #21), and edi
-// ships osx-arm64/osx-64. This mirrors crysta's `parse_double` (src/core/edi.cpp) device-for-device,
-// which also means the accepted grammar (leading '+', exponents, `.5`, `1.`) is identical by
-// construction rather than by argument.
+// Parse a complete numeric token into a double, the same value on every platform and in every locale
+// (number_token.hpp, the engine loader's rule): the whole token is read, so trailing characters
+// (including a `(su)` suffix, which is a model-parameter grammar and never valid in a data column) fail
+// rather than silently truncating. A subnormal value reads as itself; a nonzero value below the
+// smallest double is refused, as is one beyond the largest.
 double to_double(const std::string& text, const std::string& where) {
     double value = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    if (stream.fail() || !stream.eof()) {
-        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
+    const detail::NumberToken read = detail::read_number(text, value);
+    if (read == detail::NumberToken::underflow) {
+        fail_domain(where, "number-underflow", "the value of '" + text + "' is below the smallest double");
     }
-    if (!std::isfinite(value)) {
-        fail_domain(where, "non-finite-number", "non-finite number '" + text + "'");
+    if (read != detail::NumberToken::ok) {
+        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
     }
     return value;
 }
@@ -2012,13 +2002,11 @@ std::string format_fixed(double value, int ndec) {
     return std::string(buffer);
 }
 
-// Parse a fixed-point string back to a double, locale-independently (the round-trip probe below).
+// Parse a fixed-point string back to a double as the loader reads it (the round-trip probe below), so a
+// subnormal value round-trips at the same decimals on every platform.
 double parse_fixed(const std::string& text) {
     double out = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> out;
-    return (stream.fail() || !stream.eof()) ? std::numeric_limits<double>::quiet_NaN() : out;
+    return detail::read_number(text, out) == detail::NumberToken::ok ? out : std::numeric_limits<double>::quiet_NaN();
 }
 
 // Minimal number of decimals for which `format_fixed(value, ndec)` round-trips `value` exactly —
@@ -4227,10 +4215,9 @@ void clear_fit_share(ExperimentBase& experiment) {
 
 double correlation_value(const FitParameterCorrelation& row) {
     double value = 0.0;
-    std::istringstream stream(row.correlation.value());
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    return stream.fail() || !stream.eof() ? std::numeric_limits<double>::quiet_NaN() : value;
+    return detail::read_number(row.correlation.value(), value) == detail::NumberToken::ok
+               ? value
+               : std::numeric_limits<double>::quiet_NaN();
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(

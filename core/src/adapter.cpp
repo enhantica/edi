@@ -27,6 +27,7 @@
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
+#include "number_token.hpp"
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
@@ -1576,20 +1577,8 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
 }  // namespace
 
 bool parse_scan_number(std::string_view token, double& value) {
-    // io.cpp's to_double device: a classic-locale stream that must consume the whole token. Not
-    // std::from_chars, whose floating-point overload libc++ does not provide (macOS builds).
-    if (token.empty() || std::isspace(static_cast<unsigned char>(token.front())) != 0) {
-        return false;
-    }
-    std::istringstream stream{std::string(token)};
-    stream.imbue(std::locale::classic());
-    double parsed = 0.0;
-    stream >> parsed;
-    if (stream.fail() || !stream.eof()) {
-        return false;
-    }
-    value = parsed;
-    return true;
+    // The project loader's rule (number_token.hpp): the whole token, the same value on every platform.
+    return edi::detail::read_number(std::string(token), value) == edi::detail::NumberToken::ok;
 }
 
 ScanPlaces scan_places(const ScanDatasets& datasets) {
@@ -4587,6 +4576,12 @@ bool parse_csv_cell(const std::string& cell, Value& out) {
     stream.imbue(std::locale::classic());
     stream >> out;
     return !stream.fail() && stream.eof();
+}
+
+// A number cell reads as the project loader reads one (number_token.hpp): a stream read of a double diverges between
+// the platforms' libraries.
+bool parse_csv_cell(const std::string& cell, double& out) {
+    return edi::detail::read_number(cell, out) == edi::detail::NumberToken::ok;
 }
 
 // A results row's file, as the scan's events name it: its file_path cell without the directory.
