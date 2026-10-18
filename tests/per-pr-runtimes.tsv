@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-18T09:38:00Z
+# measured_utc = 2026-10-18T10:04:21Z
 #
-# Recorded from: measured test run (85 node(s) measured once, 12695 banked, 0 stale row(s) dropped)
-# Collected tests: 14056; with a reported duration: 8027
+# Recorded from: measured test run (2 node(s) measured once, 12768 banked, 0 stale row(s) dropped)
+# Collected tests: 14076; with a reported duration: 8027
 # Module-scoped fixture costs recorded: 54
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 14056
+# inventory_python = 14076
 # inventory_cpp = 335
-# inventory_measured = 12750
+# inventory_measured = 12770
 # inventory_unmeasured = 1641
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -11297,6 +11297,26 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_report_temporary_aliases.py::
 0.230	tests/system/py/test_report_temporary_aliases.py::test_every_temporary_writer_detaches_retained_aliases[refused-published-owned-symbolic-python-html]
 0.190	tests/system/py/test_report_temporary_aliases.py::test_every_temporary_writer_detaches_retained_aliases[refused-published-owned-symbolic-save-as]
 0.210	tests/system/py/test_report_temporary_aliases.py::test_every_temporary_writer_detaches_retained_aliases[refused-published-owned-symbolic-save]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[comment]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[duplicate-rule]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[fixed-value]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[missing-rule]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[uncertainty]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[wrong-rule]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_model_comparison_rejects_changes_beyond_the_derived_spelling[fixed]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_model_comparison_rejects_changes_beyond_the_derived_spelling[su]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_model_comparison_rejects_changes_beyond_the_derived_spelling[value]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[-0.02134-0.00151--0.0213(16)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[0-0.0123-0.000(13)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[0-1-0.0(10)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[0.4637-0.0196-0.46(2)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[1.5-0-1.5(0)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[1.54249-0.01532-1.542(16)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[2.16352-0.00481-2.164(5)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[3.0-0-3(0)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[3.88-0.000429614028128419-3.8800(5)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_matches_independent_iucr_examples[54912-1234-54900(1300)]
+0.000	tests/system/py/test_saved_spelling_compatibility.py::test_saved_spelling_preserves_fixed_values_literals_comments_and_other_files
 0.150	tests/system/py/test_scan_accident_paths.py::test_an_externally_changed_indexed_row_never_becomes_a_template_value
 0.170	tests/system/py/test_scan_accident_paths.py::test_changing_the_iteration_limit_cannot_reclassify_a_retained_result
 0.840	tests/system/py/test_scan_accident_paths.py::test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo[free]

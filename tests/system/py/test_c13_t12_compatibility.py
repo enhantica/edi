@@ -19,6 +19,7 @@ from tests.fixtures.loop_parameter_ids.historical_bytes import (
     old_fit_state_bytes,
     without_nonjoint_weights,
 )
+from tests.fixtures.saved_spelling.reference import historical_spelling
 from tests.fixtures.table_display.stored_id_bytes import ordinal_copy
 from tests.fixtures.weight_fractions.single_phase_bytes import COLUMN, historical_single_fraction
 
@@ -186,7 +187,7 @@ def prepare_recorded_current_format(row, tmp_path, record_property):
 
 
 def comparison_records(name, previous, emitted, source):
-    a = normalized_record(name, previous)
+    a = historical_spelling(name, normalized_record(name, previous))
     if name == 'analysis/analysis.edi':
         a = without_nonjoint_weights(a)
     b = normalized_record(
@@ -209,6 +210,8 @@ def record_fraction_adaptation(record_property):
     record_property(
         'weight_fraction_after', 'one checked trailing column; single enabled row 1.0 without s.u.'
     )
+    record_property('saved_spelling_before', 'exact value(s.u.) bytes and no uncertainty setting')
+    record_property('saved_spelling_after', 'independent IUCr spelling and exact iucr_19 default')
 
 
 def assert_fraction_comparison_guards(name, previous, emitted, source):

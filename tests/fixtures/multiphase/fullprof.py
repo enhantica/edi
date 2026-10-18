@@ -155,7 +155,7 @@ _linked_structure.scale
     return root
 
 
-def actual_values(project, *, asymmetry_off=False):
+def actual_values(project, *, asymmetry_off=False, with_uncertainties=False):
     values = {}
     ref = reference(asymmetry_off=asymmetry_off)
     e = project.experiments[0]
@@ -167,20 +167,24 @@ def actual_values(project, *, asymmetry_off=False):
         if bits[0] in SITES:
             s = project.structures[bits[0]]
             if bits[1] == 'scale':
-                value = links[bits[0]].scale.value
+                parameter = links[bits[0]].scale
             elif bits[1] == 'cell':
-                value = getattr(s.cell, bits[2]).value
+                parameter = getattr(s.cell, bits[2])
             else:
                 site = next(site for site in s.atom_sites if site.id == bits[1])
-                value = getattr(site, bits[2]).value
+                parameter = getattr(site, bits[2])
         elif bits[0] == 'profile':
             field = bits[1]
             if field == 'eta':
                 field = 'mixing_eta_0'
-            value = getattr(e.peak, field).value
+            parameter = getattr(e.peak, field)
         elif bits[0] == 'instrument':
-            value = getattr(e.instrument, bits[1]).value
+            parameter = getattr(e.instrument, bits[1])
         else:
-            value = e.background[int(bits[1]) - 1].intensity.value
-        values[key] = float(value)
+            parameter = e.background[int(bits[1]) - 1].intensity
+        values[key] = (
+            (float(parameter.value), parameter.uncertainty)
+            if with_uncertainties
+            else float(parameter.value)
+        )
     return values
