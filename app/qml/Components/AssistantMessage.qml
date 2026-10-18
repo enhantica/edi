@@ -40,6 +40,7 @@ Rectangle {
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
     property bool technicalCopied: false
     onPayloadChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
+    onTextChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
     Timer { id: copyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: row.technicalCopied = false }
     function copyTechnicalPayload() {
         const component = row, identity = row.disclosureIdentity, original = row.payload;
@@ -48,6 +49,20 @@ Rectangle {
             const literal = JSON.stringify(original, null, 2);
             if (typeof literal !== "string" || !current()) return;
             ApplicationInfo.copyText(literal);
+            if (!current()) return;
+            component.technicalCopied = true;
+            copyFeedback.restart();
+        } catch (error) { if (current()) component.technicalCopied = false; }
+    }
+    function copyUserText() {
+        const component = row, identity = row.disclosureIdentity, original = row.text;
+        const originalPayload = row.payload, owner = row.assistant;
+        const current = () => Qt.isQtObject(component) && component.kind === "user"
+            && component.status === "completed" && component.disclosureIdentity === identity
+            && component.text === original && component.payload === originalPayload && component.assistant === owner;
+        try {
+            if (!current()) return;
+            ApplicationInfo.copyText(original);
             if (!current()) return;
             component.technicalCopied = true;
             copyFeedback.restart();
@@ -200,7 +215,15 @@ Rectangle {
         return icons[payload && payload.type] || "info-circle";
     }
     color: "transparent"
-    implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
+    readonly property real historyCopyExtent: Math.ceil(historyCopyMetrics.height)
+    readonly property real historyCopyGutter: kind === "user" ? historyCopyExtent + AppSizes.unit : 0
+    implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5),
+        kind === "user" ? historyCopyExtent + AppSizes.unit * 1.5 : 0)
+    FontMetrics {
+        id: historyCopyMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
     TextMetrics {
         id: userTextMetrics
         font.family: EaStyle.Fonts.fontFamily
@@ -209,13 +232,51 @@ Rectangle {
     }
     Rectangle {
         id: bubble
-        x: row.kind === "user" ? row.width - width : 0
-        width: row.kind === "user" ? Math.min(row.width - AppSizes.unit, Math.max(AppSizes.unit * 3, userTextMetrics.advanceWidth + AppSizes.unit * 2)) : row.width
+        x: row.kind === "user" ? Math.max(0, row.width - row.historyCopyGutter - width) : 0
+        width: row.kind === "user" ? Math.min(Math.max(0, row.width - row.historyCopyGutter - AppSizes.unit), Math.max(AppSizes.unit * 3, userTextMetrics.advanceWidth + AppSizes.unit * 2)) : row.width
         height: row.implicitHeight
         color: row.kind === "user" ? EaStyle.Colors.contentBackground : "transparent"
         radius: row.kind === "user" ? AppSizes.unit * 0.75 : 0
         border.width: row.highlighted ? EaStyle.Sizes.borderThickness : 0
         border.color: EaStyle.Colors.themeAccent
+    }
+    Item {
+        x: bubble.x
+        width: Math.max(0, row.width - x)
+        height: row.height
+        visible: row.kind === "user"
+        HoverHandler {
+            id: userHistoryHover
+            acceptedDevices: PointerDevice.AllDevices
+            blocking: false
+        }
+    }
+    EaElements.ToolButton {
+        id: userCopy
+        objectName: "assistant.user.copyText"
+        x: bubble.x + bubble.width + AppSizes.unit * 0.5
+        y: AppSizes.unit * 0.75
+        implicitWidth: row.historyCopyExtent
+        implicitHeight: row.historyCopyExtent
+        visible: row.kind === "user" && row.status === "completed" && row.width >= row.historyCopyGutter
+        opacity: userHistoryHover.hovered || activeFocus ? 1 : 0
+        focusPolicy: Qt.TabFocus
+        fontIcon: row.technicalCopied ? "check" : "copy"
+        showBackground: false
+        contentItem: EaElements.Label {
+            text: userCopy.fontIcon
+            font.family: EaStyle.Fonts.iconsFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+            color: !userCopy.enabled ? EaStyle.Colors.themeForegroundDisabled
+                : userCopy.hovered || userCopy.down ? EaStyle.Colors.themeForegroundHovered
+                : EaStyle.Colors.themeForegroundMinor
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            Accessible.ignored: true
+        }
+        ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy sent message")
+        Accessible.name: ToolTip.text
+        onClicked: if (userHistoryHover.hovered || activeFocus) row.copyUserText()
     }
     component LiteralDetails: TextEdit {
         property string fieldName: ""
@@ -237,7 +298,7 @@ Rectangle {
         id: content
         x: bubble.x + (row.kind === "user" ? AppSizes.unit : 0)
         y: row.kind === "user" ? AppSizes.unit * 0.75 : AppSizes.unit * 0.25
-        width: bubble.width - (row.kind === "user" ? AppSizes.unit * 2 : 0)
+        width: Math.max(0, bubble.width - (row.kind === "user" ? AppSizes.unit * 2 : 0))
         spacing: AppSizes.unit * 0.4
         TextEdit {
             id: body
@@ -295,9 +356,15 @@ Rectangle {
             }
         }
         RowLayout {
+            id: activityHeader
             width: parent.width
             visible: row.kind !== "assistant" && row.kind !== "user"
             spacing: AppSizes.unit * 0.5
+            HoverHandler {
+                id: activityHeaderHover
+                acceptedDevices: PointerDevice.AllDevices
+                blocking: false
+            }
             EaElements.Button {
                 id: commandDisclosure
                 objectName: row.commandActivity ? "assistant.command.toggle" : "assistant.activity.toggle"
@@ -356,6 +423,8 @@ Rectangle {
                 objectName: "assistant.activity.copyTechnical"
                 implicitWidth: commandDisclosure.implicitHeight
                 implicitHeight: commandDisclosure.implicitHeight
+                opacity: activityHeaderHover.hovered || activeFocus ? 1 : 0
+                focusPolicy: Qt.TabFocus
                 fontIcon: row.technicalCopied ? "check" : "copy"
                 showBackground: false
                 contentItem: EaElements.Label {
@@ -371,7 +440,7 @@ Rectangle {
                 }
                 ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy activity details")
                 Accessible.name: ToolTip.text
-                onClicked: row.copyTechnicalPayload()
+                onClicked: if (activityHeaderHover.hovered || activeFocus) row.copyTechnicalPayload()
             }
         }
         Rectangle {

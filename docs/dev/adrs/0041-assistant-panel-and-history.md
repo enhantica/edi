@@ -1581,3 +1581,22 @@ pixel acceptance.
 Prior art: [IconLine.qml](../../../app/qml/Components/IconLine.qml), capital ink
 centre and actual glyph baseline; [Qt Text updateBaseline](https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/items/qquicktext.cpp#L382)
 and [TextMetrics renderType](https://doc.qt.io/qt-6/qml-qtquick-textmetrics.html#renderType-prop).
+
+
+### Hover and keyboard history copy
+
+Activity copy keeps its compact native line-height target and permanent layout
+slot, revealing its glyph on that line's passive hover or native keyboard/accessibility
+focus. Opacity changes do not alter header width or height. The native copy action
+uses TabFocus without stealing mouse focus/selection; unrevealed activations do
+not write the clipboard. Main disclosure and canonical-payload copy are unchanged.
+
+Sent user bubbles reserve a narrow right rail permanently, with the same small
+muted copy glyph outside the top-right of the bubble and ordinary margins. The
+passive hover region covers that bubble and rail, excluding unrelated empty
+history space. The rail does not appear/disappear in layout on hover. A genuine
+activation copies the exact immutable sent text once, including whitespace; it
+does not export JSON, attachment bytes or an assistant response. Captured row,
+text, payload, owner and lifetime are rechecked around the native clipboard call.
+Feedback resets on replacement/reuse/text changes. Sent files remain read-only
+metadata; pending attachment removal and Clear authority are unchanged.
