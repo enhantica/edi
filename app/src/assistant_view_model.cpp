@@ -6429,6 +6429,34 @@ struct AssistantViewModel::State {
     }
     void create_widget_next(const std::shared_ptr<NativeCreateWidget>& run) {
         if (!create_widget_current(run) || !widget_input) { create_widget_refuse(run, widget_outcome_error, false, "next-current"); return; }
+        // These captureless local predicates add no per-request callback owner.
+        static constexpr auto text_action=[](const edi::ExperimentBase* experiment, const NativeCreateWidget::Input& step)
+                ->std::optional<ProjectEditor::CreationAction> {
+            using Action=ProjectEditor::CreationAction;
+            if (!experiment) return std::nullopt;
+            if (step.target.startsWith(QLatin1StringView("experiments.name.")))
+                return Action{Action::Kind::ExperimentName,experiment,{},step.text};
+            if (step.target.startsWith(QLatin1StringView("excludedRegion.start.")) || step.target.startsWith(QLatin1StringView("excludedRegion.end."))) {
+                const auto index=QStringView(step.target).sliced(step.target.lastIndexOf('.')+1).toUInt();
+                if (index>=experiment->excluded_regions.size()) return std::nullopt;
+                return Action{step.target.startsWith(QLatin1StringView("excludedRegion.start."))?Action::Kind::ExclusionStart:Action::Kind::ExclusionEnd,
+                    experiment->excluded_regions[index].get(),{},{},step.text.toDouble()};
+            }
+            return std::nullopt;
+        };
+        static constexpr auto text_matches=[](const edi::Project& model, const ProjectEditor::CreationAction& action) {
+            using Action=ProjectEditor::CreationAction;
+            // Compare membership before dereferencing a possibly retired original member.
+            for (const auto& experiment : model.experiments) {
+                if (action.kind==Action::Kind::ExperimentName && static_cast<const edi::ExperimentBase*>(experiment.get())==action.row)
+                    return QStringView(action.text).compare(QUtf8StringView(experiment->name.value()))==0;
+                if (action.kind==Action::Kind::ExclusionStart || action.kind==Action::Kind::ExclusionEnd)
+                    for (const auto& region : experiment->excluded_regions)
+                        if (region.get()==action.row)
+                            return (action.kind==Action::Kind::ExclusionStart?region->first.get():region->second.get())==action.number;
+            }
+            return false;
+        };
         if (run->step >= run->inputs.size()) {
             native_finish(true, create_widget_progress(run, true, QObject::tr("Created through the original Project, Structure and Experiment controls; edits retain their ordinary Undo. No files were saved.")));
             if (create_widget_owned(run)) create_widget_end(run);
@@ -6485,7 +6513,14 @@ struct AssistantViewModel::State {
             auto* parameter = qobject_cast<ParameterItem*>(target->property("item").value<QObject*>());
             if (parameter && parameter->value() == step.text.toDouble()) { create_widget_advance(run); return; }
         }
-        if (step.kind == AssistantWidgetInput::Kind::Text && target->property("value").toString() == step.text) { create_widget_advance(run); return; }
+        if (step.kind == AssistantWidgetInput::Kind::Text) {
+            if (!create_widget_current(run) || !run->project) throw std::runtime_error("The original text owner is unavailable");
+            const auto* model=run->project->assistantProject();
+            const auto* experiment=!run->individual_tool.isEmpty()?run->operation_member:model->experiments.empty()?nullptr:model->experiments[0].get();
+            const auto action=text_action(experiment,step);
+            if (!action) throw std::runtime_error("The original text model action is unavailable");
+            if (text_matches(*model,*action)) { create_widget_advance(run); return; }
+        }
         if (!widget_input->usableTarget(*target)) { create_widget_reveal(run, target); return; }
         AssistantWidgetInput::Request input; input.kind = step.kind; input.target = target; input.value = step.text; input.option = option;
         input.current = [this, run] { return create_widget_current(run); };
@@ -6502,18 +6537,15 @@ struct AssistantViewModel::State {
             auto* experiment = !run->individual_tool.isEmpty() ? run->operation_member : run->project->assistantProject()->experiments.empty() ? nullptr : run->project->assistantProject()->experiments[0].get();
             std::optional<ProjectEditor::CreationAction> action;
             using Action = ProjectEditor::CreationAction;
-            if (step.target == "experiments.create") action = Action{Action::Kind::ExperimentAppend};
-            else if (step.target.startsWith("experiments.name.")) action = Action{Action::Kind::ExperimentName, experiment, {}, step.text};
+            if (step.kind == AssistantWidgetInput::Kind::Text) {
+                action=text_action(experiment,step);
+                if (!action) return false;
+            }
+            else if (step.target == "experiments.create") action = Action{Action::Kind::ExperimentAppend};
             else if (step.target == "experimentType.beamMode") action = Action{Action::Kind::ExperimentType, experiment, "beamMode", run->individual_tool.isEmpty()?QStringLiteral("constant wavelength"):run->arguments.value("token").toString()};
             else if (step.target == "experimentType.radiationProbe") action = Action{Action::Kind::ExperimentType, experiment, "radiationProbe", run->individual_tool.isEmpty()?QStringLiteral("neutron"):run->arguments.value("token").toString()};
             else if (step.target == "peak.type") action = Action{Action::Kind::PeakProfile, experiment, {}, step.text};
             else if (step.target == "excludedRegions.append") action = Action{Action::Kind::ExclusionAppend, experiment};
-            else if (step.target.startsWith("excludedRegion.start.") || step.target.startsWith("excludedRegion.end.")) {
-                const auto index = step.target.section('.', -1).toUInt();
-                if (!experiment || index >= experiment->excluded_regions.size()) return false;
-                action = Action{step.target.startsWith("excludedRegion.start.") ? Action::Kind::ExclusionStart : Action::Kind::ExclusionEnd,
-                    experiment->excluded_regions[index].get(), {}, {}, step.text.toDouble()};
-            }
             if (action) {
                 const auto role=reserve_disclosure(sizeof(ProjectViewModel::WidgetCreationInput) + generic_size(action->field,Limits::context_bytes) + generic_size(action->text,Limits::context_bytes));
                 run->control_input = run->project->prepareWidgetCreation(*action);
@@ -6550,7 +6582,15 @@ struct AssistantViewModel::State {
                 branch="control.choice";
                 if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) throw std::runtime_error("The original choice was refused");
                 branch="control.text";
-                if ((step.kind == AssistantWidgetInput::Kind::FormText || step.kind == AssistantWidgetInput::Kind::Text) && target->property(step.kind == AssistantWidgetInput::Kind::Text ? "value" : "text").toString() != step.text) throw std::runtime_error("The original text was refused");
+                if (step.kind == AssistantWidgetInput::Kind::FormText && target->property("text").toString() != step.text) throw std::runtime_error("The original text was refused");
+                if (step.kind == AssistantWidgetInput::Kind::Text) {
+                    const auto* input=run->control_input.get();
+                    const auto* session=result_session();
+                    if (!input || !input->consumed || !input->outcome.applied || !input->outcome.published ||
+                        !create_widget_owned(run) || !run->project || project!=run->project || !session || session->project()!=run->project ||
+                        !text_matches(*run->project->assistantProject(),input->expected))
+                        throw std::runtime_error("The original text model action was not confirmed");
+                }
                 branch="control.receipt";
                 if (run->control_input && (!run->control_input->consumed || !run->control_input->outcome.applied || !run->control_input->outcome.published)) throw std::runtime_error("The original model action was not confirmed");
                 branch="parameter.receipt";
