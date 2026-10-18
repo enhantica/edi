@@ -4454,7 +4454,18 @@ def test_native159_genuine_dotted_cif_selected_creation_preserves_original_input
 ):
     original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
     provenance = json.loads((original / 'provenance.json').read_text())
-    actor, trace = native_case(generic, [], connect_now=False)
+    actor, trace = native_case(generic, [], connect_now=False, script={'scenario': 'native:script'})
+    # COMPLETE254's real saved-empty setup; scientific operands remain CIF159's LBCO/HRPT.
+    saved = extension == '.edi'
+    if saved:
+        requested = {'name': 'Original named empty owner', 'title': 'Original owner title',
+                     'description': 'Original owner description, distinct from the supplied recipe',
+                     'authors': 'Original independent author', 'su_rule': 'iucr_99',
+                     'report_libraries': True, 'location': str(tmp_path / 'original-empty-owner')}
+        created = actor.command('named_empty_create', **requested)
+        assert created['reply']['created'] and created['vm']['project_present'], (
+            'IMPORT464 SETUP: genuine ordinary Session creates and saves the original empty owner'
+        )
     assert actor.command('native_science_enable')['reply']['enabled'], (
         'CIF159: preserve original input science, bytes and authenticated owner'
     )
@@ -4509,23 +4520,74 @@ def test_native159_genuine_dotted_cif_selected_creation_preserves_original_input
             for key, value in metadata['profile_parameters'].items()
         ],
     }
-    native145_configure(
-        actor,
-        trace,
-        [
-            [
-                native_call(
-                    'create_cwl_project',
-                    cif_file_id=selected[owned[0].name],
-                    data_file_id=selected[owned[1].name],
-                    recipe=recipe,
-                )
-            ]
-        ],
-    )
+    legal_call = native_call('create_cwl_project', cif_file_id=selected[owned[0].name],
+                             data_file_id=selected[owned[1].name], recipe=recipe)
+    turns = [[legal_call]]
+    if saved:
+        invalid_recipe = {**recipe, 'background': []}
+        refused_call = native_call('create_cwl_project', cif_file_id=selected[owned[0].name],
+                                   data_file_id=selected[owned[1].name], recipe=invalid_recipe)
+        turns.insert(0, [refused_call])
+    readonly409_configure(trace)
+    native145_configure(actor, trace, turns)
     before = actor.last['vm']
-    state, replies = native_send(actor, trace, 1)
-    assert replies[0]['response']['result']['success'], replies[0]['decoded']
+    if saved:
+        original_owner = before['project']['empty_completion_observer']
+        assert original_owner['same_owner'] and original_owner['same_core'] and (
+            original_owner['structures'] == original_owner['experiments'] == 0
+        ), 'IMPORT464 SETUP: actual saved owner/core is scientifically empty before either turn'
+        assert all(original_owner['metadata'][key] == requested[key]
+                   for key in ('name', 'title', 'description', 'authors')) and (
+            original_owner['metadata']['created'] and original_owner['settings']['su_rule'] == 'iucr_99'
+            and original_owner['settings']['html_offline'] is True
+        ), 'IMPORT464 SETUP: original independent metadata/settings really exist before recipe admission'
+        source_directory = Path(original_owner['path'])
+        assert source_directory.resolve() == Path(requested['location']).resolve() and (
+            source_directory.resolve().is_relative_to(tmp_path.resolve())
+            and (source_directory / 'project.edi').is_file()
+        ), 'IMPORT464 SETUP: real original saved-empty files belong to this isolated test'
+        source_files = save211_files(source_directory)
+        state, replies = native_send(actor, trace, 1)
+        refused = replies[0]
+        expected_refusal = {'schema': 'edi.assistant.outgoing/1', 'status': 'refused', 'code': 'refused',
+                            'refusal_field': 'background', 'refusal_reason': 'minimum_items', 'minimum_items': 2}
+        assert refused['response']['result']['success'] is False and all(
+            type(refused['decoded'][key]) is type(value) and refused['decoded'][key] == value
+            for key, value in expected_refusal.items()
+        ), 'IMPORT464: empty background has the fixed public typed safe field/reason/minimum, never a generic failure'
+        assert 'message' not in refused['decoded'] and 'what' not in refused['decoded'], (
+            'IMPORT464: refusal projection cannot disclose an arbitrary exception message'
+        )
+        assert refused['original']['params']['tool'] == 'create_cwl_project' and (
+            refused['original']['params']['arguments'] == refused_call['arguments']
+            and refused['original']['params'].get('namespace') is None
+        ), 'IMPORT464: actual refused original envelope/tool/full arguments are independently pinned'
+        state = settle(actor, lambda value: not value['can_cancel'])
+        assert state['project'] == before['project'] and save211_files(source_directory) == source_files, (
+            'IMPORT464: typed pre-admission refusal changes no owner/science/settings/Undo or saved byte'
+        )
+        canonical = lambda rows: [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+                                  for row in rows]
+        assert canonical(state['selected_files']) == canonical(before['selected_files']) and (
+            [path.read_bytes() for path in owned] == original_bytes
+        ), 'IMPORT464: refused input preserves every actual source ID/descriptor and independent original byte'
+        assert state['connected'] and state['models'] == before['models'] and (
+            state['handoff']['account_label'] == before['handoff']['account_label']
+            and not state['context_consent_required'] and not state['pending_plan'] and not state['pending_question']
+            and not json.loads(state['native_context']).get('error')
+        ), 'IMPORT464: ordinary pre-admission validation remains ready, complete and unquarantined'
+        assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == 1 and (
+            len(native_records(trace, '.native-emitted.jsonl')) == 1
+        ), 'IMPORT464: refusal cannot silently retry or execute the separately configured legal turn'
+        # Only after the strict before-write refusal proof: a separate explicit user Send.
+        state, replies = native_send(actor, trace, 2)
+        assert replies[1]['original']['params']['arguments'] == legal_call['arguments'] and (
+            replies[1]['original']['id'] != refused['original']['id']
+            and replies[1]['original']['params']['callId'] != refused['original']['params']['callId']
+        ), 'IMPORT464: legal correction is a distinct genuine original request, never unsafe automatic replay'
+    else:
+        state, replies = native_send(actor, trace, 1)
+    assert replies[-1]['response']['result']['success'], replies[-1]['decoded']
     state = settle(actor, lambda value: value['project_present'] and not value['can_cancel'])
     assert state['connected'] and state['models'] == before['models'], (
         'CIF159: preserve original input science, bytes and authenticated owner'
@@ -4611,6 +4673,32 @@ def test_native159_genuine_dotted_cif_selected_creation_preserves_original_input
     ), (
         'CIF159: preserve original input science, bytes and authenticated owner'
     )
+
+    readonly409_policy(trace)
+    assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == (2 if saved else 1), (
+        'IMPORT464: each explicit original Send admits exactly one bounded original turn'
+    )
+    if saved:
+        actual_owner = state['project']['empty_completion_observer']
+        assert actual_owner['same_owner'] and actual_owner['same_core'] and all(
+            actual_owner[key] == original_owner[key]
+            for key in ('owner_identity', 'core_identity', 'metadata', 'settings', 'path', 'metadata_path')
+        ), 'IMPORT464: legal population preserves original saved owner/core/user metadata/settings/path'
+        assert save211_files(source_directory) == source_files, (
+            'IMPORT464: population never silently saves over original empty native files'
+        )
+        assert actor.command('native_undo')['reply']['was_available'], (
+            'IMPORT464: one actual ordinary Undo owns the complete lawful population'
+        )
+        undone = settle(actor, lambda value: value['project']['empty_completion_observer']['structures'] == 0
+                        and value['project']['empty_completion_observer']['experiments'] == 0
+                        and not value['project']['science_observer']['calculating'])
+        assert undone['project']['empty_completion_observer'] == original_owner and all(
+            undone['project'][key] == before['project'][key] for key in ('parameters', 'science_observer', 'mode')
+        ) and all(undone['project']['native_observer'][key] == before['project']['native_observer'][key]
+                  for key in ('record', 'can_undo')) and save211_files(source_directory) == source_files, (
+            'IMPORT464: one real Undo restores exact original empty owner/science/settings/prior history and saved bytes'
+        )
 
 
 def test_native159_advertised_profile_recipe_is_constructible_from_public_catalog(
@@ -9193,6 +9281,10 @@ def gui392_run(tmp_path, case):
         if case == 'chooser-pointer':
             config['ux289_hold_input'] = True
     if case == 'first-eye-clear':
+        # Unchanged automatic choice resolves to actual effective medium (original461).
+        # The chooser's independently chronological GUI416 fixture remains unchanged.
+        config.pop('gui415_policy', None)
+        config.update(readonly409=True, native_turn_calls=[[], []])
         config['ux289_hold_input'] = True
         config['gui404_table_reply'] = True
     config_path.write_text(json.dumps(config))
@@ -9253,7 +9345,7 @@ def gui392_run(tmp_path, case):
         )
     if requests:
         loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
-        assert loaded['sha256'] == hashlib.sha256(config_bytes).hexdigest() and loaded['native_turn_calls'] == [[]], (
+        assert loaded['sha256'] == hashlib.sha256(config_bytes).hexdigest() and loaded['native_turn_calls'] == ([[], []] if case == 'first-eye-clear' else [[]]), (
             'GUI392 SETUP: real original peer consumed exact independently authored no-native-action configuration'
         )
     assert not native_records(trace, '.native-replies.jsonl'), (
@@ -9330,7 +9422,7 @@ def gui392_run(tmp_path, case):
                     if 'GUI393_CLEAR_IDS ' in line]
         assert len(receipts) == 1, 'GUI393: exact original GUI user/source identity witness must be delivered'
         turns = [row for row in requests if row.get('method') == 'turn/start']
-        assert len(turns) == 1 and turns[0]['params']['clientUserMessageId'] == receipts[0]['user'], (
+        assert len(turns) == 2 and turns[0]['params']['clientUserMessageId'] == receipts[0]['user'], (
             'GUI393: real held original user identity equals independent actual wire admission once'
         )
         turn = turns[0]
@@ -9349,10 +9441,11 @@ def gui392_run(tmp_path, case):
         )
         received = [row for row in clear_control_events(trace) if row['kind'] == 'ux289-original-input-received']
         released = [row for row in clear_control_events(trace) if row['kind'] == 'ux289-original-ack-release']
-        assert len(received) == len(released) == 1 and all(
-            row['request_id'] == turn['id'] and row['client_user_message_id'] == receipts[0]['user']
-            for row in received + released
-        ), 'GUI393: real busy/ACK/Clear interval bonds to exact original received envelope'
+        assert len(received) == len(released) == 2 and all(
+            sum(row['request_id'] == original_turn['id'] and row['client_user_message_id'] ==
+                original_turn['params']['clientUserMessageId'] for row in observations) == 1
+            for original_turn in turns for observations in (received, released)
+        ), 'GUI464: BOTH genuine held requests have exactly one original received/released envelope'
         approval404 = [json.loads(line.split('GUI404_APPROVAL ', 1)[1]) for line in result.stdout.splitlines()
                        if 'GUI404_APPROVAL ' in line]
         assert len(approval404) == 1, 'GUI404: mandatory real Cancel/newer-identical/Approve interval is delivered ONCE'
@@ -9402,7 +9495,40 @@ def gui392_run(tmp_path, case):
         }) == 1 and all(row['row'] and len(row['bands']) == 4 for row in tables404), (
             'GUI404: both actual native palettes observe SAME one completed original response and all FOUR declared ordinary data rows'
         )
-        gui415_policy(trace, config['gui415_policy'])
+        after_clear = [json.loads(line.split('GUI464_ONCE ', 1)[1]) for line in result.stdout.splitlines()
+                       if 'GUI464_ONCE ' in line]
+        assert len(after_clear) == 1, 'GUI464: mandatory actual after-Clear single approval/ACK receipt is delivered once'
+        proof464 = after_clear[0]
+        second = turns[1]
+        assert proof464['text'] == 'GUI464 original draft after genuine Clear' and (
+            proof464['user'] == second['params']['clientUserMessageId'] != receipts[0]['user']
+            and second['params']['threadId'] != turn['params']['threadId']
+            and proof464['sendClicks'] == 3 and proof464['approvalClicks'] == 1 and proof464['opens'] == 3
+            and type(proof464['revision']) is int
+        ), 'GUI464: genuine Clear/new draft has its own user/thread and ONE Send/Approve, never a second Send workaround'
+        assert sum(item.get('type') == 'text' and item.get('text') == proof464['text']
+                   for item in second['params']['input']) == 1, (
+            'GUI464: exact post-Clear current draft is independently recorded actual outgoing text once'
+        )
+        contexts464 = rpc83_context_inputs(second['params'])
+        assert len(contexts464) == 1 and len(contexts464[0]['selected_files']['files']) == 1, (
+            'GUI464: only the genuinely reselected current source is disclosed after prior Clear retired its grants'
+        )
+        descriptor464 = contexts464[0]['selected_files']['files'][0]
+        assert set(descriptor464) == set(wire_roles405.values()) and all(
+            type(descriptor464[key]) is str for key in ('id', 'name', 'format')
+        ) and type(descriptor464['text_readable']) is bool and type(descriptor464['bytes']) in (int, float) and (
+            descriptor464['bytes'] >= 0 and descriptor464['bytes'] % 1 == 0
+        ), 'GUI464: fresh wire descriptor has ALL five declared scalar roles/types, no readability default'
+        assert len(proof464['files']) == 1 and set(proof464['files'][0]) == fields404 and all(
+            type(proof464['files'][0][key]) is type(proof404['files'][0][key]) for key in fields404
+        ) and proof464['files'] == [{key: descriptor464[wire_roles405[key]] for key in fields404}] and (
+            descriptor464['id'] and descriptor464['name'] == 'lbco.edi' and descriptor464['bytes'] == len(original_bytes)
+        ), 'GUI464: every actual post-Clear GUI ID/descriptor bonds exact wire fields and independent name/bytes'
+        assert sum(reply.get('id') == second['id'] and 'result' in reply for reply in replies) == 1, (
+            'GUI464: actual post-Clear admission receives one independently recorded matching ACK'
+        )
+        readonly409_policy(trace)
     elif case.startswith('chooser-'):
         replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         reads = [row for row in requests if row.get('method') == 'model/list']
@@ -9489,7 +9615,7 @@ def readonly409_configure(trace):
     """Opt-in public354 fixture; all original GUI/default peer behavior stays exact."""
     path = trace.parent / 'peer-input.json'
     config = json.loads(path.read_text())
-    assert config['scenario'] in {'complete', 'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, 'INPUT409 SETUP: existing ordinary fileauth vehicle only'
+    assert config['scenario'] in {'complete', 'fileauth', 'native:script', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, 'INPUT409 SETUP: existing ordinary fileauth vehicle only'
     config.update(readonly409=True, vm319_record_packets=True)
     path.write_text(json.dumps(config))
 

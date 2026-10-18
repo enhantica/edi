@@ -1446,3 +1446,281 @@ def test_ux300_original_public_notification_and_retirement(case, tmp_path):
     assert not trace.with_suffix('.native-emitted.jsonl').exists(), (
         'UX300: genuine logout retirement never fabricates a native scientific invocation'
     )
+
+# Independent PUBLIC381/381v2 ordered scalar arrays; same original native Main vehicle.
+ARRAY450_CASES = ['normal-values', 'singleton', 'values', 'free', 'all-noop-values',
+                  'all-noop-free', 'mixed-values', 'invalid-last', 'manual-draft', 'stop', 'takeover']
+
+
+def array450_calls(case):
+    assert case in ARRAY450_CASES, 'ARRAY450 SETUP: finite original-control case inventory'
+    la = 'structure.atom_sites[La].adp_iso'
+    ba = 'structure.atom_sites[Ba].adp_iso'
+    co = 'structure.atom_sites[Co].adp_iso'
+    wavelength = 'experiment.instrument.setup_wavelength'
+    cell = 'structure.cell.length_a'
+    sentinel = {'tool': 'set_parameters', 'call_id': 'array450-sentinel', 'arguments': {
+        'purpose': 'Establish independent prior recorded Undo before ordered array',
+        'values': [{'path': wavelength, 'value': 1.495}]}}
+    tool = 'set_free' if case in {'free', 'all-noop-free'} else 'set_parameters'
+    values = [{'path': la, 'value': 0.6}, {'path': wavelength, 'value': 1.49},
+              {'path': cell, 'value': 3.89}]
+    if case == 'singleton':
+        values = [{'path': la, 'value': 0.6}]
+    elif case == 'all-noop-values':
+        values = [{'path': la, 'value': 0.5}, {'path': wavelength, 'value': 1.495}, {'path': cell, 'value': 3.88}]
+    elif case == 'mixed-values':
+        values = [{'path': la, 'value': 0.5}, {'path': ba, 'value': 0.7}, {'path': cell, 'value': 3.88}]
+    elif case == 'invalid-last':
+        values = [{'path': la, 'value': 0.6}, {'path': 'original.absent.parameter', 'value': 4.0}]
+    elif case in {'stop', 'takeover'}:
+        values = [{'path': la, 'value': 0.6}, {'path': ba, 'value': 0.7}, {'path': co, 'value': 0.8}]
+    flags = [{'path': la, 'free': case == 'all-noop-free'}, {'path': ba, 'free': True},
+             {'path': co, 'free': case == 'all-noop-free'}]
+    main = {'tool': tool, 'call_id': 'array450-action-' + case, 'arguments': {
+        'purpose': 'Original ordered original-control array ' + case,
+        **({'flags': flags} if tool == 'set_free' else {'values': values})}}
+    return [sentinel, main]
+
+
+def array450_result(case, call, result):
+    assert type(result) is dict and type(result.get('success')) is bool, 'ARRAY450: actual original typed host result is mandatory'
+    contents = result.get('contentItems')
+    assert type(contents) is list and len(contents) == 1 and type(contents[0]) is dict and (
+        contents[0].get('type') == 'inputText' and type(contents[0].get('text')) is str
+    ), 'ARRAY450: exact one official typed inputText carries actual result, no guessed success fallback'
+    value = json.loads(contents[0]['text'])
+    assert type(value) is dict and type(value.get('status')) is str, 'ARRAY450: genuine result JSON is an object with actual status'
+    if case in {'invalid-last', 'manual-draft'}:
+        assert result['success'] is False and value['status'] in {'refused', 'unavailable'} and (
+            type(value.get('message')) is str and value['message']
+        ), 'ARRAY450: initially blocked/invalid original call is a real typed before-input refusal'
+    else:
+        incomplete = case in {'stop', 'takeover'}
+        assert result['success'] is (not incomplete), 'ARRAY450: partial/incomplete native work cannot be successful whole-array completion'
+        assert value['status'] == ('partial' if incomplete else 'unchanged' if case.startswith('all-noop-') else 'edited'), (
+            'ARRAY450: settled noops, changed science and factual interrupted prefix have DISTINCT truthful status'
+        )
+        if case not in {'normal-values', 'singleton'}:
+            entries = call['arguments'].get('values', call['arguments'].get('flags'))
+            assert type(value.get('steps_completed')) is int and value['steps_completed'] == (1 if incomplete else len(entries)), (
+                'ARRAY450: exact settled requested prefix INCLUDES noops and excludes uncommitted current entry'
+            )
+            assert type(value.get('complete')) is bool and value['complete'] is (not incomplete) and (
+                type(value.get('atomic')) is bool and value['atomic'] is False
+            ), 'ARRAY450: visible multi-entry is factual per-control work, never hidden atomic fallback'
+            assert type(value.get('calculation_pending')) is bool, 'ARRAY450: actual native pending-calculation fact is typed, never assumed converged/fit'
+    return value
+
+
+@pytest.mark.parametrize('case', ARRAY450_CASES)
+def test_array450_ordered_parameters_and_flags_use_original_controls(case, tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import ux345_default_scattering_project
+    reference = tmp_path / 'reference'; reference.mkdir()
+    fixture = ux345_default_scattering_project(reference); fixture.rename(reference / 'project')
+    original_files = {str(p.relative_to(reference)): p.read_bytes() for p in reference.rglob('*') if p.is_file()}
+    calls = array450_calls(case)
+    (reference / 'array450.json').write_text(json.dumps({'case': case, 'calls': calls}))
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    environment['QT_QUICK_CONTROLS_HOVER_ENABLED'] = '1'
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text()); config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[[calls[0]], [calls[1]]],
+                  native_array451_policy={'family': '450', 'case': case}, vm319_record_packets=True)
+    config_path.write_text(json.dumps(config)); config_bytes = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'ARRAY450 SETUP: genuinely bound future normal Main consumer required; no old binary relabel'
+    function = 'test_array450_ordered_original_controls:' + case
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::' + function, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            data = getattr(error, stream) or b''
+            raw = data if isinstance(data, bytes) else data.encode('utf-8')
+            target = tmp_path / ('array450-timeout.' + stream + '.log'); target.write_bytes(raw)
+            error.add_note(str(target) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'array450.stdout.log').write_text(result.stdout)
+    (tmp_path / 'array450.stderr.log').write_text(result.stderr)
+    (tmp_path / 'array450-process.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode,
+                                                             'timeout': 90, 'case': case}, indent=2))
+    output = result.stdout + result.stderr
+    assert result.returncode == 0 and 'FAIL!' not in output and (
+        'PASS   : edi_app::AssistantPopup::test_array450_ordered_original_controls(' + case + ')' in output
+    ), 'ARRAY450: genuine actual Main row reaches ALL strict native/input/science/Undo/currentness assertions\n' + output
+    assert config_path.read_bytes() == config_bytes and original_files == {
+        str(p.relative_to(reference)): p.read_bytes() for p in reference.rglob('*') if p.is_file() and p.name != 'array450.json'
+    }, 'ARRAY450: full predeclared script and every independently owned scientific source byte remain exact'
+    assert json.loads((reference / 'array450.json').read_text()) == {'case': case, 'calls': calls}, 'ARRAY450: independent operands cannot be repaired after bootstrap'
+    loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['sha256'] == hashlib.sha256(config_bytes).hexdigest() and loaded['native_turn_calls'] == config['native_turn_calls'], (
+        'ARRAY450: actual owned process consumed BOTH independently fixed original calls once'
+    )
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text().splitlines()]
+    starts = [row for row in requests if row.get('method') == 'turn/start']
+    assert len(starts) == 2 and not any(row.get('method') in {'turn/steer', 'account/login/start', 'account/logout'} for row in requests), (
+        'ARRAY450: distinct prior sentinel and one original array are genuine current turns, no replay/steer/auth repair'
+    )
+    replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    emitted = [json.loads(line) for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    assert len(emitted) == len(replies) == 2 and not trace.with_suffix('.native-wrong-envelope.jsonl').exists(), (
+        'ARRAY450: both original requests are actually emitted and answered once, no missing or unrelated refusal'
+    )
+    assert len({row['id'] for row in emitted}) == 2, 'ARRAY450: genuine original reverse envelopes are distinct'
+    for index, call in enumerate(calls):
+        original, response = replies[index]['original'], replies[index]['response']
+        assert original['id'] == emitted[index]['id'] == response['id'] != call['call_id'] and (
+            original['params']['callId'] == emitted[index]['params']['callId'] == call['call_id']
+            and original['params']['tool'] == emitted[index]['params']['tool'] == call['tool']
+            and original['params']['arguments'] == emitted[index]['params']['arguments'] == call['arguments']
+        ), 'ARRAY450: exact literal whole-array arguments/purpose/tool and original RPC identity survive once-only visible work'
+        array450_result('singleton' if index == 0 else case, call, response['result'])
+    receipts = [json.loads(line.split('ARRAY450_RESULT ', 1)[1]) for line in result.stdout.splitlines() if 'ARRAY450_RESULT ' in line]
+    assert len(receipts) == 1 and receipts[0]['case'] == case and receipts[0]['sameOwner'] is True, (
+        'ARRAY450: reached native input/result boundary has one original-owner receipt'
+    )
+    users = receipts[0]['users']
+    expected_texts = ['Original450 establish the independent prior Undo sentinel', 'Original ordered visible array ' + case]
+    assert len(users) == 2 and all(row['status'] == 'completed' for row in users) and [row['text'] for row in users] == expected_texts and (
+        [row['params']['clientUserMessageId'] for row in starts] == [row['id'] for row in users]
+    ), 'ARRAY450: original user identities, literal ordered objectives and genuine ACKs bond to exactly their actual wire turns'
+
+# PUBLIC original category/model roles + PUBLIC383 retirement; no private producer oracle.
+ARRAY451_CASES = ['hidden-change', 'hidden-noop', 'removed-noop', 'applied-replacement']
+
+
+def array451_calls(case):
+    assert case in ARRAY451_CASES, 'ARRAY451 SETUP: finite original model/lifetime cases only'
+    def call(identifier, values):
+        return {'tool': 'set_parameters', 'call_id': identifier, 'arguments': {
+            'purpose': 'Independent original current-member and retirement witness', 'values': values}}
+    la = 'structure.atom_sites[La].adp_iso'
+    wavelength = 'experiment.instrument.setup_wavelength'
+    hidden = 'experiment.instrument.calib_d_to_tof_linear'
+    if case == 'applied-replacement':
+        return [call('array451-original-A', [{'path': la, 'value': 0.6},
+                                            {'path': 'structure.atom_sites[Ba].adp_iso', 'value': 0.7}])]
+    values = ([{'path': wavelength, 'value': 1.496}, {'path': la, 'value': 0.5}]
+              if case == 'removed-noop' else [{'path': la, 'value': 0.6},
+                 {'path': hidden, 'value': 123.0 if case == 'hidden-noop' else 123.5}])
+    return [call('array451-sentinel', [{'path': wavelength, 'value': 1.495}]),
+            call('array451-normal', values), call('array451-visible', values)]
+
+
+def array451_result(case, index, result):
+    assert type(result) is dict and type(result.get('success')) is bool, 'ARRAY451: typed original outer success is mandatory'
+    items = result.get('contentItems')
+    assert type(items) is list and len(items) == 1 and type(items[0]) is dict and (
+        items[0].get('type') == 'inputText' and type(items[0].get('text')) is str
+    ), 'ARRAY451: exact one original typed result, no missing/unrelated/admission fallback'
+    value = json.loads(items[0]['text'])
+    assert type(value) is dict and type(value.get('status')) is str, 'ARRAY451: original result is a JSON object'
+    if case == 'applied-replacement':
+        assert result['success'] is False and value['status'] == 'applied_unconfirmed', (
+            'ARRAY451: known actual scientific application stays factual despite original authority retirement')
+        assert type(value.get('steps_completed')) is int and value['steps_completed'] == 0, (
+            'ARRAY451: actually applied but not settled first entry is NOT a settled prefix')
+        assert value.get('complete') is False and value.get('atomic') is False, (
+            'ARRAY451: old original multi-entry result is incomplete and non-atomic')
+        if 'request_retired' in value:
+            assert value['request_retired'] is True, 'ARRAY451: optional retirement authority fact is additive and typed'
+        assert type(value.get('calculation_pending')) is bool, 'ARRAY451: original pending-science fact is typed, not guessed Current'
+    elif index < 2:
+        assert result['success'] is True and value['status'] == 'edited', (
+            'ARRAY451: same exact lawful normal request MUST really succeed; setup/early refusal is never a positive')
+    else:
+        assert result['success'] is False and value['status'] in {'refused', 'unavailable'} and (
+            type(value.get('message')) is str and value['message']
+        ), 'ARRAY451: later known unmapped/removed original member refuses the WHOLE visible array before earlier input'
+    return value
+
+
+@pytest.mark.parametrize('case', ARRAY451_CASES)
+def test_array451_current_original_member_and_retirement(case, tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import ux345_default_scattering_project
+    reference = tmp_path / 'reference'; reference.mkdir()
+    fixture = ux345_default_scattering_project(reference); fixture.rename(reference / 'project')
+    experiment = reference / 'project/experiments/hrpt.edi'
+    original = experiment.read_bytes()
+    marker = b'_instrument.calib_twotheta_offset 0.6()\n'
+    assert original.count(marker) == 1 and b'_instrument.calib_d_to_tof_linear' not in original, (
+        'ARRAY451 SETUP: exact original CW experiment admits one independent extra declared free TOF scalar')
+    if case.startswith('hidden-'):
+        experiment.write_bytes(original.replace(marker, marker + b'_instrument.calib_d_to_tof_linear 123.0()\n'))
+        assert experiment.read_bytes().replace(b'_instrument.calib_d_to_tof_linear 123.0()\n', b'') == original, (
+            'ARRAY451 SETUP: removing ONLY own free unused instrument declaration reconstructs exact original experiment')
+    shutil.copytree(reference / 'project', reference / 'replacement')
+    before = {str(p.relative_to(reference)): p.read_bytes() for p in reference.rglob('*') if p.is_file()}
+    calls = array451_calls(case)
+    (reference / 'array451.json').write_text(json.dumps({'case': case, 'calls': calls}))
+    environment = popup171_owned_environment(tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text()); config.pop('report_page_reply')
+    config.update(scenario='native:script', native_turn_calls=[[call] for call in calls],
+                  native_array451_policy={'family': '451', 'case': case}, vm319_record_packets=True)
+    config_path.write_text(json.dumps(config)); config_bytes = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'ARRAY451 SETUP: future genuinely bound normal Main consumer required'
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_array451_original_member:' + case, '-o', '-,txt']
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True,
+                                text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            path = tmp_path / ('array451-timeout.' + stream + '.log'); path.write_bytes(raw)
+            error.add_note(str(path) + '\n' + raw.decode(errors='backslashreplace'))
+        raise
+    (tmp_path / 'array451.stdout.log').write_text(result.stdout)
+    (tmp_path / 'array451.stderr.log').write_text(result.stderr)
+    (tmp_path / 'array451-process.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode, 'timeout': 90}))
+    assert result.returncode == 0 and 'FAIL!' not in result.stdout + result.stderr and (
+        'PASS   : edi_app::AssistantPopup::test_array451_original_member(' + case + ')' in result.stdout
+    ), 'ARRAY451: actual normal success and genuine native original-control/replacement assertions all reach\n' + result.stdout + result.stderr
+    assert config_path.read_bytes() == config_bytes and before == {
+        str(p.relative_to(reference)): p.read_bytes() for p in reference.rglob('*') if p.is_file() and p.name != 'array451.json'
+    }, 'ARRAY451: exact own fixture bytes/science and original peer script remain unchanged'
+    loaded = json.loads(config_path.with_suffix('.peer-loaded.json').read_text())
+    assert loaded['sha256'] == hashlib.sha256(config_bytes).hexdigest() and loaded['native_turn_calls'] == [[call] for call in calls], (
+        'ARRAY451: actual original peer consumed exactly the immutable ordered scripts')
+    trace = Path(config['trace'])
+    requests = [json.loads(line) for line in trace.read_text().splitlines()]
+    starts = [row for row in requests if row.get('method') == 'turn/start']
+    assert len(starts) == len(calls) and not any(row.get('method') == 'turn/steer' for row in requests), (
+        'ARRAY451: every original request is emitted once, no extra retry/steer/repair turn')
+    emitted = [json.loads(line) for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted) == len(replies) == len(calls) and len({row['id'] for row in emitted}) == len(calls), (
+        'ARRAY451: all original complete reverse envelopes are distinct and answered exactly once')
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists(), 'ARRAY451: no wrong/late original envelope is tolerated'
+    for index, call in enumerate(calls):
+        original, response = replies[index]['original'], replies[index]['response']
+        assert original == emitted[index] and response['id'] == original['id'] != call['call_id'], (
+            'ARRAY451: response belongs to the exact independently captured original reverse envelope')
+        assert original['params']['callId'] == call['call_id'] and original['params']['tool'] == call['tool'] and (
+            original['params']['arguments'] == call['arguments'] and original['params']['namespace'] is None
+        ), 'ARRAY451: exact full literal purpose/operands/native tool survive original request authority'
+        array451_result(case, index, response['result'])
+    receipts = [json.loads(line.split('ARRAY451_RESULT ', 1)[1]) for line in result.stdout.splitlines() if 'ARRAY451_RESULT ' in line]
+    assert len(receipts) == 1 and receipts[0]['case'] == case, 'ARRAY451: one original native boundary receipt is mandatory'
+    if case == 'applied-replacement':
+        assert starts[0]['params']['clientUserMessageId'] == receipts[0]['oldUser']['id'] and receipts[0]['oldUser']['text'] == 'Original451 0' and receipts[0]['oldUser']['status'] == 'completed', ('ARRAY451: original actual user ID/ACK and objective bond to SAME old wire request before replacement')
+        assert receipts[0]['applied'] == [0.6] and receipts[0]['replacements'] == 1 and receipts[0]['bUntouched'] is True, (
+            'ARRAY451: original applied receipt and actual synchronous B replacement are facts, not prepared uncertainty')
+    else:
+        assert receipts[0]['normalSucceeded'] is True and receipts[0]['zeroVisibleInput'] is True, (
+            'ARRAY451: exact SAME normal operands succeeded before known-route visible refusal; no early-refusal laundering')
+        users = receipts[0]['users']
+        assert [row['text'] for row in users] == ['Original451 ' + str(i) for i in range(3)] and (
+            all(row['status'] == 'completed' for row in users)
+        ), 'ARRAY451: original literal ordered user messages have genuine matching ACKs'
+        assert [row['params']['clientUserMessageId'] for row in starts] == [row['id'] for row in users], (
+            'ARRAY451: every actual user ID bonds independently to corresponding original wire request')

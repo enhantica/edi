@@ -41,6 +41,46 @@ clear_prior = None
 
 
 
+# Explicit closed native-array fixture only. Original defaults and GUI416 remain independent.
+def array451_policy_fields(params):
+    marker = config.get('native_array451_policy')
+    assert type(marker) is dict and set(marker) == {'family', 'case'}, 'ARRAY451 SETUP: closed explicit native-array opt-in identity required'
+    assert type(marker['family']) is str and marker['family'] in {'450', '451'} and type(marker['case']) is str, 'ARRAY451 SETUP: only independently predeclared native-array families'
+    assert scenario == 'native:script' and 'gui415_policy' not in config and 'readonly409' not in config and 'input413' not in config, 'ARRAY451 SETUP: conflicting original opt-ins refuse, no policy echo/fallback'
+    def call(identifier, purpose, values, tool='set_parameters'):
+        return {'tool': tool, 'call_id': identifier, 'arguments': {'purpose': purpose, 'flags' if tool == 'set_free' else 'values': values}}
+    la, ba, co = ['structure.atom_sites[' + name + '].adp_iso' for name in ['La', 'Ba', 'Co']]
+    wavelength, cell = 'experiment.instrument.setup_wavelength', 'structure.cell.length_a'
+    family, case = marker['family'], marker['case']
+    if family == '450':
+        assert case in {'normal-values','singleton','values','free','all-noop-values','all-noop-free','mixed-values','invalid-last','manual-draft','stop','takeover'}, 'ARRAY451 SETUP: original finite450 scripts only'
+        first = call('array450-sentinel', 'Establish independent prior recorded Undo before ordered array', [{'path':wavelength,'value':1.495}])
+        values = [{'path':la,'value':0.6},{'path':wavelength,'value':1.49},{'path':cell,'value':3.89}]
+        if case == 'singleton': values = [{'path':la,'value':0.6}]
+        elif case == 'all-noop-values': values = [{'path':la,'value':0.5},{'path':wavelength,'value':1.495},{'path':cell,'value':3.88}]
+        elif case == 'mixed-values': values = [{'path':la,'value':0.5},{'path':ba,'value':0.7},{'path':cell,'value':3.88}]
+        elif case == 'invalid-last': values = [{'path':la,'value':0.6},{'path':'original.absent.parameter','value':4.0}]
+        elif case in {'stop','takeover'}: values = [{'path':la,'value':0.6},{'path':ba,'value':0.7},{'path':co,'value':0.8}]
+        tool = 'set_free' if case in {'free','all-noop-free'} else 'set_parameters'
+        if tool == 'set_free': values = [{'path':la,'free':case == 'all-noop-free'},{'path':ba,'free':True},{'path':co,'free':case == 'all-noop-free'}]
+        expected = [[first],[call('array450-action-'+case,'Original ordered original-control array '+case,values,tool)]]
+    else:
+        assert case in {'hidden-change','hidden-noop','removed-noop','applied-replacement'}, 'ARRAY451 SETUP: original finite451 scripts only'
+        purpose = 'Independent original current-member and retirement witness'
+        if case == 'applied-replacement': expected = [[call('array451-original-A',purpose,[{'path':la,'value':0.6},{'path':ba,'value':0.7}])]]
+        else:
+            values = ([{'path':wavelength,'value':1.496},{'path':la,'value':0.5}] if case == 'removed-noop'
+                else [{'path':la,'value':0.6},{'path':'experiment.instrument.calib_d_to_tof_linear','value':123.0 if case == 'hidden-noop' else 123.5}])
+            expected = [[call('array451-sentinel',purpose,[{'path':wavelength,'value':1.495}])],
+                        [call('array451-normal',purpose,values)],[call('array451-visible',purpose,values)]]
+    assert json.dumps(config.get('native_turn_calls'),sort_keys=True,allow_nan=False) == json.dumps(expected,sort_keys=True,allow_nan=False), 'ARRAY451 SETUP: exact independent complete native scripts, no arbitrary tool/operand authority'
+    assert (params.get('model') or 'gpt-6.1-sol') == 'gpt-6.1-sol', 'ARRAY451 SETUP: only independent originally offered primary model'
+    supplied = params.get('config')
+    if supplied is None: supplied = {}
+    assert type(supplied) is dict and supplied.get('model_reasoning_effort','medium') == 'medium', 'ARRAY451 SETUP: independent originally offered medium effort, never arbitrary choice echo'
+    return {'approvalPolicy':'never','approvalsReviewer':'user','model':'gpt-6.1-sol',
+            'reasoningEffort':'medium','sandbox':{'type':'readOnly','networkAccess':False}}
+
 # GUI416 opt-in only; native default peer behavior remains exact after reversal.
 gui416_state = {'cursor': -1, 'choice': ('gpt-6.1-sol', None), 'threads': 0}
 def gui416_choose(params, method):
@@ -123,8 +163,10 @@ def complete():
     # The ordinary peer/default scenarios and all event/envelope paths stay unchanged.
     if 'gui404_table_reply' in config:
         assert config['gui404_table_reply'] is True and scenario == 'native:script' and (
-            config.get('native_turn_calls') == [[]] and config.get('ux289_hold_input') is True
-            and turn_number == 1 and config.get('report_page_reply') is not True
+            ((config.get('native_turn_calls') == [[]] and turn_number == 1)
+             or (config.get('readonly409') is True and config.get('native_turn_calls') == [[], []]
+                 and turn_number in (1, 2))) and config.get('ux289_hold_input') is True
+            and config.get('report_page_reply') is not True
         ), 'GUI404 SETUP: exact legal original no-native-operation held-table fixture only'
         item['text'] = 'Original fileauth reply 1\n\n| Item | Value |\n| --- | --- |\n| Alpha | 111 |\n| Bravo | 222 |\n| Charlie | 333 |\n| Delta | 444 |'
     notify('item/started', {'threadId': thread_id, 'turnId': turn_id, 'item': item})
@@ -1893,10 +1935,21 @@ for line in sys.stdin:
             value['thread']['id'] = thread_id
             value.update(approvalPolicy='never', approvalsReviewer='user', model=model416,
                          reasoningEffort=effort416, sandbox={'type':'readOnly','networkAccess':False})
+        if config.get('native_array451_policy') is not None:
+            value.update(array451_policy_fields(params))
         if config.get('readonly409') is True:
-            assert scenario in {'complete', 'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, (
+            assert scenario in {'complete', 'fileauth', 'native:script', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, (
                 'INPUT409 SETUP: explicit finite preserved fileauth/effective-policy fixture only'
             )
+            if scenario == 'native:script':
+                assert 'gui415_policy' not in config and 'native_array451_policy' not in config, (
+                    'IMPORT464 SETUP: strict current default script cannot combine conflicting policy opt-ins'
+                )
+                # Actual independent trace chronology; Clear must not reuse an old thread identity.
+                count = sum(json.loads(line).get('method') == 'thread/start'
+                            for line in trace.read_text(encoding='utf-8').splitlines())
+                thread_id = '019a0290-0000-7000-8000-' + f'{count:012d}'
+                value['thread']['id'] = thread_id
             # Independent original catalogue constants, not an echo of subject policy/choices.
             value.update(approvalPolicy='never', approvalsReviewer='user', model='gpt-6.1-sol',
                          reasoningEffort='medium', sandbox={'type': 'readOnly', 'networkAccess': False})

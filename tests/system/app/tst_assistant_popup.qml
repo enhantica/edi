@@ -6112,6 +6112,8 @@ TestCase {
     }
     function test_gui393_first_delivery_eye_clear() {
         const before = gui392_setup(); gui392_signIn();
+        compare(assistant.contextApprovalBlocked, false,
+            "CONSENT464 SETUP: original healthy native controller has no retained outcome fence");
         const account = JSON.stringify(gui392_json(Probe.rows(assistant.models)));
         const token = assistant.beginFileSelection();
         verify(token.length > 0 && assistant.addSelectedFiles(token,
@@ -6233,6 +6235,62 @@ TestCase {
             compare(JSON.stringify(gui392_json(Probe.rows(assistant.models))), account,
                 "GUI393: actual Clear preserves original model catalogue");
             compare(JSON.stringify(gui392_usageData()), usage, "GUI393: actual Clear preserves account-owned usage");
+            gui392_unchanged(before);
+            compare(assistant.contextApprovalBlocked, false,
+                "CONSENT464: genuine Clear returns healthy original approval state without forging retention");
+            const newToken = assistant.beginFileSelection();
+            verify(newToken.length > 0 && assistant.addSelectedFiles(newToken,
+                [Probe.referenceUrl("project/structures/lbco.edi")]),
+                "CONSENT464 SETUP: after Clear a genuine NEW selection admits the current attachment");
+            tryCompare(assistant.selectedFiles, "count", 1, 2000,
+                "CONSENT464 SETUP: actual reselected source exists before new Send");
+            const newRows = gui392_json(Probe.rows(assistant.selectedFiles));
+            const newCanonical = newRows.map(file => ({id:file.id,name:file.name,bytes:file.bytes,
+                textReadable:file.textReadable,format:file.format}));
+            verify(newRows[0].id.length > 0 && newRows[0].pending && assistant.contextConsentRequired,
+                "CONSENT464 SETUP: changed current scope really needs approval after genuine Clear");
+            const newText = "GUI464 original draft after genuine Clear";
+            Ui.click(this, Probe, window, editor.objectName); visible185_type(newText);
+            const newRevision = composer.textRevision;
+            Ui.click(this, Probe, window, "assistant.send");
+            tryCompare(dialog, "opened", true, 2000,
+                "CONSENT464: ONE post-Clear Send opens SAME original consent dialog");
+            gui398_nativeDialog(dialog);
+            compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(assistant.contextPreview)),
+                "CONSENT464: actual original opening discloses exact current post-Clear context");
+            const newApprove = dialog.standardButton(Dialog.Ok), newApproveLife = lifetime313(newApprove);
+            let newApprovalClicks = 0;
+            function newlyApproved() { current(); ++newApprovalClicks; }
+            newApprove.clicked.connect(newlyApproved);
+            try {
+                gui392_button(newApprove, dialog);
+                // Exactly one Approve; NO Send after the real approval.
+                tryVerify(() => assistant.canCancel && Probe.rows(assistant.messages).filter(row =>
+                    row.kind === "user" && row.text === newText && row.status === "pending").length === 1, 2000,
+                    "CONSENT464: ONE genuine post-Clear approval automatically admits exact pending draft once");
+                current();
+                compare(editor.text, newText, "CONSENT464: held original ACK has not consumed the new draft");
+                compare(composer.textRevision, newRevision, "CONSENT464: exact new draft revision survives admission");
+                compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), JSON.stringify(newRows),
+                    "CONSENT464: exact current attachment authority/pending state survive before ACK");
+                compare(sendClicks, 3, "CONSENT464: exactly ONE additional Send, no postapproval workaround");
+                compare(newApprovalClicks, 1, "CONSENT464: exactly ONE original new native approval");
+                compare(opens, 3, "CONSENT464: exactly ONE additional original opening");
+                const newUser = Probe.rows(assistant.messages).filter(row => row.kind === "user" && row.text === newText);
+                compare(newUser.length, 1, "CONSENT464: new objective has exactly one actual original user row");
+                verify(newUser[0].id.length > 0 && newUser[0].id !== originalUserId,
+                    "CONSENT464: Clear/new input has actual fresh user identity, never resurrected old row");
+                assistant.refreshUsage();
+                tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row =>
+                    row.id === newUser[0].id && row.kind === "user" && row.status === "completed")
+                    && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
+                        && row.status === "completed" && row.text === markdown), 2000,
+                    "CONSENT464: original matching new ACK and completed reply settle without another Send");
+                ux358_acknowledgedPresentation(composer, newCanonical);
+                compare(editor.text, "", "CONSENT464: only the matching new ACK consumes exact post-Clear draft");
+                console.log("GUI464_ONCE", JSON.stringify({user:newUser[0].id,text:newText,files:newCanonical,
+                    revision:newRevision,sendClicks:sendClicks,approvalClicks:newApprovalClicks,opens:opens}));
+            } finally { disconnect313(newApproveLife, newApprove, "clicked", newlyApproved); }
             gui392_unchanged(before);
             capture("gui393-first-delivery-eye-clear");
         } finally {
@@ -7536,5 +7594,538 @@ TestCase {
         verify(!bOwner.fit.running,"PREFS419: source-dependent Send cannot start a scientific fit");
         console.log("PREFS419_RESULT",JSON.stringify({tag:data.tag,callbacks:callbackCount,replacements:replacements,
             originalReceiver:oldIdentity,originalOwner:identity313(before.life),newOwner:identity313(bOwnerLife),returned:returned,before:bState,after:prefs419_state(bReceiver),draft:bDraft}));
+    }
+    // PUBLIC381/381v2: original scalar widgets, current physical items, one RPC.
+    function array450_physical(project) {
+        const all = Probe.objectsWithProperty(project, "refinable").filter(parameter =>
+            typeof parameter.path === "string" && typeof parameter.value === "number"
+            && typeof parameter.fittable === "boolean");
+        verify(all.length > 3 && new Set(all.map(parameter => parameter.path)).size === all.length,
+            "ARRAY450 SETUP: actual physical ParameterItems, not only the refinable Analysis projection, are unique");
+        return all;
+    }
+    function array450_values(parameters) {
+        return JSON.stringify(parameters.map(parameter => [parameter.path, parameter.value, parameter.free,
+            parameter.hasUncertainty, parameter.uncertainty]).sort((a,b) => a[0].localeCompare(b[0])));
+    }
+    function array450_parameter(parameters, path) {
+        const found = parameters.filter(parameter => parameter.path === path);
+        compare(found.length, 1, "ARRAY450: independent literal native path resolves one current physical object");
+        return found[0];
+    }
+    function array450_activity(callId, previousIds) {
+        const found = Probe.rows(assistant.messages).filter(row => !previousIds.has(row.id)
+            && row.kind === "activity" && row.payload && row.payload.id === callId);
+        verify(found.length <= 1, "ARRAY450: one genuine new activity belongs to the exact original call");
+        if (!found.length || !["completed", "failed"].includes(found[0].status)) return null;
+        verify(typeof found[0].id === "string" && found[0].id.length > 0,
+            "ARRAY450: settled activity has an actual public identity");
+        return found[0];
+    }
+    function test_array450_ordered_original_controls_data() {
+        return ["normal-values", "singleton", "values", "free", "all-noop-values", "all-noop-free",
+            "mixed-values", "invalid-last", "manual-draft", "stop", "takeover"].map(tag => ({tag:tag}));
+    }
+    function test_array450_ordered_original_controls(data) {
+        const specification = JSON.parse(Probe.readReferenceFile("array450.json"));
+        compare(specification.case, data.tag, "ARRAY450 SETUP: exact independent request/configuration pair is predeclared");
+        verify(Session.openProject(Probe.referenceUrl("project")), "ARRAY450 SETUP: owned lawful original project opens normally");
+        const project = Session.project, ownerLife = lifetime313(project);
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
+            "ARRAY450 SETUP: real default-table calculation is current before history setup");
+        let parameters = array450_physical(project);
+        let la = array450_parameter(parameters,"structure.atom_sites[La].adp_iso");
+        let ba = array450_parameter(parameters,"structure.atom_sites[Ba].adp_iso");
+        let co = array450_parameter(parameters,"structure.atom_sites[Co].adp_iso");
+        let wavelength = array450_parameter(parameters,"experiment.instrument.setup_wavelength");
+        let cell = array450_parameter(parameters,"structure.cell.length_a");
+        compare([la.value,ba.value,co.value,wavelength.value,cell.value],[0.5,0.5,0.5,1.494,3.88],
+            "ARRAY450 SETUP: independently committed literal physical operands are present");
+        compare([la.free,ba.free,co.free],[true,true,true], "ARRAY450 SETUP: original present-zero-SU ADP flags start free");
+        const initialValues = array450_values(parameters), inputs = visible185_inputs(project);
+        const declarations = relation245_declarations(project), shape = relation246_shape(project);
+        toggle(); gui392_signIn();
+        verify(!assistant.contextConsentRequired && assistant.connected, "ARRAY450 SETUP: actual managed current disclosure is admitted");
+        compare(assistant.showActions,false,"ARRAY450 SETUP: independent prior edit uses genuine default normal mode");
+        const account = assistant.connectionLabel, catalog = JSON.stringify(Probe.rows(assistant.models));
+        // A separate real normal native edit establishes a recorded sentinel.
+        // It is setup, never credited as visible array input or scientific proof.
+        const sentinelIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        assistant.send("Original450 establish the independent prior Undo sentinel");
+        tryVerify(() => array450_activity("array450-sentinel",sentinelIds) !== null && !assistant.canCancel,10000,
+            "ARRAY450 SETUP: genuine prior native RPC completes before the array is admitted");
+        compare(array450_parameter(array450_physical(project),"experiment.instrument.setup_wavelength").value,1.495,
+            "ARRAY450 SETUP: real ordinary native sentinel actually changed the CURRENT logical wavelength");
+        verify(project.canUndo,"ARRAY450 SETUP: prior genuine edit owns actual recorded Undo");
+        tryVerify(() => alive313(ownerLife) && Session.project === project && !project.calculating && Probe.computedCurrent(project.currentExperiment),10000,
+            "ARRAY450 SETUP: actual prior science settles, no fabricated currentness");
+        // The prior ordinary edit/calculation may refresh wrapper children.
+        // Main-call identities are captured only now, from actual current objects.
+        parameters=array450_physical(project);
+        la=array450_parameter(parameters,"structure.atom_sites[La].adp_iso");
+        ba=array450_parameter(parameters,"structure.atom_sites[Ba].adp_iso");
+        co=array450_parameter(parameters,"structure.atom_sites[Co].adp_iso");
+        wavelength=array450_parameter(parameters,"experiment.instrument.setup_wavelength");
+        cell=array450_parameter(parameters,"structure.cell.length_a");
+        const before = array450_values(parameters);
+        const originals = new Map(parameters.map(parameter => [parameter.path,
+            {value:parameter.value,free:parameter.free,hasUncertainty:parameter.hasUncertainty,uncertainty:parameter.uncertainty}]));
+        const call = specification.calls[1], entries = call.arguments.values || call.arguments.flags;
+        const requestedPaths=new Set(entries.map(entry => entry.path));
+        const tracked=parameters.filter(parameter => requestedPaths.has(parameter.path));
+        const lives=tracked.map(parameter => lifetime313(parameter));
+        const originalPhysicalPaths=JSON.stringify(parameters.map(parameter => parameter.path).sort());
+        if (data.tag !== "normal-values") {
+            Ui.click(this,Probe,window,"assistant.showActions");
+            verify(assistant.showActions,"ARRAY450: genuine original mode checkbox enables visible controls");
+        }
+        closeAssistant388();
+        let draftField = null, draftLife = null, draftFocus = null, draftSelection = null;
+        if (data.tag === "manual-draft") {
+            visible185_page("structure"); Ui.click(this,Probe,window,"sideBar.tab.basic");
+            Ui.expandGroup(this,Probe,window,"group.cell");
+            draftField = Ui.control(Probe,window,"cell.length_a");
+            verify(draftField !== null && draftField.item === cell && Ui.exposed(draftField),
+                "ARRAY450 SETUP: original owned manual cell field is actually exposed");
+            draftLife=lifetime313(draftField);Ui.click(this,Probe,window,draftField.objectName);
+            visible185_type("3.901");
+            compare(draftField.text,"3.901","ARRAY450 SETUP: genuine new numeric draft remains uncommitted");
+            compare(draftField.assistantManualDraft,true,"ARRAY450 SETUP: original public field reports genuinely UNFINISHED user input");
+            compare(array450_values(parameters),before,"ARRAY450 SETUP: typing has not changed science");
+            draftFocus=window.activeFocusItem;draftSelection=[draftField.selectionStart,draftField.selectionEnd];
+        }
+        const slots=[], input=[], writes=[], navigation=[];
+        const controls=new Set();let starts=0,fitStarts=0;
+        function current() {
+            verify(alive313(ownerLife) && Session.project === project && lives.every(alive313),
+                "ARRAY450: every action/observation still belongs to the original live owner/items");
+            const now=array450_physical(project);
+            verify(JSON.stringify(now.map(parameter => parameter.path).sort()) === originalPhysicalPaths
+                && tracked.every(parameter => now.includes(parameter)),
+                "ARRAY450: the original requested physical members cannot be replaced behind a logical path/index");
+        }
+        function bind(object,signal,callback) {
+            const life=lifetime313(object);object[signal].connect(callback);slots.push({object:object,life:life,signal:signal,callback:callback});
+        }
+        function controlParameter(control) {
+            if (typeof control.item !== "undefined" && parameters.includes(control.item)) return control.item;
+            if (!control.objectName.startsWith("parameters.free.")) return null;
+            for (let parent=control.parent;parent;parent=parent.parent)
+                if (parameters.includes(parent.parameter)) return parent.parameter;
+            return null;
+        }
+        function scan() {
+            current();
+            const candidates=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName");
+            for (const control of candidates) {
+                if (controls.has(control)) continue;
+                const name=control.objectName;
+                const parameter=controlParameter(control);
+                const value=parameter !== null && (name.startsWith("parameters.value.") || name.startsWith("instrument.") || name.startsWith("cell."));
+                const free=parameter !== null && name.startsWith("parameters.free.");
+                const filter=name === "parameters.nameFilter";
+                const reset=name === "parameters.resetFilters";
+                if (!value && !free && !filter && !reset) continue;
+                controls.add(control);
+                const life=lifetime313(control), identity=identity313(life);
+                function received(kind) {
+                    current();verify(alive313(life) && controlParameter(control) === parameter,
+                        "ARRAY450: original input cannot move to a reused delegate/index/new parameter");
+                    verify(control.visible && control.enabled && Ui.exposed(control),
+                        "ARRAY450: receipt is from a genuinely exposed native control, not a hidden batch fallback");
+                    const receipt={kind:kind,path:parameter ? parameter.path : null,name:name,identity:identity,
+                        rect:rect(control),point:Ui.clickPoint(control),text:value || filter ? control.text : null,
+                        checked:free ? control.checked : null};
+                    if (filter || reset) navigation.push(receipt);else input.push(receipt);
+                }
+                if (reset) bind(control,"clicked",() => received("reset"));
+                else if (free) bind(control,"toggled",() => received("free"));
+                else bind(control,"textEdited",() => received(value ? "value" : "filter"));
+            }
+        }
+        function stopObservers() {
+            while (slots.length) {
+                const slot=slots.pop();disconnect313(slot.life,slot.object,slot.signal,slot.callback);
+            }
+        }
+        for (const parameter of [la,ba,co,wavelength,cell]) {
+            const parameterLife=lifetime313(parameter);
+            bind(parameter,"valueChanged",() => {current();verify(alive313(parameterLife),"ARRAY450: original value receipt is still live before dereference");writes.push({path:parameter.path,field:"value",value:parameter.value});});
+            bind(parameter,"freeChanged",() => {current();verify(alive313(parameterLife),"ARRAY450: original flag receipt is still live before dereference");writes.push({path:parameter.path,field:"free",value:parameter.free});});
+        }
+        for (const name of ["appBar.tab.structure","appBar.tab.experiment","appBar.tab.analysis"]) {
+            const control=item(name);bind(control,"clicked",() => {current();navigation.push({kind:"page-click",name:name});});
+        }
+        bind(window.appBarCentralTabs,"currentIndexChanged",() => {navigation.push({kind:"page-change",page:window.appBarCentralTabs.currentIndex});scan();});
+        bind(assistant,"actionPointerShown",scan);bind(assistant,"actionPointerMoved",scan);bind(assistant,"actionPointerPressed",scan);
+        bind(assistant,"showingActionsChanged",() => {if(assistant.showingActions)++starts;});
+        bind(project.fit,"runningChanged",() => {if(project.fit.running)++fitStarts;});
+        scan();
+        const previous=new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const beforePage=window.appBarCentralTabs.currentIndex;
+        const requestedPreference=Preferences.assistantShown;
+        const budget=visible237_observationMs(entries.map(entry => ({path:entry.path,
+            text:Object.prototype.hasOwnProperty.call(entry,"value") ? String(entry.value) : ""})));
+        let manualToggles=0, stopped=false;
+        try {
+            // Existing direct Send entrance intentionally preserves an active manual draft.
+            assistant.send("Original ordered visible array " + data.tag);
+            if (["stop","takeover"].includes(data.tag)) {
+                let second=null;
+                tryVerify(() => {
+                    const found=Ui.itemsWithProperty(Ui.page(window),"item").filter(control => control.item === ba
+                        && control.objectName.startsWith("parameters.value.") && Ui.exposed(control));
+                    second=found.length === 1 ? found[0] : null;
+                    return assistant.showingActions && la.value === 0.6 && second !== null
+                        && second.activeFocus && second.text !== second.editText
+                        && input.some(row => row.path === ba.path && row.kind === "value");
+                },budget,"ARRAY450 SETUP: first real edit is applied and second original entry is genuinely typing before intervention");
+                compare([ba.value,co.value],[0.5,0.5],"ARRAY450 SETUP: later native scientific writes have NOT occurred");
+                if (data.tag === "stop") {
+                    const stop=item("assistant.stopVisibleAction");
+                    verify(stop.visible && stop.enabled && Ui.exposed(stop),"ARRAY450: original appbar Stop is genuinely actionable");
+                    mouseClick(stop);stopped=true;
+                } else {
+                    const manual=visible185_free(ba),life=lifetime313(manual);
+                    function toggled(){++manualToggles;}
+                    manual.toggled.connect(toggled);
+                    try {Ui.click(this,Probe,window,manual.objectName);}
+                    finally {disconnect313(life,manual,"toggled",toggled);}
+                    compare(manualToggles,1,"ARRAY450: exactly one genuine user checkbox toggle causes takeover");
+                    compare(ba.free,false,"ARRAY450: the original manual receiver actually changes its own flag");
+                }
+            }
+            tryVerify(() => array450_activity(call.call_id,previous) !== null && !assistant.canCancel && !assistant.showingActions,
+                budget,"ARRAY450: exact original call/whole turn settles after real input, without retry or missing receipt");
+            current();scan();
+            const row=array450_activity(call.call_id,previous);
+            compare(row.payload.tool,call.tool,"ARRAY450: retained result belongs to original tool");
+            const initialRefusal=["invalid-last","manual-draft"].includes(data.tag);
+            if (!initialRefusal) verify(typeof row.payload.nativeOutcome === "object" && row.payload.nativeOutcome !== null,
+                "ARRAY450: genuine supported result is admitted native work, never setup refusal as positive");
+            compare(fitStarts,0,"ARRAY450: parameter/free arrays never invent a fit worker");
+            compare(visible185_inputs(project),inputs,"ARRAY450: all measured coordinates/intensities/SUs/weights/exclusions/links remain exact");
+            compare(relation245_declarations(project),declarations,"ARRAY450: aliases/constraints remain exact");
+            compare(relation246_shape(project),shape,"ARRAY450: physical sites/composition/fractional operands remain exact");
+            compare(assistant.connectionLabel,account,"ARRAY450: original managed account remains unchanged");
+            compare(JSON.stringify(Probe.rows(assistant.models)),catalog,"ARRAY450: catalog is not replaced to repair native work");
+            verify(assistant.connected,"ARRAY450: actual managed transport remains healthy after the original call");
+            const finalInput=input.slice(),finalWrites=writes.slice(),finalNavigation=navigation.slice();
+            stopObservers();
+            const noOp=data.tag.startsWith("all-noop-");
+            const changed=data.tag === "normal-values" || data.tag === "values" ? [la,wavelength,cell]
+                : data.tag === "free" ? [la,co] : data.tag === "mixed-values" ? [ba]
+                : ["singleton","stop","takeover"].includes(data.tag) ? [la] : [];
+            if (initialRefusal || noOp) {
+                compare(array450_values(array450_physical(project)),before,"ARRAY450: initial refusal/all-noop preserves every actual physical value/free/SU");
+                compare(finalInput.length,0,"ARRAY450: refusal/noop happens before ANY scientific key/toggle input");
+                compare(finalWrites.length,0,"ARRAY450: refusal/noop creates no native scientific write");
+                compare(finalNavigation.length,0,"ARRAY450: refusal/noop precedes navigation/filter input");
+                compare(window.appBarCentralTabs.currentIndex,beforePage,"ARRAY450: actual original page is unchanged");
+            } else {
+                for (const parameter of changed) {
+                    const entry=entries.find(value => value.path === parameter.path);
+                    if (call.tool === "set_free") compare(parameter.free,entry.free,"ARRAY450: literal requested flag is actually adopted");
+                    else compare(parameter.value,entry.value,"ARRAY450: literal requested physical value is actually adopted");
+                    const field=call.tool === "set_free" ? "free" : "value";
+                    compare(JSON.stringify(finalWrites.filter(receipt => receipt.path === parameter.path && receipt.field === field).map(receipt => receipt.value)),
+                        JSON.stringify([entry[field]]),"ARRAY450: one actual changed member publishes one literal scientific edit, never intermediate numeric drafts");
+                    if (data.tag !== "normal-values") verify(finalInput.some(receipt => receipt.path === parameter.path
+                        && receipt.kind === (call.tool === "set_free" ? "free" : "value")
+                        && (call.tool === "set_free" ? receipt.checked === entry.free : typeof receipt.text === "string" && receipt.text.trim().length > 0 && Number(receipt.text) === entry.value)),
+                        "ARRAY450: every changed entry has its OWN final native typing/toggle receipt on the exact current member");
+                }
+                if (data.tag !== "normal-values") verify(starts > 0,"ARRAY450: changed visible array genuinely entered original helper presentation");
+                else compare([starts,finalInput.length,finalNavigation.length],[0,0,0],
+                    "ARRAY450: unchanged normal mode remains truly programmatic/atomic without decorative widget input");
+                const noopPaths=entries.filter(entry => {
+                    const old=originals.get(entry.path);
+                    return old && (call.tool === "set_free" ? old.free === entry.free : old.value === entry.value);
+                }).map(entry => entry.path);
+                verify(finalInput.every(receipt => !noopPaths.includes(receipt.path)) && finalWrites.every(receipt => !noopPaths.includes(receipt.path)),
+                    "ARRAY450: confirmed noop entries create neither original native input nor a scientific write");
+                const allowed=new Set(changed.map(parameter => parameter.path));
+                if (allowed.has(cell.path)) for(const suffix of ["b","c"]) {
+                    const follower=array450_parameter(parameters,"structure.cell.length_"+suffix);
+                    compare(follower.value,cell.value,"ARRAY450: original cubic cell equality remains scientifically valid");allowed.add(follower.path);
+                }
+                if(data.tag === "takeover")allowed.add(ba.path);
+                for(const parameter of array450_physical(project))if(!allowed.has(parameter.path)) {
+                    const original=originals.get(parameter.path);
+                    compare(JSON.stringify([parameter.value,parameter.free,parameter.hasUncertainty,parameter.uncertainty]),
+                        JSON.stringify([original.value,original.free,original.hasUncertainty,original.uncertainty]),
+                        "ARRAY450: every unrelated physical value/free/PRESENT-SU remains exact");
+                }
+                if(data.tag === "mixed-values")verify(finalInput.every(receipt => receipt.path === ba.path),
+                    "ARRAY450: settled noop entries never borrow input/Undo from the one actual changed member");
+                if(["stop","takeover"].includes(data.tag)) {
+                    compare([ba.value,co.value],[0.5,0.5],"ARRAY450: retiring original input cannot write B or continue to C");
+                    compare(Preferences.assistantShown,requestedPreference,"ARRAY450: Stop/takeover preserves the stored sidebar request");
+                    if(data.tag === "stop")verify(stopped,"ARRAY450: incomplete prefix is caused by actual original Stop");
+                }
+            }
+            if(draftField !== null) {
+                verify(alive313(draftLife),"ARRAY450: original manual draft field survives before inspection");
+                compare(draftField.text,"3.901","ARRAY450: refused request preserves exact newer manual spelling");
+                compare(draftField.assistantManualDraft,true,"ARRAY450: refused native request cannot finish/authorize the user's original draft");
+                compare(window.activeFocusItem,draftFocus,"ARRAY450: admission never blurs original manual draft");
+                compare([draftField.selectionStart,draftField.selectionEnd],draftSelection,"ARRAY450: original manual selection survives");
+            }
+            const changedPaths=changed.map(parameter => parameter.path);
+            const finalValues=array450_values(array450_physical(project));
+            const users=Probe.rows(assistant.messages).filter(value => value.kind === "user").map(value => ({id:value.id,text:value.text,status:value.status}));
+            console.log("ARRAY450_RESULT",JSON.stringify({case:data.tag,input:finalInput,writes:finalWrites,navigation:finalNavigation,
+                starts:starts,fitStarts:fitStarts,values:JSON.parse(finalValues),users:users,
+                calculationAtPublication:project.calculating,nativeOutcome:row.payload.nativeOutcome || null,
+                sameOwner:Session.project === project,manualToggles:manualToggles}));
+            if(data.tag === "takeover") {
+                verify(window.assistantManualTakeover,"ARRAY450: original native manual-input policy actually retains control for the user");
+                return; // User-toggle history shape is not promised; do not invent a manual Undo.
+            }
+            if(draftField !== null) {
+                keyClick(Qt.Key_Escape);
+                compare(cell.value,3.88,"ARRAY450: genuine Escape cancels only uncommitted manual draft");
+                compare(draftField.assistantManualDraft,false,"ARRAY450: original cancellation is FINISHED before the NEXT ordinary Undo input");
+            }
+            const undoCount=data.tag === "normal-values" ? 1 : changed.length;
+            for(let index=0;index<undoCount;++index) {
+                Ui.click(this,Probe,window,"appBar.button.undo");
+                tryVerify(() => alive313(ownerLife) && Session.project === project && !project.calculating && Probe.computedCurrent(project.currentExperiment),10000,
+                    "ARRAY450: each genuine ordinary Undo settles its actual native calculation");
+                if(data.tag !== "normal-values") {
+                    const path=changedPaths[changedPaths.length-1-index];
+                    const restored=array450_parameter(array450_physical(project),path),original=originals.get(path);
+                    compare(JSON.stringify([restored.value,restored.free,restored.hasUncertainty,restored.uncertainty]),
+                        JSON.stringify([original.value,original.free,original.hasUncertainty,original.uncertainty]),
+                        "ARRAY450: ordinary Undo restores exactly the most recent changed scalar, never a noop");
+                }
+            }
+            compare(array450_values(array450_physical(project)),before,"ARRAY450: normal single Undo or per-control visible Undo restores ALL original physical operands");
+            Ui.click(this,Probe,window,"appBar.button.undo");
+            tryVerify(() => alive313(ownerLife) && Session.project === project && !project.calculating && Probe.computedCurrent(project.currentExperiment),10000,
+                "ARRAY450: NEXT prior sentinel Undo genuinely settles");
+            compare(array450_values(array450_physical(project)),initialValues,"ARRAY450: NEXT real Undo removes prior wavelength sentinel, proving no phantom noop/refusal history");
+            compare(visible185_inputs(project),inputs,"ARRAY450: ordinary Undo preserves every supplied measured triple/SU");
+            compare(relation245_declarations(project),declarations,"ARRAY450: Undo preserves original declarations");
+        } finally {
+            stopObservers();
+            if(assistant.canCancel)assistant.cancel();
+        }
+    }
+    // PUBLIC original category/model ownership, no recursive QObject discovery as membership proof.
+    function array451_member(model,path) {
+        const found=Probe.rows(model).filter(row => row.parameter && row.parameter.path === path);
+        compare(found.length,1,"ARRAY451: exact CURRENT original model role owns one independent literal path");
+        return found[0];
+    }
+    function array451_science(project) {
+        const values=Probe.rows(project.parameters).map(row => [row.parameter.path,row.parameter.value,row.parameter.free,
+            row.parameter.hasUncertainty,row.parameter.uncertainty]);
+        verify(new Set(values.map(row => row[0])).size === values.length,"ARRAY451: original live parameter model paths are unique");
+        return {values:values,inputs:visible185_inputs(project),relations:relation245_declarations(project),
+            shape:relation246_shape(project),metadata:import265_owner(project),undo:project.canUndo,modified:project.modified};
+    }
+    function array451_activity(receiver,id,previous) {
+        const found=Probe.rows(receiver.messages).filter(row => !previous.has(row.id) && row.kind === "activity"
+            && row.payload && row.payload.id === id && ["completed","failed"].includes(row.status));
+        verify(found.length <= 1,"ARRAY451: at most one completed original call row, no duplicate publication");
+        return found.length ? found[0] : null;
+    }
+    function test_array451_original_member_data() {
+        return ["hidden-change","hidden-noop","removed-noop","applied-replacement"].map(tag => ({tag:tag}));
+    }
+    function test_array451_original_member(data) {
+        const spec=JSON.parse(Probe.readReferenceFile("array451.json"));
+        compare(spec.case,data.tag,"ARRAY451 SETUP: original literal fixture and request inventory match");
+        verify(Session.openProject(Probe.referenceUrl("project")),"ARRAY451 SETUP: normal public project reader admits owned lawful fixture");
+        const project=Session.project,ownerLife=lifetime313(project),original=Session.assistant,receiverLife=lifetime313(original);
+        tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment),10000,
+            "ARRAY451 SETUP: actual independent fixture calculation is Current before request admission");
+        const initial=array451_science(project), la=array451_member(project.parameters,"structure.atom_sites[La].adp_iso").parameter;
+        compare(la.value,0.5,"ARRAY451 SETUP: literal original La displacement value is independent of native response");
+        const laPath=la.path,laLife=lifetime313(la),model=project.parameters,modelLife=lifetime313(model);
+        toggle();gui392_signIn();
+        verify(original.connected && !original.contextConsentRequired && !original.canCancel,
+            "ARRAY451 SETUP: actual current account/disclosure and normal tool route are healthy, not setup-refusal positives");
+        compare(original.showActions,false,"ARRAY451 SETUP: same lawful positive begins in ORIGINAL normal atomic mode");
+        const account=original.connectionLabel,catalog=JSON.stringify(Probe.rows(original.models));
+        const slots=[],events=[],navigation=[],writes=[];const controls=new Set();let fitStarts=0;
+        function bind(object,signal,callback){const life=lifetime313(object);object[signal].connect(callback);slots.push({object:object,signal:signal,callback:callback,life:life});}
+        function stop(){while(slots.length){const slot=slots.pop();disconnect313(slot.life,slot.object,slot.signal,slot.callback);}}
+        function current(){verify(alive313(ownerLife) && Session.project === project && alive313(receiverLife) && Session.assistant === original,
+            "ARRAY451: original scientific/request owner remains live before owned effects");}
+        function scan(){
+            current();
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")){
+                if(controls.has(control))continue;
+                const name=control.objectName;
+                const parameter=typeof control.item !== "undefined" ? control.item : null;
+                const numeric=parameter !== null && (name.startsWith("parameters.value.") || name.startsWith("instrument.") || name.startsWith("cell."));
+                const isFree=name.startsWith("parameters.free.");
+                const filter=name === "parameters.nameFilter",reset=name === "parameters.resetFilters";
+                if(!numeric && !isFree && !filter && !reset)continue;
+                controls.add(control);const life=lifetime313(control);
+                function received(kind){
+                    current();verify(alive313(life),"ARRAY451: receipt owns an original surviving receiver");
+                    verify(control.visible && control.enabled && Ui.exposed(control),"ARRAY451: scientific input is genuinely exposed, not a hidden native shortcut");
+                    const receipt={kind:kind,name:name,path:parameter ? parameter.path : null,identity:identity313(life),rect:rect(control),
+                        point:Ui.clickPoint(control),text:numeric || filter ? control.text : null};
+                    if(filter || reset)navigation.push(receipt);else events.push(receipt);
+                }
+                bind(control,reset ? "clicked" : isFree ? "toggled" : "textEdited",() => received(reset ? "reset" : isFree ? "free" : "text"));
+            }
+        }
+        function watchScience(){for(const row of Probe.rows(project.parameters)){
+            const parameter=row.parameter,life=lifetime313(parameter),path=parameter.path;
+            bind(parameter,"valueChanged",() => {verify(alive313(life),"ARRAY451: original physical write receipt is live");writes.push({path:path,value:parameter.value});});
+        }}
+        function send(index){
+            current();const call=spec.calls[index],before=new Set(Probe.rows(original.messages).map(row => row.id));
+            original.send("Original451 "+index);
+            tryVerify(() => array451_activity(original,call.call_id,before) !== null && !original.canCancel && !original.showingActions,
+                10000,"ARRAY451: exact original native RPC settles once, no missing/early-refusal positive");
+            return array451_activity(original,call.call_id,before);
+        }
+        function settled(){tryVerify(() => alive313(ownerLife) && Session.project === project && !project.calculating
+            && Probe.computedCurrent(project.currentExperiment),10000,"ARRAY451: genuine native calculation/ordinary Undo actually settles");}
+        function undo(){Ui.click(this,Probe,window,"appBar.button.undo");settled();}
+        try {
+            if(data.tag === "applied-replacement") {
+                // This is the original public ParameterItem notification of an ACTUAL native write.
+                // No signal is invoked by the test; Session.openProject is the genuine public replacement.
+                Ui.click(this,Probe,window,"assistant.showActions");verify(original.showActions,"ARRAY451: genuine public mode checkbox enables visible arrays");
+                closeAssistant388();watchScience();scan();
+                bind(original,"actionPointerShown",scan);bind(original,"actionPointerMoved",scan);bind(original,"actionPointerPressed",scan);
+                const applied=[];let replacements=0,bOwner=null,bReceiver=null,bLife=null,bReceiverLife=null,bBaseline=null,atApply=null,oldUser=null;
+                function replaced(){
+                    current();verify(alive313(laLife),"ARRAY451: actual applied receipt belongs to the original current La object");
+                    if(la.value !== 0.6)return;
+                    compare(replacements,0,"ARRAY451: one actual original scalar write creates exactly one owner replacement");
+                    verify(array451_member(model,la.path).parameter === la,"ARRAY451: application is observed on an actual original live model member");
+                    verify(events.some(row => row.path === la.path && row.kind === "text" && Number(row.text) === 0.6),
+                        "ARRAY451: original native typing reached literal final operand BEFORE science publication");
+                    const users=Probe.rows(original.messages).filter(row => row.kind === "user" && row.text === "Original451 0");
+                    compare(users.length,1,"ARRAY451: original applied call belongs to one actually admitted user row");
+                    verify(typeof users[0].id === "string" && users[0].id.length > 0 && users[0].status === "completed",
+                        "ARRAY451: original user has a genuine completed matching ACK before actual native application");
+                    oldUser={id:users[0].id,text:users[0].text,status:users[0].status};
+                    applied.push(la.value);atApply=array451_science(project);++replacements;
+                    stop(); // retire only TEST observers before real Session closing notifications; never dereference A after replacement.
+                    verify(Session.openProject(Probe.referenceUrl("replacement")),"ARRAY451: actual synchronous original value notification opens independent B normally");
+                    bOwner=Session.project;bReceiver=Session.assistant;bLife=lifetime313(bOwner);bReceiverLife=lifetime313(bReceiver);
+                    verify(bOwner !== project,"ARRAY451: original publication truly replaces A, never reuses A identity as B");
+                    bBaseline={science:array451_science(bOwner),state:prefs419_state(bReceiver)};
+                }
+                bind(la,"valueChanged",replaced);
+                original.send("Original451 0");
+                tryVerify(() => replacements === 1 && bOwner !== null && alive313(bLife) && alive313(bReceiverLife)
+                    && Session.project === bOwner && Session.assistant === bReceiver && !bReceiver.canCancel && !bReceiver.showingActions,
+                    visible237_observationMs([{path:laPath,text:"0.6"}]),"ARRAY451: known applied first input reaches synchronous replacement and old work retires naturally");
+                compare(applied,[0.6],"ARRAY451: applied receipt is a real scientific fact, never inferred from prepared text");
+                compare(atApply.values.find(row => row[0] === "structure.atom_sites[La].adp_iso")[1],0.6,"ARRAY451: original A actually owns changed physical science at replacement");
+                compare(atApply.values.find(row => row[0] === "structure.atom_sites[Ba].adp_iso")[1],0.5,"ARRAY451: next requested A member never applied before replacement");
+                for(const row of atApply.values)if(row[0] !== laPath)
+                    compare(JSON.stringify(row),JSON.stringify(initial.values.find(value => value[0] === row[0])),
+                        "ARRAY451: every unrelated A physical value/free/PRESENT-SU is unchanged at the actual write boundary");
+                compare(atApply.inputs,initial.inputs,"ARRAY451: actual A input triples/weights/exclusions/links are untouched before replacement");
+                compare(atApply.relations,initial.relations,"ARRAY451: actual A aliases/constraints remain unchanged before replacement");
+                // atApply retains public dirty/Undo observations, not proof of later presentation:
+                // this original valueChanged interval precedes normal flag publication and destroys A.
+                // Live-owner rows still require real ordinary Undo; post-destruction A Undo is unobserved.
+                compare(array451_member(bOwner.parameters,"structure.atom_sites[La].adp_iso").parameter.value,0.5,"ARRAY451: B remains independent literal input, no old A application leaks");
+                compare(array451_member(bOwner.parameters,"structure.atom_sites[Ba].adp_iso").parameter.value,0.5,"ARRAY451: old continuation cannot apply next A operand to B");
+                // Initial async calculation may publish B's computed pattern; compare science/metadata, not its pending flag.
+                stop();
+                tryVerify(() => alive313(bLife) && Session.project === bOwner && !bOwner.calculating && Probe.computedCurrent(bOwner.currentExperiment),10000,
+                    "ARRAY451: genuine B initial calculation finishes without old-A authority");
+                compare(JSON.stringify(array451_science(bOwner)),JSON.stringify(bBaseline.science),"ARRAY451: B physical/free/SU/input/declaration/path/metadata/Undo/dirty facts stay untouched");
+                const state=prefs419_state(bReceiver);
+                for(const key of ["account","skills","selectedSkill","model","effort","files"])
+                    compare(JSON.stringify(state[key]),JSON.stringify(bBaseline.state[key]),"ARRAY451: old A cannot mutate B account/configuration/draft authority: "+key);
+                verify(!Probe.rows(bReceiver.messages).some(row => row.payload && row.payload.id === spec.calls[0].call_id),
+                    "ARRAY451: retired A result cannot be published in replacement conversation B");
+                console.log("ARRAY451_RESULT",JSON.stringify({case:data.tag,applied:applied,replacements:replacements,bUntouched:true,
+                    originalOwner:identity313(ownerLife),newOwner:identity313(bLife),oldUser:oldUser,atApply:atApply,bScience:array451_science(bOwner),input:events,writes:writes}));
+                return;
+            }
+            send(0);settled();const afterSentinel=array451_science(project);
+            compare(array451_member(project.parameters,"experiment.instrument.setup_wavelength").parameter.value,1.495,
+                "ARRAY451: prior genuine normal tool created its literal recorded Undo sentinel");
+            let target=null,targetLife=null,hiddenRow=null;
+            if(data.tag.startsWith("hidden-")){
+                compare(project.currentExperiment.beamModeToken,"constant wavelength","ARRAY451: free TOF scalar is unused in the real original CW profile, no forced exposure");
+                hiddenRow=array451_member(project.currentExperiment.instrument,"experiment.instrument.calib_d_to_tof_linear");target=hiddenRow.parameter;
+                compare([hiddenRow.name,hiddenRow.usedByProfile,target.value,target.free],["calib_d_to_tof_linear",false,123,true],
+                    "ARRAY451: original ParameterListModel owns independent declared free-but-unused member");
+                verify(array451_member(project.parameters,target.path).parameter === target,"ARRAY451: Analysis and Instrument are bound to SAME actual current ParameterItem");
+            }else target=array451_member(project.parameters,"structure.atom_sites[La].adp_iso").parameter;
+            targetLife=lifetime313(target);const path=target.path,oldValue=target.value;
+            const normal=send(1);settled();
+            verify(normal.payload.nativeOutcome !== null && typeof normal.payload.nativeOutcome === "object",
+                "ARRAY451: SAME exact lawful normal array is genuine admitted native work, never setup/refusal");
+            const entries=spec.calls[1].arguments.values;
+            for(const entry of entries)compare(array451_member(project.parameters,entry.path).parameter.value,entry.value,
+                "ARRAY451: SAME normal operands actually change or retain their independent literal physical member");
+            verify(project.canUndo,"ARRAY451: normal atomic positive has a real ordinary Undo");
+            undo();compare(JSON.stringify(array451_science(project).values),JSON.stringify(afterSentinel.values),
+                "ARRAY451: ONE ordinary Undo restores whole positive array; native noops add no extra history");
+            let removedReceipt=null;
+            if(data.tag === "removed-noop"){
+                const liveTarget=array451_member(project.parameters,path).parameter,removedLife=lifetime313(liveTarget);
+                const sites=project.currentStructure.atomSites,siteLife=lifetime313(sites),rows=Probe.rows(sites);
+                const index=rows.findIndex(row => row.label === "La");
+                verify(index >= 0 && rows[index].adpIso === liveTarget,"ARRAY451 SETUP: exact original La site/ADP live role selected BEFORE ordinary removal");
+                function removed(){
+                    if(Probe.rows(model).some(row => row.parameter === liveTarget))return;
+                    if(removedReceipt !== null)return;
+                    verify(alive313(removedLife),"ARRAY451: genuine original rowsRemoved notification reaches still-live deleteLater child interval");
+                    removedReceipt={alive:true,identity:identity313(removedLife),path:path,oldValue:liveTarget.value,
+                        currentPaths:Probe.rows(model).map(row => row.parameter.path)};
+                    verify(!removedReceipt.currentPaths.includes(path),"ARRAY451: removed cached path is NOT current model membership even while old QObject lives");
+                }
+                bind(model,"rowsRemoved",removed);
+                sites.remove(index);
+                verify(removedReceipt !== null && removedReceipt.alive,"ARRAY451: actual model removal reached owned deferred-child observation, not optional missing seam");
+                verify(alive313(siteLife),"ARRAY451: original owning site model survives its actual public removal");
+                verify(!Probe.rows(project.parameters).some(row => row.parameter.path === path),"ARRAY451: no-op operand's old physical object is truly retired from CURRENT model");
+            }else{
+                visible185_page("experiment");Ui.click(this,Probe,window,"sideBar.tab.basic");Ui.expandGroup(this,Probe,window,"group.instrument");rendered();
+                const rows=Probe.rows(project.currentExperiment.instrument),entry=rows.filter(row => row.name === "calib_d_to_tof_linear");
+                compare(entry.length,1,"ARRAY451: currently selected original Instrument still owns exactly one declared unused field");
+                verify(entry[0].usedByProfile === false && entry[0].parameter === array451_member(project.parameters,path).parameter,
+                    "ARRAY451: live original role, not block name or recursive QObject, establishes hidden target identity");
+                const fields=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(control => control.objectName === "instrument.calib_d_to_tof_linear");
+                compare(fields.length,1,"ARRAY451: original ParameterGrid creates one exact hidden delegate");
+                verify(fields[0].item === entry[0].parameter && !fields[0].visible && !Ui.exposed(fields[0]),
+                    "ARRAY451: original usedByProfile semantics genuinely hide control without changing UI properties/profile");
+            }
+            Ui.click(this,Probe,window,"assistant.showActions");verify(original.showActions,"ARRAY451: genuine eye toggles only visible mode AFTER normal positive/Undo");
+            closeAssistant388();
+            const before=array451_science(project),beforePage=window.appBarCentralTabs.currentIndex;
+            watchScience();scan();
+            bind(original,"actionPointerShown",scan);bind(original,"actionPointerMoved",scan);bind(original,"actionPointerPressed",scan);
+            bind(window.appBarCentralTabs,"currentIndexChanged",() => {navigation.push({kind:"page"});scan();});
+            bind(project.fit,"runningChanged",() => {if(project.fit.running)++fitStarts;});
+            const refused=send(2);current();stop();
+            compare(JSON.stringify(spec.calls[1].arguments),JSON.stringify(spec.calls[2].arguments),"ARRAY451: visible negative uses EXACT SAME independent whole operands as healthy normal positive");
+            compare(JSON.stringify(array451_science(project)),JSON.stringify(before),"ARRAY451: known-unmapped/removed later member refuses BEFORE earlier edit/dirty/Undo/science");
+            compare([events.length,writes.length,navigation.length,fitStarts],[0,0,0,0],"ARRAY451: initial whole refusal reaches ZERO scientific/control/navigation/Fit effects");
+            compare(window.appBarCentralTabs.currentIndex,beforePage,"ARRAY451: known unsupported original route cannot navigate as a partial attempt");
+            compare(original.connectionLabel,account,"ARRAY451: refusal never repairs original account");
+            compare(JSON.stringify(Probe.rows(original.models)),catalog,"ARRAY451: exact catalogue stays healthy/unchanged");
+            if(data.tag === "removed-noop"){
+                undo();
+                compare(JSON.stringify(array451_science(project).values),JSON.stringify(afterSentinel.values),"ARRAY451: NEXT ordinary Undo restores genuine removed member; refusal/noop created no phantom history");
+                const restored=array451_member(project.parameters,path).parameter;
+                compare(restored.value,oldValue,"ARRAY451: actual current restored member retains independent old no-op operand");
+            }
+            undo();compare(JSON.stringify(array451_science(project).values),JSON.stringify(initial.values),
+                "ARRAY451: NEXT prior sentinel Undo reaches original physical state, no hidden refusal/noop edit");
+            compare(visible185_inputs(project),initial.inputs,"ARRAY451: original measured triples/SUs/weights/links/exclusions survive actual native/Undo steps");
+            compare(relation245_declarations(project),initial.relations,"ARRAY451: original relations survive native refusal and real Undo");
+            const users=Probe.rows(original.messages).filter(row => row.kind === "user").map(row => ({id:row.id,text:row.text,status:row.status}));
+            console.log("ARRAY451_RESULT",JSON.stringify({case:data.tag,normalSucceeded:true,zeroVisibleInput:true,users:users,
+                removed:removedReceipt,hidden: data.tag.startsWith("hidden-") ? {path:path,usedByProfile:false} : null}));
+        } finally {stop();if(alive313(receiverLife) && original.canCancel)original.cancel();}
     }
 }
