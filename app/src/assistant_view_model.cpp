@@ -161,10 +161,30 @@ void open_selected_regular(QFile& file, const QString& path) {
 }
 
 #ifndef __EMSCRIPTEN__
+// Retained original-input proofs must not export their read capability to a
+// later runtime exec. Duplicate atomically without inheritance, or refuse.
+int duplicate_input_descriptor(int descriptor) noexcept {
+#if defined(Q_OS_UNIX) && defined(F_DUPFD_CLOEXEC)
+    return ::fcntl(descriptor,F_DUPFD_CLOEXEC,0);
+#elif defined(Q_OS_WIN)
+    const auto original=reinterpret_cast<HANDLE>(_get_osfhandle(descriptor));
+    HANDLE duplicate=INVALID_HANDLE_VALUE;
+    if(original==INVALID_HANDLE_VALUE || !DuplicateHandle(GetCurrentProcess(),original,
+        GetCurrentProcess(),&duplicate,0,FALSE,DUPLICATE_SAME_ACCESS))return -1;
+    const int result=_open_osfhandle(reinterpret_cast<intptr_t>(duplicate),_O_RDONLY|_O_BINARY|_O_NOINHERIT);
+    if(result<0)CloseHandle(duplicate);
+    return result;
+#else
+    (void)descriptor;
+    return -1;
+#endif
+}
 // This extends the original selected-input boundary. A genuine user spelling
 // pins one object; tool arguments can only refer to its opaque receipt ID.
 struct LocalInputSource {
-    QString id, selected, physical, attachment;
+    QString id, selected, physical, attachment, collection;
+    QByteArray digest;
+    quint64 admitted_generation=0;
     qsizetype ordinal=0;
     bool directory=false, acquired=false;
     QString failure;
@@ -209,6 +229,39 @@ struct LocalInputSource {
 #else
     bool current() const noexcept{return false;}
 #endif
+    bool content_current() const noexcept {
+        try {
+            if (!current() || digest.size()!=QCryptographicHash::hashLength(QCryptographicHash::Sha256)) return false;
+#if defined(Q_OS_UNIX) || defined(Q_OS_WIN)
+            const int duplicate=duplicate_input_descriptor(descriptor);
+            if (duplicate<0) return false;
+            QFile input;
+            if (!input.open(duplicate,QIODevice::ReadOnly|QIODevice::Unbuffered,QFileDevice::AutoCloseHandle)) {
+#if defined(Q_OS_UNIX)
+                ::close(duplicate);
+#else
+                _close(duplicate);
+#endif
+                return false;
+            }
+            if (!input.seek(0)) return false;
+            QCryptographicHash hash(QCryptographicHash::Sha256);
+            std::array<char,edi::assistant::SelectedFileLimits::read_bytes> buffer{};
+            quint64 total=0;
+            for (;;) {
+                if (!current()) return false;
+                const auto count=input.read(buffer.data(),buffer.size());
+                if (count<0) return false;
+                if (!count) break;
+                if (static_cast<quint64>(count)>edi::assistant::SelectedFileLimits::file_bytes-total) return false;
+                total+=static_cast<quint64>(count);hash.addData(QByteArrayView(buffer.data(),count));
+            }
+            return input.error()==QFileDevice::NoError && current() && hash.result()==digest;
+#else
+            return false;
+#endif
+        } catch (...) { return false; }
+    }
 };
 QByteArray selected_physical_key(QFile& file) {
 #if defined(Q_OS_UNIX)
@@ -1217,6 +1270,7 @@ struct AssistantViewModel::State {
     }
     Object generic_native{{"status", "disconnected"}};
     QMap<QString, QString> generic_input_paths;
+    QMap<QString,std::shared_ptr<LocalInputSource>> generic_input_origins;
     QMap<QString, QByteArray> generic_input_physical;
     QMap<QString, QByteArray> generic_input_hashes; // SHA-256 of actual human-admitted immutable bytes.
     std::unique_ptr<QTemporaryDir> generic_input_cache;
@@ -1795,7 +1849,11 @@ struct AssistantViewModel::State {
         Object arguments;
         QVector<Input> inputs;
         std::shared_ptr<const edi::assistant::SelectedFile> structure_source, measurement_source;
-        QUrl measurement_path;
+        std::shared_ptr<LocalInputSource> structure_origin, measurement_origin;
+        QUrl measurement_path, measurement_reader_path;
+        bool origin_unavailable=false;
+        quint64 file_cue_roles=0;
+        std::unique_ptr<QTemporaryDir> input_snapshot;
         std::shared_ptr<ProjectViewModel::WidgetCreationInput> control_input;
         std::shared_ptr<ProjectViewModel::WidgetParameterInput> parameter_input;
         QPointer<ParameterItem> control_parameter;
@@ -1806,11 +1864,9 @@ struct AssistantViewModel::State {
         QString page;
         std::shared_ptr<NativeCreation> owner_handoff;
         bool creating_project = false;
-        std::unique_ptr<QTemporaryDir> input_snapshot;
         QUrl structure_path;
-        QPointer<QQuickItem> file_group, picker_field, create_group;
+        QPointer<QQuickItem> create_group;
         unsigned reveal_steps = 0;
-        QPointer<QObject> file_dialog, picker_popup;
         std::shared_ptr<ProjectViewModel::WidgetFileInput> file_input;
         std::uint64_t edit_scope = 0;
         qsizetype completed_steps = 0;
@@ -2033,9 +2089,6 @@ struct AssistantViewModel::State {
             if (native_create_widget && native_create_widget->form &&
                 native_create_widget->form->property("assistantIntentId").toString() == native_create_widget->id &&
                 item == native_create_widget->form->property("contentItem").value<QQuickItem*>()) return control;
-            if (native_create_widget && native_create_widget->picker_popup && native_create_widget->file_dialog &&
-                native_create_widget->file_dialog->property("assistantIntentId").toString() == native_create_widget->id &&
-                item == native_create_widget->picker_popup->property("contentItem").value<QQuickItem*>()) return control;
             if (native_widget && native_widget->tool == "save_project") {
                 if (name == "appBar.button.save") return true;
                 if (native_widget->save_form && item == native_widget->save_form->property("contentItem").value<QQuickItem*>()) return control;
@@ -3601,6 +3654,15 @@ struct AssistantViewModel::State {
         value(genuine_objective_row);
         value(generic_policy_model);value(generic_policy_effort);value(generic_settings_model);value(generic_settings_effort);
         QSet<const LocalInputSource*> countedSources;
+        const auto input_source = [&](const std::shared_ptr<LocalInputSource>& source) {
+            if (!source || countedSources.contains(source.get())) return;
+            countedSources.insert(source.get());raw(sizeof(LocalInputSource)+2*sizeof(void*));
+            raw(static_cast<quint64>(source->id.capacity()+source->selected.capacity()+source->physical.capacity()+source->attachment.capacity()+source->collection.capacity()+source->failure.capacity())*sizeof(QChar));
+            raw(source->digest.capacity());value(source->result);
+        };
+        for(auto i=generic_input_origins.cbegin();i!=generic_input_origins.cend();++i) {
+            raw(sizeof(std::pair<QString,std::shared_ptr<LocalInputSource>>)+4*sizeof(void*));value(i.key());input_source(i.value());
+        }
         QSet<const NativeReceipt*> counted;
         const auto receipt = [&](const std::shared_ptr<NativeReceipt>& r) {
             if (!r || counted.contains(r.get())) return;
@@ -3608,11 +3670,7 @@ struct AssistantViewModel::State {
             value(r->objective); value(r->thread); value(r->turn); raw(r->approved_context.size());
             value(r->selected_context);
             raw(r->sources.capacity()*sizeof(std::shared_ptr<LocalInputSource>));
-            for(const auto& source:r->sources)if(!countedSources.contains(source.get())) {
-                countedSources.insert(source.get());raw(sizeof(LocalInputSource));
-                raw(static_cast<quint64>(source->id.capacity()+source->selected.capacity()+source->physical.capacity()+source->attachment.capacity()+source->failure.capacity())*sizeof(QChar));
-                value(source->result);
-            }
+            for(const auto& source:r->sources)input_source(source);
             for (auto i = r->selected_hashes.constBegin(); i != r->selected_hashes.constEnd(); ++i) { value(i.key()); raw(i.value().size()); }
             if (r->stamps) raw(native_stamp_bytes(*r->stamps));
         };
@@ -3729,8 +3787,12 @@ struct AssistantViewModel::State {
                 raw(sizeof(edi::assistant::SelectedFile) + source->bytes.capacity() + source->id.size() + source->relative_name.size());
             }
             if (frame->structure_source) raw(frame->structure_source->bytes.size()); // Original CIF reader's simultaneous text argument.
-            for (const auto& path : {frame->structure_path, frame->measurement_path})
-                raw(4 * static_cast<quint64>(path.toLocalFile().size()) * sizeof(QChar)); // URL, current helper, picker draft and original callback spelling.
+            input_source(frame->structure_origin);input_source(frame->measurement_origin);
+            raw(frame->file_cue_roles); // Exact admitted closure target/temporary capacity, retained with retired frame captures.
+            raw(sizeof(std::array<char,edi::assistant::SelectedFileLimits::read_bytes>)+sizeof(QCryptographicHash)+sizeof(QFile)+
+                3*sizeof(std::shared_ptr<LocalInputSource>)+3*QCryptographicHash::hashLength(QCryptographicHash::Sha256)); // Origin local, predicate target and its assignment temporary.
+            for (const auto& path : {frame->structure_path, frame->measurement_path, frame->measurement_reader_path})
+                raw(4 * static_cast<quint64>(path.toLocalFile().size()) * sizeof(QChar)); // Original URL, encoding and original callback spelling.
             for (const auto& input : frame->inputs) {
                 value(input.target); raw(4 * static_cast<quint64>(input.text.size()) * sizeof(QChar));
             }
@@ -4315,6 +4377,17 @@ struct AssistantViewModel::State {
             }
             std::vector<edi::assistant::SelectedFile> files;files.reserve(Bounds::files-oldFiles.size());
             QMap<QString,QByteArray> physical;
+            std::optional<decltype(reserve_disclosure(0))> originRole;
+            const quint64 originBytes=Bounds::files*(sizeof(LocalInputSource)+2*sizeof(void*)+sizeof(std::shared_ptr<LocalInputSource>)+
+                2*Limits::id_bytes*sizeof(QChar)+QCryptographicHash::hashLength(QCryptographicHash::Sha256));
+            originRole.emplace(reserve_disclosure(originBytes));
+            quint64 originPathBytes=0;
+            const auto releaseOriginPaths=qScopeGuard([this,publication,&originPathBytes] {
+                if(publication.receiver && publication.receiver->state_.get()==this)disclosure_preparing_bytes-=originPathBytes;
+            });
+            // Reserve before vector growth; on every failure the vector and
+            // captured proofs die before either origin/path charge is released.
+            std::vector<std::shared_ptr<LocalInputSource>> origins;origins.reserve(Bounds::files-oldFiles.size());
             QJsonArray descriptors;
             int discovered=0,ignored=0;
             const auto capture=[&](QFile& input,const QString& name) {
@@ -4345,12 +4418,20 @@ struct AssistantViewModel::State {
                 struct stat after{};
                 if(verified!=static_cast<quint64>(before.st_size) || ::fstat(input.handle(),&after)!=0 ||
                     !LocalInputSource::same(before,after) || check.result()!=expected)throw std::runtime_error("Input changed during capture");
-                const auto fileId=QString::fromStdString(file.id);
+                const quint64 pathRole=static_cast<quint64>(source->selected.size()+name.size()+1)*sizeof(QChar)+PATH_MAX*sizeof(QChar);
+                disclosure_room(pathRole);disclosure_preparing_bytes+=pathRole;originPathBytes+=pathRole;
+                auto origin=std::make_shared<LocalInputSource>();
+                origin->selected=source->directory?QDir(source->selected).filePath(name):source->selected;
+                origin->physical=QFileInfo(origin->selected).canonicalFilePath();origin->identity=before;
+                origin->descriptor=duplicate_input_descriptor(input.handle());origin->digest=expected;
+                if(!origin->current())throw std::runtime_error("The original input changed or is protected");
+                const auto fileId=QString::fromStdString(file.id);origin->attachment=fileId;origin->collection=old.value("collection_id").toString();
+                origin->admitted_generation=file_generation(old);origins.push_back(std::move(origin));
                 descriptors.append(Object{{"file_id",fileId},{"ordinal",static_cast<double>(source->ordinal)},{"reader_hint",input_reader_hint(name)}});
                 physical.insert(fileId,key);total+=file.bytes.size();files.push_back(std::move(file));
             };
             if(source->directory) {
-                const int duplicate=::dup(source->descriptor);
+                const int duplicate=duplicate_input_descriptor(source->descriptor);
                 DIR* directory=duplicate<0 ? nullptr : ::fdopendir(duplicate);
                 if(!directory){if(duplicate>=0)::close(duplicate);throw std::runtime_error("Input directory unavailable");}
                 const auto close=qScopeGuard([directory]{::closedir(directory);});
@@ -4372,7 +4453,7 @@ struct AssistantViewModel::State {
                     capture(input,name);
                 }
             } else {
-                discovered=1;const int duplicate=::dup(source->descriptor);QFile input;
+                discovered=1;const int duplicate=duplicate_input_descriptor(source->descriptor);QFile input;
                 if(duplicate<0 || !input.open(duplicate,QIODevice::ReadOnly|QIODevice::Unbuffered,QFileDevice::AutoCloseHandle)){
                     if(duplicate>=0)::close(duplicate);throw std::runtime_error("Input file unavailable");}
                 if(!input.seek(0))throw std::runtime_error("Input file unavailable");
@@ -4385,16 +4466,21 @@ struct AssistantViewModel::State {
             const auto cacheRole=reserve_disclosure(generic_size(outcome,Limits::context_bytes));
             auto cached=outcome;
             auto response=native_response(true,outcome);auto row=native_row(*originalCall.record,outcome,true);
-            auto stage=generic_stage_files(files,physical);
+            auto stage=generic_stage_files(files,physical,origins);
             const auto collection=old.value("collection_id").toString().isEmpty()?QUuid::createUuid().toString(QUuid::WithoutBraces):old.value("collection_id").toString();
             if(!current() || !source->current())throw std::runtime_error("Input scope changed");
+            for(const auto& origin:origins) { origin->collection=collection;if(!origin->current())throw std::runtime_error("The original input changed or is protected"); }
             auto result=controller->update_selected_files(collection.toStdString(),file_generation(old),std::move(files),{});
             if(!result.ok){outcome["status"]="refused";outcome["files"]=QJsonArray{};outcome["admitted"]=0;
                 outcome["code"]="input_capacity";native_finish(false,outcome);return;}
             adopted=true;
             source->result.swap(cached);source->acquired=true;
             // Exact actual collection admission is a local fact before any notifying model projection.
-            generic_input_paths.swap(stage->paths);generic_input_hashes.swap(stage->hashes);generic_input_physical.swap(stage->physical);stage->fresh.clear();
+            generic_input_paths.swap(stage->paths);generic_input_hashes.swap(stage->hashes);generic_input_physical.swap(stage->physical);
+            generic_input_origins.swap(stage->origins);stage->fresh.clear();
+            std::vector<std::shared_ptr<LocalInputSource>>().swap(origins);
+            disclosure_preparing_bytes-=originPathBytes;originPathBytes=0;
+            originRole->dismiss();originRole.reset();disclosure_preparing_bytes-=originBytes;
             selected_reply=std::move(result.value);selected_rows_dirty=true;
             originalCall.record->outcome=outcome;originalCall.record->response.swap(response);originalCall.record->terminal.swap(row);originalCall.record->outcome_ready=true;
             native_call->may_have_written=true;
@@ -4812,6 +4898,18 @@ struct AssistantViewModel::State {
         auto result=std::make_unique<QTemporaryDir>(root+"/native-input-XXXXXX");
         if(!result->isValid())throw std::runtime_error("Native input snapshot is unavailable");
         return result;
+    }
+    std::shared_ptr<LocalInputSource> original_input(const NativeReceipt& receipt,const QString& id) const {
+        const auto origin=generic_input_origins.value(id);
+        if (!origin || origin->attachment!=id || origin->collection!=receipt.selected_context.value("collection_id").toString() ||
+            origin->admitted_generation>file_generation(receipt.selected_context) ||
+            !receipt.selected_hashes.contains(id) || origin->digest.toHex()!=receipt.selected_hashes.value(id) || !origin->current())
+            throw ActionRefusal("input_unavailable","file_id");
+        return origin;
+    }
+    static QUrl original_input_url(const std::shared_ptr<LocalInputSource>& origin) {
+        if (!origin || !origin->content_current()) throw ActionRefusal("input_unavailable","file_id");
+        return QUrl::fromLocalFile(origin->selected);
     }
     static QUrl native_snapshot_file(const QTemporaryDir& snapshot,const edi::assistant::SelectedFile& source,const QString& name) {
         const auto leaf=QFileInfo(name).fileName();
@@ -5529,11 +5627,15 @@ struct AssistantViewModel::State {
         creation->epoch = session->assistantEpoch();
         creation->completion_project = project;
         creation->completing_existing = project != nullptr;
+        const auto originReadRole=reserve_disclosure(sizeof(std::array<char,edi::assistant::SelectedFileLimits::read_bytes>)+2*QCryptographicHash::hashLength(QCryptographicHash::Sha256));
+        const auto cifOrigin=original_input(*native_receipt,cifId),dataOrigin=original_input(*native_receipt,dataId);
+        if(!cifOrigin->content_current() || !dataOrigin->content_current())throw ActionRefusal("input_unavailable","file_id");
         auto inputs = creation_input(creation, cifId, dataId);
         // Counts cannot exceed the bounded selected measurement byte count. Prepare
         // every complete result wrapper before submitting any native work.
         Object maximum{{"status", "applied_unconfirmed"}, {"adopted", false}, {"completed_existing", true}, {"saved", false}, {"presentation_complete", false}, {"calculation_pending", false},
             {"request_retired", true}, {"message", QString(static_cast<qsizetype>(Limits::error_bytes), QChar(1))}};
+        maximum["action_error"]="input_unavailable";maximum["action_field"]="file_id";
         for (const auto* field : {"points", "skipped", "nonpositive", "duplicates", "reordered", "derived_sigma"})
             maximum[field] = static_cast<double>(edi::assistant::SelectedFileLimits::file_bytes);
         auto job = creation_job(creation, std::move(inputs.first), std::move(inputs.second), std::move(recipe));
@@ -5546,6 +5648,7 @@ struct AssistantViewModel::State {
             if (!receiver) return;
             if (creation->cancelled || !native_current(creation->receipt) || !native_call || native_call->record != creation->record)
                 throw std::runtime_error("Native creation retired before worker admission");
+            if(!cifOrigin->content_current() || !dataOrigin->content_current())throw ActionRefusal("input_unavailable","file_id");
             creation->ticket = idle_worker->submit("assistant-native-create", std::move(job));
         } catch (...) {
             if (!receiver) return;
@@ -5622,6 +5725,9 @@ struct AssistantViewModel::State {
         }
         const bool identity_refused = (run->file_input && run->file_input->result_identity_refused) ||
             (run->control_input && run->control_input->result_identity_refused);
+        if ((run->origin_unavailable || (run->file_input && run->file_input->source_changed)) && !applied) {
+            result["action_error"]="input_unavailable";result["action_field"]="file_id";
+        }
         if (identity_refused && !applied) {
             result["action_error"] = "unsupported_input";
             result["action_field"] = run->file_input ? "file_id" : run->individual_tool == "create_experiment" ? "project" : "experiment";
@@ -5673,7 +5779,12 @@ struct AssistantViewModel::State {
             run->control_input=run->project->prepareWidgetCreation(Action{Action::Kind::ExperimentAppend});
         else run->control_input=run->project->prepareWidgetCreation(Action{Action::Kind::ExperimentType,run->operation_member,
             run->arguments.value("axis").toString(),run->arguments.value("token").toString()});
-        if (run->file_input) run->file_input->bounded_result = true;
+        if (run->file_input) {
+            const auto origin=run->structure_source?run->structure_origin:run->measurement_origin;
+            run->file_input->source_current=[origin] { return origin && origin->content_current(); };
+            run->file_input->reader_path=run->measurement_reader_path;
+            run->file_input->bounded_result = true;
+        }
         if (run->control_input) run->control_input->bounded_result = true;
         native_charge();
         if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
@@ -5688,7 +5799,7 @@ struct AssistantViewModel::State {
         const auto& outcome=run->file_input?run->file_input->outcome:run->control_input->outcome;
         if(!outcome.applied || !outcome.published || !individual_member_current(run)) {
             auto result=individual_progress(run,false);
-            if(!outcome.applied && !(run->file_input && run->file_input->result_identity_refused) &&
+            if(!outcome.applied && !run->origin_unavailable && !(run->file_input && run->file_input->source_changed) && !(run->file_input && run->file_input->result_identity_refused) &&
                 !(run->control_input && run->control_input->result_identity_refused)) {
                 result["action_error"]=run->file_input?"reader_refused":"unsupported_type";
                 result["action_field"]=run->file_input?"file_id":"token";
@@ -5830,10 +5941,15 @@ struct AssistantViewModel::State {
                     if(name=="load_structure")run->structure_source=std::move(source);else run->measurement_source=std::move(source);
                 }
                 if(!run->structure_source && !run->measurement_source)throw ActionRefusal("input_unavailable","file_id");
-                run->input_snapshot=native_input_snapshot();
-                const auto source=run->structure_source?run->structure_source:run->measurement_source;
-                const auto path=native_snapshot_file(*run->input_snapshot,*source,QString::fromUtf8(source->relative_name.data(),static_cast<qsizetype>(source->relative_name.size())));
-                if(run->structure_source)run->structure_path=path;else run->measurement_path=path;
+                const auto origin=original_input(*receipt,file_id);
+                const auto pathRole=reserve_disclosure(8*static_cast<quint64>(origin->selected.size())*sizeof(QChar)+sizeof(std::array<char,edi::assistant::SelectedFileLimits::read_bytes>));
+                const auto path=original_input_url(origin);
+                if(run->structure_source){run->structure_path=path;run->structure_origin=origin;}
+                else {
+                    run->measurement_path=path;run->measurement_origin=origin;
+                    run->input_snapshot=native_input_snapshot();
+                    run->measurement_reader_path=native_snapshot_file(*run->input_snapshot,*run->measurement_source,QStringLiteral("measurement.xye"));
+                }
             }
             native_charge();if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
             if(!run->visible_delivery) {
@@ -5926,19 +6042,12 @@ struct AssistantViewModel::State {
             try { widget_showing(false); } catch (...) {}
         if (!receiver) return;
         if (run->ordinary) {
-            // The original same-instance picker owns its configuration token.
-            // Recheck original cleanup identity after every notifying QML call.
-            const auto group = run->file_group;
             if (original_cleanup() && run->project) {
                 run->project->finishWidgetFile(run->file_input); run->project->finishWidgetCreation(run->control_input); run->project->finishWidgetInput(run->parameter_input);
             }
             if (run->edit_scope) { const auto scope = run->edit_scope; run->edit_scope = 0; if (original_cleanup()) end_own_edit(scope); }
             if (original_cleanup() && run->create_group) try {
                 (void)QMetaObject::invokeMethod(run->create_group, "retireAssistantCreate", Qt::DirectConnection,
-                    Q_ARG(QVariant, QVariant(run->id)), Q_ARG(QVariant, QVariant(run->manual_takeover)));
-            } catch (...) {}
-            if (original_cleanup() && group) try {
-                (void)QMetaObject::invokeMethod(group, "retireAssistantPicker", Qt::DirectConnection,
                     Q_ARG(QVariant, QVariant(run->id)), Q_ARG(QVariant, QVariant(run->manual_takeover)));
             } catch (...) {}
             return;
@@ -5965,7 +6074,8 @@ struct AssistantViewModel::State {
                     native_call->may_have_written=false; // The original pre-Edit refusal proves no write.
                 create_widget_retain(run);
                 auto outcome=create_widget_progress(run,false,message);
-                if(!run->individual_tool.isEmpty() && !run->completed_steps &&
+                if(!run->individual_tool.isEmpty() && !run->completed_steps && !run->origin_unavailable &&
+                    !(run->file_input && run->file_input->source_changed) &&
                     !(run->file_input && run->file_input->result_identity_refused) &&
                     !(run->control_input && run->control_input->result_identity_refused)) {
                     if(run->file_input && run->file_input->consumed) {outcome["action_error"]="reader_refused";outcome["action_field"]="file_id";}
@@ -5991,13 +6101,6 @@ struct AssistantViewModel::State {
         }
         if (receiver && native_create_widget == run) create_widget_end(run);
     }
-    bool create_widget_picker_current(const std::shared_ptr<NativeCreateWidget>& run) const {
-        return create_widget_current(run) && run->ordinary && run->file_group && run->file_dialog &&
-            run->file_group->window() == run->window &&
-            run->file_group->property("assistantPickerId").toString() == run->id &&
-            run->file_dialog->property("assistantIntentId").toString() == run->id &&
-            run->file_dialog->property("visible").toBool();
-    }
     void create_widget_after_structure(const std::shared_ptr<NativeCreateWidget>& run, bool delivered, const QString& message) {
         if (!create_widget_owned(run)) return;
         const auto input = run->file_input;
@@ -6018,149 +6121,130 @@ struct AssistantViewModel::State {
             catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
         });
     }
-    void create_widget_picker_path(const std::shared_ptr<NativeCreateWidget>& run) {
-        if (!create_widget_picker_current(run) || !run->picker_popup || !run->picker_popup->property("visible").toBool() ||
-            !run->picker_field || !run->picker_field->hasActiveFocus() || !widget_input)
-            throw std::runtime_error("The original toolkit picker location is unavailable");
-        AssistantWidgetInput::Request request;
-        request.kind = AssistantWidgetInput::Kind::FilePath; request.target = run->picker_field;
-        const bool measured = run->inputs.at(run->step).target.startsWith("experiments.loadData.");
-        request.value = (measured ? run->measurement_path : run->structure_path).toLocalFile();
-        request.current = [this, run] { return create_widget_picker_current(run) && run->picker_popup &&
-            run->picker_popup->property("visible").toBool() && run->picker_field && run->picker_field->hasActiveFocus(); };
-        request.prepareCommit = [this, run] {
-            if (!create_widget_picker_current(run) || !run->project) return false;
-            const bool measured = run->inputs.at(run->step).target.startsWith("experiments.loadData.");
-            run->file_input = measured ? run->project->prepareWidgetMeasurementFile(run->measurement_path, run->measurement_source, run->project->currentExperiment())
-                : run->project->prepareWidgetStructureFile(run->structure_path, run->structure_source);
-            run->file_input->bounded_result = !run->individual_tool.isEmpty();
-            native_charge();
-            if (!create_widget_picker_current(run)) return false;
-            run->edit_scope = begin_own_edit();
-            native_call->may_have_written = true;
-            return true;
-        };
-        request.finishCommit = [this, run] {
-            if (run->project) run->project->finishWidgetFile(run->file_input);
-            if (run->edit_scope) {
-                const auto scope = run->edit_scope; run->edit_scope = 0;
-                if (run->receiver && run->receiver->state_.get() == this) end_own_edit(scope);
-            }
-        };
-        request.completed = [this, run](bool delivered, const QString& message) {
-            if (!create_widget_owned(run)) return;
-            try { create_widget_after_structure(run, delivered, message); }
-            catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
-        };
-        widget_input->start(std::move(request));
-    }
-    void create_widget_capture_picker(const std::shared_ptr<NativeCreateWidget>& run) {
-        if (!create_widget_picker_current(run)) throw std::runtime_error("The original toolkit picker is not current");
-        QPointer<QObject> popup;
-        // Qt's SAME FileDialog fallback is parented to the original window on
-        // show. Capture the sole visible actual implementation and its own
-        // breadcrumb.dialog link, never a global first text-field match.
-        for (auto* object : run->window->findChildren<QObject*>()) {
-            if (!object->inherits("QQuickFileDialogImpl") || !object->property("visible").toBool() ||
-                object->property("title") != run->file_dialog->property("title")) continue;
-            auto* content = object->property("contentItem").value<QQuickItem*>();
-            if (!content || content->window() != run->window) continue;
-            if (popup) throw std::runtime_error("The actual toolkit file picker is ambiguous");
-            popup = object;
-        }
-        if (!popup) throw std::runtime_error("The original toolkit file picker is unavailable");
-        QPointer<QQuickItem> field;
-        for (auto* object : popup->findChildren<QObject*>()) {
-            if (!object->inherits("QQuickFolderBreadcrumbBar") || object->property("dialog").value<QObject*>() != popup) continue;
-            auto* candidate = object->property("textField").value<QQuickItem*>();
-            if (!candidate || candidate->window() != run->window || field) throw std::runtime_error("The original picker breadcrumb is ambiguous");
-            field = candidate;
-        }
-        run->picker_popup=popup; run->picker_field=field;
-    }
-    void create_widget_picker_location(const std::shared_ptr<NativeCreateWidget>& run) {
-        if (!create_widget_picker_current(run) || !widget_input) throw std::runtime_error("The original Structure Load picker did not open");
-        create_widget_capture_picker(run);
-        const auto popup=run->picker_popup; const auto field=run->picker_field;
-        auto* focus = run->window->activeFocusItem();
-        bool inside = false;
-        auto* content = popup->property("contentItem").value<QQuickItem*>();
-        for (auto* item = focus; item; item = item->parentItem()) if (item == content) inside = true;
-        if (!field || !inside || !focus) throw std::runtime_error("The original picker has no current list focus");
-        run->picker_popup = popup; run->picker_field = field;
-        AssistantWidgetInput::Request request;
-        request.kind = AssistantWidgetInput::Kind::FileLocation; request.target = focus; request.locationField = field;
-        request.current = [this, run, popup, field] { return create_widget_picker_current(run) && popup &&
-            run->picker_popup == popup && popup->property("visible").toBool() && field && run->picker_field == field; };
-        request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run](bool delivered, const QString& message) {
-            if (!create_widget_owned(run)) return;
-            if (!delivered) { create_widget_refuse(run, message); return; }
-            QTimer::singleShot(0, &owner, [this, run] {
-                if (!create_widget_current(run)) return;
-                try { create_widget_picker_path(run); }
-                catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
-            });
-        };
-        widget_input->start(std::move(request));
-    }
     void create_widget_load_structure(const std::shared_ptr<NativeCreateWidget>& run) {
-        if (!create_widget_current(run) || !run->ordinary || !run->project || !widget_input ||
-            (!run->structure_source && !run->measurement_source) || !run->input_snapshot || !run->input_snapshot->isValid())
-            throw std::runtime_error("The admitted original Structure Load is unavailable");
-        const bool measured = run->inputs.at(run->step).target.startsWith("experiments.loadData.");
-        auto* group = create_widget_named(run, measured ? "group.experiments" : "group.structures");
-        const auto target_name = measured && !run->individual_tool.isEmpty()
-            ? QString("experiments.loadData.%1").arg(individual_member_index(run)) : measured ? QString("experiments.loadData.0") : QString("structures.load");
-        auto* load = create_widget_named(run, target_name);
+        // Declared before temporary/request targets: an allocation refusal destroys
+        // those original captures before this reservation can reconcile output.
+        std::optional<decltype(reserve_disclosure(0))> callbackPreparation;
+        const auto receiver=run->receiver;
+        if (!receiver || receiver->state_.get()!=this)return;
+        const bool originalCurrent=create_widget_current(run);
+        if(!receiver || receiver->state_.get()!=this)return;
+        if (!originalCurrent || !run->ordinary || !run->project || !widget_input ||
+            (!run->structure_source && !run->measurement_source))
+            throw std::runtime_error("The admitted original file load is unavailable");
+        const bool measured=run->inputs.at(run->step).target.startsWith("experiments.loadData.");
+        const auto target_name=measured && !run->individual_tool.isEmpty()
+            ? QString("experiments.loadData.%1").arg(individual_member_index(run)) : measured?QString("experiments.loadData.0"):QString("structures.load");
+        const QPointer<QQuickItem> load(create_widget_named(run,target_name));
+        if(!receiver || receiver->state_.get()!=this)return;
         if (measured && !run->individual_tool.isEmpty() && (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))
             throw ActionRefusal("target_unavailable","experiment");
-        if (!group || !load || group->property("project").value<ProjectViewModel*>() != run->project) {
-            if(!load && !run->individual_tool.isEmpty() && create_widget_missing_target(run,run->inputs.at(run->step)))return;
-            throw std::runtime_error("The original Structure group is unavailable");
-        }
-        if(measured && !run->individual_tool.isEmpty()) {
-            auto* row=create_widget_named(run,QString("experiments.row.%1").arg(individual_member_index(run)));
-            bool inside=false;for(auto* parent=load;parent;parent=parent->parentItem())if(parent==row)inside=true;
-            if(!row || !inside || row->property("experiment").value<QObject*>()!=run->operation_view)
-                throw ActionRefusal("target_unavailable","experiment");
-        }
-        if (!widget_input->usableTarget(*load)) { create_widget_reveal(run,load); return; }
-        run->file_group = group;
-        QVariant prepared;
-        if (measured) (void)QMetaObject::invokeMethod(group, "prepareAssistantPicker", Qt::DirectConnection,
-            Q_RETURN_ARG(QVariant, prepared), Q_ARG(QVariant, QVariant(run->id)),
-            Q_ARG(QVariant, QVariant::fromValue(run->project->currentExperiment())));
-        else (void)QMetaObject::invokeMethod(group, "prepareAssistantPicker", Qt::DirectConnection,
-            Q_RETURN_ARG(QVariant, prepared), Q_ARG(QVariant, QVariant(run->id)));
-        if (!run->receiver || run->receiver->state_.get() != this || !create_widget_current(run)) return;
-        if (!prepared.toBool() || !run->file_group || group->property("assistantPickerId").toString() != run->id)
-            throw std::runtime_error("The original Structure picker did not admit its operation");
-        QObject* host = nullptr;
-        for (auto* object : group->findChildren<QObject*>()) {
-            if (object->objectName() != (measured ? "experiments.dataDialog" : "structures.fileDialog")) continue;
-            if (host) throw std::runtime_error("The original Structure picker is ambiguous");
-            host = object;
-        }
-        if (!host) throw std::runtime_error("The original Structure picker is unavailable");
-        run->file_dialog = host;
-        AssistantWidgetInput::Request request;
-        request.kind = AssistantWidgetInput::Kind::Navigate; request.target = load;
-        request.current = [this, run] { return create_widget_current(run) && run->file_group && run->file_dialog &&
-            run->file_group->property("assistantPickerId").toString() == run->id; };
-        request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run](bool delivered, const QString& message) {
-            if (!create_widget_owned(run)) return;
-            if (!delivered) { create_widget_refuse(run, message); return; }
-            try { create_widget_capture_picker(run); }
-            catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error); return; }
-            QTimer::singleShot(0, &owner, [this, run] {
-                if (!create_widget_current(run)) return;
-                try { create_widget_picker_location(run); }
-                catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
-            });
+        if (!load) { if(!run->individual_tool.isEmpty() && create_widget_missing_target(run,run->inputs.at(run->step)))return;
+            throw std::runtime_error("The original Load control is unavailable"); }
+        const QPointer<QQuickItem> group(create_widget_named(run,measured?"group.experiments":"group.structures"));
+        if(!receiver || receiver->state_.get()!=this)return;
+        const auto groupProject=group?group->property("project").value<ProjectViewModel*>():nullptr;
+        if(!receiver || receiver->state_.get()!=this)return;
+        if(!group || groupProject!=run->project)throw ActionRefusal("target_unavailable","project");
+        const QPointer<QQuickItem> row=measured?create_widget_named(run,QString("experiments.row.%1").arg(run->individual_tool.isEmpty()?0:individual_member_index(run))):nullptr;
+        if(!receiver || receiver->state_.get()!=this)return;
+        const QPointer<ExperimentViewModel> targetExperiment=measured && row?qobject_cast<ExperimentViewModel*>(row->property("experiment").value<QObject*>()):nullptr;
+        if(!receiver || receiver->state_.get()!=this)return;
+        const auto targetCurrent=[this,run,load,row,targetExperiment,target_name,measured] {
+            const auto receiver=run->receiver;
+            if(!receiver || receiver->state_.get()!=this || !load)return false;
+            const bool original=create_widget_current(run);
+            if(!receiver || receiver->state_.get()!=this || !original || !load || load->objectName()!=target_name)return false;
+            if(!measured)return true;
+            if(!row || !targetExperiment || !row->isAncestorOf(load))return false;
+            const auto member=row->property("experiment").value<QObject*>();
+            if(!receiver || receiver->state_.get()!=this || !row || !targetExperiment || member!=targetExperiment)return false;
+            const bool current=create_widget_current(run);
+            if(!receiver || receiver->state_.get()!=this || !current || !row || !targetExperiment || !load)return false;
+            const bool memberCurrent=run->individual_tool.isEmpty() || individual_member_current(run);
+            if(!receiver || receiver->state_.get()!=this || !memberCurrent || !run->project || !targetExperiment)return false;
+            return run->individual_tool.isEmpty() ||
+                (targetExperiment==run->operation_view && run->project->currentExperiment()==targetExperiment);
         };
-        widget_input->start(std::move(request));
+        if(!targetCurrent())throw ActionRefusal("target_unavailable","experiment");
+        if (!widget_input->usableTarget(*load)) { create_widget_reveal(run,load);return; }
+        const auto origin=measured?run->measurement_origin:run->structure_origin;
+        if (!origin || !origin->current()) { run->origin_unavailable=true;throw ActionRefusal("input_unavailable","file_id"); }
+        AssistantWidgetInput::Request cue;
+        cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=load;
+        auto cueCurrent=[this,run,targetCurrent,origin] {
+            const auto receiver=run->receiver;
+            if(!receiver || receiver->state_.get()!=this)return false;
+            const bool targetReady=targetCurrent();
+            if(!receiver || receiver->state_.get()!=this || !targetReady)return false;
+            if(origin->current())return true;
+            run->origin_unavailable=true;
+            return false;
+        };
+        cue.prepareCommit=[] { return true; };cue.finishCommit=[] {};
+        auto cueCompleted=[this,run,measured,origin,targetCurrent,targetExperiment](bool delivered,const QString& message) {
+            const auto receiver=run->receiver;
+            if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+            try {
+                // Inspect the original target even on helper rejection: only a
+                // still-current target can attribute refusal to its source.
+                const bool targetReady=targetCurrent();
+                if(!receiver || receiver->state_.get()!=this)return;
+                if(!targetReady) {
+                    create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;
+                }
+                if(!origin->current())run->origin_unavailable=true;
+                if(run->origin_unavailable) {
+                    create_widget_refuse(run,QObject::tr("The original attached file changed or is unavailable"));return;
+                }
+                if(!delivered) {
+                    create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;
+                }
+                if(!origin->content_current()) {
+                    run->origin_unavailable=true;
+                    create_widget_refuse(run,QObject::tr("The original attached file changed or is unavailable"));return;
+                }
+                bool applied=false;
+                {
+                const auto input=measured?run->project->prepareWidgetMeasurementFile(run->measurement_path,run->measurement_source,targetExperiment)
+                    :run->project->prepareWidgetStructureFile(run->structure_path,run->structure_source);
+                run->file_input=input;
+                std::uint64_t editScope=0;
+                const auto cleanup=qScopeGuard([this,run,receiver,input,&editScope] {
+                    if(run->project)run->project->finishWidgetFile(input);
+                    if(receiver && receiver->state_.get()==this && editScope) {
+                        if(run->edit_scope==editScope)run->edit_scope=0;
+                        end_own_edit(editScope);
+                    }
+                });
+                run->file_input->bounded_result=!run->individual_tool.isEmpty();
+                run->file_input->source_current=[origin] { return origin->content_current(); };
+                run->file_input->reader_path=run->measurement_reader_path;
+                if(!receiver || receiver->state_.get()!=this)return;
+                native_charge();
+                if(!receiver || receiver->state_.get()!=this)return;
+                const bool stillTarget=targetCurrent();
+                if(!receiver || receiver->state_.get()!=this || !stillTarget)return;
+                editScope=begin_own_edit();run->edit_scope=editScope;
+                applied=measured?run->project->loadDataInto(targetExperiment,run->measurement_path):run->project->loadStructure(run->structure_path);
+                }
+                if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+                create_widget_after_structure(run,applied,run->file_input->outcome.message);
+            } catch(...) { if(receiver && receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error); }
+        };
+        // Native Request contains the function objects; their actual captured
+        // targets and original local copies also coexist before helper transfer.
+        constexpr quint64 roles=2*(sizeof(cueCurrent)+sizeof(cueCompleted))+sizeof(targetCurrent);
+        const auto growth=roles>run->file_cue_roles?roles-run->file_cue_roles:0;
+        callbackPreparation.emplace(reserve_disclosure(growth));
+        cue.current=std::move(cueCurrent);cue.completed=std::move(cueCompleted);
+        run->file_cue_roles=std::max(run->file_cue_roles,roles);
+        callbackPreparation->dismiss();callbackPreparation.reset();disclosure_preparing_bytes-=growth;
+        native_charge();
+        if(!receiver || receiver->state_.get()!=this)return;
+        const bool current=create_widget_current(run);
+        if(!receiver || receiver->state_.get()!=this || !current || !widget_input)return;
+        widget_input->start(std::move(cue));
     }
     QQuickItem* create_widget_named(const std::shared_ptr<NativeCreateWidget>& run, const QString& name) const {
         QQuickItem* found = nullptr;
@@ -6191,6 +6275,9 @@ struct AssistantViewModel::State {
         result["saved"] = false; result["presentation_complete"] = complete;
         result["calculation_pending"] = run->project && run->project->calculating();
         result["message"] = bounded_error(message);
+        if(run->origin_unavailable || (run->file_input && run->file_input->source_changed && !run->file_input->outcome.applied)) {
+            result["action_error"]="input_unavailable";result["action_field"]="file_id";
+        }
         if(!run->individual_tool.isEmpty())return individual_progress(run,complete);
         return result;
     }
@@ -6525,6 +6612,7 @@ struct AssistantViewModel::State {
         writing = true; emit_plan();
         Object maximum{{"status", "applied_unconfirmed"}, {"adopted", false}, {"completed_existing", true}, {"saved", false}, {"complete", false}, {"atomic", false}, {"steps_completed", static_cast<double>(run->inputs.size() + 6 * recipe.background.size())},
             {"presentation_complete", false}, {"calculation_pending", false}, {"message", QString(static_cast<qsizetype>(Limits::error_bytes), QChar(1))}};
+        maximum["action_error"]="input_unavailable";maximum["action_field"]="file_id";
         for (const auto* field : {"points", "skipped", "nonpositive", "duplicates", "reordered", "derived_sigma"}) maximum[field] = static_cast<double>(edi::assistant::SelectedFileLimits::file_bytes);
         native_prepare(rpc,id,"create_cwl_project",purpose,original,maximum);
         if (!receiver || !native_call || native_call->rpc != rpc || native_call->record->call != id)
@@ -6545,21 +6633,29 @@ struct AssistantViewModel::State {
             // belongs to the actual original loader reached by each real action.
             auto capture = std::make_shared<NativeCreation>();
             capture->selected = native_selected_bytes(*run->call.receipt);
-            auto paths = creation_input(capture,cif,data,false);
             for (auto& file : capture->selected) {
                 if (file.id == cif.toStdString()) run->structure_source = std::make_shared<const edi::assistant::SelectedFile>(std::move(file));
                 else if (file.id == data.toStdString()) run->measurement_source = std::make_shared<const edi::assistant::SelectedFile>(std::move(file));
             }
-            if (!run->structure_source || !run->measurement_source || !capture->snapshot)
+            if (!run->structure_source || !run->measurement_source)
                 throw std::runtime_error("The original captures are unavailable");
-            run->input_snapshot = std::move(capture->snapshot);
-            run->measurement_path = QUrl::fromLocalFile(QString::fromStdString(paths.second));
-            run->structure_path=native_snapshot_file(*run->input_snapshot,*run->structure_source,QStringLiteral("structure.cif"));
+            run->structure_origin=original_input(*run->call.receipt,cif);
+            run->measurement_origin=original_input(*run->call.receipt,data);
+            const auto originPaths=reserve_disclosure(8*static_cast<quint64>(run->structure_origin->selected.size()+run->measurement_origin->selected.size())*sizeof(QChar)+sizeof(std::array<char,edi::assistant::SelectedFileLimits::read_bytes>));
+            run->structure_path=original_input_url(run->structure_origin);
+            run->measurement_path=original_input_url(run->measurement_origin);
+            run->input_snapshot=native_input_snapshot();
+            run->measurement_reader_path=native_snapshot_file(*run->input_snapshot,*run->measurement_source,QStringLiteral("measurement.xye"));
             }
             native_charge();
             if (!create_widget_current(run)) return;
             widget_showing(true);
             if (create_widget_current(run)) create_widget_next(run);
+        } catch (const ActionRefusal& failure) {
+            if(receiver && receiver->state_.get()==this && create_widget_owned(run)) {
+                if(failure.error=="input_unavailable" && failure.field=="file_id")run->origin_unavailable=true;
+                create_widget_refuse(run,run->origin_unavailable?QObject::tr("The original attached file changed or is unavailable"):widget_outcome_error);
+            }
         } catch (...) {
             if (receiver && create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error);
         }
@@ -6691,20 +6787,21 @@ struct AssistantViewModel::State {
         QMap<QString, QString> paths;
         QStringList fresh;
         QMap<QString, QByteArray> hashes,physical;
+        QMap<QString,std::shared_ptr<LocalInputSource>> origins;
         State* host=nullptr;
         FileProjection publication;
         QPointer<CodexAgent> transport;
         quint64 transport_generation=0,preparing=0;
         ~GenericFileStage() {
             for(const auto& path:fresh)try{QFile::remove(path);}catch(...){}
-            paths.clear();hashes.clear();physical.clear();fresh.clear();
+            paths.clear();hashes.clear();physical.clear();origins.clear();fresh.clear();
             if(publication.receiver && publication.receiver->state_.get()==host) {
                 host->disclosure_preparing_bytes-=preparing;
                 host->native_release_charge(publication,transport,transport_generation);
             }
         }
     };
-    std::unique_ptr<GenericFileStage> generic_stage_files(const std::vector<edi::assistant::SelectedFile>& files, const QMap<QString,QByteArray>& physical = {}) {
+    std::unique_ptr<GenericFileStage> generic_stage_files(const std::vector<edi::assistant::SelectedFile>& files, const QMap<QString,QByteArray>& physical = {}, const std::vector<std::shared_ptr<LocalInputSource>>& origins = {}) {
         if (!generic_input_cache) {
             // All host-owned immutable caches must remain outside a selectable
             // grant, including a user-selected temporary-directory parent.
@@ -6722,12 +6819,15 @@ struct AssistantViewModel::State {
             add(sizeof(std::pair<QString,QString>)+static_cast<quint64>(i.key().size()+i.value().size())*sizeof(QChar));
         for(const auto* map:{&generic_input_hashes,&generic_input_physical})for(auto i=map->cbegin();i!=map->cend();++i)
             add(sizeof(std::pair<QString,QByteArray>)+static_cast<quint64>(i.key().size())*sizeof(QChar)+i.value().size());
+        for(auto i=generic_input_origins.cbegin();i!=generic_input_origins.cend();++i)
+            add(sizeof(std::pair<QString,std::shared_ptr<LocalInputSource>>)+4*sizeof(void*)+static_cast<quint64>(i.key().size())*sizeof(QChar));
         const auto root=generic_input_cache->path();
         for(const auto& file:files) {
             if(file.id.size()>Limits::id_bytes || file.relative_name.size()>edi::assistant::SelectedFileLimits::name_bytes)
                 throw std::length_error("Input cache names exceed capacity");
             const quint64 name=file.relative_name.size(),id=file.id.size();
             const quint64 path=static_cast<quint64>(root.size())+id+name+2;
+            add(sizeof(std::pair<QString,std::shared_ptr<LocalInputSource>>)+4*sizeof(void*)+id*sizeof(QChar));
             add(sizeof(QString)+sizeof(std::pair<QString,QString>)+2*sizeof(std::pair<QString,QByteArray>));
             add((name+id+path+path+2*id)*sizeof(QChar)); // name/id/path locals, cleanup path, two identity keys.
             add(3*QCryptographicHash::hashLength(QCryptographicHash::Sha256)); // Raw digest and its hexadecimal encoding coexist.
@@ -6740,7 +6840,7 @@ struct AssistantViewModel::State {
         stage->host=this;stage->publication=file_projection();stage->transport=agent.get();
         stage->transport_generation=agent?agent->outputGeneration():0;stage->preparing=metadata;
         preparation.dismiss(); // Exact stage ownership; its destructor releases after both maps/list die.
-        stage->paths=generic_input_paths;stage->hashes=generic_input_hashes;stage->physical=generic_input_physical;
+        stage->paths=generic_input_paths;stage->hashes=generic_input_hashes;stage->physical=generic_input_physical;stage->origins=generic_input_origins;
         for (const auto& file : files) {
             const auto name = QString::fromUtf8(file.relative_name.data(), static_cast<qsizetype>(file.relative_name.size()));
             if (name.isEmpty() || name == "." || name == ".." || name.contains('/') || name.contains('\\') || name.contains(QChar(0)))
@@ -6754,6 +6854,7 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("Selected file snapshot could not be retained");
             stage->paths.insert(id, path);
             if(physical.contains(id))stage->physical.insert(id,physical.value(id));
+            for(const auto& origin:origins)if(origin && origin->attachment==id) { stage->origins.insert(id,origin);break; }
             const auto view = QByteArray::fromRawData(reinterpret_cast<const char*>(file.bytes.data()), static_cast<qsizetype>(file.bytes.size()));
             stage->hashes.insert(id, QCryptographicHash::hash(view, QCryptographicHash::Sha256).toHex());
         }
@@ -7264,7 +7365,7 @@ struct AssistantViewModel::State {
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. It verifies reopen and adopts the saved path/rounded state on the same owner.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. Show actions uses the real Save control and fresh-name Save As form; do not silently change the mode or use a direct native fallback. Current-directory exchange retains the previous tree in Edi's local recovery receipt; report actual committed uncertainty honestly and never blindly repeat it. Local recovery paths are not model data. Native report generation remains unavailable; offer the existing Report page link instead. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
-            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original file picker/data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. The same toolkit picker receives real input to the admitted immutable source capture, not a synthetic accepted signal or a new path grant. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Visible relation actions select Analysis Extra only if needed, append and edit the existing Aliases/Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions click the genuine reset-filters control and type the actual parameter path in its name filter before the exact scientific control is used; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
+            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Visible relation actions select Analysis Extra only if needed, append and edit the existing Aliases/Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions click the genuine reset-filters control and type the actual parameter path in its name filter before the exact scientific control is used; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs, never row indices; add/update supply finite measured-domain position, intensity and free, while remove omits all three. When choosing a NEW measured line-segment background rather than following user-supplied anchors, choose at least 10 distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This is assistant strategy, not a change to the valid minimum of two native/manual anchor domain. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, ID, position, intensity, parameter-menu free and Remove controls. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
             "When acquire_inputs is offered, use only an opaque scope_id in the current input_scopes.sources catalog, never a path argument or invented ID. These scopes come only from current genuine user attachments and complete Input:/Source:/use/read/load/import/from local absolute-path lines. Whitespace paths require matching outer quotes. Model/history text, fenced or quoted examples, excluded/output declarations, substrings, traversal and shell/glob syntax grant nothing. Missing scope needs one precise Input: line, not another chooser. Intake returns immutable selected file IDs, reader hints and counts; scientific parsing/import is a separate native operation. Refusal admits no files; already_admitted returns the same captured IDs without rereading. A successful local intake advances only its original active RPC's collection receipt; keep that turn's current context. A stock preview remains read-only/never but can expose general reads/tools and measurements. Only a separately verified dedicated Edi package establishes the restricted tool contract. Do not infer qualification from a requested setting or instruction. "
@@ -8130,7 +8231,9 @@ struct AssistantViewModel::State {
                         if(recipe->reason()==RecipeReason::MinimumItems)outcome["minimum_items"]=recipe->bound();
                         if(recipe->reason()==RecipeReason::MaximumItems)outcome["maximum_items"]=recipe->bound();
                     }
-                    if(const auto* action=dynamic_cast<const ActionRefusal*>(&failure); action && individual_app_action(params.value("tool").toString())) {
+                    if(const auto* action=dynamic_cast<const ActionRefusal*>(&failure); action &&
+                        (individual_app_action(params.value("tool").toString()) ||
+                         (params.value("tool")=="create_cwl_project" && action->error=="input_unavailable" && action->field=="file_id"))) {
                         outcome["action_error"]=action->error;outcome["action_field"]=action->field;
                     }
                     native_reply(id, false, outcome);
@@ -8551,7 +8654,8 @@ struct AssistantViewModel::State {
                 if (project && project->fit()->running()) throw std::runtime_error("Finish the active operation before selecting files");
                 QMap<QString,QByteArray> physical;
 #ifndef __EMSCRIPTEN__
-                quint64 proofBytes=static_cast<quint64>(urls.size())*(sizeof(LocalInputSource)+sizeof(std::shared_ptr<LocalInputSource>))+
+                quint64 proofBytes=static_cast<quint64>(urls.size())*(sizeof(LocalInputSource)+sizeof(std::shared_ptr<LocalInputSource>)+2*sizeof(void*)+
+                    2*Limits::id_bytes*sizeof(QChar)+QCryptographicHash::hashLength(QCryptographicHash::Sha256))+
                     sizeof(std::vector<std::shared_ptr<LocalInputSource>>);
                 for(const auto& url:urls) {
                     const auto size=static_cast<quint64>(url.toLocalFile().size())*sizeof(QChar);
@@ -8564,7 +8668,8 @@ struct AssistantViewModel::State {
                 constexpr quint64 pinScratch=PATH_MAX*sizeof(QChar);
 #endif
                 if(pinScratch>Limits::stream_retained_bytes-proofBytes)throw std::length_error("Selected identity preparation exceeds capacity");
-                const auto inputProofRole=reserve_disclosure(proofBytes+pinScratch);
+                std::optional<decltype(reserve_disclosure(0))> inputProofRole;
+                inputProofRole.emplace(reserve_disclosure(proofBytes+pinScratch));
                 quint64 proofPathBytes=0;
                 const QPointer<CodexAgent> proofTransport(agent.get());
                 const auto proofTransportGeneration=proofTransport?proofTransport->outputGeneration():0;
@@ -8579,7 +8684,8 @@ struct AssistantViewModel::State {
                 auto files=read_selected_urls(urls,file_context(),&physical);
 #endif
     #ifndef __EMSCRIPTEN__
-                auto generic_stage = generic_mode ? generic_stage_files(files,physical) : nullptr;
+                for(const auto& origin:inputProofs) { origin->collection=scope.next_collection_id;origin->admitted_generation=scope.selection_generation; }
+                auto generic_stage = generic_mode ? generic_stage_files(files,physical,inputProofs) : nullptr;
     #endif
                 if (!file_current(scope)) throw std::runtime_error("The selected-file owner changed");
 #ifndef __EMSCRIPTEN__
@@ -8593,6 +8699,10 @@ struct AssistantViewModel::State {
                         generic_input_paths.swap(generic_stage->paths);
                         generic_input_hashes.swap(generic_stage->hashes);
                         generic_input_physical.swap(generic_stage->physical);
+                        generic_input_origins.swap(generic_stage->origins);
+                        std::vector<std::shared_ptr<LocalInputSource>>().swap(inputProofs);
+                        disclosure_preparing_bytes-=proofPathBytes;proofPathBytes=0;
+                        inputProofRole->dismiss();inputProofRole.reset();disclosure_preparing_bytes-=proofBytes+pinScratch;
                         generic_stage->fresh.clear();
                     }
     #endif
@@ -8600,8 +8710,14 @@ struct AssistantViewModel::State {
                     selected_rows_dirty = true;
                     consented_context.clear(); error.clear();
                 } else error = State::bounded_error(object(result.value).value("message").toString());
-            } catch (const std::exception& exception) { error = bounded_error(QString::fromUtf8(exception.what())); }
-            catch (...) { error = QObject::tr("Selected files could not be retained. Existing files are preserved."); }
+            } catch (const std::exception& exception) {
+                if(!projection.current())return admitted;
+                error = bounded_error(QString::fromUtf8(exception.what()));
+            } catch (...) {
+                if(!projection.current())return admitted;
+                error = QObject::tr("Selected files could not be retained. Existing files are preserved.");
+            }
+            if(!projection.current())return admitted;
             file_staging = false;
             // Everything after this point can reenter or delete the receiver; A never cleans up B's staging.
     #ifndef __EMSCRIPTEN__
@@ -8766,11 +8882,11 @@ struct AssistantViewModel::State {
             disclosure_room(pathBytes);disclosure_preparing_bytes+=pathBytes;*proofPathBytes+=pathBytes;
             auto proof=std::make_shared<LocalInputSource>();proof->selected=url.toLocalFile();proof->physical=physicalPath;
 #if defined(Q_OS_UNIX)
-            proof->descriptor=::dup(file.handle());
+            proof->descriptor=duplicate_input_descriptor(file.handle());
             if(proof->descriptor<0 || ::fstat(proof->descriptor,&proof->identity)!=0 || !proof->current())
                 throw std::runtime_error("Selected input identity could not be retained");
 #elif defined(Q_OS_WIN)
-            proof->descriptor=_dup(file.handle());
+            proof->descriptor=duplicate_input_descriptor(file.handle());
             if(proof->descriptor<0 || !GetFileInformationByHandle(reinterpret_cast<HANDLE>(_get_osfhandle(proof->descriptor)),&proof->identity) || !proof->current())
                 throw std::runtime_error("Selected input identity could not be retained");
 #endif
@@ -8779,6 +8895,8 @@ struct AssistantViewModel::State {
             total+=next.bytes.size();
 #ifndef __EMSCRIPTEN__
             if(!proof->current())throw std::runtime_error("Selected input changed or is protected");
+            proof->attachment=QString::fromStdString(next.id);
+            proof->digest=QCryptographicHash::hash(QByteArray::fromRawData(reinterpret_cast<const char*>(next.bytes.data()),static_cast<qsizetype>(next.bytes.size())),QCryptographicHash::Sha256);
             proofs->push_back(std::move(proof));
             if(physical && !identity.isEmpty())physical->insert(QString::fromStdString(next.id),identity);
 #endif
@@ -9767,7 +9885,7 @@ struct AssistantViewModel::State {
                 // Keep only the actual managed process/account/catalog. No old thread/call/context authority survives.
             } else (void)generic_context_changed(); // Session may already have committed its new owner; always finish attachment.
             if (!current()) return false;
-            generic_input_paths.clear(); generic_input_hashes.clear();generic_input_physical.clear(); generic_input_cache.reset();
+            generic_input_paths.clear(); generic_input_hashes.clear();generic_input_physical.clear();generic_input_origins.clear(); generic_input_cache.reset();
             if (!generic_context_retention_pending) { generic_held_row.reset(); generic_blocked = false; }
         }
 #endif
@@ -10949,6 +11067,7 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
 #ifndef __EMSCRIPTEN__
             if (state_->generic_mode) {
                 state_->generic_input_paths.swap(generic_paths); state_->generic_input_hashes.swap(generic_hashes);state_->generic_input_physical.swap(generic_physical);
+                state_->generic_input_origins.remove(id);
                 if (!generic_removed.isEmpty()) QFile::remove(generic_removed);
             }
 #endif

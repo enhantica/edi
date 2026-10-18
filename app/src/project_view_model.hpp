@@ -481,10 +481,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
     QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
     struct WidgetFileInput {
+        std::function<bool()> source_current;
+        QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.
         enum class Kind { Structure, Measurement };
         Kind kind = Kind::Structure;
         const edi::ExperimentBase* experiment = nullptr;
-        bool bounded_result = false, result_identity_refused = false;
+        bool bounded_result = false, result_identity_refused = false, source_changed = false;
         edi::Edit::AppliedResult applied_result;
         std::size_t points = 0, skipped = 0, nonpositive = 0, duplicates = 0, reordered = 0, derived = 0;
         QUrl path;

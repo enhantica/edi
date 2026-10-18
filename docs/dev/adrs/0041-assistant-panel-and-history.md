@@ -1944,3 +1944,31 @@ default; no timer, counter, profile store, runner, model operation or public API
 Existing Main monotonic/native-frame observations can correlate these intervals with
 actual input/render gaps before a narrowly owned caching correction is chosen. Source
 redundancy does not itself prove the owner's elapsed lag or a responsiveness fix.
+
+
+### File-load cue is presentation rather than device input
+
+The shared pointer sequencer has one narrow file-load cue: current target geometry,
+movement and visual press, with no device/key/clicked/file-dialog dispatch. Its original
+receiver/currentness checks still fence completion. Afterwards the existing PVM file
+admission/import owns actual consumed/applied/published facts and ordinary Undo. Manual
+Load opens its original dialog; parameter/free/relation controls retain genuine input.
+Original URL/FD/content proof and approved reader bytes follow ADR0017. A visual cue never
+claims that a Load button handler ran, nor proves scientific success.
+
+
+### Original input proof lifetime and cue refusal
+
+The original selected-input and acquired-input entrances share non-inheritable
+descriptor duplication: POSIX close-on-exec duplication or a non-inheritable Windows
+handle/CRT descriptor, with refusal when it cannot be established. The same rule
+covers their verification and directory-read duplicates. A later runtime exec must
+not inherit an original-input read capability.
+
+Acquisition reserves proof backing before growing its vector. Local proofs are
+destroyed before their origin and path preparation charges are released; successful
+adoption still explicitly transfers those roles to the selected-input owner.
+A still-current Load target records an unavailable original before either initial
+cue admission or later cue rejection can publish a generic control refusal. A retired
+target keeps its own retirement result. Compiled instructions describe the same
+visual-only assistant cue and original manual system dialog.

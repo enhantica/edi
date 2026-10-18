@@ -700,9 +700,12 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
         if (input) {
             if (input->kind != WidgetFileInput::Kind::Structure || input->consumed || input->path != file || !input->source)
                 throw std::invalid_argument("The chosen structure does not match its admitted original file");
+            const bool sourceCurrent=!input->source_current || input->source_current();
+            if(!self || retired_ || widget_file_input_!=input)return false;
+            if(!sourceCurrent) { input->source_changed=true;throw std::invalid_argument("The original attached structure changed or is unavailable"); }
             input->consumed = true; widget_input_executing_ = true;
         }
-        // The original picker selects the exact admitted capture. Its immutable
+        // The app-owned file receipt carries the admitted capture. Its immutable
         // bytes are the authority, not a second path read after genuine input.
         // Ordinary manual Load keeps its existing native/CIF file-reader door.
         auto structure = input ? edi::structure_from_edi_text(std::string(
@@ -719,6 +722,11 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
         }
         if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) {
             emit refused(refusal); return false;
+        }
+        if(input) {
+            const bool sourceCurrent=!input->source_current || input->source_current();
+            if(!self || retired_ || widget_file_input_!=input)return false;
+            if(!sourceCurrent) { input->source_changed=true;throw std::invalid_argument("The original attached structure changed or is unavailable"); }
         }
         auto before = edi::capture_structures(*project_);
         undo_history_.reserve(undo_history_.size() + 1);
@@ -1012,6 +1020,9 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         if (input->kind != WidgetFileInput::Kind::Measurement || input->consumed || input->path != file ||
             input->experiment != &experiment || !input->source)
             return refuse(tr("The chosen data does not match its admitted original experiment/file"));
+        const bool sourceCurrent=!input->source_current || input->source_current();
+        if(!self || retired_ || widget_file_input_!=input || static_cast<std::size_t>(index)>=project_->experiments.size() || project_->experiments[static_cast<std::size_t>(index)].get()!=&experiment)return false;
+        if(!sourceCurrent) { input->source_changed=true;return refuse(tr("The original attached data changed or is unavailable")); }
         input->consumed = true; widget_input_executing_ = true;
     }
     // A name the user has not changed (experiment1, experiment2, …) gives way to the file's.
@@ -1020,7 +1031,10 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
                               std::all_of(name.begin() + 10, name.end(), [](char c) { return c >= '0' && c <= '9'; });
     std::optional<edi::PlainDataLoad> read;
     try {
-        read.emplace(edi::experiment_with_plain_data(experiment, file.toLocalFile().toStdString(), default_name));
+        if(input) {
+            if(!input->reader_path.isLocalFile())return refuse(tr("The approved data reader input is unavailable"));
+            read.emplace(edi::experiment_with_plain_data(experiment,input->reader_path.toLocalFile().toStdString(),file.toLocalFile().toStdString(),default_name));
+        } else read.emplace(edi::experiment_with_plain_data(experiment, file.toLocalFile().toStdString(), default_name));
     } catch (const std::exception& refusal) {
         return refuse(input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what()));
     }
@@ -1037,6 +1051,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         input->consumed = true; // The original refused input is one-shot before notifying.
         input->result_identity_refused = true;
         return refuse(tr("The parsed data or phase identity exceeds the assistant result limit; no edit was made"));
+    }
+    if(input) {
+        const bool sourceCurrent=!input->source_current || input->source_current();
+        if(!self || retired_ || widget_file_input_!=input || static_cast<std::size_t>(index)>=project_->experiments.size() || project_->experiments[static_cast<std::size_t>(index)].get()!=&experiment)return false;
+        if(!sourceCurrent) { input->source_changed=true;return refuse(tr("The original attached data changed or is unavailable")); }
     }
     const QString file_name = QString::fromStdString(load.file_name);
     LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment)};

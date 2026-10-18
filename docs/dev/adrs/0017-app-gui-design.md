@@ -1282,7 +1282,7 @@ The original Create project dialog accepts letters, digits, spaces and Unicode n
 
 The first implementation is ProjectViewModel's Structure Load, Create experiment, enabled Experiment Type selectors and Load data into a bound ExperimentViewModel. Native `load_structure`, `create_experiment`, `set_experiment_type` and `load_data` expose those same doors in normal and Show actions delivery. File authority is an immutable admitted ID; member authority is the actual current PVM/native member, with a result pin on the original input receipt before public model notifications. Replacement or automatic naming returns the actual new dataset ID. No provider path, generic QObject scripting, new importer or recovery scheduler is introduced.
 
-Existing compound creation keeps its empty guard, typed recipe, normal atomic transaction/one Undo and visible per-control partial behavior. Shared app-owned snapshot IO and original visible load/current-member steps prevent scientific-reader divergence. The new calls preserve existing scientific members/metadata/explicit choices and each ordinary Undo. No-op type settles before navigation or input. Already measured targets refuse replacement. Native refusal uses closed app-owned action identifiers, never raw exception text. An actual applied input alone may advance its scientific/raw-data disclosure; selected files, project/account, skills and capabilities must still match the original approval. Late/retired callbacks preserve actual partial facts and cannot authorize or answer a newer owner. Normal mode requires no widget geometry; Show actions uses actual group/member controls and the same original one-shot picker token. Pending/retired callback owners remain charged until actual release. Native/compiler/input delivery and dedicated-package qualification are separate evidence.
+Existing compound creation keeps its empty guard, typed recipe, normal atomic transaction/one Undo and visible per-control partial behavior. Shared app-owned snapshot IO and original visible load/current-member steps prevent scientific-reader divergence. The new calls preserve existing scientific members/metadata/explicit choices and each ordinary Undo. No-op type settles before navigation or input. Already measured targets refuse replacement. Native refusal uses closed app-owned action identifiers, never raw exception text. An actual applied input alone may advance its scientific/raw-data disclosure; selected files, project/account, skills and capabilities must still match the original approval. Late/retired callbacks preserve actual partial facts and cannot authorize or answer a newer owner. Normal mode requires no widget geometry. Show actions uses actual group/member controls; file loading alone presents the original Load pointer/click cue without dispatched input or a picker, then enters the same validated native file operation. Pending/retired callback owners remain charged until actual release. Native/compiler/input delivery and dedicated-package qualification are separate evidence.
 
 
 The original type selector rebuilds settings for the selected type; wavelength or linked-phase scales can be reset. Successful actual replacement reports the fixed `experiment_type_settings_reinitialized` diagnostic and current member/type/links. An equal-type no-op does not report a reset. Guidance requires inspection and reapplication of explicit supported values through the original parameter controls, without pretending this action preserves all experiment configuration or silently reconstructing it.
@@ -1294,3 +1294,27 @@ Original file/creation inputs now receive the closed Edit's typed applied result
 ### Individual-action parsed identities are admitted before Edit
 
 The original Structure/data reader result and original Create/type names and phase links must fit the existing assistant result identifier bound before an individual assistant input reaches Edit or Undo publication. A prearmed individual input opts into this check and keeps a fixed refusal latch; manual and compound readers keep their existing behavior. Structure Load checks its already parsed native name; Load data checks its already parsed replacement after normal name-collision handling; Create/type checks the exact generated names/links. There is one original parser and no rename, truncation, larger cap or rollback. Unsupported representation returns the existing closed unsupported_input/file_id (or project/experiment) refusal with no scientific edit, preserving the original supplied bytes and ordinary manual name domain. Final-result and encoded-terminal checks remain defense in depth; callback retirement never upgrades the refusal to a write or authorizes another owner.
+
+
+### Approved file load presentation and original source identity
+
+The original Structure and Experiment groups retain their genuine manual system/browser
+file choosers and owner-bound accepted/rejected handlers. Their assistant-only fallback
+configuration, picker token, location focus and breadcrumb/path typing are removed.
+For already approved attachments, Show actions reveals the existing Load control and
+shows the shared pointer/press cue without delivering any mouse, key or clicked event.
+It then uses the original prearmed PVM file operation/Undo; other control input is unchanged.
+
+Original attachment and actually opened directory-child FD proofs are retained by selected
+ID/collection generation under existing inclusive retention. The original URL/name remains
+the source identity. Physical spelling, object, approved digest, account/project/input and
+member authority must remain current; removal, Clear and retired callbacks do not retarget
+an old proof. Chip consumption preserves canonical selected authority. Missing/changed or
+unavailable origins refuse, never authorize a replacement path or temporary fallback.
+
+Structure parsing consumes immutable admitted bytes. The existing SDK measurement parser
+is path-only, so its approved-byte stage stays internal; the common core plain-data assembly
+now accepts a separate original source identity for naming. Manual loading delegates with
+the same path for both roles. The normal compound atomic worker stage/transaction is kept,
+with original-origin verification before worker admission. No second parser, recovery/import
+scheduler, OS automation or new scientific editor is introduced. Native proof is separate.

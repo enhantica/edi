@@ -341,6 +341,10 @@ bool persistable_name(const std::string& name);
 /// row.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name);
+/// Same reader and assembly, with an internal approved-byte reader path and the original source path
+/// for file identity/naming. No second parser or input authority is introduced.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name);
 
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's

@@ -1632,7 +1632,12 @@ PlainDataRows read_plain_data(const std::string& path) {
 
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name) {
-    PlainDataRows read = read_plain_data(path);
+    return experiment_with_plain_data(experiment,path,path,take_file_name);
+}
+
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& path, bool take_file_name) {
+    PlainDataRows read = read_plain_data(reader_path);
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
     load.points = read.x.size();
     load.skipped = read.skipped;
