@@ -9055,6 +9055,60 @@ def gui404_table_markdown():
     return 'Original fileauth reply 1\n\n| Item | Value |\n| --- | --- |\n| Alpha | 111 |\n| Bravo | 222 |\n| Charlie | 333 |\n| Delta | 444 |'
 
 
+def gui439_native_environment(environment, captures):
+    # GUI-only opt-in. Original owned/default environment and every unrelated caller are unchanged.
+    optin=os.environ.get('EDI_TEST_NATIVE_GUI')
+    if optin is None:return environment
+    assert optin=='owner439-native-display', 'GUI439 SETUP: exact separately released native-display opt-in only'
+    from main_diagnostic416 import identity,same_generation
+    import stat
+    path=Path(os.environ['EDI_TEST_NATIVE_GUI_RECEIPT'])
+    root=Path(os.environ['EDI_TEST_SCOPE_DIR'])/'native-display'
+    assert path.is_absolute()and path==root/'live.json'and not path.is_symlink(), (
+        'GUI439 SETUP: exact owned display receipt, never ambient user DISPLAY or arbitrary supplied cwd'
+    )
+    receipt=json.loads(path.read_text());leader=receipt['leader']
+    from native_display442 import validate_receipt_binding
+    validate_receipt_binding(receipt)
+    assert receipt['state']=='LIVE_OWNED_AUTH_FILE_DISPLAY'and receipt['original_scope']['accepted']is True, (
+        'GUI439 SETUP: original live server ownership was proved before effects'
+    )
+    assert leader['pid']==leader['sid']and same_generation(leader,identity(leader['pid'])), (
+        'GUI439 SETUP: original server generation remains current, never numeric PID/SID reuse'
+    )
+    assert receipt['argv'][0]=='/tmp/e11-t5-native-display/package/usr/bin/Xvfb'and receipt['argv'][1]=='-displayfd'and(
+        receipt['argv'][3:]==['-auth',str(root/'Xauthority'),'-nolisten','tcp','-screen','0','1280x768x24']), (
+        'GUI439 SETUP: exact bound local-only authenticated original display command'
+    )
+    auth=root/'Xauthority';info=auth.lstat()
+    assert stat.S_ISREG(info.st_mode)and stat.S_IMODE(info.st_mode)==0o600 and(info.st_dev,info.st_ino)==tuple(receipt['auth_identity']), (
+        'GUI439 SETUP: exact original private nonlink authentication file remains owned'
+    )
+    assert hashlib.sha256(auth.read_bytes()).hexdigest()==receipt['auth']['sha256'], 'GUI439 SETUP: original credential bytes remain exact'
+    guard_path=Path(receipt['dependency_guard']['path'])
+    assert hashlib.sha256(guard_path.read_bytes()).hexdigest()==receipt['dependency_guard']['sha256'], 'GUI439 SETUP: bound graphics dependency inventory is unchanged'
+    guard=json.loads(guard_path.read_text())
+    for filename,value in guard['guard_files'].items():
+        data=Path(filename).read_bytes()
+        assert len(data)==value['bytes']and hashlib.sha256(data).hexdigest()==value['sha256'], (
+            'GUI439 SETUP: actual Xvfb/xcb/GLX/Mesa library closure remains pinned'
+        )
+    changes=receipt['environment']
+    assert set(changes)=={'QT_QPA_PLATFORM','QT_QUICK_BACKEND','QSG_RHI_BACKEND','QT_XCB_GL_INTEGRATION',
+        'LIBGL_ALWAYS_SOFTWARE','QSG_INFO','DISPLAY','XAUTHORITY'}
+    assert {k:v for k,v in changes.items()if k not in {'DISPLAY','XAUTHORITY'}}=={
+        'QT_QPA_PLATFORM':'xcb','QT_QUICK_BACKEND':'rhi','QSG_RHI_BACKEND':'opengl',
+        'QT_XCB_GL_INTEGRATION':'xcb_glx','LIBGL_ALWAYS_SOFTWARE':'1','QSG_INFO':'1'}, (
+        'GUI439 SETUP: original Qt OpenGL RHI with Mesa software GL, never software scenegraph paint'
+    )
+    assert changes['XAUTHORITY']==str(auth)and changes['DISPLAY'].startswith(':')and changes['DISPLAY'][1:].isdigit()
+    original=dict(environment);result={**environment,**changes}
+    (captures/'gui439-environment.json').write_text(json.dumps({'original_owned_environment':original,
+        'actual_native_environment':result,'declared_changes':changes,'server_leader':leader,
+        'display_receipt':str(path),'supported_RHI_frame_not_yet_proved':True},indent=2)+'\n')
+    return result
+
+
 def gui392_run(tmp_path, case):
     from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
 
@@ -9089,6 +9143,7 @@ def gui392_run(tmp_path, case):
               for path in reference.rglob('*') if path.is_file() and not path.is_symlink()}
     link_target = os.readlink(linked)
     environment = popup171_owned_environment(tmp_path)
+    environment = gui439_native_environment(environment, tmp_path)
     environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
     config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
     config = json.loads(config_path.read_text())
