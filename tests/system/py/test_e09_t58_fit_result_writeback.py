@@ -74,16 +74,23 @@ def test_fit_result_uncertainty_replaces_stale_model_and_serialized_state(
         'a fit that updates the value but leaves a stale model uncertainty is not write-back'
     )
 
+    original_cell = tuple(getattr(project.structure.cell, 'length_' + axis) for axis in 'abc')
+    assert tuple(item.value for item in original_cell) == pytest.approx((expected_value,) * 3), (
+        'The fitted cubic cell keeps the declared a=b=c values before serialization'
+    )
+    written_cell = tuple(
+        saved_pair(item.value, item.uncertainty)[0] if item.free else item.value
+        for item in original_cell
+    )
     saved = tmp_path / 'saved-project'
     project.save_as(saved)
     reloaded_cell = LIB.Project.load(saved).structure.cell
     reloaded = reloaded_cell.length_a
     written_value, written_su = saved_pair(expected_value, expected_uncertainty)
-    token = spelling(expected_value, expected_uncertainty)
     structure = next((saved / 'structures').glob('*.edi')).read_text()
-    assert re.findall(r'(?m)^_cell.length_a\s+(\S+)', structure) == [token], (
-        'The saved fitted token uses the independently derived IUCr value and uncertainty'
-    )
+    assert re.findall(r'(?m)^_cell.length_a\s+(\S+)', structure) == [
+        spelling(expected_value, expected_uncertainty)
+    ], 'The saved fitted token uses the independently derived IUCr value and uncertainty'
     assert float(reloaded.value) == pytest.approx(written_value, rel=0, abs=0), (
         'The fitted value reloads at its independently derived written precision'
     )
@@ -97,6 +104,6 @@ def test_fit_result_uncertainty_replaces_stale_model_and_serialized_state(
             reloaded_cell.length_b,
             reloaded_cell.length_c,
         )
-    ) == pytest.approx((written_value, written_value, written_value), rel=0, abs=0), (
-        'the saved cubic cell must apply its declared a=b=c ties to the refined length'
+    ) == pytest.approx(written_cell, rel=0, abs=0), (
+        'The cubic cell reloads each fitted axis at its declared free or fixed written precision'
     )

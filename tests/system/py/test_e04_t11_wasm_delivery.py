@@ -26,6 +26,7 @@ from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t11_wasm'
+VENDOR = json.loads((ROOT / 'tests/fixtures/report_transport/vendor.json').read_text())
 
 
 def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
@@ -35,6 +36,9 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     for name in ('wasm-pack.sh', 'wasm-env.sh', 'wasm_import_check.mjs'):
         shutil.copy2(ROOT / 'tools/ci' / name, scripts / name)
     shutil.copytree(ROOT / 'app/web', root / 'app/web')
+    for name in VENDOR:
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / name, root / name)
     for name in ('DEPENDENCIES.md', 'LICENSE', 'COPYING', 'THIRD-PARTY-NOTICES'):
         shutil.copy2(ROOT / name, root / name)
     toolchain = tmp_path / 'toolchain'
@@ -72,6 +76,11 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
         names = archive.namelist()
         assert not any(Path(name).name in native or name.startswith('build/') for name in names), (
             'public webapp packaging must exclude native libraries, objects and build trees'
+        )
+        assert {
+            name: archive.read(name) for name in names if name.startswith('report/vendor/')
+        } == {'report/vendor/' + Path(name).name: (ROOT / name).read_bytes() for name in VENDOR}, (
+            'The transport carries exactly the three declared report vendor files byte for byte'
         )
         assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 2, (
             'excluding native objects must retain both prescribed WebAssembly transport outputs'

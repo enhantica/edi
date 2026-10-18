@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-18T10:04:21Z
+# measured_utc = 2026-10-18T10:14:49Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 12768 banked, 0 stale row(s) dropped)
-# Collected tests: 14076; with a reported duration: 8027
+# Recorded from: measured test run (6 node(s) measured once, 12770 banked, 0 stale row(s) dropped)
+# Collected tests: 14082; with a reported duration: 8032
 # Module-scoped fixture costs recorded: 54
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 14076
+# inventory_python = 14082
 # inventory_cpp = 335
-# inventory_measured = 12770
+# inventory_measured = 12776
 # inventory_unmeasured = 1641
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -9510,6 +9510,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.090	tests/system/py/test_e04_t12_public_release.py::test_unreadable_containers_refuse_publication[xz]
 0.070	tests/system/py/test_e04_t12_public_release.py::test_unreadable_containers_refuse_publication[zip]
 0.080	tests/system/py/test_e04_t12_public_release.py::test_unreadable_containers_refuse_publication[zst]
+0.160	tests/system/py/test_e04_t12_public_release.py::test_vendor_allowance_does_not_cover_other_paths_or_versions[another-version]
+0.150	tests/system/py/test_e04_t12_public_release.py::test_vendor_allowance_does_not_cover_other_paths_or_versions[archive-member]
+0.160	tests/system/py/test_e04_t12_public_release.py::test_vendor_allowance_does_not_cover_other_paths_or_versions[neighbor]
+0.180	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/plotly-cartesian-3.7.0.min.js]
+0.000	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/three-0.160.0-OrbitControls.js]
+0.060	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/three-0.160.0.module.min.js]
 0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[disabled-check]
 0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-name]
 0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-path]
