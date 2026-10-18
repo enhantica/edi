@@ -1,7 +1,10 @@
 "The historical byte adaptation admits only the independently derived uncertainty spellings."
 
+from decimal import Decimal
+
 import pytest
 
+from tests.fixtures.saved_spelling.fit_state import half_step
 from tests.fixtures.saved_spelling.reference import decode, historical_spelling, spelling
 from tests.system.py.test_c13_t12_compatibility import comparison_records, delimiter_only
 
@@ -24,6 +27,10 @@ from tests.system.py.test_c13_t12_compatibility import comparison_records, delim
 def test_saved_spelling_matches_independent_iucr_examples(value, su, expected):
     assert spelling(value, su) == expected, (
         'The expected saved token follows the stated IUCr ceiling and value rounding'
+    )
+    shown, _uncertainty = decode(expected)
+    assert abs(Decimal(str(shown)) - Decimal(value)) <= half_step(expected), (
+        'The written uncertainty digits bound value rounding by half the final decimal step'
     )
 
 
