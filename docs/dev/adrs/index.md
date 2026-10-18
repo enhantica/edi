@@ -65,7 +65,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0038](0038-subscription-provider-connections.md) | Subscription provider connections | Accepted | 🟡 | High | Native SIWC ChatGPT candidate; issuer-verified credentials, bounded streamed Responses; live account and other providers/platforms pending |
 | [0041](0041-assistant-panel-and-history.md) | Assistant panel and conversation history | Accepted | 🟡 | High | Appbar-only overlay on the actual sidebar, existing components, explicit approval and bounded history; live provider proof pending |
 
-| [0042](0042-assistant-product-skills.md) | Versioned assistant product guidance | Accepted | 🟡 | High | Initial exact content/index present; embedded loading, consented context and resource browsing pending |
+| [0042](0042-assistant-product-skills.md) | Versioned assistant product guidance | Accepted | 🟡 | High | Versioned bundled guidance; native Preferences source capture, immutable staging/disclosure and runtime validation described; native qualification remains required |
 
 | [0043](0043-defined-background-editing.md) | Defined line-segment background editing | Accepted | 🟡 | High | Common explicit manual/native/visible add-update-remove preparation, atomic row Edit and Undo; complete bounded anchor inspection; native capacity distinct from ordinary GUI capacity |
 

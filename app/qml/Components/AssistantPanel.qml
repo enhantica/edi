@@ -70,21 +70,37 @@ Popup {
     property var consentSend: null
     function retireConsentSend() { consentSend = null; }
     function ownsConsentSend(intent) {
-        return intent !== null && consentSend === intent && intent.owner === panel.assistant
-            && intent.project === Session.project && composer.ownsConsentDraft(intent.draft)
-            && panel.assistant.connected && panel.assistant.contextPreview === intent.context
-            && panel.assistant.selectedModel === intent.model && panel.assistant.selectedEffort === intent.effort
-            && consentSend === intent && composer.ownsConsentDraft(intent.draft);
+        const component = panel, original = panel.assistant, draftComponent = composer;
+        if (intent === null || consentSend !== intent || intent.owner !== original) return false;
+        const draftOwned = draftComponent.ownsConsentDraft(intent.draft);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !draftOwned) return false;
+        const context = original.contextPreview;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+            || component.consentSend !== intent || intent.owner !== original) return false;
+        if (intent.project !== Session.project || !original.connected || context !== intent.context
+            || original.selectedModel !== intent.model || original.selectedEffort !== intent.effort) return false;
+        const stillDraftOwned = draftComponent.ownsConsentDraft(intent.draft);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return false;
+        return stillDraftOwned && component.consentSend === intent;
     }
     function resumeConsentSend() {
-        const intent = consentSend;
+        const component = panel, original = panel.assistant, draftComponent = composer;
+        const intent = component.consentSend;
         if (!intent) return;
-        if (!ownsConsentSend(intent)) { if (consentSend === intent) retireConsentSend(); return; }
-        if (!intent.approved || panel.assistant.contextConsentRequired
-            || panel.assistant.state !== "idle" || panel.assistant.canCancel) return;
+        const owned = component.ownsConsentSend(intent);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
+        if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); return; }
+        if (!intent.approved) return;
+        const required = original.contextConsentRequired;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
+        const stillOwned = component.ownsConsentSend(intent);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
+        if (required || original.state !== "idle" || original.canCancel) return;
         // Consume before submission: queued readiness notifications cannot send twice.
-        consentSend = null;
-        composer.submitApprovedDraft(intent.draft);
+        component.consentSend = null;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+            || component.consentSend !== null) return;
+        draftComponent.submitApprovedDraft(intent.draft);
     }
     function scheduleConsentSend() { Qt.callLater(resumeConsentSend); }
     Connections {
@@ -97,9 +113,12 @@ Popup {
         function onStateChanged() { panel.scheduleConsentSend(); }
         function onCanCancelChanged() { panel.scheduleConsentSend(); }
         function onContextPreviewChanged() {
-            const intent = panel.consentSend;
-            if (intent && !panel.ownsConsentSend(intent)) { if (panel.consentSend === intent) panel.retireConsentSend(); }
-            else panel.scheduleConsentSend();
+            const component = panel, original = panel.assistant;
+            const intent = component.consentSend;
+            const owned = intent ? component.ownsConsentSend(intent) : true;
+            if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
+            if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); }
+            else if (component.consentSend === intent) component.scheduleConsentSend();
         }
     }
     Connections {
@@ -516,14 +535,23 @@ Popup {
                             panel.retireConsentSend();
                     }
                     onContextApprovalRequested: draft => {
-                        const captured = composer.captureConsentDraft();
-                        if (!captured || captured.text !== draft) return;
-                        const original = panel.assistant;
-                        const intent = { owner: original, project: Session.project, draft: captured,
-                            context: original.contextPreview, model: original.selectedModel,
-                            effort: original.selectedEffort, approved: false };
-                        panel.consentSend = intent;
-                        if (panel.ownsConsentSend(intent)) connectionDialog.open();
+                        const component = panel, original = panel.assistant, draftComponent = composer, dialog = connectionDialog;
+                        const previous = component.consentSend;
+                        const captured = draftComponent.captureConsentDraft();
+                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+                            || !captured || captured.text !== draft || captured.owner !== original) return;
+                        const owned = draftComponent.ownsConsentDraft(captured);
+                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+                            || !owned || component.consentSend !== previous) return;
+                        const intent = { owner: original, project: captured.project, draft: captured,
+                            context: captured.context, model: captured.model,
+                            effort: captured.effort, approved: false };
+                        component.consentSend = intent;
+                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
+                        const stillOwned = component.ownsConsentSend(intent);
+                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+                            || !Qt.isQtObject(dialog) || !stillOwned) return;
+                        dialog.open();
                     }
                 }
             }
@@ -749,10 +777,13 @@ Popup {
             assistant: panel.assistant
             onRejected: panel.retireConsentSend()
             onContextApproved: {
-                const intent = panel.consentSend;
-                if (!panel.ownsConsentSend(intent)) { if (panel.consentSend === intent) panel.retireConsentSend(); return; }
+                const component = panel, original = panel.assistant;
+                const intent = component.consentSend;
+                const owned = component.ownsConsentSend(intent);
+                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
+                if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); return; }
                 intent.approved = true;
-                panel.scheduleConsentSend();
+                component.scheduleConsentSend();
             }
         }
     }

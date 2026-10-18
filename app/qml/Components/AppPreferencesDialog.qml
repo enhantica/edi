@@ -2,10 +2,12 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
@@ -97,7 +99,16 @@ AppDialog {
 
     objectName: "preferences"
     visible: Preferences.dialogShown
-    onClosed: Preferences.dialogShown = false
+    onClosed: {
+        Preferences.dialogShown = false;
+        const intent=sourcesFolder.selection;
+        if(intent) {
+            sourcesFolder.selection=null;
+            if(Qt.isQtObject(intent.owner))intent.owner.cancelSkillSourceSelection(intent.id);
+            if(Qt.isQtObject(sourcesFolder) && sourcesFolder.selection===null)sourcesFolder.reject();
+        }
+    }
+    onOpened: Session.assistant.refreshSkillSources()
 
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
@@ -139,6 +150,11 @@ AppDialog {
             objectName: "preferences.tab.projects"
             fontIcon: "archive"
             text: qsTr("Projects")
+        }
+        EaElements.AppBarTabButton {
+            objectName: "preferences.tab.aiAssistance"
+            fontIcon: "robot"
+            text: qsTr("AI assistance")
         }
         EaElements.AppBarTabButton {
             objectName: "preferences.tab.experimental"
@@ -312,6 +328,137 @@ AppDialog {
             }
         }
 
+        ScrollView {
+            id: aiPage
+            implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height-bar.implicitHeight-AppSizes.unit*8))
+            readonly property var original: Session.assistant
+            clip: true
+            Column {
+                id: aiContent
+                width: Math.max(0, aiPage.availableWidth)
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Skill sources")
+                    font.bold: true
+                }
+                DataTable {
+                    id: sourceTable
+                    objectName: "preferences.ai.sources"
+                    width: parent.width
+                    maxRowCountShow: 5
+                    sourceModel: aiPage.original ? aiPage.original.skillSources : null
+                    defaultInfoText: qsTr("No skill sources")
+                    columnWidths: [numberColumnWidth,-1,AppSizes.iconColumnWidth,AppSizes.iconColumnWidth]
+                    header: EaComponents.ListViewHeader {
+                        EaComponents.TableViewLabel {}
+                        EaComponents.TableViewLabel { text: qsTr("Source"); horizontalAlignment: Text.AlignLeft }
+                        EaComponents.TableViewLabel {}
+                        EaComponents.TableViewLabel {}
+                    }
+                    delegate: EaComponents.ListViewDelegate {
+                        id: sourceRow
+                        required property int index
+                        readonly property string sourceId: model.id || ""
+                        required property string label
+                        required property string path
+                        required property bool builtin
+                        required property string status
+                        required property var model
+                        readonly property var original: aiPage.original
+                        property int presentation: 0
+                        onSourceIdChanged: ++presentation
+                        onOriginalChanged: ++presentation
+                        EaComponents.TableViewLabel {
+                            text: sourceRow.index+1
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                        EaComponents.TableViewLabel {
+                            objectName: "preferences.ai.source.label."+sourceRow.sourceId
+                            text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.path
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideMiddle
+                            ToolTip.text: text+(sourceRow.status.length ? "\n"+sourceRow.status : "")
+                        }
+                        EaComponents.TableViewButton {
+                            id: sourceEnabled
+                            objectName: "preferences.ai.source.enabled."+sourceRow.sourceId
+                            fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
+                            enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
+                            ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
+                            Accessible.name: ToolTip.text
+                            Accessible.checkable: true
+                            Accessible.checked: sourceRow.model.enabled
+                            property var gesture: null
+                            onPressed: gesture={owner:sourceRow.original,id:sourceRow.sourceId,revision:sourceRow.original.skillSourceRevision,presentation:sourceRow.presentation,enabled:!sourceRow.model.enabled}
+                            onCanceled: gesture=null
+                            onClicked: {
+                                const original=gesture;gesture=null;
+                                if(original && Qt.isQtObject(original.owner) && original.owner===aiPage.original && original.id===sourceRow.sourceId && original.presentation===sourceRow.presentation && original.enabled===!sourceRow.model.enabled)
+                                    original.owner.setSkillSourceEnabled(original.id,original.enabled,original.revision);
+                            }
+                            Connections {
+                                target: sourceRow.original
+                                function onSkillSourcesChanged() { sourceEnabled.gesture=null; }
+                            }
+                        }
+                        EaComponents.TableViewButton {
+                            objectName: "preferences.ai.source.remove."+sourceRow.sourceId
+                            fontIcon: "minus-circle"
+                            enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
+                            ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
+                            Accessible.name: ToolTip.text
+                            id: sourceRemove
+                            property var gesture: null
+                            onPressed: gesture={owner:sourceRow.original,id:sourceRow.sourceId,revision:sourceRow.original.skillSourceRevision,presentation:sourceRow.presentation}
+                            onCanceled: gesture=null
+                            onClicked: {
+                                const original=gesture;gesture=null;
+                                if(original && Qt.isQtObject(original.owner) && original.owner===aiPage.original && original.id===sourceRow.sourceId && original.presentation===sourceRow.presentation)
+                                    original.owner.removeSkillSource(original.id,original.revision);
+                            }
+                            Connections {
+                                target: sourceRow.original
+                                function onSkillSourcesChanged() { sourceRemove.gesture=null; }
+                            }
+                        }
+                    }
+                }
+                EaElements.SideBarButton {
+                    objectName: "preferences.ai.sources.add"
+                    text: qsTr("Add skill source")
+                    fontIcon: "plus-circle"
+                    enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
+                    onClicked: {
+                        const original=Session.assistant;
+                        const token=original.beginSkillSourceSelection();
+                        if (!Qt.isQtObject(original) || original!==Session.assistant || !token.length || sourcesFolder.intent.length) {
+                            if (Qt.isQtObject(original)) original.cancelSkillSourceSelection(token);
+                            return;
+                        }
+                        const intent={owner:original,id:token};
+                        sourcesFolder.selection=intent;
+                        if (Qt.isQtObject(sourcesFolder) && sourcesFolder.selection===intent) sourcesFolder.open();
+                        else if (Qt.isQtObject(original)) original.cancelSkillSourceSelection(token);
+                    }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: Session.assistant.skillSourceError
+                    visible: text.length>0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                    color: EaStyle.Colors.red
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Enabled sources guide the assistant. They do not grant project writes, network access or new tools.")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                }
+            }
+        }
+
         // Experimental: zoom and language are not available yet — the default zoom, English.
         RowGrid {
             RowLabel {
@@ -428,6 +575,30 @@ AppDialog {
                     text: qsTr("Reset to defaults")
                     onClicked: resetConfirm.open()
                 }
+            }
+        }
+    }
+
+    FolderDialog {
+        id: sourcesFolder
+        objectName: "preferences.ai.sources.folder"
+        property var selection: null
+        readonly property string intent: selection ? selection.id : ""
+        readonly property var original: selection ? selection.owner : null
+        title: qsTr("Choose a skill folder or collection")
+        onAccepted: {
+            const target=original; const token=intent; const folder=selectedFolder;
+            selection=null;
+            if (Qt.isQtObject(target)) target.addSkillSource(token,folder);
+        }
+        onRejected: { const target=original; const token=intent; selection=null; if (Qt.isQtObject(target)) target.cancelSkillSourceSelection(token); }
+        Component.onDestruction: { const target=original; const token=intent; selection=null; if (Qt.isQtObject(target)) target.cancelSkillSourceSelection(token); }
+        Connections {
+            target: sourcesFolder.original
+            function onSkillSourceSelectionRetired(token) {
+                if (sourcesFolder.intent!==token) return;
+                sourcesFolder.selection=null;
+                if (Qt.isQtObject(sourcesFolder) && sourcesFolder.selection===null) sourcesFolder.reject();
             }
         }
     }

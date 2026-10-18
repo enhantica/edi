@@ -443,44 +443,67 @@ Rectangle {
     }
     function captureConsentDraft() {
         if (editor.inputMethodComposing || editor.preeditText.length) return null;
-        return { owner: assistant, text: editor.text, revision: textRevision, ownerRevision: draftOwnerRevision,
-            files: consentFileRevision, project: Session.project, context: assistant.contextPreview,
+        const component = composer;
+        const draft = { owner: assistant, text: editor.text, revision: textRevision, ownerRevision: draftOwnerRevision,
+            files: consentFileRevision, project: Session.project,
             model: assistant.selectedModel, effort: assistant.selectedEffort,
             email: assistant.account.email, plan: assistant.account.planType };
+        const context = draft.owner.contextPreview;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draft.owner) || draft.owner !== component.assistant) return null;
+        draft.context = context;
+        const owned = component.ownsConsentDraft(draft);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draft.owner) || draft.owner !== component.assistant) return null;
+        return owned ? draft : null;
     }
     function ownsConsentDraft(draft) {
-        return draft !== null && draft.owner === assistant && draft.text === editor.text
+        if (draft === null || draft.owner !== assistant) return false;
+        const original = assistant;
+        const context = original.contextPreview;
+        return Qt.isQtObject(composer) && Qt.isQtObject(original) && original === assistant
+            && draft.owner === original && draft.text === editor.text
             && draft.revision === textRevision && draft.ownerRevision === draftOwnerRevision
             && draft.files === consentFileRevision && draft.project === Session.project
-            && draft.context === assistant.contextPreview && draft.model === assistant.selectedModel
+            && draft.context === context && draft.model === assistant.selectedModel
             && draft.effort === assistant.selectedEffort && draft.email === assistant.account.email
             && draft.plan === assistant.account.planType
             && !editor.inputMethodComposing && editor.preeditText.length === 0;
     }
     function submitApprovedDraft(draft) {
-        if (!ownsConsentDraft(draft) || !assistant.connected || assistant.contextConsentRequired
-            || assistant.state !== "idle" || assistant.canCancel) return;
-        submit(draft);
+        const component = composer, original = assistant;
+        const owned = component.ownsConsentDraft(draft);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return;
+        if (!original.connected) return;
+        const required = original.contextConsentRequired;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
+        const stillOwned = component.ownsConsentDraft(draft);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
+        if (required || original.state !== "idle" || original.canCancel) return;
+        component.submit(draft);
     }
     function submit(approvedDraft) {
+        const component = composer, original = assistant;
+        const requested = approvedDraft || component.captureConsentDraft();
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !requested) return;
         if (!approvedDraft) {
-            const requested = captureConsentDraft();
-            submissionRequested(requested);
-            if (!Qt.isQtObject(composer) || (requested && !ownsConsentDraft(requested))) return;
+            component.submissionRequested(requested);
+            if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
         }
-        if (!assistant.connected || (assistant.canCancel && !canSteer) || !hasDraft)
-            return;
-        if (approvedDraft && !ownsConsentDraft(approvedDraft)) return;
-        if (assistant.contextConsentRequired) {
+        const owned = component.ownsConsentDraft(requested);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return;
+        if (!original.connected || (original.canCancel && !canSteer) || !hasDraft) return;
+        const required = original.contextConsentRequired;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
+        const stillOwned = component.ownsConsentDraft(requested);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
+        if (required) {
             if (approvedDraft) return;
-            contextApprovalRequested(editor.text);
+            component.contextApprovalRequested(requested.text);
             return;
         }
-        const original = assistant;
         const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
-        if (approvedDraft && (!ownsConsentDraft(approvedDraft) || original.state !== "idle" || original.canCancel)) return;
+        if (approvedDraft && (original.state !== "idle" || original.canCancel)) return;
         const rowId = original.submitDraft(text);
-        if (!Qt.isQtObject(composer) || original !== composer.assistant) return;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
         if (rowId.length && draftOwnerRevision === ownerRevision) {
             const pending = submittedDrafts.slice();
             pending.push({id: rowId, text: text, revision: revision});

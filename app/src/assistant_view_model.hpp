@@ -27,6 +27,9 @@ class AssistantViewModel : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to Session")
+    Q_PROPERTY(edi_app::RowTableModel* skillSources READ skillSources CONSTANT)
+    Q_PROPERTY(QString skillSourceRevision READ skillSourceRevision NOTIFY skillSourcesChanged)
+    Q_PROPERTY(QString skillSourceError READ skillSourceError NOTIFY skillSourcesChanged)
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
@@ -80,6 +83,15 @@ class AssistantViewModel : public QObject {
     QString lastError() const;
     QVariantMap usage() const;
     QVariantMap account() const;
+    RowTableModel* skillSources() const;
+    QString skillSourceError() const;
+    QString skillSourceRevision() const;
+    Q_INVOKABLE QString beginSkillSourceSelection();
+    Q_INVOKABLE bool addSkillSource(const QString& token, const QUrl& folder);
+    Q_INVOKABLE void cancelSkillSourceSelection(const QString& token);
+    Q_INVOKABLE bool setSkillSourceEnabled(const QString& id, bool enabled, const QString& revision = {});
+    Q_INVOKABLE bool removeSkillSource(const QString& id, const QString& revision = {});
+    Q_INVOKABLE void refreshSkillSources();
     Q_INVOKABLE void refreshUsage();
     QString contextPreview() const;
     bool contextConsentRequired() const;
@@ -134,6 +146,8 @@ class AssistantViewModel : public QObject {
     void activeJobIdChanged();
     void canCancelChanged();
     void lastErrorChanged();
+    void skillSourcesChanged();
+    void skillSourceSelectionRetired(const QString& token);
     void usageChanged();
     void contextPreviewChanged();
 

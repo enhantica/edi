@@ -78,3 +78,40 @@ A genuine Sign in attempt also owns a bounded app-local failure dialog, using th
 ### Native recipe profile choices are actual core tokens (2026-10-16)
 
 The native creation recipe previously described peak_profile as arbitrary short text while the actual selector accepts canonical core IDs. A delegated agent could therefore invent plausible display spellings and fail before project creation. The recipe schema now derives its enum from supported_peak_profiles(CONSTANT_WAVELENGTH), the same existing core catalog used by normal selectors, and parses only those exact choices. No parallel profile list, synonym guessing, new scientific model or host-selected profile default is introduced. User-supplied wavelength/recipe intent remains authoritative; the agent chooses justified offered options only within delegation. A fresh actual thread/catalog is needed for updated tool metadata; old instructions are not retroactively changed. Source preparation is not an observed explanation for any unexpanded owner error beyond the confirmed metadata omission.
+
+### Configured native skill inventory and immutable disclosure
+
+The first implementation is the app's existing bundled resource staging, runtime skills/list discovery and complete context/disclosure lifecycle. Built-in and selected local packages now use one bounded inventory capture. Local selection is an instruction-read scope only. A source is a standard SKILL.md package or a collection of immediate packages; names/front matter must be valid and unique, and every captured file belongs to a declared package. Files/entries, path lengths, payload and catalog size retain the existing Limits/SelectedFileLimits. Canonical directory identity is pinned and rechecked; directory/file opens reject links and special members, compare actual opened/named identity, and refuse changed files/directories. Missing, malformed or duplicate sources admit no partial replacement. The bundled manifest still binds its original resource hashes. No remote source fetch or source text can add native tool IDs, project roots, writes or network permission.
+
+Approval owns the immutable captured inventory and configuration identity. Staging copies those exact approved bytes into a fresh Edi-owned instruction directory; it never recaptures a different source at this boundary and never overwrites an existing provider-modified stage. The staged snapshot, runtime declarations, bootstrap/backend proof and final submitted disclosure are bonded. Every required staged resource, including auxiliary files, is hashed before Send; changed source/staged content or configuration refuses before input admission. A source/configuration A→B→A transition cannot make staged B stand in for approved A. Disabling/removing a source retires the existing context through its original lifecycle; the next Edi-managed stage/disclosure excludes it. All-disabled stages an empty skills directory and requires zero registered Edi source paths. Unrelated provider-global/plugin behavior is not relabeled as configured-source authority or isolated by this feature.
+
+The settings decoder reuses the first strict JSON parser and the receipt parser's concrete pre-admission accounting: borrowed QSettings value, raw encoding, strict AST/key/number/string temporaries, decoded strings, replacement rows and old/new canonical COW/configuration/encoded/settings owners overlap until their actual release. Token/depth/closed-shape checks precede owning parser copies. Source capture charges payload, file/path/catalog/decode/front-matter/hash and concurrent manifest owners before growth. It counts UTF-8/UTF-16 explicitly, without a guessed Unicode multiplier or capacity increase. A weak inventory identity list keeps an original snapshot counted while a local callback frame still owns it; shared inventory bytes are counted once across approval, stage, backend and local frames. Registration transfers the existing reservation to that actual live owner without a double charge. Conservative temporary high-water charges remain until the original frame exits; they are not released while payloads are live. Edi's scientific model is not charged again as an instruction inventory.
+
+Loading may emit the existing model and property signals. Every affected preparation/disclosure/bootstrap/Send/native refresh caller carries its original weak receiver/State/controller/project/account/input proof before its first post-effect member read, catch publication or admission. A deleted/rebound receiver abandons old presentation; a genuine committed settings or scientific result remains factual. Source setters additionally carry the original serial through reload and publication. This extends the existing common callback/transport retirement rules rather than suppressing observers, recapturing a replacement owner or adding a callback framework. Existing effective readOnly/never policy and final model/effort proof remain required. Raw measurement/general-read exposure warnings stay accurate; this is not the later isolated host/privacy boundary.
+
+### Discovery catalog ownership and disclosure refresh
+
+Runtime discovery extends the original bundled catalog. Each required staged
+file is compared with its approved immutable bytes using the existing bounded
+read buffer. Borrowed provider strings are sized before their decoded owners;
+the complete content decode, temporary JSON row, growing catalog and table-key
+replacement roles are admitted before construction against the same joint
+application/transport slot. The encoded catalog limit remains strict. Empty
+and all-disabled inventories require no file-read buffer.
+
+The catalog uses the original canonical Rows mechanism rather than another
+independent model payload. A const shared catalog snapshot owns its JSON rows;
+weak identities count each live snapshot once, including an old callback frame
+after a replacement. Transfer removes its preparation reservation only after
+the tracked owner exists. Current model rows remain charged until replaced or
+cleared; source disable/removal alone cannot declare them released. Temporary
+roles unwind after their actual payloads and reconcile the original transport
+generation. These are retained-payload/container admissions under the existing
+policy, not a claim to measure Qt allocator overhead or process RSS.
+
+Source reload and successful or failed settings writes retire the corresponding
+old approval and synchronously publish the existing context/consent properties
+with original-owner guards before exposing replacement table rows. A failed
+write stays explicitly invalid; a committed configuration remains factual if
+later presentation retires. No builtin error fallback, replacement-owner
+recapture, deferred publication dependency or additional permission is added.

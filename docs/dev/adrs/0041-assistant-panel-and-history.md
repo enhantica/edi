@@ -1272,3 +1272,47 @@ path and presentation identity before continuing. A reentrant new owner, a new
 opening for the same owner/path or destruction supersedes the old opener. The
 same standard dialog and unsaved behavior remain; no callbacks are suppressed and
 no old opener restores or reopens a newer presentation.
+
+### Application Preferences skill sources
+
+The first manual door is the existing application Preferences dialog (ADR-0017 §12), with the original LinkedStructureGroup/DataTable add, enable and remove conventions. AI assistance contains that same table pattern and a genuine FolderDialog. EasyDiffraction is the built-in source's user-facing name; its repository/resource path is not presented. It can be disabled but not deleted. A local row represents the exact selected package/collection and physical directory identity. Its opaque ID is independent of row position. There is no new chat skill browser, science form, project folder grant or provider capability.
+
+Preferences remains available without assistant sign-in. Its controls refuse changes while the assistant owns active work. A native row captures its original owner, opaque ID and configuration revision on press; an intervening replacement/configuration update cannot transfer that click to another row or owner. Folder completion consumes an original one-shot owner/account/project/input/configuration receipt before callbacks. Cancel, project/account/input retirement and dialog destruction retire only that chooser. Closing Preferences also retires its original outstanding chooser. The ordinary global settings store persists enabled source rows; opening Preferences explicitly reloads them. Reading an unchanged configuration does not change approval. Missing settings explicitly default to the built-in source, whereas unreadable, malformed, oversized or failed-write settings are assistant-invalid and never fall back to built-in instructions. That error cannot unwind ordinary Session construction or project replacement. Explicit reload/source correction can recover. All-disabled is a valid empty instruction catalog.
+
+The current chat/header/composer, account/usage, palette, original scientific controls, Save, input and folder-free read-only lifecycle remain the existing implementation. This feature adds instruction-source preferences, not filesystem write authority or a privacy boundary against the runtime's other existing tools. Local capture uses the existing Unix native filesystem boundary; unsupported local platforms refuse. Injected restricted compatibility controllers retain their separate existing behavior. Native UI, persistence faults, provider discovery, race/fault injection and C++/Qt qualification require the actual consumer; source/grammar checks do not certify those intervals.
+
+### Source-dependent consent publication
+
+The original Send wrapper treats the consent getter as callback-capable. Each
+branch checks its captured weak receiver, State, project/controller, account,
+input and presentation proof before any refusal, member access or notification
+after that getter. A changed source can retire the original offer; it cannot
+transfer the original draft's Send authority to its replacement.
+
+A factual source reload, invalid configuration or committed edit updates the
+existing context-preview notifier synchronously through the original guarded
+context lifecycle. Its continuation carries only that helper's own account
+transition. The same good configuration keeps its approval; actual replacement
+abandons old publication. Neither a timer nor a later archive render supplies
+the disclosure bond. A first source load with no prior execution context
+publishes the initial offer without retiring an unrelated account.
+
+The existing composer and pending-send receipt functions also recheck their
+original assistant/project, draft revision (including newer identical input),
+file revision, model/effort and account after source-dependent getters. Offer
+creation reuses that captured context rather than obtaining replacement values
+mid-construction. The original dialog's accepted continuation retains its
+existing disclosed-context object identity across sign-in, failure presentation
+and the consent getter before emitting approval. Cancel, the real ACK and
+consume-before-submit ordering remain unchanged; no new visual control or
+public receipt API is introduced.
+
+Receipt predicates can synchronously publish source changes and return failure
+because their original component was retired. Every outer caller saves that
+result and checks its captured component and assistant before any subsequent
+property access, signal, cleanup or dialog opener, including false/null returns.
+A failed draft capture emits no submission signal. A live old pending intent
+may be retired only while it is still the same intent; it cannot clear its
+replacement. The original consume-before-submit order also checks its receiver
+and empty slot after the notifying property change. These checks extend the
+existing consent receipt, with no new signal, control or callback suppression.

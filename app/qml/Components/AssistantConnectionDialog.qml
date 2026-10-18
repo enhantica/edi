@@ -63,12 +63,27 @@ AppDialog {
         }
     }
     onAccepted: {
+        const original = assistant;
+        const project = Session.project;
+        const model = original.selectedModel, effort = original.selectedEffort;
+        const wasConnected = original.connected;
+        const email = original.account.email, plan = original.account.planType;
+        const offered = disclosedContext;
+        const current = () => Qt.isQtObject(dialog) && Qt.isQtObject(original)
+            && dialog.assistant === original && Session.project === project
+            && original.selectedModel === model && original.selectedEffort === effort
+            && (!wasConnected || (original.account.email === email && original.account.planType === plan))
+            && dialog.disclosedContext === offered;
+        if (!current()) return;
         connectionFailure.close();
-        connectionAttempt = !assistant.connected;
-        assistant.signIn();
+        if (!current()) return;
+        connectionAttempt = !wasConnected;
+        original.signIn();
+        if (!current()) return;
         showConnectionFailureIfFinished();
-        if (assistant.connected && !assistant.contextConsentRequired)
-            contextApproved();
+        if (!current() || !original.connected) return;
+        const required = original.contextConsentRequired;
+        if (current() && !required) contextApproved();
     }
     AppDialog {
         id: connectionFailure
