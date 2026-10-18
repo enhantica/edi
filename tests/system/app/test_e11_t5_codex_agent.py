@@ -11105,6 +11105,15 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     sites = {row['id']: row for row in structure['sites']}
     assert set(sites) == {'La', 'Ba', 'Co', 'O'} and observations[0]['phases'] == [structure['id']], (
         'OUTCOME500: one literal original LBCO phase retains every independent crystallographic species')
+    # ADR0022: geometry exposes closed-cell display copies at BOTH0 and1, not physical multiplicity.
+    # Independent Pm-3m orbits from pinned literal source coordinates; no candidate-derived positions.
+    from itertools import product
+    physical_orbits518 = {
+        'La': {(0, 0, 0)}, 'Ba': {(0, 0, 0)}, 'Co': {(.5, .5, .5)},
+        'O': {(0, .5, .5), (.5, 0, .5), (.5, .5, 0)},
+    }
+    assert {row['site_id'] for row in structure['expanded']} == set(sites), (
+        'ORBIT518: display geometry contains exactly the original physical site identities')
     for label, coordinates, occupancy, multiplicity in [('La', [0, 0, 0], .5, 1), ('Ba', [0, 0, 0], .5, 1),
                                                         ('Co', [.5, .5, .5], 1, 1), ('O', [0, .5, .5], 1, 3)]:
         site = sites[label]
@@ -11112,9 +11121,22 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
             site['adp_type'] == 'Biso' and math.isfinite(site['adp_iso']) and site['adp_iso'] >= 0
         ), 'OUTCOME500: physical finite Biso and original literal coordinates/composition/occupancies survive staged fit'
         images = [row for row in structure['expanded'] if row['site_id'] == label]
-        assert len(images) == multiplicity and all(row['occupancy'] == occupancy and row['u_iso'] == pytest.approx(
+        assert all(len(row['fractional']) == 3 and all(type(value) in (int, float) and math.isfinite(value)
+                   for value in row['fractional']) for row in images), (
+            'ORBIT518: every original display image has three finite actual fractional coordinates')
+        raw_positions518 = [tuple(row['fractional']) for row in images]
+        assert len(raw_positions518) == len(set(raw_positions518)), (
+            'ORBIT518: raw display rows are unique per original site before periodic equivalence')
+        expected_display518 = {position for origin in physical_orbits518[label]
+                               for position in product(*[(0, 1) if value == 0 else (value,) for value in origin])}
+        assert set(raw_positions518) == expected_display518, (
+            'ORBIT518: complete exact closed-cell display orbit admits no missing, extra or translated-outside image')
+        physical_positions518 = {tuple(value % 1 for value in position) for position in raw_positions518}
+        assert len(physical_positions518) == multiplicity and physical_positions518 == physical_orbits518[label], (
+            'ORBIT518: integer-translation equivalent display copies retain exact independent physical multiplicity and orbit')
+        assert all(row['occupancy'] == occupancy and math.isfinite(row['u_iso']) and row['u_iso'] == pytest.approx(
             site['adp_iso'] / (8 * math.pi ** 2), abs=1e-12) for row in images), (
-            'OUTCOME500: real expanded physical multiplicity and nontrivial Biso-to-Uiso units obey the independent closed form')
+            'OUTCOME500: every real expanded image preserves occupancy and finite nontrivial Biso-to-Uiso units')
     assert sites['La']['adp_iso'] == sites['Ba']['adp_iso'], (
         'OUTCOME500: shared La/Ba Biso remains factual after the separately proven pre-Save structural-ADP movement')
     assert science['constraints'] == [{'id': relation['constraints'][0]['id'], 'expression': relation['constraints'][0]['expression'], 'enabled': True}] and (

@@ -8945,14 +8945,17 @@ TestCase {
         let filePresses = 0, fileReleases = 0, fileClicks = 0, dialogsOpened = 0, typed = 0, freeClicks = 0, fitStarts = 0, fitFinishes = 0;
         let lastPoint = null;
         let elapsedPhase511="setup";
-        const frame511=function(){ console.info("GUI511_FRAME",elapsedPhase511); };
+        const observations518={frames:{setup:0,active:0,settled_idle:0,manual:0},
+            inputIssue:{composer:0,send:0,"approve-context":0,"manual-value":0,undo:0,report:0},
+            inputReceipt:{"parameter-free":0,"parameter-text":0},monotonicClockAvailable:false};
+        const frame511=function(){ ++observations518.frames[elapsedPhase511]; };
         function bind(object, signal, callback) {
             const life = lifetime313(object); object[signal].connect(callback);
             bindings.push({object:object,signal:signal,callback:callback,life:life});
         }
         function scan() {
             if(assistant.canCancel && elapsedPhase511!=="active") {
-                elapsedPhase511="active";console.info("GUI511_PHASE","active");
+                elapsedPhase511="active";console.info("GUI511_PHASE","active",JSON.stringify(observations518));
             }
             for (const name of Object.keys(cues)) {
                 const controls = Ui.itemsWithProperty(Ui.windowRoot(window), "objectName").filter(c => c.objectName === name && c.visible && Ui.rendered(c));
@@ -8978,13 +8981,13 @@ TestCase {
             for (const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c =>
                 c.objectName.startsWith("parameters.free.") && typeof c.clicked === "function")) {
                 if (watched.has(control)) continue; watched.add(control);
-                bind(control,"clicked",() => { console.info("GUI511_INPUT_RECEIPT","parameter-free"); if(assistant.showingActions) ++freeClicks; });
+                bind(control,"clicked",() => { ++observations518.inputReceipt["parameter-free"]; if(assistant.showingActions) ++freeClicks; });
             }
             const field = window.activeFocusItem;
             if (field && !watched.has(field) && typeof field.textEdited === "function") {
                 let parent = field;
                 while(parent && !(parent.item && Session.project && visible185_parameters(Session.project).includes(parent.item))) parent=parent.parent;
-                if(parent) { watched.add(field); bind(field,"textEdited",() => { console.info("GUI511_INPUT_RECEIPT","parameter-text"); if(assistant.showingActions) ++typed; }); }
+                if(parent) { watched.add(field); bind(field,"textEdited",() => { ++observations518.inputReceipt["parameter-text"]; if(assistant.showingActions) ++typed; }); }
             }
         }
         function cue() {
@@ -9017,25 +9020,25 @@ TestCase {
         function objective(text, last) {
             if(window.assistantManualTakeover || !popup.shown) toggle();
             const requiresApproval=assistant.contextConsentRequired;
-            console.info("GUI511_INPUT_ISSUE","composer");
+            ++observations518.inputIssue["composer"];
             Ui.click(test,Probe,window,"assistant.composer"); visible185_type(text);
             compare(item("assistant.composer").text,text); verify(item("assistant.send").enabled);
-            console.info("GUI511_INPUT_ISSUE","send");
+            ++observations518.inputIssue["send"];
             Ui.click(test,Probe,window,"assistant.send");
             if(requiresApproval) {
                 const dialog=ux356_dialog(); tryCompare(dialog,"opened",true,2000);
-                console.info("GUI511_INPUT_ISSUE","approve-context");
+                ++observations518.inputIssue["approve-context"];
                 gui470_standardAction(dialog.standardButton(Dialog.Ok),dialog,"approve-context");
             }
             tryVerify(() => outcome(last)!==null && !assistant.canCancel && !assistant.showingActions
                 && Session.project!==null && !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),
                 10000,"MAIN504: original objective completes all calls and actual current calculation within existing bounds");
             verify(!assistant.lastError,"MAIN504: no retained/context/worker error can substitute for completion");
-            elapsedPhase511="settled_idle";console.info("GUI511_PHASE","settled_idle");
+            elapsedPhase511="settled_idle";console.info("GUI511_PHASE","settled_idle",JSON.stringify(observations518));
         }
         try {
             bind(window,"frameSwapped",frame511);
-            console.info("GUI511_PHASE","setup");
+            console.info("GUI511_PHASE","setup",JSON.stringify(observations518));
             scan(); bind(assistant,"actionPointerShown",scan);
             bind(assistant,"actionPointerMoved",point => { lastPoint={x:point.x,y:point.y}; scan(); });
             bind(assistant,"actionPointerPressed",cue); bind(window,"activeFocusItemChanged",scan);
@@ -9184,17 +9187,17 @@ TestCase {
             compare(save349_science(Session.project),rounded,"MAIN504: ordinary readback preserves current saved scientific result");
             aliasesCurrent(Session.project);
             // One ordinary existing manual edit/Undo after readback; never an invented atomic visible-import Undo.
-            elapsedPhase511="manual";console.info("GUI511_PHASE","manual");
+            elapsedPhase511="manual";console.info("GUI511_PHASE","manual",JSON.stringify(observations518));
             visible185_page("analysis"); Ui.click(test,Probe,window,"sideBar.tab.basic");
             Ui.click(test,Probe,window,"parameters.nameFilter"); visible185_type("adp_iso"); rendered();
             const undoOwner=Session.project, undoBefore=undoOwner.canUndo, valuesBefore=visible185_values(undoOwner);
             const inputsBefore=visible185_inputs(undoOwner), declarationsBefore=relation245_declarations(undoOwner);
             const manual=visible185_parameter(undoOwner,"La","adp_iso"), oldValue=manual.value, requested=oldValue+.125;
             const field=visible185_field(manual); Ui.scrollIntoView(field); rendered();
-            console.info("GUI511_INPUT_ISSUE","manual-value");
+            ++observations518.inputIssue["manual-value"];
             mouseClick(field); visible185_type(String(requested)); keyClick(Qt.Key_Return);
             tryCompare(manual,"value",requested,2000); verify(undoOwner.canUndo,"MAIN504: actual original manual value commit owns ordinary Undo");
-            console.info("GUI511_INPUT_ISSUE","undo");
+            ++observations518.inputIssue["undo"];
             Ui.click(test,Probe,window,"appBar.button.undo");
             tryVerify(() => !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),10000);
             compare(Session.project,undoOwner); compare(visible185_values(Session.project),valuesBefore);
@@ -9210,7 +9213,7 @@ TestCase {
             compare(bodies.length,1); Ui.scrollIntoView(bodies[0]); rendered();
             const body=bodies[0], start=body.getText(0,body.length).indexOf("Open Report page"); verify(start>=0);
             const point=body.positionToRectangle(start+2), x=point.x+Math.max(1,point.width/2), y=point.y+point.height/2;
-            console.info("GUI511_INPUT_ISSUE","report");
+            ++observations518.inputIssue["report"];
             compare(body.linkAt(x,y),"edi:report"); mouseMove(body,x,y); mouseClick(body,x,y);
             tryCompare(window.appBarCentralTabs,"currentIndex",AppState.Page.Report,2000); rendered();
             const preview=Ui.control(Probe,window,"report.preview"); verify(preview!==null && Ui.rendered(preview));
@@ -9222,7 +9225,7 @@ TestCase {
             compare(Probe.readReferenceFile("lbco.cif"),sourceBytes[0]); compare(Probe.readReferenceFile("hrpt.xye"),sourceBytes[1]);
             capture("main504-original-current-report");
         } finally {
-            console.log("MAIN504_NATIVE_FACTS",JSON.stringify({filePresses:filePresses,fileReleases:fileReleases,fileClicks:fileClicks,dialogsOpened:dialogsOpened,
+            console.log("MAIN504_NATIVE_FACTS",JSON.stringify({observations518:observations518,filePresses:filePresses,fileReleases:fileReleases,fileClicks:fileClicks,dialogsOpened:dialogsOpened,
                 cues:cues,typed:typed,freeClicks:freeClicks,fitStarts:fitStarts,fitFinishes:fitFinishes,
                 currentOwner:String(Session.project),canCancel:assistant.canCancel,lastError:assistant.lastError}));
             for(const row of bindings) disconnect313(row.life,row.object,row.signal,row.callback);
