@@ -937,6 +937,18 @@ def native_original_addresses(value):
         assert len(matches) == 1, 'CREATE SETUP: original current parameter address is unique'
         return matches[0]
     if isinstance(value, dict) and set(value) == {'$original_selected_name'}:
+        if config.get('main507_closed_files') is True:
+            assert config.get('native_import267') is True and config.get('scenario') == 'native:script', (
+                'MAIN507 SETUP: closed opaque selection is restricted to this explicit original native-import fixture')
+            names = ('lbco.cif', 'hrpt.xye')
+            assert value['$original_selected_name'] in names and len(native_disclosed_sources) == 2
+            assert len({row['id'] for row in native_disclosed_sources}) == 2
+            for row, byte_count in zip(native_disclosed_sources, (487, 83671), strict=True):
+                assert type(row['id']) is str and row['id'] and type(row['bytes']) in (int, float) and row['bytes'] == byte_count
+                assert type(row['format']) is str and row['format']
+                if 'textReadable' in row:
+                    assert row['textReadable'] is True
+            return native_disclosed_sources[names.index(value['$original_selected_name'])]['id']
         matches = [row['id'] for row in native_disclosed_sources
                    if row['name'] == value['$original_selected_name'] and row['text_readable']]
         assert len(matches) == 1, 'IMPORT267 SETUP: actual original disclosed selected source ID is unique'
@@ -1155,11 +1167,26 @@ def native_reply(request):
             and original['params']['tool'] == 'inspect_project'):
         disclosed = json.loads(result['contentItems'][0]['text'])
         native_disclosed_sources[:] = disclosed['selected_files']['files']
-        clear_observation('import267-original-source-addresses', {
-            'request_id': request['id'],
-            'sources': [{'name': row['name'], 'id': row['id'], 'text_readable': row['text_readable']}
-                        for row in native_disclosed_sources],
-        })
+        if config.get('main507_closed_files') is True:
+            assert config.get('scenario') == 'native:script' and config.get('native_turn_calls')
+            assert type(native_disclosed_sources) is list and len(native_disclosed_sources) == 2
+            assert len({row['id'] for row in native_disclosed_sources}) == 2
+            for row, byte_count in zip(native_disclosed_sources, (487, 83671), strict=True):
+                assert type(row['id']) is str and row['id'] and type(row['bytes']) in (int, float) and row['bytes'] == byte_count
+                assert type(row['format']) is str and row['format']
+                if 'textReadable' in row:
+                    assert row['textReadable'] is True
+            clear_observation('main507-original-closed-source-addresses', {
+                'request_id': request['id'],
+                'sources': [{'id': row['id'], 'bytes': row['bytes'], 'format': row['format']}
+                            for row in native_disclosed_sources],
+            })
+        else:
+            clear_observation('import267-original-source-addresses', {
+                'request_id': request['id'],
+                'sources': [{'name': row['name'], 'id': row['id'], 'text_readable': row['text_readable']}
+                            for row in native_disclosed_sources],
+            })
     if (config.get('action484') is True and original['params']['tool'] == 'inspect_project'):
         native_action484_datasets.clear()
         disclosed = json.loads(result['contentItems'][0]['text']) if result and result.get('success') else {'datasets': []}

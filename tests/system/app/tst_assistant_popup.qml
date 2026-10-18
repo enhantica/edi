@@ -6989,6 +6989,8 @@ TestCase {
             Ui.click(this, Probe, window, "assistant.clear");
             tryCompare(assistant.messages, "count", 0, 2000, "GUI393: actual eraser Clear removes original conversation");
             compare(assistant.selectedFiles.count, 0, "GUI393: original Clear retires actual selected-file grants");
+            tryCompare(assistant, "canCancel", false, 2000,
+                "CLEAR513: original Clear fresh-thread setup settles before unchanged account and consent observations");
             const clearConnected509=assistant.connected;
             const clearCanCancel509=clearConnected509 ? assistant.canCancel : null;
             const clearConsent509=clearConnected509 && !clearCanCancel509 ? assistant.contextConsentRequired : null;
@@ -8908,5 +8910,322 @@ TestCase {
             console.log("ARRAY451_RESULT",JSON.stringify({case:data.tag,normalSucceeded:true,zeroVisibleInput:true,users:users,
                 removed:removedReceipt,hidden: data.tag.startsWith("hidden-") ? {path:path,usedByProfile:false} : null}));
         } finally {stop();if(alive313(receiverLife) && original.canCancel)original.cancel();}
+    }
+    function test_main504_lbco_show_actions_owner_outcome() {
+        const test = this;
+        const plan = JSON.parse(Probe.readReferenceFile("main504-plan.json"));
+        const triples = JSON.parse(Probe.readReferenceFile("triples.json"));
+        const sourceBytes = ["lbco.cif", "hrpt.xye"].map(name => Probe.readReferenceFile(name));
+        Session.closeProject();
+        const path = ApplicationInfo.localPath(Probe.referenceUrl("current"));
+        verify(Session.createProject("Original Main LBCO owner", "Original Main description", path,
+            "iucr_99", "Original Main title", "Original Main author", true), "MAIN504: genuine saved empty Session owner exists");
+        const original = Session.project, ownerLife = lifetime313(original), metadata = import265_owner(original);
+        compare(original.structures.count, 0); compare(original.experiments.count, 0);
+        const token = assistant.beginFileSelection();
+        verify(token.length > 0 && assistant.addSelectedFiles(token,
+            [Probe.referenceUrl("lbco.cif"), Probe.referenceUrl("hrpt.xye")]), "MAIN504: original intake admits immutable authentic sources");
+        tryCompare(assistant.selectedFiles, "count", 2, 2000);
+        const selectedRows507 = gui392_json(Probe.rows(assistant.selectedFiles));
+        const selected = JSON.stringify(selectedRows507.map(row =>
+            ({id:row.id,name:row.name,bytes:row.bytes,textReadable:row.textReadable,format:row.format})));
+        compare(selectedRows507.length,2);
+        compare(new Set(selectedRows507.map(row => row.id)).size,2,"MAIN507: actual original selected membership has two distinct opaque IDs");
+        for(const [index,name,bytes] of [[0,"lbco.cif",487],[1,"hrpt.xye",83671]]) {
+            const row=selectedRows507[index];
+            verify(typeof row.id==="string" && row.id.length>0 && row.name===name && row.bytes===bytes
+                && row.textReadable===true && typeof row.format==="string" && row.format.length>0,
+                "MAIN507: genuine original intake binds known file order/type/bytes to each opaque selected identity");
+        }
+        visible185_page("project"); toggle(); gui392_signIn(false);
+        Ui.click(test, Probe, window, "assistant.showActions");
+        verify(assistant.showActions && item("assistant.showActions").checked, "MAIN504: genuine native eye enables ON mode");
+        const account = JSON.stringify(Probe.rows(assistant.models)), previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const bindings = [], watched = new Set(), cues = {"structures.load":0,"experiments.loadData.0":0};
+        let filePresses = 0, fileReleases = 0, fileClicks = 0, dialogsOpened = 0, typed = 0, freeClicks = 0, fitStarts = 0, fitFinishes = 0;
+        let lastPoint = null;
+        let elapsedPhase511="setup";
+        const frame511=function(){ console.info("GUI511_FRAME",elapsedPhase511); };
+        function bind(object, signal, callback) {
+            const life = lifetime313(object); object[signal].connect(callback);
+            bindings.push({object:object,signal:signal,callback:callback,life:life});
+        }
+        function scan() {
+            if(assistant.canCancel && elapsedPhase511!=="active") {
+                elapsedPhase511="active";console.info("GUI511_PHASE","active");
+            }
+            for (const name of Object.keys(cues)) {
+                const controls = Ui.itemsWithProperty(Ui.windowRoot(window), "objectName").filter(c => c.objectName === name && c.visible && Ui.rendered(c));
+                compare(controls.length <= 1, true, "MAIN504: original Load receiver is unique");
+                for (const control of controls) {
+                    if (watched.has(control)) continue; watched.add(control);
+                    let nativeReceivers=0;
+                    if (typeof control.clicked === "function") { bind(control, "clicked", () => { ++fileClicks; }); ++nativeReceivers; }
+                    if (typeof control.released === "function") bind(control,"released",() => { ++fileReleases; });
+                    if (typeof control.pressed === "boolean") bind(control, "pressedChanged", () => { if (control.pressed) ++filePresses; });
+                    for (const handler of Probe.objectsWithProperty(control, "pressed").filter(h => h.parent === control && typeof h.tapped === "function")) {
+                        bind(handler,"pressedChanged",() => { if(handler.pressed) ++filePresses; });
+                        bind(handler,"tapped",() => { ++fileClicks; }); ++nativeReceivers;
+                    }
+                    verify(nativeReceivers>0,"MAIN504: actual rendered original Load owns a real button/TapHandler receipt, never absent witness");
+                }
+            }
+            for (const dialog of Probe.objectsWithProperty(window, "fileMode")) {
+                if (watched.has(dialog)) continue; watched.add(dialog);
+                verify(!dialog.visible, "MAIN504: no existing file dialog is already open");
+                bind(dialog,"visibleChanged",() => { if(dialog.visible) ++dialogsOpened; });
+            }
+            for (const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c =>
+                c.objectName.startsWith("parameters.free.") && typeof c.clicked === "function")) {
+                if (watched.has(control)) continue; watched.add(control);
+                bind(control,"clicked",() => { console.info("GUI511_INPUT_RECEIPT","parameter-free"); if(assistant.showingActions) ++freeClicks; });
+            }
+            const field = window.activeFocusItem;
+            if (field && !watched.has(field) && typeof field.textEdited === "function") {
+                let parent = field;
+                while(parent && !(parent.item && Session.project && visible185_parameters(Session.project).includes(parent.item))) parent=parent.parent;
+                if(parent) { watched.add(field); bind(field,"textEdited",() => { console.info("GUI511_INPUT_RECEIPT","parameter-text"); if(assistant.showingActions) ++typed; }); }
+            }
+        }
+        function cue() {
+            scan(); verify(assistant.actionWindow === window && assistant.showingActions, "MAIN504: cue belongs to actual current Main action");
+            const pointer = item("assistant.actionPointer"); verify(Ui.rendered(pointer), "MAIN504: cue is actually rendered");
+            for(const name of Object.keys(cues)) {
+                const targets=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c => c.objectName===name && Ui.exposed(c));
+                if(targets.length===1 && lastPoint) {
+                    const box=rect(targets[0]);
+                    if(lastPoint.x>=box[0] && lastPoint.y>=box[1] && lastPoint.x<box[0]+box[2] && lastPoint.y<box[1]+box[3]) ++cues[name];
+                }
+            }
+            compare(filePresses,0,"MAIN504: visual file-load cue never dispatches a real press");
+            compare(fileClicks,0,"MAIN504: visual file-load cue never dispatches a real Load click/tap");
+            compare(fileReleases,0,"MAIN504: visual file-load cue never dispatches a real Load release");
+            compare(dialogsOpened,0,"MAIN504: attached-file cue never opens an ordinary file dialog");
+        }
+        function outcome(index) {
+            const rows=Probe.rows(assistant.messages).filter(row => !previous.has(row.id) && row.kind==="activity"
+                && row.payload && row.payload.id==="main504-"+index);
+            compare(rows.length<=1,true,"MAIN504: each exact native call has one original row");
+            if(!rows.length || rows[0].status!=="completed") return null;
+            verify(rows[0].payload.success===true && rows[0].payload.nativeOutcome,
+                "MAIN504: completed original call has factual successful native outcome, never partial/refused substitute");
+            const items=JSON.parse(JSON.stringify(rows[0].payload.contentItems));
+            verify(Array.isArray(items) && items.length===1 && items[0].type==="inputText" && typeof items[0].text==="string",
+                "MAIN504: SAME completed admitted row owns exactly one original typed native response");
+            return JSON.parse(items[0].text);
+        }
+        function objective(text, last) {
+            if(window.assistantManualTakeover || !popup.shown) toggle();
+            const requiresApproval=assistant.contextConsentRequired;
+            console.info("GUI511_INPUT_ISSUE","composer");
+            Ui.click(test,Probe,window,"assistant.composer"); visible185_type(text);
+            compare(item("assistant.composer").text,text); verify(item("assistant.send").enabled);
+            console.info("GUI511_INPUT_ISSUE","send");
+            Ui.click(test,Probe,window,"assistant.send");
+            if(requiresApproval) {
+                const dialog=ux356_dialog(); tryCompare(dialog,"opened",true,2000);
+                console.info("GUI511_INPUT_ISSUE","approve-context");
+                gui470_standardAction(dialog.standardButton(Dialog.Ok),dialog,"approve-context");
+            }
+            tryVerify(() => outcome(last)!==null && !assistant.canCancel && !assistant.showingActions
+                && Session.project!==null && !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),
+                10000,"MAIN504: original objective completes all calls and actual current calculation within existing bounds");
+            verify(!assistant.lastError,"MAIN504: no retained/context/worker error can substitute for completion");
+            elapsedPhase511="settled_idle";console.info("GUI511_PHASE","settled_idle");
+        }
+        try {
+            bind(window,"frameSwapped",frame511);
+            console.info("GUI511_PHASE","setup");
+            scan(); bind(assistant,"actionPointerShown",scan);
+            bind(assistant,"actionPointerMoved",point => { lastPoint={x:point.x,y:point.y}; scan(); });
+            bind(assistant,"actionPointerPressed",cue); bind(window,"activeFocusItemChanged",scan);
+            objective("Import these original LBCO and HRPT attachments using the explicit original recipe",3);
+            verify(alive313(ownerLife) && Session.project===original,"MAIN504: import populates SAME original saved owner");
+            compare(import265_owner(original),metadata); compare(original.structures.count,1); compare(original.experiments.count,1);
+            const closed507=outcome(0).selected_files.files;
+            verify(Array.isArray(closed507) && closed507.length===2,"MAIN507: genuine successful inspection exposes both closed opaque File operands");
+            compare(new Set(closed507.map(row => row.id)).size,2);
+            for(let index=0;index<2;++index) {
+                const wire=closed507[index], selectedRow=selectedRows507[index];
+                compare(wire.id,selectedRow.id,"MAIN507: exact actual selected ID survives closed wire projection in known intake order");
+                compare(wire.bytes,selectedRow.bytes); compare(wire.format,selectedRow.format);
+                if(Object.prototype.hasOwnProperty.call(wire,"textReadable"))
+                    compare(wire.textReadable,true,"MAIN507: optional PUBLIC readable role, when present, remains strictly typed true");
+            }
+            const aliasesExpected={};
+            for(const [id,path] of [["original_la_biso",plan.adps[0]],["original_ba_biso",plan.adps[1]]]) {
+                const matches=outcome(2).parameters.filter(row => row.path===path);
+                compare(matches.length,1); verify(typeof matches[0].unique_name==="string" && matches[0].unique_name.length>0);
+                aliasesExpected[id]=matches[0].unique_name;
+            }
+            verify(aliasesExpected.original_la_biso!==aliasesExpected.original_ba_biso);
+            function aliasesCurrent(project) {
+                const rows=Probe.rows(project.analysis.aliases); compare(rows.length,2);
+                const mapping={}; for(const row of rows) mapping[row.id]=row.parameter;
+                compare(JSON.stringify(Object.keys(mapping).sort()),JSON.stringify(Object.keys(aliasesExpected).sort()));
+                for(const id of Object.keys(aliasesExpected)) compare(mapping[id],aliasesExpected[id]);
+                compare(JSON.stringify(Probe.rows(project.analysis.constraints).map(row => [row.id,row.expression,row.enabled])),
+                    JSON.stringify([["original_chosen_shared_biso","original_ba_biso = original_la_biso",true]]));
+            }
+            const physicalSites=Probe.rows(original.currentStructure.atomSites);
+            compare(physicalSites.length,4); compare(original.currentStructure.spaceGroup.nameHM,"P m -3 m");
+            for(const [label,xyz,occupancy] of [["La",[0,0,0],.5],["Ba",[0,0,0],.5],["Co",[.5,.5,.5],1],["O",[0,.5,.5],1]]) {
+                const matches=physicalSites.filter(row => row.label===label); compare(matches.length,1);
+                const site=matches[0]; compare(site.typeSymbol,label); compare(site.adpType,"Biso");
+                compare(JSON.stringify([site.fractX.value,site.fractY.value,site.fractZ.value]),JSON.stringify(xyz));
+                compare(site.occupancy.value,occupancy); compare(visible185_parameter(original,label,"adp_iso").value,0);
+            }
+            const wavelengths=visible185_parameters(original).filter(parameter => parameter.name==="setup_wavelength");
+            compare(wavelengths.length,1); compare(wavelengths[0].value,1.49);
+            const inputs=JSON.parse(visible185_inputs(original));
+            compare(JSON.stringify(inputs.observations),JSON.stringify(triples)); compare(inputs.weight,1);
+            compare(inputs.exclusions.length,0); compare(JSON.stringify(inputs.links),JSON.stringify([["lbco",true]]));
+            compare(cues["structures.load"],1,"MAIN504: exact original Structure Load receives one genuine visual cue");
+            compare(cues["experiments.loadData.0"],1,"MAIN504: exact original Data Load receives one genuine visual cue");
+            compare(filePresses,0); compare(fileReleases,0); compare(fileClicks,0); compare(dialogsOpened,0);
+            const nuisanceIds510={};
+            for(const path of plan.nuisance) {
+                const matches=outcome(2).parameters.filter(row => row.path===path);
+                compare(matches.length,1);
+                verify(matches[0].dependence==="independent" && matches[0].free===false
+                    && typeof matches[0].unique_name==="string" && matches[0].unique_name.length>0,
+                    "MAIN510: each literal nuisance path identifies one genuine original independent fixed cell/background member");
+                nuisanceIds510[path]=matches[0].unique_name;
+            }
+            compare(new Set(Object.values(nuisanceIds510)).size,3,"MAIN510: literal cell/background targets retain distinct original identities");
+            const profileIds514={};
+            for(const path of plan.profiles) {
+                const matches=outcome(2).parameters.filter(row => row.path===path);
+                compare(matches.length,1,"MAIN514: original profile path identifies exactly one initial member");
+                verify(matches[0].dependence==="independent" && matches[0].free===false
+                    && typeof matches[0].unique_name==="string" && matches[0].unique_name.length>0,
+                    "MAIN514: original profile member is genuinely independent and held before warm-up");
+                profileIds514[path]=matches[0].unique_name;
+            }
+            compare(new Set(Object.values(profileIds514)).size,plan.profiles.length,"MAIN514: original profile identities remain distinct");
+            const fit=original.fit, fitLife=lifetime313(fit);
+            bind(fit,"runningChanged",() => { if(alive313(fitLife) && fit.running) ++fitStarts; });
+            bind(fit,"finished",() => { ++fitFinishes; });
+            const profileBaselines507={};
+            for(const setting of plan.recipe.initial_parameters) {
+                verify(!Object.prototype.hasOwnProperty.call(profileBaselines507,setting.path));
+                profileBaselines507[setting.path]=setting.value;
+            }
+            profileBaselines507[plan.zero]=plan.recipe.zero_offset;
+            const originalScales507=outcome(2).parameters.filter(row => row.path.endsWith(".scale"));
+            compare(originalScales507.length,1,"MAIN507: original successful pre-fit list identifies ONE physical phase-scale path");
+            compare(originalScales507[0].value,plan.recipe.phase_scale,"MAIN507: independent literal recipe establishes the preceding scale baseline");
+            profileBaselines507[originalScales507[0].path]=plan.recipe.phase_scale;
+            for(const path of Object.keys(profileBaselines507)) {
+                const matches=outcome(2).parameters.filter(row => row.path===path);
+                compare(matches.length,1,"MAIN507: each intended profile/zero/scale path is unique in the genuine preceding native list");
+                compare(matches[0].value,profileBaselines507[path],"MAIN507: literal recipe baseline really precedes optimization");
+            }
+            objective("Set positive ADP starts, share La and Ba, then warm up scale cell background and zero while holding profile and ADPs",10);
+            compare(Session.project,original); compare(import265_owner(original),metadata); aliasesCurrent(original);
+            for(const path of plan.nuisance) {
+                const matches=outcome(8).parameters.filter(row => row.path===path);
+                compare(matches.length,1);
+                verify(matches[0].unique_name===nuisanceIds510[path] && matches[0].dependence==="independent" && matches[0].free===true,
+                    "MAIN510: first genuine post-fit read proves SAME actual independent cell/background roles free");
+            }
+            for(const path of plan.profiles) {
+                const matches=outcome(8).parameters.filter(row => row.path===path);
+                compare(matches.length,1,"MAIN514: first post-fit read retains one original profile member");
+                verify(matches[0].unique_name===profileIds514[path] && matches[0].dependence==="independent"
+                    && matches[0].free===false && matches[0].value===profileBaselines507[path],
+                    "MAIN514: first actual warm-up holds SAME original profile member at literal start");
+            }
+            const profileAdps=["La","Ba","Co","O"].map(label => visible185_parameter(original,label,"adp_iso"));
+            verify(profileAdps.every(parameter => parameter.value===.5 && !parameter.free),"MAIN504: actual first-stage ADPs remain the four fixed positive starts");
+            verify(typed>0 && freeClicks>0,"MAIN507: actual original text/free controls still execute independently of optimizer movement");
+            const profileResults507=outcome(8).parameters;
+            let profileMoved507=false;
+            for(const path of [plan.zero,originalScales507[0].path]) {
+                const matches=profileResults507.filter(row => row.path===path);
+                compare(matches.length,1,"MAIN507: first post-fit native list uniquely returns each intended optimization path");
+                verify(typeof matches[0].value==="number" && Number.isFinite(matches[0].value));
+                if(matches[0].value!==profileBaselines507[path]) profileMoved507=true;
+            }
+            verify(profileMoved507,"MAIN514: first warm-up moves actual zero or scale, never held profile/ADP setup or SU");
+            const baseline=profileAdps.map(parameter => parameter.value);
+            objective("Release profile and independent La Co O ADPs jointly, carry warm cell background zero and scale, then Save current",16);
+            console.info("GUI511_IDLE_BEGIN","settled_idle");
+            wait(5000); // Exactly one authorized event-processing idle observation; original outer90s unchanged.
+            console.info("GUI511_IDLE_END","settled_idle");
+            const current=Session.project, saved=outcome(16), fitted=outcome(13).parameters;
+            for(const path of plan.nuisance) {
+                const matches=fitted.filter(row => row.path===path);
+                compare(matches.length,1);
+                verify(matches[0].unique_name===nuisanceIds510[path] && matches[0].dependence==="independent" && matches[0].free===true,
+                    "MAIN510: ADP stage carries original cell/background freedom through actual pre-Save post-fit read");
+            }
+            for(const path of [plan.zero,...plan.profiles]) {
+                const matches=fitted.filter(row => row.path===path);
+                compare(matches.length,1); verify(matches[0].dependence==="independent" && matches[0].free===true
+                    && (path===plan.zero || matches[0].unique_name===profileIds514[path]),
+                    "MAIN514: actual final read retains reference full-free SAME original profile and zero roles");
+            }
+            verify(saved.status==="succeeded" && saved.committed===true && saved.reopened===true
+                && saved.active===true && saved.presentation_complete===true,"MAIN504: genuine current Save commits/reopens/presents completely");
+            compare(current.path,path); verify(!current.modified && !Session.needsSaveAs);
+            compare(import265_owner(current),metadata); compare(visible185_inputs(current),JSON.stringify(inputs));
+            compare(fitStarts,2); compare(fitFinishes,2);
+            for(const index of [7,12]) { const result=outcome(index);
+                verify(["done","max_iterations"].includes(result.status) && result.adopted===true && result.iterations>0,"MAIN504: both actual native fit stages run/adopt, never no-step"); }
+            verify([0,2,3].some(i => fitted.filter(row => row.path===plan.adps[i]).length===1
+                && fitted.filter(row => row.path===plan.adps[i])[0].value!==baseline[i]),"MAIN504: ADPs genuinely move before Save");
+            for(const label of ["La","Co","O"]) { const parameter=visible185_parameter(current,label,"adp_iso");
+                verify(parameter.free && parameter.hasUncertainty && Number.isFinite(parameter.uncertainty) && parameter.uncertainty>0 && parameter.value>=0,"MAIN504: real fitted ADPs retain positive finite native SUs"); }
+            compare(visible185_parameter(current,"La","adp_iso").value,visible185_parameter(current,"Ba","adp_iso").value);
+            aliasesCurrent(current);
+            const rounded=save349_science(current); verify(Session.openProject(Probe.referenceUrl("current")),"MAIN504: original Session reader genuinely reopens committed current output");
+            tryVerify(() => !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),10000);
+            compare(save349_science(Session.project),rounded,"MAIN504: ordinary readback preserves current saved scientific result");
+            aliasesCurrent(Session.project);
+            // One ordinary existing manual edit/Undo after readback; never an invented atomic visible-import Undo.
+            elapsedPhase511="manual";console.info("GUI511_PHASE","manual");
+            visible185_page("analysis"); Ui.click(test,Probe,window,"sideBar.tab.basic");
+            Ui.click(test,Probe,window,"parameters.nameFilter"); visible185_type("adp_iso"); rendered();
+            const undoOwner=Session.project, undoBefore=undoOwner.canUndo, valuesBefore=visible185_values(undoOwner);
+            const inputsBefore=visible185_inputs(undoOwner), declarationsBefore=relation245_declarations(undoOwner);
+            const manual=visible185_parameter(undoOwner,"La","adp_iso"), oldValue=manual.value, requested=oldValue+.125;
+            const field=visible185_field(manual); Ui.scrollIntoView(field); rendered();
+            console.info("GUI511_INPUT_ISSUE","manual-value");
+            mouseClick(field); visible185_type(String(requested)); keyClick(Qt.Key_Return);
+            tryCompare(manual,"value",requested,2000); verify(undoOwner.canUndo,"MAIN504: actual original manual value commit owns ordinary Undo");
+            console.info("GUI511_INPUT_ISSUE","undo");
+            Ui.click(test,Probe,window,"appBar.button.undo");
+            tryVerify(() => !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),10000);
+            compare(Session.project,undoOwner); compare(visible185_values(Session.project),valuesBefore);
+            compare(visible185_inputs(Session.project),inputsBefore); compare(relation245_declarations(Session.project),declarationsBefore);
+            compare(Session.project.canUndo,undoBefore,"MAIN504: exactly one actual ordinary Undo restores pre-edit history availability");
+            if(window.assistantManualTakeover || !popup.shown) toggle(); rendered();
+            const messages=Probe.rows(assistant.messages).filter(row => row.kind==="assistant" && row.status==="completed" && row.text.includes("[Open Report page](edi:report)"));
+            compare(messages.length,3,"MAIN504: original completed peer turns retain their truthful explicit Report links");
+            const delegates=Ui.itemsWithProperty(Ui.windowRoot(window),"rowId").filter(control => control.rowId===messages[2].id
+                && control.assistant===assistant && typeof control.resetDetails==="function" && typeof control.copyTechnicalPayload==="function");
+            compare(delegates.length,1);
+            const bodies=Ui.itemsWithProperty(delegates[0],"readOnly").filter(control => control.readOnly && control.visible && typeof control.linkAt==="function");
+            compare(bodies.length,1); Ui.scrollIntoView(bodies[0]); rendered();
+            const body=bodies[0], start=body.getText(0,body.length).indexOf("Open Report page"); verify(start>=0);
+            const point=body.positionToRectangle(start+2), x=point.x+Math.max(1,point.width/2), y=point.y+point.height/2;
+            console.info("GUI511_INPUT_ISSUE","report");
+            compare(body.linkAt(x,y),"edi:report"); mouseMove(body,x,y); mouseClick(body,x,y);
+            tryCompare(window.appBarCentralTabs,"currentIndex",AppState.Page.Report,2000); rendered();
+            const preview=Ui.control(Probe,window,"report.preview"); verify(preview!==null && Ui.rendered(preview));
+            compare(preview.report,Session.project.report); tryCompare(Session.project.report,"active",true,2000);
+            compare(filePresses,0); compare(fileReleases,0); compare(fileClicks,0); compare(dialogsOpened,0);
+            compare(JSON.stringify(Probe.rows(assistant.models)),account);
+            compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles)).map(row =>
+                ({id:row.id,name:row.name,bytes:row.bytes,textReadable:row.textReadable,format:row.format}))),selected);
+            compare(Probe.readReferenceFile("lbco.cif"),sourceBytes[0]); compare(Probe.readReferenceFile("hrpt.xye"),sourceBytes[1]);
+            capture("main504-original-current-report");
+        } finally {
+            console.log("MAIN504_NATIVE_FACTS",JSON.stringify({filePresses:filePresses,fileReleases:fileReleases,fileClicks:fileClicks,dialogsOpened:dialogsOpened,
+                cues:cues,typed:typed,freeClicks:freeClicks,fitStarts:fitStarts,fitFinishes:fitFinishes,
+                currentOwner:String(Session.project),canCancel:assistant.canCancel,lastError:assistant.lastError}));
+            for(const row of bindings) disconnect313(row.life,row.object,row.signal,row.callback);
+        }
     }
 }

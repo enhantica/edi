@@ -10949,10 +10949,11 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         [native_call('set_parameters', values=[{'path': path, 'value': .5} for path in adp_paths]),
          native_call('add_relations', **relation),
          native_call('set_free', flags=[{'path': scale, 'free': True}, {'path': zero_path, 'free': True}]
-                     + [{'path': path, 'free': True} for path in profile_paths + nuisance_paths]),
+                     + [{'path': path, 'free': True} for path in nuisance_paths]
+                     + [{'path': path, 'free': False} for path in profile_paths]),
          native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics')],
-        [native_call('set_free', flags=[{'path': zero_path, 'free': False}]
-                     + [{'path': path, 'free': False} for path in profile_paths]
+        [native_call('set_free', flags=[{'path': zero_path, 'free': True}]
+                     + [{'path': path, 'free': True} for path in profile_paths]
                      + [{'path': path, 'free': True} for path in [adp_paths[0], adp_paths[2], adp_paths[3], *nuisance_paths]]),
          native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics'),
          native_call('save_project', name='Unused proposed fresh label must not rename the current owner')],
@@ -10981,6 +10982,15 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         nuisance_identities510[path] = matches[0]['unique_name']
     assert len(set(nuisance_identities510.values())) == len(nuisance_paths), (
         'STAGE510: three literal nuisance roles are distinct actual original physical parameters')
+    profile_identities514 = {}
+    for path in profile_paths:
+        matches = [row for row in replies[1]['decoded']['parameters'] if row['path'] == path]
+        assert len(matches) == 1 and matches[0]['dependence'] == 'independent' and matches[0]['free'] is False and (
+            type(matches[0]['unique_name']) is str and matches[0]['unique_name']
+        ), 'STAGE514: initial genuine list identifies each original independent fixed profile member before warm-up'
+        profile_identities514[path] = matches[0]['unique_name']
+    assert len(set(profile_identities514.values())) == len(profile_paths), (
+        'STAGE514: original literal profile paths designate distinct physical members')
     expected_alias_targets = {}
     for alias in relation['aliases']:
         matching = [row for row in replies[1]['decoded']['parameters'] if row['path'] == alias['path']]
@@ -11008,6 +11018,12 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         assert len(matches) == 1 and matches[0]['unique_name'] == nuisance_identities510[path] and (
             matches[0]['dependence'] == 'independent' and matches[0]['free'] is True
         ), 'STAGE510: first post-fit read retains every intended independent cell/background role actually free on its original member'
+    for path in profile_paths:
+        matches = [row for row in replies[7]['decoded']['parameters'] if row['path'] == path]
+        assert len(matches) == 1 and matches[0]['unique_name'] == profile_identities514[path] and (
+            matches[0]['dependence'] == 'independent' and matches[0]['free'] is False
+            and matches[0]['value'] == metadata['profile_parameters'][path.removeprefix('experiment.peak.')]
+        ), 'STAGE514: first actual warm-up holds SAME original profile identities at literal starting values'
     profile_adps = {path: native_parameter(profiled, path)['value'] for path in adp_paths}
     assert all(value == .5 for value in profile_adps.values()) and all(
         native_parameter(profiled, path)['free'] is False for path in adp_paths
@@ -11023,10 +11039,10 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         'OUTCOME500: profile stage must execute/adopt a real moving fit, never no-step/unavailable/error/partial success')
     profile_scales = [row for row in profiled['project']['parameters'] if row['path'].endswith('.scale')]
     assert len(profile_scales) == 1, 'OUTCOME500: independent single phase has ONE actual physical scale, never first-match identity'
-    assert any(native_parameter(profiled, 'experiment.peak.' + key)['value'] != value
-               for key, value in metadata['profile_parameters'].items()) or native_parameter(profiled, zero_path)['value'] != 0 or (
-        profile_scales[0]['value'] != 1
-    ), 'OUTCOME500: actual optimized profile/zero/scale differs from independently literal starting values'
+    assert native_parameter(profiled, zero_path)['free'] is True and profile_scales[0]['free'] is True and (
+        native_parameter(profiled, zero_path)['value'] != metadata['zero_offset_degrees']
+        or profile_scales[0]['value'] != metadata['phase_scale']
+    ), 'STAGE514: first actual warm-up moves literal zero or scale while profile and ADPs remain held'
     assert native_inputs(profiled) == observations and save211_files(directory) == initial_saved, (
         'OUTCOME500: first actual fit preserves original measurements/sigmas/masks/weights and does not Save')
     native145_approve(actor)
@@ -11110,9 +11126,14 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         parameter = native_parameter(saved, path)
         assert parameter['free'] is True and parameter['uncertainty'] is not None and math.isfinite(parameter['uncertainty']) and parameter['uncertainty'] > 0, (
             'OUTCOME500: actual independent fitted ADPs retain positive finite SUs, never fabricated fit completion')
+    for path in profile_paths + [zero_path]:
+        matches = [row for row in replies[12]['decoded']['parameters'] if row['path'] == path]
+        assert len(matches) == 1 and matches[0]['dependence'] == 'independent' and matches[0]['free'] is True and (
+            path == zero_path or matches[0]['unique_name'] == profile_identities514[path]
+        ), 'STAGE514: second genuine post-fit read retains full-free original profile and zero roles'
     assert not native_parameter(saved, adp_paths[1])['independent'] and not native_parameter(saved, adp_paths[1])['free'] and all(
-        not native_parameter(saved, path)['free'] for path in profile_paths + [zero_path]
-    ), 'OUTCOME500: final stage preserves dependent fixed Ba and independently fixed profile/zero declarations'
+        native_parameter(saved, path)['free'] for path in profile_paths + [zero_path]
+    ), 'STAGE514: Save preserves dependent fixed Ba and reference full-free independent profile/zero declarations'
     saved_shared_sus = [native_parameter(saved, path)['uncertainty'] for path in adp_paths[:2]]
     assert all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in saved_shared_sus) and (
         saved_shared_sus[0] == saved_shared_sus[1]
@@ -11161,3 +11182,109 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     assert native_inputs(reopened) == observations and Path(reopened['project']['host_snapshot']['path']).resolve() == directory.resolve() and (
         not reopened['project']['host_snapshot']['modified'] and save211_files(directory) == saved_files
     ), 'OUTCOME500: independent readback restores actual current saved owner without changing committed science or files'
+
+
+def test_main504_lbco_show_actions_cue_fit_save_and_report(tmp_path):
+    """One real Main/native workflow; cue-only attached-file loads, no replacement import form."""
+    from tests.system.app.test_e11_t5_assistant_popup import popup171_owned_environment
+
+    reference = tmp_path / 'reference'
+    reference.mkdir()
+    original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
+    provenance = json.loads((original / 'provenance.json').read_text())
+    for entry in provenance['inputs']:
+        data = (original / entry['path']).read_bytes()
+        assert len(data) == entry['bytes'] and hashlib.sha256(data).hexdigest() == entry['sha256']
+        (reference / entry['path']).write_bytes(data)
+    triples = [[float(v) for v in line.split()] for line in (reference / 'hrpt.xye').read_text().splitlines()
+               if line.strip() and not line.lstrip().startswith('#')]
+    assert len(triples) == provenance['measurement_rows'] and triples[0] == provenance['measurement_first'] and triples[-1] == provenance['measurement_last']
+    (reference / 'triples.json').write_text(json.dumps(triples))
+    metadata = provenance['experiment_metadata']
+    recipe = {'project_name': 'Original ignored recipe rename', 'description': 'Original ignored recipe description',
+              'experiment_name': 'NPD', 'sample_form': 'powder', 'beam_mode': 'constant wavelength',
+              'radiation_probe': 'neutron', 'scattering_type': 'bragg', 'peak_profile': 'cwl-tch-pseudo-voigt',
+              'wavelength': 1.49, 'zero_offset': metadata['zero_offset_degrees'], 'phase_scale': metadata['phase_scale'],
+              'background': [dict(zip(('position', 'intensity'), pair, strict=True)) for pair in metadata['background']],
+              'exclusions': [], 'initial_parameters': [{'path': 'experiment.peak.' + key, 'value': value}
+                                                       for key, value in metadata['profile_parameters'].items()]}
+    adps = ['structure.atom_sites[' + site + '].adp_iso' for site in ('La', 'Ba', 'Co', 'O')]
+    profiles = ['experiment.peak.' + key for key in metadata['profile_parameters']]
+    zero = 'experiment.instrument.calib_twotheta_offset'
+    nuisance = ['structure.cell.length_a', 'experiment.background[1].intensity', 'experiment.background[2].intensity']
+    relation = native145_relation_args(adps[0], adps[1])
+    groups = [
+        [native_call('inspect_project'),
+         native_call('create_cwl_project', cif_file_id={'$original_selected_name': 'lbco.cif'},
+                     data_file_id={'$original_selected_name': 'hrpt.xye'}, recipe=recipe),
+         native_call('list_parameters'), native_call('inspect_project')],
+        [native_call('set_parameters', values=[{'path': path, 'value': .5} for path in adps]),
+         native_call('add_relations', **relation),
+         native_call('set_free', flags=[{'path': {'$original_parameter_suffix': '.scale'}, 'free': True},
+                                       {'path': zero, 'free': True}] + [{'path': path, 'free': True} for path in nuisance]
+                     + [{'path': path, 'free': False} for path in profiles]),
+         native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics')],
+        [native_call('set_free', flags=[{'path': path, 'free': True} for path in [zero, *profiles]]
+                     + [{'path': path, 'free': True} for path in [adps[0], adps[2], adps[3], *nuisance]]),
+         native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics'),
+         native_call('save_project', destination='current')],
+    ]
+    calls = [call for group in groups for call in group]
+    for index, call in enumerate(calls):
+        call['call_id'] = 'main504-' + str(index)
+    (reference / 'main504-plan.json').write_text(json.dumps({'adps': adps, 'profiles': profiles, 'zero': zero, 'nuisance': nuisance, 'recipe': recipe}))
+    inputs = {path.name: path.read_bytes() for path in reference.iterdir() if path.is_file()}
+    environment = gui439_native_environment(popup171_owned_environment(tmp_path), tmp_path)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
+    elapsed_rules511 = environment.get('QT_LOGGING_RULES', '')
+    environment['QT_LOGGING_RULES'] = elapsed_rules511 + ('\n' if elapsed_rules511 else '') + 'edi.assistant.elapsed.debug=true'
+    environment['QT_MESSAGE_PATTERN'] = '[%{time process} pid=%{pid} tid=%{threadid} %{type} %{category} %{file}:%{line}] %{message}'
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.update(scenario='native:script', native_turn_calls=groups, readonly409=True,
+                  native_import267=True, main507_closed_files=True, vm319_record_packets=True, report_page_reply=True)
+    config_path.write_text(json.dumps(config))
+    config_bytes = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
+    assert runner.is_file(), 'MAIN504 SETUP: genuine current original Main consumer is required'
+    argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_main504_lbco_show_actions_owner_outcome', '-o', '-,txt']
+    (tmp_path / 'main504-request.json').write_text(json.dumps({'argv': argv, 'timeout': 90,
+        'environment': {key: value for key, value in environment.items() if key.startswith(('QT_', 'EDI_', 'XDG_'))}}, indent=2))
+    try:
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired as error:
+        for stream in ('stdout', 'stderr'):
+            value = getattr(error, stream) or b''
+            raw = value if isinstance(value, bytes) else value.encode('utf-8')
+            destination = tmp_path / ('main504-timeout.' + stream + '.log')
+            destination.write_bytes(raw)
+            error.add_note(str(destination))
+        raise
+    (tmp_path / 'main504.stdout.log').write_text(result.stdout)
+    (tmp_path / 'main504.stderr.log').write_text(result.stderr)
+    assert result.returncode == 0 and 'FAIL!' not in result.stdout and 'PASS   : edi_app::AssistantPopup::test_main504_lbco_show_actions_owner_outcome()' in result.stdout, (
+        'MAIN504: genuine Main/cue/science/fit/current Save/Report must all complete\n' + result.stdout + result.stderr)
+    assert not any('Binding loop detected' in line for line in (result.stdout + result.stderr).splitlines())
+    trace = Path(config['trace'])
+    emitted = native_records(trace, '.native-emitted.jsonl')
+    replies = native_records(trace, '.native-replies.jsonl')
+    assert len(emitted) == len(replies) == len(calls) == 17 and len({row['id'] for row in emitted}) == 17
+    assert [row['params']['callId'] for row in emitted] == [row['call_id'] for row in calls]
+    assert [row['params']['tool'] for row in emitted] == [row['tool'] for row in calls]
+    assert all(reply['response']['id'] == original['id'] and reply['response']['result']['success'] is True
+               for original, reply in zip(emitted, replies, strict=True))
+    first_inspection = json.loads(replies[0]['response']['result']['contentItems'][0]['text'])
+    disclosed = first_inspection['selected_files']['files']
+    assert type(disclosed) is list and len(disclosed) == 2 and len({row['id'] for row in disclosed}) == 2 and all(
+        type(row['id']) is str and row['id'] and type(row['bytes']) in (int, float)
+        and row['bytes'] == entry['bytes'] and type(row['format']) is str and row['format']
+        for row, entry in zip(disclosed, provenance['inputs'], strict=True)
+    ), 'MAIN507: actual closed inspection IDs are unique and ordered against independently pinned authentic source byte counts'
+    assert emitted[1]['params']['arguments']['cif_file_id'] == disclosed[0]['id'] and (
+        emitted[1]['params']['arguments']['data_file_id'] == disclosed[1]['id']
+    ), 'MAIN507: SAME actual current inspection opaque IDs reach the original import RPC in exact selected order'
+    readonly409_policy(trace)
+    assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == 3
+    assert not any(row.get('method') in {'turn/interrupt', 'turn/steer'} for row in records(trace))
+    assert config_path.read_bytes() == config_bytes and all((reference / name).read_bytes() == data for name, data in inputs.items())
