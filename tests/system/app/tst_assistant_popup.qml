@@ -6566,8 +6566,9 @@ TestCase {
             compare(labels[0].color, EaStyle.Colors.themeAccent, "GUI398: original enabled Details link paints native blue text");
         }
         let lastReceipt407 = null, completed407 = false;
-        function input(button) {
+        function input(button, beforeNativeInput) {
             Ui.scrollIntoView(button); rendered();
+            if (beforeNativeInput !== undefined) beforeNativeInput();
             if (lastReceipt407 !== null) {
                 const previous407 = lastReceipt407; lastReceipt407 = null;
                 verify(previous407.finish("details-before-next-input"), "GUI407: previous original disclosure interval retains complete passive evidence");
@@ -6582,11 +6583,12 @@ TestCase {
             link(human, "Show details"); input(human);
             tryCompare(human, "checked", true, 2000, "GUI398: genuine original Show details exposes human-readable Details");
             link(human, "Hide details");
-            ux356_fullyExposed(technical); link(technical, "Show technical data");
-            compare(technical.checked, false, "GUI398: opening human Details NEVER automatically expands raw technical data");
-            verify(!Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
-            capture("gui398-signin-human-details");
-            input(technical);
+            input(technical, function () {
+                ux356_fullyExposed(technical); link(technical, "Show technical data");
+                compare(technical.checked, false, "GUI398: opening human Details NEVER automatically expands raw technical data");
+                verify(!Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
+                capture("gui398-signin-human-details");
+            });
             tryCompare(technical, "checked", true, 2000, "GUI398: genuine Show technical data exposes original exact payload");
             link(technical, "Hide technical data");
             verify(Ui.rendered(preview) && preview.readOnly && preview.selectByMouse,
