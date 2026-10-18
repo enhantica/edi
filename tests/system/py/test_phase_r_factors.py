@@ -7,10 +7,17 @@ import numpy as np
 import pytest
 
 from tests.fixtures.phase_factors.reference import axial_profiles
+from tests.fixtures.saved_spelling.profile_bounds import phase_errors, polynomial_error
 from tests.fixtures.xray_doublet import phase_membership as doublet_phase
 from tests.integration.py.test_anisotropic_adps import loop_rows
 from tests.system.py.test_latest_fit_uncertainty import ENGINE, vehicle
-from tests.system.py.test_powder_r_factors import profile_checks, record, scan_template_background
+from tests.system.py.test_powder_r_factors import (
+    assert_profile_rounding,
+    profile_checks,
+    record,
+    saved_profile,
+    scan_template_background,
+)
 
 
 def isolated_patterns(root, *, zero_background=False):
@@ -110,7 +117,7 @@ def phase_vehicle(root, mode):
     return ENGINE.Project.load(root), parts, masks, grid, sigma, observations
 
 
-def phase_checks(project, text, parts, observations, backgrounds=None):
+def phase_checks(project, text, parts, observations, backgrounds=None, *, saved=None):  # noqa: PLR0914
     rows = loop_rows(text, '_fit_result_phase')
     keys = [
         (row['_fit_result_phase.experiment_id'], row['_fit_result_phase.structure_id'])
@@ -124,17 +131,26 @@ def phase_checks(project, text, parts, observations, backgrounds=None):
         '_fit_result_phase.experiment_id and _fit_result_phase.structure_id '
         'must preserve the composite key'
     )
+    reloaded = None
+    if saved is not None and backgrounds is None:
+        reloaded = ENGINE.Project.load(saved)
+        reloaded.analysis.calculate()
     for experiment in project.experiments:
         observed = observations[experiment.name]
-        background = (
-            np.asarray(experiment.data.intensity_bkg)
-            if backgrounds is None
-            else backgrounds[experiment.name]
-        )
+        saved_yc = None
+        if saved is not None and backgrounds is None:
+            _yo, saved_yc, _sigma, background = saved_profile(saved, experiment.name)
+        else:
+            background = (
+                np.asarray(experiment.data.intensity_bkg)
+                if backgrounds is None
+                else backgrounds[experiment.name]
+            )
         # The denominator is the actual total calculated-minus-background input.
         # For scans reconstruct the selected template, preserving addition order.
         total = (
-            np.asarray(experiment.data.intensity_calc) - background
+            (np.asarray(experiment.data.intensity_calc) if saved_yc is None else saved_yc)
+            - background
             if backgrounds is None
             else ((background + parts[0]) + parts[1]) - background
         )
@@ -160,6 +176,41 @@ def phase_checks(project, text, parts, observations, backgrounds=None):
             assert float(row['_fit_result_phase.f_r_factor']) == pytest.approx(
                 amplitude, rel=1e-12
             ), '_fit_result_phase.f_r_factor must use its phase amplitudes'
+            if reloaded is not None:
+                rounded = reloaded.experiments[experiment.name]
+                rounded_bg = np.asarray(rounded.data.intensity_bkg)
+                rounded_total = np.asarray(rounded.data.intensity_calc) - rounded_bg
+                rounded_share = np.divide(
+                    observed - rounded_bg,
+                    rounded_total,
+                    out=np.zeros_like(rounded_total),
+                    where=rounded_total > 0,
+                )
+                text = (saved / f'experiments/{experiment.name}.edi').read_text()
+                tokens = [r['_background.coef'] for r in loop_rows(text, '_background')]
+                radius = polynomial_error(
+                    tokens, np.asarray(rounded.data.two_theta), constrained=False
+                )
+                observed_radius = np.asarray([
+                    np.sum(
+                        np.divide(profile, total, out=np.zeros_like(total), where=total > 0)
+                        * radius
+                    )
+                    for profile in reflections
+                ])
+                rounded_io = np.asarray([
+                    np.sum(profile * rounded_share) for profile in reflections
+                ])
+                bounds = phase_errors(io, ic, observed_radius)
+                rounded_amplitudes = np.sqrt(rounded_io / ic)
+                actual = (
+                    np.sum(abs(rounded_io - ic)) / np.sum(abs(rounded_io)),
+                    np.sum(abs(rounded_amplitudes - 1)) / np.sum(rounded_amplitudes),
+                )
+                assert all(
+                    abs(new - old) <= limit + 1e-12
+                    for new, old, limit in zip(actual, (bragg, amplitude), bounds, strict=True)
+                ), 'Phase recalculation must stay within the independent written-digit bounds'
 
 
 def retained_metrics(text, prefix, fields):
@@ -222,10 +273,19 @@ def test_phase_and_profile_results_follow_reload_and_changed_free_set_refit(tmp_
         isolated_patterns(tmp_path / 'input', zero_background=True),
         observations,
         backgrounds,
+        saved=tmp_path / 'saved',
     )
     profile_checks(
-        project, text, declared, dict.fromkeys(observations, 2), backgrounds, sum(parts)
+        project,
+        text,
+        declared,
+        dict.fromkeys(observations, 2),
+        backgrounds,
+        sum(parts),
+        saved=tmp_path / 'saved',
     )
+    if mode not in {'sequential', 'independent'}:
+        assert_profile_rounding(project, tmp_path / 'saved', declared, constrained=False)
     loaded = ENGINE.Project.load(tmp_path / 'saved')
     assert_retained_metrics(text, record(loaded, tmp_path / 'reopened')[0])
     if mode in {'sequential', 'independent'}:
@@ -270,8 +330,19 @@ def test_phase_and_profile_results_follow_reload_and_changed_free_set_refit(tmp_
         isolated_patterns(tmp_path / 'input', zero_background=True),
         changed,
         backgrounds,
+        saved=tmp_path / 'refitted',
     )
-    profile_checks(loaded, latest, declared, dict.fromkeys(changed, 1), backgrounds, sum(parts))
+    profile_checks(
+        loaded,
+        latest,
+        declared,
+        dict.fromkeys(changed, 1),
+        backgrounds,
+        sum(parts),
+        saved=tmp_path / 'refitted',
+    )
+    if mode not in {'sequential', 'independent'}:
+        assert_profile_rounding(loaded, tmp_path / 'refitted', declared, constrained=False)
     assert loop_rows(latest, '_fit_result_phase') != loop_rows(text, '_fit_result_phase'), (
         'The new observations must replace the saved phase results as the latest fit'
     )

@@ -26,7 +26,7 @@ from conftest import (
 )
 from tests.fixtures.correlations.machine_record import without_pair_count
 from tests.fixtures.ncaf_free_flags import canonicalize
-from tests.fixtures.saved_spelling.reference import saved_pair, with_default_rule
+from tests.fixtures.saved_spelling.reference import saved_pair, spelling, with_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
 LIB = importlib.import_module('edi')
@@ -270,6 +270,11 @@ def test_positional_basic_fit_reaches_model_file_and_undo(tmp_path: Path) -> Non
     assert '(' in fitted_token, (
         'the structures file must serialize an e.s.d. with the moved positional basic'
     )
+    expected_value, expected_uncertainty = saved_pair(expected_value, expected_uncertainty)
+    assert fitted_token == spelling(
+        _machine_number(record, 'param.Ca1.fract_x.value'),
+        _machine_number(record, 'param.Ca1.fract_x.uncertainty'),
+    ), 'The saved positional basic must carry exactly the independent IUCr value and s.u. digits'
     restored = _site(fitted, 'Ca1').fract_x
     assert float(restored.value) == pytest.approx(expected_value), (
         'the positional-basic value from the machine record must reach the saved model'
