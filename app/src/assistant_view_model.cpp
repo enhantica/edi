@@ -25,6 +25,9 @@
 #include <QJsonObject>
 #include <QMetaObject>
 #include <QMouseEvent>
+#include <QKeyEvent>
+#include <QKeySequence>
+#include <QInputMethodEvent>
 #include <QLoggingCategory>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -853,6 +856,7 @@ struct AssistantViewModel::State {
     bool generic_mode = false, generic_connecting = false, generic_busy = false, generic_blocked = false;
     bool generic_authenticated = false, generic_retiring = false, generic_writing_input = false, generic_revoke_pending = false;
     bool generic_clear_pending = false, generic_clear_interrupt_sent = false, generic_context_pending = false;
+    bool generic_stop_requested = false; // Only the original AI Stop entrance sets this latch.
     bool generic_context_retention_pending = false;
     QString generic_context_retention_error;
     QString generic_interrupt_rpc, generic_interrupt_thread, generic_interrupt_turn;
@@ -1672,7 +1676,7 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> project;
         std::optional<edi::WorkStamps> stamps;
         quint64 generation = 0, serial = 0;
-        bool retired = false;
+        bool retired = false, stale = false;
     };
     // A call belongs to its original turn, not to a replaceable steer receipt.
     // Canonical provider bytes and the app-authored result have separate owners.
@@ -1687,10 +1691,19 @@ struct AssistantViewModel::State {
         QJsonValue rpc;
         std::shared_ptr<NativeRecord> record;
         std::shared_ptr<NativeReceipt> receipt;
-        bool may_have_written = false, resolved = false, retiring = false;
+        bool may_have_written = false, resolved = false, retiring = false, finishing = false;
+        std::shared_ptr<NativeReceipt> inspection; // Only a settled read may transfer this new authority.
     };
     QMap<QString, std::shared_ptr<NativeReceipt>> native_pending;
     std::shared_ptr<NativeReceipt> native_receipt;
+    std::vector<std::weak_ptr<NativeReceipt>> inspection_frames;
+    void inspection_track(const std::shared_ptr<NativeReceipt>& receipt) {
+        std::erase_if(inspection_frames, [](const auto& weak) { return weak.expired(); });
+        if (std::any_of(inspection_frames.cbegin(), inspection_frames.cend(), [&](const auto& weak) { return weak.lock() == receipt; })) return;
+        const auto role = reserve_disclosure((inspection_frames.size() + 1) * sizeof(std::weak_ptr<NativeReceipt>));
+        inspection_frames.reserve(inspection_frames.size() + 1);
+        inspection_frames.push_back(receipt);
+    }
     QMap<QString, std::shared_ptr<NativeRecord>> native_records;
     std::optional<NativeCall> native_call;
     QPointer<FitViewModel> native_fit;
@@ -1971,14 +1984,25 @@ struct AssistantViewModel::State {
         }
         return false;
     }
-    bool manual_control(QQuickItem* target, bool handler_action = false) const {
+    bool manual_control(QQuickItem* target) const {
         if (!target || !action_window || target->window() != action_window) return false;
-        bool control = handler_action || target->inherits("QQuickTextInput") || target->inherits("QQuickTextEdit");
+        // A harmless filter/search is still conflicting input when it is the
+        // exact live paced receiver. Never resume automation into its new draft.
+        if (widget_input && widget_input->conflictsWith(target)) return target->isVisible() && target->isEnabled();
+        bool control = false;
         // App-owned handler identity and actual text receivers are scoped below
         // to the original workflow/form; the composer remains outside it.
         for (auto* item = target; item; item = item->parentItem()) {
             if (!item->isVisible() || !item->isEnabled()) return false;
             const auto name = item->objectName();
+            // Presentation navigation is not a project edit. Its real effects
+            // may retire the current tool target, but not the official turn.
+            if (item->inherits("QQuickTabButton") || name == "parameters.nameFilter" ||
+                name == "parameters.category" || name == "parameters.variability" || name == "parameters.resetFilters") return false;
+            if (item->inherits("QQuickGroupBox")) {
+                const auto label = item->property("label").value<QQuickItem*>();
+                if (label && (label == target || label->isAncestorOf(target))) return false;
+            }
             if (native_create_widget && native_create_widget->form &&
                 native_create_widget->form->property("assistantIntentId").toString() == native_create_widget->id &&
                 item == native_create_widget->form->property("contentItem").value<QQuickItem*>()) return control;
@@ -1992,16 +2016,17 @@ struct AssistantViewModel::State {
             if (name.startsWith("workflow.") && (name.endsWith(".manualSidebar") || name.endsWith(".mainContent"))) return control;
             // Existing common/parameter editors mark even a clean draft. This
             // is control identity, never a read or write of the event's text.
-            if (item->property("assistantManualDraft").isValid() || item->property("assistantEditing").isValid() ||
-                item->property("down").isValid() || item->property("pressed").isValid() || item->property("interactive").toBool()) {
+            if (item->inherits("QQuickTextInput") || item->inherits("QQuickTextEdit") ||
+                item->property("assistantManualDraft").isValid() || item->property("assistantEditing").isValid() ||
+                item->property("down").isValid() || item->property("pressed").isValid()) {
                 const auto read_only = item->property("readOnly");
                 if (!read_only.isValid() || !read_only.toBool()) control = true;
             }
         }
         return false; // In particular the assistant composer is outside this tree.
     }
-    bool retire_manual_input(QQuickItem* control, bool handler_action = false) {
-        if (!manual_control(control, handler_action) || !manual_request_current()) return true;
+    bool retire_manual_input(QQuickItem* control) {
+        if (!manual_control(control) || !manual_request_current()) return true;
         const QPointer<QQuickItem> original(control);
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto binding = generation; const auto serial = native_serial; const auto account = usage_epoch;
@@ -2029,7 +2054,7 @@ struct AssistantViewModel::State {
         if (original_creation) original_creation->manual_takeover = true;
         if (showing_actions) try { emit owner.actionManualTakeover(); } catch (...) {}
         if (!original_request()) return false; // A never cancels/acts through new B.
-        if (manual_request_current()) try { owner.cancel(); } catch (...) {}
+        if (manual_request_current()) native_supersede_operation(widget_outcome_error);
         // A handler must not run its old action against a replacement project,
         // window/helper or reentrant successor admitted during cancellation.
         return original_owner() && !native_widget && !native_create_widget && native_records.size() == entries && widget_input.get() == helper &&
@@ -2187,6 +2212,34 @@ struct AssistantViewModel::State {
             native_finish(false, run->call.record->outcome);
             if (receiver && widget_owned(run)) widget_end(run);
         }
+    }
+    void native_supersede_operation(const QString& message) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const auto call = native_call;
+        const auto widget = native_widget;
+        const auto creation = native_create_widget;
+        if (call && call->finishing) {
+            if (widget) widget_end(widget);
+            if (receiver && creation && native_create_widget == creation) create_widget_end(creation);
+            return;
+        }
+        if (widget) { widget_refuse(widget, message); return; }
+        if (creation) { create_widget_refuse(creation, message); return; }
+        if (!call) return; // Original publication already owns its factual reply.
+        const auto original = [&] { return receiver && receiver->state_.get() == this && native_call &&
+            native_call->record == call->record && native_call->receipt == call->receipt && native_call->rpc == call->rpc; };
+        try {
+            if (native_fit) {
+                const auto fit = native_fit;
+                fit->cancel(); // The actual final report retains the original RPC, not a fabricated completion.
+                return;
+            }
+            native_cancel_creation();
+            if (!original()) return;
+            native_cancel_save();
+            if (!original() || native_worker_admitted()) return;
+            native_finish(false, call->record->outcome);
+        } catch (...) { if (original()) native_fence(); }
     }
     void widget_input_finished(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) noexcept {
         if (!widget_owned(run)) return;
@@ -3410,7 +3463,22 @@ struct AssistantViewModel::State {
             receipt->turn == generic_turn && receipt->project == project;
     }
     bool native_current(const std::shared_ptr<NativeReceipt>& receipt) const {
-        return native_owner(receipt) && (!project || (receipt->stamps && edi::unchanged_since(*project->assistantProject(), *receipt->stamps)));
+        return native_owner(receipt) && !receipt->stale && (!project || (receipt->stamps && edi::unchanged_since(*project->assistantProject(), *receipt->stamps)));
+    }
+    static quint64 native_stamp_bytes(const edi::WorkStamps& stamps) {
+        quint64 bytes = sizeof(edi::WorkStamps);
+        const auto add = [&](quint64 n) {
+            if (n > Limits::stream_retained_bytes - bytes) throw std::length_error("Scientific stamp roles exceed capacity");
+            bytes += n;
+        };
+        for (const auto* rows : {&stamps.experiment_inputs, &stamps.structure_inputs}) {
+            if (rows->capacity() > Limits::stream_retained_bytes / sizeof(std::string))
+                throw std::length_error("Scientific stamp rows exceed capacity");
+            add(rows->capacity() * sizeof(std::string));
+            for (const auto& value : *rows) { add(value.size()); add(1); }
+        }
+        add(stamps.relations.size()); add(1);
+        return bytes;
     }
     quint64 native_bytes() const {
         quint64 total = 0;
@@ -3473,17 +3541,11 @@ struct AssistantViewModel::State {
                 value(source->result);
             }
             for (auto i = r->selected_hashes.constBegin(); i != r->selected_hashes.constEnd(); ++i) { value(i.key()); raw(i.value().size()); }
-            if (r->stamps) {
-                raw(sizeof(edi::WorkStamps));
-                const auto strings = [&](const std::vector<std::string>& entries) {
-                    raw(entries.size() * sizeof(std::string));
-                    for (const auto& entry : entries) raw(entry.size());
-                };
-                strings(r->stamps->experiment_inputs); strings(r->stamps->structure_inputs);
-                raw(r->stamps->relations.size());
-            }
+            if (r->stamps) raw(native_stamp_bytes(*r->stamps));
         };
         receipt(native_receipt);
+        raw(inspection_frames.capacity() * sizeof(std::weak_ptr<NativeReceipt>));
+        for (const auto& frame : inspection_frames) receipt(frame.lock());
         for (auto i = native_pending.constBegin(); i != native_pending.constEnd(); ++i) { value(i.key()); receipt(i.value()); }
         QSet<const NativeRecord*> records;
         const auto record = [&](const std::shared_ptr<NativeRecord>& entry) {
@@ -3511,7 +3573,7 @@ struct AssistantViewModel::State {
             value(i.key()); record(i.value());
         }
         if (native_call) {
-            raw(sizeof(NativeCall)); value(native_call->rpc); receipt(native_call->receipt);
+            raw(sizeof(NativeCall)); value(native_call->rpc); receipt(native_call->receipt); receipt(native_call->inspection);
             // A complete bounded post-write context has its own temporary role;
             // it cannot borrow the original approved-context/result capacity.
             raw(Limits::context_bytes);
@@ -3635,9 +3697,7 @@ struct AssistantViewModel::State {
             const auto& a = *native_attachment;
             raw(sizeof(NativeAttachment)); scope(a.disclosure); raw(a.context.size()); raw(a.consent.size()); raw(a.selected_reply.size());
             value(a.selected_context); value(a.outcome); value(a.response); value(a.row);
-            raw(a.stamps.relations.size());
-            for (const auto& entry : a.stamps.experiment_inputs) raw(sizeof(std::string) + entry.size());
-            for (const auto& entry : a.stamps.structure_inputs) raw(sizeof(std::string) + entry.size());
+            raw(native_stamp_bytes(a.stamps) - sizeof(edi::WorkStamps));
         }
         return total;
     }
@@ -3796,18 +3856,32 @@ struct AssistantViewModel::State {
     }
     void native_refresh(const NativeCall& call) {
         const auto publication = file_projection();
-        if (!call.may_have_written || !native_owner(call.receipt)) return;
+        const auto current = [&] { return publication.input_current() && !call.receipt->stale && native_owner(call.receipt) &&
+            native_call && native_call->record == call.record && native_call->receipt == call.receipt && native_call->rpc == call.rpc; };
+        if (!call.may_have_written || !current()) return;
         std::optional<edi::WorkStamps> stamps;
-        if(project)stamps=edi::work_stamps(*project->assistantProject());
+        quint64 stamp_role = 0;
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto transport_generation = transport ? transport->outputGeneration() : 0;
+        const auto release_stamps = qScopeGuard([&, publication] {
+            if (!publication.receiver || publication.receiver->state_.get() != this) return;
+            disclosure_preparing_bytes -= stamp_role;
+            native_release_charge(publication, transport, transport_generation);
+        });
+        if (project) {
+            stamps = edi::work_stamps(*project->assistantProject(), static_cast<std::size_t>(native_room()));
+            stamp_role = native_stamp_bytes(*stamps);
+            disclosure_preparing_bytes += stamp_role; // Callback-free bounded capture transfers its actual local role.
+        }
         if (controller) controller->notify_changed();
-        if (!publication.input_current()) return;
+        if (!current()) return;
         const auto context = outgoing_context();
-        if (!publication.input_current()) return;
+        if (!current()) return;
         if (context.contains("error")) throw std::length_error("Complete native context is unavailable");
         if (!native_owner(call.receipt) || !native_call || native_call->record != call.record || native_call->receipt != call.receipt) return;
         if (!same_disclosure(call.receipt->disclosure, approved_scope)) throw std::runtime_error("The original native disclosure retired");
         const auto refreshed_scope = current_disclosure(&context);
-        if(!publication.input_current())return;
+        if(!current())return;
         if (call.record->tool != "create_cwl_project" && !same_disclosure(call.receipt->disclosure, refreshed_scope))
             throw std::runtime_error("The native result changed its original input disclosure");
         auto encoded = QJsonDocument(context).toJson(QJsonDocument::Compact);
@@ -3815,13 +3889,22 @@ struct AssistantViewModel::State {
         // Temporary stamps/context are admitted with their actual owning roles
         // before replacing the old receipt. Failure leaves the actual edit and
         // prepared uncertainty outcome intact, with further execution fenced.
+        const auto new_stamp_role = stamp_role;
+        const auto old_stamp_role = call.receipt->stamps ? native_stamp_bytes(*call.receipt->stamps) : 0;
         auto old = std::move(call.receipt->stamps);
         call.receipt->stamps = std::move(stamps);
+        // These are the same concurrently owned two payloads, just exchanged
+        // between the current receipt and its original local rollback frame.
+        disclosure_preparing_bytes -= stamp_role; disclosure_preparing_bytes += old_stamp_role; stamp_role = old_stamp_role;
         call.receipt->approved_context.swap(encoded);
         try { native_charge(); }
         catch (...) {
-            call.receipt->stamps = std::move(old); call.receipt->approved_context.swap(encoded); throw;
+            if (!publication.receiver || publication.receiver->state_.get() != this) throw;
+            call.receipt->stamps.swap(old); call.receipt->approved_context.swap(encoded);
+            disclosure_preparing_bytes -= stamp_role; disclosure_preparing_bytes += new_stamp_role; stamp_role = new_stamp_role;
+            throw;
         }
+        if (!current()) return;
         call.receipt->disclosure = refreshed_scope;
         approved_scope = refreshed_scope; backend_scope = refreshed_scope;
         consented_context.clear();
@@ -3870,7 +3953,8 @@ struct AssistantViewModel::State {
                 };
     }
     void native_finish(bool success, const Object& outcome) noexcept {
-        if (!native_call) return;
+        if (!native_call || native_call->finishing) return;
+        native_call->finishing = true; // Sequential/reentrant publication belongs to this original call only.
         const QPointer<AssistantViewModel> receiver(&owner);
         auto call = *native_call; // Stable owner across synchronous transport failure/reentrant retirement.
         auto record = call.record;
@@ -3910,7 +3994,22 @@ struct AssistantViewModel::State {
             if (!original_call()) return;
             record->completed = true;
             if (retained) { record->maximum_row = {}; record->maximum_response = {}; }
+            const auto inspection = call.inspection;
+            bool advance = false;
+            if (success && retained && inspection && native_receipt == call.receipt && native_owner(call.receipt)) {
+                const bool approved = disclosure_approved(); // Callback-capable: original publication must still own the return.
+                if (!original_call()) return;
+                advance = approved && native_receipt == call.receipt && native_owner(call.receipt) && policy_current() &&
+                    !generic_connecting && !generic_context_pending && !generic_clear_pending &&
+                    (!project || (inspection->stamps && edi::unchanged_since(*project->assistantProject(), *inspection->stamps)));
+            }
             if (native_call && native_call->record == record) native_call.reset();
+            if (advance) {
+                // Never update stamps in a receipt shared with an old editor or
+                // late callback. Publication completed; only later calls see this.
+                call.receipt->retired = true;
+                native_receipt = inspection;
+            }
             const auto settled = native_settlement_scope(call);
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
             if (!receiver || !settled()) return;
@@ -4211,7 +4310,13 @@ struct AssistantViewModel::State {
 
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage) {
         const auto publication=file_projection();
-        if (!native_current(native_receipt) || !native_pending.isEmpty() || native_call || native_fit || native_creation || native_save) {
+        const bool inspecting = params.value("tool") == "inspect_project";
+        if (inspecting && (!policy_current() || generic_connecting)) {
+            native_reply(rpc, false, {{"status", "refused"}, {"message", "The original thread settings are not current."}}); return;
+        }
+        const auto original_receipt = native_receipt;
+        if (!(inspecting ? native_owner(original_receipt) : native_current(original_receipt)) ||
+            !native_pending.isEmpty() || native_call || native_fit || native_creation || native_save) {
             native_reply(rpc, false, {{"status", "refused"}, {"message", "No current settled native request is available."}}); return;
         }
         const auto name = generic_id(params.value("tool"));
@@ -4251,6 +4356,40 @@ struct AssistantViewModel::State {
         std::vector<std::pair<std::string, bool>> beforeFlags;
         auto edit = project ? assistant_native_edit(*project->assistantProject(), name, args, beforeFlags) : std::optional<edi::Edit>{};
         Object read_result;
+        std::shared_ptr<NativeReceipt> inspection;
+        quint64 inspection_bytes = 0;
+        const QPointer<CodexAgent> inspection_transport(agent.get());
+        const auto inspection_transport_generation = inspection_transport ? inspection_transport->outputGeneration() : 0;
+        const auto release_inspection = qScopeGuard([&, publication] {
+            if (!publication.receiver || publication.receiver->state_.get() != this) return;
+            disclosure_preparing_bytes -= inspection_bytes;
+            native_release_charge(publication, inspection_transport, inspection_transport_generation);
+        });
+        const auto inspect_current = [&] { return publication.input_current() && native_receipt == original_receipt &&
+            native_owner(original_receipt) && !native_call && !native_fit && !native_creation && !native_save && native_pending.isEmpty(); };
+        if (inspecting) {
+            inspection_track(original_receipt);
+            if (!inspect_current()) return;
+            const auto shell = sizeof(NativeReceipt) + original_receipt->sources.size() * sizeof(std::shared_ptr<LocalInputSource>) +
+                generic_size(original_receipt->objective, Limits::context_bytes) + generic_size(original_receipt->thread, Limits::context_bytes) +
+                generic_size(original_receipt->turn, Limits::context_bytes) + generic_size(original_receipt->selected_context, Limits::context_bytes);
+            disclosure_room(shell); disclosure_preparing_bytes += shell; inspection_bytes += shell;
+            inspection = std::make_shared<NativeReceipt>();
+            inspection->disclosure = original_receipt->disclosure;
+            inspection->objective = original_receipt->objective; inspection->thread = original_receipt->thread;
+            inspection->turn = original_receipt->turn; inspection->sources = original_receipt->sources;
+            inspection->selected_context = original_receipt->selected_context; inspection->selected_hashes = original_receipt->selected_hashes;
+            inspection->project = original_receipt->project; inspection->generation = original_receipt->generation; inspection->serial = original_receipt->serial;
+            if (project) {
+                const auto room = native_room();
+                disclosure_preparing_bytes += room; inspection_bytes += room;
+                // This overload admits canonical source buffers before growth.
+                inspection->stamps = edi::work_stamps(*project->assistantProject(), static_cast<std::size_t>(room));
+                const auto used = native_stamp_bytes(*inspection->stamps);
+                if (used > room) throw std::length_error("Inspection source capture exceeds capacity");
+                disclosure_preparing_bytes -= room - used; inspection_bytes -= room - used;
+            }
+        }
         if (readonly) {
             auto context = outgoing_context();
             if(!publication.input_current())return;
@@ -4258,7 +4397,28 @@ struct AssistantViewModel::State {
             if (context.contains("error")) { native_reply(rpc, false, {{"status", "unavailable"}, {"message", "Complete native context is unavailable."}}); return; }
             read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
         }
+        if (inspecting) {
+            if (!inspect_current()) return;
+            const auto actual = current_disclosure(&read_result);
+            if (!inspect_current()) return;
+            if (!same_disclosure(original_receipt->disclosure, actual) ||
+                (project && (!inspection->stamps || !edi::unchanged_since(*project->assistantProject(), *inspection->stamps)))) {
+                native_reply(rpc, false, {{"status", "refused"}, {"message", "The inspected project or approved input scope changed; nothing was changed."}});
+                return;
+            }
+            const auto encoded = generic_size(read_result, Limits::context_bytes);
+            disclosure_room(encoded); disclosure_preparing_bytes += encoded; inspection_bytes += encoded;
+            inspection->approved_context = QJsonDocument(read_result).toJson(QJsonDocument::Compact);
+        }
         native_prepare(rpc, id, name, purpose, original, read_result);
+        if (inspecting) {
+            if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
+            native_call->inspection = std::move(inspection);
+            disclosure_preparing_bytes -= inspection_bytes; inspection_bytes = 0; // Transfer actual owners before callbacks.
+            inspection_track(native_call->inspection); // Retired local/callback owners remain charged after slot release.
+            native_charge();
+            if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
+        }
         if (readonly) { native_finish(true, read_result); return; }
         if (name == "edit_background") {
             const auto background = assistant_native_background(*project->assistantProject(), args);
@@ -4546,22 +4706,42 @@ struct AssistantViewModel::State {
                 // prepared attachment encoding coexists with that original JSON
                 // context until this function returns, so admit its second role
                 // before asking the original Controller to construct either.
+                const auto publication = file_projection();
+                const QPointer<ProjectViewModel> original_target(target);
+                const auto current = [&] { return publication.input_current() && original_target && native_creation == creation &&
+                    !creation->cancelled && native_call && native_call->record == creation->record &&
+                    native_call->receipt == creation->receipt && native_current(creation->receipt); };
+                if (!current()) throw std::runtime_error("The original creation attachment retired");
                 const auto attachment_context_role=reserve_disclosure(Limits::context_bytes);
+                quint64 attachment_stamp_bytes = 0;
+                const QPointer<CodexAgent> transport(agent.get());
+                const auto transport_generation = transport ? transport->outputGeneration() : 0;
+                const auto release_stamps = qScopeGuard([&, publication] {
+                    if (!publication.receiver || publication.receiver->state_.get() != this) return;
+                    disclosure_preparing_bytes -= attachment_stamp_bytes;
+                    native_release_charge(publication, transport, transport_generation);
+                });
                 auto attachment = std::make_unique<NativeAttachment>();
                 attachment->creation = creation; attachment->target = target; attachment->active = std::make_shared<bool>(false);
                 attachment->prepared_controller = make_controller(target, creation->receipt->generation, attachment->active);
+                if (!current()) throw std::runtime_error("The original creation attachment retired");
                 const auto collection = QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
                 auto selected = attachment->prepared_controller->update_selected_files(collection, 0, std::move(creation->selected), {});
+                if (!current()) throw std::runtime_error("The original creation attachment retired");
                 if (!selected.ok) throw std::runtime_error("Native selected files could not be attached");
                 attachment->selected_reply = std::move(selected.value);
                 attachment->selected_context = object(attachment->selected_reply);
                 auto context = object(attachment->prepared_controller->context());
+                if (!current()) throw std::runtime_error("The original creation attachment retired");
                 if (context.contains("error")) throw std::length_error("Complete created-project context is unavailable");
                 append_native_context(context); // Same complete grant/data envelope as normal context.
                 attachment->context = QJsonDocument(context).toJson(QJsonDocument::Compact);
                 const auto attachment_scope_role = reserve_disclosure(disclosure_shell_bytes);
                 attachment->disclosure = prepare_disclosure_scope(target, context, generic_input_hashes);
-                attachment->stamps = edi::work_stamps(*target->assistantProject());
+                if (!current()) throw std::runtime_error("The original creation attachment retired");
+                attachment->stamps = edi::work_stamps(*target->assistantProject(), static_cast<std::size_t>(native_room()));
+                attachment_stamp_bytes = native_stamp_bytes(attachment->stamps);
+                disclosure_preparing_bytes += attachment_stamp_bytes;
                 attachment->outcome = outcome; attachment->response = native_response(true, outcome);
                 attachment->row = native_row(*creation->record, outcome, true);
                 if (generic_size(outcome, Limits::context_bytes) > creation->record->outcome_bytes ||
@@ -4569,8 +4749,13 @@ struct AssistantViewModel::State {
                     generic_size(attachment->response, Limits::message_bytes) > generic_size(creation->record->maximum_response, Limits::message_bytes))
                     throw std::length_error("Created-project outcome exceeds its prepared role");
                 connect_project(target, creation->receipt->generation, attachment->active); // Prepare inactive, original-generation signal ownership before exposure.
+                if (!current()) throw std::runtime_error("The original creation attachment retired");
                 auto* installed_attachment = attachment.get();
-                native_attachment = std::move(attachment); native_charge();
+                native_attachment = std::move(attachment);
+                disclosure_preparing_bytes -= attachment_stamp_bytes; attachment_stamp_bytes = 0;
+                native_charge();
+                if (!current() || native_attachment.get() != installed_attachment)
+                    throw std::runtime_error("The original creation attachment retired");
                 return installed_attachment;
     }
     bool native_creation_current(const std::shared_ptr<NativeCreation>& creation) const {
@@ -5994,7 +6179,7 @@ struct AssistantViewModel::State {
             generic_turn.clear(); generic_thread.clear(); invalidate_policy();
             generic_native["status"] = "disconnected"; native = generic_native;
             error = bounded_error(original_explanation);
-            generic_retiring = false; generic_revoke_pending = false;
+            generic_retiring = false; generic_revoke_pending = false; generic_stop_requested = false;
             notify();
         } catch (...) {} // Original failure cannot unwind a receiver or clean up B.
     }
@@ -6163,7 +6348,7 @@ struct AssistantViewModel::State {
             retire_result();
             if (!current()) return false;
             generic_authenticated = false;
-            if (!required) { generic_retiring = false; generic_revoke_pending = false; }
+            if (!required) { generic_retiring = false; generic_revoke_pending = false; generic_stop_requested = false; }
             if (agent) try { agent->retire(); } catch (...) {}
             if (!current()) return false;
             generic_busy = false; generic_connecting = false;
@@ -6175,7 +6360,7 @@ struct AssistantViewModel::State {
             generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); generic_workspace.clear(); generic_skill_paths.clear(); staged_skill_inventory.reset(); generic_skill_declarations={};
             // Retired artifacts stay available for explicit recovery; no provider data is adopted.
             generic_native["status"] = "disconnected";
-            if (required) { generic_retiring = false; generic_revoke_pending = false; }
+            if (required) { generic_retiring = false; generic_revoke_pending = false; generic_stop_requested = false; }
             return current();
         } catch (...) { return false; }
     }
@@ -6186,20 +6371,20 @@ struct AssistantViewModel::State {
         agent->settleOperation();
         if (!publication.input_current()) return;
         generic_revoke_pending = false;
-        generic_clear_interrupt_sent = false;
+        generic_clear_interrupt_sent = false; generic_stop_requested = false;
     }
     void generic_advance_clear() {
         const auto publication = file_projection();
         if (!generic_clear_pending && !generic_context_pending && !generic_revoke_pending) return;
         if (!generic_authenticated || generic_retiring) return; // Real account/failure retirement remains authoritative.
-        if (generic_busy && !generic_turn.isEmpty() && !generic_clear_interrupt_sent && generic_interrupt_rpc.isEmpty()) {
+        if (generic_stop_requested && generic_revoke_pending && generic_busy && !generic_turn.isEmpty() && !generic_clear_interrupt_sent && generic_interrupt_rpc.isEmpty()) {
             generic_clear_interrupt_sent = true;
             const auto interrupt = generic_request("turn/interrupt", {{"threadId", generic_thread}, {"turnId", generic_turn}});
             if (!publication.input_current()) return;
             generic_interrupt_rpc = interrupt;
             generic_interrupt_thread = generic_thread; generic_interrupt_turn = generic_turn;
         }
-        // Stop/manual takeover can precede the original turn/start ACK.
+        // Explicit Stop can precede the original turn/start ACK.
         // The same existing revoke deadline/once flag sends its interrupt only
         // when the real original turn ID arrives; never disconnect to guess it.
         if (!generic_clear_pending && !generic_context_pending) return;
@@ -6217,7 +6402,7 @@ struct AssistantViewModel::State {
         generic_context_reuse = false;
         if (clear) {
             generic_clear_pending = false; generic_context_pending = false;
-            generic_clear_interrupt_sent = false; generic_revoke_pending = false;
+            generic_clear_interrupt_sent = false; generic_revoke_pending = false; generic_stop_requested = false;
             generic_blocked = false; generic_held_row.reset();
             native_discard_pending = true; native_complete_discard();
             if (!receiver || generation != binding || usage_epoch != account || native_serial != input) return;
@@ -6239,7 +6424,7 @@ struct AssistantViewModel::State {
         } else {
             generic_retire_context(reuse);
             if (!receiver || generation != binding || usage_epoch != account || native_serial != input) return;
-            generic_context_pending = false; generic_clear_interrupt_sent = false; generic_revoke_pending = false;
+            generic_context_pending = false; generic_clear_interrupt_sent = false; generic_revoke_pending = false; generic_stop_requested = false;
         }
     }
     void generic_retire_context(bool reuse = false) {
@@ -6267,9 +6452,15 @@ struct AssistantViewModel::State {
         const auto publication=file_projection();
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto original_project = project;
+        const auto original_receipt = native_receipt;
         const auto binding = generation; const auto account = usage_epoch; const auto input = native_serial;
+        if (scientific) {
+            if (original_receipt) original_receipt->stale = true;
+            for (auto& pending : native_pending) pending->stale = true;
+        }
         const auto current = [&] {
             return publication.input_current() && receiver && generation == binding && usage_epoch == account && native_serial == input && project == original_project &&
+                (native_receipt == original_receipt || (!native_receipt && (!original_receipt || original_receipt->retired))) &&
                 (!continuation || (scientific ? continuation->input_current() : continuation->current()));
         };
         try {
@@ -6281,11 +6472,24 @@ struct AssistantViewModel::State {
             const bool same_scope = scientific && disclosure_approved();
             if(!current())return false;
             const bool reuse = same_scope && same_disclosure(backend_scope, approved_scope);
+            if (scientific && reuse && !generic_context_pending && !generic_clear_pending) {
+                const auto receipt = native_receipt;
+                if (receipt) receipt->stale = true;
+                for (auto& pending : native_pending) pending->stale = true;
+                native_supersede_operation(widget_outcome_error);
+                if (!current()) return false;
+                retire_result();
+                if (!current()) return false;
+                consented_context.clear();
+                return true; // A later retained inspection must establish a separate fresh receipt.
+            }
             // Revocation only upgrades: a later routine edit cannot downgrade an
             // already pending input/project/root/capability memory retirement.
             generic_context_reuse = generic_context_pending ? generic_context_reuse && reuse : reuse;
             if (!scientific || !same_scope) approved_scope.reset();
-            native_retire(true, false, true);
+            native_supersede_operation(widget_outcome_error);
+            if (!current()) return false;
+            native_retire(true);
             if (!current()) return false;
             retire_result();
             if (!current()) return false;
@@ -6295,7 +6499,9 @@ struct AssistantViewModel::State {
             }
             if (generic_context_pending || generic_clear_pending) return !generic_blocked;
             generic_context_pending = true;
-            const bool retained = generic_interrupt_rows();
+            // Preserve the original activity and official turn. Old scoped
+            // operations retire truthfully while the protocol drains naturally.
+            const bool retained = !generic_blocked;
             if (!current()) return false;
             if (!retained) {
                 // The original bounded archive is still owned. Block fresh
@@ -6311,11 +6517,6 @@ struct AssistantViewModel::State {
             if (!generic_retire_question() || !current()) return false;
             generic_clear_interrupt_sent = generic_interrupt_thread == generic_thread &&
                 !generic_turn.isEmpty() && generic_interrupt_turn == generic_turn;
-            if (generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() ||
-                !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) {
-                generic_revoke_pending = true;
-                agent->beginOperation(Limits::revoke_ms, 0);
-            }
             if (!current()) return false;
             generic_advance_clear();
             return current() && retained && generic_authenticated && !generic_retiring && !generic_blocked;
@@ -6324,7 +6525,7 @@ struct AssistantViewModel::State {
             // Ordinary edit/fit signals are emitted after their model commit.
             // Failed cancellation fences execution, never throws through Qt or
             // claims that the already committed edit/result was rolled back.
-            generic_fail(error.isEmpty() ? QStringLiteral("The agent context could not be cancelled safely. Project changes and retained work are preserved.") : error);
+            generic_fail(error.isEmpty() ? QStringLiteral("The agent context could not be refreshed safely. Project changes and retained work are preserved.") : error);
             return false;
         }
     }
@@ -6384,10 +6585,8 @@ struct AssistantViewModel::State {
         if (!publish_selected_rows({}, projection)) return;
         selected_rows_dirty = false;
         error.clear();
-        if (generic_busy || generic_connecting || !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() || !generic_interrupt_rpc.isEmpty()) {
-            generic_revoke_pending = true;
-            agent->beginOperation(Limits::revoke_ms, 0);
-        }
+        // Clear retires authority immediately but does not manufacture an AI Stop.
+        // The original inference deadline and real correlated replies remain owned.
         if (!projection.input_current()) return;
         generic_advance_clear();
         if (!projection.publication_current()) return;
@@ -6569,7 +6768,7 @@ struct AssistantViewModel::State {
         params["developerInstructions"] = QStringLiteral(
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project with explicit destination=current saves that same genuine already-owned directory; omit name/path for this branch. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: explicit destination=current preserves its actual owned directory, while default purpose/name starts the original one-operation Save As chooser and fresh-name form before writing. It verifies reopen and adopts the saved path/rounded state on the same owner.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: prefer explicit destination=current for its genuine already-owned directory, otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. Show actions uses the real Save control and fresh-name Save As form; do not silently change the mode or use a direct native fallback. Current-directory exchange retains the previous tree in Edi's local recovery receipt; report actual committed uncertainty honestly and never blindly repeat it. Local recovery paths are not model data. Native report generation remains unavailable; offer the existing Report page link instead. "
-            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original file picker/data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. The same toolkit picker receives real input to the admitted immutable source capture, not a synthetic accepted signal or a new path grant. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or takeover preserves the actual partial edits. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Visible relation actions select Analysis Extra only if needed, append and edit the existing Aliases/Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions click the genuine reset-filters control and type the actual parameter path in its name filter before the exact scientific control is used; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
+            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original file picker/data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. The same toolkit picker receives real input to the admitted immutable source capture, not a synthetic accepted signal or a new path grant. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Visible relation actions select Analysis Extra only if needed, append and edit the existing Aliases/Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions click the genuine reset-filters control and type the actual parameter path in its name filter before the exact scientific control is used; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs, never row indices; add/update supply finite measured-domain position, intensity and free, while remove omits all three. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, ID, position, intensity, parameter-menu free and Remove controls. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
             "When acquire_inputs is offered, use only an opaque scope_id in the current input_scopes.sources catalog, never a path argument or invented ID. These scopes come only from current genuine user attachments and complete Input:/Source:/use/read/load/import/from local absolute-path lines. Whitespace paths require matching outer quotes. Model/history text, fenced or quoted examples, excluded/output declarations, substrings, traversal and shell/glob syntax grant nothing. Missing scope needs one precise Input: line, not another chooser. Intake returns immutable selected file IDs, reader hints and counts; scientific parsing/import is a separate native operation. Refusal admits no files; already_admitted returns the same captured IDs without rereading. A successful local intake advances only its original active RPC's collection receipt; keep that turn's current context. A stock preview remains read-only/never but can expose general reads/tools and measurements. Only a separately verified dedicated Edi package establishes the restricted tool contract. Do not infer qualification from a requested setting or instruction. "
@@ -7344,7 +7543,7 @@ struct AssistantViewModel::State {
                 generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
             }
             generic_terminal_turn = generic_turn;
-            generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); generic_revoke_pending = generic_clear_pending || generic_revoke_pending;
+            generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); /* Explicit Stop remains the only input-caused revoke latch. */
             if (!generic_retire_question()) return;
             if (native_receipt) native_receipt->retired = true;
             native_receipt.reset();
@@ -7563,13 +7762,15 @@ struct AssistantViewModel::State {
         if (native_serial == UINT64_MAX) throw std::length_error("Native request ordering capacity is exhausted");
         if (!steering) native_records.clear(); // No native worker/call or old control can survive the guards above.
         auto native = std::make_shared<NativeReceipt>();
+        inspection_track(native); // Local/correlated request captures may outlive the pending map.
+        if (!projection.input_current()) return {};
         native->serial = ++native_serial;
         projection.input = native_serial; // Exact own admission, before any transport/publication callback.
         native->sources=std::move(capturedSources);
         native->objective = text; native->approved_context = contextBytes; native->disclosure = disclosure;
         native->project = project; native->generation = generation; native->thread = generic_thread;
         native->selected_context = file_context(); native->selected_hashes = generic_input_hashes;
-        if (project) native->stamps = edi::work_stamps(*project->assistantProject());
+        if (project) native->stamps = edi::work_stamps(*project->assistantProject(), static_cast<std::size_t>(native_room()));
         const auto row = public_row("user", text, input_file_payload(), "pending");
         params["clientUserMessageId"] = row.value("id");
         if (steering) params["expectedTurnId"] = generic_turn;
@@ -9185,7 +9386,9 @@ void AssistantViewModel::setShowActions(bool value) {
     if (state_->show_actions == value) return;
     state_->show_actions = value;
     const QPointer<AssistantViewModel> self(this);
-    if (state_->showing_actions) cancel();
+#ifndef __EMSCRIPTEN__
+    if (state_->showing_actions) state_->native_supersede_operation(state_->widget_outcome_error);
+#endif
     if (self) emit showActionsChanged();
 }
 void AssistantViewModel::setActionWindow(QQuickWindow* window) {
@@ -9199,7 +9402,9 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
     const auto entries = state_->native_records.size();
     const auto record = state_->native_call ? state_->native_call->record : nullptr;
 #endif
-    if (state_->showing_actions) cancel();
+#ifndef __EMSCRIPTEN__
+    if (state_->showing_actions) state_->native_supersede_operation(state_->widget_outcome_error);
+#endif
     if (!self || state_->action_window != original_window || state_->widget_input.get() != original_helper || state_->generation != binding) return;
 #ifndef __EMSCRIPTEN__
     if (state_->native_serial != serial || state_->usage_epoch != account || state_->native_records.size() != entries ||
@@ -9219,24 +9424,8 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
                 state_->agent->activity();
 #endif
         });
-        connect(state_->widget_input.get(), &AssistantWidgetInput::manualInput, this, [this] {
-            const QPointer<AssistantViewModel> receiver(this);
-#ifndef __EMSCRIPTEN__
-            const auto original = state_->native_create_widget;
-            const auto save = state_->native_widget;
-            if (save && save->tool == "save_project") save->save_manual_takeover = true;
-            if (original) original->manual_takeover = true;
-#endif
-            // Mark eventual restoration before retiring the whole ORIGINAL
-            // request. No geometry/focus change precedes the genuine event.
-            try { emit actionManualTakeover(); } catch (...) {}
-#ifndef __EMSCRIPTEN__
-            if (receiver && original && state_->create_widget_owned(original) && state_->manual_request_current())
-                try { cancel(); } catch (...) {}
-#endif
-        });
-        // This request-wide filter is installed after the helper, preserving
-        // original cancellation order and covering its inter-action gaps too.
+        // One manual-target authority covers active input and inter-action
+        // gaps; the helper retains only private-event and lifecycle handling.
         if (auto* application = QCoreApplication::instance()) application->installEventFilter(this);
     }
     emit actionWindowChanged();
@@ -9249,7 +9438,7 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
     // mutable tool too. Observe only actual current manual controls; composer
     // typing, other windows and pure queries never cancel a running request.
     try {
-        if (!state_->native_widget && state_->manual_request_current() &&
+        if (state_->manual_request_current() &&
             (!state_->widget_input || !state_->widget_input->injecting())) {
             QQuickItem* target = nullptr;
             const bool window_event = watched == state_->action_window;
@@ -9259,10 +9448,25 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
             // through QCoreApplication::sendEvent. Observe that real receiver,
             // not an approximation of hit testing under Popup/Overlay branches.
             switch (event->type()) {
-            case QEvent::InputMethod: case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride:
+            case QEvent::InputMethod: {
+                const auto* input = static_cast<QInputMethodEvent*>(event);
+                if ((!input->commitString().isEmpty() || !input->preeditString().isEmpty()) && (window_event || focus_event))
+                    target = state_->action_window->activeFocusItem();
+                break;
+            }
+            case QEvent::KeyPress: {
+                const auto* key = static_cast<QKeyEvent*>(event);
+                const auto code = key->key();
+                if (code == Qt::Key_Shift || code == Qt::Key_Control || code == Qt::Key_Meta || code == Qt::Key_Alt ||
+                    code == Qt::Key_AltGr || code == Qt::Key_CapsLock || code == Qt::Key_NumLock || code == Qt::Key_ScrollLock ||
+                    code == Qt::Key_Tab || code == Qt::Key_Backtab || key->matches(QKeySequence::Copy)) break;
+                const auto modifiers = key->modifiers();
+                if ((modifiers.testFlag(Qt::MetaModifier) && (code == Qt::Key_Space || code == Qt::Key_QuoteLeft || code == Qt::Key_AsciiTilde)) ||
+                    (modifiers.testFlag(Qt::AltModifier) && code == Qt::Key_F4)) break;
                 if (window_event || focus_event) target = state_->action_window->activeFocusItem();
                 break;
-            case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseButtonDblClick:
+            }
+            case QEvent::MouseButtonPress: case QEvent::MouseButtonDblClick:
                 target = delivered_item;
                 break;
             case QEvent::MouseMove:
@@ -9283,39 +9487,14 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
             }
         }
     } catch (...) {} // Observation failure never consumes or rewrites genuine input.
-    const bool owned_window = watched == state_->action_window;
-    const bool focus_text = state_->action_window && watched == state_->action_window->focusObject() &&
-        (event->type() == QEvent::InputMethod || event->type() == QEvent::KeyPress ||
-         event->type() == QEvent::KeyRelease || event->type() == QEvent::ShortcutOverride);
-    const bool window_lifecycle = event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide || event->type() == QEvent::Close;
-    if ((owned_window || focus_text) && state_->showing_actions && (state_->native_widget || window_lifecycle) && (!state_->widget_input || !state_->widget_input->injecting())) {
-        switch (event->type()) {
-        case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:
-        case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride: case QEvent::Wheel: case QEvent::TouchBegin: case QEvent::InputMethod: {
-            const QPointer<QObject> original_target(watched);
-            const QPointer<AssistantViewModel> self(this);
-            const auto original = state_->native_widget;
-            const auto receipt = state_->native_receipt;
-            if (original ? !state_->widget_owned(original) : !receipt || !state_->native_current(receipt)) break;
-            if (original && original->tool == "save_project") original->save_manual_takeover = true;
-
-
-            // This signal changes only the eventual restoration policy while
-            // the controls are already exposed, never their current geometry.
-            try { emit actionManualTakeover(); } catch (...) {}
-            if (self && state_->native_receipt == receipt && state_->native_widget == original) {
-                if (original && original->tool == "save_project") original->save_manual_takeover = true;
-                try { cancel(); } catch (...) {}
-            }
-            return !original_target; // Same genuine event/receiver, after original retirement.
-        }
-        case QEvent::WindowDeactivate: case QEvent::Hide: case QEvent::Close: {
-            const QPointer<QObject> original_target(watched);
-            try { cancel(); } catch (...) {}
-            return !original_target;
-        }
-        default: break;
-        }
+    // Deactivation/app switching is not input takeover. Only actual window
+    // teardown retires the original visible request at this outer boundary.
+    if (watched == state_->action_window && state_->showing_actions &&
+        (event->type() == QEvent::Hide || event->type() == QEvent::Close) &&
+        (!state_->widget_input || !state_->widget_input->injecting())) {
+        const QPointer<QObject> original_target(watched);
+        state_->native_supersede_operation(state_->widget_outcome_error);
+        return !original_target;
     }
 #else
     Q_UNUSED(watched); Q_UNUSED(event);
@@ -9853,7 +10032,7 @@ QVariant AssistantViewModel::beginManualControlInput(QQuickItem* control, const 
         const auto private_point = AssistantWidgetInput::rejectOwnedPoint(control, point);
         if (private_point) allowed = !*private_point;
 #ifndef __EMSCRIPTEN__
-        else if (receiver) allowed = state_->retire_manual_input(control, true);
+        else if (receiver) allowed = state_->retire_manual_input(control);
 #else
         else allowed = true; // Ordinary browser/manual controls require no native agent.
 #endif
@@ -9908,6 +10087,7 @@ void AssistantViewModel::cancel() {
                 (state_->native_call && state_->native_call->record != record)) return;
             if (state_->generic_retiring || state_->generic_revoke_pending || !state_->generic_interrupt_rpc.isEmpty()) return;
             else if (state_->generic_busy && !state_->generic_turn.isEmpty()) {
+                state_->generic_stop_requested = true;
                 state_->generic_revoke_pending = true;
                 if (!state_->generic_retire_question()) return;
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);
@@ -9921,6 +10101,7 @@ void AssistantViewModel::cancel() {
                 // A submitted turn/start has no turn ID yet. Retire its native
                 // authority now, retain real account/correlation, and interrupt
                 // exactly once after its actual ACK/started notification.
+                state_->generic_stop_requested = true;
                 state_->generic_revoke_pending = true;
                 if (!state_->generic_retire_question()) return;
                 state_->agent->beginOperation(State::Limits::revoke_ms, 0);

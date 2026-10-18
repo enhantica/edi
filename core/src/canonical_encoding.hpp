@@ -56,6 +56,13 @@ struct RelationValueSlot {
 std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             const ItemVec<ParameterConstraint>& constraints,
                             std::vector<RelationValueSlot>* values);
+// The same original byte traversal with a nonallocating count sink. Relation
+// lookup retains its original naming scratch; the caller admits that role before
+// calling its count/writer. These source-private entrances never notify callers.
+std::size_t geometry_inputs_size(const Structure&, std::size_t limit);
+std::size_t calculation_inputs_size(const ItemVec<Structure>&, const ExperimentBase&, std::size_t limit);
+std::size_t relation_inputs_size(const ItemVec<ParameterAlias>&, const ItemVec<ParameterConstraint>&, std::size_t limit);
+
 // Slots were checked against this exact complete encoding before live writes.
 // No name joining, resizing, allocation or declaration traversal occurs here.
 void refresh_relation_values(std::string& encoding,

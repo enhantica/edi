@@ -110,10 +110,6 @@ Popup {
             y: AppSizes.unit * 0.5
             width: parent.width
             spacing: AppSizes.unit * 0.25
-            EaElements.Label {
-                text: qsTr("Edi")
-                color: EaStyle.Colors.themeForegroundMinor
-            }
             TextEdit {
                 width: parent.width
                 text: notice.noticeText

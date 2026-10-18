@@ -302,3 +302,24 @@ Prior art: native selected-CIF/XYE composition prepares an isolated project; ord
 
 
 The same-owner empty-population fit-residue comparison uses the authoritative nonempty FitResultCategory::columns (scalar/string/optional fields), not the unspecialized engine RowSchema for this app record. Its nonempty assertion and explicit correlations/scan-results checks remain shared by admission, final completion and Undo.
+
+
+## Bounded scientific stamp capture
+
+The existing work_stamps owner-thread capture and canonical source encoder are
+the first implementation of scientific freshness. Its bounded overload accepts
+a construction-byte allowance. A nonallocating count sink shares the exact
+original geometry/calculation/relation traversal with the byte writer, including
+measured axes/intensity/uncertainty buffers and equal-write identities. It admits
+container/string payloads and the original relation name-resolution scratch
+before retaining source encodings. Checked arithmetic rejects insufficient
+capacity; no partial stamp is returned and no scientific field is omitted.
+The original unbounded API and unchanged_since byte comparisons remain intact.
+
+Counting and capture are synchronous on the same live owner thread, without
+callbacks or event processing. This is a payload/container allowance, not an
+allocator-RSS promise. Callers retain the actual model owner and recheck their
+original lifetime/currentness after surrounding callbacks. Assistant input,
+own-edit refresh, creation attachment and fresh inspection use the same bounded
+entry; their local, old/new and late-callback roles remain jointly charged. A
+new inspection receipt never changes stamps shared by an earlier operation.

@@ -212,7 +212,8 @@ bool AssistantWidgetInput::current(std::uint64_t id) const {
     const auto request = request_; // Keep callback ownership through reentrant retirement.
     if (serial_ != id || !request || !window_ || !request->target || !request->current) return false;
     const bool valid = request->current();
-    return self && valid && serial_ == id && request_ == request && window_ && request->target;
+    return self && valid && serial_ == id && request_ == request && window_ && request->target &&
+        (!draft_ || commit_prepared_ || request->target->property("assistantEditing").toBool());
 }
 bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter) const {
     if (!window_ || item.window() != window_ || !window_->isVisible() || item.width() <= 0 || item.height() <= 0) return false;
@@ -279,7 +280,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     request_ = std::move(prepared);
     const auto original = request_;
     const auto id = ++serial_;
-    choice_popup_.clear(); option_step_ = 0;
+    choice_popup_.clear(); choice_content_.clear(); option_step_ = 0;
     center_ = center; step_ = Step::Move; character_ = 0; draft_ = false; commit_prepared_ = false;
     QPointer<AssistantWidgetInput> self(this);
     emit activeChanged(true);
@@ -296,7 +297,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     return id;
 }
 bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
-    if (!window_ || !request_ || !mouse_owner_) return false;
+    if (!window_ || !request_ || !mouse_owner_ || (!window_->isActive() && !cleanup_release_)) return false;
     const QPointer<AssistantWidgetInput> self(this);
     const QPointer<QQuickWindow> window(window_);
     const auto original = request_; const auto id = serial_;
@@ -312,7 +313,7 @@ bool AssistantWidgetInput::mouse(QEvent::Type type, Qt::MouseButton button) {
     return self && window && serial_ == id && request_ == original;
 }
 bool AssistantWidgetInput::scroll() {
-    if (!window_ || !request_ || !mouse_owner_ || !request_->scrollDirection) return false;
+    if (!window_ || !window_->isActive() || !request_ || !mouse_owner_ || !request_->scrollDirection) return false;
     const QPointer<AssistantWidgetInput> self(this);
     const QPointer<QQuickWindow> window(window_);
     const auto original = request_; const auto id = serial_;
@@ -324,6 +325,12 @@ bool AssistantWidgetInput::scroll() {
     event.setTimestamp(mouse_owner_->eventStamp(QEvent::Wheel));
     QCoreApplication::sendEvent(window, &event);
     return self && window && serial_ == id && request_ == original;
+}
+bool AssistantWidgetInput::conflictsWith(const QQuickItem* item) const noexcept {
+    if (!request_ || !item || !window_ || item->window() != window_) return false;
+    const auto* target = request_->target.data();
+    return (target && (target == item || target->isAncestorOf(item))) ||
+        (choice_content_ && (choice_content_ == item || choice_content_->isAncestorOf(item)));
 }
 bool AssistantWidgetInput::choiceKeyboardOwned() const {
     if (!window_ || !request_ || !request_->target) return false;
@@ -337,7 +344,7 @@ bool AssistantWidgetInput::choiceKeyboardOwned() const {
     return false;
 }
 bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const QString& text) {
-    if (!window_ || !request_ || !request_->target || !choiceKeyboardOwned()) return false;
+    if (!window_ || !window_->isActive() || !request_ || !request_->target || !choiceKeyboardOwned()) return false;
     const QPointer<AssistantWidgetInput> self(this);
     const QPointer<QQuickWindow> window(window_);
     const auto original = request_; const auto id = serial_;
@@ -381,6 +388,9 @@ void AssistantWidgetInput::advance() noexcept {
         const bool valid = current(id);
         if (!self) return;
         if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (serial_ == id && request_ == request) stop(false, tr("Visible action target changed or is unavailable"), true); return; }
+        // Keep the same step and original authority while another application
+        // is active. Never request activation or inject into an inactive window.
+        if (!window_->isActive()) { timer_.start(character_ms); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
             stop(false, interrupted_, false); return;
         }
@@ -405,6 +415,7 @@ void AssistantWidgetInput::advance() noexcept {
             }
             if (request->kind == Kind::DismissMenu) {
                 choice_popup_ = request->target->property("contextMenu").value<QObject*>();
+                choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
                 if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !choiceKeyboardOwned()) { stop(false, tr("The original parameter menu lost keyboard ownership"), false); return; }
                 step_ = Step::ChooseCommit; timer_.start(0); return;
             }
@@ -440,6 +451,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (!self || serial_ != id || request_ != request) return;
             if (request_->kind == Kind::Choose || request_->kind == Kind::SearchChoice) {
                 choice_popup_ = request_->target->property("popup").value<QObject*>();
+                choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
                 if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { stop(false, tr("The genuine ComboBox popup did not open"), false); return; }
                 step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChooseHome;
                 timer_.start(click_relaxation_ms); return;
@@ -555,7 +567,7 @@ void AssistantWidgetInput::stop(bool delivered, const QString& diagnostic, bool 
     if (restore) restoreDraft();
     if (!self || request_ != original || serial_ != id) return;
     request_.reset();
-    const bool prepared = commit_prepared_; commit_prepared_ = false; draft_ = false; original_text_.clear(); choice_popup_.clear();
+    const bool prepared = commit_prepared_; commit_prepared_ = false; draft_ = false; original_text_.clear(); choice_popup_.clear(); choice_content_.clear();
     if (prepared) try { original->finishCommit(); } catch (...) { delivered = false; }
     if (!self) return;
     if (serial_ == id && !request_) {
@@ -573,30 +585,14 @@ bool AssistantWidgetInput::eventFilter(QObject* watched, QEvent* event) {
     // The retained application filter separately consumes stale own events, even
     // when this helper is inactive/replaced. Genuine devices remain manual.
     if (ownMouseEvent(event)) return rejectOwnEvent(watched, event);
-    const bool owned_window = watched == window_;
-    const bool focus_text = window_ && watched == window_->focusObject() &&
-        (event->type() == QEvent::InputMethod || event->type() == QEvent::KeyPress ||
-         event->type() == QEvent::KeyRelease || event->type() == QEvent::ShortcutOverride);
-    if ((owned_window || focus_text) && request_ && !injecting_) {
-        switch (event->type()) {
-        case QEvent::MouseButtonPress: case QEvent::MouseButtonRelease: case QEvent::MouseMove:
-        case QEvent::Wheel: case QEvent::KeyPress: case QEvent::KeyRelease: case QEvent::ShortcutOverride: case QEvent::TouchBegin: case QEvent::InputMethod: {
-            const QPointer<QObject> original_target(watched);
-            const QPointer<AssistantWidgetInput> self(this);
-            const auto original = request_; const auto id = serial_;
-            try { emit manualInput(); } catch (...) {}
-            // A synchronous observer may have retired/replaced the old input.
-            if (self && request_ == original && serial_ == id) cancel();
-            // Never redeliver to a deleted receiver. A surviving original
-            // receiver receives this same event only after exact cleanup.
-            return !original_target;
-        }
-        case QEvent::WindowDeactivate: case QEvent::Hide: case QEvent::Close: {
-            const QPointer<QObject> original_target(watched);
-            cancel(); return !original_target;
-        }
-        default: break;
-        }
+    // The owning VM classifies genuine project input at its actual receiver.
+    // This helper must not convert ordinary hover/chat/navigation or Cmd-Tab
+    // into a second blanket cancellation path.
+    if (watched == window_ && request_ && !injecting_ &&
+        (event->type() == QEvent::Hide || event->type() == QEvent::Close)) {
+        const QPointer<QObject> original_target(watched);
+        cancel();
+        return !original_target;
     }
     return false;
 }

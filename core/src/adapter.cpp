@@ -4451,6 +4451,42 @@ WorkStamps work_stamps(const Project& live) {
     return stamps;
 }
 
+WorkStamps work_stamps(const Project& live, std::size_t construction_bytes) {
+    const auto require = [&](std::size_t& used, std::size_t bytes) {
+        if (bytes > construction_bytes - used) throw std::length_error("Scientific stamp capture exceeds capacity");
+        used += bytes;
+    };
+    std::size_t used = 0;
+    require(used, sizeof(WorkStamps));
+    const auto rows = [&](std::size_t count) {
+        if (count > (construction_bytes - used) / sizeof(std::string))
+            throw std::length_error("Scientific stamp rows exceed capacity");
+        require(used, count * sizeof(std::string));
+    };
+    rows(live.experiments.size()); rows(live.structures.size());
+    // This is the FIRST naming/join admission already used by native persistence.
+    // Only the real relation encoder needs this simultaneously owned map/vector
+    // scratch. It is not a second handwritten scientific codec or a model copy.
+    PersistenceAdmission names(construction_bytes - used, true);
+    if (!live.aliases.empty()) (void)admit_currentness_inputs(live, names, true);
+    const auto scratch = names.used();
+    require(used, scratch);
+    for (const auto& experiment : live.experiments) {
+        const auto count = detail::calculation_inputs_size(live.structures, *experiment, construction_bytes - used);
+        require(used, count); require(used, 1);
+    }
+    for (const auto& structure : live.structures) {
+        const auto count = detail::geometry_inputs_size(*structure, construction_bytes - used);
+        require(used, count); require(used, 1);
+    }
+    const auto relations = detail::relation_inputs_size(live.aliases, live.constraints, construction_bytes - used);
+    require(used, relations); require(used, 1);
+    // No callback or event processing occurs between counting and the ORIGINAL
+    // capture. Its sole byte writer and private edit/membership identity capture
+    // remain the first implementation, never a parallel hand-maintained codec.
+    return work_stamps(live);
+}
+
 WorkSnapshot snapshot_for_work(const Project& live) {
     // The stamps first, then the copy: a write after this call is newer than both.
     WorkStamps stamps = work_stamps(live);

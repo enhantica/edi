@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <map>
+#include <limits>
+#include <stdexcept>
 #include <optional>
 #include <string>
 #include <vector>
@@ -29,6 +31,21 @@ namespace {
 // Deliberately TOTAL over the whole Project — including `experiments` and `fitting_mode`, which the
 // single-bank handle never reads. Failing closed on an unrelated edit is the conservative direction;
 // missing a field is not. Adding a field to edi::Project REQUIRES extending this.
+class EncodingSize {
+ public:
+    explicit EncodingSize(std::size_t limit) : limit_(limit) {}
+    void clear() noexcept { used_ = 0; }
+    std::size_t size() const noexcept { return used_; }
+    void append(const char*, std::size_t count) {
+        if (count > limit_ - used_) throw std::length_error("Scientific stamp encoding exceeds capacity");
+        used_ += count;
+    }
+    EncodingSize& operator+=(std::string_view value) { append(nullptr, value.size()); return *this; }
+    EncodingSize& operator+=(char) { append(nullptr, 1); return *this; }
+ private:
+    std::size_t limit_, used_ = 0;
+};
+
 void write_u64(char* target, std::uint64_t value) noexcept {
     // Same sixteen lowercase hexadecimal bytes as the canonical source codec.
     // Writing a prepared slot must not call a formatter or allocate.
@@ -38,17 +55,20 @@ void write_u64(char* target, std::uint64_t value) noexcept {
         value >>= 4;
     }
 }
-void put_u64(std::string& out, std::uint64_t value) {
+template<class Output>
+void put_u64(Output& out, std::uint64_t value) {
     char buffer[16];
     write_u64(buffer, value);
     out.append(buffer, sizeof buffer);
 }
 
-void put_double(std::string& out, double value) {
+template<class Output>
+void put_double(Output& out, double value) {
     put_u64(out, std::bit_cast<std::uint64_t>(value));
 }
 
-void put_text(std::string& out, std::string_view value) {
+template<class Output>
+void put_text(Output& out, std::string_view value) {
     put_u64(out, value.size());
     out += value;
     out += '\x1e';
@@ -61,9 +81,11 @@ enum class Scope { Everything, CalculationInputs };
 
 // A bare number is never a parameter here: an implicit Parameter(double) temporary would carry a
 // fresh identity (detail::Epoch) on every call, so no two encodings could ever be equal.
-void put_parameter(std::string& out, double value, Scope scope) = delete;
+template<class Output>
+void put_parameter(Output& out, double value, Scope scope) = delete;
 
-void put_parameter(std::string& out, const Parameter& parameter, Scope scope) {
+template<class Output>
+void put_parameter(Output& out, const Parameter& parameter, Scope scope) {
     put_double(out, parameter.value);
     if (scope == Scope::CalculationInputs) {
         put_u64(out, parameter.epoch.value());  // review 9 F1: every admitted write
@@ -74,13 +96,15 @@ void put_parameter(std::string& out, const Parameter& parameter, Scope scope) {
     }
 }
 
-void put_optional_parameter(std::string& out, const OptionalParameter& parameter,
+template<class Output>
+void put_optional_parameter(Output& out, const OptionalParameter& parameter,
                             Scope scope) {
     out += parameter ? 'P' : '-';  // presence encoded distinctly from a 0 value
     if (parameter) put_parameter(out, *parameter, scope);
 }
 
-void put_experiment(std::string& out, const ExperimentBase& experiment, Scope scope) {
+template<class Output>
+void put_experiment(Output& out, const ExperimentBase& experiment, Scope scope) {
     for (const auto& slot : detail::kPeakSlots) {
         put_text(out, slot.first);
         put_parameter(out, slot.second(const_cast<ExperimentBase&>(experiment)), scope);
@@ -196,7 +220,8 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
 
 // The bond cutoffs, presence included (an unset one and its default are different models: only a
 // declared one is saved).
-void put_geom(std::string& out, const Geom& geom) {
+template<class Output>
+void put_geom(Output& out, const Geom& geom) {
     for (const std::optional<double>* value :
          {&geom.min_bond_distance_cutoff.get(), &geom.bond_distance_inc.get()}) {
         out += value->has_value() ? 'G' : '-';
@@ -208,16 +233,19 @@ void put_geom(std::string& out, const Geom& geom) {
 
 // A geometry input with the identity of its last write. The identity alone would do: no two
 // writes share one. The value stays in the encoding so that it reads as what it is.
-void put_written(std::string& out, const detail::Written<double>& field) {
+template<class Output>
+void put_written(Output& out, const detail::Written<double>& field) {
     put_double(out, field.get());
     put_u64(out, field.written());
 }
-void put_written(std::string& out, const detail::WrittenText& field) {
+template<class Output>
+void put_written(Output& out, const detail::WrittenText& field) {
     put_text(out, field.value());
     put_u64(out, field.written());
 }
 
-void put_structure(std::string& out, const Structure& structure, Scope scope) {
+template<class Output>
+void put_structure(Output& out, const Structure& structure, Scope scope) {
     put_text(out, structure.name.value());
     put_text(out, structure.space_group.name_h_m);
     // The code changes the resolved setting
@@ -299,7 +327,8 @@ std::string canonical_encoding(const Project& project) {
     return out;
 }
 
-void geometry_inputs_into(std::string& out, const Structure& structure) {
+template<class Output>
+void geometry_inputs_write(Output& out, const Structure& structure) {
     // Crysta's geometry inputs and no other field: the space group, the six cell values, the site
     // rows with each site's id, type symbol, Wyckoff letter, ADP type, coordinates, occupancy and
     // ADP, and `geom`. The letter is one because a geometry read applies the relations, and the
@@ -352,6 +381,11 @@ void geometry_inputs_into(std::string& out, const Structure& structure) {
 
 }
 
+void geometry_inputs_into(std::string& out, const Structure& structure) { geometry_inputs_write(out, structure); }
+std::size_t geometry_inputs_size(const Structure& structure, std::size_t limit) {
+    EncodingSize out(limit); geometry_inputs_write(out, structure); return out.size();
+}
+
 std::string geometry_inputs(const Structure& structure) {
     std::string out;
     out.reserve(1024);
@@ -359,7 +393,8 @@ std::string geometry_inputs(const Structure& structure) {
     return out;
 }
 
-void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structures,
+template<class Output>
+void calculation_inputs_write(Output& out, const ItemVec<Structure>& structures,
                              const ExperimentBase& experiment) {
     out.clear();
     put_u64(out, structures.size());
@@ -378,6 +413,8 @@ void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structu
     // only, never saved.
     const auto put_values = [&out](const std::vector<double>& values) {
         put_u64(out, values.size());
+        if (values.size() > std::numeric_limits<std::size_t>::max() / sizeof(double))
+            throw std::length_error("Scientific column size overflows");
         out.append(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(double));
     };
     out += experiment.data ? 'D' : '-';
@@ -431,6 +468,13 @@ void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structu
 }
 
 
+void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structures, const ExperimentBase& experiment) {
+    calculation_inputs_write(out, structures, experiment);
+}
+std::size_t calculation_inputs_size(const ItemVec<Structure>& structures, const ExperimentBase& experiment, std::size_t limit) {
+    EncodingSize out(limit); calculation_inputs_write(out, structures, experiment); return out.size();
+}
+
 std::string calculation_inputs(const ItemVec<Structure>& structures, const ExperimentBase& experiment) {
     std::string out;
     out.reserve(4096);
@@ -442,11 +486,11 @@ std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             const ItemVec<ParameterConstraint>& constraints) {
     return relation_inputs(aliases, constraints, nullptr);
 }
-std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
-                            const ItemVec<ParameterConstraint>& constraints,
-                            std::vector<RelationValueSlot>* values) {
+template<class Output>
+void relation_inputs_write(Output& out, const ItemVec<ParameterAlias>& aliases,
+                           const ItemVec<ParameterConstraint>& constraints, std::vector<RelationValueSlot>* values) {
     if (values) { values->clear(); values->reserve(aliases.size()); }
-    std::string out;
+    out.clear();
     put_u64(out, aliases.generation());
     put_u64(out, aliases.size());
     for (const auto& alias : aliases) {
@@ -477,7 +521,16 @@ std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
             }
         }
     }
-    return out;
+}
+
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints,
+                            std::vector<RelationValueSlot>* values) {
+    std::string out; relation_inputs_write(out, aliases, constraints, values); return out;
+}
+std::size_t relation_inputs_size(const ItemVec<ParameterAlias>& aliases,
+                                const ItemVec<ParameterConstraint>& constraints, std::size_t limit) {
+    EncodingSize out(limit); relation_inputs_write(out, aliases, constraints, nullptr); return out.size();
 }
 
 void refresh_relation_values(std::string& encoding,

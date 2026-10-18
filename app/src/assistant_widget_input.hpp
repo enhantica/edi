@@ -44,6 +44,8 @@ class AssistantWidgetInput final : public QObject {
     std::uint64_t start(Request request); // Not exposed to QML/provider tools.
     void cancel();
     bool injecting() const noexcept { return injecting_; }
+    // Genuine input at this exact paced control/popup supersedes only its operation.
+    bool conflictsWith(const QQuickItem* item) const noexcept;
     // Exact private mouse device, including Qt clones; not a synthetic-event heuristic.
     bool ownMouseEvent(const QEvent* event) const noexcept;
     // Recognition is not admission: every window/item delivery rechecks the
@@ -58,7 +60,6 @@ class AssistantWidgetInput final : public QObject {
  signals:
     void activeChanged(bool active);
     void inputProgress(); // A real delivered character; no text/payload.
-    void manualInput(); // Keep the manual target exposed before yielding its original event.
     void pointerShown();
     void pointerMoved(const QPointF& position);
     void pointerPressed();
@@ -87,6 +88,7 @@ class AssistantWidgetInput final : public QObject {
     qsizetype character_ = 0;
     QString original_text_;
     QPointer<QObject> choice_popup_;
+    QPointer<QQuickItem> choice_content_;
     int option_step_ = 0;
     bool choiceKeyboardOwned() const;
     const QString failed_ = QStringLiteral("The visible action could not be completed; inspect the current project");

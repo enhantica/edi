@@ -535,7 +535,7 @@ Initial assistant-result host preparation validates the existing canonical scien
 
 ### Context retirement is not account retirement
 
-Successful selected-file add/remove and ordinary project/manual-fit changes invalidate the staged thread/context, not the genuine managed process/account/catalog. Host-owned selected snapshots and retained conversation remain. Existing file admission runs only when execution/retirement is settled; its own staging flag does not imply account logout. For active manual changes, the same original terminal/input/control cancellation proof and first revoke deadline used by Clear settle execution, with a distinct context-pending flag and no archive clear. Old progress is suppressed and existing pending rows are interrupted honestly; fresh context consent and a new thread are mandatory. Explicit logout, unfinished/unadmitted connection preparation, unknown protocol/transport failures retain real process/account retirement. Retired workspace files remain available for explicit recovery; a new staged thread never relabels them as fresh. No authenticated assignment, manual approval bypass or new RPC ownership table is introduced.
+Successful selected-file add/remove and actual owner/disclosure changes invalidate their original native authority, not the genuine managed process/account/catalog. Host-owned selected snapshots and retained conversation remain. Existing file admission runs only when execution/retirement is settled; its own staging flag does not imply account logout. Ordinary project/manual-fit changes within the same approved scope invalidate scientific freshness only: they settle the original conflicting operation without interrupting the official turn or rewriting unrelated activity. A retained fresh inspection establishes authority for later operations; actual changed disclosure still requires real approval. Clear and scope retirement drain original correlated work naturally; only the AI Stop requests a turn interrupt. Explicit logout, unfinished/unadmitted connection preparation, unknown protocol/transport failures retain real process/account retirement. Retired workspace files remain available for explicit recovery; a new staged thread never relabels them as fresh. No authenticated assignment, manual approval bypass or new RPC ownership table is introduced.
 
 FA1 preserves the matching old-turn interrupt-issued evidence through repeated binds, before and after its actual acknowledgement. FA2 propagates interruption-archive retention failure: keep the bounded original archive, retain the actual storage diagnostic and block new execution until explicit Clear, while real cancellation still settles and admitted file changes remain committed. No missing outcome is relabelled successful. FA3 contains the entire bool-returning context transition, including cancellation admission failure, at its ordinary Qt callback boundary; genuine authority failure uses the existing fail/retire fence without undoing or misreporting a published manual edit/fit. These are ownership/publication corrections, not a new request map or persistence framework.
 
@@ -651,7 +651,7 @@ The owner requested both fast native execution and optional human-like controls.
 
 This owns the compiled EaElements.RemotePointer prior art and app demo_driver real QMouseEvent/QKeyEvent/QTimer principles. The old RemoteController imports QtTest/QtMultimedia and is excluded; neither dependency nor blocking wait is added. The helper reuses the matched pointer's move500ms, press100ms and click-relaxation500ms, plus RemoteController's character100ms as asynchronous timers. Controls are host-selected by exact actual ParameterItem identity/path and genuine named tab/value/free/fit widgets, never provider QObject selectors or a command language. Hidden, clipped, disabled or missing controls refuse; actual event delivery and model readback determine the result.
 
-The sidebar's preference is retained while the manual controls are temporarily revealed. Finish, question and programmatic retirement restore ordinary sidebar visibility, respecting the user's current preference. Genuine manual input instead marks a takeover scoped to the actual current project before cancellation, leaving the manual sidebar exposed until the user explicitly opens the assistant. This avoids changing geometry/focus over the original press/release, key, wheel or touch event. It never replays an event or overwrites the preference; a replacement project does not inherit that takeover. The Stop slot remains present during takeover so cancellation cannot shift app-bar targets before the same event is delivered. The new mode checkbox extends the actual Usage/folder/composer Tab/Backtab chain and skips disabled controls. Real mouse/key/wheel/touch/window-deactivation input cancels the original visible owner before passing the genuine event on. Old timer/completion callbacks can neither hide a replacement pointer nor settle a later RPC.
+The sidebar's preference is retained while the manual controls are temporarily revealed. Finish, question and programmatic retirement restore ordinary sidebar visibility, respecting the user's current preference. Genuine manual input instead marks a takeover scoped to the actual current project before cancellation, leaving the manual sidebar exposed until the user explicitly opens the assistant. This avoids changing geometry/focus over the original press/release, key, wheel or touch event. It never replays an event or overwrites the preference; a replacement project does not inherit that takeover. The Stop slot remains present during takeover so cancellation cannot shift app-bar targets before the same event is delivered. The new mode checkbox extends the actual Usage/folder/composer Tab/Backtab chain and skips disabled controls. Only an explicit AI Stop interrupts the official turn. Genuine conflicting project input supersedes the original visible operation with factual partial results before the same event continues; harmless input and application switching do not interrupt the turn. Old timer/completion callbacks can neither hide a replacement pointer nor settle a later RPC.
 
 ParameterField and ParameterCell now own an app-private view-only draft guard: paced text is not accepted by ordinary focus-loss/editingFinished. Only the prepared final Return releases that guard. Cancel resets the current model binding rather than replaying an old number or leaving a valid partial number to commit after focus loss. The real setter enters an exact prepared editor receipt, so the existing recorded Undo/validation/publication path remains authoritative. Fit completion is prearmed before the real Start fitting release and remains owned by the actual FitReport, independent of fallible running/presentation notifications. No scientific rollback of later user edits or fabricated worker completion is used.
 
@@ -740,9 +740,10 @@ settlement. No widget, scientific edit lock or original RPC is retained merely
 to keep the sidebar closed.
 
 Real manual input between tools is owned by that same current native receipt.
-It marks the existing manual-takeover policy before cancellation and returns
-false so the original event/target continues unchanged. The marker prevents
-reopening over that event; helper/window/toggle/retirement still cancel normally.
+It marks the existing manual-takeover presentation policy before settling the
+original operation, then preserves the genuine event/target. The marker prevents
+reopening over that event. Window/toggle changes can retire an unavailable
+original tool without requesting whole-turn interruption.
 Old cleanup checks the captured receipt and replacement widget before changing
 presentation. This does not implement missing widget navigation or background
 insertion, and does not treat animated pointer movement as user input.
@@ -1744,3 +1745,42 @@ Sign in retains its natural text sizing, and native actions, keyboard order,
 current-owner handlers, glyphs, palette, hover/checked/disabled states and circle
 extent are unchanged. No global style or geometry override is introduced.
 Native painted spacing still requires the real app; grammar is not pixel proof.
+
+
+### Explicit Stop and current scientific inspection
+
+The original sidebar/status Stop controls alone latch a requested official-turn
+interrupt, including the original pre-ACK once/correlation path. Window
+deactivation, pointer movement, typing, scroll/navigation and Show actions or
+window presentation changes do not manufacture Stop. Genuine conflicting
+project input settles only the captured original operation through its existing
+refusal, partial-prefix or admitted-worker/report path. The same manual event is
+not replayed. Destroyed owners, sign-out, protocol/transport and resource failures
+remain failures; this policy does not promise that failed work continues.
+
+The VM owns manual target classification in active and inter-action intervals;
+the helper keeps exact private-device/replay rejection and local Close/Hide
+cleanup. Its existing paced timer holds the same step while the original window
+is inactive, under the unchanged original deadline. It never activates another
+window or injects into an inactive application. Original focus and draft
+ownership must survive reactivation; a lost assistant draft refuses that tool.
+
+Original project-edited and unowned fit notifications still retire compatibility
+plans and stale scientific state. Within the same approved owner/account/input
+scope they do not retire official turn/history or relabel all activity as
+interrupted. Writes using the old scientific receipt refuse. Only a genuinely
+completed, retained inspect_project can capture full current state and establish
+a separate receipt for subsequent operations. The old receipt is never updated
+to new stamps; pending editors and late callbacks cannot inherit the inspection.
+A further manual edit makes the new receipt stale again. Actual scope/account,
+input or project replacement still revokes its original authority without
+recapturing a newer owner.
+
+Clear retires old authority immediately and lets real correlated work settle
+before final conversation cleanup; it does not send a hidden AI Stop. The
+original inference deadline, once replies, committed scientific state/Undo and
+retention fences remain. No automatic Clear, retry, cap donation or import
+recovery engine is introduced. The chronological notice retains full selectable
+error text and its Edi accessibility ownership without a redundant visible
+heading. Source reasoning does not qualify native app-switch/draft/pressed
+receiver behavior or retention failures.
