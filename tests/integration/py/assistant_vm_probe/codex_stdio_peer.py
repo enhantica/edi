@@ -1894,7 +1894,7 @@ for line in sys.stdin:
             value.update(approvalPolicy='never', approvalsReviewer='user', model=model416,
                          reasoningEffort=effort416, sandbox={'type':'readOnly','networkAccess':False})
         if config.get('readonly409') is True:
-            assert scenario in {'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, (
+            assert scenario in {'complete', 'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, (
                 'INPUT409 SETUP: explicit finite preserved fileauth/effective-policy fixture only'
             )
             # Independent original catalogue constants, not an echo of subject policy/choices.

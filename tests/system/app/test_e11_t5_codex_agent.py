@@ -1375,7 +1375,19 @@ def test_rpc83_peer_qualifies_actual_experimental_field_negotiation(tmp_path, me
 
 def test_rpc83_real_hello_uses_negotiated_supported_fields_and_completes(generic):
     actor, trace = generic()
+    # Existing strict independently fixed stock readOnly/never policy, not a write-grant peer.
+    readonly409_configure(trace)
     connect(actor)
+    assert (actor.last['vm']['selected_model'], actor.last['vm']['selected_effort']) == (
+        'gpt-6.1-sol', ''
+    ), 'BOOT461: fresh actual catalogue selects its declared available model with automatic effort'
+    threads = [row for row in records(trace) if row.get('method') == 'thread/start']
+    assert len(threads) == 1 and not started_requests(trace), (
+        'BOOT461: genuine initial thread starts exactly once before any user inference'
+    )
+    assert threads[0]['params']['model'] == 'gpt-6.1-sol' and threads[0]['params']['config'][
+        'model_reasoning_effort'
+    ] == 'medium', 'BOOT461: initial physical thread uses independent offered model/default effort'
     actor.command('send_text', text='Hello — original RPC contract control')
     state = settle(
         actor,
@@ -1403,6 +1415,10 @@ def test_rpc83_real_hello_uses_negotiated_supported_fields_and_completes(generic
     assert len(users(actor, 'Hello — original RPC contract control')) == 1, (
         'RPC1: successful admission preserves exactly the original public user row'
     )
+    assert len([row for row in actual if row.get('method') == 'thread/start']) == 1, (
+        'BOOT461: successful Hello neither restarts its admitted thread nor replays bootstrap'
+    )
+    readonly409_policy(trace)
 
 
 def rpc83_context_inputs(params):
@@ -9473,7 +9489,7 @@ def readonly409_configure(trace):
     """Opt-in public354 fixture; all original GUI/default peer behavior stays exact."""
     path = trace.parent / 'peer-input.json'
     config = json.loads(path.read_text())
-    assert config['scenario'] in {'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, 'INPUT409 SETUP: existing ordinary fileauth vehicle only'
+    assert config['scenario'] in {'complete', 'fileauth', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, 'INPUT409 SETUP: existing ordinary fileauth vehicle only'
     config.update(readonly409=True, vm319_record_packets=True)
     path.write_text(json.dumps(config))
 
