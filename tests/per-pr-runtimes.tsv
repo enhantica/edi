@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-18T10:14:49Z
+# measured_utc = 2026-10-18T15:24:02Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 12770 banked, 0 stale row(s) dropped)
-# Collected tests: 14082; with a reported duration: 8032
+# Recorded from: measured test run (6 node(s) measured once, 13604 banked, 0 stale row(s) dropped)
+# Collected tests: 14916; with a reported duration: 8674
 # Module-scoped fixture costs recorded: 55
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 14910
+# inventory_python = 14916
 # inventory_cpp = 335
-# inventory_measured = 13604
+# inventory_measured = 13610
 # inventory_unmeasured = 1641
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
@@ -8926,6 +8926,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c34_t28_value_expressions.py:
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[pull_request]
 0.000	tests/system/py/test_ci_cadence.py::test_cadence_eligibility_and_rendering_use_the_actions_model[push]
 0.070	tests/system/py/test_ci_cadence.py::test_deferred_scale_assertions_and_regular_small_scan_are_preserved
+0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-linux]
+0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-macos]
+0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[diagnostics]
+0.230	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[scan-independent]
+0.230	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[scan-sequential]
+0.020	tests/system/py/test_ci_cadence.py::test_inventory_migrations_name_frozen_witnesses_and_available_successors
 0.110	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[pull_request]
 0.120	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[push]
 0.060	tests/system/py/test_ci_cadence.py::test_linux_non_suite_guard_refuses_each_same_named_execution_escape[advisory-pull_request]
