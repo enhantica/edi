@@ -46,6 +46,7 @@
 #include <exception>
 #include <new>
 #include <stdexcept>
+#include <source_location>
 #include <algorithm>
 #include <map>
 #include <set>
@@ -2234,10 +2235,49 @@ struct AssistantViewModel::State {
             native_records.size() == entries && (!native_call || native_call->record == record))
             try { widget_showing(false); } catch (...) {}
     }
-    void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message) noexcept {
+    void widget_refuse(const std::shared_ptr<NativeWidget>& run, const QString& message,
+                       std::source_location caller = std::source_location::current()) noexcept {
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
             const auto receiver = run->receiver;
+            if (run->tool == "edit_background" && lcAssistantWidgetLookup().isDebugEnabled() && create_widget_owned(parent) &&
+                !run->call.record->answered && !run->call.record->discarded && !run->call.record->completed) {
+                // Snapshot only retained facts before child cleanup; never query a control for logging.
+                const auto original = run;
+                const auto record = run->call.record; const auto receipt = run->call.receipt;
+                const auto active_receipt = native_receipt;
+                const auto index = parent->step; const auto step = run->background_step;
+                const auto group = run->background_group;
+                const bool group_present = bool(group);
+                const QPointer<AssistantWidgetInput> helper(widget_input.get());
+                const bool helper_present = bool(helper);
+                const auto background = run->background_input; const auto parameter = run->input;
+                const int background_consumed = background ? int(background->consumed) : -1;
+                const int background_applied = background ? int(background->outcome.applied) : -1;
+                const int background_published = background ? int(background->outcome.published) : -1;
+                const int parameter_consumed = parameter ? int(parameter->consumed) : -1;
+                const int parameter_applied = parameter ? int(parameter->outcome.applied) : -1;
+                const int parameter_published = parameter ? int(parameter->outcome.published) : -1;
+                const auto binding = generation; const auto serial = native_serial; const auto account = usage_epoch;
+                const bool retiring = native_call->retiring, resolved = native_call->resolved;
+                const bool retired = record->retired, receipt_retired = receipt->retired;
+                try {
+                    qCDebug(lcAssistantWidgetLookup) << "background child refusal" << "line" << caller.line() << "column" << caller.column()
+                        << "step" << step << "group_present" << group_present << "delivered" << -1 << "target_survived" << -1
+                        << "background_present" << bool(background) << "background" << background_consumed << background_applied << background_published
+                        << "parameter_present" << bool(parameter) << "parameter" << parameter_consumed << parameter_applied << parameter_published;
+                } catch (...) {} // Observation failure never replaces the original refusal.
+                // A synchronous message handler may destroy A or admit a successor, even on the same owner.
+                if (!receiver || receiver->state_.get() != this || run != original || !widget_owned(original) ||
+                    !create_widget_owned(parent) || original->create_parent.lock() != parent || parent->step != index ||
+                    original->background_step != step || original->background_group != group || bool(group) != group_present ||
+                    widget_input.get() != helper || bool(helper) != helper_present ||
+                    original->background_input != background || original->input != parameter ||
+                    original->call.record != record || original->call.receipt != receipt || native_receipt != active_receipt ||
+                    record->answered || record->discarded || record->completed || record->retired != retired || receipt->retired != receipt_retired ||
+                    native_call->retiring != retiring || native_call->resolved != resolved ||
+                    generation != binding || native_serial != serial || usage_epoch != account) return;
+            }
             try {
                 create_widget_take_child(parent, run);
                 widget_end(run);
