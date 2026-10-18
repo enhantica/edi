@@ -1564,3 +1564,20 @@ background has a toolbar-height implicit size even when hidden; that default
 must not enlarge a compact conversation header. The real copy target fits the
 same visible row rather than overlapping adjacent history. Existing message and
 ListView spacing, details surface and glyph sizing are unchanged.
+
+
+### Working cue capital alignment
+
+The shared working cue follows the first IconLine convention: its vertical icon
+anchor is the capital-H ink centre at the actual Label baseline, rather than the
+whole working phrase's descender-inclusive bounds. TextMetrics uses that Label's
+renderType, as required for matching the drawn text. Qt's Text baseline already
+includes top padding and vertical alignment; no additional baseline offset is
+added. The original padding containment policy re-evaluates against the capital
+anchor, while accepted icon extent, robot ink/size/rotation fit, all animations,
+clipping and both callers are unchanged. This source correction is not native
+pixel acceptance.
+
+Prior art: [IconLine.qml](../../../app/qml/Components/IconLine.qml), capital ink
+centre and actual glyph baseline; [Qt Text updateBaseline](https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/items/qquicktext.cpp#L382)
+and [TextMetrics renderType](https://doc.qt.io/qt-6/qml-qtquick-textmetrics.html#renderType-prop).

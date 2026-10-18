@@ -30,7 +30,13 @@ EaElements.Label {
     topPadding: Math.max(0, iconExtent / 2 - naturalTextInkCenter)
     bottomPadding: Math.max(0, iconExtent / 2 - (contentHeight - naturalTextInkCenter))
     FontMetrics { id: textMetrics; font: workStatus.font }
-    TextMetrics { id: textInk; font: workStatus.font; text: workStatus.text }
+    // IconLine aligns inline symbols to capital ink, excluding descenders.
+    TextMetrics {
+        id: textInk
+        font: workStatus.font
+        renderType: workStatus.renderType
+        text: "H"
+    }
     onVisibleChanged: {
         if (visible) variant = Math.floor(Math.random() * 3);
         else workGlyph.rotation = 0;
