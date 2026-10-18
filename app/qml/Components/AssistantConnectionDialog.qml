@@ -262,6 +262,8 @@ AppDialog {
                 }
                 onCheckedChanged: if (!checked) technicalData.checked = false
                 Accessible.name: text
+                Accessible.checkable: details.checkable
+                Accessible.checked: details.checked
             }
             Column {
                 visible: details.checked
@@ -313,6 +315,8 @@ AppDialog {
                     checkable: true
                     text: checked ? qsTr("Hide technical data") : qsTr("Show technical data")
                     Accessible.name: text
+                    Accessible.checkable: technicalData.checkable
+                    Accessible.checked: technicalData.checked
                     contentItem: EaElements.Label {
                         text: technicalData.text
                         font: technicalData.font

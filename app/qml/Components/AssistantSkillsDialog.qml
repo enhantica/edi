@@ -56,6 +56,8 @@ AppDialog {
                         checked: dialog.assistant.selectedSkill.length === 0 ? index === dialog.selectedIndex : model.id === dialog.assistant.selectedSkill
                         enabled: dialog.assistant.selectedSkill.length === 0 || !dialog.assistant.canCancel
                         Accessible.name: text + (checked ? qsTr(" · selected") : "")
+                        Accessible.checkable: checkable
+                        Accessible.checked: checked
                         onClicked: { if (dialog.assistant.selectedSkill.length === 0) dialog.inspectedIndex = index; else dialog.assistant.selectSkill(model.id); }
                     }
                     EaElements.Label {

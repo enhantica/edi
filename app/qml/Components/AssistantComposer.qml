@@ -684,6 +684,8 @@ Rectangle {
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: qsTr("Show actions")
                 Accessible.name: ToolTip.text
+                Accessible.checkable: showActionsControl.checkable
+                Accessible.checked: showActionsControl.checked
                 Accessible.description: qsTr("Use real visible controls for supported actions")
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.backtab: addFilesButton

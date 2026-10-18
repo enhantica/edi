@@ -1784,3 +1784,16 @@ recovery engine is introduced. The chronological notice retains full selectable
 error text and its Edi accessibility ownership without a redundant visible
 heading. Source reasoning does not qualify native app-switch/draft/pressed
 receiver behavior or retention failures.
+
+
+### Checkable assistant controls expose their actual accessibility state
+
+The original activity disclosure and Preferences source toggle explicitly expose
+Accessible.checkable and Accessible.checked. The composer Show actions eye and
+the existing Details, technical-data and retained skill-selection toggles follow
+that same convention: their accessibility flags bind to the actual control's
+checkable/checked properties. The native checked binding and handler remain the
+only state/action authority. Ordinary popup openers are buttons, and native radio
+controls keep their original roles. No dimensions, ink, palette, enabled state,
+keyboard behavior, Stop behavior or scientific permission changes with these
+metadata bindings. Actual accessibility delivery requires native qualification.
