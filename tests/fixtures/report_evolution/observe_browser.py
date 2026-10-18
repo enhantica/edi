@@ -142,7 +142,9 @@ def observe(html, *, render_timeout_ms=5000):
             args, stdout=log, stderr=log, env={**os.environ, 'MOZ_HEADLESS': '1'}
         )
         try:
-            results = receive_pages(received, process, time.monotonic() + 15)
+            # Allow browser startup and both frames to load on slower CI runners.
+            # Each page still has its own drawing deadline.
+            results = receive_pages(received, process, time.monotonic() + 60)
         finally:
             process.terminate()
             try:
