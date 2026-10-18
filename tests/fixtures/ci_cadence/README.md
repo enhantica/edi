@@ -18,12 +18,17 @@ platform/event cohorts and failed execution cannot become successful evidence.
 The original `baseline.json` retains every frozen identity and source-level
 nonexecution obligation from its named Git object. Native case labels are stored
 as SHA-256 identities, with the source path retained; the live inventory uses the
-same encoding. Python node names remain unchanged. The generators read the
+same encoding. Frozen Python node names retain their original spelling. The generators read the
 original Git objects before encoding native labels, so the snapshot contains no
 private process labels. The source audit is split into bounded batches,
 with every original file and assertion retained. Edi's pre-existing deferred
 scale source remains preserved, with its body/limit/fixture mutation controls;
 restoring it was part of the superseded nightly design, not the reshaped scope.
+
+`identity_migrations.py` names Python witnesses that were renamed or split after
+the shipped snapshot. The cadence gate requires every successor and leaves
+unmapped identities unchanged. Removal controls exercise each successor in both
+ordinary execution groups; a migration cannot excuse dropping a test.
 
 The current workflow's suite steps run as real Bash with an observed Pixi process
 boundary. Accepted main supplies the required task calls and deferral environment.

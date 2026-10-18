@@ -53,6 +53,7 @@ class ScanSession : public QObject {
     const edi::ScanDatasets& datasets() const { return datasets_; }
     const edi::ScanResultIndex& index() const { return index_; }
     int place(const std::string& file) const;
+    const edi::ScanPlaces& places() const { return places_; }
     // A row a run just appended (the event's own cells): checked against the header, indexed at the file's end.
     // The dataset's place, or -1 with the refusal in `error`; a refusal leaves the index refused (`index().error`),
     // never holding part of what was read.
@@ -63,10 +64,6 @@ class ScanSession : public QObject {
     // How the run ended on a dataset: success, maxIterations, noStep, notConverged (no reason recorded), or ""
     // without a row.
     QString outcome(int dataset) const;
-    // Calls `visit(dataset, value, uncertainty)` for every row's cells of one parameter column, reading the file once.
-    // Throws std::invalid_argument when the results path is there but no longer a regular file.
-    void column(const edi::Project& project, const std::string& name,
-                const std::function<void(int, double, double)>& visit) const;
 
     // The run provenance file.
     const Run& run() const { return run_; }

@@ -110,7 +110,8 @@ type (diffraction-lib's category compatibility at `0ffba46f` with edi's declared
 table does (ADR-0017 §5). A field the space group fixes or ties to another is shown disabled, with the value symmetry implies, and the Analysis table does not list it (ADR-0019). Peak asymmetry
 belongs to the Peak group (without a subheading since ADR-0017 §5); the ADP columns belong to Atom sites. The named non-category parts are the block lists (Structures, Experiments), the Project
 page's actions and the Analysis parameter table. Basic or Extras is a per-category presentation choice (`app/src/category_list_model.cpp`). The Text tab shows the file a save writes for the block,
-byte for byte, or the writer's refusal; it is loaded only while shown.
+byte for byte, or the writer's refusal; it is loaded only while shown. While a scan's dataset is shown, it shows that
+dataset's block, with the values the pages show, though a save writes the scan's template (2026-10-17).
 
 ### 4. What E04's base gates mean now that gui-components is the maintained base
 

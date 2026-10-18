@@ -55,6 +55,10 @@ class LivePreview {
     // and it is a request. There is no rollback: a callable cannot be passed, so a change that writes
     // and then throws cannot reach this door.
     void apply(const Edit& edit);
+    // An edit of a setting no calculation reads (the report's, ADR-0036 §7): runs it on the live project at once and
+    // refuses as `apply` does, but is neither noted nor a request, so the publication stays current. The owner
+    // publishes what the setting changes; `edited` is not called.
+    void apply_setting(const Edit& edit);
     // A request with no change (a project just opened, a block just loaded).
     void recalculate();
     // A calculation is in flight or owed.

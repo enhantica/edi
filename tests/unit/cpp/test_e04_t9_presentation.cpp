@@ -6,6 +6,7 @@
 #include <set>
 #include <tuple>
 #include "e04_t9_support.hpp"
+#include "edi/palette.hpp"
 
 TEST_CASE("E04-T9 D3 generator preserves endpoints and linear interpolation") {
     const auto out = e04_t9_fixture::interpolate({10, 20, 40}, {2, 6, 8}, {10, 15, 20, 30, 40});
@@ -253,20 +254,29 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     const std::vector<double> disorder{10,13,11,14,12,15};
     CHECK_MESSAGE((edi::decimate_min_max(disorder,y,y,10,15,1) == all), " I17 nonmonotonic axes retain all visible rows");
     CHECK_MESSAGE((edi::decimate_min_max(x,y,y,10,15,2) == all), " I17 pixel columns with at most four rows retain every row");
-    auto project = edi::load_project(e04_t9_fixture::silicon); project.calculate();
-    const auto p = edi::present_pattern(edi::capture_pattern(project,0),{});
+    // Styling is a unit property: hand-authored columns reach every renderer role.
+    // Full physical capture and calculation remain exercised by the corpus integration case above.
+    auto col = [](std::vector<double> values) { return std::make_shared<const std::vector<double>>(std::move(values)); };
+    edi::PatternSource source;
+    source.x = col(x); source.meas = col(y); source.su = col({1,1,1,1,1,1});
+    source.calc = col({1,7,0,6,3,5}); source.bkg = col({1,1,1,1,1,1}); source.resid = col({1,1,1,1,1,1});
+    source.phases = {{"phase","Phase",0,col({11,13}),{}}}; source.current = true;
+    const auto p = edi::present_pattern(source,{});
     // Owner 2026-10-02,  item 7 requests thinner residual and Bragg lines.
     // Their 1-px values below are labelled regression pins of the chosen style;
     // the positive/thinner invariant separately proves the owner requirement.
     CHECK_MESSAGE(p.y_residual.title == "Residual",
                   " owner chart item 4 names the residual presentation axis Residual");
+    // ADR-0038: Coast is the default scheme; the retired Default token is gone.
+    // Before: fixed upstream measured/structure shades. After: parity with the
+    // published palette API, whose independent source and contrast gates own correctness.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,"#03A9F4","#81D4FA",2},
+        {edi::SeriesKind::Measured,edi::pattern_colour(edi::ColourScheme::Coast,0,1,false),edi::pattern_colour(edi::ColourScheme::Coast,0,1,true),2},
         {edi::SeriesKind::Calculated,"#F44336","#EF9A9A",2},
         {edi::SeriesKind::Background,"#607D8B","#B0BEC5",1},
         {edi::SeriesKind::Residual,"#8BC34A","#C5E1A5",1},
-        {edi::SeriesKind::BraggTicks,"#FF9800","#FFCC80",1}}) {
+        {edi::SeriesKind::BraggTicks,edi::structure_colour(edi::ColourScheme::Coast,0,false),edi::structure_colour(edi::ColourScheme::Coast,0,true),1}}) {
         const auto& s = series(p,kind);
         const auto style = std::find_if(styles.begin(),styles.end(),[&](const auto& v){return v.key==s.style;});
         REQUIRE_MESSAGE(style != styles.end(), " I23 every series resolves to the one authoritative style table");
@@ -276,7 +286,7 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
                           " owner chart item 7 keeps lines visible and thinner than their prior widths");
         }
         CHECK_MESSAGE((style->light == light && style->dark == dark && style->width_px == width),
-                      " I23 independent palettes and prior widths match;  one-pixel widths are labelled regression pins");
+                      " I23 role styles follow the shared published palette and retained widths; one-pixel widths are labelled regression pins");
         if (kind == edi::SeriesKind::Measured)
             CHECK_MESSAGE(style->marker_px == 5,
                           " I23 ADR-0017 section 15 measured markers have the owner-reviewed size");

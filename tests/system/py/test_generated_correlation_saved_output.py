@@ -11,6 +11,7 @@ import edi
 import pytest
 
 from tests.conftest import corpus_case_dir, crysta_reference_prefix
+from tests.fixtures.report_units.iucr_reference import rounded_correlation
 from tests.fixtures.shared_correlations.freeze_saved import HERE, hashes, loop_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -98,7 +99,12 @@ def test_real_fit_emits_every_pinned_single_or_template_correlation_row(
         assert math.isfinite(wanted) and math.isfinite(float(produced[4])), (
             'The generated correlation and its completed numerical reference must be finite'
         )
-        assert abs(float(produced[4]) - wanted) <= max(5e-9 * abs(wanted), 5e-10), (
-            'Saved coefficients must match the completed same-fit numerical table '
+        written = rounded_correlation(wanted)
+        assert produced[4] == written, (
+            'Saved coefficients use the independently derived correlation spelling '
+            'of the completed same-fit numerical table'
+        )
+        assert abs(float(produced[4]) - float(written)) <= max(5e-9 * abs(wanted), 5e-10), (
+            'Saved coefficients match the completed numerical reference at written precision '
             'within the retained bound'
         )

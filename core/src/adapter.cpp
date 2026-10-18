@@ -27,6 +27,7 @@
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
+#include "number_token.hpp"
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
@@ -47,6 +48,9 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
+#if __has_include("crysta/report_settings.hpp")
+#include "crysta/report_settings.hpp"
+#endif
 #include "crysta/scattering.hpp"
 #include "crysta/structure_geometry.hpp"
 #include "crysta/symmetry.hpp"
@@ -612,6 +616,12 @@ void complete_atom_site_aniso(Structure& s) {
             for (std::size_t k = 0; k < 6; ++k) {
                 if (parameters[k]->value != components[k]) {
                     parameters[k]->value = components[k];
+                }
+                // An exact zero has no s.u., as in a new tensor: a fixed 0 read from a file keeps none either, so a
+                // project reopened, or holding what it saved, shows its zeros as it did before.
+                if (components[k] == 0.0 && !parameters[k]->free.get() &&
+                    parameters[k]->uncertainty.get() == std::optional<double>(0.0)) {
+                    parameters[k]->uncertainty = std::nullopt;
                 }
             }
             // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
@@ -1337,6 +1347,24 @@ void fill_crysta_sequential(const SequentialFitConfig& config,
     }
 }
 
+std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets) {
+    if (!scan.sequential_fit.template_file.empty() || datasets.files.empty()) {
+        return scan.sequential_fit.template_file;
+    }
+    return datasets.files.front();
+}
+
+std::string effective_scan_template_file(const Project& scan) {
+    if (!scan.sequential_fit.template_file.empty()) {
+        return scan.sequential_fit.template_file;
+    }
+    try {
+        return effective_scan_template_file(scan, scan_datasets(scan));
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no listing, no template dataset
+        return {};
+    }
+}
+
 ScanDatasets scan_datasets(const Project& project) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
@@ -1549,20 +1577,8 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
 }  // namespace
 
 bool parse_scan_number(std::string_view token, double& value) {
-    // io.cpp's to_double device: a classic-locale stream that must consume the whole token. Not
-    // std::from_chars, whose floating-point overload libc++ does not provide (macOS builds).
-    if (token.empty() || std::isspace(static_cast<unsigned char>(token.front())) != 0) {
-        return false;
-    }
-    std::istringstream stream{std::string(token)};
-    stream.imbue(std::locale::classic());
-    double parsed = 0.0;
-    stream >> parsed;
-    if (stream.fail() || !stream.eof()) {
-        return false;
-    }
-    value = parsed;
-    return true;
+    // The project loader's rule (number_token.hpp): the whole token, the same value on every platform.
+    return edi::detail::read_number(std::string(token), value) == edi::detail::NumberToken::ok;
 }
 
 ScanPlaces scan_places(const ScanDatasets& datasets) {
@@ -1874,6 +1890,93 @@ std::vector<std::string> read_scan_row(const Project& project, std::int64_t offs
     return split_scan_row(line);
 }
 
+std::vector<std::string> evolution_parameters(const Project& project, const ScanResultIndex& index) {
+    std::vector<std::string> names;
+    std::set<std::string> columns;
+    for (const NamedParameter& parameter : named_parameters(project)) {
+        if (parameter.parameter->free) {
+            names.push_back(parameter.unique_name);
+            columns.insert(scan_results_column(parameter.unique_name));
+        }
+    }
+    for (const ScanParameterColumns& parameter : index.parameters) {
+        if (columns.insert(parameter.name).second) {
+            names.push_back(parameter.name);
+        }
+    }
+    return names;
+}
+
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::string& parameter, bool by_value,
+                      const std::function<void(const EvolutionPoint&)>& visit) {
+    evolution_series(project, places, index, std::vector<std::string>{parameter}, by_value,
+                     [&visit](std::size_t, const EvolutionPoint& point) { visit(point); });
+}
+
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::vector<std::string>& parameters, bool by_value,
+                      const std::function<void(std::size_t, const EvolutionPoint&)>& visit) {
+    // Each parameter's value and s.u. columns, by its unique name or its results column; none for one not recorded.
+    std::vector<const ScanParameterColumns*> columns(parameters.size(), nullptr);
+    bool any = false;
+    for (std::size_t i = 0; i < parameters.size(); ++i) {
+        for (const std::string& name : {parameters[i], scan_results_column(parameters[i])}) {
+            for (const ScanParameterColumns& recorded : index.parameters) {
+                if (columns[i] == nullptr && recorded.name == name) {
+                    columns[i] = &recorded;
+                    any = true;
+                }
+            }
+        }
+    }
+    if (!any || !index.error.empty() || !scan_state_present(scan_results_path(project), "analysis/results.csv")) {
+        return;
+    }
+    std::ifstream input(scan_results_path(project), std::ios::binary);
+    std::string line;
+    // The columns mean what the indexed header says only while the file still has that header.
+    if (!std::getline(input, line) || split_scan_row(line) != index.header) {
+        return;
+    }
+    const bool extracted = by_value && !project.sequential_fit.extract.empty() && !index.extract.empty();
+    std::int64_t offset = input.tellg();
+    while (offset < index.end && std::getline(input, line) && !input.eof()) {
+        offset = input.tellg();
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != index.header.size()) {
+            continue;
+        }
+        const auto place = places.find(scan_row_file(index, cells));
+        // A refused file's row holds the values its fit started from, not a result.
+        if (place == places.end() || cells[index.chi] == "nan") {
+            continue;
+        }
+        double x = static_cast<double>(place->second + 1);
+        if (extracted) {
+            const std::ptrdiff_t column = index.extract.front();
+            if (column < 0 || !parse_scan_number(cells[static_cast<std::size_t>(column)], x)) {
+                continue;
+            }
+        }
+        for (std::size_t i = 0; i < parameters.size(); ++i) {
+            EvolutionPoint point;
+            point.x = x;
+            point.dataset = place->second;
+            if (columns[i] == nullptr || !parse_scan_number(cells[columns[i]->value], point.y) ||
+                !parse_scan_number(cells[columns[i]->uncertainty], point.su)) {
+                continue;
+            }
+            constexpr double kLimit = 1e300;
+            if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.su) && point.su >= 0.0 &&
+                std::abs(point.x) <= kLimit && std::abs(point.y - point.su) <= kLimit &&
+                std::abs(point.y + point.su) <= kLimit) {
+                visit(i, point);
+            }
+        }
+    }
+}
+
 void check_scan_template_file(const Project& project, const std::string& file) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
@@ -1954,7 +2057,78 @@ void raise_coded(const std::exception& error) {
     }
 }
 
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+// ADR-0036 §7: the report's settings, its saved-report rows and the two Analysis view items, as crysta writes them.
+void copy_report_settings(const Project& model, crysta::Project& cproject) {
+    cproject.report_html = model.report_html;
+    cproject.report_pdf = model.report_pdf;
+    cproject.report_cif = model.report_cif;
+    cproject.report_html_offline = model.report_html_offline;
+    cproject.report_excluded = model.report_excluded;
+    cproject.report_files.clear();
+    for (const auto& file : model.report_files) {
+        crysta::ReportFile row;
+        row.name = file->name.value();
+        row.format = file->format.value();
+        row.saved = file->saved.value();
+        row.project_last_modified = file->project_last_modified.value();
+        row.digest = file->digest.value();
+        cproject.report_files.push_back(row);
+    }
+    cproject.correlation_threshold = model.correlation_threshold;
+    cproject.pattern_x_axis = model.pattern_x_axis;
+}
+#endif
+
 }  // namespace
+
+void check_report_setting(const std::string& tag, const std::string& value) {
+    const std::string_view name(tag);
+    if (name.starts_with("_report.")) {
+        Project scratch;
+        detail::read_report_item(name.substr(std::string_view("_report.").size()), value, scratch);
+    } else if (name == "_correlation_chart.threshold") {
+        (void)detail::read_correlation_threshold(value);
+    } else if (name == "_pattern_chart.x_axis") {
+        (void)detail::read_pattern_x_axis(value);
+    } else {
+        throw std::invalid_argument(tag + " is not a report setting");
+    }
+}
+
+bool save_report_settings(const Project& model, const std::string& directory) {
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    // Only the report's settings cross: a project of nothing else carries them to crysta's writer.
+    const crysta::Project carrier(std::vector<crysta::Structure>{}, std::vector<crysta::BraggPdExperiment>{},
+                                  [&model](crysta::Project& project) { copy_report_settings(model, project); });
+    return crysta::write_report_settings(carrier, directory);
+#else
+    (void)model;
+    (void)directory;
+    throw std::invalid_argument("saving the report settings needs a newer crysta");
+#endif
+}
+
+std::string report_settings_text(const Project& model) {
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    const crysta::Project carrier(std::vector<crysta::Structure>{}, std::vector<crysta::BraggPdExperiment>{},
+                                  [&model](crysta::Project& project) {
+                                      copy_report_settings(model, project);
+                                      // The defaults effective_report_options takes for a setting left unstated.
+                                      project.report_html = std::optional<bool>(model.report_html.value_or(true));
+                                      project.report_pdf = std::optional<bool>(model.report_pdf.value_or(false));
+                                      project.report_cif = std::optional<bool>(model.report_cif.value_or(false));
+                                      project.report_html_offline =
+                                          std::optional<bool>(model.report_html_offline.value_or(false));
+                                      project.report_excluded =
+                                          std::optional<std::string>(model.report_excluded.value_or("data"));
+                                  });
+    return crysta::report_settings_text(carrier);
+#else
+    (void)model;
+    throw std::invalid_argument("showing the report settings needs a newer crysta");
+#endif
+}
 
 void save_project_via_crysta(const Project& model, const std::string& directory) {
     // Edi does not write — it asks crysta to. Build the full engine project from the model
@@ -2063,7 +2237,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.path = model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
-    // The project identity rides the delegated save. Copy the six persisted metadata fields
+    // The project identity rides the delegated save. Copy the persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
     // the `_metadata.*` block into a carried project.edi, or creates the record when none
@@ -2073,10 +2247,21 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     cproject.metadata.name = model.metadata.name;
     cproject.metadata.title = model.metadata.title;
     cproject.metadata.description = model.metadata.description;
+#if __has_include("crysta/su_format.hpp")  // crysta's SDK; drop the guard when the pin moves
+    cproject.metadata.authors = model.metadata.authors;
+#endif
     cproject.metadata.created = model.metadata.created;
     cproject.metadata.last_modified = model.metadata.last_modified;
     cproject.metadata.timestamp = model.metadata.timestamp;
     cproject.persist_metadata = true;
+#if __has_include("crysta/su_format.hpp")  // drop the guard when the pin moves
+    // The delegated writer spells every value with an s.u. by the project's rule.
+    cproject.su_rule = model.su_rule;
+#endif
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    // And writes the report's settings and saved-report rows, and the two Analysis view items.
+    copy_report_settings(model, cproject);
+#endif
     // Review-9 F1: ONE persisted snapshot row per basic. In memory every free tied axis may
     // carry its own prior state (lossless undo), but the persisted _fit_parameter loop keeps
     // only the designated axis's row — the representative when free, else the first free
@@ -2196,6 +2381,36 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
 }
+
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+void read_report_item(std::string_view item, const std::string& value, Project& project) {
+    const crysta::ReportItemValue read = crysta::read_report_item(item, value);
+    if (item == "html") {
+        project.report_html = read.flag;
+    } else if (item == "pdf") {
+        project.report_pdf = read.flag;
+    } else if (item == "cif") {
+        project.report_cif = read.flag;
+    } else if (item == "html_offline") {
+        project.report_html_offline = read.flag;
+    } else {
+        project.report_excluded = read.keys;
+    }
+}
+double read_correlation_threshold(const std::string& value) { return crysta::read_correlation_threshold(value); }
+std::string read_pattern_x_axis(const std::string& value) { return crysta::read_pattern_x_axis(value); }
+std::string read_report_file_format(const std::string& value) { return crysta::read_report_file_format(value); }
+#else
+namespace {
+[[noreturn]] void needs_newer_crysta() {
+    throw std::invalid_argument("the report settings need a newer crysta");
+}
+}  // namespace
+void read_report_item(std::string_view, const std::string&, Project&) { needs_newer_crysta(); }
+double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
+std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
+std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
+#endif
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
@@ -4363,6 +4578,12 @@ bool parse_csv_cell(const std::string& cell, Value& out) {
     return !stream.fail() && stream.eof();
 }
 
+// A number cell reads as the project loader reads one (number_token.hpp): a stream read of a double diverges between
+// the platforms' libraries.
+bool parse_csv_cell(const std::string& cell, double& out) {
+    return edi::detail::read_number(cell, out) == edi::detail::NumberToken::ok;
+}
+
 // A results row's file, as the scan's events name it: its file_path cell without the directory.
 std::string scan_file_name(const std::string& file_path) {
     const std::size_t slash = file_path.rfind('/');
@@ -4448,7 +4669,7 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
         source.excluded.push_back({std::min(start, end), std::max(start, end)});
     }
-    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (°)" : "TOF (µs)";
+    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (deg)" : "TOF (µs)";
     const crysta::ComputedView view = crysta::peek(fitted, fitted.experiment());
     const auto shared = [](const crysta::ColumnSnapshot<double>& column) -> PatternSource::Column {
         return column.empty() ? nullptr : column.buffer();
@@ -4764,12 +4985,12 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             } else {
                 clear_fit_result(*this);
             }
-            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+            settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
         } else if (*completed_files > 0) {
             // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
             // skips that file and could not make them again. The unfinished file has none, and the rest of the
             // record stays as it was.
-            settle_scan_results(fit_result, *scan, sequential_fit.template_file);
+            settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
         }
         return outcome;
     } catch (const std::invalid_argument&) {

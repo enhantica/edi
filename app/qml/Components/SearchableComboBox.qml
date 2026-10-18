@@ -198,6 +198,9 @@ EaElements.ComboBox {
         if (control.contentItemLabel)
             control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
         control.popup.contentItem.header = searchHeader;
+        // The list holds its entries only while it shows: a closed one sized to the window kept a screenful of
+        // entries, and every change of the model's rows (a scan's Reset relabels all its datasets) laid them out again.
+        control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null);
         // The field stays at the top while the list scrolls: a long list opens at its current entry.
         control.popup.contentItem.headerPositioning = ListView.OverlayHeader;
         // The field takes the keyboard while the list is open.

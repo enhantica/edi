@@ -15,6 +15,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.report_units.iucr_reference import rounded_correlation, rounded_record
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/correlations'
 REFERENCE = json.loads((FIXTURE / 'reference.json').read_text())
@@ -70,8 +72,11 @@ def check_pairs(text, count):
             'Stored correlation labels must identify the independently selected fit parameters'
         )
         assert math.isfinite(pairs[key]), 'Every persisted correlation coefficient must be finite'
-        assert pairs[key] == pytest.approx(row['correlation'], abs=2e-4), (
-            'Polynomial fit correlations must match diffraction-lib normalized normal equations'
+        assert pairs[key] == pytest.approx(
+            float(rounded_correlation(row['correlation'])), abs=1e-14
+        ), (
+            'Saved polynomial covariance equals the independent IUCr-rounded external reference; '
+            f'pair={key}, actual={pairs[key]}, raw reference={row["correlation"]}'
         )
 
 
@@ -154,7 +159,10 @@ def test_external_loop_survives_load_and_save_byte_for_byte(tmp_path):
     path.write_text(path.read_text().rstrip() + '\n\n' + loop)
     loaded = edi.Project.load(source)
     once = saved_analysis(loaded, tmp_path / 'once')
-    assert loop in once, 'Loading and saving must preserve the external correlation-loop bytes'
+    assert rounded_record(loop.encode()).decode() in once, (
+        'Before full-precision coefficient bytes; after IUCr coefficients with every external '
+        'row identity and endpoint byte retained'
+    )
     twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
     assert once == twice, (
         'A second unchanged save must preserve all analysis bytes including correlations'
@@ -226,13 +234,24 @@ def test_empty_free_set_never_invents_pairs(tmp_path):
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
-def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload(tmp_path, mode):
+@pytest.mark.parametrize(
+    'template',
+    [None, '01.xy', '02.xy'],
+    ids=['first-by-default', 'declared-first', 'declared-later'],
+)
+def test_scan_persists_effective_templates_external_pairs_on_save_and_reload(
+    tmp_path, mode, template
+):
     reference = json.loads((FIXTURE / 'scan-reference.json').read_text())
     source = tmp_path / 'input'
     shutil.copytree(FIXTURE / f'scan-{mode}', source)
-    # Before: every dataset matrix was saved. After: the owner keeps only the template.
+    # Before: only a declared template was persisted. After: its absence selects file one.
     analysis = source / 'analysis/analysis.edi'
-    analysis.write_text(analysis.read_text() + '\n_sequential_fit.template_file 01.xy\n')
+    if template is not None:
+        analysis.write_text(
+            analysis.read_text() + '\n_sequential_fit.template_file ' + template + '\n'
+        )
+    effective = template or reference['cases'][0]['file']
     project = edi.Project.load(source)
     project.analysis.fit()
     assert (source / 'analysis/results.csv').is_file(), (
@@ -251,9 +270,14 @@ def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload
     lines = once.splitlines(keepends=True)
     starts = [i for i, line in enumerate(lines) if line.startswith(PREFIX + 'id')]
     rows = [row for i in starts for row in correlations(''.join(lines[i:]))]
-    expected = reference['cases'][0]['rows']
+    expected = next(case['rows'] for case in reference['cases'] if case['file'] == effective)
     assert len(rows) == len(expected), (
-        'Sequential and independent saves retain exactly the explicitly declared template pairs'
+        'Sequential and independent saves retain the declared template pairs, '
+        'or the first dataset pairs when none is declared'
+    )
+    assert all(Path(row.get('file_path', '')).name == effective for row in rows), (
+        'Each saved pair keeps the effective template file identity, '
+        'including the first-file fallback'
     )
     for pair in (('base', 'ramp'), ('base', 'curve'), ('ramp', 'curve')):
 
@@ -267,10 +291,14 @@ def test_scan_persists_only_declared_templates_external_pairs_on_save_and_reload
 
         target = tuple(sorted(pair))
         actual = sorted(float(row['correlation']) for row in rows if identity(row) == target)
-        truth = sorted(row['correlation'] for row in expected if identity(row) == target)
-        assert actual == pytest.approx(truth, abs=2e-4), (
+        truth = sorted(
+            float(rounded_correlation(row['correlation']))
+            for row in expected
+            if identity(row) == target
+        )
+        assert actual == pytest.approx(truth, abs=1e-14), (
             'The saved template must retain its independently normalized covariance, '
-            'including signs'
+            f'including IUCr significant figures; pair={target}, actual={actual}, expected={truth}'
         )
     twice = saved_analysis(edi.Project.load(tmp_path / 'once'), tmp_path / 'twice')
     assert once == twice, (

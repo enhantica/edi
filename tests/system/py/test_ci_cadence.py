@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.ci_cadence.identity_migrations import MIGRATIONS
 from tests.fixtures.ci_cadence.inventory import identity
 from tests.system.py.ci_execution_contract import (
     contexts,
@@ -458,6 +459,50 @@ def test_scale_semantics_gate_rejects_weakened_bodies_and_limits(damage):
 SHIPPED = json.loads((ROOT / 'tests/fixtures/ci_cadence/shipped-policy.json').read_text())
 
 
+def migrated_inventory(inventory):
+    return [successor for node in inventory for successor in MIGRATIONS.get(node, [node])]
+
+
+def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
+    assert set(MIGRATIONS) <= set(SHIPPED['nodes']), (
+        'Inventory migrations name only identities in the independently shipped snapshot'
+    )
+    successors = [node for replacement in MIGRATIONS.values() for node in replacement]
+    assert all(MIGRATIONS.values()) and len(successors) == len(set(successors)), (
+        'Each migrated witness retains a nonempty, distinct set of replacement identities'
+    )
+    assert not set(successors) & set(MIGRATIONS) and set(successors) <= set(nodes()), (
+        'Migration targets are current witnesses, never retired aliases or absent tests'
+    )
+    unchanged = [node for node in SHIPPED['nodes'] if node not in MIGRATIONS]
+    assert unchanged and migrated_inventory(unchanged) == unchanged, (
+        'Every unmapped frozen identity remains required verbatim'
+    )
+
+
+@pytest.mark.parametrize(
+    'retired',
+    list(MIGRATIONS),
+    ids=['desktop-linux', 'desktop-macos', 'scan-sequential', 'scan-independent', 'diagnostics'],
+)
+def test_inventory_migration_refuses_every_dropped_successor(retired):
+    inventory = nodes()
+    groups = json.loads(POLICY.read_text())['groups']
+    required = migrated_inventory([retired])
+    for group in ('quick', 'full'):
+        selected = expand(groups[group], inventory) + expand(groups['app'], inventory)
+        assert not selection_errors({'nodes': selected}, inventory, required), (
+            'Ordinary execution includes every replacement of each frozen witness'
+        )
+        for successor in required:
+            damaged = [node for node in inventory if node != successor]
+            selected = expand(groups[group], damaged) + expand(groups['app'], damaged)
+            assert 'omitted' in selection_errors({'nodes': selected}, damaged, required), (
+                'A named migration cannot conceal the loss of any replacement witness; '
+                f'group={group}, previous={retired}, missing={successor}'
+            )
+
+
 @pytest.mark.parametrize('group', ['quick', 'full'])
 def test_shipped_groups_retain_the_frozen_inventory(group):
     groups = json.loads(POLICY.read_text())['groups']
@@ -468,10 +513,10 @@ def test_shipped_groups_retain_the_frozen_inventory(group):
     required = expand(old[group], SHIPPED['nodes'])
     if BASE['repo'] == 'edi':
         required += expand(old['app'], SHIPPED['nodes'])
-    assert set(SHIPPED['nodes']) <= set(nodes()), (
+    assert set(migrated_inventory(SHIPPED['nodes'])) <= set(nodes()), (
         'every accepted inventory identity remains available, including policy helper tests'
     )
-    errors = selection_errors({'nodes': selected}, nodes(), required)
+    errors = selection_errors({'nodes': selected}, nodes(), migrated_inventory(required))
     assert not errors, (
         'shipped cadence keeps the frozen identities available to ordinary full execution'
     )

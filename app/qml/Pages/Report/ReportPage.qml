@@ -2,63 +2,76 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 
-import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Report page (easydiffractionbeta Pages/Summary): the report as Qt rich text in a read-only text
-// area — project information, crystal data, data collection, the fit; Export summary disabled until
-// the report task; every project file in Text.
+// The Report page (edi ADR-0036; the owner's notes 30 and 31, and the sidebar of 2026-10-13): the report's live preview
+// in the main area, drawn from the report model; the sidebar's Export and Contents; reports/report.edi in Text.
 WorkflowPage {
     id: page
 
     readonly property ProjectViewModel project: Session.project
+    readonly property ReportViewModel report: project ? project.report : null
+    // Export's save under way (ExportGroup.saving): the report stays built and the preview drawn until it is written.
+    property bool saving: false
 
     pageName: "report"
-    defaultInfo: project ? "" : qsTr("No summary generated")
+    defaultInfo: project ? "" : qsTr("No report generated")
     mainTabs: [
         IconTabButton {
-            objectName: "mainArea.report.tab.summary"
+            objectName: "mainArea.report.tab.report"
             // The view's name, text only (edi ADR-0017 §2).
-            text: qsTr("Summary")
+            text: qsTr("Report")
         }
     ]
     mainItems: [
-        Flickable {
-            contentHeight: reportText.implicitHeight
-            clip: true
-            ScrollBar.vertical: EaElements.ScrollBar {
-                policy: ScrollBar.AsNeeded
-                interactive: false
-            }
-
-            EaElements.TextArea {
-                id: reportText
-                objectName: "report.text"
-                width: parent.width
-                padding: AppSizes.reportPadding
-                readOnly: true
-                textFormat: TextEdit.RichText
-                wrapMode: TextEdit.Wrap
-                text: page.project ? page.project.report.richText : ""
-            }
+        ReportPreview {
+            id: reportPreview
+            objectName: "report.preview"
+            report: page.report
+            // Drawn while the page is shown, and while a save is under way: a PDF takes its figures.
+            drawn: page.current || page.saving
         }
     ]
     textEnabled: project !== null
     basicItem: Component {
         EaComponents.SideBarColumn {
-            ExportSummaryGroup {}
+            ExportGroup {
+                report: page.report
+                preview: reportPreview
+                shown: page.current
+                onSavingChanged: page.saving = saving
+            }
+            ContentsGroup {
+                report: page.report
+                shown: page.current
+            }
         }
     }
     textItem: Component {
         TextTab {
-            source: page.project ? page.project.projectText : null
+            source: page.project ? page.project.reportText : null
             underContinue: false
         }
     }
     continueVisible: false
+
+    // The report's charts take the app's colour scheme.
+    Binding {
+        target: page.report
+        property: "colourScheme"
+        value: Preferences.colourScheme
+        when: page.report !== null
+    }
+
+    // The report rebuilds at once only while this page is shown, or while a save is under way: a save that waited
+    // for a calculation takes the report from its outcome, which a hidden page has only marked stale.
+    Binding {
+        target: page.report
+        property: "active"
+        value: page.current || page.saving
+        when: page.report !== null
+    }
 }

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <string>
 #include <string_view>
@@ -26,6 +27,13 @@ struct ScanDatasets {
 /// The datasets of `project`'s declared scan (crysta::sequential_scan_files). Throws with the driver's message on
 /// an undeclared scan, a project with no directory, a missing directory or no matching file.
 ScanDatasets scan_datasets(const Project& project);
+
+/// The scan's template dataset in effect: `_sequential_fit.template_file` when declared, else the first file of the
+/// scan's listing; empty when there is neither. A scan's report is this dataset's, and its fit record keeps this
+/// dataset's correlation pairs (edi ADR-0034), so the report shows the same pairs in the app and from the saved files.
+std::string effective_scan_template_file(const Project& scan, const ScanDatasets& datasets);
+/// The same, listing the scan's files itself; the declared file, or empty, when they cannot be listed.
+std::string effective_scan_template_file(const Project& scan);
 
 /// One dataset's measured pattern, read as the driver reads it, on the axis of `mode`.
 PdDataBase read_scan_dataset(const std::string& directory, const std::string& file, BeamModeEnum mode);
@@ -126,6 +134,34 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& proje
 
 /// The cells of the row that starts at `offset`; throws when the file has no complete row there.
 std::vector<std::string> read_scan_row(const Project& project, std::int64_t offset);
+
+/// The parameters a scan's evolution charts list, the Evolution tab's and the report's: every free parameter of the
+/// template by its unique name, listed before any dataset is fitted, then each one `analysis/results.csv` records
+/// that is not free (any more), by its column, in the file's order.
+std::vector<std::string> evolution_parameters(const Project& project, const ScanResultIndex& index);
+
+/// One point of a parameter's evolution: a fitted dataset's value and s.u., at its x.
+struct EvolutionPoint {
+    double x = 0.0;
+    double y = 0.0;
+    double su = 0.0;
+    std::size_t dataset = 0;  ///< the dataset's place in the scan
+};
+
+/// Visits each point of `parameter` (a unique name or a results column) in `analysis/results.csv`, reading the file
+/// once while it still has the index's header: each row naming a file of the scan that holds a fit result (a refused
+/// file's row does not) and whose value, s.u. and x are finite numbers, the error bar's ends within ±1e300. x is the
+/// first extract rule's value when `by_value` and the scan has a rule, else the dataset's place counted from 1. A
+/// parameter the file does not record has no point; a results path that is there but not a regular file throws.
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::string& parameter, bool by_value,
+                      const std::function<void(const EvolutionPoint&)>& visit);
+
+/// The same for several parameters in one read of the file: `visit` gets each point with its parameter's place in
+/// `parameters`, row by row. A report draws every parameter's chart from one read.
+void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                      const std::vector<std::string>& parameters, bool by_value,
+                      const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 
 /// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
 /// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.

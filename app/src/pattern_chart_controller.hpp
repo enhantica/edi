@@ -12,13 +12,31 @@
 #include <QtGraphs/QXYSeries>
 #include <QtQml/qqmlregistration.h>
 #include <optional>
+#include <vector>
 
 #include "chart_models.hpp"
 #include "edi/presentation.hpp"
 #include "experiment_view_model.hpp"
 #include "measured_layer.hpp"
+#include "report_view_model.hpp"
 
 namespace edi_app {
+
+// One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, and the row's centre in rows from the
+// bottom. QML reads a list of them as an array.
+struct BraggLabel {
+    Q_GADGET
+    QML_VALUE_TYPE(braggLabel)
+    Q_PROPERTY(QString text MEMBER text CONSTANT)
+    Q_PROPERTY(QColor color MEMBER color CONSTANT)
+    Q_PROPERTY(double centre MEMBER centre CONSTANT)
+
+   public:
+    QString text;
+    QColor color;
+    double centre = 0.0;
+    bool operator==(const BraggLabel&) const = default;
+};
 
 // One pattern chart (edi ADR-0017 §15, ADR-0021). It draws what the core's edi::present_pattern
 // returns and computes nothing: it owns the view (the x range, the main y range, the plot width, the y
@@ -29,9 +47,17 @@ class PatternChartController : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(edi_app::ExperimentViewModel* experiment READ experiment WRITE setExperiment NOTIFY experimentChanged)
+    // The report's input (edi ADR-0036): with `report` set the chart draws the report model's presentation of
+    // `reportExperiment` as it is, instead of presenting an experiment. It has no view to change, so the zoom, the
+    // pan and the hover read-out do nothing.
+    Q_PROPERTY(edi_app::ReportViewModel* report READ report WRITE setReport NOTIFY reportChanged)
+    Q_PROPERTY(QString reportExperiment READ reportExperiment WRITE setReportExperiment NOTIFY reportExperimentChanged)
     // The chart is shown: a hidden chart is only marked dirty, and refreshed when it is shown again.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     Q_PROPERTY(bool dark READ dark WRITE setDark NOTIFY darkChanged)
+    // The colour scheme, a token of edi::colour_scheme_from_name (data/palettes): the experiments' and structures'
+    // colours.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
     // The main plot area, in logical pixels, and the window's device pixel ratio: the decimation's width.
     Q_PROPERTY(qreal plotWidth READ plotWidth WRITE setPlotWidth NOTIFY plotWidthChanged)
     Q_PROPERTY(qreal plotHeight READ plotHeight WRITE setPlotHeight NOTIFY plotHeightChanged)
@@ -41,6 +67,9 @@ class PatternChartController : public QObject {
                    residualPlotHeightChanged)
     Q_PROPERTY(qreal devicePixelRatio READ devicePixelRatio WRITE setDevicePixelRatio NOTIFY devicePixelRatioChanged)
     Q_PROPERTY(YScale yScale READ yScale WRITE setYScale NOTIFY yScaleChanged)
+    // The x axis: d-spacing, or the experiment's own (2θ or time-of-flight). On d the pattern is the d-spacing capture
+    // (edi::capture_pattern), which needs a calculated pattern; until then the chart stays on the experiment's axis.
+    Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
     // How long a box zoom, a wheel zoom and a reset move the axis ranges (easydiffractionbeta's
     // ChartView.SeriesAnimations, EaStyle.Times.chartAnimation), in milliseconds; 0: at once.
     Q_PROPERTY(int animationDuration READ animationDuration WRITE setAnimationDuration NOTIFY animationDurationChanged)
@@ -53,6 +82,8 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QXYSeries* braggSeries0 MEMBER bragg_series_0_ NOTIFY braggSeries0Changed)
     Q_PROPERTY(QXYSeries* braggSeries1 MEMBER bragg_series_1_ NOTIFY braggSeries1Changed)
     Q_PROPERTY(QXYSeries* braggSeries2 MEMBER bragg_series_2_ NOTIFY braggSeries2Changed)
+    Q_PROPERTY(QXYSeries* braggSeries3 MEMBER bragg_series_3_ NOTIFY braggSeries3Changed)
+    Q_PROPERTY(QXYSeries* braggSeries4 MEMBER bragg_series_4_ NOTIFY braggSeries4Changed)
     // What the three panes show.
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
@@ -75,6 +106,9 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
     Q_PROPERTY(QString residualTitle READ residualTitle NOTIFY residualTitleChanged)
+    // The Bragg rows' labels (edi::BraggRowLabel): maps of `text`, `color` and `centre`, the row's middle in the
+    // Bragg pane's units (row k from the bottom spans k to k + 1).
+    Q_PROPERTY(QList<edi_app::BraggLabel> braggLabels READ braggLabels NOTIFY braggLabelsChanged)
     // The legend's rows and the excluded bands, as typed models (chart_models.hpp): the controller replaces
     // their rows at each refresh.
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
@@ -85,10 +119,13 @@ class PatternChartController : public QObject {
     Q_PROPERTY(QColor backgroundColor READ backgroundColor NOTIFY backgroundColorChanged)
     Q_PROPERTY(QColor residualColor READ residualColor NOTIFY residualColorChanged)
     Q_PROPERTY(QColor excludedColor READ excludedColor NOTIFY excludedColorChanged)
-    // The three tick colours, by the structure's place in the project (the palette of ADR-0017 §8).
+    // The tick colours: the scheme's structure colours, one series each (no scheme has more than five), by the
+    // structure's place in the project taken round the scheme's colours, as the structure lists take them.
     Q_PROPERTY(QColor braggColor0 READ braggColor0 NOTIFY braggColor0Changed)
     Q_PROPERTY(QColor braggColor1 READ braggColor1 NOTIFY braggColor1Changed)
     Q_PROPERTY(QColor braggColor2 READ braggColor2 NOTIFY braggColor2Changed)
+    Q_PROPERTY(QColor braggColor3 READ braggColor3 NOTIFY braggColor3Changed)
+    Q_PROPERTY(QColor braggColor4 READ braggColor4 NOTIFY braggColor4Changed)
     // How many times the series were replaced: what a test observes at a frame's synchronisation.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
@@ -101,10 +138,16 @@ class PatternChartController : public QObject {
 
     ExperimentViewModel* experiment() const { return experiment_; }
     void setExperiment(ExperimentViewModel* experiment);
+    ReportViewModel* report() const { return report_; }
+    void setReport(ReportViewModel* report);
+    QString reportExperiment() const { return report_experiment_; }
+    void setReportExperiment(const QString& experiment);
     bool active() const { return active_; }
     void setActive(bool active);
     bool dark() const { return dark_; }
     void setDark(bool dark);
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
     qreal plotWidth() const { return plot_width_; }
     void setPlotWidth(qreal width);
     qreal plotHeight() const { return plot_height_; }
@@ -115,6 +158,8 @@ class PatternChartController : public QObject {
     void setDevicePixelRatio(qreal ratio);
     YScale yScale() const { return y_scale_; }
     void setYScale(YScale scale);
+    bool dSpacing() const { return d_spacing_; }
+    void setDSpacing(bool on);
     int animationDuration() const { return animation_duration_; }
     void setAnimationDuration(int milliseconds);
 
@@ -137,6 +182,7 @@ class PatternChartController : public QObject {
     QString xTitle() const { return x_title_; }
     QString yTitle() const { return y_title_; }
     QString residualTitle() const { return residual_title_; }
+    QList<BraggLabel> braggLabels() const { return bragg_labels_; }
     ChartLegendModel* legend() const { return legend_; }
     ChartBandModel* excludedBands() const { return excluded_bands_; }
     QColor measuredColor() const { return color(measured_style_); }
@@ -147,6 +193,8 @@ class PatternChartController : public QObject {
     QColor braggColor0() const { return color(QStringLiteral("bragg.0")); }
     QColor braggColor1() const { return color(QStringLiteral("bragg.1")); }
     QColor braggColor2() const { return color(QStringLiteral("bragg.2")); }
+    QColor braggColor3() const { return color(QStringLiteral("bragg.3")); }
+    QColor braggColor4() const { return color(QStringLiteral("bragg.4")); }
     int revision() const { return revision_; }
 
     // A style key's colour in the current theme, with the table's opacity.
@@ -176,13 +224,17 @@ class PatternChartController : public QObject {
 
    signals:
     void experimentChanged();
+    void reportChanged();
+    void reportExperimentChanged();
     void activeChanged();
     void darkChanged();
+    void colourSchemeChanged();
     void plotWidthChanged();
     void plotHeightChanged();
     void residualPlotHeightChanged();
     void devicePixelRatioChanged();
     void yScaleChanged();
+    void dSpacingChanged();
     void animationDurationChanged();
     void measuredSeriesChanged();
     void measuredLayerChanged();
@@ -192,6 +244,8 @@ class PatternChartController : public QObject {
     void braggSeries0Changed();
     void braggSeries1Changed();
     void braggSeries2Changed();
+    void braggSeries3Changed();
+    void braggSeries4Changed();
     void xMinChanged();
     void xMaxChanged();
     void yMinChanged();
@@ -210,6 +264,7 @@ class PatternChartController : public QObject {
     void currentChanged();
     void xTitleChanged();
     void yTitleChanged();
+    void braggLabelsChanged();
     void residualTitleChanged();
     void revisionChanged();
     void measuredColorChanged();
@@ -220,6 +275,8 @@ class PatternChartController : public QObject {
     void braggColor0Changed();
     void braggColor1Changed();
     void braggColor2Changed();
+    void braggColor3Changed();
+    void braggColor4Changed();
 
    private:
     void invalidate();
@@ -255,9 +312,19 @@ class PatternChartController : public QObject {
     double xOf(double pixel) const;
 
     QPointer<ExperimentViewModel> experiment_;
+    QPointer<ReportViewModel> report_;
+    QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
+    QString colour_scheme_ = QStringLiteral("coast");
+    // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
+    // project's experiments in the colour scheme.
+    std::vector<edi::SeriesStyle> styles() const;
+    // The colour scheme the chart is drawn in.
+    edi::ColourScheme scheme() const;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
     YScale y_scale_ = Linear;
+    bool d_spacing_ = false;
+    edi::PatternAxis axis() const { return d_spacing_ ? edi::PatternAxis::DSpacing : edi::PatternAxis::Native; }
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.
     std::optional<double> x_min_, x_max_, y_min_, y_max_;
     // The animation: its ranges at the start and the end, as shown, and the view it ends in.
@@ -267,7 +334,7 @@ class PatternChartController : public QObject {
     double from_[4] = {}, to_[4] = {};
     std::optional<double> target_[4];
     QPointer<QXYSeries> measured_series_, calculated_series_, background_series_, residual_series_,
-        bragg_series_0_, bragg_series_1_, bragg_series_2_;
+        bragg_series_0_, bragg_series_1_, bragg_series_2_, bragg_series_3_, bragg_series_4_;
     QPointer<MeasuredLayer> measured_layer_;
     edi::PatternPresentation shown_;
     double shown_x_min_ = 0.0, shown_x_max_ = 1.0, shown_y_min_ = 0.0, shown_y_max_ = 1.0;
@@ -276,6 +343,8 @@ class PatternChartController : public QObject {
     int bragg_rows_ = 0, revision_ = 0;
     bool has_residual_ = false, has_data_ = false, current_ = false;
     QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
+    std::size_t colour_count_ = 0;
+    QList<BraggLabel> bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;
 };

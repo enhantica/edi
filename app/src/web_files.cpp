@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <QtCore/private/qzipreader_p.h>
 #include <QtCore/private/qzipwriter_p.h>
+#include <cstdlib>
 #include <memory>
 #include <vector>
 
@@ -22,7 +23,21 @@
 // folder's parent, then edi_web_folder_copied(request, count) runs; a dismissed chooser calls
 // edi_web_folder_cancelled(request). The input stays in the page, hidden, as `#edi-open-folder` until the choice
 // ends, so a page driver can hand it a folder too.
-EM_JS_DEPS(edi_web_files, "$FS");
+EM_JS_DEPS(edi_web_files, "$FS,$stringToNewUTF8");
+
+// A file of the site, read with a same-origin request that waits for its answer: a few megabytes at most, once per
+// saved report. Its text in new memory the caller frees, or null.
+EM_JS(char*, edi_web_site_file, (const char* path_utf8), {
+    try {
+        const request = new XMLHttpRequest();
+        request.open("GET", UTF8ToString(path_utf8), false);
+        request.overrideMimeType("text/plain; charset=utf-8");
+        request.send(null);
+        return request.status === 200 ? stringToNewUTF8(request.responseText) : 0;
+    } catch (error) {
+        return 0;
+    }
+});
 EM_JS(void, edi_web_pick_folder, (int request, const char* root_utf8), {
     const root = UTF8ToString(root_utf8);
     document.getElementById("edi-open-folder")?.remove();
@@ -133,6 +148,19 @@ QByteArray WebFiles::pack(const QString& directory) {
             return {};
         }
         writer.addFile(top + QLatin1Char('/') + dir.relativeFilePath(path), file.readAll());
+    }
+    writer.close();
+    return writer.status() == QZipWriter::NoError ? archive : QByteArray();
+}
+
+QByteArray WebFiles::packFiles(const QList<QPair<QString, QByteArray>>& files) {
+    QByteArray archive;
+    QBuffer buffer(&archive);
+    buffer.open(QIODevice::WriteOnly);
+    QZipWriter writer(&buffer);
+    writer.setCompressionPolicy(QZipWriter::AutoCompress);
+    for (const auto& [path, data] : files) {
+        writer.addFile(path, data);
     }
     writer.close();
     return writer.status() == QZipWriter::NoError ? archive : QByteArray();
@@ -329,8 +357,22 @@ bool WebFiles::downloadProject(const QString& path) {
         emit failed(0, QStringLiteral("cannot pack the project in %1").arg(path));
         return false;
     }
-    QWasmLocalFileAccess::saveFile(archive, (QDir(path).dirName() + QStringLiteral(".zip")).toStdString());
+    return download(archive, QDir(path).dirName() + QStringLiteral(".zip"));
+}
+
+bool WebFiles::download(const QByteArray& data, const QString& name) {
+    QWasmLocalFileAccess::saveFile(data, name.toStdString());
     return true;
+}
+
+QByteArray WebFiles::siteFile(const QString& path) {
+    char* text = edi_web_site_file(path.toUtf8().constData());
+    if (text == nullptr) {
+        return {};
+    }
+    QByteArray out(text);
+    std::free(text);
+    return out;
 }
 
 #else
@@ -359,6 +401,10 @@ bool WebFiles::downloadProject(const QString& /*directory*/) {
     emit failed(0, QStringLiteral("downloading a project is the browser build's"));
     return false;
 }
+
+bool WebFiles::download(const QByteArray& /*data*/, const QString& /*name*/) { return false; }
+
+QByteArray WebFiles::siteFile(const QString& /*path*/) { return {}; }
 
 #endif
 

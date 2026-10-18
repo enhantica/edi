@@ -4,6 +4,10 @@
     python -m edi fit <project-dir> [--dry] [--verbosity ...] [--report ...] [--stream]
     python -m edi calc <project-dir> [--dry] [--verbosity ...] [--report machine|human]
     python -m edi undo <project-dir> [--dry] [--verbosity ...] [--report machine|human]
+    python -m edi report <project-dir> [--check] [--output PATH] [--offline|--online]
+                         [--x-axis ...] [--correlation-threshold X]
+                         [--exclude KEY ... | --include-all]
+                         [--colour-scheme NAME] [--correlation-experiment NAME]
 
 This exists because an example script was doing the job: ``examples/fit_ncaf.py`` had accreted
 argument parsing, verbosity handling and two output formats, which made it an undeclared
@@ -41,6 +45,7 @@ from pathlib import Path
 from typing import Self
 
 import edi
+from edi import _project_output as _output
 
 # One verbosity for both channels, so --verbosity means the same thing whichever --report is
 # chosen.
@@ -154,6 +159,99 @@ def build_parser() -> argparse.ArgumentParser:
         default='machine',
         help="which channel to print: 'machine' (the default) is the versioned key=value record "
         "byte-comparable with `crysta undo`; 'human' is the readable view",
+    )
+    report = subcommands.add_parser(
+        'report',
+        help="save a project's report into its reports folder, as the app's Save report does",
+    )
+    report.add_argument('project', help='project directory')
+    report.add_argument(
+        '--check',
+        action='store_true',
+        help='list each saved report as current, out of date or missing, writing nothing; '
+        'exit 1 when one is not current',
+    )
+    report.add_argument(
+        '--output',
+        metavar='PATH',
+        default=None,
+        help="write the HTML report to PATH instead of saving the ticked formats; the project's "
+        'saved reports and their rows are left as they are',
+    )
+    libraries = report.add_mutually_exclusive_group()
+    libraries.add_argument(
+        '--offline',
+        dest='offline',
+        action='store_const',
+        const=True,
+        default=None,
+        help='embed the chart libraries in the HTML report, for this run',
+    )
+    libraries.add_argument(
+        '--online',
+        dest='offline',
+        action='store_const',
+        const=False,
+        help='load the chart libraries from the web, for this run',
+    )
+    report.add_argument(
+        '--x-axis',
+        choices=('native', 'd_spacing'),
+        default=None,
+        help="the charts' x axis for this run: the experiment's own (2θ or TOF) or d-spacing",
+    )
+    report.add_argument(
+        '--correlation-threshold',
+        type=float,
+        default=None,
+        metavar='X',
+        help='the correlation chart shows the parameters whose strongest correlation '
+        'reaches X (0 to 1), for this run',
+    )
+    groups = report.add_mutually_exclusive_group()
+    groups.add_argument(
+        '--exclude',
+        action='append',
+        default=None,
+        metavar='KEY',
+        help='leave a group out for this run (charts, correlations, reflections, data, '
+        'evolution); repeat for several',
+    )
+    groups.add_argument(
+        '--include-all', action='store_true', help='leave no group out, for this run'
+    )
+    report.add_argument(
+        '--colour-scheme',
+        choices=(
+            'coast',
+            'garden',
+            'peaceful',
+            'fogForest',
+            'sage',
+            'okabeIto',
+            'paulTolBright',
+            'paulTolMuted',
+            'tableau',
+            'observable',
+            'carbon',
+            'dark2',
+            'petroff',
+            'vivid',
+            'nord',
+            'solarized',
+            'catppuccin',
+            'apple',
+        ),
+        default=None,
+        metavar='NAME',
+        help="the colour scheme whose light colours the report's charts take (default: coast)",
+    )
+    report.add_argument(
+        '--correlation-experiment',
+        default=None,
+        metavar='NAME',
+        help='in a fit of several experiments, the one whose parameters the correlation chart '
+        'shows (default: the first)',
     )
     return parser
 
@@ -547,7 +645,9 @@ def _write_back_calculated(path: Path, grid, calculated) -> None:
     lines.extend(
         f'{index + 1} {grid[index]:g} {value:g}' for index, value in enumerate(calculated)
     )
-    path.write_text(''.join(f'{line}\n' for line in lines), encoding='utf-8')
+    # Replaced whole as project output (edi ADR-0039), as the engine's calc does: the document
+    # lives in <project>/experiments/.
+    _output.write_project_file(path.parent.parent, path, ''.join(f'{line}\n' for line in lines))
 
 
 def run_calc(args: argparse.Namespace) -> int:
@@ -629,6 +729,42 @@ def run_undo(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_report(args: argparse.Namespace) -> int:
+    # The project's own report settings, a flag replacing one for this run only; nothing is
+    # written to the project. Save report writes the ticked formats but the PDF, which is the
+    # app's.
+    project = edi.Project.load(args.project)
+    if args.check:
+        states = project.report.check()
+        for name, state in states:
+            print(f'{name} {state}')
+        return 0 if all(state == 'current' for _name, state in states) else 1
+    excluded = [] if args.include_all else args.exclude
+    if args.output is not None:
+        path = project.report.save_html(
+            args.output,
+            offline=args.offline,
+            x_axis=args.x_axis,
+            correlation_threshold=args.correlation_threshold,
+            excluded=excluded,
+            colour_scheme=args.colour_scheme,
+            correlation_experiment=args.correlation_experiment,
+        )
+        print(f'Wrote {path}')
+        return 0
+    written = project.report.save(
+        offline=args.offline,
+        x_axis=args.x_axis,
+        correlation_threshold=args.correlation_threshold,
+        excluded=excluded,
+        colour_scheme=args.colour_scheme,
+        correlation_experiment=args.correlation_experiment,
+    )
+    for path in written:
+        print(f'Wrote {path}')
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     # Argument parsing is NOT a run: argparse exits on its own for a usage error, and no record is
     # emitted, because nothing was attempted. Everything below has reached the point of
@@ -636,6 +772,12 @@ def main(argv: list[str] | None = None) -> int:
     # gets a well-formed "this run produced no fit" rather than silence it cannot distinguish
     # from a crash.
     args = build_parser().parse_args(argv)
+    if args.command == 'report':
+        try:
+            return run_report(args)
+        except (edi.IoError, ValueError, OSError) as error:
+            print(f'edi report: {error}', file=sys.stderr)
+            return 1
     try:
         if args.command == 'undo':
             return run_undo(args)

@@ -19,6 +19,7 @@
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
+#include "number_token.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -26,6 +27,7 @@
 #include <cctype>
 #include <charconv>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
@@ -42,6 +44,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 #include <iomanip>
@@ -416,30 +419,19 @@ int fractional_digits(const std::string& mantissa) {
     return digits;
 }
 
-// Parse a complete numeric token into a double, locale-independently AND portably.
-//
-// An istringstream imbued with the classic ("C") locale always reads a '.' decimal separator
-// whatever the process locale is, so the same project bytes parse identically under, say, a
-// comma-decimal de_DE — the bug the previous std::stod implementation carried, since strtod follows
-// LC_NUMERIC and would have rejected `449.2719` there. Requiring eof() means the WHOLE token was
-// consumed, so trailing characters (including a `(su)` suffix, which is a model-parameter grammar and
-// never valid in a data column) fail rather than silently truncating.
-//
-// Deliberately NOT std::from_chars: libc++ (Apple/macOS AppleClang) `= delete`s the floating-point
-// overload, so that call does not compile there — it broke crysta's own macOS CI (PR #21), and edi
-// ships osx-arm64/osx-64. This mirrors crysta's `parse_double` (src/core/edi.cpp) device-for-device,
-// which also means the accepted grammar (leading '+', exponents, `.5`, `1.`) is identical by
-// construction rather than by argument.
+// Parse a complete numeric token into a double, the same value on every platform and in every locale
+// (number_token.hpp, the engine loader's rule): the whole token is read, so trailing characters
+// (including a `(su)` suffix, which is a model-parameter grammar and never valid in a data column) fail
+// rather than silently truncating. A subnormal value reads as itself; a nonzero value below the
+// smallest double is refused, as is one beyond the largest.
 double to_double(const std::string& text, const std::string& where) {
     double value = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    if (stream.fail() || !stream.eof()) {
-        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
+    const detail::NumberToken read = detail::read_number(text, value);
+    if (read == detail::NumberToken::underflow) {
+        fail_domain(where, "number-underflow", "the value of '" + text + "' is below the smallest double");
     }
-    if (!std::isfinite(value)) {
-        fail_domain(where, "non-finite-number", "non-finite number '" + text + "'");
+    if (read != detail::NumberToken::ok) {
+        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
     }
     return value;
 }
@@ -451,13 +443,32 @@ double to_double(const std::string& text, const std::string& where) {
 // FULL reference mantissa — and still rejects an in-bracket exponent `1.2e3(4)` (the reference
 // rejects it too), which misses the mantissa and falls through to the fixed-value parse (which
 // rejects the trailing bracket). The BRACKET carries three forms:
-//   * all-digit su -> esd in units of the mantissa's last decimal (last-digit-scaled, UNCHANGED):
-//     `3.89(2)` -> 0.02; `18.(1)` -> 1*10^0 -> 1.0; `.5(3)` -> 3*10^-1 -> 0.3;
+//   * all-digit su -> esd in units of the mantissa's last decimal, read as the one decimal number
+//     `<digits>e-<decimals>` (scaled_uncertainty): `3.89(2)` -> 0.02; `18.(1)` -> 1.0; `.5(3)` -> 0.3;
 //   * a su containing a '.' -> ABSOLUTE standard uncertainty (`383.2(1.2)` -> 1.2);
 //   * empty bracket `value()` -> refinable (free) with no prior esd (std::nullopt), distinct from a
 //     fixed value (esd 0.0, not free) and a zero-esd refined `value(0)`.
 // A bare token (no bracket) is fixed: present esd 0.0, not free — preserving the public esd==0.0
 // save->load fixed point. `to_double` rejects non-finite at the boundary.
+// An integer s.u. in units of the mantissa's last decimal place, read as the decimal number
+// `<digits>e-<decimals>`. strtod rounds it correctly on every platform, subnormals
+// included, and the text has no radix character for a locale to change. Dividing by pow(10, decimals)
+// gave zero past 308 decimals; digits that underflow even a subnormal are refused naming the token.
+double scaled_uncertainty(const std::string& digits, int decimals, const std::string& token,
+                          const std::string& where) {
+    const std::string text = digits + "e-" + std::to_string(decimals);
+    char* end = nullptr;
+    const double value = std::strtod(text.c_str(), &end);
+    if (end != text.c_str() + text.size() || !std::isfinite(value)) {
+        fail_schema(where, "invalid-number", "invalid number '" + token + "'");
+    }
+    if (value == 0.0 && digits.find_first_not_of('0') != std::string::npos) {
+        fail_domain(where, "uncertainty-underflow",
+                    "the uncertainty of '" + token + "' is below the smallest double");
+    }
+    return value;
+}
+
 Parameter parse_parameter(const std::string& token, const std::string& where) {
     static const std::regex pattern(R"(^([+-]?(?:\d+\.?\d*|\.\d+))\((\d+|\d*\.\d+|\d+\.)?\)$)");
     std::smatch match;
@@ -468,12 +479,9 @@ Parameter parse_parameter(const std::string& token, const std::string& where) {
         if (uncertainty.empty()) {
             return Parameter(value, std::nullopt, true);  // refinable, no prior esd
         }
-        // Integer su: DIVIDE by 10^ndec (not multiply by 10^-ndec) so a single correctly-rounded op
-        // matches crysta/the reference bit-for-bit ('.5(3)' -> 3/10 = 0.3, not 3*0.1 = 0.3000...04).
         const double esd = uncertainty.find('.') != std::string::npos
                                ? to_double(uncertainty, where)  // decimal su -> absolute
-                               : to_double(uncertainty, where) /
-                                     std::pow(10.0, fractional_digits(mantissa));  // last-digit-scaled
+                               : scaled_uncertainty(uncertainty, fractional_digits(mantissa), token, where);
         return Parameter(value, esd, true);
     }
     // No (well-formed) bracket: a bare fixed value; a malformed bracket also lands here and to_double
@@ -1994,13 +2002,11 @@ std::string format_fixed(double value, int ndec) {
     return std::string(buffer);
 }
 
-// Parse a fixed-point string back to a double, locale-independently (the round-trip probe below).
+// Parse a fixed-point string back to a double as the loader reads it (the round-trip probe below), so a
+// subnormal value round-trips at the same decimals on every platform.
 double parse_fixed(const std::string& text) {
     double out = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> out;
-    return (stream.fail() || !stream.eof()) ? std::numeric_limits<double>::quiet_NaN() : out;
+    return detail::read_number(text, out) == detail::NumberToken::ok ? out : std::numeric_limits<double>::quiet_NaN();
 }
 
 // Minimal number of decimals for which `format_fixed(value, ndec)` round-trips `value` exactly —
@@ -3267,6 +3273,36 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         project.experiments.push_back(std::move(experiment));
     }
 
+    // ADR-0036 §7: reports/report.edi, the report's settings and its saved-report rows, each checked by crysta's rules:
+    // a value an item does not take, an item the category does not have and a row without a known format are refused,
+    // naming them.
+    const fs::path report_settings = root / "reports" / "report.edi";
+    if (fs::is_regular_file(report_settings)) {
+        const std::string where = report_settings.string();
+        const Block block = parse_block(read_file(where), where, false);
+        try {
+            for (const auto& [tag, value] : block.items) {
+                if (tag.rfind("_report.", 0) == 0) {
+                    detail::read_report_item(std::string_view(tag).substr(std::string_view("_report.").size()), value,
+                                             project);
+                }
+            }
+            if (const Loop* files = block.loop_with("_report_file.name")) {
+                for (const auto& row : files->rows) {
+                    ReportFile file;
+                    file.name = loop_cell(*files, row, "_report_file.name", where);
+                    file.format = detail::read_report_file_format(loop_cell(*files, row, "_report_file.format", where));
+                    file.saved = loop_cell(*files, row, "_report_file.saved", where);
+                    file.project_last_modified = loop_cell(*files, row, "_report_file.project_last_modified", where);
+                    file.digest = loop_cell(*files, row, "_report_file.digest", where);
+                    project.report_files.push_back(std::move(file));
+                }
+            }
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(error.what()) + ": " + where);
+        }
+    }
+
     const fs::path analysis_file = root / "analysis" / "analysis.edi";
     if (fs::is_regular_file(analysis_file)) {
         const Block block =
@@ -3281,6 +3317,17 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                               declared_fitting_modes() + ": " + analysis_file.string());
             }
             project.fitting_mode = *mode;
+        }
+        // ADR-0036 §7: the correlation chart's threshold and the pattern chart's x axis, each checked by crysta's rules.
+        try {
+            if (const std::string* threshold = block.find("_correlation_chart.threshold")) {
+                project.correlation_threshold = detail::read_correlation_threshold(*threshold);
+            }
+            if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
+                project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
+            }
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(error.what()) + ": " + analysis_file.string());
         }
         // The declared iteration bound. The tag has ridden in analysis files since the
         // diffraction-lib ports; honoring it makes the project data the ONE place a bounded fit
@@ -3790,18 +3837,21 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                    (line.size() == tag.size() || line[tag.size()] == ' ' ||
                     line[tag.size()] == '\t' || line[tag.size()] == '\r');
         };
-        static const char* const kMetadataFields[6] = {
-            "name", "title", "description", "created", "last_modified", "timestamp"};
+        static const char* const kMetadataFields[7] = {
+            "name", "title", "description", "authors", "created", "last_modified", "timestamp"};
         std::optional<std::string> declared_version;
         // ADR-0017 §14: the plot renderer diffraction-lib declares in the record - an engine
         // choice, beside the calculator and the minimizer, that edi does not make.
         std::optional<std::string> declared_plot_renderer;
+        // How the project writes values with a standard uncertainty.
+        std::optional<std::string> declared_su_rule;
         std::map<std::string, std::string> restored;
         {
             std::istringstream record_lines(record_text);
             std::string line;
             const std::string version_tag = "_edi.schema_version";
             const std::string renderer_tag = "_rendering_plot.type";
+            const std::string su_rule_tag = "_su_format.rule";
             while (std::getline(record_lines, line)) {
                 if (is_tag_line(line, version_tag) && !declared_version.has_value()) {
                     declared_version = lexical_value(line, version_tag.size(), version_tag);
@@ -3809,6 +3859,14 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 }
                 if (is_tag_line(line, renderer_tag) && !declared_plot_renderer.has_value()) {
                     declared_plot_renderer = lexical_value(line, renderer_tag.size(), renderer_tag);
+                    continue;
+                }
+                if (is_tag_line(line, su_rule_tag)) {
+                    if (declared_su_rule.has_value()) {
+                        throw IoError("project.edi declares " + su_rule_tag +
+                                      " more than once: " + record_where);
+                    }
+                    declared_su_rule = lexical_value(line, su_rule_tag.size(), su_rule_tag);
                     continue;
                 }
                 for (const char* field : kMetadataFields) {
@@ -3871,6 +3929,14 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         restore("name", project.metadata.name);
         restore("title", project.metadata.title);
         restore("description", project.metadata.description);
+        restore("authors", project.metadata.authors);
+        if (declared_su_rule.has_value()) {
+            if (*declared_su_rule != "iucr_19" && *declared_su_rule != "iucr_99") {
+                throw IoError("project.edi _su_format.rule is '" + *declared_su_rule +
+                              "', expected iucr_19 or iucr_99: " + record_where);
+            }
+            project.su_rule = *declared_su_rule;
+        }
         restore("created", project.metadata.created);
         restore("last_modified", project.metadata.last_modified);
         restore("timestamp", project.metadata.timestamp);
@@ -4149,10 +4215,9 @@ void clear_fit_share(ExperimentBase& experiment) {
 
 double correlation_value(const FitParameterCorrelation& row) {
     double value = 0.0;
-    std::istringstream stream(row.correlation.value());
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    return stream.fail() || !stream.eof() ? std::numeric_limits<double>::quiet_NaN() : value;
+    return detail::read_number(row.correlation.value(), value) == detail::NumberToken::ok
+               ? value
+               : std::numeric_limits<double>::quiet_NaN();
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
@@ -4250,6 +4315,75 @@ void save_project_as(Project& project, const std::string& directory) {
     project.scan_data_root.clear();
 }
 
+bool adopt_saved_values(Project& project, const std::string& directory) {
+    // The reopen's warnings were the save's own concern; a project the loader refuses, such as one saved before it
+    // has a structure, keeps its values as they are.
+    std::optional<Project> reopened;
+    try {
+        reopened.emplace(load_project(directory, [](const std::string&) {}));
+    } catch (const IoError&) {
+        return false;
+    }
+    const Project& saved = *reopened;
+    bool changed = false;
+    std::map<std::string, const Parameter*> held;
+    for (const auto& slot : parameter_slots(saved)) {
+        held.emplace(slot.unique_name, slot.parameter);
+    }
+    for (const auto& slot : parameter_slots(project)) {
+        const auto found = held.find(slot.unique_name);
+        if (found == held.end()) {
+            continue;
+        }
+        Parameter& parameter = *slot.parameter;
+        if (parameter.value != found->second->value.get()) {
+            parameter.value = found->second->value.get();
+            changed = true;
+        }
+        if (parameter.uncertainty != found->second->uncertainty.get()) {
+            parameter.uncertainty = found->second->uncertainty.get();
+            changed = true;
+        }
+    }
+    // The correlation rows a save wrote, by their two parameters and file, take the saved coefficients. A scan's
+    // template then reads its pairs from those rows, as a reopened project does, not from its fit's table.
+    using RowKey = std::tuple<std::string, std::string, std::string>;
+    const auto key_of = [](const FitParameterCorrelation& row) {
+        return RowKey{row.parameter_unique_name_i.value(), row.parameter_unique_name_j.value(), row.file_path.value()};
+    };
+    std::map<RowKey, std::string> written;
+    for (const auto& row : saved.fit_result.correlations) {
+        written.emplace(key_of(*row), row->correlation.value());
+    }
+    // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
+    // correlations of a few hundred free parameters.
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows(project.fit_result.correlations.begin(),
+                                                            project.fit_result.correlations.end());
+    bool rows_changed = false;
+    for (auto& row : rows) {
+        const auto found = written.find(key_of(*row));
+        if (found != written.end() && row->correlation.value() != found->second) {
+            auto adopted = std::make_shared<FitParameterCorrelation>(*row);
+            adopted->correlation = found->second;
+            row = std::move(adopted);
+            rows_changed = true;
+        }
+    }
+    if (rows_changed) {
+        project.fit_result.correlations.assign(std::move(rows));
+        changed = true;
+    }
+    for (const auto& [key, text] : written) {
+        const auto table = project.fit_result.scan_results.find(std::get<2>(key));
+        if (!std::get<2>(key).empty() && table != project.fit_result.scan_results.end() && table->second &&
+            table->second->correlations) {
+            project.fit_result.scan_results.erase(table);
+            changed = true;
+        }
+    }
+    return changed;
+}
+
 
 // ----: the text a save writes ------------------------------------------
 
@@ -4312,6 +4446,8 @@ std::vector<std::string> saved_file_order(const Project& project) {
             fs::path(entity_path("", "experiment", experiment->name)).generic_string());
     }
     files.emplace_back("analysis/analysis.edi");
+    // The report's own settings and saved-report rows (ADR-0036 §7), when the project states any.
+    files.emplace_back("reports/report.edi");
     return files;
 }
 

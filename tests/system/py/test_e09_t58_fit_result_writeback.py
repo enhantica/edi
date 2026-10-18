@@ -1,9 +1,8 @@
 """P2: fitted values and e.s.d.s are results in the project model.
 
-This file is intentionally byte-identical in crysta and edi.  The fit result is
-the independent producer for the expected values and uncertainties; reloading
-the saved project proves the writer did not preserve plausible-looking stale
-uncertainties.
+The fit result supplies the unrounded values and uncertainties. An independent
+decimal reference predicts their saved spelling; the stale seed remains a
+separate negative control.
 """
 
 from __future__ import annotations
@@ -11,12 +10,14 @@ from __future__ import annotations
 import importlib
 import math
 import os
+import re
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from conftest import crysta_reference_source
+from tests.fixtures.saved_spelling.reference import saved_pair, spelling
 
 ROOT = Path(__file__).resolve().parents[3]
 LIB = importlib.import_module('edi')
@@ -73,15 +74,28 @@ def test_fit_result_uncertainty_replaces_stale_model_and_serialized_state(
         'a fit that updates the value but leaves a stale model uncertainty is not write-back'
     )
 
+    original_cell = tuple(getattr(project.structure.cell, 'length_' + axis) for axis in 'abc')
+    assert tuple(item.value for item in original_cell) == pytest.approx((expected_value,) * 3), (
+        'The fitted cubic cell keeps the declared a=b=c values before serialization'
+    )
+    written_cell = tuple(
+        saved_pair(item.value, item.uncertainty)[0] if item.free else item.value
+        for item in original_cell
+    )
     saved = tmp_path / 'saved-project'
     project.save_as(saved)
     reloaded_cell = LIB.Project.load(saved).structure.cell
     reloaded = reloaded_cell.length_a
-    assert float(reloaded.value) == pytest.approx(expected_value), (
-        'the fitted value reported by FitResult must survive model serialization and reload'
+    written_value, written_su = saved_pair(expected_value, expected_uncertainty)
+    structure = next((saved / 'structures').glob('*.edi')).read_text()
+    assert re.findall(r'(?m)^_cell.length_a\s+(\S+)', structure) == [
+        spelling(expected_value, expected_uncertainty)
+    ], 'The saved fitted token uses the independently derived IUCr value and uncertainty'
+    assert float(reloaded.value) == pytest.approx(written_value, rel=0, abs=0), (
+        'The fitted value reloads at its independently derived written precision'
     )
-    assert float(reloaded.uncertainty) == pytest.approx(expected_uncertainty), (
-        'the serialized su must come from the fit result, not the pre-fit stale uncertainty'
+    assert float(reloaded.uncertainty) == pytest.approx(written_su, rel=0, abs=0), (
+        'The saved uncertainty follows the fitted result and IUCr ceiling, never the stale seed'
     )
     assert tuple(
         float(parameter.value)
@@ -90,6 +104,6 @@ def test_fit_result_uncertainty_replaces_stale_model_and_serialized_state(
             reloaded_cell.length_b,
             reloaded_cell.length_c,
         )
-    ) == pytest.approx((expected_value, expected_value, expected_value)), (
-        'the saved cubic cell must apply its declared a=b=c ties to the refined length'
+    ) == pytest.approx(written_cell, rel=0, abs=0), (
+        'The cubic cell reloads each fitted axis at its declared free or fixed written precision'
     )

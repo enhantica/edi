@@ -7,32 +7,11 @@
 # without the engine; adapter.cpp keeps everything that holds a crysta type.
 find_package(crysta CONFIG REQUIRED)  # the engine, as a standalone C++ package (build-crysta.sh)
 
-add_library(edi_core STATIC
-    src/version.cpp
-    src/adapter.cpp
-    src/canonical_encoding.cpp
-    src/parameter_paths.cpp
-    src/fit_policy.cpp
-    src/io.cpp
-    src/validation.cpp
-    src/report.cpp
-    src/selectors.cpp
-    src/worker.cpp
-    src/live_preview.cpp
-    src/fit_job.cpp
-    src/presentation.cpp
-    src/structure_scene.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
-)
+# The sources and the embedded data tables, shared with the ThreadSanitizer tree (tools/ci/tsan).
+include(${CMAKE_SOURCE_DIR}/cmake/edi_core_sources.cmake)
+edi_core_sources(${CMAKE_SOURCE_DIR} EDI_CORE_SOURCES)
+add_library(edi_core STATIC ${EDI_CORE_SOURCES})
 add_library(edi::core ALIAS edi_core)
-
-# ADR-0022: the element table (data/elements/element-styles.tsv, PROVENANCE.md beside it) is embedded in
-# the core as a string, so no runtime file lookup exists; element_style_table() parses it once. A change
-# to the file reconfigures.
-set(EDI_ELEMENT_STYLES_TSV ${CMAKE_SOURCE_DIR}/data/elements/element-styles.tsv)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_ELEMENT_STYLES_TSV})
-file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
-configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
 
 target_include_directories(edi_core
     PUBLIC

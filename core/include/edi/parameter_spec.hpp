@@ -496,6 +496,12 @@ inline void check_admissible(const ParameterSpec* spec, double value, const char
     }
 }
 
+/// A parameter's short symbol as the app's tables and the report show it: its LaTeX name in plain text
+/// (`$\sigma_1$` is "σ₁", `$B_{\mathrm{iso}}$` is "B iso"), the FCJ asymmetry under FullProf's names "S/L" and "D/L",
+/// the doublet's ratio as "Intensity ratio 2/1", or the display name where the LaTeX name uses anything this does not
+/// spell.
+std::string parameter_symbol(const ParameterSpec* parameter_spec);
+
 // How an ADP parameter shows for its site's declared type. The isotropic value is B iso or U iso, or the
 // read-only equivalent of an anisotropic site: U eq for Uani, B eq for Bani and beta. A tensor component
 // (`component` 11, 22, 33, 12, 13 or 23) is U11 or B11 in Å², or the unitless β11.

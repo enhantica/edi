@@ -21,6 +21,20 @@ Item {
     objectName: "chart"
 
     property ExperimentViewModel experiment: null
+    // The report's input (edi ADR-0036): set, the chart draws the report model's presentation of `reportExperiment`
+    // as it is, with no toolbar and no pointer, so the wheel scrolls what holds it.
+    property ReportViewModel report: null
+    // The theme colours the chart draws with; a PDF's figure takes the light ones.
+    property FigureColors colors: FigureColors {}
+    property string reportExperiment: ""
+    // Set: the x axis is this project's `_pattern_chart.x_axis` (the Analysis page's chart, which the report follows),
+    // an undoable edit saved with the project; else the chart's own choice.
+    property ProjectViewModel axisProject: null
+    // The page whose settings keep the chart's view options (edi ADR-0031 §2): "analysis" (the y scale) or
+    // "experiment" (the y scale and the x axis); none for a report figure, whose options are its own.
+    property string settingsPage: ""
+    // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
+    readonly property var scaleTokens: ["linear", "sqrt", "log"]
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
     // rule). A chart not shown keeps its last drawing and refreshes once, with the latest result, when it
     // is shown again; a chart no page hides is shown.
@@ -54,8 +68,12 @@ Item {
     readonly property real tickRoom: 15
     readonly property real labelLift: tickRoom - Math.round(em * 0.4)
     readonly property real titleGutter: Math.round(em * 1.6)
-    // The toolbar ends at the plot areas' right border, one em above the main one.
-    readonly property real topHeight: topMargin + toolbar.height + belowToolbar
+    // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
+    // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
+    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbar.height + belowToolbar
+    // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
+    // charts show it in the page's selector line.
+    readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
     // The panes' heights, as easydiffractionbeta divides them: of what the toolbar and the x axis leave, the
     // main pane takes 0.7 and the residual 0.3, each less half of what the tick rows take between them. A
     // structure's row is 1.5 em high, in a pane half an em higher.
@@ -158,7 +176,7 @@ Item {
         colorScheme: GraphsTheme.ColorScheme.Light
         backgroundVisible: false
         plotAreaBackgroundVisible: false
-        labelTextColor: EaStyle.Colors.chartLabels
+        labelTextColor: chart.colors.chartLabels
         labelFont.family: EaStyle.Fonts.fontFamily
         labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
         axisX.mainColor: "transparent"
@@ -198,7 +216,7 @@ Item {
             height: axisLabel.height
             horizontalAlignment: axisLabel.horizontalAlignment
             verticalAlignment: axisLabel.verticalAlignment
-            color: EaStyle.Colors.chartLabels
+            color: chart.colors.chartLabels
             text: axisLabel.axis !== null && axisLabel.format !== null ? chart.yLabelText(axisLabel.text, axisLabel.axis, axisLabel.valueScale, axisLabel.format) : axisLabel.text
         }
     }
@@ -257,7 +275,7 @@ Item {
                 visible: x > 0 && x < grid.width - width
                 width: EaStyle.Sizes.borderThickness
                 height: grid.height
-                color: EaStyle.Colors.chartGridLine
+                color: chart.colors.chartGridLine
             }
         }
         Repeater {
@@ -269,14 +287,14 @@ Item {
                 visible: y > 0 && y < grid.height - height
                 width: grid.width
                 height: EaStyle.Sizes.borderThickness
-                color: EaStyle.Colors.chartGridLine
+                color: chart.colors.chartGridLine
             }
         }
         // The border, over the grid: the four sides in the axis colour.
         Rectangle {
             anchors.fill: parent
             color: "transparent"
-            border.color: EaStyle.Colors.chartAxis
+            border.color: chart.colors.chartAxis
             border.width: EaStyle.Sizes.borderThickness
         }
     }
@@ -286,7 +304,7 @@ Item {
         required property GraphsView pane
 
         rotation: -90
-        color: EaStyle.Colors.chartLabels
+        color: chart.colors.chartLabels
         x: chart.sideMargin + (chart.titleGutter - width) / 2
         y: pane.y + pane.plotArea.y + (pane.plotArea.height - height) / 2
     }
@@ -294,10 +312,17 @@ Item {
     PatternChartController {
         id: controller
 
-        // First, so a chart made where it is not shown draws nothing until it is.
-        active: chart.shown && chart.visible
+        // First, so a chart made where it is not shown draws nothing until it is. Qt Graphs cannot lay a view out
+        // outside a window, so a chart leaving one (a report figure being replaced) draws nothing either.
+        active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
-        dark: EaStyle.Colors.isDarkPalette
+        report: chart.report
+        colourScheme: Preferences.colourScheme
+        // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
+        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
+        yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
+        reportExperiment: chart.reportExperiment
+        dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
         plotHeight: mainView.plotArea.height
         residualPlotHeight: residualView.visible ? residualView.plotArea.height : 0
@@ -312,6 +337,8 @@ Item {
         braggSeries0: bragg0
         braggSeries1: bragg1
         braggSeries2: bragg2
+        braggSeries3: bragg3
+        braggSeries4: bragg4
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -348,7 +375,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: EaStyle.Colors.chartBackground
+        color: chart.colors.chartBackground
     }
 
     PaneGrid {
@@ -393,11 +420,12 @@ Item {
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
     // The toolbar line, centred under the block selector row (the owner, 2026-10-11): the y scale, linear, square
-    // root or log, and the x axis, 2θ, time-of-flight or d-spacing (owner, 2026-10-05; the x axis shows the
-    // experiment's own and is disabled until switching exists), then the buttons, a toolbar group's spacing apart.
+    // root or log, and the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner, 2026-10-05), then
+    // the buttons, a toolbar group's spacing apart.
     Row {
         x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
+        visible: !chart.report
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
         Row {
@@ -410,20 +438,37 @@ Item {
                 // The closed box names its axis (owner, 2026-10-05).
                 closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
                 currentIndex: controller.yScale
-                onActivated: index => controller.yScale = index
+                onActivated: index => {
+                    if (chart.settingsPage === "analysis")
+                        Preferences.analysisYScale = chart.scaleTokens[index];
+                    else if (chart.settingsPage === "experiment")
+                        Preferences.experimentYScale = chart.scaleTokens[index];
+                    else
+                        controller.yScale = index;
+                }
             }
             ToolbarComboBox {
                 objectName: "chart.toolbar.xaxis"
-                enabled: false
+                enabled: chart.experiment !== null
                 toolTip: qsTr("X axis")
-                model: [qsTr("2θ"), qsTr("time-of-flight"), qsTr("d-spacing")]
-                closedTexts: [qsTr("x: 2θ"), qsTr("x: TOF"), qsTr("x: d")]
-                currentIndex: ["twoTheta", "timeOfFlight", "dSpacing"].indexOf(chart.xAxis)
+                model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
+                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
+                currentIndex: controller.dSpacing ? 1 : 0
+                onActivated: index => {
+                    if (chart.axisProject)
+                        chart.axisProject.patternDSpacing = index === 1;
+                    else if (chart.settingsPage === "experiment")
+                        Preferences.experimentXAxis = index === 1 ? "d_spacing" : "native";
+                    else
+                        controller.dSpacing = index === 1;
+                }
             }
         }
         ChartToolbar {
             id: toolbar
 
+            // The y titles carry the series' colours, so the legend box waits behind its button.
+            legendShown: false
             onResetClicked: controller.reset()
         }
     }
@@ -547,6 +592,18 @@ Item {
             color: controller.braggColor2
             width: 1  // edi::pattern_style_table's `bragg.2` (ADR-0017 §15)
         }
+        LineSeries {
+            id: bragg3
+            objectName: "chart.series.bragg.3"
+            color: controller.braggColor3
+            width: 1  // edi::pattern_style_table's `bragg.3` (ADR-0017 §15)
+        }
+        LineSeries {
+            id: bragg4
+            objectName: "chart.series.bragg.4"
+            color: controller.braggColor4
+            width: 1  // edi::pattern_style_table's `bragg.4` (ADR-0017 §15)
+        }
     }
 
     GraphsView {
@@ -604,6 +661,29 @@ Item {
         text: controller.yTitle
         visible: controller.hasData
     }
+    // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour.
+    Repeater {
+        model: controller.braggLabels
+        delegate: IconLine {
+            required property var modelData
+
+            objectName: "chart.bragg.label"
+            visible: braggView.visible
+            height: AppSizes.legendRowHeight
+            textColor: modelData.color
+            segments: [
+                {
+                    "icon": "layer-group",
+                    "color": modelData.color
+                },
+                {
+                    "text": modelData.text
+                }
+            ]
+            x: Math.max(0, braggView.x + braggView.plotArea.x - width - Math.round(chart.em * 0.4))
+            y: braggView.y + braggView.plotArea.y + (1 - modelData.centre / Math.max(1, controller.braggRows)) * braggView.plotArea.height - height / 2
+        }
+    }
     PaneTitle {
         objectName: "chart.title.residual"
         pane: residualView
@@ -614,20 +694,31 @@ Item {
         objectName: "chart.title.x"
         x: mainView.x + mainView.plotArea.x + (mainView.plotArea.width - width) / 2
         y: chart.height - chart.bottomMargin - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
-        color: EaStyle.Colors.chartLabels
+        color: chart.colors.chartLabels
         text: controller.xTitle
         visible: controller.hasData
     }
 
     // The legend, inside the main plot's top right corner.
-    // The x axis the pattern is drawn on: "twoTheta", "timeOfFlight" or "dSpacing". Only the experiment's own
-    // axis is drawn for now (no switching yet).
-    readonly property string xAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
+    // The experiment's own x axis, "twoTheta" or "timeOfFlight", and the one the pattern is drawn on, that or
+    // "dSpacing" (the toolbar's x box).
+    readonly property string nativeAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
+    readonly property string xAxis: controller.dSpacing ? "dSpacing" : nativeAxis
+
+    EaElements.Label {
+        objectName: "chart.reliability"
+        visible: chart.reliability !== ""
+        x: mainView.x + mainView.plotArea.x
+        y: Math.max(0, mainView.y + mainView.plotArea.y - height - Math.round(chart.em * 0.25))
+        color: chart.colors.chartLabels
+        text: chart.reliability
+    }
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
     // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
         objectName: "chart.legend"
+        colors: chart.colors
         x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
@@ -644,6 +735,7 @@ Item {
         property real lastX: 0
 
         objectName: "chart.pointer"
+        enabled: !chart.report
         x: mainView.x + mainView.plotArea.x
         y: mainView.y + mainView.plotArea.y
         width: mainView.plotArea.width
@@ -685,14 +777,14 @@ Item {
             width: Math.abs(pointer.mouseX - pointer.pressX)
             height: Math.abs(pointer.mouseY - pointer.pressY)
             color: "transparent"
-            border.color: EaStyle.Colors.appBorder
+            border.color: chart.colors.appBorder
             border.width: EaStyle.Sizes.borderThickness
             opacity: 0.9
 
             Rectangle {
                 anchors.fill: parent
                 opacity: 0.5
-                color: EaStyle.Colors.appBorder
+                color: chart.colors.appBorder
             }
         }
     }
@@ -706,7 +798,7 @@ Item {
         y: braggView.y + braggView.plotArea.y
         width: braggView.plotArea.width
         height: braggView.plotArea.height
-        visible: braggView.visible && toolbar.hoverShown
+        visible: braggView.visible && toolbar.hoverShown && !chart.report
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(1, braggPointer, mouse)
@@ -722,7 +814,7 @@ Item {
         y: residualView.y + residualView.plotArea.y
         width: residualView.plotArea.width
         height: residualView.plotArea.height
-        visible: residualView.visible && toolbar.hoverShown
+        visible: residualView.visible && toolbar.hoverShown && !chart.report
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
         onPositionChanged: mouse => hoverLabel.read(2, residualPointer, mouse)
@@ -750,8 +842,8 @@ Item {
         visible: hoverText.text !== ""
         width: hoverText.implicitWidth + chart.em
         height: hoverText.implicitHeight + chart.em * 0.5
-        color: EaStyle.Colors.mainContentBackgroundHalfTransparent
-        border.color: EaStyle.Colors.chartGridLine
+        color: chart.colors.mainContentBackgroundHalfTransparent
+        border.color: chart.colors.chartGridLine
         border.width: EaStyle.Sizes.borderThickness
 
         EaElements.Label {
@@ -759,7 +851,7 @@ Item {
             objectName: "chart.hover.text"
             anchors.centerIn: parent
             textFormat: Text.RichText
-            color: EaStyle.Colors.themeForeground
+            color: chart.colors.themeForeground
         }
     }
 }
