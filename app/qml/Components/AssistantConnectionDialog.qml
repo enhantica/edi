@@ -9,8 +9,26 @@ import edi.app
 AppDialog {
     id: dialog
     required property AssistantViewModel assistant
-    signal contextApproved()
+    signal contextApproved(var offer)
     property bool connectionAttempt: false
+    property var approvalOwner: ({})
+    function beginOffer() {
+        const offer = ({});
+        approvalOwner = offer;
+        return offer;
+    }
+    function presentOffer(offer) {
+        const component = dialog, original = dialog.assistant;
+        const token = offer === undefined ? component.beginOffer() : offer;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
+            || token === null || component.approvalOwner !== token) return;
+        component.open();
+    }
+    onAssistantChanged: approvalOwner = ({})
+    Connections {
+        target: dialog
+        function onRejected() { dialog.approvalOwner = ({}); }
+    }
     function showConnectionFailureIfFinished() {
         if (!connectionAttempt || assistant.state === "connecting") return;
         connectionAttempt = false;
@@ -19,9 +37,10 @@ AppDialog {
             connectionFailure.open();
         }
     }
+    readonly property string disclosedContextText: assistant.contextPreview
     readonly property var disclosedContext: {
         try {
-            return JSON.parse(assistant.contextPreview);
+            return JSON.parse(disclosedContextText);
         } catch (error) {
             return { error: true };
         }
@@ -45,8 +64,10 @@ AppDialog {
     standardButtons: Dialog.Ok | Dialog.Cancel
     function updateAcceptButton() {
         const acceptButton = standardButton(Dialog.Ok);
-        if (acceptButton)
+        if (acceptButton) {
             acceptButton.text = assistant.connected ? qsTr("Approve context") : qsTr("Sign in with ChatGPT");
+            acceptButton.enabled = !assistant.contextApprovalBlocked;
+        }
     }
     onOpened: updateAcceptButton()
     Connections {
@@ -56,8 +77,10 @@ AppDialog {
                 dialog.updateAcceptButton();
         }
         function onStateChanged() { dialog.showConnectionFailureIfFinished(); }
+        function onContextPreviewChanged() { if (dialog.visible) dialog.updateAcceptButton(); }
         function onLastErrorChanged() { dialog.showConnectionFailureIfFinished(); }
         function onConversationRetired() {
+            dialog.approvalOwner = ({});
             dialog.connectionAttempt = false;
             connectionFailure.close();
         }
@@ -68,12 +91,22 @@ AppDialog {
         const model = original.selectedModel, effort = original.selectedEffort;
         const wasConnected = original.connected;
         const email = original.account.email, plan = original.account.planType;
-        const offered = disclosedContext;
-        const current = () => Qt.isQtObject(dialog) && Qt.isQtObject(original)
-            && dialog.assistant === original && Session.project === project
+        const approval = dialog.approvalOwner;
+        const ownerCurrent = () => Qt.isQtObject(dialog) && Qt.isQtObject(original)
+            && dialog.assistant === original && dialog.approvalOwner === approval && Session.project === project
             && original.selectedModel === model && original.selectedEffort === effort
             && (!wasConnected || (original.account.email === email && original.account.planType === plan))
-            && dialog.disclosedContext === offered;
+            && !original.contextApprovalBlocked;
+        if (!ownerCurrent()) return;
+        const offered = dialog.disclosedContextText;
+        if (!ownerCurrent()) return;
+        const current = () => {
+            if (!ownerCurrent()) return false;
+            const context = original.contextPreview;
+            // Consent-state notification may rebuild the parsed presentation
+            // object without changing the exact offered outgoing context.
+            return ownerCurrent() && dialog.disclosedContextText === offered && context === offered;
+        };
         if (!current()) return;
         connectionFailure.close();
         if (!current()) return;
@@ -83,7 +116,7 @@ AppDialog {
         showConnectionFailureIfFinished();
         if (!current() || !original.connected) return;
         const required = original.contextConsentRequired;
-        if (current() && !required) contextApproved();
+        if (current() && !required) contextApproved(approval);
     }
     AppDialog {
         id: connectionFailure

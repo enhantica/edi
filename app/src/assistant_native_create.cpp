@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_create.hpp"
+#include "assistant_recipe_refusal.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
 #include "edi/assistant_files.hpp"
 #include "edi/assistant_limits.hpp"
@@ -17,27 +18,30 @@ using Limits = edi::assistant::Limits;
 Object shape(Object properties, Array required) {
     return {{"type", "object"}, {"properties", properties}, {"required", required}, {"additionalProperties", false}};
 }
-void exact(const Object& value, const QSet<QString>& keys) {
-    if (value.size() != keys.size()) throw edi::IoError("Native creation recipe fields are missing or unsupported");
-    for (auto i = value.constBegin(); i != value.constEnd(); ++i) if (!keys.contains(i.key())) throw edi::IoError("Unsupported native recipe field");
+void exact(const Object& value, const QSet<QString>& keys, RecipeField field = RecipeField::Recipe) {
+    if (value.size() != keys.size()) throw RecipeRefusal(field, RecipeReason::Fields);
+    for (auto i = value.constBegin(); i != value.constEnd(); ++i) if (!keys.contains(i.key())) throw RecipeRefusal(field, RecipeReason::Fields);
 }
 std::string text(const Object& value, const char* key, quint64 limit, bool empty = false) {
     const auto field = value.value(key);
-    if (!field.isString() || (!empty && field.toString().trimmed().isEmpty())) throw edi::IoError("Supply explicit nonempty native recipe text");
-    if (static_cast<quint64>(field.toString().size()) > limit) throw edi::IoError("Native recipe text exceeds capacity");
+    if (!field.isString() || (!empty && field.toString().trimmed().isEmpty())) throw RecipeRefusal(recipe_field(key), RecipeReason::TextRequired);
+    if (static_cast<quint64>(field.toString().size()) > limit) throw RecipeRefusal(recipe_field(key), RecipeReason::TextCapacity);
     const auto bytes = field.toString().toUtf8();
-    if (static_cast<quint64>(bytes.size()) > limit || bytes.contains('\0')) throw edi::IoError("Native recipe text exceeds capacity or contains NUL");
+    if (static_cast<quint64>(bytes.size()) > limit) throw RecipeRefusal(recipe_field(key), RecipeReason::TextCapacity);
+    if (bytes.contains('\0')) throw RecipeRefusal(recipe_field(key), RecipeReason::InvalidText);
     return bytes.toStdString();
 }
 double number(const Object& value, const char* key) {
     const auto field = value.value(key);
-    if (!field.isDouble() || !std::isfinite(field.toDouble())) throw edi::IoError("Native recipe requires finite numeric values");
+    if (!field.isDouble() || !std::isfinite(field.toDouble())) throw RecipeRefusal(recipe_field(key), RecipeReason::FiniteNumber);
     return field.toDouble();
 }
 Array array(const Object& value, const char* key, int minimum) {
     const auto field = value.value(key);
-    if (!field.isArray() || field.toArray().size() < minimum || field.toArray().size() > static_cast<qsizetype>(Limits::stream_items))
-        throw edi::IoError("Native recipe array is missing or exceeds capacity");
+    if (!field.isArray()) throw RecipeRefusal(recipe_field(key), RecipeReason::ArrayRequired);
+    if (field.toArray().size() < minimum) throw RecipeRefusal(recipe_field(key), RecipeReason::MinimumItems, minimum);
+    if (field.toArray().size() > static_cast<qsizetype>(Limits::stream_items))
+        throw RecipeRefusal(recipe_field(key), RecipeReason::MaximumItems, static_cast<int>(Limits::stream_items));
     return field.toArray();
 }
 }
@@ -81,22 +85,22 @@ NativeCwlRecipe parse_native_cwl_recipe(const Object& recipe) {
     result.peak_profile = text(recipe, "peak_profile", Limits::id_bytes);
     const auto profiles = edi::supported_peak_profiles(edi::BeamModeEnum::CONSTANT_WAVELENGTH);
     if (std::find(profiles.begin(), profiles.end(), result.peak_profile) == profiles.end())
-        throw edi::IoError("Unsupported native CW peak_profile: use one exact token offered by the creation recipe enum");
+        throw RecipeRefusal(RecipeField::PeakProfile, RecipeReason::SupportedProfile);
 
     result.wavelength = number(recipe, "wavelength"); result.zero_offset = number(recipe, "zero_offset"); result.phase_scale = number(recipe, "phase_scale");
     for (const auto& entry : array(recipe, "background", 2)) {
-        if (!entry.isObject()) throw edi::IoError("Invalid background anchor");
-        const auto row = entry.toObject(); exact(row, {"position", "intensity"});
+        if (!entry.isObject()) throw RecipeRefusal(RecipeField::Background, RecipeReason::ObjectRequired);
+        const auto row = entry.toObject(); exact(row, {"position", "intensity"}, RecipeField::Background);
         result.background.emplace_back(number(row, "position"), number(row, "intensity"));
     }
     for (const auto& entry : array(recipe, "exclusions", 0)) {
-        if (!entry.isObject()) throw edi::IoError("Invalid exclusion");
-        const auto row = entry.toObject(); exact(row, {"first", "second"});
+        if (!entry.isObject()) throw RecipeRefusal(RecipeField::Exclusions, RecipeReason::ObjectRequired);
+        const auto row = entry.toObject(); exact(row, {"first", "second"}, RecipeField::Exclusions);
         result.exclusions.emplace_back(number(row, "first"), number(row, "second"));
     }
     for (const auto& entry : array(recipe, "initial_parameters", 0)) {
-        if (!entry.isObject()) throw edi::IoError("Invalid initial parameter");
-        const auto row = entry.toObject(); exact(row, {"path", "value"});
+        if (!entry.isObject()) throw RecipeRefusal(RecipeField::InitialParameters, RecipeReason::ObjectRequired);
+        const auto row = entry.toObject(); exact(row, {"path", "value"}, RecipeField::InitialParameters);
         result.initial_parameters.emplace_back(text(row, "path", Limits::id_bytes), number(row, "value"));
     }
     return result;

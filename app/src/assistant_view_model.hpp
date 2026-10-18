@@ -53,6 +53,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
+    Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextPreviewChanged)
 
    public:
     explicit AssistantViewModel(QObject* parent = nullptr);
@@ -95,6 +96,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void refreshUsage();
     QString contextPreview() const;
     bool contextConsentRequired() const;
+    bool contextApprovalBlocked() const;
     void setSelectedModel(const QString& model);
     void setSelectedEffort(const QString& effort);
     /// Attach the live project through its existing worker and edit door; nullptr keeps a conversational session.

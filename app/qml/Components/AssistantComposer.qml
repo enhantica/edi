@@ -496,7 +496,9 @@ Rectangle {
         const stillOwned = component.ownsConsentDraft(requested);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
         if (required) {
-            if (approvedDraft) return;
+            // Approval cannot resolve a retained native/history outcome. Keep
+            // the original draft and existing Clear/inspection diagnostic.
+            if (approvedDraft || original.contextApprovalBlocked) return;
             component.contextApprovalRequested(requested.text);
             return;
         }

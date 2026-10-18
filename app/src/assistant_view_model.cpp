@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+#include "assistant_recipe_refusal.hpp"
 
 #include <QFile>
 #include <QCoreApplication>
@@ -7399,7 +7400,21 @@ struct AssistantViewModel::State {
                     native_finish(false, {{"status", uncertain ? "unconfirmed" : "refused"}, {"message", (uncertain ? QStringLiteral("Native publication failed; inspect the actual displayed project before continuing.") : QStringLiteral("The native action was refused by Edi validation.")) + save_diagnostic}});
                     if (uncertain && original_scope()) native_fence();
                 }
-                else native_reply(id, false, {{"status", "refused"}, {"message", QStringLiteral("Native arguments are invalid or exceed scope/capacity.") + save_diagnostic}});
+                else {
+                    Object outcome{{"status", "refused"}, {"message", QStringLiteral("Native arguments are invalid or exceed scope/capacity.") + save_diagnostic}};
+                    // Recipe parsing is before native admission in both modes.
+                    // Only closed app-owned identifiers may explain that refusal.
+                    if (const auto* recipe = dynamic_cast<const RecipeRefusal*>(&failure);
+                        recipe && params.value("tool") == "create_cwl_project") {
+                        const auto field=static_cast<std::size_t>(recipe->field()), reason=static_cast<std::size_t>(recipe->reason());
+                        if(field>=recipe_fields.size() || reason>=recipe_reasons.size())throw std::logic_error("Native recipe refusal mapping is unavailable");
+                        outcome["refusal_field"]=QLatin1StringView(recipe_fields[field]);
+                        outcome["refusal_reason"]=QLatin1StringView(recipe_reasons[reason]);
+                        if(recipe->reason()==RecipeReason::MinimumItems)outcome["minimum_items"]=recipe->bound();
+                        if(recipe->reason()==RecipeReason::MaximumItems)outcome["maximum_items"]=recipe->bound();
+                    }
+                    native_reply(id, false, outcome);
+                }
             }
             return;
         }
@@ -8299,6 +8314,7 @@ struct AssistantViewModel::State {
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
             if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextPreviewChanged)) return;
+            if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextPreviewChanged)) return;
         } catch (...) {
             if (current()) throw; // Never unwind into an old caller after deletion/rebind.
         }
@@ -9507,6 +9523,13 @@ QString AssistantViewModel::contextPreview() const {
 #endif
     return state_->controller ? QString::fromStdString(state_->controller->context()) : QString();
 }
+bool AssistantViewModel::contextApprovalBlocked() const {
+#ifndef __EMSCRIPTEN__
+    return state_->generic_mode && (state_->native_blocked || state_->generic_context_retention_pending);
+#else
+    return false;
+#endif
+}
 bool AssistantViewModel::contextConsentRequired() const {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
@@ -9655,8 +9678,9 @@ QString AssistantViewModel::submitDraft(const QString& text) {
         if (!state_->claim_file_projection(projection)) return {};
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
-            if (state_->generic_context_retention_pending) {
-                state_->error = state_->generic_context_retention_error; state_->notify(); return {};
+            if (state_->generic_context_retention_pending || state_->native_blocked) {
+                state_->error = state_->generic_context_retention_pending ? state_->generic_context_retention_error : state_->native_capacity_error;
+                state_->notify(); return {};
             }
             state_->generic_writing_input = false;
             if (static_cast<quint64>(text.size()) > State::Limits::message_bytes || static_cast<quint64>(text.toUtf8().size()) > State::Limits::message_bytes)

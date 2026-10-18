@@ -1446,3 +1446,50 @@ is not promoted to success. Command retained/public disagreement continues to
 use its original truthful explanation. The native activity Button owns the same
 styled hover tooltip as the original ToolButton, honoring the application-wide
 show-tooltips preference; attaching explanation text alone is not hover delivery.
+
+
+### Approval recovery keeps its original offer
+
+The original connection dialog compares exact captured outgoing-context text,
+with its original component/account/project/model/effort and opening/retirement
+owner, before and after callback-capable getters and approval. Parsed JSON is a
+presentation object, not the offer identity: the shared context notification also
+announces consent-required changes, so successful approval may rebuild that
+object without changing the offered bytes. Only the still-owned original offer
+can emit approval; the existing composer receipt consumes the original draft
+before its single submission when backend readiness arrives. Clear, replacement,
+changed draft/files/model/account, IME and Cancel retain their original fences.
+
+A retained native/history outcome remains consent-required and separately blocks
+approval. The original composer keeps its draft and existing inspection/Clear
+diagnostic instead of reopening an approval which cannot settle that outcome.
+An already-open original approval becomes unavailable while that fence holds;
+the public send entrance preserves the same retention cause. Explicit Clear is
+still the only discard door; this does not retry native work or claim that an
+uncertain import was rolled back or completed.
+
+The original Panel binds every offer to the dialog generation before its first
+callback-capable draft capture, including a same-visible presentation and an
+entering/reopened popup. The explicit presentation entrance owns that token;
+the later opened transition does not mint a replacement. Acceptance publishes
+its captured token, and Panel checks that exact original intent/token before
+marking it approved. A current newer identical draft can never inherit an old
+acceptance. The genuine accepted close does not retire its pending once receipt.
+
+
+### Native recipe refusals stay typed and actionable
+
+The existing explicit creation recipe and native reader remain authoritative in
+both modes. In particular its line-segment background requires at least two
+actual supplied anchors; no background or scientific default is invented.
+Structural/text/number/array/profile recipe validation before native admission
+uses a small app-owned typed refusal. The original reply carries only closed
+field/reason identifiers and, for array bounds, the existing minimum or maximum.
+The same outgoing projection validates those identifiers before construction.
+It still excludes arbitrary messages, exception what(), paths and raw data.
+The original generic refused code is retained; a malformed recipe is not an
+admitted scientific edit and can be corrected with a fresh lawful request.
+
+This does not attribute or weaken a separate retained-native-outcome fence.
+After scientific work or uncertain publication, the original once-owned result,
+inspection/Stop/Clear and no-automatic-replay rules remain authoritative.

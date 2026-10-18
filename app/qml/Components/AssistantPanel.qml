@@ -69,18 +69,21 @@ Popup {
     property var consentSend: null
     function retireConsentSend() { consentSend = null; }
     function ownsConsentSend(intent) {
-        const component = panel, original = panel.assistant, draftComponent = composer;
-        if (intent === null || consentSend !== intent || intent.owner !== original) return false;
+        const component = panel, original = panel.assistant, draftComponent = composer, dialog = connectionDialog;
+        if (!Qt.isQtObject(dialog) || intent === null || consentSend !== intent || intent.owner !== original
+            || intent.offer !== dialog.approvalOwner) return false;
         const draftOwned = draftComponent.ownsConsentDraft(intent.draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !draftOwned) return false;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !draftOwned
+            || !Qt.isQtObject(dialog) || intent.offer !== dialog.approvalOwner) return false;
         const context = original.contextPreview;
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-            || component.consentSend !== intent || intent.owner !== original) return false;
+            || !Qt.isQtObject(dialog) || component.consentSend !== intent || intent.owner !== original
+            || intent.offer !== dialog.approvalOwner) return false;
         if (intent.project !== Session.project || !original.connected || context !== intent.context
             || original.selectedModel !== intent.model || original.selectedEffort !== intent.effort) return false;
         const stillDraftOwned = draftComponent.ownsConsentDraft(intent.draft);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return false;
-        return stillDraftOwned && component.consentSend === intent;
+        return stillDraftOwned && component.consentSend === intent && Qt.isQtObject(dialog) && intent.offer === dialog.approvalOwner;
     }
     function resumeConsentSend() {
         const component = panel, original = panel.assistant, draftComponent = composer;
@@ -325,8 +328,14 @@ Popup {
                         onClicked: {
                             if (panel.assistant.connected) accountDialog.open();
                             else {
-                                panel.retireConsentSend();
-                                connectionDialog.open();
+                                const component = panel, original = panel.assistant, dialog = connectionDialog;
+                                const offer = dialog.beginOffer();
+                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
+                                    || component.assistant !== original || dialog.assistant !== original || dialog.approvalOwner !== offer) return;
+                                component.retireConsentSend();
+                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
+                                    || component.assistant !== original || dialog.assistant !== original || dialog.approvalOwner !== offer || original.connected) return;
+                                dialog.presentOffer(offer);
                             }
                         }
                     }
@@ -536,21 +545,30 @@ Popup {
                     onContextApprovalRequested: draft => {
                         const component = panel, original = panel.assistant, draftComponent = composer, dialog = connectionDialog;
                         const previous = component.consentSend;
+                        // Retire A before draft capture/getters can reenter, even
+                        // when this same dialog is already visible or entering.
+                        const offer = dialog.beginOffer();
+                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
+                            || component.assistant !== original || dialog.assistant !== original
+                            || dialog.approvalOwner !== offer || component.consentSend !== previous) return;
                         const captured = draftComponent.captureConsentDraft();
                         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+                            || !Qt.isQtObject(dialog) || dialog.assistant !== original || dialog.approvalOwner !== offer
                             || !captured || captured.text !== draft || captured.owner !== original) return;
                         const owned = draftComponent.ownsConsentDraft(captured);
                         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+                            || !Qt.isQtObject(dialog) || dialog.assistant !== original || dialog.approvalOwner !== offer
                             || !owned || component.consentSend !== previous) return;
                         const intent = { owner: original, project: captured.project, draft: captured,
                             context: captured.context, model: captured.model,
-                            effort: captured.effort, approved: false };
+                            effort: captured.effort, offer: offer, approved: false };
                         component.consentSend = intent;
-                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
+                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
+                            || !Qt.isQtObject(dialog) || dialog.approvalOwner !== offer || component.consentSend !== intent) return;
                         const stillOwned = component.ownsConsentSend(intent);
                         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-                            || !Qt.isQtObject(dialog) || !stillOwned) return;
-                        dialog.open();
+                            || !Qt.isQtObject(dialog) || dialog.approvalOwner !== offer || !stillOwned) return;
+                        dialog.presentOffer(offer);
                     }
                 }
             }
@@ -772,12 +790,14 @@ Popup {
             id: connectionDialog
             assistant: panel.assistant
             onRejected: panel.retireConsentSend()
-            onContextApproved: {
-                const component = panel, original = panel.assistant;
+            onContextApproved: offer => {
+                const component = panel, original = panel.assistant, dialog = connectionDialog;
                 const intent = component.consentSend;
+                if (!intent || !Qt.isQtObject(dialog) || intent.offer !== offer || dialog.approvalOwner !== offer) return;
                 const owned = component.ownsConsentSend(intent);
                 if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
                 if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); return; }
+                if (!Qt.isQtObject(dialog) || component.consentSend !== intent || intent.offer !== offer || dialog.approvalOwner !== offer) return;
                 intent.approved = true;
                 component.scheduleConsentSend();
             }
