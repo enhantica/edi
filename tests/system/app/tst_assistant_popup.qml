@@ -17,6 +17,7 @@ TestCase {
     name: "AssistantPopup"
     when: windowShown
     FontMetrics { id: gui398FontMetrics }
+    TextMetrics { id: gui470ActionInk }
     property var window
     property var popup
     property var assistant
@@ -4240,60 +4241,253 @@ TestCase {
             const retained = Probe.rows(assistant.messages).filter(row => row.id === original.id);
             compare(JSON.stringify(retained[0].payload), JSON.stringify(completed[0].payload),
                 "UX295: later selection cannot rewrite historical acknowledged descriptor payload");
-            const remove = Ui.itemsWithProperty(window.contentItem, "objectName").filter(control =>
-                control.objectName === "assistant.sentFile.remove." + selectedId && control.visible);
-            compare(remove.length, 1, "UX295: original sent source owns one real idle revoke control");
-            verify(remove[0].enabled, "UX295: actual idle sent-source revoke is enabled before genuine click");
-            Ui.scrollIntoView(remove[0]); rendered();
-            verify(Ui.exposed(remove[0]), "UX295: actual original sent revoke is physically exposed");
-            Ui.click(this, Probe, window, remove[0].objectName);
+            const authority471 = canonicalSelected();
+            const snapshotRows471 = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === original.id);
+            compare(snapshotRows471.length,1,"UX471: original historical row is re-resolved after actual later-file layout publication");
+            gui471_sentSnapshot(snapshotRows471[0], selectedId);
+            compare(canonicalSelected(), authority471,
+                "UX471: sent snapshot inspection preserves every original and later selected descriptor");
+            const pending = ux356_chip(popup.contentItem, later[0], false);
+            verify(pending.remove.enabled, "UX471: genuine later PENDING chip retains its original remove action");
+            mouseClick(pending.remove, Ui.clickPoint(pending.remove).x, Ui.clickPoint(pending.remove).y);
             tryCompare(assistant.selectedFiles, "count", 1, 2000,
-                "UX295: actual original sent revoke removes only original current source authority");
+                "UX471: real pending removal revokes only the later pending source authority");
             const remaining = Probe.rows(assistant.selectedFiles);
-            compare(remaining[0].id, later[0].id, "UX295: sent revoke cannot remove later selected authority");
-            compare(remaining[0].pending, true, "UX295: unrelated later pending chip remains pending");
+            compare(remaining[0].id, selectedId, "UX471: pending removal preserves original acknowledged authority");
+            compare(remaining[0].pending, false, "UX471: historical ACK never reverts original consumed presentation");
             const historical = Probe.rows(assistant.messages).filter(row => row.id === original.id);
-            compare(historical.length, 1, "UX295: authority revoke retains exact original user history identity");
+            compare(historical.length, 1, "UX471: pending removal retains exact original user history identity");
             compare(JSON.stringify(historical[0].payload), JSON.stringify(completed[0].payload),
-                "UX295: current read-grant revoke cannot erase historical sent descriptor snapshot");
+                "UX471: pending removal cannot erase historical sent descriptor snapshot");
             verify(findChild(window, "assistant.sentFile." + selectedId) !== null,
-                "UX295: removed current authority remains truthfully represented as historical sent input");
-            compare(Probe.readFile(extraSource), extraBytes, "UX295: later source bytes remain immutable after revoke");
-            compare(Probe.readFile(source), beforeBytes, "UX295: sent revoke never deletes original source bytes");
-            compare(Session.project, project, "UX295: source presentation/revoke preserves scientific owner");
+                "UX471: independently retained current authority remains represented as historical sent input");
+            compare(Probe.readFile(extraSource), extraBytes, "UX471: later source bytes remain immutable after pending removal");
+            compare(Probe.readFile(source), beforeBytes, "UX471: pending removal never deletes original source bytes");
+            compare(Session.project, project, "UX471: snapshot and pending removal preserve scientific owner");
             compare(JSON.stringify(Probe.rows(assistant.models)), account,
-                "UX295: sent revoke preserves original genuine account and model catalog");
+                "UX471: snapshot and pending removal preserve original genuine account and model catalog");
         }
         visible185_capture("ux289-" + data.tag);
     }
 
 
+    // Owner471: sent attachments are historical presentation, never revoke controls.
+    function gui472_actionCapable(object) {
+        if (typeof object.readOnly === "boolean" && !object.readOnly
+            && typeof object.text === "string") return true; // Editable native input is not a historical snapshot.
+        const signal = typeof object.clicked === "function" || typeof object.pressed === "function"
+            || typeof object.tapped === "function" || typeof object.doubleTapped === "function";
+        if (!signal) return false;
+        // AbstractButton remains keyboard-capable even with no accepted pointer buttons.
+        if (typeof object.checkable === "boolean" || typeof object.tapped === "function"
+            || typeof object.doubleTapped === "function") return true;
+        const mouseArea = typeof object.acceptedButtons === "number" && typeof object.containsMouse === "boolean"
+            && typeof object.mouseX === "number" && typeof object.mouseY === "number"
+            && typeof object.pressAndHold === "function";
+        if (mouseArea && object.acceptedButtons === Qt.NoButton && object.activeFocusOnTab !== true) return false;
+        return true; // Unknown action carrier cannot become a passive-decoration exemption.
+    }
+    function gui471_sentSnapshot(root, id) {
+        const chips = Ui.itemsWithProperty(root, "objectName").filter(object => object.objectName === "assistant.sentFile."+id);
+        compare(chips.length, 1, "GUI471: SAME original user row owns ONE immutable sent snapshot");
+        const chip = chips[0], life = lifetime313(chip), owner = Session.project;
+        const controls = Probe.objectsWithProperty(chip,"enabled").filter(gui472_actionCapable);
+        compare(controls.length,0,"GUI471: sent snapshot has NO interactive descendants, including hidden revoke controls");
+        verify(!gui472_actionCapable(chip),"GUI472: sent snapshot itself has no input-capable native action");
+        verify(alive313(life) && Session.project === owner,"GUI471: snapshot inspection retains exact live owner/receiver");
+    }
+    function gui471_flow(working) {
+        const list = item("assistant.messages"), editor = item("assistant.composer");
+        compare(list.model,assistant.messages,"GUI471: original conversation retains actual canonical message model");
+        verify(list.footerItem !== null && gui393_under(working,list.footerItem),
+            "GUI471: real Working belongs INSIDE original scrollable conversation footer");
+        const composers = Ui.itemsWithProperty(popup.contentItem,"captureConsentDraft").filter(control =>
+            control.assistant === assistant && gui393_under(editor,control));
+        compare(composers.length,1,"GUI472: original editor belongs to ONE actual current AssistantComposer");
+        const composer = composers[0];
+        verify(!gui393_under(working,composer),"GUI472: real Working never occupies actual input/composer subtree");
+        for (const name of ["assistant.plan.approve","assistant.question.answer"]) {
+            const controls = Ui.itemsWithProperty(popup.contentItem,"objectName").filter(object => object.objectName === name);
+            compare(controls.length,1,"GUI471: original pending-decision control remains unique even while hidden: "+name);
+            verify(gui393_under(controls[0],list.footerItem),
+                "GUI471: SAME original pending decision belongs to conversation flow, not reserved composer region");
+        }
+        const notices = Ui.itemsWithProperty(popup.contentItem,"objectName").filter(object => object.objectName === "assistant.currentNotice");
+        compare(notices.length,1,"GUI471: original app-owned current notice has ONE public native presentation");
+        verify(gui393_under(notices[0],list.footerItem),"GUI471: app notice is in conversation, never pinned over input");
+        const trials = Ui.itemsWithProperty(popup.contentItem,"text").filter(object =>
+            object.assistant === assistant && object.text === "Refinement trial running · "+assistant.activeJobId);
+        compare(trials.length,1,"GUI471: original Trial presentation remains uniquely owned even while inactive");
+        verify(gui393_under(trials[0],list.footerItem),"GUI471: original Trial is in conversation flow");
+        return list;
+    }
+    function gui471_activity(previous, callId) {
+        const records = Probe.rows(assistant.messages).filter(row => !previous.has(row.id)
+            && row.kind === "activity" && row.payload && row.payload.id === callId && row.payload.nativeOutcome);
+        compare(records.length,1,"GUI471: actual successful original native call owns ONE canonical activity record");
+        const canonical = records[0], payload = JSON.stringify(gui392_json(canonical.payload),null,2);
+        compare(canonical.status,"completed","GUI471: actual successful inspect has truthful completed presentation");
+        const list = item("assistant.messages"), index = Probe.rows(assistant.messages).findIndex(row => row.id === canonical.id);
+        verify(index >= 0,"GUI471: canonical original activity has actual native ListView model index");
+        list.positionViewAtIndex(index,ListView.Contain);rendered();
+        const rows = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === canonical.id);
+        compare(rows.length,1,"GUI471: actual rendered original activity delegate is unique");
+        const row = rows[0], life = lifetime313(row), owner = Session.project;
+        compare(row.assistant,assistant,"GUI471: activity retains original controller");
+        const toggles = Ui.itemsWithProperty(row,"objectName").filter(object =>
+            object.objectName === "assistant.activity.toggle" || object.objectName === "assistant.command.toggle");
+        compare(toggles.length,1,"GUI471: original activity has ONE main native disclosure");
+        const toggle = toggles[0], copies = Ui.itemsWithProperty(row,"objectName").filter(object => object.objectName === "assistant.activity.copyTechnical");
+        compare(copies.length,1,"GUI471: original activity has ONE canonical full-payload copy action");
+        const copy = copies[0];
+        Ui.scrollIntoView(toggle); rendered(); ux356_fullyExposed(toggle);
+        const restPoint472 = Ui.clickPoint(toggle);
+        verify(restPoint472 !== null,"GUI472: SAME original disclosure has real native header-hover destination outside copy");
+        mouseMove(toggle,restPoint472.x,restPoint472.y);rendered();ux356_fullyExposed(copy);
+        compare(toggle.checked,false,"GUI471: original activity starts folded");
+        const tr = rect(toggle), cr = rect(copy);
+        verify(cr[0] >= tr[0] && Math.abs(cr[1]+cr[3]/2-tr[1]-tr[3]/2) <= 0.5,
+            "GUI471: full-payload Copy is on SAME activity HEADER before opening details");
+        const glyphs = gui392_labels(toggle).filter(label => label.font.family === EaStyle.Fonts.iconsFamily);
+        // Existing successful native-inspect outcome and original native icon vocabulary.
+        compare(glyphs.length,2,"GUI471: main header has ONLY status/type icons, no extra disclosure arrow");
+        const statuses = glyphs.filter(label => label.text === FitOutcomes.icon("success"));
+        const categories = glyphs.filter(label => label.text === "info-circle" || label.text === "cog");
+        compare(statuses.length,1,"GUI471: original successful activity exposes ONE truthful native status icon");
+        compare(categories.length,1,"GUI471: original native activity exposes ONE type icon");
+        verify(rect(statuses[0])[0]+statuses[0].width <= rect(categories[0])[0]+0.5,
+            "GUI471: truthful STATUS icon precedes activity TYPE icon");
+        const copyGlyphs = gui392_labels(copy.contentItem).filter(label =>
+            label.font.family === EaStyle.Fonts.iconsFamily && label.text === "copy");
+        compare(copyGlyphs.length,1,"GUI472: original copy content owns ONE actual painted native copy glyph");
+        const copyGlyph = copyGlyphs[0], copyGlyphLife = lifetime313(copyGlyph);
+        verify(gui393_under(copyGlyph,copy.contentItem),"GUI472: palette observation belongs to SAME actual native copy content");
+        verify(!copy.hovered && !copy.down && !copy.pressed,
+            "GUI472: real pointer relocation observes Copy at REST without forced interaction state");
+        tryCompare(copyGlyph,"color",EaStyle.Colors.themeForegroundMinor,2000,
+            "GUI472: actual painted resting copy glyph uses original independent native MINOR palette");
+        compare(String(copyGlyph.color),String(categories[0].color),
+            "GUI472: painted resting Copy matches actual original muted type/gear icon");
+        verify(alive313(copyGlyphLife),"GUI472: actual painted copy receiver remains alive at native input boundary");
+        let clicks471 = 0;
+        const copied471 = function(){++clicks471;};
+        const copyLife471 = lifetime313(copy);
+        try {
+            copy.clicked.connect(copied471);
+            status410Clipboard.text="";gui392_button(copy,popup);status410Clipboard.paste();
+            compare(clicks471,1,"GUI471: SAME native header copy receiver receives exactly ONE original click");
+        } finally { disconnect313(copyLife471,copy,"clicked",copied471); }
+        compare(status410Clipboard.text,payload,"GUI471: genuine header Copy publishes ENTIRE original canonical payload exactly");
+        gui392_button(toggle,popup);
+        compare(toggle.checked,true,"GUI471: ONE native main disclosure opens original details directly");
+        const nested = Ui.itemsWithProperty(row,"text").filter(control => typeof control.clicked === "function"
+            && ["Technical details","Hide technical details"].includes(control.text));
+        compare(nested.length,0,"GUI471: activity has NO secondary Technical details action, visible or hidden");
+        const viewports = Ui.itemsWithProperty(row,"objectName").filter(object =>
+            object.objectName === "assistant.activity.details" || object.objectName === "assistant.command.details");
+        compare(viewports.length,1,"GUI471: direct unfold owns ONE public unified activity viewport");
+        verify(viewports[0].visible,"GUI471: main disclosure directly shows unified details");
+        const body = Ui.itemsWithProperty(viewports[0],"readOnly").filter(field => field.readOnly && field.text === payload);
+        compare(body.length,1,"GUI471: direct unfold exposes ONE complete selectable canonical payload");
+        ux356_fullyExposed(viewports[0]);
+        Ui.scrollIntoView(body[0]);rendered();
+        verify(body[0].visible && Ui.exposed(body[0]) && body[0].selectByMouse,
+            "GUI471: complete original read-only text is selectable through its actual scrollable viewport");
+        const boxes = Ui.itemsWithProperty(row,"radius").filter(box => box.visible && box.radius > 0
+            && String(box.color) === String(EaStyle.Colors.contentBackground)
+            && gui393_under(body[0],box));
+        compare(boxes.length,1,"GUI471: entire unfolded payload belongs to ONE rounded native user-message surface");
+        verify(Math.abs(boxes[0].width-row.width) <= AppSizes.unit+0.5,
+            "GUI471: unfolded surface uses full available original sidebar row width");
+        Ui.scrollIntoView(toggle);rendered();gui392_button(toggle,popup);
+        compare(toggle.checked,false,"GUI471: SAME main disclosure closes original details without a second toggle");
+        verify(alive313(life) && Session.project === owner && row.rowId === canonical.id,
+            "GUI471: native disclosure/copy retain SAME original row, owner and identity");
+        compare(JSON.stringify(gui392_json(row.payload)),JSON.stringify(gui392_json(canonical.payload)),
+            "GUI471: header copy/disclosure cannot mutate canonical retained native result");
+    }
+    function gui471_workingFrame(control, variant, name) {
+        verify(assistant.state === "agent_active" && assistant.canCancel,
+            "GUI471 SETUP: presentation selection is allowed ONLY during independently reached real native activity");
+        verify(control.working && control.visible && Ui.exposed(control),
+            "GUI471: actual current shared Working receiver is visible and physically exposed");
+        control.variant = variant; // Explicitly authorized PRESENTATION choice, never VM state/busy.
+        rendered();
+        compare(control.variant,variant,"GUI471: snapshot uses the declared original presentation variant");
+        compare(control.text,"AI working...","GUI471: real busy uses original truthful native working text");
+        const logos = Ui.itemsWithProperty(control,"source").filter(image =>
+            image.sourceSize !== undefined && typeof image.fillMode === "number"
+            && /Assistant(?:Working|Spinner)\.svg$/.test(String(image.source)));
+        compare(logos.length,1,"GUI472: SAME shared native Working owns ONE original logo destination");
+        const logo = logos[0], rotating = logo.parent, slot = rotating ? rotating.parent : null;
+        verify(slot !== null && slot.parent === control && gui393_under(logo,slot),
+            "GUI472: original fixed shared icon slot is physically owned by SAME Working control");
+        verify(slot.width > 0 && slot.height > 0 && Math.abs(slot.width-slot.height) <= 0.5
+            && Math.abs(logo.width-slot.width) <= 0.5 && Math.abs(logo.height-slot.height) <= 0.5
+            && Math.abs(rotating.width-slot.width) <= 0.5 && Math.abs(rotating.height-slot.height) <= 0.5,
+            "GUI472: actual fixed slot and original native logo destination have SAME positive square extent");
+        const slotRect = slot.mapToItem(control,0,0,slot.width,slot.height);
+        const slotBounds = [slotRect.x,slotRect.y,slotRect.width,slotRect.height];
+        const robots = gui392_labels(control).filter(label => label.font.family === EaStyle.Fonts.iconsFamily && label.text === "robot");
+        if (variant === 2) {
+            compare(robots.length,1,"GUI471: actual robot frame has ONE visible original native glyph");
+            gui470ActionInk.font=robots[0].font;gui470ActionInk.text="robot";
+            const ink=gui470ActionInk.tightBoundingRect;
+            const mapped=robots[0].mapToItem(control,ink.x,robots[0].baselineOffset+ink.y,ink.width,ink.height);
+            verify(gui393_under(robots[0],rotating),"GUI472: actual robot and native logo share SAME rotating receiver and original fixed slot");
+            verify(gui470_contains(slotBounds,[mapped.x,mapped.y,mapped.width,mapped.height]),
+                "GUI472: ACTUAL rotated robot ink fits exact native shared icon SLOT, never text-gap/padded band");
+            const textInk = control.mapToItem(window.contentItem,control.leftPadding,control.baselineOffset,0,0);
+            gui470ActionInk.font=control.font;gui470ActionInk.text="H";
+            const metrics=gui470ActionInk.tightBoundingRect;
+            const actual=robots[0].mapToItem(window.contentItem,ink.x,robots[0].baselineOffset+ink.y,ink.width,ink.height);
+            verify(Math.abs(actual.y+actual.height/2-(textInk.y+metrics.y+metrics.height/2)) <= 1,
+                "GUI472: actual native robot ink center aligns with original app CAPITAL-H optical ink at actual Label baseline");
+        }
+        visible185_capture(name);
+        console.info("GUI471_WORKING",JSON.stringify({name:name,variant:variant,state:assistant.state,
+            canCancel:assistant.canCancel,receiver:String(control),owner:String(Session.project),bounds:rect(control),slot:slotBounds,logo:String(logo)}));
+    }
     function test_ux289_hidden_activity_uses_real_original_request() {
         const project = Session.project;
         const values = visible185_values(project);
         toggle();
-        assistant.signIn();
+        gui392_signIn();
         report187_ready("ux289-working-bootstrap", false);
-        if (assistant.contextConsentRequired) assistant.signIn();
-        report187_ready("ux289-working-disclosed", true);
         const account = JSON.stringify(Probe.rows(assistant.models));
         const previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
         Ui.click(this, Probe, window, "assistant.composer");
         visible185_type("Original two-tool activity retained across public observation");
+        const needsApproval471 = assistant.contextConsentRequired;
         Ui.click(this, Probe, window, "assistant.send");
+        if (needsApproval471) {
+            const dialog = ux356_dialog();
+            tryCompare(dialog,"opened",true,2000,"GUI471: original Send opens SAME owned consent dialog before ONE approval");
+            gui470_standardAction(dialog.standardButton(Dialog.Ok),dialog,"approve-context");
+        }
         tryVerify(() => visible185_outcome("ux289-working-first", previous) !== null
             && assistant.state === "agent_active" && assistant.canCancel, 10000,
             "UX289 SETUP: real first original native read completed while original objective is still active");
-        const panelWorking = item("assistant.working");
-        verify(panelWorking.visible, "UX289: genuine active objective displays existing panel Working");
-        closeAssistant388(); // Genuine explicit user hide must retain precedence after terminal.
-        const status = item("statusBar.assistant.working");
-        tryCompare(status, "visible", true, 2000,
-            "UX289: hidden chat displays shared Working during real request gap, not synthetic busy");
-        compare(panelWorking.visible, false, "UX289: covered panel and hidden-chat status do not duplicate painted activity");
-        verify(Ui.exposed(status) && status.width > 0 && status.height > 0,
-            "UX289: actual hidden-chat activity owns nonzero unobscured status geometry");
-        visible185_capture("ux289-hidden-working");
+        const panelWorking = item("assistant.working"), status = item("statusBar.assistant.working");
+        const theme471 = EaStyle.Colors.theme, panelVariant471 = panelWorking.variant, statusVariant471 = status.variant;
+        try {
+            EaStyle.Colors.theme = 0; // Finite owner-requested LIGHT render, restore below.
+            const list471 = gui471_flow(panelWorking);
+            Ui.scrollIntoView(panelWorking);rendered();
+            gui471_workingFrame(panelWorking,2,"ux471-panel-robot-light");
+            gui471_workingFrame(panelWorking,1,"ux471-panel-logo-light");
+            gui471_activity(previous,"ux289-working-first");
+            closeAssistant388(); // Genuine explicit user hide must retain precedence after terminal.
+            tryCompare(status,"visible",true,2000,
+                "UX289: hidden chat displays shared Working during real request gap, not synthetic busy");
+            compare(panelWorking.visible,false,"UX289: covered panel and hidden-chat status do not duplicate painted activity");
+            verify(Ui.exposed(status) && status.width>0 && status.height>0,
+                "UX289: actual hidden-chat activity owns nonzero unobscured status geometry");
+            gui471_workingFrame(status,2,"ux471-status-robot-light");
+            gui471_workingFrame(status,1,"ux471-status-logo-light");
+        } finally {
+            panelWorking.variant=panelVariant471;status.variant=statusVariant471;EaStyle.Colors.theme=theme471;
+        }
         assistant.refreshUsage();
         tryVerify(() => visible185_outcome("ux289-working-second", previous) !== null
             && Probe.rows(assistant.messages).some(row => !previous.has(row.id)
@@ -5031,8 +5225,13 @@ TestCase {
         verify(label.Accessible.name.includes(file.name) && label.Accessible.name.includes(String(file.bytes)),
             "UX356: accessibility retains the complete original filename and exact admitted byte count");
         const buttons = Ui.itemsWithProperty(chip, "enabled").filter(control =>
-            typeof control.clicked === "function" && control.Accessible.name.includes(file.name));
-        compare(buttons.length, 1, "UX356: original chip owns one actual named remove action");
+            gui472_actionCapable(control) && control.Accessible.name.includes(file.name));
+        if (sent) {
+            gui471_sentSnapshot(root, file.id);
+            compare(buttons.length, 0, "UX471: historical snapshot has NO named remove action");
+            return {chip: chip};
+        }
+        compare(buttons.length, 1, "UX356: original PENDING chip owns one actual named remove action");
         ux356_fullyExposed(buttons[0]);
         return {chip: chip, remove: buttons[0]};
     }
@@ -5181,20 +5380,25 @@ TestCase {
                 "UX356: ordinary repeated work retains every completed original message unchanged");
             const retainedRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
             compare(retainedRows.length, 1, "UX356: original ID is re-resolved after later delegate/layout publication");
-            const sent = ux356_chip(retainedRows[0], files[0], true);
-            verify(sent.remove.enabled, "UX356: original sent source has a genuine idle remove action");
-            mouseClick(sent.remove, Ui.clickPoint(sent.remove).x, Ui.clickPoint(sent.remove).y);
-            tryCompare(assistant.selectedFiles, "count", 1, 2000, "UX356: actual original remove revokes only that current source ID");
-            compare(Probe.rows(assistant.selectedFiles)[0].id, files[1].id,
-                "UX356: sent remove preserves the other independently selected source identity");
+            ux356_chip(retainedRows[0], files[0], true);
+            ux356_chip(retainedRows[0], files[1], true);
+            compare(JSON.stringify(Probe.rows(assistant.selectedFiles).map(file => ({id:file.id,name:file.name,bytes:file.bytes,textReadable:file.textReadable,format:file.format}))), JSON.stringify(files),
+                "UX471: noninteractive sent history preserves BOTH exact original canonical file authorities");
             const preserved = Probe.rows(assistant.messages).filter(row => row.id === original.id);
-            compare(preserved.length, 1, "UX356: source removal preserves the sole original historical row");
-            compare(JSON.stringify(preserved[0].payload.files.map(file => ({id: file.id, name: file.name,
-                bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
-                "UX356: revoking current authority never rewrites historical sent-file snapshot");
+            compare(preserved.length, 1, "UX471: inspecting sent history preserves sole original historical row");
+            compare(JSON.stringify(preserved[0].payload.files.map(file => ({id:file.id,name:file.name,
+                bytes:file.bytes,textReadable:file.textReadable,format:file.format}))), JSON.stringify(files),
+                "UX471: sent history retains all five original immutable descriptor fields");
             const context = JSON.parse(assistant.contextPreview);
-            compare(JSON.stringify(context.selected_files.files.map(file => file.id)), JSON.stringify([files[1].id]),
-                "UX356: current outgoing context has no read authority for the removed historical source");
+            compare(JSON.stringify(context.selected_files.files.map(file => file.id)), JSON.stringify(files.map(file => file.id)),
+                "UX471: history presentation neither grants nor silently revokes current selected read authority");
+            Ui.click(this, Probe, window, "assistant.clear");
+            tryCompare(assistant.selectedFiles, "count", 0, 2000,
+                "UX471: genuine Clear retires ALL original selected read authorities");
+            tryCompare(assistant.messages, "count", 0, 2000,
+                "UX471: genuine Clear removes old sent snapshots and original conversation together");
+            compare(JSON.stringify(JSON.parse(assistant.contextPreview).selected_files.files), "[]",
+                "UX471: current outgoing disclosure has NO historical read authority after actual Clear");
             verify(alive313(owner) && Session.project === project,
                 "UX356: compact consent/attachment presentation preserves exact original scientific owner");
             compare(save349_science(project), science, "UX356: input/consent/chip changes preserve all original science/data/SU/relations/metadata");
@@ -5206,7 +5410,7 @@ TestCase {
             compare(JSON.stringify(Probe.rows(assistant.models)), account,
                 "UX356: genuine managed account/catalog remains exact through original admission and removal");
             console.info("UX356_IDS", JSON.stringify({case: data.tag, first: original.id,
-                files: files, removed: files[0].id, remaining: files[1].id, dialogOpens: opens,
+                files: files, cleared: files.map(file => file.id), dialogOpens: opens,
                 submissions: submissions358}));
             visible185_capture("ux356-" + data.tag);
         } finally { disconnect313(dialogLife, dialog, "openedChanged", opened); }
@@ -5443,12 +5647,121 @@ TestCase {
             }
         }
     }
+    // GUI470: ordinary standard action geometry and ORIGINAL native signal receipt.
+    function gui470_contains(outer, inner) {
+        return outer.length === 4 && inner.length === 4
+            && outer.concat(inner).every(value => typeof value === "number" && Number.isFinite(value))
+            && outer[2] > 0 && outer[3] > 0 && inner[2] > 0 && inner[3] > 0
+            && inner[0] >= outer[0] - 0.5 && inner[1] >= outer[1] - 0.5
+            && inner[0] + inner[2] <= outer[0] + outer[2] + 0.5
+            && inner[1] + inner[3] <= outer[1] + outer[3] + 0.5;
+    }
+    function gui470_standardAction(button, dialog, role) {
+        verify(role === "sign-in" || role === "approve-context",
+            "GUI472 SETUP: independent original semantic role is sign-in or current-context approval");
+        const labels472 = {"sign-in":"Sign in with ChatGPT","approve-context":"Approve context"};
+        const expectedText = labels472[role]; // Independent unchanged PUBLIC original full labels, never button.text as golden.
+        const original = {owner:Session.project,controller:Session.assistant,window:window,button:button,dialog:dialog};
+        const objects = [original.owner,original.controller,original.window,button,dialog];
+        const lives = objects.map(lifetime313);
+        function current() {
+            return lives.every(alive313) && Session.project === original.owner
+                && Session.assistant === original.controller && window === original.window
+                && original.button === button && original.dialog === dialog;
+        }
+        verify(current() && dialog.visible && dialog.opened && button !== null && button.enabled,
+            "GUI470: original settled action/dialog/window/controller/project are live before native input");
+        compare(dialog.standardButton(Dialog.Ok), button,
+            "GUI470: action is exact original native standard Ok receiver, not a substitute input");
+        compare(button.text, expectedText, "GUI470: actual native action displays complete independent literal label");
+        compare(assistant.connected, role === "approve-context",
+            "GUI470: Sign in starts disconnected, Approve starts genuinely connected");
+        const connectedBefore = assistant.connected, footer = dialog.footer;
+        verify(footer !== null && footer.contentItem !== null && gui393_under(button, footer.contentItem),
+            "GUI470: SAME original standard receiver really belongs to original footer's native content row");
+        const row = footer.contentItem;
+        function scene(item) {
+            const r = item.mapToItem(window.contentItem, 0, 0, item.width, item.height);
+            return [r.x,r.y,r.width,r.height];
+        }
+        const mappedDialog = dialog.parent.mapToItem(window.contentItem,dialog.x,dialog.y,dialog.width,dialog.height);
+        const popupBounds = [mappedDialog.x,mappedDialog.y,mappedDialog.width,mappedDialog.height];
+        const footerBounds = scene(footer), rowBounds = scene(row), buttonBounds = scene(button);
+        // Observe at the SAME original opened/click interval. No extra polish,
+        // scroll, delay, changed point, forced geometry or label assignment.
+        verify(gui470_contains(popupBounds,footerBounds) && gui470_contains(footerBounds,rowBounds),
+            "GUI470: actual original footer and native row are contained by their own modal surface");
+        for (const bounds of [popupBounds,footerBounds,rowBounds]) verify(gui470_contains(bounds,buttonBounds),
+            "GUI470: full actual Sign in/Approve hit rectangle stays INSIDE original popup/footer/row");
+        const labels = gui392_labels(button).filter(label => label.text === expectedText
+            && button.contentItem !== null && gui393_under(label,button.contentItem));
+        compare(labels.length,1,"GUI470: original standard action owns ONE actual painted complete native label");
+        const label = labels[0];
+        verify(label.lineCount === 1 && !label.truncated && label.contentWidth > 0,
+            "GUI470: full actual standard action label is one untruncated native text line");
+        ux356_fullyExposed(button);ux356_fullyExposed(label);
+        gui470ActionInk.font = label.font;gui470ActionInk.text = expectedText;
+        const metrics = gui470ActionInk.tightBoundingRect;
+        const available = label.width - label.leftPadding - label.rightPadding;
+        verify(Number.isFinite(available) && available >= gui470ActionInk.advanceWidth - 0.5,
+            "GUI470: actual native text slot fits full independently measured original action label");
+        let origin = label.leftPadding;
+        if (label.horizontalAlignment === Text.AlignHCenter) origin += (available-gui470ActionInk.advanceWidth)/2;
+        else if (label.horizontalAlignment === Text.AlignRight) origin += available-gui470ActionInk.advanceWidth;
+        else compare(label.horizontalAlignment,Text.AlignLeft,
+            "GUI470: original literal single-line label has a supported native horizontal alignment");
+        const ink = label.mapToItem(window.contentItem,origin+metrics.x,label.baselineOffset+metrics.y,metrics.width,metrics.height);
+        const inkBounds = [ink.x,ink.y,ink.width,ink.height];
+        for (const bounds of [buttonBounds,rowBounds,footerBounds,popupBounds]) verify(gui470_contains(bounds,inkBounds),
+            "GUI470: independently measured actual font ink fits original action/row/footer/popup");
+        const point = Ui.clickPoint(button);
+        verify(point !== null,"GUI470: SAME original standard action supplies its unchanged native click point");
+        const scenePoint = button.mapToItem(window.contentItem,point.x,point.y);
+        verify([scenePoint.x,scenePoint.y].every(Number.isFinite) && [buttonBounds,rowBounds,footerBounds,popupBounds].every(bounds =>
+            scenePoint.x >= bounds[0] && scenePoint.x < bounds[0]+bounds[2]
+            && scenePoint.y >= bounds[1] && scenePoint.y < bounds[1]+bounds[3]),
+            "GUI470: unchanged original center/clip click point is inside SAME original modal/native action");
+        const events = [], bindings = [];
+        function record(kind) {
+            verify(current(),"GUI470: real standard-button signal retains exact original live receiver/window/owner");
+            events.push({kind:kind,pressed:button.pressed});
+        }
+        const pressed = function(){record("pressedChanged");};
+        const released = function(){record("released");};
+        const clicked = function(){record("clicked");};
+        const canceled = function(){record("canceled");};
+        try {
+            for (const pair of [["pressedChanged",pressed],["released",released],["clicked",clicked],["canceled",canceled]]) {
+                button[pair[0]].connect(pair[1]);bindings.push(pair);
+            }
+            gui392_button(button,dialog); // Original helper performs its ONE unchanged native mouse action.
+            verify(current(),"GUI470: original physical receiver and owner survive the native signal tail");
+            const presses = events.filter(event => event.kind === "pressedChanged" && event.pressed);
+            compare(presses.length,1,"GUI470: exactly ONE actual true pressed edge reached original standard button");
+            compare(events.filter(event => event.kind === "released").length,1,
+                "GUI470: exactly ONE actual native released signal reached original standard button");
+            compare(events.filter(event => event.kind === "clicked").length,1,
+                "GUI470: exactly ONE actual native clicked signal, not a popup-dismissal substitute");
+            compare(events.filter(event => event.kind === "canceled").length,0,
+                "GUI470: outside-modal or canceled pointer delivery cannot qualify as original action");
+            verify(events.findIndex(event => event.kind === "pressedChanged" && event.pressed)
+                < events.findIndex(event => event.kind === "released")
+                && events.findIndex(event => event.kind === "released") < events.findIndex(event => event.kind === "clicked"),
+                "GUI470: original true press then release precede exact native click");
+            console.log("GUI470_STANDARD_ACTION",JSON.stringify({role:role,text:expectedText,connectedBefore:connectedBefore,
+                button:identity313(lives[3]),dialog:identity313(lives[4]),owner:identity313(lives[0]),controller:identity313(lives[1]),
+                popup:popupBounds,footer:footerBounds,row:rowBounds,buttonBounds:buttonBounds,ink:inkBounds,
+                scenePoint:[scenePoint.x,scenePoint.y],events:events}));
+        } finally {
+            for (const pair of bindings) disconnect313(lives[3],button,pair[0],pair[1]);
+        }
+    }
     function gui392_signIn() {
         if (assistant.connected) return;
         Ui.click(this, Probe, window, "assistant.connection");
         const dialog = ux356_dialog();
         tryCompare(dialog, "opened", true, 2000, "GUI392: actual header Sign in opens original provider dialog");
-        gui392_button(dialog.standardButton(Dialog.Ok), dialog);
+        gui470_standardAction(dialog.standardButton(Dialog.Ok), dialog, "sign-in");
         report187_ready("gui392-genuine-header-signin", false);
         tryCompare(dialog, "visible", false, 2000, "GUI398: original ready sign-in dialog genuinely finishes native exit before reuse");
     }
@@ -6189,7 +6502,7 @@ TestCase {
             compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))), selectedBefore,
                 "GUI404: exact current attachments remain original at approval");
             capture("gui404-send-required-approval");
-            gui392_button(approve, dialog);
+            gui470_standardAction(approve, dialog, "approve-context");
             // No Send after this original approval. A second-Send requirement MUST fail here.
             tryVerify(() => assistant.canCancel && Probe.rows(assistant.messages).filter(row => !oldIds.has(row.id)
                 && row.kind === "user" && row.text === originalText && row.status === "pending").length === 1, 2000,
@@ -6263,7 +6576,7 @@ TestCase {
             function newlyApproved() { current(); ++newApprovalClicks; }
             newApprove.clicked.connect(newlyApproved);
             try {
-                gui392_button(newApprove, dialog);
+                gui470_standardAction(newApprove, dialog, "approve-context");
                 // Exactly one Approve; NO Send after the real approval.
                 tryVerify(() => assistant.canCancel && Probe.rows(assistant.messages).filter(row =>
                     row.kind === "user" && row.text === newText && row.status === "pending").length === 1, 2000,

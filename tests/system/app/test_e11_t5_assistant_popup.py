@@ -1369,6 +1369,7 @@ def test_ux289_real_main_activity_and_folder_presentation(case, tmp_path):
     ]
     if case == 'hidden-activity':
         config.update(scenario='native:script', native_turn_calls=[calls],
+                      readonly409=True, vm319_record_packets=True,
                       relation246_wait_for_usage=['ux289-working-first'])
     config_path.write_text(json.dumps(config))
     original = config_path.read_bytes()
@@ -1393,6 +1394,30 @@ def test_ux289_real_main_activity_and_folder_presentation(case, tmp_path):
     if case == 'hidden-activity':
         trace = Path(config['trace'])
         replies = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+        # Same existing independently declared readOnly409 contract; no subject-policy echo.
+        from test_e11_t5_codex_agent import readonly409_policy
+        readonly409_policy(trace)
+        actions472 = [json.loads(line.split('GUI470_STANDARD_ACTION ',1)[1]) for line in result.stdout.splitlines()
+                      if 'GUI470_STANDARD_ACTION ' in line]
+        assert [row['role'] for row in actions472] == ['sign-in','approve-context'] and (
+            [row['text'] for row in actions472] == ['Sign in with ChatGPT','Approve context']
+            and [row['connectedBefore'] for row in actions472] == [False,True]
+        ), 'GUI472: actual original busy setup reaches independent FULL sign-in/approval labels and semantic roles once'
+        frames471 = [json.loads(line.split('GUI471_WORKING ', 1)[1]) for line in result.stdout.splitlines()
+                     if 'GUI471_WORKING ' in line]
+        assert [row['name'] for row in frames471] == [
+            'ux471-panel-robot-light', 'ux471-panel-logo-light',
+            'ux471-status-robot-light', 'ux471-status-logo-light'], (
+            'GUI471: actual original busy vehicle captures declared panel then genuinely hidden status variants'
+        )
+        assert all((tmp_path / ('visible185-' + row['name'] + '.png')).is_file()
+                   and (tmp_path / ('visible185-' + row['name'] + '.png')).stat().st_size > 0
+                   for row in frames471), 'GUI471: all four original actual-Window native capture artifacts must exist'
+        assert len({row['owner'] for row in frames471}) == 1, 'GUI471: all genuine panel/status frames retain SAME actual scientific owner'
+        assert [row['variant'] for row in frames471] == [2, 1, 2, 1] and all(
+            row['state'] == 'agent_active' and row['canCancel'] is True
+            and row['receiver'] and row['owner'] for row in frames471
+        ), 'GUI471: deterministic rendering never substitutes fake VM busy or fabricated owner identity'
         assert len(replies) == 2 and all(row['response']['result']['success'] is True
                                        for row in replies), 'UX289: both real native reads succeed once on original envelopes'
         assert [row['original']['params']['callId'] for row in replies] == [row['call_id'] for row in calls], (

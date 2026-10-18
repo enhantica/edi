@@ -9528,6 +9528,22 @@ def gui392_run(tmp_path, case):
         assert sum(reply.get('id') == second['id'] and 'result' in reply for reply in replies) == 1, (
             'GUI464: actual post-Clear admission receives one independently recorded matching ACK'
         )
+        actions470 = [json.loads(line.split('GUI470_STANDARD_ACTION ',1)[1]) for line in result.stdout.splitlines()
+                      if 'GUI470_STANDARD_ACTION ' in line]
+        assert [value['role'] for value in actions470] == ['sign-in','approve-context','approve-context'] and (
+            [value['text'] for value in actions470] == ['Sign in with ChatGPT','Approve context','Approve context']
+            and [value['connectedBefore'] for value in actions470] == [False,True,True]
+        ), 'GUI470: original disconnected action then BOTH current approvals must reach genuine native input/connection intervals'
+        for value in actions470:
+            assert all(value[key] for key in ('button','dialog','owner','controller')), (
+                'GUI470: actual standard-action receipts retain real original receiver/owner identities'
+            )
+            events470 = value['events']
+            assert sum(event['kind'] == 'pressedChanged' and event['pressed'] is True for event in events470) == 1 and (
+                sum(event['kind'] == 'released' for event in events470) == 1
+                and sum(event['kind'] == 'clicked' for event in events470) == 1
+                and not any(event['kind'] == 'canceled' for event in events470)
+            ), 'GUI470: mandatory actual original press/release/click receipts cannot be replaced by modal dismissal or synthetic signal'
         readonly409_policy(trace)
     elif case.startswith('chooser-'):
         replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
