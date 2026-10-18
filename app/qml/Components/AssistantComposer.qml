@@ -21,7 +21,7 @@ Rectangle {
     readonly property real actionSize: EaStyle.Sizes.toolButtonHeight * 0.75
     function closeChoices() { if (Qt.isQtObject(choicePopup)) choicePopup.close(); }
     readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
-    readonly property color lightActionBackground: EaStyle.Colors.themeBackgroundHovered2
+    readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
     readonly property var effortChoices: [""].concat(assistant.availableEfforts).map(token => ({token: token, label: effortLabel(token)}))
     readonly property int selectedModelRow: {
         for (let i=0;i<assistant.models.count;++i)
@@ -640,7 +640,8 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
-                    color: addFilesButton.hovered || addFilesButton.pressed || addFilesButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: addFilesButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
+                        : addFilesButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                     radius: width * 0.5
                 }
                 enabled: composer.assistant.connected && !WebFiles.available && !composer.assistant.canCancel
@@ -677,7 +678,8 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize; implicitHeight: implicitWidth
                     radius: width*0.5
-                    color: showActionsControl.hovered || showActionsControl.pressed || showActionsControl.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: showActionsControl.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
+                        : showActionsControl.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                 }
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: qsTr("Show actions")
@@ -700,7 +702,8 @@ Rectangle {
                 background: Rectangle {
                     implicitHeight: composer.actionSize
                     radius: height*0.5
-                    color: modelEffortButton.hovered || modelEffortButton.pressed || modelEffortButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: modelEffortButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
+                        : modelEffortButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                 }
                 contentItem: Row {
                     id: modelEffortText
@@ -710,6 +713,9 @@ Rectangle {
                         height: parent.height
                         verticalAlignment: Text.AlignVCenter
                         text: composer.modelLabel
+                        color: !modelEffortButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                            : modelEffortButton.hovered || modelEffortButton.down || modelEffortButton.visualFocus
+                                ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
                         width: Math.max(0,Math.min(implicitWidth,modelEffortButton.availableWidth-effortPillLabel.width-modelEffortText.spacing))
@@ -720,7 +726,9 @@ Rectangle {
                         verticalAlignment: Text.AlignVCenter
                         text: composer.selectedEffortLabel
                         textFormat: Text.PlainText
-                        color: EaStyle.Colors.themeForegroundMinor
+                        color: !modelEffortButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                            : modelEffortButton.hovered || modelEffortButton.down || modelEffortButton.visualFocus
+                                ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundMinor
                         elide: Text.ElideRight
                         width: Math.max(0,Math.min(implicitWidth,modelEffortButton.availableWidth*0.45))
                     }
@@ -760,7 +768,8 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: previousUserButton.hovered || previousUserButton.pressed || previousUserButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: previousUserButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
+                        : previousUserButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                 }
                 ToolTip.text: qsTr("Previous user message")
                 Accessible.name: ToolTip.text
@@ -785,7 +794,8 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: nextUserButton.hovered || nextUserButton.pressed || nextUserButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: nextUserButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
+                        : nextUserButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                 }
                 ToolTip.text: qsTr("Next user message")
                 Accessible.name: ToolTip.text
@@ -814,7 +824,8 @@ Rectangle {
                     text: stopButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: stopButton.font.pixelSize * 1.25
-                    color: composer.canSteer && composer.hasDraft ? stopButton.foregroundColor() : (EaStyle.Colors.isDarkPalette ? "black" : "white")
+                    color: stopButton.enabled && (stopButton.hovered || stopButton.down || stopButton.visualFocus) ? EaStyle.Colors.themeAccent
+                        : composer.canSteer && composer.hasDraft ? stopButton.foregroundColor() : (EaStyle.Colors.isDarkPalette ? "black" : "white")
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -849,7 +860,8 @@ Rectangle {
                     text: sendButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: sendButton.font.pixelSize * 1.25
-                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : sendButton.foregroundColor()
+                    color: sendButton.enabled && (sendButton.hovered || sendButton.down || sendButton.visualFocus) ? EaStyle.Colors.themeAccent
+                        : sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : sendButton.foregroundColor()
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }

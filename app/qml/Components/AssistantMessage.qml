@@ -144,6 +144,21 @@ Rectangle {
         }
         return action.type === "unknown";
     }
+    function guidanceReadCaption(workflow, refinement) {
+        return workflow && refinement ? qsTr("Read assistant workflow and refinement instructions")
+             : workflow ? qsTr("Read assistant workflow instructions")
+             : refinement ? qsTr("Read assistant refinement instructions") : "";
+    }
+    function knownGuidanceCommandCaption(command) {
+        // Closed whole-command identities only; never tokenize or execute shell text.
+        const workflow = "cat .agents/skills/project-assistance/SKILL.md";
+        const refinement = "cat .agents/skills/refinement-strategy/SKILL.md";
+        if (command === workflow) return guidanceReadCaption(true, false);
+        if (command === refinement) return guidanceReadCaption(false, true);
+        if (command === workflow + " .agents/skills/refinement-strategy/SKILL.md"
+            || command === refinement + " .agents/skills/project-assistance/SKILL.md") return guidanceReadCaption(true, true);
+        return "";
+    }
     function activityDescription() {
         if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
@@ -151,6 +166,8 @@ Rectangle {
                        : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
         if (supplied.trim().length) return shortActionObject(supplied, false);
         if (!commandActivity) return "";
+        const guidance = knownGuidanceCommandCaption(payload.command);
+        if (guidance.length) return guidance;
         // Exact structured action metadata may supply a purpose when the pinned
         // runtime has no explicit one. Never parse shell text or infer an outcome.
         const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
@@ -159,7 +176,8 @@ Rectangle {
         for (const action of actions) {
             if (action.type === "read") {
                 const path = action.path.replace(/\\/g, "/");
-                if (/(^|\/)project-assistance\/SKILL\.md$/.test(path)) labels.push(qsTr("Read assistant workflow instructions"));
+                if (/(^|\/)project-assistance\/SKILL\.md$/.test(path)) labels.push(guidanceReadCaption(true, false));
+                else if (/(^|\/)refinement-strategy\/SKILL\.md$/.test(path)) labels.push(guidanceReadCaption(false, true));
                 else if (action.name === "SKILL.md") labels.push(qsTr("Read assistant instructions"));
                 else labels.push(qsTr("Read %1").arg(action.name || action.path));
             }

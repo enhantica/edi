@@ -1690,3 +1690,41 @@ Prior art is the existing canonical messages model/row ID navigation and native
 ListView header/delegate/footer composition, the original notice style and the
 pinned structured command/tool metadata. Native chronology and rendered input
 still require the actual app vehicle; source checks alone are not acceptance.
+
+
+### Persistent native control surfaces and live context publication
+
+Composer neutral round actions and the Clear/Usage header controls reuse the
+original sidebar-hover surface token in both palettes: darker than the light
+surrounding surfaces and the native translucent hover fill in dark mode.
+Backgrounds remain present at rest; enabled hover glyphs/text use the existing
+accent, including both model/effort labels and Usage. Disabled colors, checked
+Show actions, native keyboard fill cue, action enablement, handlers and strong
+Send/Stop surfaces remain. The accepted-size avatar adopts Send's contrasting
+background/foreground with no border. No global palette or component library is
+changed. Working progress gains the normal inter-item top gap only when its
+independent working/presented state is true; parent visibility never depends on
+the child's effective visibility, and no hidden gap is retained.
+
+The dialog's exact context QString is synchronously refreshed through its
+existing context notifier, owner and open entrances, rather than binding any
+property to the callback-capable getter. Each refresh captures the original
+component/assistant and its own presentation identity before reading the getter.
+A synchronous newer inventory/context notification replaces that identity; the
+old return cannot overwrite it. No timer, queued retry, notifier suppression or
+stale snapshot is used. Initial/owner/open refreshes keep displayed bytes live;
+the accepted handler remains unchanged and independently reads the real current
+context, verifies exact offered bytes, original offer/account/owner/draft fences
+and once approval. Failed projection clears only its own presentation and offer.
+The source loader commits its state/digest before publication and unchanged
+reloads return without notifying, so the display updater introduces no own
+notification feedback. Native warning absence still requires a real app run.
+
+Human captions additionally recognize only four exact whole app-guidance read
+commands: the single workflow/refinement SKILL.md reads and the two-path cat in
+either order, using the existing staged relative paths. No trim, tokenization,
+quotes, options, substitutions, redirections, compounds, newlines or unknown
+paths are accepted by this closed identity comparison. Structured read metadata
+shares the same human workflow/refinement wording. Supplied purpose remains
+preferred; every other unknown command retains the honest neutral fallback and
+the exact literal stays in expanded canonical details/copy.

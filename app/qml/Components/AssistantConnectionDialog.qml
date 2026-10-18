@@ -24,7 +24,7 @@ AppDialog {
             || token === null || component.approvalOwner !== token) return;
         component.open();
     }
-    onAssistantChanged: approvalOwner = ({})
+    onAssistantChanged: { approvalOwner = ({}); refreshDisclosedContext(); }
     Connections {
         target: dialog
         function onRejected() { dialog.approvalOwner = ({}); }
@@ -37,7 +37,28 @@ AppDialog {
             connectionFailure.open();
         }
     }
-    readonly property string disclosedContextText: assistant.contextPreview
+    property string disclosedContextText: ""
+    property var contextPresentation: ({})
+    function refreshDisclosedContext() {
+        const component = dialog, original = dialog.assistant;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original)) return;
+        const request = ({});
+        component.contextPresentation = request;
+        const current = () => Qt.isQtObject(component) && Qt.isQtObject(original)
+            && component.assistant === original && component.contextPresentation === request;
+        if (!current()) return;
+        try {
+            // The getter may synchronously publish a newer inventory/context.
+            // That notification refreshes with a new identity; its value wins.
+            const exact = original.contextPreview;
+            if (current()) component.disclosedContextText = exact;
+        } catch (error) {
+            if (!current()) return;
+            component.disclosedContextText = "";
+            if (current()) component.approvalOwner = ({});
+        }
+    }
+    Component.onCompleted: refreshDisclosedContext()
     readonly property var disclosedContext: {
         try {
             return JSON.parse(disclosedContextText);
@@ -91,7 +112,11 @@ AppDialog {
             acceptButton.enabled = !assistant.contextApprovalBlocked;
         }
     }
-    onOpened: updateAcceptButton()
+    onOpened: {
+        const component = dialog, original = dialog.assistant;
+        refreshDisclosedContext();
+        if (Qt.isQtObject(component) && Qt.isQtObject(original) && component.assistant === original) component.updateAcceptButton();
+    }
     Connections {
         target: dialog.assistant
         function onConnectedChanged() {
@@ -99,7 +124,12 @@ AppDialog {
                 dialog.updateAcceptButton();
         }
         function onStateChanged() { dialog.showConnectionFailureIfFinished(); }
-        function onContextPreviewChanged() { if (dialog.visible) dialog.updateAcceptButton(); }
+        function onContextPreviewChanged() {
+            const component = dialog, original = dialog.assistant;
+            component.refreshDisclosedContext();
+            if (Qt.isQtObject(component) && Qt.isQtObject(original) && component.assistant === original && component.visible)
+                component.updateAcceptButton();
+        }
         function onLastErrorChanged() { dialog.showConnectionFailureIfFinished(); }
         function onConversationRetired() {
             dialog.approvalOwner = ({});

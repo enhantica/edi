@@ -66,6 +66,7 @@ Popup {
         return qsTr("Resets in %1 min").arg(minutes);
     }
     readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
+    readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
     property var noticeState: null
     property var noticeProjection: ({})
     function captureNotice() {
@@ -323,6 +324,17 @@ Popup {
                         implicitWidth: EaStyle.Sizes.toolButtonHeight
                         implicitHeight: EaStyle.Sizes.toolButtonHeight
                         showBackground: false
+                        background: Item {
+                            implicitWidth: EaStyle.Sizes.toolButtonHeight
+                            implicitHeight: implicitWidth
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: EaStyle.Sizes.toolButtonHeight * 0.75
+                                height: width
+                                radius: width * 0.5
+                                color: clearButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                            }
+                        }
                         ToolTip.text: qsTr("Clear conversation")
                         Accessible.name: ToolTip.text
                         KeyNavigation.priority: KeyNavigation.BeforeItem
@@ -336,10 +348,19 @@ Popup {
                         objectName: "assistant.usage"
                         text: !panel.usageWindow ? "–" : qsTr("%1% used").arg(panel.usageWindow.usedPercent)
                         font.bold: false
+                        leftPadding: AppSizes.unit * 0.5
+                        rightPadding: AppSizes.unit * 0.5
+                        background: Rectangle {
+                            implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
+                            radius: height * 0.5
+                            color: usageButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        }
                         contentItem: EaElements.Label {
                             text: usageButton.text
                             font: usageButton.font
-                            color: panel.allowanceColor(panel.remainingPercent)
+                            color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                                : usageButton.hovered || usageButton.down || usageButton.visualFocus
+                                    ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -361,7 +382,9 @@ Popup {
                             font.pixelSize: EaStyle.Sizes.fontPixelSize
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
-                            color: connectionButton.foregroundColor()
+                            color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                                : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
+                                : panel.assistant.connected ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : connectionButton.foregroundColor()
                         }
                         Layout.preferredWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : implicitWidth
                         Layout.minimumWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : 0
@@ -379,10 +402,7 @@ Popup {
                                 width: EaStyle.Sizes.toolButtonHeight * 0.75
                                 height: width
                                 radius: width * 0.5
-                                color: connectionButton.hovered || connectionButton.down || connectionButton.activeFocus
-                                    ? EaStyle.Colors.themeBackgroundHovered1 : EaStyle.Colors.themeBackground
-                                border.width: EaStyle.Sizes.borderThickness
-                                border.color: Qt.darker(color, 1.1)
+                                color: EaStyle.Colors.isDarkPalette ? "white" : "black"
                             }
                         }
                         ToolTip.text: panel.assistant.connected ? qsTr("Account") : text
@@ -448,12 +468,19 @@ Popup {
                             width: parent.width
                             assistant: panel.assistant
                         }
-                        AssistantWorking {
-                            objectName: "assistant.working"
+                        Item {
                             width: parent.width
-                            height: Math.max(implicitHeight, iconExtent)
-                            assistant: panel.assistant
-                            presented: panel.shown && panel.visible
+                            visible: workingCue.working && workingCue.presented
+                            height: visible ? workingCue.height + chatBody.spacing : 0
+                            AssistantWorking {
+                                id: workingCue
+                                objectName: "assistant.working"
+                                y: chatBody.spacing
+                                width: parent.width
+                                height: Math.max(implicitHeight, iconExtent)
+                                assistant: panel.assistant
+                                presented: panel.shown && panel.visible
+                            }
                         }
                     }
                     header: EdiNotice {
