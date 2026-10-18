@@ -220,6 +220,12 @@ def test_c33_owned_page_is_the_measured_filename_difference():
     # The independently gated two-bank verification page is now retained prior art.
     before.add('pd-neut-tof_ferrite-austenite_beer_joint')
     after = {p.stem for p in (ROOT / 'docs/dev/verification').glob('*.py')}
+    # The separately gated X-ray page inventory owns these additions.
+    after.difference_update({
+        'pd-xray-cwl_LiF_doublet',
+        'pd-xray-cwl_LiF_single_absorption',
+        'pd-xray-cwl_PbSO4_round-robin',
+    })
     # ADR-0026 independently gates its beta-tensor verification page.
     after.discard('pd-neut-cwl_Y2O3_beta-adp')
     # ADR-0078 adds its separately gated tied-Biso page; keep this task's delta exact.

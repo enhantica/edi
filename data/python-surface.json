@@ -1364,6 +1364,24 @@
      },
      "reason": "C",
      "verdict": "public"
+    },
+    "setup_wavelength_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlInstrumentBase.setup_wavelength_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_wavelength_2_to_1_ratio": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlInstrumentBase.setup_wavelength_2_to_1_ratio",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "CwlPseudoVoigt": {
@@ -2316,49 +2334,49 @@
    },
    "FitParameterCorrelationItem": {
     "correlation": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.correlation",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "id": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.id",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "parameter_unique_name_i": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.parameter_unique_name_i",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "parameter_unique_name_j": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.parameter_unique_name_j",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "source_kind": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "counterpart",
       "ref": "FitParameterCorrelationItem.source_kind",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     }
    },
    "FitPreamble": {
@@ -2392,13 +2410,13 @@
      "verdict": "public"
     },
     "correlations": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "deviation",
       "ref": "D47",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "fitting_time": {
      "need": {
@@ -2776,13 +2794,13 @@
      "verdict": "public"
     },
     "correlations": {
-     "reason": "C",
-     "verdict": "public",
      "need": {
       "by": "deviation",
       "ref": "D47",
       "verdict": "keep"
-     }
+     },
+     "reason": "C",
+     "verdict": "public"
     },
     "fitting_time": {
      "need": {
@@ -2927,6 +2945,15 @@
      "need": {
       "by": "counterpart",
       "ref": "LinkedStructure.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "weight_fraction": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5464,6 +5491,26 @@
      "reason": "C",
      "verdict": "public"
     }
+   },
+   "WeightFraction": {
+    "uncertainty": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "value": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
    }
   },
   "module": {
@@ -5774,13 +5821,13 @@
     "verdict": "public"
    },
    "FitParameterCorrelationItem": {
-    "reason": "C",
-    "verdict": "public",
     "need": {
      "by": "counterpart",
      "ref": "FitParameterCorrelationItem",
      "verdict": "keep"
-    }
+    },
+    "reason": "C",
+    "verdict": "public"
    },
    "FitPreamble": {
     "need": {
@@ -6241,6 +6288,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "WeightFraction": {
+    "need": {
+     "by": "deviation",
+     "ref": "D80",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "error_report": {
     "need": {
      "by": "deviation",
@@ -6589,7 +6645,9 @@
     "parameters",
     "setup_monochromator_twotheta",
     "setup_polarization_coefficient",
-    "setup_wavelength"
+    "setup_wavelength",
+    "setup_wavelength_2",
+    "setup_wavelength_2_to_1_ratio"
    ]
   },
   "CwlPseudoVoigt": {
@@ -6884,7 +6942,8 @@
     "enabled",
     "parameters",
     "scale",
-    "structure_id"
+    "structure_id",
+    "weight_fraction"
    ]
   },
   "LinkedStructures": {
@@ -7356,6 +7415,13 @@
     "COMPACT",
     "FULL",
     "OFF"
+   ]
+  },
+  "WeightFraction": {
+   "kind": "class",
+   "members": [
+    "uncertainty",
+    "value"
    ]
   },
   "error_report": {

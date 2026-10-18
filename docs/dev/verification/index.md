@@ -86,6 +86,19 @@ produced by edi or crysta.
   – the same pattern with the monochromator **polarization** factor
   (`setup_polarization_coefficient` 0.5, `setup_monochromator_twotheta` 26.565°;
   FullProf `Rpolarz`, `Cthm` 0.8).
+- [pd-xray-cwl LiF single absorption](pd-xray-cwl_LiF_single_absorption.ipynb)
+  – the same pattern with the Hewat cylinder **absorption** correction
+  (`cylinder-hewat`, `mu_r` 0.9; FullProf `muR`), applied per reflection.
+- [pd-xray-cwl LiF doublet](pd-xray-cwl_LiF_doublet.ipynb) – the same pattern with the
+  Cu **Kα doublet** (`setup_wavelength_2` 1.5444 Å, `setup_wavelength_2_to_1_ratio` 0.5;
+  FullProf `Lambda2`, `Ratio`).
+
+### PbSO4 structure
+
+- [pd-xray-cwl PbSO4 round robin](pd-xray-cwl_PbSO4_round-robin.ipynb) – the X-ray round-robin
+  pattern with the Cu Kα doublet, monochromator polarization and **Bérar–Baldinozzi** asymmetry;
+  the pseudo-Voigt's widths, mixing and asymmetry are fitted to FullProf's TCH profile, so the
+  bounds are regression pins and the page does not count toward diffraction-lib parity.
 
 ## Powder, Neutron, Time-Of-Flight
 

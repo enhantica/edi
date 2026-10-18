@@ -269,12 +269,19 @@ def test_loop_expectations_cover_fixture_bytes(source):
     assert len(cases) == len(parsed), (
         'gate 3: no input-file loop is omitted from the frozen inventory'
     )
+    modes = {case.get('source_bytes') for case in cases}
+    assert len(modes) == 1 and modes <= {None, 'current'}, (
+        'Gate 3 all loops in one file must share one exact current or archived input identity'
+    )
+    # Read and authenticate the complete source once, not once per loop. The
+    # archived data is still checked in full; large ASCII tables are not omitted.
+    contents = (
+        path.read_bytes() if modes == {'current'} else original_tokens(pre_catalogue_bytes(path))
+    )
+    actual_digest = hashlib.sha256(contents).hexdigest()
+    replacement = json.loads((ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text())
     for case in cases:
         digest = case['sha256']
-        contents = original_tokens(pre_catalogue_bytes(path))
-        replacement = json.loads(
-            (ROOT / 'tests/fixtures/e04_t2/replacement-input.json').read_text()
-        )
         if source == replacement['file']:
             assert replacement['before_sha256'] == digest, (
                 'Gate 3 retains the exact original retired-model input receipt'
@@ -285,7 +292,7 @@ def test_loop_expectations_cover_fixture_bytes(source):
                 re.MULTILINE,
             ), 'Gate 3 replacement input must declare the owner-selected Npr5 shape'
             digest = replacement['after_sha256']
-        assert hashlib.sha256(contents).hexdigest() == digest, (
+        assert actual_digest == digest, (
             'Gate 3 frozen loop oracle retains exact input provenance at the selector seam'
         )
         assert {k: case[k] for k in ('category', 'columns', 'rows')} in parsed, (
@@ -678,3 +685,31 @@ def test_sequence_retains_the_source_checker_failure_barrier(tmp_path):
         'The real lint sequence must build first, execute the source checker and '
         'refuse Qt lint after that checker fails'
     )
+
+
+@pytest.mark.parametrize(
+    'rows',
+    [
+        'a 1\nb 2\n',
+        '"a b" 1\n\'c d\' 2\n',
+        'a 1 # ignored words\nb 2 # ignored words\n',
+        'a\\ b 1\nc\\ d 2\n',
+    ],
+    ids=['plain', 'quoted', 'commented', 'escaped'],
+)
+def test_loop_row_count_preserves_unquoted_quoted_comment_and_escape_boundaries(rows, tmp_path):
+    path = tmp_path / 'input.edi'
+    path.write_text('data_input\nloop_\n_sample.id\n_sample.value\n' + rows)
+    producer = runpy.run_path(str(ROOT / 'tests/fixtures/e04_t2/generate.py'))
+    assert producer['loops'](path) == [
+        {'category': 'sample', 'columns': ['id', 'value'], 'rows': 2}
+    ], 'Gate 3 loop row counting must preserve quoting, escaped whitespace and comment arity'
+
+
+@pytest.mark.parametrize('row', ['a', 'a 1 extra'])
+def test_loop_row_count_rejects_incomplete_or_extra_columns(row, tmp_path):
+    path = tmp_path / 'input.edi'
+    path.write_text('data_input\nloop_\n_sample.id\n_sample.value\n' + row + '\n')
+    producer = runpy.run_path(str(ROOT / 'tests/fixtures/e04_t2/generate.py'))
+    with pytest.raises(ValueError, match='malformed fixture loop'):
+        producer['loops'](path)

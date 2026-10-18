@@ -2625,6 +2625,7 @@
       "block": "analysis",
       "file": "docs/user/cli/pd-xray-cwl_lif_single/project/analysis/analysis.edi",
       "sha256": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+      "source_bytes": "current",
       "category": "joint_fit",
       "columns": [
         "experiment_id",
@@ -2638,7 +2639,8 @@
       "page": "experiment",
       "block": "cu_ka",
       "file": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
-      "sha256": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+      "source_bytes": "current",
       "category": "linked_structure",
       "columns": [
         "structure_id",
@@ -2652,7 +2654,8 @@
       "page": "experiment",
       "block": "cu_ka",
       "file": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
-      "sha256": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+      "source_bytes": "current",
       "category": "background",
       "columns": [
         "id",
@@ -2667,7 +2670,8 @@
       "page": "experiment",
       "block": "cu_ka",
       "file": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
-      "sha256": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+      "source_bytes": "current",
       "category": "data",
       "columns": [
         "two_theta",
@@ -2684,6 +2688,7 @@
       "block": "lif",
       "file": "docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi",
       "sha256": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe",
+      "source_bytes": "current",
       "category": "atom_site",
       "columns": [
         "id",
@@ -2942,6 +2947,93 @@
         "adp_iso"
       ],
       "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/excluded_region",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/linked_structure",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/background",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "background",
+      "columns": [
+        "id",
+        "order",
+        "coef"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/data",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 6001
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi/atom_site",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "structure",
+      "block": "pbso4",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi",
+      "sha256": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401",
+      "source_bytes": "current",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 5
     }
   ]
 }

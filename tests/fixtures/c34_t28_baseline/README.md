@@ -103,6 +103,16 @@ The later LATP project did not exist at the pre-move build. Its separate
 independently committed source inputs and a second-save fixed-point invariant,
 never a fresh save-output pin. Author it with
 `python -m tests.fixtures.c34_t28_baseline.generate_bytes --add-fixed-point pd-xray-cwl_latp_scan-4f`.
-The inventory admits this one explicit addition and still requires every
+The inventory admits the explicitly declared additions and still requires every
 historical case. Its save witness proves complete first/second saved inventories
 and byte equality, while retaining every input byte.
+
+The round-robin PbSO4 project and the extended LiF CLI project also have complete
+current-input hashes and second-save fixed-point invariants, authored with the
+same `--add-fixed-point` generator. No new saved-output golden is captured.
+The original LiF CLI input and saved-byte pins remain unchanged: its complete
+original input is identical to the retained corpus LiF input, which is replayed
+against those pins. Both the historical replay and the current-input invariant
+first authenticate every current CLI input byte. Changed scientific values,
+measurement rows, row order and missing or extra files are refused before saving.
+The descriptive metadata archive and its strict byte checks remain unchanged.
