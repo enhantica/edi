@@ -1654,3 +1654,39 @@ Fingerprint/settings bytes, formats, resource accounting and scientific or
 runtime policy behavior do not change. Source checks cannot certify native
 Mac layout, binding-warning absence or one-click input; those remain real-app
 qualification requirements.
+
+
+### Chronological current Edi notice and human activity purposes
+
+The assistant's current Edi notice is a bounded presentation fact, not a footer,
+archive entry or model message. On the first publication of a new current error,
+the panel retains one owner/text/canonical-row-ID anchor. Repeated publication of
+the same error keeps that anchor. Its selectable Edi-labelled item follows that
+canonical row in the scrolling list; subsequent messages appear after it. A
+missing/removed anchor or empty history uses one scrolling header notice so an
+orphan is never lost. Clearing the current error removes its presentation;
+conversation/account/assistant retirement resets the anchor. No append to a
+failed archive, inference input or secondary history store is attempted.
+
+The native delegate Column preserves original message role/ID access and forwards
+pool/reuse resets to the original AssistantMessage. Canonical model rows,
+clipboard/report callbacks, navigation and reading/follow-tail rules remain the
+original ones. Pending Plan/Question/Trial/Working controls keep their existing
+handlers in the scrolling progress footer; the Edi notice does not live there.
+
+Collapsed activity captions prefer actual supplied purpose/description, then
+validated pinned CommandAction metadata. Known project-assistance/SKILL.md reads
+use the existing bundled workflow identity; unknown shell intention says only
+Run shell command, never a raw command prefix. Registered Edi tool names map to
+short human action phrases; other categories use honest verb descriptions.
+Captions do not claim success, inspect command syntax, invoke a shell or create
+new provider fields. Literal commands, immutable details/canonical copy and
+actual status/uncertainty remain unchanged.
+
+The Preferences Add skill source button uses the full existing content width.
+The redundant guide paragraph is removed; the original source settings,
+FolderDialog tokens, enable/add/remove controls and their authority remain.
+Prior art is the existing canonical messages model/row ID navigation and native
+ListView header/delegate/footer composition, the original notice style and the
+pinned structured command/tool metadata. Native chronology and rendered input
+still require the actual app vehicle; source checks alone are not acceptance.

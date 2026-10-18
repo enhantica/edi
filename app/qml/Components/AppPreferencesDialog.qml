@@ -426,6 +426,7 @@ AppDialog {
                 }
                 EaElements.SideBarButton {
                     objectName: "preferences.ai.sources.add"
+                    width: parent.width
                     text: qsTr("Add skill source")
                     fontIcon: "plus-circle"
                     enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
@@ -449,12 +450,6 @@ AppDialog {
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
-                }
-                EaElements.Label {
-                    width: parent.width
-                    text: qsTr("Enabled sources guide the assistant. They do not grant project writes, network access or new tools.")
-                    textFormat: Text.PlainText
-                    wrapMode: Text.WrapAnywhere
                 }
             }
         }

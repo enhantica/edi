@@ -66,6 +66,70 @@ Popup {
         return qsTr("Resets in %1 min").arg(minutes);
     }
     readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
+    property var noticeState: null
+    property var noticeProjection: ({})
+    function captureNotice() {
+        const component = panel, original = panel.assistant;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original)) return;
+        const previous = component.noticeState;
+        const message = original.lastError;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original) return;
+        if (!message.length) {
+            if (component.noticeState === previous) component.noticeState = null;
+            return;
+        }
+        if (previous && previous.owner === original && previous.text === message) return;
+        const rows = original.messages, count = rows.count;
+        const anchor = count > 0 ? rows.text(count - 1, "id") : "";
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
+            || component.noticeState !== previous || original.lastError !== message) return;
+        component.noticeState = { owner: original, text: message, anchor: anchor };
+    }
+    readonly property bool noticeAnchorPresent: {
+        const revision = noticeProjection;
+        const notice = noticeState;
+        if (revision === null) return false;
+        if (!notice || notice.owner !== assistant || !notice.anchor.length) return false;
+        for (let i = 0; i < assistant.messages.count; ++i)
+            if (assistant.messages.text(i, "id") === notice.anchor) return true;
+        return false;
+    }
+    onAssistantChanged: { noticeState = null; captureNotice(); }
+    Component.onCompleted: captureNotice()
+    component EdiNotice: Item {
+        id: notice
+        required property string noticeText
+        objectName: noticeText.length > 0 ? "assistant.currentNotice" : ""
+        visible: noticeText.length > 0
+        implicitHeight: visible ? noticeContent.implicitHeight + AppSizes.unit * 0.5 : 0
+        height: implicitHeight
+        Column {
+            id: noticeContent
+            y: AppSizes.unit * 0.5
+            width: parent.width
+            spacing: AppSizes.unit * 0.25
+            EaElements.Label {
+                text: qsTr("Edi")
+                color: EaStyle.Colors.themeForegroundMinor
+            }
+            TextEdit {
+                width: parent.width
+                text: notice.noticeText
+                textFormat: TextEdit.PlainText
+                readOnly: true
+                selectByMouse: true
+                persistentSelection: true
+                wrapMode: TextEdit.Wrap
+                color: EaStyle.Colors.themeForeground
+                selectionColor: EaStyle.Colors.themeAccent
+                selectedTextColor: EaStyle.Colors.themeBackground
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                Accessible.role: Accessible.StaticText
+                Accessible.name: qsTr("Edi notice: %1").arg(text)
+            }
+        }
+    }
     property var consentSend: null
     function retireConsentSend() { consentSend = null; }
     function ownsConsentSend(intent) {
@@ -107,13 +171,14 @@ Popup {
     function scheduleConsentSend() { Qt.callLater(resumeConsentSend); }
     Connections {
         target: panel.assistant
-        function onConversationRetired() { panel.retireConsentSend(); }
+        function onConversationRetired() { panel.retireConsentSend(); panel.noticeState = null; panel.captureNotice(); }
         function onConnectedChanged() { panel.retireConsentSend(); }
-        function onAccountChanged() { panel.retireConsentSend(); }
+        function onAccountChanged() { panel.retireConsentSend(); panel.noticeState = null; panel.captureNotice(); }
         function onSelectedModelChanged() { panel.retireConsentSend(); }
         function onSelectedEffortChanged() { panel.retireConsentSend(); }
         function onStateChanged() { panel.scheduleConsentSend(); }
         function onCanCancelChanged() { panel.scheduleConsentSend(); }
+        function onLastErrorChanged() { panel.captureNotice(); }
         function onContextPreviewChanged() {
             const component = panel, original = panel.assistant;
             const intent = component.consentSend;
@@ -383,38 +448,6 @@ Popup {
                             width: parent.width
                             assistant: panel.assistant
                         }
-                        Item {
-                            objectName: "assistant.currentNotice"
-                            width: conversation.width
-                            visible: panel.assistant.lastError.length > 0
-                            height: visible ? noticeContent.implicitHeight + AppSizes.unit * 0.5 : 0
-                            Column {
-                                id: noticeContent
-                                y: AppSizes.unit * 0.5
-                                width: parent.width
-                                spacing: AppSizes.unit * 0.25
-                                EaElements.Label {
-                                    text: qsTr("Edi")
-                                    color: EaStyle.Colors.themeForegroundMinor
-                                }
-                                TextEdit {
-                                    width: parent.width
-                                    text: panel.assistant.lastError
-                                    textFormat: TextEdit.PlainText
-                                    readOnly: true
-                                    selectByMouse: true
-                                    persistentSelection: true
-                                    wrapMode: TextEdit.Wrap
-                                    color: EaStyle.Colors.themeForeground
-                                    selectionColor: EaStyle.Colors.themeAccent
-                                    selectedTextColor: EaStyle.Colors.themeBackground
-                                    font.family: EaStyle.Fonts.fontFamily
-                                    font.pixelSize: EaStyle.Sizes.fontPixelSize
-                                    Accessible.role: Accessible.StaticText
-                                    Accessible.name: qsTr("Edi notice: %1").arg(text)
-                                }
-                            }
-                        }
                         AssistantWorking {
                             objectName: "assistant.working"
                             width: parent.width
@@ -423,22 +456,46 @@ Popup {
                             presented: panel.shown && panel.visible
                         }
                     }
-                    delegate: AssistantMessage {
-                        assistant: panel.assistant
-                        required property var model
+                    header: EdiNotice {
                         width: conversation.width
-                        kind: model.kind
-                        text: model.text
-                        payload: model.payload
-                        status: model.status
-                        rowId: model.id
-                        onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
-                        onDetailsChanging: {
-                            conversation.cancelFlick();
-                            conversation.followsTail = false;
-                            conversation.jumpedUserId = "";
+                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && !panel.noticeAnchorPresent
+                            ? panel.noticeState.text : ""
+                    }
+                    delegate: Column {
+                        id: messageDelegate
+                        required property var model
+                        readonly property string rowId: model.id
+                        readonly property string kind: model.kind
+                        readonly property string text: model.text
+                        readonly property var payload: model.payload
+                        readonly property string status: model.status
+                        width: conversation.width
+                        spacing: chatBody.spacing
+                        ListView.onPooled: messageItem.resetDetails()
+                        ListView.onReused: messageItem.resetDetails()
+                        AssistantMessage {
+                            id: messageItem
+                            assistant: panel.assistant
+                            width: parent.width
+                            kind: messageDelegate.kind
+                            text: messageDelegate.text
+                            payload: messageDelegate.payload
+                            status: messageDelegate.status
+                            rowId: messageDelegate.rowId
+                            onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
+                            onDetailsChanging: {
+                                conversation.cancelFlick();
+                                conversation.followsTail = false;
+                                conversation.jumpedUserId = "";
+                            }
+                            highlighted: kind === "user" && rowId === conversation.jumpedUserId
                         }
-                        highlighted: model.kind === "user" && model.id === conversation.jumpedUserId
+                        EdiNotice {
+                            width: parent.width
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
+                                && panel.noticeAnchorPresent && panel.noticeState.anchor === messageDelegate.rowId
+                                ? panel.noticeState.text : ""
+                        }
                     }
                     property bool followsTail: true
                     property string jumpedUserId: ""
@@ -526,7 +583,7 @@ Popup {
                     }
                     Connections {
                         target: panel.assistant.messages
-                        function onDataChanged() { conversation.observeUserAdmission(); conversation.followOutput(); }
+                        function onDataChanged() { panel.noticeProjection = ({}); conversation.observeUserAdmission(); conversation.followOutput(); }
                     }
                     ScrollBar.vertical: EaElements.ScrollBar {
                         id: historyScrollBar

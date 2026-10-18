@@ -157,27 +157,37 @@ Rectangle {
         if (!Array.isArray(actions) || actions.length === 0 || !actions.every(usableCommandAction)) return "";
         const labels = [];
         for (const action of actions) {
-            if (action.type === "read") labels.push(qsTr("Read %1").arg(action.name || action.path));
+            if (action.type === "read") {
+                const path = action.path.replace(/\\/g, "/");
+                if (/(^|\/)project-assistance\/SKILL\.md$/.test(path)) labels.push(qsTr("Read assistant workflow instructions"));
+                else if (action.name === "SKILL.md") labels.push(qsTr("Read assistant instructions"));
+                else labels.push(qsTr("Read %1").arg(action.name || action.path));
+            }
             else if (action.type === "listFiles") labels.push(action.path ? qsTr("List %1").arg(action.path) : qsTr("List files"));
             else if (action.type === "search") labels.push(action.query ? qsTr("Search for %1").arg(action.query) : qsTr("Search files"));
-            else if (action.type === "unknown" && action.command.trim().length)
-                labels.push(qsTr("Run %1").arg(shortActionObject(action.command, false)));
+            else if (action.type === "unknown") labels.push(qsTr("Run shell command"));
         }
         return shortActionObject(labels.join(" · "), false);
     }
     function activityCaption() {
-        if (payload && payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string") return shortActionObject(payload.title, false);
+        if (payload && payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string" && payload.title.trim().length) return shortActionObject(payload.title, false);
         const description = activityDescription();
         if (description.length) return description;
-        if (decisionActivity) return qsTr("Request");
-        if (commandActivity) {
-            const command = typeof payload.command === "string" ? shortActionObject(payload.command, false) : "";
-            return command.length ? qsTr("Run %1").arg(command) : qsTr("Run command");
+        if (decisionActivity) return qsTr("Review requested action");
+        if (commandActivity) return qsTr("Run shell command");
+        if (payload && payload.type === "dynamicToolCall") {
+            const tools = {inspect_project: qsTr("Inspect project"), list_parameters: qsTr("Inspect parameters"),
+                diagnostics: qsTr("Check refinement diagnostics"), set_parameters: qsTr("Update parameter values"),
+                set_free: qsTr("Select refinement parameters"), run_fit: qsTr("Refine project"),
+                create_cwl_project: qsTr("Create diffraction project"), acquire_inputs: qsTr("Inspect input files"),
+                save_project: qsTr("Save project"), add_relations: qsTr("Edit parameter relationships"),
+                edit_background: qsTr("Edit experiment background")};
+            return Object.prototype.hasOwnProperty.call(tools, payload.tool) ? tools[payload.tool] : qsTr("Use project tool");
         }
-        const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
-            mcpToolCall: qsTr("Native operation"), dynamicToolCall: qsTr("Native operation"),
-            collabAgentToolCall: qsTr("Agent operation"), plan: qsTr("Plan update")};
-        return names[payload && payload.type] || qsTr("Activity");
+        const names = {fileChange: qsTr("Update files"), webSearch: qsTr("Search the web"),
+            mcpToolCall: qsTr("Use external tool"), collabAgentToolCall: qsTr("Coordinate assistant task"),
+            plan: qsTr("Update work plan"), ediOutcome: qsTr("Report project action")};
+        return payload && Object.prototype.hasOwnProperty.call(names, payload.type) ? names[payload.type] : qsTr("Perform assistant action");
     }
     function activityState() {
         if (commandActivity) {
