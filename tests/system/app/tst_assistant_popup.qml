@@ -335,6 +335,11 @@ TestCase {
         oldToolTips = Preferences.toolTips;
         window = application.createObject(null);
         verify(window !== null, "I16/popup: production Main instantiates in the normal native runner");
+        // QtTest keys use the active/focus window; pointer events use their item's window.
+        // Establish original Main ONCE, before any account/work or later deliberate app switch.
+        window.requestActivate();
+        tryCompare(window, "active", true, 2000,
+            "GUI497 SETUP: the separately created real Main is initially active for original native keyboard routing");
         rendered();
         popup = item("assistant.popup");
         assistant = Session.assistant;
@@ -6557,9 +6562,27 @@ TestCase {
         return pill;
     }
     function gui393_roundFooter() {
-        const send = item("assistant.send");
-        verify(send.enabled && send.visible && send.background.color.a > 0,
-            "GUI393: independent real typed draft enables original strong Send");
+        const send = item("assistant.send"), editor = item("assistant.composer");
+        const revisions = Probe.objectsWithProperty(window, "textRevision").filter(object => object.firstFocusItem === editor);
+        const testWindow = this.Window.window, focus = window.activeFocusItem;
+        console.log("GUI497_SEND_BEFORE", JSON.stringify({
+            send: String(send), sendEnabled: send.enabled, sendVisible: send.visible,
+            background: String(send.background), backgroundAlpha: send.background ? send.background.color.a : null,
+            controller: String(assistant), sameController: Session.assistant === assistant,
+            state: assistant.state, connected: assistant.connected, canCancel: assistant.canCancel,
+            editor: String(editor), editorLength: editor.text.length, revisionOwners: revisions.length,
+            revision: revisions.length === 1 ? revisions[0].textRevision : null,
+            composing: editor.inputMethodComposing, editorFocus: editor.focus, editorActiveFocus: editor.activeFocus,
+            editorEnabled: editor.enabled, editorVisible: editor.visible,
+            main: String(window), mainActive: window.active, mainVisible: window.visible,
+            editorWindow: String(editor.Window.window), editorInMain: editor.Window.window === window,
+            testWindow: String(testWindow), testWindowActive: testWindow ? testWindow.active : null,
+            mainFocus: String(focus), mainFocusName: focus ? String(focus.objectName).slice(0, 80) : "",
+            focusIsEditor: focus === editor,
+            testFocus: testWindow ? String(testWindow.activeFocusItem) : "null"}));
+        verify(send.enabled, "GUI497: independent real typed draft enables original Send");
+        verify(send.visible, "GUI497: original Send is visible at the same pre-input interval");
+        verify(send.background.color.a > 0, "GUI497: original Send retains its actually painted strong background");
         for (const name of ["assistant.files.add", "assistant.showActions",
                             "assistant.previousUserMessage", "assistant.nextUserMessage"]) {
             const control = item(name), background = control.background;
