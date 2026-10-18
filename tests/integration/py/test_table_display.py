@@ -5,10 +5,15 @@ import re
 import shlex
 import shutil
 import subprocess
-from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
+
+from tests.integration.py.test_scan_app_contract import (
+    object_id,
+    property_value,
+    status_item_results,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / 'tests/fixtures/table_display/run_functions.cjs'
@@ -71,21 +76,8 @@ def test_display_precision_is_independent_of_cell_clip_width():
 
 
 def test_sequential_count_colours_follow_zero_and_nonzero_state():
-    source = ROOT / 'app/qml/Components/StatusBar.qml'
     for ok, failed in ((0, 0), (7, 0), (0, 3), (7, 3)):
-        actual = run_functions(
-            source,
-            ['counts'],
-            [{'name': 'counts', 'args': []}],
-            fit={'scanOk': ok, 'scanFailed': failed},
-        )[0]
-        expected = [
-            f'<font color="#009900">{ok} ok</font>' if ok else '0 ok',
-            f'<font color="#cc0000">{failed} fail</font>' if failed else '0 fail',
-        ]
-        assert actual == expected, (
-            'Sequential status colours positive ok green and positive fail red; zero stays neutral'
-        )
+        test_displayed_sequential_counts_consume_state_colours(False, ok, failed)
 
 
 @pytest.mark.parametrize(
@@ -126,61 +118,45 @@ def test_displayed_sequential_counts_consume_state_colours(summary, ok, failed):
         'goodnessOfFit': '1.4',
         'iterations': '8',
     }
-    pieces = run_functions(
-        ROOT / 'app/qml/Components/StatusBar.qml', [], [], fit=fit, consumer='scan'
-    )
-
-    class Ink(HTMLParser):
-        def __init__(self, colour):
-            super().__init__()
-            self.stack = [('root', colour)]
-            self.characters = []
-
-        def handle_starttag(self, tag, attrs):
-            values = dict(attrs)
-            colour = values.get('color', self.stack[-1][1])
-            style = re.search(r'(?:^|;)\s*color\s*:\s*([^;]+)', values.get('style', ''))
-            self.stack.append((tag, style[1].strip() if style else colour))
-
-        def handle_endtag(self, tag):
-            for index in range(len(self.stack) - 1, 0, -1):
-                if self.stack[index][0] == tag:
-                    self.stack = self.stack[:index]
-                    break
-
-        def handle_data(self, data):
-            self.characters.extend((char, self.stack[-1][1]) for char in data)
-
-    characters = []
-    for piece in pieces:
-        assert piece['format'] in {1, 2}, (
-            'The visible count Text interprets colour markup instead of displaying literal tags'
+    fit['outcome'] = 'success'
+    actual = status_item_results((ROOT / 'app/qml/Components/StatusBar.qml').read_text(), fit)
+    # Before: coloured HTML count fragments. After the owner's status items:
+    # the shared icon and numeric value carry the state colour; the key stays neutral.
+    rows = {row['key']: row for row in actual}
+    for key, count, colour, icon in (
+        ('OK', ok, '#009900', 'check'),
+        ('Failed', failed, '#cc0000', 'times'),
+    ):
+        assert rows[key]['value'] == str(count) and rows[key]['icon'] == icon, (
+            'The actual sequential consumer retains each supplied count and its own semantic icon'
         )
-        ink = Ink(piece['color'])
-        ink.feed(piece['text'])
-        characters.extend(ink.characters)
-        characters.append((' ', '#111111'))
-    displayed = ''.join(char for char, _ in characters)
-    expected_ok, expected_fail = f'{ok} ok', f'{failed} fail'
-    assert expected_ok in displayed and expected_fail in displayed, (
-        'Running scans and completed summaries display both supplied count words'
-    )
-    for word, count, colour in ((expected_ok, ok, '#009900'), (expected_fail, failed, '#cc0000')):
-        start = displayed.index(word)
-        actual = {value for _, value in characters[start : start + len(word)]}
-        assert actual == {colour} if count else actual <= {'#111111', '#666666'}, (
+        expected = {colour} if count else {'#111111', '#666666'}
+        assert rows[key]['value_color'] in expected and rows[key]['icon_color'] in expected, (
             'Running scans and completed summaries display state-coloured counts '
             'through their real consumer bindings; zero remains neutral'
         )
-    assert (
-        displayed.index(expected_ok)
-        < displayed.index(expected_fail)
-        < displayed.index('1s')
-        < displayed.index('χ² 1.4')
-    ), 'The visible sequential consumer retains count, time and goodness-of-fit order'
-    assert ('10 files' in displayed) == summary and ('eta 2s' in displayed) == (not summary), (
-        'The actual consumer distinguishes running progress from the completed scan summary'
+        assert rows[key]['key_shown'], (
+            'The actual status item shows its semantic key '
+            'when the caller provides room for every key'
+        )
+    keys = [row['key'] for row in actual]
+    assert keys.index('OK') < keys.index('Failed') < keys.index('Time') < keys.index('χ²'), (
+        'The displayed sequential consumer retains count, time and goodness-of-fit order'
     )
+    assert rows['Time']['value'] == '1s' and rows['χ²']['value'] == '1.4', (
+        'The actual shared status cells display the supplied time and goodness of fit'
+    )
+    assert ('Files' in rows) is summary and ('ETA' in rows) is (not summary), (
+        'The actual status items distinguish running progress from a completed scan summary'
+    )
+    if summary:
+        assert rows['Files']['value'] == '10 files', (
+            'The completed summary keeps the supplied file inventory'
+        )
+    else:
+        assert rows['ETA']['value'] == '2s', (
+            'A running scan keeps the supplied remaining-time estimate'
+        )
 
 
 @pytest.mark.parametrize('escape', ['unused-formatter', 'coloured-zero'])
@@ -188,17 +164,17 @@ def test_scan_consumer_gate_rejects_disconnected_or_coloured_zero_display(
     tmp_path, monkeypatch, escape
 ):
     source = (ROOT / 'app/qml/Components/StatusBar.qml').read_text()
-    neutral = '[qsTr("%1 ok").arg(bar.fit.scanOk), qsTr("%1 fail").arg(bar.fit.scanFailed)]'
+    ok_item = object_id(source, 'okItem')
+    colour = property_value(ok_item, 'valueColor')
     if escape == 'unused-formatter':
-        mutated = source.replace('fitArea.counts()', neutral)
+        changed_item = ok_item.replace(
+            'valueColor: ' + colour, 'valueColor: EaStyle.Colors.themeForeground'
+        )
         ok, failed = 7, 3
     else:
-        start = source.index('id: numberText')
-        tail = re.sub(
-            r'(?m)^(\s*color:)[^\n]+', r'\1 EaStyle.Colors.green', source[start:], count=1
-        )
-        mutated = source[:start] + tail
+        changed_item = ok_item.replace('valueColor: ' + colour, 'valueColor: EaStyle.Colors.green')
         ok, failed = 0, 0
+    mutated = source.replace(ok_item, changed_item)
     assert mutated != source, 'The consumer escape exercise reaches the actual scan text binding'
     target = tmp_path / 'app/qml/Components/StatusBar.qml'
     target.parent.mkdir(parents=True)

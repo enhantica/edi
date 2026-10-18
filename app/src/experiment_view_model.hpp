@@ -8,6 +8,7 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
+#include <optional>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -161,12 +162,27 @@ class ExperimentViewModel : public QObject {
     RangeViewModel* measuredRange() const { return measured_range_; }
     PatternModel* pattern() const { return pattern_; }
     // The experiment's pattern as the chart draws it (edi ADR-0021 §1): immutable buffers, captured when
-    // a calculation is published and when the experiment is first shown.
-    const edi::PatternSource& patternSource() const { return pattern_source_; }
+    // a calculation is published and when the experiment is first shown. On the d axis it is the d-spacing capture,
+    // kept while a chart is on d; until there is one, the pattern on the experiment's own axis.
+    const edi::PatternSource& patternSource(edi::PatternAxis axis = edi::PatternAxis::Native) const {
+        return axis == edi::PatternAxis::DSpacing && d_source_ ? *d_source_ : pattern_source_;
+    }
     void capturePattern();
     // A running fit's pattern at one iteration: shown until the fit ends and the pattern is captured
-    // again.
-    void showPattern(edi::PatternSource source);
+    // again. A scan dataset's view brings its d-spacing capture too; a fit's frame does not, and the chart on d
+    // keeps the last one until the fit's result is captured.
+    void showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source = std::nullopt);
+    // A chart's x axis: while one chart is on d, the pattern is captured on d as well.
+    void setChartAxis(const QObject* chart, edi::PatternAxis axis);
+    bool dSpacingWanted() const { return !d_charts_.isEmpty(); }
+    // The colour of this experiment's pattern (edi::pattern_colour) is its place among a count: by default among the
+    // project's experiments; a scan's template shows one dataset at a time and takes that dataset's place among the
+    // scan's datasets, as the Project page lists them (setColourPlace).
+    std::size_t colourPlace() const { return colour_place_.value_or(place()); }
+    std::size_t colourCount() const { return colour_place_ ? colour_count_ : project_.experiments.size(); }
+    // The project's structures, whose ticks the pattern shows.
+    std::size_t structureCount() const { return project_.structures.size(); }
+    void setColourPlace(std::optional<std::size_t> place, std::size_t count);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
@@ -208,11 +224,16 @@ class ExperimentViewModel : public QObject {
    private:
     edi::Category category(const char* id) const;
     void setLastError(const QString& error);
+    // The experiment's place in the project.
+    std::size_t place() const;
 
     edi::Project& project_;
     edi::ExperimentBase& experiment_;
     QSet<const QObject*> shown_charts_;
+    QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;
+    std::optional<std::size_t> colour_place_;
+    std::size_t colour_count_ = 0;
     std::uint64_t presented_generation_ = 0;
     ProjectEditor& editor_;
     bool can_load_data_ = false;
@@ -240,6 +261,7 @@ class ExperimentViewModel : public QObject {
     RangeViewModel* measured_range_;
     PatternModel* pattern_;
     edi::PatternSource pattern_source_;
+    std::optional<edi::PatternSource> d_source_;
     BlockText* text_;
 };
 

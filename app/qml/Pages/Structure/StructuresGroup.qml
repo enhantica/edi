@@ -34,6 +34,8 @@ EaElements.GroupBox {
             objectName: "structures.list"
             defaultInfoText: qsTr("No structures defined")
             sourceModel: group.project ? group.project.structures : null
+            marksCurrentRow: true
+            currentRow: group.project ? group.project.currentStructureIndex : -1
 
             columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
@@ -53,15 +55,13 @@ EaElements.GroupBox {
                 }
             }
 
-            delegate: EaComponents.ListViewDelegate {
+            delegate: TableRow {
                 id: row
 
-                required property int index
                 required property string name
                 required property StructureViewModel structure
 
                 objectName: `structures.row.${index}`
-                color: group.project && group.project.currentStructureIndex === index ? EaStyle.Colors.tableHighlight : (index % 2 ? EaStyle.Colors.themeBackgroundHovered2 : EaStyle.Colors.themeBackgroundHovered1)
                 TapHandler {
                     onTapped: group.project.currentStructureIndex = row.index
                 }

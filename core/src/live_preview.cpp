@@ -145,6 +145,8 @@ void LivePreview::apply(const Edit& edit) {
     State::request(state_);
 }
 
+void LivePreview::apply_setting(const Edit& edit) { edit(); }
+
 void LivePreview::recalculate() {
     State& s = *state_;
     s.trace(work::EventKind::Input, s.newest + 1);

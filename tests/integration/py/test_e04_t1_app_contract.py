@@ -40,7 +40,52 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def api_violations(source):
+def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each failed identity check refuses independently
+    # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
+    # "the report model crosses into the Report page untyped for now".
+    # The planned schema successor removes this sole temporary exception.
+    # Its exact task identity and the owner citation live in the hub acceptance receipt.
+    if relative_path != 'app/src/report_view_model.hpp':
+        return set()
+    classes = []
+    for match in re.finditer(r'\b(?:class|struct)\s+(\w+)[^;{}]*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        classes.append((match[1], match.end(), end))
+    if sum(name == 'ReportViewModel' for name, _, _ in classes) != 1:
+        return set()
+    namespaces = []
+    for match in re.finditer(r'\bnamespace\s*(\w+(?:::\w+)*)?\s*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        namespaces.append((match[1], match.end(), end))
+    properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
+    named = [
+        m
+        for m in properties
+        if re.fullmatch(r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*', m[1])
+    ]
+    if len(named) != 1:
+        return set()
+    prop = named[0]
+    enclosing = [name for name, start, end in namespaces if start <= prop.start() < end]
+    if enclosing != ['edi_app']:
+        return set()
+    owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
+    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
+        return set()
+    return {prop.span()}
+
+
+def api_violations(source, relative_path=None):
     source = without_comments(source)
     forbidden = set(FORBIDDEN)
     aliases = re.findall(r'using\s+(\w+)\s*=\s*([^;]+);|typedef\s+([^;]+)\s+(\w+)\s*;', source)
@@ -48,8 +93,13 @@ def api_violations(source):
         for name, value, old_value, old_name in aliases:
             if set(re.findall(r'\w+', value or old_value)) & forbidden:
                 forbidden.add(name or old_name)
-    surfaces = re.findall(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
-    fragments = [' '.join(parts) for parts in surfaces]
+    allowed = report_model_exception_spans(source, relative_path)
+    surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
+    fragments = [
+        ' '.join(part or '' for part in match.groups())
+        for match in surfaces
+        if match.span() not in allowed
+    ]
     fragments += re.findall(
         r'(?:Q_SIGNALS|signals|(?:public|protected|private)\s+(?:Q_SLOTS|slots))\s*:(.*?)(?=\n\s*(?:public|private|protected|signals|Q_SIGNALS)\s*:|\Z)',
         source,
@@ -85,7 +135,7 @@ def test_shipped_view_model_api_is_typed():
     files = list((ROOT / 'app/src').rglob('*.hpp')) + list((ROOT / 'app/src').rglob('*.h'))
     assert files, 'gate 4: the app must declare the typed QObject view-model contract'
     for file in files:
-        assert not api_violations(file.read_text()), (
+        assert not api_violations(file.read_text(), file.relative_to(ROOT).as_posix()), (
             f'I2: no JSON/dictionary state crosses the API in {file.relative_to(ROOT)}'
         )
     for file in (ROOT / 'app/qml').rglob('*.qml'):
@@ -93,6 +143,93 @@ def test_shipped_view_model_api_is_typed():
             r'JSON\s*\.\s*(?:parse|stringify)\s*\(|\bJsonListModel\b',
             without_comments(file.read_text()),
         ), f'I2: no dictionary round trips or JsonListModel in {file.relative_to(ROOT)}'
+
+
+REPORT_EXCEPTION = (
+    'namespace edi_app { class ReportViewModel : public QObject { '
+    'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) }; }'
+)
+REPORT_HEADER = 'app/src/report_view_model.hpp'
+
+
+def test_report_model_owner_exception_is_exactly_one_named_property():
+    assert not api_violations(REPORT_EXCEPTION, REPORT_HEADER), (
+        'I2 owner decision 3f2ce1cf6 admits only ReportViewModel.model QVariantMap; '
+        'the planned schema successor removes the exception'
+    )
+
+
+@pytest.mark.parametrize(
+    'escape',
+    [
+        'anonymous-namespace',
+        'foreign-namespace',
+        'nested-namespace',
+        'second',
+        'renamed',
+        'other-class',
+        'other-file',
+        'duplicate',
+        'list',
+        'hash',
+        'json',
+        'alias',
+        'nested',
+        'method',
+        'signal',
+        'savedReports',
+        'figures',
+        'suText',
+        'setPoints',
+    ],
+)
+def test_report_model_owner_exception_cannot_widen(escape):
+    source, path = REPORT_EXCEPTION, REPORT_HEADER
+    if escape == 'anonymous-namespace':
+        source = source.replace('namespace edi_app {', 'namespace edi_app { namespace {') + '}'
+    elif escape == 'foreign-namespace':
+        source = source.replace('namespace edi_app', 'namespace other')
+    elif escape == 'nested-namespace':
+        source = (
+            source.replace('namespace edi_app {', 'namespace edi_app { namespace other {') + '}'
+        )
+    elif escape == 'second':
+        source = source.replace('};', 'Q_PROPERTY(QVariantMap second READ second) };')
+    elif escape == 'renamed':
+        source = source.replace('QVariantMap model', 'QVariantMap payload')
+    elif escape == 'other-class':
+        source = source.replace('ReportViewModel', 'OtherViewModel')
+    elif escape == 'other-file':
+        path = 'app/src/other.hpp'
+    elif escape == 'duplicate':
+        source += REPORT_EXCEPTION
+    elif escape in {'list', 'hash', 'json'}:
+        source = source.replace(
+            'QVariantMap',
+            {'list': 'QVariantList', 'hash': 'QVariantHash', 'json': 'QJsonObject'}[escape],
+        )
+    elif escape == 'alias':
+        source = 'using Payload = QVariantMap;' + source.replace(
+            'QVariantMap model', 'Payload model'
+        )
+    elif escape == 'nested':
+        source = source.replace('Q_PROPERTY', 'class OtherViewModel { Q_PROPERTY').replace(
+            ' };', ' }; };'
+        )
+    else:
+        added = {
+            'method': 'Q_INVOKABLE QVariantMap payload();',
+            'signal': 'signals:\n void changed(QVariantList values);',
+            'savedReports': 'Q_PROPERTY(QVariantList savedReports READ savedReports)',
+            'figures': 'Q_INVOKABLE void saveReport(QVariantMap figures);',
+            'suText': 'Q_PROPERTY(QVariantMap suText READ suText)',
+            'setPoints': 'Q_INVOKABLE void setPoints(QVariantList points);',
+        }[escape]
+        source = source.replace('};', added + ' };')
+    assert api_violations(source, path), (
+        'I2: the single temporary model exception refuses second/renamed/foreign '
+        f'properties and every other dictionary, list or JSON crossing; escape={escape}'
+    )
 
 
 def assert_gui_pin(source):
@@ -202,30 +339,124 @@ def assert_local_app_checks(manifest):
         )
 
 
-def assert_disabled_app_steps(job):
-    for title, task in (
-        ("The app's Qt Quick Test tier", 'app-test'),
-        ('The UI test against the one committed image set', 'app-ui-test'),
-    ):
+NIGHTLY_APP_CONDITION = (
+    "${{ !cancelled() && (github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch') }}"
+)
+APP_GROUP_TITLE = "The app group's Python tests (tests/integration/app)"
+APP_TIER_STEPS = (
+    ("The app's Qt Quick Test tier", 'app-test'),
+    ('The UI test against the one committed image set', 'app-ui-test'),
+)
+APP_IMAGE_UPLOAD_TITLE = "Upload the UI test's images and similarity maps"
+
+
+def assert_nightly_app_steps(job):
+    for title, task in APP_TIER_STEPS:
         steps = [step for step in job['steps'] if step.get('name') == title]
-        assert len(steps) == 1 and steps[0].get('if') is False, (
-            ' owner decisions: each disabled app tier is retained once with literal if: false'
+        assert len(steps) == 1, (
+            f'owner decision: each nightly app tier is present once; title={title!r}, '
+            f'actual count={len(steps)}'
+        )
+        assert steps[0].get('if') == NIGHTLY_APP_CONDITION, (
+            'owner decision: app tiers run only on schedule or manual dispatch, including '
+            f'after earlier failures; title={title!r}, actual if={steps[0].get("if")!r}'
         )
         assert steps[0].get('run') == f'pixi run -e app --skip-deps {task}', (
-            ' owner decisions: retain the manual tier command for owner re-enable'
+            f'owner decision: retain the app tier command; title={title!r}, '
+            f'actual run={steps[0].get("run")!r}'
         )
-    uploads = [
-        step
-        for step in job['steps']
-        if step.get('name') == "Upload the UI test's images and similarity maps"
-    ]
-    assert len(uploads) == 1 and uploads[0].get('if') is False, (
-        ' owner decision: retain the image upload once with literal if: false'
+    uploads = [step for step in job['steps'] if step.get('name') == APP_IMAGE_UPLOAD_TITLE]
+    assert len(uploads) == 1, (
+        f'owner decision: the nightly UI image upload is present once; actual count={len(uploads)}'
     )
+    assert uploads[0].get('if') == NIGHTLY_APP_CONDITION, (
+        'owner decision: image upload has the same schedule/manual and cancellation condition; '
+        f'actual if={uploads[0].get("if")!r}'
+    )
+    assert uploads[0].get('uses') == 'actions/upload-artifact@v4' and set(
+        uploads[0].get('with', {}).get('path', '').split()
+    ) == {'build/app/ui-actual', 'build/app/ui-diff'}, (
+        'owner decision: the nightly upload keeps the actual-image and similarity-map inputs; '
+        f'actual upload={uploads[0]}'
+    )
+    groups = [step for step in job['steps'] if step.get('name') == APP_GROUP_TITLE]
+    assert len(groups) == 1 and groups[0].get('run') == 'pixi run --skip-deps group-app', (
+        'owner decision: keep the group-app command present once before Qt Quick Test; '
+        f'actual group steps={groups}'
+    )
+    titles = [step.get('name') for step in job['steps']]
+    assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
+        'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
+        f'the Python app group; actual step order={titles}'
+    )
+
+
+def assert_nightly_app_step_escape_controls():
+    # Independent positive policy fixture: these values come from the workflow contract.
+    job = {
+        'steps': [
+            {'name': APP_GROUP_TITLE, 'run': 'pixi run --skip-deps group-app'},
+            *[
+                {
+                    'name': title,
+                    'if': NIGHTLY_APP_CONDITION,
+                    'run': f'pixi run -e app --skip-deps {task}',
+                }
+                for title, task in APP_TIER_STEPS
+            ],
+            {
+                'name': APP_IMAGE_UPLOAD_TITLE,
+                'if': NIGHTLY_APP_CONDITION,
+                'uses': 'actions/upload-artifact@v4',
+                'with': {'path': 'build/app/ui-actual\nbuild/app/ui-diff'},
+            },
+        ]
+    }
+    assert_nightly_app_steps(job)
+    for title in [*(title for title, _ in APP_TIER_STEPS), APP_IMAGE_UPLOAD_TITLE]:
+        for condition in (
+            None,
+            False,
+            True,
+            'false',
+            '${{ false }}',
+            '${{ always() }}',
+            '${{ !cancelled() }}',
+            "${{ github.event_name == 'push' }}",
+            "${{ github.event_name == 'pull_request' }}",
+        ):
+            broken = copy.deepcopy(job)
+            step = next(step for step in broken['steps'] if step['name'] == title)
+            if condition is None:
+                step.pop('if')
+            else:
+                step['if'] = condition
+            with pytest.raises(AssertionError, match='owner decision'):
+                assert_nightly_app_steps(broken)
+        for duplicate in (False, True):
+            broken = copy.deepcopy(job)
+            step = next(step for step in broken['steps'] if step['name'] == title)
+            if duplicate:
+                broken['steps'].append(copy.deepcopy(step))
+            else:
+                broken['steps'].remove(step)
+            with pytest.raises(AssertionError, match='owner decision'):
+                assert_nightly_app_steps(broken)
+    broken = copy.deepcopy(job)
+    broken['steps'][0], broken['steps'][1] = broken['steps'][1], broken['steps'][0]
+    with pytest.raises(AssertionError, match='before Qt Quick Test'):
+        assert_nightly_app_steps(broken)
+    for index in (0, 1, 2):
+        broken = copy.deepcopy(job)
+        broken['steps'][index]['run'] = 'true'
+        with pytest.raises(AssertionError, match='owner decision'):
+            assert_nightly_app_steps(broken)
 
 
 @pytest.mark.parametrize('damage', ['missing-edge', 'empty-checker'])
 def test_app_reachability_observer_rejects_missing_group_or_checker(damage):
+    assert_nightly_app_step_escape_controls()
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
     for aggregator in ('app-verify', 'app-gates'):
@@ -263,20 +494,7 @@ def test_local_and_ci_gates_reach_app_tests():
         assert job.get('if') is not False, (
             ' owner decisions: both app jobs remain active and required'
         )
-        assert_disabled_app_steps(job)
-        for title in (
-            "The app's Qt Quick Test tier",
-            'The UI test against the one committed image set',
-        ):
-            for condition in (None, True, 'false', '${{ false }}'):
-                mutant = copy.deepcopy(job)
-                step = next(step for step in mutant['steps'] if step.get('name') == title)
-                if condition is None:
-                    step.pop('if')
-                else:
-                    step['if'] = condition
-                with pytest.raises(AssertionError, match='owner decision'):
-                    assert_disabled_app_steps(mutant)
+        assert_nightly_app_steps(job)
         commands = '\n'.join(
             step.get('run', '') for step in job['steps'] if step.get('if') is not False
         )
@@ -287,13 +505,6 @@ def test_local_and_ci_gates_reach_app_tests():
             'group-app',
         ):
             assert script in commands, f'gate 6/7: {name} invokes the shared {script} task'
-        uploads = [step for step in job['steps'] if 'upload-artifact' in step.get('uses', '')]
-        assert any(
-            step.get('if') is False
-            and 'build/app/ui-actual' in step.get('with', {}).get('path', '')
-            and 'build/app/ui-diff' in step.get('with', {}).get('path', '')
-            for step in uploads
-        ), f' owner decision: {name} retains disabled image upload inputs for re-enable'
 
     assert sorted(app_jobs) == ['Linux', 'macOS'], (
         'gate 7: both desktop platforms execute app checks'

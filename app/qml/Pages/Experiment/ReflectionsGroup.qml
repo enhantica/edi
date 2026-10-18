@@ -43,7 +43,7 @@ DataTable {
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (deg)")
         }
         EaComponents.TableViewLabel {
             horizontalAlignment: Text.AlignHCenter

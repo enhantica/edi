@@ -180,17 +180,20 @@ cross deterministic pattern.linked_structure.alpha.scale pattern.linked_structur
         q[0] * q[1] * scales[1] / denominator**2,
         -q[0] * q[1] * scales[0] / denominator**2,
     )
-    variance = (
-        (gradient[0] * 0.03) ** 2
-        + (gradient[1] * 0.012) ** 2
-        + 2 * gradient[0] * gradient[1] * rho * 0.03 * 0.012
-    )
-    wanted = math.sqrt(variance)
+    # ADR-0089 writes two significant figures. Reload uses that stored
+    # coefficient in the quotient rather than the original fit precision.
+    written_rho = {0.625: '0.63', -0.375: '-0.38'}[rho]
     uncorrelated = expected(scales)[1]
-    assert not math.isclose(wanted, uncorrelated, rel_tol=0.05), (
-        'The independently authored covariance must distinguish omission of the cross term'
-    )
-    for stage in ('memory', 'reopened'):
+    for stage, coefficient in (('memory', rho), ('reopened', float(written_rho))):
+        variance = (
+            (gradient[0] * 0.03) ** 2
+            + (gradient[1] * 0.012) ** 2
+            + 2 * gradient[0] * gradient[1] * coefficient * 0.03 * 0.012
+        )
+        wanted = math.sqrt(variance)
+        assert not math.isclose(wanted, uncorrelated, rel_tol=0.05), (
+            'The independently authored covariance must distinguish omission of the cross term'
+        )
         actual = fractions(project)
         np.testing.assert_allclose(
             [item.uncertainty for item in actual],
@@ -206,12 +209,23 @@ cross deterministic pattern.linked_structure.alpha.scale pattern.linked_structur
             assert '_fit_parameter_correlation.correlation' in text, (
                 'Saving a correlated derived result must retain the correlation loop'
             )
-            assert f'{rho}' in text, (
-                'Saving the derived uncertainty must retain its nonzero stored scale correlation'
-            )
+            stored_rows = [
+                row.split()
+                for row in text.splitlines()
+                if row.split()[:2] == ['cross', 'deterministic']
+            ]
+            assert stored_rows == [
+                [
+                    'cross',
+                    'deterministic',
+                    'pattern.linked_structure.alpha.scale',
+                    'pattern.linked_structure.beta.scale',
+                    written_rho,
+                ]
+            ], 'Saving must retain the named nonzero cross-scale correlation at ADR-0089 precision'
             project = engine.Project.load(saved)
 
-    check_correlation_omission(saved, rho, wanted, uncorrelated)
+    check_correlation_omission(saved, written_rho, wanted, uncorrelated)
 
 
 def check_correlation_omission(saved, rho, wanted, uncorrelated):

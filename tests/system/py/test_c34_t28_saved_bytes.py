@@ -17,6 +17,8 @@ import pytest
 
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
+from tests.fixtures.report_units.iucr_reference import without_default_rule
+from tests.fixtures.report_units.saved_iucr import rounded_pins
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 
@@ -68,6 +70,9 @@ def observe_legacy_pin(source, destination, *, calculator=False):
         analysis.write_bytes(
             historical_analysis(source, historical_fit_ids(source, analysis.read_bytes()))
         )
+    if not calculator:
+        record = legacy / 'project.edi'
+        record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
     return REFERENCE.saved_hashes(legacy) if calculator else REFERENCE.hashes(legacy)
 
 
@@ -184,11 +189,22 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
     assert REFERENCE.saved_hashes(tmp_path) == old_saved, (
         ' I22 removing the required calculator block preserves every old output byte'
     )
-    (tmp_path / 'project.edi').write_bytes(canonical)
+    record = tmp_path / 'project.edi'
+    rule = b'_su_format.rule iucr_19\n'
+    record.write_bytes(canonical + rule)
     assert (
-        REFERENCE.saved_hashes(tmp_path)['project.edi']
-        == REFERENCE.hashes(tmp_path)['project.edi']
-    ), ' I22 calculator-like bytes outside experiments are never masked'
+        REFERENCE.saved_hashes(tmp_path)['project.edi'] == hashlib.sha256(canonical).hexdigest()
+    ), 'I22 calculator-like bytes outside experiments survive the checked default IUCr declaration'
+    for setting in (
+        b'',
+        rule * 2,
+        rule.replace(b'iucr_19', b'iucr_99'),
+        rule + b'_su_format.extra invalid\n',
+    ):
+        record.write_bytes(canonical + setting)
+        with pytest.raises(AssertionError, match=r'IUCr|s\.u\.'):
+            REFERENCE.saved_hashes(tmp_path)
+    record.write_bytes(canonical + rule)
     experiment.write_bytes(ordinary.replace(b'0.125', b'0.126') + canonical)
     assert (
         REFERENCE.saved_hashes(tmp_path)['experiments/d20.edi'] != old_saved['experiments/d20.edi']
@@ -242,9 +258,8 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         assert historical_input_hashes(source) == expected['input_sha256'], (
             'the current model must match the explicitly labelled post-change regression pin'
         )
-        assert (
-            observe_legacy_pin(source, tmp_path / 'saved', calculator=True)
-            == expected['saved_sha256']
+        assert observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == rounded_pins(
+            expected['saved_sha256']
         ), 'the complete saved project must match the labelled model-change regression pin'
         return
     if case == 'repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
@@ -293,8 +308,8 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
     assert REFERENCE.legacy_input_hashes(source, case) == expected['input_sha256'], (
         ' I22 the storage move cannot alter inputs to hide a serialization regression'
     )
-    assert (
-        observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == expected['saved_sha256']
+    assert observe_legacy_pin(source, tmp_path / 'saved', calculator=True) == rounded_pins(
+        expected['saved_sha256']
     ), ' I22 save must retain the pre-move bytes of every file in this project'
 
 
@@ -317,9 +332,9 @@ def test_new_lif_project_matches_labelled_post_feature_byte_pin(tmp_path, case):
     assert REFERENCE.hashes(source) == expected['input_sha256'], (
         ' post-feature regression pin retains all input bytes and measured files'
     )
-    assert observe_legacy_pin(source, tmp_path / 'saved') == expected['saved_sha256'], (
-        ' post-feature serialization regression pin retains the full saved inventory and bytes'
-    )
+    assert observe_legacy_pin(source, tmp_path / 'saved') == rounded_pins(
+        expected['saved_sha256']
+    ), ' post-feature serialization regression pin retains the full saved inventory and bytes'
 
 
 @pytest.mark.parametrize('damage', ['value', 'row-order', 'missing', 'extra', 'data'])

@@ -1,0 +1,18 @@
+{
+  "roots": [
+    "core/src",
+    "app/src",
+    "lib/edi",
+    "core/include"
+  ],
+  "project_output": [
+    "core/src/report_save.cpp",
+    "app/src/scan_session.cpp",
+    "lib/edi/__init__.py",
+    "lib/edi/__main__.py"
+  ],
+  "helpers": [
+    "lib/edi/_project_output.py"
+  ],
+  "namespace": "crysta::output"
+}

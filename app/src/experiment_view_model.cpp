@@ -292,22 +292,66 @@ void ExperimentViewModel::sync() {
     scattering_source_->sync();
 }
 
-void ExperimentViewModel::capturePattern() {
+std::size_t ExperimentViewModel::place() const {
     std::size_t place = 0;
     for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
         if (project_.experiments[i].get() == &experiment_) {
             place = i;
         }
     }
-    pattern_source_ = edi::capture_pattern(project_, place);
+    return place;
+}
+
+void ExperimentViewModel::capturePattern() {
+    pattern_source_ = edi::capture_pattern(project_, place());
+    pattern_source_.experiment_place = colourPlace();
+    if (!d_charts_.isEmpty()) {
+        d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
+        d_source_->experiment_place = colourPlace();
+    }
     ++pattern_generation_;
     emit patternSourceChanged();
 }
 
-void ExperimentViewModel::showPattern(edi::PatternSource source) {
+void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source) {
     pattern_source_ = std::move(source);
+    pattern_source_.experiment_place = colourPlace();
+    if (d_source) {
+        d_source_ = std::move(d_source);
+        d_source_->experiment_place = colourPlace();
+    }
     ++pattern_generation_;
     emit patternSourceChanged();
+}
+
+void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count) {
+    if (place == colour_place_ && (!place || count == colour_count_)) {
+        return;
+    }
+    colour_place_ = place;
+    colour_count_ = place ? count : 0;
+    // The same pattern in its new colour: the chart draws it again, and nothing waiting on a new pattern counts it.
+    pattern_source_.experiment_place = colourPlace();
+    if (d_source_) {
+        d_source_->experiment_place = colourPlace();
+    }
+    emit patternSourceChanged();
+}
+
+void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis axis) {
+    const bool wanted = !d_charts_.isEmpty();
+    if (axis == edi::PatternAxis::DSpacing) {
+        d_charts_.insert(chart);
+    } else {
+        d_charts_.remove(chart);
+    }
+    if (d_charts_.isEmpty()) {
+        d_source_.reset();
+    } else if (!wanted) {
+        d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
+        d_source_->experiment_place = colourPlace();
+        emit patternSourceChanged();
+    }
 }
 
 void ExperimentViewModel::setChartShown(const QObject* chart, bool shown) {

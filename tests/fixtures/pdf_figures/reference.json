@@ -1,0 +1,93 @@
+{
+  "reference": "Independent PDF unit-square image mapping and affine composition",
+  "cases": {
+    "translated": {
+      "bounds": [
+        72,
+        142,
+        272,
+        242
+      ],
+      "edges": [
+        200,
+        100
+      ],
+      "pixels": [
+        200,
+        100
+      ],
+      "clip": [
+        0,
+        0,
+        595,
+        842
+      ]
+    },
+    "nested": {
+      "bounds": [
+        66,
+        447,
+        166,
+        497
+      ],
+      "edges": [
+        100,
+        50
+      ],
+      "pixels": [
+        200,
+        100
+      ],
+      "clip": [
+        0,
+        0,
+        595,
+        842
+      ]
+    },
+    "rotated": {
+      "bounds": [
+        285,
+        472,
+        360,
+        622
+      ],
+      "edges": [
+        150,
+        75
+      ],
+      "pixels": [
+        200,
+        100
+      ],
+      "clip": [
+        0,
+        0,
+        595,
+        842
+      ]
+    },
+    "clipped": {
+      "bounds": [
+        72,
+        142,
+        272,
+        242
+      ],
+      "edges": [
+        200,
+        100
+      ],
+      "pixels": [
+        200,
+        100
+      ],
+      "clip": [
+        72,
+        142,
+        172,
+        242
+      ]
+    }
+  }
+}

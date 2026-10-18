@@ -252,9 +252,14 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
             name: historical_single_fraction(name, without_calculator(name, data))
             for name, data in actual.items()
         }
-        assert actual == _tree_bytes(golden), (
+        from tests.fixtures.report_units.iucr_reference import rounded_record  # noqa: PLC0415
+
+        assert actual == {
+            name: rounded_record(data) for name, data in _tree_bytes(golden).items()
+        }, (
             'adding project identity must leave every pre-existing canonical TOF golden path '
-            'and byte unchanged apart from the checked calculator block and unity fraction column'
+            'and byte unchanged apart from the checked calculator block '
+            'and independent IUCr tokens and the checked unity fraction column'
         )
         normalized = tree_bytes_with_normalized_project_metadata(
             destination, 'created', 'last_modified'
@@ -266,7 +271,8 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
             r'_metadata\.description +\?\n'
             r'_metadata\.created +<NORMALIZED-WALL-CLOCK>\n'
             r'_metadata\.last_modified +<NORMALIZED-WALL-CLOCK>\n'
-            r'_metadata\.timestamp +\?\n',
+            r'_metadata\.timestamp +\?\n'
+            r'_su_format\.rule iucr_19\n',
             normalized,
         ), (
             'the new TOF golden artifact must be exactly the schema-3 default identity record; '

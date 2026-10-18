@@ -19,6 +19,7 @@
 #include <string_view>
 
 #include "background.hpp"
+#include "crysta/project_output.hpp"
 #include "edi/io.hpp"
 
 namespace edi_app {
@@ -27,6 +28,13 @@ namespace {
 namespace fs = std::filesystem;
 
 fs::path analysis_dir(const edi::Project& project) { return fs::path(project.path) / "analysis"; }
+
+// The scan's files are written into the project's own analysis/ folder: a link standing at it, or at its set-aside
+// folder, is first replaced by a folder of the project's own, so nothing behind the link is written.
+void own_analysis_dir(const edi::Project& project) {
+    crysta::output::own_folder(analysis_dir(project), fs::path(project.path));
+    crysta::output::own_folder(analysis_dir(project) / ".edi-set-aside", fs::path(project.path));
+}
 
 const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"};
 constexpr int kResultFileCount = 4;
@@ -61,31 +69,15 @@ std::optional<std::string> read_file(const fs::path& path) {
     return bytes;
 }
 
-// Writes `text` to `path` whole, through a sibling that is renamed over it; or removes `path` for nullopt.
+// Writes `text` to `path` whole, through a temporary renamed over it; or removes `path` for nullopt. Scan files are
+// project output (ADR-0039) and live in <project>/analysis/.
 void put_file(const fs::path& path, const std::optional<std::string>& text) {
-    std::error_code error;
+    const std::string root = path.parent_path().parent_path().string();
     if (!text) {
-        fs::remove(path, error);
-        if (error) {
-            throw std::runtime_error("cannot remove " + path.string() + ": " + error.message());
-        }
+        crysta::output::remove_file(root, path.string());
         return;
     }
-    const fs::path staged = path.string() + ".edi-staged";
-    {
-        std::ofstream output(staged, std::ios::binary | std::ios::trunc);
-        output << *text;
-        output.close();
-        if (!output) {
-            fs::remove(staged, error);
-            throw std::runtime_error("cannot write " + staged.string());
-        }
-    }
-    fs::rename(staged, path, error);
-    if (error) {
-        fs::remove(staged, error);
-        throw std::runtime_error("cannot replace " + path.string());
-    }
+    crysta::output::replace_file(root, path.string(), *text);
 }
 
 std::vector<std::string> split(const std::string& line) {
@@ -313,48 +305,6 @@ QString ScanSession::outcome(int dataset) const {
     return QStringLiteral("notConverged");
 }
 
-void ScanSession::column(const edi::Project& project, const std::string& name,
-                         const std::function<void(int, double, double)>& visit) const {
-    std::size_t value_column = 0, uncertainty_column = 0;
-    bool found = false;
-    for (const edi::ScanParameterColumns& parameter : index_.parameters) {
-        if (parameter.name == name) {
-            value_column = parameter.value;
-            uncertainty_column = parameter.uncertainty;
-            found = true;
-        }
-    }
-    if (!found || !index_.error.empty()) {
-        return;
-    }
-    // A results path that is gone gives no values, as a changed header does; one that is no longer a regular file
-    // refuses (scan_state_present throws), as the row reader does.
-    if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
-        return;
-    }
-    std::ifstream input(analysis_dir(project) / "results.csv", std::ios::binary);
-    std::string line;
-    // The columns mean what the indexed header says only while the file still has that header.
-    if (!std::getline(input, line) || split(line) != index_.header) {
-        return;
-    }
-    std::int64_t offset = input.tellg();
-    while (offset < index_.end && std::getline(input, line) && !input.eof()) {
-        offset = input.tellg();
-        const std::vector<std::string> cells = split(line);
-        if (cells.size() != index_.header.size()) {
-            continue;
-        }
-        const int dataset = place(edi::scan_row_file(index_, cells));
-        double value = 0.0, uncertainty = 0.0;
-        // A refused file's row holds the values its fit started from, not a result: it is not drawn.
-        if (dataset >= 0 && cells[index_.chi] != "nan" && edi::parse_scan_number(cells[value_column], value) &&
-            edi::parse_scan_number(cells[uncertainty_column], uncertainty)) {
-            visit(dataset, value, uncertainty);
-        }
-    }
-}
-
 QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
     run_ = run;
     QJsonObject object{{QStringLiteral("template"), QString::fromStdString(run.identity)},
@@ -365,7 +315,7 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
         object.insert(QStringLiteral("seconds"), run.seconds);
     }
     try {
-        fs::create_directories(analysis_dir(project));
+        own_analysis_dir(project);
         put_file(analysis_dir(project) / "scan-run.json", QJsonDocument(object).toJson().toStdString());
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
@@ -374,8 +324,8 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
 }
 
 std::string ScanSession::templateIdentity(const edi::Project& project) {
-    // The name, title and description (project.edi) and the fitting mode are not the template: changing them leaves
-    // the results current. Neither are the fits' parameter correlations, a scan's own included (the
+    // The name, title and description (project.edi), the fitting mode and the report's settings (reports/report.edi
+    // and analysis.edi's two chart items) are not the template: changing them leaves the results current. Neither are the fits' parameter correlations, a scan's own included (the
     // `_fit_parameter_correlation` loop, its last category). The minimizer's settings are part of it: rows fitted under
     // another bound or descent are another generation.
     QCryptographicHash hash(QCryptographicHash::Sha256);
@@ -384,7 +334,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
         hash.addData(QByteArrayView("\n", 1));
     };
     for (const auto& [path, body] : edi::project_edi_files(project)) {
-        if (path == "project.edi") {
+        if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }
         hash.addData(QByteArrayView(path.data(), static_cast<qsizetype>(path.size())));
@@ -399,6 +349,11 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
             start = end + 1;
             if (line.starts_with("_fit_parameter_correlation.")) {
                 correlations = true;
+                pending.clear();
+                continue;
+            }
+            // A chart item takes the blank lines before it along, so a project hashes as it did without one.
+            if (line.starts_with("_correlation_chart.") || line.starts_with("_pattern_chart.")) {
                 pending.clear();
                 continue;
             }
@@ -449,7 +404,7 @@ void move_file(const fs::path& from, const fs::path& to) {
     if (!fs::exists(from, error)) {
         throw std::runtime_error("cannot move " + from.string() + ": it is not there");
     }
-    fs::rename(from, to, error);
+    crysta::output::rename(from, to, error);
     if (error) {
         throw std::runtime_error("cannot move " + from.string() + " to " + to.string() + ": " + error.message());
     }
@@ -460,7 +415,7 @@ void move_file(const fs::path& from, const fs::path& to) {
 void set_aside(const edi::Project& project, const ScanSession::Files& present, const fs::path& aside,
                std::vector<int>& moved) {
     const fs::path directory = analysis_dir(project);
-    fs::create_directories(aside);
+    crysta::output::own_folder(aside, fs::path(project.path));
     for (int which = 0; which < kResultFileCount; ++which) {
         if (*slot(present, which)) {
             move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
@@ -484,7 +439,7 @@ bool move_back(const edi::Project& project, const fs::path& aside, const std::ve
 
 void drop_set_aside(const fs::path& aside) {
     std::error_code ignored;
-    fs::remove_all(aside, ignored);
+    crysta::output::remove_all(aside, ignored);
 }
 
 QString kept_aside(const fs::path& aside, const std::exception& refusal) {
@@ -508,6 +463,7 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     const fs::path aside = set_aside_dir(project, fresh_name("taken"));
     std::vector<int> moved;
     try {
+        own_analysis_dir(project);
         set_aside(project, taken, aside, moved);
     } catch (const std::exception& refusal) {
         if (!move_back(project, aside, moved)) {
@@ -525,7 +481,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     const fs::path directory = analysis_dir(project);
     Files current;
     try {
-        fs::create_directories(directory);
+        own_analysis_dir(project);
         for (int which = 0; which < kResultFileCount; ++which) {
             *slot(current, which) = read_file(directory / kResultFiles[which]);
         }
@@ -539,10 +495,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         for (int which = 0; which < kResultFileCount; ++which) {
             if (const std::optional<std::string>& text = *slot(wanted, which)) {
                 const fs::path path = directory / (std::string(kResultFiles[which]) + ".edi-staged");
-                std::ofstream output(path, std::ios::binary | std::ios::trunc);
-                output << *text;
-                output.close();
-                if (!output) {
+                if (!crysta::output::write_temporary_file(path, *text)) {
                     throw std::runtime_error("cannot write " + path.string());
                 }
                 staged.push_back(which);
@@ -551,7 +504,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     } catch (const std::exception& refusal) {
         for (const int which : staged) {
             std::error_code ignored;
-            fs::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
+            crysta::output::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
         }
         return QString::fromUtf8(refusal.what());
     }
@@ -581,7 +534,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         }
         for (const int which : staged) {
             std::error_code ignored;
-            fs::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
+            crysta::output::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
         }
         drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
@@ -607,6 +560,7 @@ bool ScanSession::runFile(const edi::Project& project, std::optional<std::string
 
 QString ScanSession::putRunFile(const edi::Project& project, const std::optional<std::string>& bytes) {
     try {
+        own_analysis_dir(project);
         put_file(analysis_dir(project) / kResultFiles[2], bytes);
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
@@ -622,7 +576,8 @@ QString ScanSession::swapRunFile(const edi::Project& project, const std::optiona
     std::error_code error;
     const bool present = fs::exists(record, error);
     try {
-        fs::create_directories(aside);
+        own_analysis_dir(project);
+        crysta::output::own_folder(aside, fs::path(project.path));
         if (present) {
             move_file(record, aside / kResultFiles[2]);
         }
@@ -657,6 +612,7 @@ QString ScanSession::restoreRunFile(const edi::Project& project, const std::stri
     const fs::path record = analysis_dir(project) / kResultFiles[2];
     const fs::path aside(kept);
     try {
+        own_analysis_dir(project);
         std::error_code error;
         if (fs::exists(aside / kResultFiles[2], error)) {
             move_file(aside / kResultFiles[2], record);  // replaces the earlier record in one step
