@@ -4664,7 +4664,7 @@ TestCase {
         verify(gui393_under(copyGlyph,copy.contentItem),"GUI472: palette observation belongs to SAME actual native copy content");
         verify(!copy.hovered && !copy.down && !copy.pressed,
             "GUI472: real pointer relocation observes Copy at REST without forced interaction state");
-        tryCompare(copyGlyph,"color",EaStyle.Colors.themeForegroundMinor,2000,
+        tryVerify(() => Qt.colorEqual(copyGlyph.color, EaStyle.Colors.themeForegroundMinor),2000,
             "GUI472: actual painted resting copy glyph uses original independent native MINOR palette");
         compare(String(copyGlyph.color),String(categories[0].color),
             "GUI472: painted resting Copy matches actual original muted type/gear icon");
@@ -6109,7 +6109,7 @@ TestCase {
         compare(empty[0].font.weight, Font.ExtraLight,
             "GUI395: original native EmptyStateLabel uses independent extra-light weight");
         compare(empty[0].enabled, false, "GUI395: native empty-state text is semantically disabled");
-        compare(empty[0].color, EaStyle.Colors.themeForegroundDisabled,
+        tryVerify(() => Qt.colorEqual(empty[0].color, EaStyle.Colors.themeForegroundDisabled), 2000,
             "GUI395: original native disabled Label resolves disabled theme foreground");
         compare(empty[0].horizontalAlignment, Text.AlignHCenter, "GUI395: native empty-state text is horizontally centered");
         compare(empty[0].wrapMode, Text.WordWrap, "GUI395: native empty-state retains original word wrapping");
@@ -6205,7 +6205,7 @@ TestCase {
         tryVerify(() => !!gui392_usageData().observedAt, 2000, "GUI392: first genuine account usage reply is actually observed");
         mouseMove(window.contentItem, 0, 0); rendered();
         const label = gui392_usageLabel(data.headerUsed === null ? "–" : data.headerUsed + "% used");
-        tryCompare(label, "color", data.color === "red" ? EaStyle.Colors.red : data.color === "amber" ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground, 2000,
+        tryVerify(() => Qt.colorEqual(label.color, data.color === "red" ? EaStyle.Colors.red : data.color === "amber" ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground), 2000,
             "GUI398: actual USED header preserves strict remaining thresholds below25 orange/below5 red, not their equality");
         if (data.headerUsed !== null) verify(/used/i.test(item("assistant.usage").ToolTip.text)
             && /used/i.test(item("assistant.usage").Accessible.name),
@@ -6367,7 +6367,7 @@ TestCase {
             "GUI392: original eye action is genuinely checkable/named and presentation only");
         mouseMove(window.contentItem, 0, 0); rendered();
         const icons = gui392_labels(eye);
-        verify(icons.some(label => label.color === EaStyle.Colors.themeAccent),
+        tryVerify(() => icons.some(label => Qt.colorEqual(label.color, EaStyle.Colors.themeAccent)), 2000,
             "GUI392: checked original eye has an actual painted accent state");
         Ui.click(this, Probe, window, "assistant.composer"); visible185_type("GUI392 original held source request");
         Ui.click(this, Probe, window, "assistant.send");
@@ -6569,7 +6569,7 @@ TestCase {
             gui398_noBlueOutline(control);
             mouseMove(window.contentItem, 0, 0); rendered();
             gui398_noBlueOutline(control);
-            verify(background.color !== send.background.color,
+            tryVerify(() => !Qt.colorEqual(background.color, send.background.color), 2000,
                 "GUI393: light footer treatment remains distinct from stronger original Send fill: " + name);
         }
             const previous = rect(item("assistant.previousUserMessage")), next = rect(item("assistant.nextUserMessage")), submit = rect(send);
@@ -6707,8 +6707,8 @@ TestCase {
             verify(alive313(pillLife) && !pill.enabled && !choice.visible,
                 "GUI393: original live busy state disables pill and retains no active chooser");
             const stop = item("assistant.stop"), eye = item("assistant.showActions");
-            verify(stop.visible && stop.enabled && stop.background.color.a > 0
-                && stop.background.color !== eye.background.color,
+            tryVerify(() => stop.visible && stop.enabled && stop.background.color.a > 0
+                && !Qt.colorEqual(stop.background.color, eye.background.color), 2000,
                 "GUI393: original busy Stop retains stronger treatment than light footer actions");
             assistant.refreshUsage(); // Same original received-input release door as GUI392.
             tryVerify(() => !assistant.canCancel && Probe.rows(assistant.messages).some(row => row.kind === "assistant"
@@ -6768,7 +6768,7 @@ TestCase {
         verify(eye.ToolTip.text === "Show actions", "GUI486: original eye tooltip is exact");
         verify(eye.fontIcon === "eye", "GUI486: original eye glyph is exact");
         mouseMove(window.contentItem, 0, 0); rendered();
-        verify(gui392_labels(eye).some(label => label.color === EaStyle.Colors.themeAccent),
+        tryVerify(() => gui392_labels(eye).some(label => Qt.colorEqual(label.color, EaStyle.Colors.themeAccent)), 2000,
             "GUI393: original checked eye actually paints accent ink");
         gui398_noBlueOutline(eye);
         const editor = item("assistant.composer"), send = item("assistant.send");
@@ -7098,16 +7098,16 @@ TestCase {
         const labels = gui392_labels(connection).filter(label => label.text === "Sign in");
         compare(labels.length, 1, "GUI395: original Sign in owns one actual painted text label");
         mouseMove(window.contentItem, 0, 0); rendered();
-        tryCompare(labels[0], "color", EaStyle.Colors.themeForeground, 2000,
+        tryVerify(() => Qt.colorEqual(labels[0].color, EaStyle.Colors.themeForeground), 2000,
             "GUI395: original native unhovered enabled button uses ordinary foreground");
         const point = Ui.clickPoint(connection);
         mouseMove(connection, point.x, point.y); rendered();
-        tryCompare(labels[0], "color", EaStyle.Colors.themeForegroundHovered, 2000,
+        tryVerify(() => Qt.colorEqual(labels[0].color, EaStyle.Colors.themeForegroundHovered), 2000,
             "GUI395: genuine mouse hover paints original native hovered foreground, not a hardcoded label color");
         gui398_noBlueOutline(connection);
         capture("gui395-real-sign-in-hover");
         mouseMove(window.contentItem, 0, 0); rendered();
-        tryCompare(labels[0], "color", EaStyle.Colors.themeForeground, 2000,
+        tryVerify(() => Qt.colorEqual(labels[0].color, EaStyle.Colors.themeForeground), 2000,
             "GUI395: genuine pointer leave restores native foreground");
     }
     function gui395_divider(stage) {
@@ -7166,7 +7166,7 @@ TestCase {
         compare(dialog.rightPadding, EaStyle.Sizes.fontPixelSize * 2, "GUI398: native dialog retains symmetric original margin");
         compare(dialog.topPadding, EaStyle.Sizes.fontPixelSize, "GUI398: native dialog retains original top margin");
         compare(dialog.bottomPadding, EaStyle.Sizes.fontPixelSize, "GUI398: native dialog retains original bottom margin");
-        compare(dialog.background.color, EaStyle.Colors.dialogBackground, "GUI398: standard native dialog background is reused");
+        tryVerify(() => Qt.colorEqual(dialog.background.color, EaStyle.Colors.dialogBackground), 2000, "GUI398: standard native dialog background is reused");
         compare(dialog.font.pixelSize, EaStyle.Sizes.fontPixelSize, "GUI398: native dialog uses original standard font size");
         ux356_fullyExposed(dialog.contentItem);
     }
@@ -7301,7 +7301,7 @@ TestCase {
             compare(percent.text, expectedUsed[index] + "% used", "GUI398: exact independently supplied USED percentage remains truthful, including over100");
             gui399_track(dialog, track, fill, expectedUsed[index]);
             const remaining = 100 - expectedUsed[index];
-            compare(fill.color, remaining < 5 ? EaStyle.Colors.red : remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent,
+            tryVerify(() => Qt.colorEqual(fill.color, remaining < 5 ? EaStyle.Colors.red : remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent), 2000,
                 "GUI398: actual used fill is normal accent/orange below25remaining/red below5remaining");
             gui398_relativeReset(reset, supplied[ids[index]]);
             if (supplied[ids[index]] - Date.now() / 1000 < 13 * 60)
@@ -7339,7 +7339,7 @@ TestCase {
             compare(button.text, text, "GUI398: actual original native link shows exact current Show/Hide action");
             const labels = gui392_labels(button).filter(label => label.text === text);
             compare(labels.length, 1, "GUI398: original enabled Details link has ONE actually painted label");
-            compare(labels[0].color, EaStyle.Colors.themeAccent, "GUI398: original enabled Details link paints native blue text");
+            tryVerify(() => Qt.colorEqual(labels[0].color, EaStyle.Colors.themeAccent), 2000, "GUI398: original enabled Details link paints native blue text");
         }
         // Pin only original actual receivers/viewports, never their current geometry.
         const originalViewports = [];
@@ -7439,7 +7439,7 @@ TestCase {
         verify(track.width > 0 && track.height > 0 && track.radius >= track.height / 2 - 0.5
             && track.border.width > 0 && track.border.color.a > 0,
             "GUI399: actual full rounded track has a permanent visible native outline");
-        compare(track.border.color, EaStyle.Colors.appBorder,
+        tryVerify(() => Qt.colorEqual(track.border.color, EaStyle.Colors.appBorder), 2000,
             "GUI400: Usage outline uses FIRST native application/control appBorder in current palette, never bright muted-text ink");
         function distance(a, b) { return Math.pow(a.r - b.r, 2) + Math.pow(a.g - b.g, 2) + Math.pow(a.b - b.b, 2); }
         verify(distance(track.border.color, dialog.background.color) > 0,
