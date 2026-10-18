@@ -6989,7 +6989,12 @@ TestCase {
             Ui.click(this, Probe, window, "assistant.clear");
             tryCompare(assistant.messages, "count", 0, 2000, "GUI393: actual eraser Clear removes original conversation");
             compare(assistant.selectedFiles.count, 0, "GUI393: original Clear retires actual selected-file grants");
-            verify(assistant.connected && !assistant.canCancel && !assistant.contextConsentRequired,
+            const clearConnected509=assistant.connected;
+            const clearCanCancel509=clearConnected509 ? assistant.canCancel : null;
+            const clearConsent509=clearConnected509 && !clearCanCancel509 ? assistant.contextConsentRequired : null;
+            console.log("GUI509_CLEAR_OPERANDS",JSON.stringify({connected:clearConnected509,
+                canCancel:clearCanCancel509,contextConsentRequired:clearConsent509}));
+            verify(clearConnected509 && !clearCanCancel509 && !clearConsent509,
                 "GUI393: original Clear preserves genuine account and unchanged remaining-scope consent");
             compare(JSON.stringify(gui392_json(Probe.rows(assistant.models))), account,
                 "GUI393: actual Clear preserves original model catalogue");
