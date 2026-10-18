@@ -5,13 +5,13 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.1. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.2. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
 For an authorized request to create/refine and decide the remaining details, state the bounded plan and proceed within the disclosed working copy and actual runtime permissions. Do not ask again solely because the next free group changes. Ask about missing experiment metadata, ambiguous associations, new chemical assumptions or an expanded objective. Respect actual consent, approval and Stop controls.
 
-Inspect measured intensities, sigma/weights, exclusions, phase links, instrument/profile convention, independent variables and existing relations. Preserve this comparison population and objective across candidates. A file extension does not establish an experiment recipe. Never improve a reported residual by changing observations, uncertainty or exclusions without a separately justified and authorized change.
+Inspect actual native measurement counts/weighting metadata, exclusions, phase links, instrument/profile convention, independent variables and existing relations through the offered typed summaries. Raw measurement arrays and plots stay local in the dedicated runtime; never invent an inspection unavailable through the original native controls/operations. Preserve this comparison population and objective across candidates. A file extension does not establish an experiment recipe. Never improve a reported residual by changing observations, uncertainty or exclusions without a separately justified and authorized change.
 
 ## Stage, compare and retain
 

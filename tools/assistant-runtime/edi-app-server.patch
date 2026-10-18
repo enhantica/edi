@@ -1,0 +1,1125 @@
+--- a/codex-rs/app-server/Cargo.toml
++++ b/codex-rs/app-server/Cargo.toml
+@@ -162,3 +162,6 @@
+ tokio-tungstenite = { workspace = true }
+ tracing-opentelemetry = { workspace = true }
+ wiremock = { workspace = true }
++
++[features]
++edi-runtime = ["codex-core/edi-runtime", "codex-app-server-protocol/edi-runtime"]
+--- a/codex-rs/app-server/src/lib.rs
++++ b/codex-rs/app-server/src/lib.rs
+@@ -484,8 +484,8 @@
+     fn default() -> Self {
+         Self {
+             code_mode_host_transport: CodeModeHostTransport::Local,
+-            plugin_startup_tasks: PluginStartupTasks::Start,
+-            remote_control_startup_mode: RemoteControlStartupMode::ResolvePersisted,
++            plugin_startup_tasks: if cfg!(feature = "edi-runtime") { PluginStartupTasks::Skip } else { PluginStartupTasks::Start },
++            remote_control_startup_mode: if cfg!(feature = "edi-runtime") { RemoteControlStartupMode::DisabledEphemeral } else { RemoteControlStartupMode::ResolvePersisted },
+             install_shutdown_signal_handler: true,
+             managed_daemon: false,
+         }
+--- a/codex-rs/app-server/src/main.rs
++++ b/codex-rs/app-server/src/main.rs
+@@ -110,11 +110,11 @@
+             runtime_options.plugin_startup_tasks = PluginStartupTasks::Skip;
+         }
+         runtime_options.remote_control_startup_mode =
+-            match (remote_control, remote_control_disabled) {
++            if cfg!(feature = "edi-runtime") { codex_app_server::RemoteControlStartupMode::DisabledEphemeral } else { match (remote_control, remote_control_disabled) {
+                 (true, _) => codex_app_server::RemoteControlStartupMode::EnabledEphemeral,
+                 (false, true) => codex_app_server::RemoteControlStartupMode::DisabledEphemeral,
+                 (false, false) => codex_app_server::RemoteControlStartupMode::ResolvePersisted,
+-            };
++            }};
+ 
+         let exit = run_main_with_transport_options(
+             arg0_paths,
+--- a/codex-rs/app-server/src/message_processor.rs
++++ b/codex-rs/app-server/src/message_processor.rs
+@@ -643,6 +643,11 @@
+             connection_id,
+             request_id: request.id.clone(),
+         };
++        #[cfg(feature = "edi-runtime")]
++        if !matches!(request_method, "initialize" | "account/read" | "account/login/start" | "account/login/cancel" | "account/logout" | "account/rateLimits/read" | "model/list" | "thread/start" | "turn/start" | "turn/steer" | "turn/interrupt") {
++            self.outgoing.send_error(request_id, crate::error_code::invalid_request("This method is unavailable in the Edi runtime")).await;
++            return;
++        }
+         let request_span =
+             crate::app_server_tracing::request_span(&request, transport, connection_id, &session);
+         let request_trace = request.trace.as_ref().map(|trace| W3cTraceContext {
+--- a/codex-rs/app-server/src/request_processors/thread_processor.rs
++++ b/codex-rs/app-server/src/request_processors/thread_processor.rs
+@@ -1563,6 +1563,8 @@
+                 otel.name = "app_server.thread_start.config_snapshot",
+             ))
+             .await;
++        #[cfg(feature = "edi-runtime")]
++        let edi_policy = thread.edi_policy_proof(None).await.map_err(|_| invalid_request("Edi policy proof failed"))?;
+         let mut thread = build_thread_from_snapshot(
+             thread_id,
+             session_configured.session_id.to_string(),
+@@ -1620,6 +1622,8 @@
+         let thread_originator = config_snapshot.originator.clone();
+ 
+         let response = ThreadStartResponse {
++            #[cfg(feature = "edi-runtime")]
++            edi_policy,
+             thread: thread.clone(),
+             disabled_plugin_ids: config_snapshot.disabled_plugin_ids,
+             model: config_snapshot.model,
+--- a/codex-rs/app-server/src/request_processors/turn_processor.rs
++++ b/codex-rs/app-server/src/request_processors/turn_processor.rs
+@@ -533,6 +533,31 @@
+                 .inspect_err(|error| {
+                     self.track_error_response(&request_id, error, /*error_type*/ None);
+                 })?;
++        #[cfg(feature = "edi-runtime")]
++        {
++            let actual = thread.edi_policy_proof(None).await.map_err(|_| invalid_request("Edi policy proof failed"))?;
++            // Admission must not mutate policy/settings before the common
++            // step guard rejects them. Edi sends its exact original settings;
++            // all other stock context/environment/provider override entrances
++            // are unavailable in this dedicated host.
++            if params.edi_policy != actual || params.tool_output.is_some()
++                || params.disabled_plugin_ids.is_some() || params.environments.is_some()
++                || params.cwd.is_some() || params.runtime_workspace_roots.is_some()
++                || params.permissions.is_some() || params.additional_context.is_some()
++                || params.responsesapi_client_metadata.is_some()
++                || params.service_tier.is_some() || params.service_tier_for_turn.is_some()
++                || params.collaboration_mode.is_some() || params.personality.is_some()
++                || params.summary.is_some() || params.output_schema.is_some()
++                || params.parent_turn_id.is_some() || params.root_turn_id.is_some()
++                || params.cyber_access_program.is_some()
++                || params.model.as_ref().is_some_and(|v| actual.get("model") != Some(&serde_json::Value::String(v.clone())))
++                || params.effort.as_ref().is_some_and(|v| serde_json::to_value(v).ok().as_ref() != actual.get("reasoningEffort"))
++                || params.approval_policy.as_ref().is_some_and(|v| !matches!(v, codex_app_server_protocol::AskForApproval::Never))
++                || params.sandbox_policy.as_ref().is_some_and(|v| !matches!(v, codex_app_server_protocol::SandboxPolicy::ReadOnly { network_access: false }))
++                || params.approvals_reviewer.as_ref().is_some_and(|v| !matches!(v, codex_app_server_protocol::ApprovalsReviewer::User))
++                || params.input.iter().any(|item| !matches!(item, V2UserInput::Text { .. }))
++            { return Err(invalid_request("Edi turn requires its original verified policy and text input")); }
++        }
+         self.ensure_direct_input_allowed(&request_id, thread.as_ref())
+             .await?;
+         self.config_manager
+@@ -692,7 +717,7 @@
+             }
+         };
+ 
+-        if turn_has_input && started {
++        if !cfg!(feature = "edi-runtime") && turn_has_input && started {
+             let config_snapshot = thread.config_snapshot().await;
+             if config_snapshot.is_primary_environment_configured() {
+                 codex_memories_write::start_memories_startup_task(
+@@ -722,7 +747,13 @@
+             duration_ms: None,
+         };
+ 
+-        Ok(TurnStartResponse { turn })
++        #[cfg(feature = "edi-runtime")]
++        let edi_policy = thread.edi_policy_proof(Some(&turn.id)).await.map_err(|_| invalid_request("Edi turn proof failed"))?;
++        Ok(TurnStartResponse {
++            turn,
++            #[cfg(feature = "edi-runtime")]
++            edi_policy,
++        })
+     }
+ 
+     async fn build_environment_override(
+@@ -1043,6 +1074,14 @@
+             .inspect_err(|error| {
+                 self.track_error_response(request_id, error, /*error_type*/ None);
+             })?;
++        #[cfg(feature = "edi-runtime")]
++        {
++            let actual = thread.edi_policy_proof(None).await.map_err(|_| invalid_request("Edi policy proof failed"))?;
++            if params.edi_policy != actual || params.additional_context.is_some()
++                || params.responsesapi_client_metadata.is_some()
++                || params.input.iter().any(|item| !matches!(item, V2UserInput::Text { .. }))
++            { return Err(invalid_request("Edi steer requires its original verified policy and text input")); }
++        }
+         self.ensure_direct_input_allowed(request_id, thread.as_ref())
+             .await?;
+         self.config_manager
+--- a/codex-rs/app-server-protocol/Cargo.toml
++++ b/codex-rs/app-server-protocol/Cargo.toml
+@@ -54,3 +54,6 @@
+ similar = { workspace = true }
+ tempfile = { workspace = true }
+ ts-rs = { workspace = true }
++
++[features]
++edi-runtime = []
+--- a/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
++++ b/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+@@ -186,6 +186,9 @@
+ #[serde(rename_all = "camelCase")]
+ #[ts(export_to = "v2/")]
+ pub struct ThreadStartResponse {
++    #[cfg(feature = "edi-runtime")]
++    #[ts(type = "unknown")]
++    pub edi_policy: serde_json::Value,
+     pub thread: Thread,
+     pub model: String,
+     pub model_provider: String,
+--- a/codex-rs/app-server-protocol/src/protocol/v2/turn.rs
++++ b/codex-rs/app-server-protocol/src/protocol/v2/turn.rs
+@@ -165,6 +165,10 @@
+ #[serde(rename_all = "camelCase")]
+ #[ts(export_to = "v2/")]
+ pub struct TurnStartParams {
++    #[cfg(feature = "edi-runtime")]
++    #[serde(default)]
++    #[ts(type = "unknown")]
++    pub edi_policy: serde_json::Value,
+     pub thread_id: String,
+     /// Replace this thread's disabled plugin IDs.
+     /// Omitted/null preserves the list; [] clears it.
+@@ -297,6 +301,9 @@
+ #[serde(rename_all = "camelCase")]
+ #[ts(export_to = "v2/")]
+ pub struct TurnStartResponse {
++    #[cfg(feature = "edi-runtime")]
++    #[ts(type = "unknown")]
++    pub edi_policy: serde_json::Value,
+     pub turn: Turn,
+ }
+ 
+@@ -306,6 +313,10 @@
+ #[serde(rename_all = "camelCase")]
+ #[ts(export_to = "v2/")]
+ pub struct TurnSteerParams {
++    #[cfg(feature = "edi-runtime")]
++    #[serde(default)]
++    #[ts(type = "unknown")]
++    pub edi_policy: serde_json::Value,
+     pub thread_id: String,
+     #[ts(optional = nullable)]
+     pub client_user_message_id: Option<String>,
+--- a/codex-rs/core/Cargo.toml
++++ b/codex-rs/core/Cargo.toml
+@@ -181,3 +181,6 @@
+ [package.metadata.cargo-shear]
+ ignored = ["openssl-sys"]
+ ignored-paths = ["tests/remote_env_windows/*.rs"]
++
++[features]
++edi-runtime = []
+--- a/codex-rs/core/src/agents_md_manager.rs
++++ b/codex-rs/core/src/agents_md_manager.rs
+@@ -67,6 +67,7 @@
+         config: &Config,
+         environments: &TurnEnvironmentSnapshot,
+     ) -> (CodexResult<Option<Arc<LoadedAgentsMd>>>, Vec<String>) {
++        if cfg!(feature = "edi-runtime") { return (Ok(None), Vec::new()); }
+         // Serialize overlapping captures without blocking reads of the applied snapshot.
+         let Ok(_refresh_guard) = self.refresh_lock.acquire().await else {
+             return (
+--- a/codex-rs/core/src/client.rs
++++ b/codex-rs/core/src/client.rs
+@@ -273,6 +273,8 @@
+     http_client_factory: HttpClientFactory,
+     restored_history: bool,
+     request_contributors: Vec<Arc<dyn codex_extension_api::ModelRequestContributor>>,
++    #[cfg(feature = "edi-runtime")]
++    edi_ceiling: Option<(Arc<crate::edi_runtime::EdiCeiling>, String, Option<ReasoningEffortConfig>)>,
+     executed_tool_calls: Option<ExecutedToolCalls>,
+     // Resolved once when the session is created, like other session feature flags.
+     api_key_cyber_access_programs: cyber_access_program::ApiKeyCyberAccessPrograms,
+@@ -542,10 +544,48 @@
+             http_client_factory,
+             restored_history: false,
+             request_contributors,
++            #[cfg(feature = "edi-runtime")]
++            edi_ceiling: None,
+             executed_tool_calls: None,
+             api_key_cyber_access_programs:
+                 cyber_access_program::ApiKeyCyberAccessPrograms::UnsupportedProvider,
+         }
++    }
++
++    #[cfg(feature = "edi-runtime")]
++    pub(crate) fn with_edi_ceiling(mut self, ceiling: Arc<crate::edi_runtime::EdiCeiling>, model: String, effort: Option<ReasoningEffortConfig>) -> Self {
++        self.edi_ceiling = Some((ceiling, model, effort));
++        self
++    }
++
++    #[cfg(feature = "edi-runtime")]
++    fn verify_edi_request(&self, prompt: &Prompt, model_info: &ModelInfo, effort: Option<ReasoningEffortConfig>) -> Result<()> {
++        let (ceiling, model, original_effort) = self.edi_ceiling.as_ref()
++            .ok_or_else(|| CodexErr::InvalidRequest("Edi provider policy is missing".into()))?;
++        if model_info.slug != *model || effort != *original_effort
++            || self.restored_history || !self.request_contributors.is_empty()
++            || self.prompt_cache_key_override.is_some() || self.codex_responses_headers.is_some()
++            || prompt.cyber_access_program.is_some() || prompt.output_schema.is_some()
++        { return Err(CodexErr::InvalidRequest("Edi provider policy changed".into())); }
++        // The Session router separately proves the real dispatch set. This
++        // final provider entrance bonds its actual prompt to that same captured
++        // ceiling, including HTTP/Lite/WebSocket fallback and internal callers.
++        ceiling.verify(&prompt.tools, &prompt.tools)?;
++        ceiling.verify_input(&prompt.input)
++    }
++
++    #[cfg(feature = "edi-runtime")]
++    fn verify_edi_wire(&self, request: &ResponseCreateWsRequest<'_>, lite: bool) -> Result<()> {
++        let (ceiling, model, effort) = self.edi_ceiling.as_ref()
++            .ok_or_else(|| CodexErr::InvalidRequest("Edi provider policy is missing".into()))?;
++        if request.model != model.as_str() || request.reasoning.and_then(|value| value.effort.as_ref()) != effort.as_ref()
++            || request.store || !request.stream || request.tool_choice != "auto"
++            || request.previous_response_id.is_some() || request.access_programs.is_some()
++            || request.client_metadata.is_some()
++            || request.text.is_some_and(|value| value.format.is_some())
++        { return Err(CodexErr::InvalidRequest("Edi encoded provider policy changed".into())); }
++        let tools = request.tools.map(|value| serde_json::from_str(value.get())).transpose()?;
++        ceiling.verify_encoded(request.input, tools, lite)
+     }
+ 
+     pub(crate) fn with_executed_tool_calls(mut self, recorder: ExecutedToolCalls) -> Self {
+@@ -579,6 +619,8 @@
+     }
+ 
+     fn prompt_cache_key(&self, responses_metadata: &CodexResponsesMetadata) -> String {
++        #[cfg(feature = "edi-runtime")]
++        { return self.state.thread_id.to_string(); }
+         if let Some(prompt_cache_key) = &self.prompt_cache_key_override {
+             return prompt_cache_key.clone();
+         }
+@@ -679,6 +721,7 @@
+         mut extra_headers: ApiHeaderMap,
+         api_provider_override: Option<ApiProvider>,
+     ) -> Result<RealtimeWebrtcCallStart> {
++        if cfg!(feature = "edi-runtime") { return Err(CodexErr::InvalidRequest("This model service is unavailable in Edi".into())); }
+         // Create the media call over HTTP first, then retain matching auth so realtime can attach
+         // the server-side control WebSocket to the call id from that HTTP response.
+         let client_setup = self
+@@ -712,6 +755,7 @@
+         &self,
+         mut extra_headers: ApiHeaderMap,
+     ) -> Result<ApiHeaderMap> {
++        if cfg!(feature = "edi-runtime") { return Err(CodexErr::InvalidRequest("This model service is unavailable in Edi".into())); }
+         let client_setup = self
+             .current_client_setup(ClientRouting::ConfiguredProvider)
+             .await?;
+@@ -737,6 +781,7 @@
+         effort: Option<ReasoningEffortConfig>,
+         session_telemetry: &SessionTelemetry,
+     ) -> Result<Vec<ApiMemorySummarizeOutput>> {
++        if cfg!(feature = "edi-runtime") { return Err(CodexErr::InvalidRequest("This model service is unavailable in Edi".into())); }
+         if raw_memories.is_empty() {
+             return Ok(Vec::new());
+         }
+@@ -898,7 +943,11 @@
+         responses_metadata: &CodexResponsesMetadata,
+         include_internal: bool,
+     ) -> Result<ResponsesApiRequest> {
++        #[cfg(feature = "edi-runtime")]
++        self.verify_edi_request(prompt, model_info, effort.clone())?;
+         let mut input = prompt.get_formatted_input_for_request(model_info);
++        #[cfg(feature = "edi-runtime")]
++        for item in &mut input { item.clear_internal_chat_message_metadata_passthrough(); item.clear_tool_result_metadata(); }
+         if !self.reasoning_effort_override_enabled(model_info) {
+             // Unsupported models and disabled overrides must also accept saved history.
+             // Filter only the request copy; persisted history remains unchanged.
+@@ -1044,6 +1093,15 @@
+     async fn current_client_setup(&self, routing: ClientRouting) -> Result<CurrentClientSetup> {
+         // Capture before resolving credentials so an account switch during setup cannot label
+         // an old connection with the new owner's revision.
++        #[cfg(feature = "edi-runtime")]
++        {
++            let info = self.state.provider.info();
++            if !info.is_openai() || !info.requires_openai_auth || info.base_url.is_some()
++                || info.env_key.is_some() || info.experimental_bearer_token.is_some()
++                || info.auth.is_some() || info.aws.is_some() || info.gateway_oauth.is_some()
++                || info.query_params.as_ref().is_some_and(|value| !value.is_empty())
++            { return Err(CodexErr::InvalidRequest("Dedicated Edi provider routing is unavailable".into())); }
++        }
+         let auth_owner_generation = self.auth_owner_generation();
+         let auth_changes = self
+             .state
+@@ -1053,7 +1111,7 @@
+         loop {
+             let revision = auth_changes.as_ref().map(|changes| *changes.borrow());
+             let auth = self.state.provider.auth().await;
+-            let (api_provider, redirect_policy) = match routing {
++            let (mut api_provider, redirect_policy) = match routing {
+                 ClientRouting::Workspace => {
+                     let resolved = self
+                         .state
+@@ -1067,6 +1125,19 @@
+                     ClientRedirectPolicy::Default,
+                 ),
+             };
++            #[cfg(feature = "edi-runtime")]
++            {
++                // Workspace means the official account's routing scope, never
++                // a local project path. Do not forward configured/env headers.
++                let mut headers = ApiHeaderMap::new();
++                for name in ["x-openai-account-routing-override", "x-openai-internal-codex-residency"] {
++                    if let Some(value) = api_provider.headers.get(name) { headers.insert(name, value.clone()); }
++                }
++                api_provider.headers = headers;
++                api_provider.headers.insert("version", HeaderValue::from_static("0.162.1"));
++                api_provider.headers.insert("originator", HeaderValue::from_static("edi"));
++                api_provider.headers.insert("user-agent", HeaderValue::from_static("Edi/0.162.1"));
++            }
+             let resolved_auth = self
+                 .state
+                 .provider
+@@ -1106,6 +1177,8 @@
+     }
+ 
+     fn responses_headers(&self, auth: Option<&CodexAuth>, model: &str) -> ApiHeaderMap {
++        #[cfg(feature = "edi-runtime")]
++        { return ApiHeaderMap::new(); }
+         self.codex_responses_headers
+             .as_ref()
+             .filter(|config| {
+@@ -1168,6 +1241,8 @@
+         model: &str,
+         service_tier: Option<&str>,
+     ) -> Option<HeaderValue> {
++        #[cfg(feature = "edi-runtime")]
++        { return None; }
+         if !self.uses_codex_backend(auth) || is_guardian_reviewer(responses_headers) {
+             return None;
+         }
+@@ -1305,6 +1380,14 @@
+         &self,
+         responses_metadata: &CodexResponsesMetadata,
+     ) -> ApiHeaderMap {
++        #[cfg(feature = "edi-runtime")]
++        {
++            let mut headers = build_session_headers(Some(self.state.thread_id.to_string()), Some(self.state.thread_id.to_string()));
++            headers.insert(OPENAI_BETA_HEADER, HeaderValue::from_static(RESPONSES_WEBSOCKETS_V2_BETA_HEADER_VALUE));
++            headers.insert("originator", HeaderValue::from_static("edi"));
++            headers.insert("user-agent", HeaderValue::from_static("Edi/0.162.1"));
++            return headers;
++        }
+         let mut headers = build_responses_headers(
+             self.state.beta_features_header.as_deref(),
+             /*turn_state*/ None,
+@@ -1369,6 +1452,16 @@
+         compression: Compression,
+         use_responses_lite: bool,
+     ) -> ApiResponsesOptions {
++        #[cfg(feature = "edi-runtime")]
++        {
++            let mut headers = ApiHeaderMap::new();
++            headers.insert("originator", HeaderValue::from_static("edi"));
++            headers.insert("user-agent", HeaderValue::from_static("Edi/0.162.1"));
++            add_responses_lite_header(&mut headers, use_responses_lite);
++            return ApiResponsesOptions { session_id: Some(self.client.state.thread_id.to_string()),
++                thread_id: Some(self.client.state.thread_id.to_string()), session_source: None,
++                extra_headers: headers, compression, turn_state: None };
++        }
+         ApiResponsesOptions {
+             session_id: Some(self.client.responses_session_id(responses_metadata)),
+             thread_id: Some(responses_metadata.thread_id.to_string()),
+@@ -1765,12 +1858,20 @@
+                 &mut request.client_metadata,
+             );
+             let inference_trace_attempt = inference_trace.start_attempt();
++            #[cfg(not(feature = "edi-runtime"))]
+             inference_trace_attempt.add_request_headers(&mut options.extra_headers);
++            #[cfg(not(feature = "edi-runtime"))]
+             if let Some(input) = tool_metadata::bounded_input(&request, &request.input) {
+                 if let Some(recorder) = &self.client.executed_tool_calls {
+                     recorder.invalidate_wire_inventory_loss(&request.input, &input);
+                 }
+                 request.input = input;
++            }
++            #[cfg(feature = "edi-runtime")]
++            {
++                request.client_metadata = None;
++                request.access_programs = None;
++                self.client.verify_edi_wire(&ResponseCreateWsRequest::from(&request), model_info.use_responses_lite)?;
+             }
+             inference_trace_attempt.record_started(&request);
+             let client = ApiResponsesClient::new(
+@@ -1976,7 +2077,10 @@
+             if let Some(turn_state) = self.turn_state.get() {
+                 client_metadata.insert(X_CODEX_TURN_STATE_HEADER.to_string(), turn_state.clone());
+             }
++            #[cfg(not(feature = "edi-runtime"))]
+             let continuation = self.prepare_websocket_request(&request);
++            #[cfg(feature = "edi-runtime")]
++            let continuation: Option<WebsocketContinuation> = None;
+             let (mode, reason) = if continuation.is_some() {
+                 ("incremental", "incremental")
+             } else {
+@@ -2058,13 +2162,23 @@
+             let mut ws_request = ResponsesWsRequest::ResponseCreate(ws_payload);
+             stamp_ws_stream_request_start_ms(&mut ws_request);
+             let ResponsesWsRequest::ResponseCreate(payload) = &ws_request;
++            #[cfg(not(feature = "edi-runtime"))]
+             let bounded_input = tool_metadata::bounded_input(&ws_request, payload.input);
++            #[cfg(feature = "edi-runtime")]
++            let bounded_input: Option<Vec<ResponseItem>> = None;
+             if let Some(input) = bounded_input.as_deref() {
+                 if let Some(recorder) = &self.client.executed_tool_calls {
+                     recorder.invalidate_wire_inventory_loss(payload.input, input);
+                 }
+                 let ResponsesWsRequest::ResponseCreate(payload) = &mut ws_request;
+                 payload.input = input;
++            }
++            #[cfg(feature = "edi-runtime")]
++            {
++                let ResponsesWsRequest::ResponseCreate(payload) = &mut ws_request;
++                payload.client_metadata = None;
++                payload.access_programs = None;
++                self.client.verify_edi_wire(payload, model_info.use_responses_lite)?;
+             }
+             if !previous_response_id_from_untraced_warmup {
+                 inference_trace_attempt.record_started(&ws_request);
+--- a/codex-rs/core/src/codex_thread.rs
++++ b/codex-rs/core/src/codex_thread.rs
+@@ -255,6 +255,17 @@
+         }
+     }
+ 
++    #[cfg(feature = "edi-runtime")]
++    pub async fn edi_policy_proof(&self, turn_id: Option<&str>) -> CodexResult<serde_json::Value> {
++        let turn = self.session.new_default_turn().await;
++        let step = self.session.capture_step_context(turn, &CancellationToken::new()).await?;
++        let schemas = step.tool_router.model_visible_specs();
++        let mut proof = self.session.edi_ceiling.proof(&self.session.thread_id().to_string(), turn_id, &schemas)?;
++        proof["model"] = serde_json::Value::String(self.session.edi_settings.0.clone());
++        proof["reasoningEffort"] = serde_json::to_value(&self.session.edi_settings.1).map_err(|_| CodexErr::InvalidRequest("Edi effort proof unavailable".into()))?;
++        Ok(proof)
++    }
++
+     pub async fn submit(&self, op: Op) -> CodexResult<String> {
+         self.io.submit(op).await
+     }
+--- a/codex-rs/core/src/compact.rs
++++ b/codex-rs/core/src/compact.rs
+@@ -178,6 +178,12 @@
+     world_state: Arc<WorldState>,
+     compaction_metadata: CompactionTurnMetadata,
+ ) -> CodexResult<()> {
++    // This package has no isolated qualified summarizer with the same positive
++    // Edi dispatch contract. Refuse before hooks, history rewrites or provider
++    // input, preserving the original user/native outcomes rather than falling
++    // through a second unproved inference path.
++    if cfg!(feature = "edi-runtime") { return Err(CodexErr::InvalidRequest("Model compaction is unavailable in this Edi runtime".into())); }
++
+     let trigger = compaction_metadata.trigger();
+     let reason = compaction_metadata.reason();
+     let phase = compaction_metadata.phase();
+--- a/codex-rs/core/src/compact_remote_v2.rs
++++ b/codex-rs/core/src/compact_remote_v2.rs
+@@ -132,6 +132,12 @@
+     world_state: Arc<WorldState>,
+     compaction_metadata: CompactionTurnMetadata,
+ ) -> CodexResult<()> {
++    // This package has no isolated qualified summarizer with the same positive
++    // Edi dispatch contract. Refuse before hooks, history rewrites or provider
++    // input, preserving the original user/native outcomes rather than falling
++    // through a second unproved inference path.
++    if cfg!(feature = "edi-runtime") { return Err(CodexErr::InvalidRequest("Model compaction is unavailable in this Edi runtime".into())); }
++
+     let turn_context = &step_context.turn;
+     let trigger = compaction_metadata.trigger();
+     let reason = compaction_metadata.reason();
+--- /dev/null
++++ b/codex-rs/core/src/edi_runtime.rs
+@@ -0,0 +1,153 @@
++//! Immutable ceiling for the dedicated Edi app-server build.
++//! This module does not grant filesystem or provider access.
++use std::collections::BTreeMap;
++use std::sync::Arc;
++use codex_extension_api::{ExtensionDataInit, SessionIsolation, ToolPolicy};
++use codex_protocol::dynamic_tools::DynamicToolSpec;
++use codex_protocol::error::{CodexErr, Result};
++use codex_tools::{ToolName, ToolSpec, ResponsesApiNamespaceTool};
++use serde_json::{Value, json};
++
++pub const SCHEMA: &str = "edi.runtime-policy/1";
++pub const FLAVOUR: &str = "edi-app-server/1";
++const NAMES: &[&str] = &["inspect_project", "list_parameters", "diagnostics", "set_parameters", "set_free", "run_fit", "create_cwl_project", "acquire_inputs", "save_project", "add_relations", "edit_background"];
++
++pub(crate) struct EdiTurnCeiling(pub Arc<EdiCeiling>);
++
++#[derive(Debug)]
++pub struct EdiCeiling {
++    requested: Vec<DynamicToolSpec>,
++    expected: BTreeMap<String, Value>,
++}
++fn invalid() -> CodexErr { CodexErr::InvalidRequest("Edi runtime policy mismatch".into()) }
++impl EdiCeiling {
++    pub fn capture(tools: &[DynamicToolSpec]) -> Result<Self> {
++        if tools.len() != NAMES.len() { return Err(invalid()); }
++        let mut expected = BTreeMap::new();
++        for tool in tools {
++            let DynamicToolSpec::Function(function) = tool else { return Err(invalid()); };
++            if function.defer_loading || !NAMES.contains(&function.name.as_str()) ||
++                function.input_schema.get("additionalProperties") != Some(&Value::Bool(false)) {
++                return Err(invalid());
++            }
++            let mut parsed = codex_tools::dynamic_tool_to_responses_api_tool(function).map_err(|_| invalid())?;
++            parsed.defer_loading = None;
++            let schema = serde_json::to_value(parsed).map_err(|_| invalid())?;
++            if expected.insert(function.name.clone(), schema).is_some() { return Err(invalid()); }
++        }
++        Ok(Self { requested: tools.to_vec(), expected })
++    }
++    pub fn install(self, init: &mut ExtensionDataInit) {
++        init.insert(ToolPolicy {
++            allowed_tools: Some(self.expected.keys().map(|name| ToolName::namespaced("functions", name)).collect()),
++            require_managed_sandbox: false,
++            require_unified_exec: true,
++            expose_additional_permissions: false,
++        });
++        init.insert(SessionIsolation::Isolated);
++        init.insert(self);
++    }
++    pub fn same_request(&self, tools: &[DynamicToolSpec]) -> bool { self.requested == tools }
++    pub fn verify(&self, advertised: &[ToolSpec], dispatch: &[ToolSpec]) -> Result<()> {
++        fn parsed(specs: &[ToolSpec]) -> Result<BTreeMap<String, Value>> {
++            fn insert(map: &mut BTreeMap<String,Value>, tool: &codex_tools::ResponsesApiTool) -> Result<()> {
++                if tool.defer_loading == Some(true) || map.insert(tool.name.clone(), serde_json::to_value(tool).map_err(|_| invalid())?).is_some() { return Err(invalid()); }
++                Ok(())
++            }
++            let mut map = BTreeMap::new();
++            for spec in specs { match spec {
++                ToolSpec::Function(tool) => insert(&mut map, tool)?,
++                ToolSpec::Namespace(namespace) if namespace.name == "functions" => for tool in &namespace.tools {
++                    let ResponsesApiNamespaceTool::Function(tool) = tool else { return Err(invalid()); };
++                    insert(&mut map, tool)?;
++                },
++                _ => return Err(invalid()),
++            }}
++            Ok(map)
++        }
++        if parsed(advertised)? != self.expected || parsed(dispatch)? != self.expected || self.expected.is_empty() { return Err(invalid()); }
++        Ok(())
++    }
++    // Compare the actual encoded catalogue after the original API/Lite
++    // conversion. No advertised spelling can introduce a second namespace or
++    // hide a callable behind a stale typed prompt.
++    fn verify_encoded_tools(&self, tools: &[Value]) -> Result<()> {
++        fn insert(map: &mut BTreeMap<String, Value>, value: &Value) -> Result<()> {
++            let mut function = value.as_object().cloned().ok_or_else(invalid)?;
++            if function.remove("type") != Some(Value::String("function".into())) { return Err(invalid()); }
++            let name = function.get("name").and_then(Value::as_str).ok_or_else(invalid)?.to_owned();
++            if map.insert(name, Value::Object(function)).is_some() { return Err(invalid()); }
++            Ok(())
++        }
++        let mut parsed = BTreeMap::new();
++        for tool in tools {
++            if tool.get("type").and_then(Value::as_str) == Some("namespace") {
++                let namespace = tool.as_object().ok_or_else(invalid)?;
++                if namespace.get("name").and_then(Value::as_str) != Some("functions")
++                    || namespace.get("description").and_then(Value::as_str) != Some(codex_tools::default_namespace_description("functions").as_str())
++                    || namespace.keys().any(|key| !matches!(key.as_str(), "type" | "name" | "description" | "tools"))
++                { return Err(invalid()); }
++                for function in namespace.get("tools").and_then(Value::as_array).ok_or_else(invalid)? { insert(&mut parsed, function)?; }
++            } else { insert(&mut parsed, tool)?; }
++        }
++        if self.expected.is_empty() || parsed != self.expected { return Err(invalid()); }
++        Ok(())
++    }
++    pub fn verify_encoded(&self, input: &[codex_protocol::models::ResponseItem], tools: Option<Value>, lite: bool) -> Result<()> {
++        use codex_protocol::models::ResponseItem;
++        let mut additional = 0;
++        for item in input {
++            if let ResponseItem::AdditionalTools { role, tools, .. } = item {
++                additional += 1;
++                if !lite || role != "developer" { return Err(invalid()); }
++                self.verify_encoded_tools(tools)?;
++            } else { self.verify_input(std::slice::from_ref(item))?; }
++        }
++        if lite {
++            if tools.is_some() || additional != 1 { return Err(invalid()); }
++        } else {
++            if additional != 0 { return Err(invalid()); }
++            self.verify_encoded_tools(tools.as_ref().and_then(Value::as_array).ok_or_else(invalid)?)?;
++        }
++        Ok(())
++    }
++    pub fn verify_input(&self, input: &[codex_protocol::models::ResponseItem]) -> Result<()> {
++        use codex_protocol::models::{ResponseItem, ContentItem, FunctionCallOutputBody, FunctionCallOutputContentItem};
++        for item in input {
++            let refused = match item {
++                ResponseItem::Message { role, content, .. } =>
++                    !matches!(role.as_str(), "user" | "assistant" | "developer") || content.iter().any(|part|
++                        !matches!(part, ContentItem::InputText { .. } | ContentItem::OutputText { .. })),
++                ResponseItem::FunctionCallOutput { output, name, namespace, .. } => {
++                    if name.as_ref().is_some_and(|value| !self.expected.contains_key(value))
++                        || namespace.as_deref().is_some_and(|value| value != "functions") { return Err(invalid()); }
++                    match &output.body {
++                    FunctionCallOutputBody::Text(_) => false,
++                    FunctionCallOutputBody::ContentItems(items) => items.iter().any(|part|
++                        !matches!(part, FunctionCallOutputContentItem::InputText { .. })),
++                    }
++                },
++                ResponseItem::FunctionCall { name, namespace, .. } =>
++                    !self.expected.contains_key(name) || namespace.as_deref().is_some_and(|value| value != "functions"),
++                ResponseItem::Reasoning { .. } => false,
++                // Unknown, agent, custom, compaction and durable configuration
++                // items have no admitted role in this isolated app thread.
++                _ => true,
++            };
++            if refused { return Err(invalid()); }
++        }
++        Ok(())
++    }
++    pub fn proof(&self, thread: &str, turn: Option<&str>, schemas: &[ToolSpec]) -> Result<Value> {
++        let patch = option_env!("EDI_SOURCE_PATCH_SHA256").ok_or_else(invalid)?;
++        if patch.len() != 64 || !patch.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) { return Err(invalid()); }
++        Ok(json!({"schema":SCHEMA,"flavour":FLAVOUR,"upstreamVersion":"0.162.1",
++            "upstreamCommit":"092d3acd6bec3e3a14bdc7e7a2810ab628ab759d","sourcePatchSha256":patch,
++            "threadId":thread,"turnId":turn,"isolation":"isolated","toolMode":"direct",
++            "sandbox":"readOnly","approvalPolicy":"never","modelNetwork":false,
++            "requestedTools":self.requested,"advertisedTools":schemas,"dispatchEqualsAdvertisement":true}))
++    }
++}
++pub(crate) fn ceiling(init: &ExtensionDataInit) -> Result<Arc<EdiCeiling>> {
++    init.get::<EdiCeiling>().ok_or_else(invalid)
++}
+--- a/codex-rs/core/src/lib.rs
++++ b/codex-rs/core/src/lib.rs
+@@ -82,6 +82,8 @@
+ mod codex_delegate;
+ mod command_canonicalization;
+ pub mod config;
++#[cfg(feature = "edi-runtime")]
++pub mod edi_runtime;
+ pub mod connectors;
+ pub mod context;
+ mod context_manager;
+--- a/codex-rs/core/src/mcp.rs
++++ b/codex-rs/core/src/mcp.rs
+@@ -193,6 +193,7 @@
+         context: McpServerContributionContext<'_, Config>,
+         disabled_plugin_ids: &[String],
+     ) -> SelectedPluginSnapshot {
++        if cfg!(feature = "edi-runtime") { return SelectedPluginSnapshot::default(); }
+         let roots = context
+             .ready_selected_capability_roots()
+             .unwrap_or_default();
+@@ -233,6 +234,15 @@
+         disabled_plugin_ids: &[String],
+     ) -> McpRuntimeProjection {
+         let config = context.config();
++        if cfg!(feature = "edi-runtime") {
++            let empty = codex_core_plugins::PluginLoadOutcome::default();
++            let mut config = config.to_mcp_config_with_loaded_plugins(&empty, std::iter::empty());
++            config.mcp_server_catalog = Default::default();
++            config.connector_snapshot = Default::default();
++            config.apps_enabled = false;
++            config.skill_mcp_dependency_install_enabled = false;
++            return McpRuntimeProjection { config, plugins_available: false, selected_plugins: Default::default() };
++        }
+         let mut selected_plugin_connector_sources = Vec::new();
+         let mut selected_plugin_registrations = Vec::new();
+         let mut selected_plugins = Vec::new();
+--- a/codex-rs/core/src/session/mod.rs
++++ b/codex-rs/core/src/session/mod.rs
+@@ -1544,6 +1544,12 @@
+ 
+     /// Render the request copy without changing instructions persisted or inherited by forks.
+     pub(crate) async fn get_prompt_base_instructions(&self) -> BaseInstructions {
++        if cfg!(feature = "edi-runtime") {
++            return BaseInstructions {
++                text: "You are Edi's scientific assistant. Follow the application-provided scientific guidance and genuine user objective. Use only the advertised registered Edi operations. Input files and measured data stay local; do not request general filesystem, shell, network, image or delegated-agent tools.".to_owned(),
++                provenance: None,
++            };
++        }
+         let config = self.get_config().await;
+         let instructions = self.get_base_instructions().await;
+         if !config.update_plan_enabled
+@@ -3724,6 +3730,18 @@
+         required_servers: &[String],
+         required_plugins: &HashSet<String>,
+     ) -> CodexResult<Arc<StepContext>> {
++        #[cfg(feature = "edi-runtime")]
++        {
++            use codex_protocol::protocol::{AskForApproval, SandboxPolicy};
++            let original = turn_context.extension_data.get::<crate::edi_runtime::EdiTurnCeiling>();
++            if !original.as_ref().is_some_and(|marker| Arc::ptr_eq(&marker.0, &self.edi_ceiling))
++                || turn_context.approval_policy() != AskForApproval::Never
++                || !matches!(turn_context.sandbox_policy(), SandboxPolicy::ReadOnly { network_access: false })
++                || turn_context.session_source.is_internal()
++                || turn_context.model_info().slug != self.edi_settings.0
++                || turn_context.reasoning_effort().cloned() != self.edi_settings.1
++            { return Err(CodexErr::InvalidRequest("Edi effective policy/settings changed".into())); }
++        }
+         // Read the step's model and record its environments together so an update cannot split them.
+         // Wait for executor startup below, after releasing the lock.
+         let (mut settings, environments) = {
+@@ -3754,6 +3772,10 @@
+                     settings.mcp_approvals_reviewer_override;
+                 settings = Arc::new(inherited_settings);
+             }
++        }
++        #[cfg(feature = "edi-runtime")]
++        if settings.model_info.slug != self.edi_settings.0 || settings.reasoning_effort().cloned() != self.edi_settings.1 {
++            return Err(CodexErr::InvalidRequest("Edi selected step settings changed".into()));
+         }
+         let token_budget = token_budget::resolve_token_budget(
+             turn_context.configured_token_budget.as_ref(),
+@@ -3774,18 +3796,18 @@
+             loaded_agents_md
+         });
+         let prepare_tools = Box::pin(async {
+-            let selected_capability_roots = self
++            let selected_capability_roots = if cfg!(feature = "edi-runtime") { Vec::new() } else { self
+                 .resolve_selected_capability_roots_for_step(&environments)
+-                .await;
++                .await };
+             let ready_selected_capability_roots =
+                 Self::ready_selected_capability_roots(&selected_capability_roots);
+-            let executor_capability_discovery = self
++            let executor_capability_discovery = if cfg!(feature = "edi-runtime") { None } else { self
+                 .executor_capability_discovery_for_step(
+                     &turn_context.config,
+                     &ready_selected_capability_roots,
+                     &environments,
+                 )
+-                .await;
++                .await };
+             let extension_data =
+                 codex_extension_api::ExtensionData::new(turn_context.sub_id.clone());
+             if let Some(messages) = settings
+@@ -4181,6 +4203,7 @@
+         &self,
+         step_context: &StepContext,
+     ) -> Vec<ResponseItem> {
++        if cfg!(feature = "edi-runtime") { return Vec::new(); }
+         let turn_context = step_context.turn.as_ref();
+         let mut developer_sections = Vec::new();
+         let context_contributors = self.services.extensions.context_contributors().to_vec();
+@@ -4214,6 +4237,20 @@
+         world_state: &WorldState,
+     ) -> (Vec<WorldStateUpdate>, WorldStateSnapshot) {
+         let turn_context = step_context.turn.as_ref();
++        #[cfg(feature = "edi-runtime")]
++        {
++            let (snapshot, _) = world_state.render_full();
++            let sections = turn_context.developer_instructions.as_deref()
++                .filter(|text| !text.is_empty())
++                .map(|text| vec![DeveloperInstructions::new(text.to_owned()).render_fragment().into()])
++                .unwrap_or_default();
++            let updates = crate::context_manager::updates::build_rendered_message(sections)
++                .into_iter().map(|item| WorldStateUpdate {
++                    placement: Placement::Standalone,
++                    content: WorldStateUpdateContent::Item(Box::new(item)),
++                }).collect();
++            return (updates, snapshot);
++        }
+         let mut developer_sections = Vec::<RenderedFragment>::with_capacity(8);
+         let mut contextual_user_sections = Vec::<RenderedFragment>::with_capacity(2);
+         let mut separate_developer_sections = Vec::<RenderedFragment>::new();
+@@ -5138,6 +5175,7 @@
+     environment: Option<&TurnEnvironment>,
+     disabled_plugin_ids: &[String],
+ ) -> HooksConfig {
++    if cfg!(feature = "edi-runtime") { return HooksConfig::default(); }
+     let (hook_shell_program, hook_shell_argv) = environment
+         .and_then(|environment| environment.shell.as_ref())
+         .map(|shell| {
+--- a/codex-rs/core/src/session/session.rs
++++ b/codex-rs/core/src/session/session.rs
+@@ -75,6 +75,10 @@
+     pub(super) features: ManagedFeatures,
+     pub(super) isolation: codex_extension_api::SessionIsolation,
+     pub(crate) tool_policy: Arc<codex_extension_api::ToolPolicy>,
++    #[cfg(feature = "edi-runtime")]
++    pub(crate) edi_ceiling: Arc<crate::edi_runtime::EdiCeiling>,
++    #[cfg(feature = "edi-runtime")]
++    pub(crate) edi_settings: (String, Option<codex_protocol::openai_models::ReasoningEffort>),
+     pub(crate) windows_sandbox_proxy_settings_mode:
+         codex_sandboxing::WindowsSandboxProxySettingsMode,
+     pub(super) multi_agent_version: OnceLock<MultiAgentVersion>,
+@@ -633,6 +637,7 @@
+     extensions: &codex_extension_api::ExtensionRegistry<Config>,
+     session_source: &SessionSource,
+ ) -> Vec<SkillError> {
++    if cfg!(feature = "edi-runtime") { return Vec::new(); }
+     // Guardian does not consume skills, including the legacy empty-registry catalog.
+     if crate::guardian::is_basic_session_source(session_source) {
+         return Vec::new();
+@@ -797,6 +802,18 @@
+         git_enrichment_policy: GitEnrichmentPolicy,
+         windows_sandbox_proxy_settings_mode: codex_sandboxing::WindowsSandboxProxySettingsMode,
+     ) -> anyhow::Result<Arc<Self>> {
++        #[cfg(feature = "edi-runtime")]
++        let edi_ceiling = {
++            let policy = crate::edi_runtime::ceiling(&thread_extension_init)?;
++            if !policy.same_request(&session_configuration.dynamic_tools)
++                || !matches!(&initial_history, InitialHistory::New | InitialHistory::Cleared)
++                || thread_extension_init.get::<codex_extension_api::SessionIsolation>().as_deref()
++                    != Some(&codex_extension_api::SessionIsolation::Isolated)
++                || thread_extension_init.get::<codex_extension_api::ToolPolicy>().is_none()
++            { return Err(anyhow::anyhow!("Edi requires its original isolated policy")); }
++            instructions = SessionInstructions::default();
++            policy
++        };
+         debug!(
+             "Configuring session: model={}; provider={:?}",
+             session_configuration
+@@ -1165,7 +1182,7 @@
+             .unwrap_or_else(|| session_configuration.cwd().to_path_buf());
+         let auth_and_mcp_fut = async move {
+             let auth = mcp_auth.await;
+-            if config_for_mcp.features.plugin_recommendations_enabled() {
++            if !cfg!(feature = "edi-runtime") && config_for_mcp.features.plugin_recommendations_enabled() {
+                 let plugins_config = config_for_mcp.plugins_config_input();
+                 let auth_for_prewarm = auth.clone();
+                 // Fetch the catalog while MCP and plugin/skill initialization continue.
+@@ -1760,7 +1777,8 @@
+                 thread_store: Arc::clone(&thread_store),
+                 attestation_provider: attestation_provider.clone(),
+                 time_provider,
+-                model_client: ModelClient::new(
++                model_client: {
++                    let client = ModelClient::new(
+                     Some(Arc::clone(&auth_manager)),
+                     if config.features.enabled(Feature::UseAgentIdentity) {
+                         AgentIdentityAuthPolicy::ChatGptAuth
+@@ -1799,7 +1817,13 @@
+                     tx_event.clone(),
+                     codex_responses_headers,
+                     crate::cyber_access_program::ApiKeyCyberAccessPrograms::from_config(&config),
+-                ),
++                );
++                    #[cfg(feature = "edi-runtime")]
++                    let client = client.with_edi_ceiling(Arc::clone(&edi_ceiling),
++                        session_configuration.step_settings.collaboration_mode.model().to_owned(),
++                        session_configuration.step_settings.collaboration_mode.reasoning_effort());
++                    client
++                },
+                 executed_tool_calls: executed_tool_calls.clone(),
+                 code_mode_service: crate::tools::code_mode::CodeModeService::new(
+                     thread_id,
+@@ -1823,6 +1847,10 @@
+                 features: config.features.clone(),
+                 isolation,
+                 tool_policy,
++                #[cfg(feature = "edi-runtime")]
++                edi_ceiling,
++                #[cfg(feature = "edi-runtime")]
++                edi_settings: (session_configuration.step_settings.collaboration_mode.model().to_owned(), session_configuration.step_settings.collaboration_mode.reasoning_effort()),
+                 windows_sandbox_proxy_settings_mode,
+                 multi_agent_version,
+                 mcp_refresh: McpRefresh::new(),
+--- a/codex-rs/core/src/session/startup_prewarm.rs
++++ b/codex-rs/core/src/session/startup_prewarm.rs
+@@ -207,6 +207,7 @@
+ 
+ impl Session {
+     pub(crate) async fn schedule_startup_prewarm(self: &Arc<Self>, input: PrewarmInput) {
++        if cfg!(feature = "edi-runtime") { return; }
+         let websocket_connect_timeout = self.provider().await.websocket_connect_timeout();
+         let mut state = self.state.lock().await;
+         if state.shutting_down {
+--- a/codex-rs/core/src/session/turn.rs
++++ b/codex-rs/core/src/session/turn.rs
+@@ -223,7 +223,7 @@
+ 
+     let user_input = turn_user_input(&input);
+     let allow_plugin_mentions =
+-        !crate::guardian::is_basic_session_source(&turn_context.session_source);
++        !cfg!(feature = "edi-runtime") && !crate::guardian::is_basic_session_source(&turn_context.session_source);
+     let McpStartupRequirements {
+         required_servers,
+         required_plugins,
+@@ -930,7 +930,7 @@
+     turn_context: &TurnContext,
+     user_input: &[UserInput],
+ ) -> (Vec<String>, Vec<crate::plugins::PluginCapabilitySummary>) {
+-    if crate::guardian::is_basic_session_source(&turn_context.session_source) {
++    if cfg!(feature = "edi-runtime") || crate::guardian::is_basic_session_source(&turn_context.session_source) {
+         return (Vec::new(), Vec::new());
+     }
+ 
+@@ -1037,7 +1037,7 @@
+     let turn_context = step_context.turn.as_ref();
+     // Guardian input embeds the parent transcript as untrusted evidence. Do not interpret skill or
+     // plugin mentions from that generated prompt as requests to inject additional instructions.
+-    if crate::guardian::is_basic_session_source(&turn_context.session_source) {
++    if cfg!(feature = "edi-runtime") || crate::guardian::is_basic_session_source(&turn_context.session_source) {
+         return Some((Vec::new(), HashSet::new()));
+     }
+ 
+@@ -1566,6 +1566,9 @@
+     incremental_tools: bool,
+ ) -> Prompt {
+     let turn_context = &step_context.turn;
++    // The dedicated contract advertises its complete nonempty Direct catalogue
++    // on every sampling request; it never relies on inherited tool deltas.
++    let incremental_tools = incremental_tools && !cfg!(feature = "edi-runtime");
+     Prompt {
+         input,
+         tools: if incremental_tools {
+@@ -2559,6 +2562,15 @@
+     let effort = sess
+         .reasoning_effort_for_request(&step_context.settings, super::RequestEffortUsage::Sampling)
+         .await;
++    #[cfg(feature = "edi-runtime")]
++    {
++        let actual = step_context.tool_router.model_visible_specs();
++        sess.edi_ceiling.verify(&prompt.tools, &actual)?;
++        sess.edi_ceiling.verify_input(&prompt.input)?;
++        if step_context.settings.model_info.slug != sess.edi_settings.0
++            || effort != sess.edi_settings.1
++        { return Err(CodexErr::InvalidRequest("Edi sampling settings changed".into())); }
++    }
+     let mut stream = client_session
+         .stream(
+             prompt,
+--- a/codex-rs/core/src/session/turn_context.rs
++++ b/codex-rs/core/src/session/turn_context.rs
+@@ -1299,17 +1299,17 @@
+             }
+         };
+         let plugins_input = per_turn_config.plugins_config_input();
+-        let plugin_outcome = self
++        let plugin_outcome = if cfg!(feature = "edi-runtime") { codex_core_plugins::PluginLoadOutcome::default() } else { self
+             .services
+             .plugins_manager
+             .plugins_for_config(&plugins_input)
+             .await
+-            .without_plugins(&session_configuration.disabled_plugin_ids);
++            .without_plugins(&session_configuration.disabled_plugin_ids) };
+         let trusted_plugin_roots = TrustedPluginRoots::from_plugin_load_outcome(
+             &plugin_outcome,
+             per_turn_config.codex_home.as_path(),
+         );
+-        let skills_snapshot = if matches!(build_mode, TurnContextBuildMode::InjectItems)
++        let skills_snapshot = if cfg!(feature = "edi-runtime") || matches!(build_mode, TurnContextBuildMode::InjectItems)
+             || crate::guardian::is_basic_session_source(&session_configuration.session_source)
+             || (per_turn_config
+                 .features
+@@ -1369,7 +1369,9 @@
+             sub_id,
+             skills_snapshot,
+         );
+-        turn_context.code_mode_available = self.services.code_mode_service.is_available();
++        #[cfg(feature = "edi-runtime")]
++        turn_context.extension_data.insert(crate::edi_runtime::EdiTurnCeiling(Arc::clone(&self.edi_ceiling)));
++        turn_context.code_mode_available = !cfg!(feature = "edi-runtime") && self.services.code_mode_service.is_available();
+         turn_context.extension_data.insert(trusted_plugin_roots);
+         turn_context.active_host_plugin_identities = Some(
+             plugin_outcome
+--- a/codex-rs/core/src/session/world_state.rs
++++ b/codex-rs/core/src/session/world_state.rs
+@@ -45,6 +45,7 @@
+         &self,
+         step_context: &StepContext,
+     ) -> bool {
++        if cfg!(feature = "edi-runtime") { return false; }
+         if !step_context.settings.model_info.use_responses_lite {
+             return false;
+         }
+@@ -61,6 +62,11 @@
+         step_context: &StepContext,
+         new_window: bool,
+     ) -> CodexResult<WorldState> {
++        // The host cannot introduce cwd, permission-root, repository, plugin,
++        // environment or inherited instruction fragments into Edi's closed
++        // outgoing context. Edi supplies its captured application instructions
++        // explicitly; tools remain on the original Prompt.tools entrance.
++        if cfg!(feature = "edi-runtime") { return Ok(WorldState::default()); }
+         let incremental_tools = if new_window {
+             step_context.incremental_tools_enabled()
+         } else {
+--- a/codex-rs/core/src/thread_manager.rs
++++ b/codex-rs/core/src/thread_manager.rs
+@@ -2116,6 +2116,15 @@
+             mut reserved_thread_id,
+             disabled_plugin_ids,
+         } = options;
++        #[cfg(feature = "edi-runtime")]
++        {
++            // Historical/raw threads and child/review runtimes never enter this host.
++            if !matches!(&initial_history, InitialHistory::New | InitialHistory::Cleared)
++                || parent_thread_id.is_some() || inherited_instructions.is_some()
++                || inherited_exec_policy.is_some() || allow_provider_model_fallback
++            { return Err(CodexErr::InvalidRequest("Edi requires a new isolated root thread".into())); }
++            crate::edi_runtime::EdiCeiling::capture(&dynamic_tools)?.install(&mut thread_extension_init);
++        }
+         let inherited_environments = captured_environments.or(inherited_environments);
+         let session_source = session_source.unwrap_or_else(|| self.session_source.clone());
+         // Older callers and saved reviewers identify isolation through their source.
+@@ -2236,10 +2245,10 @@
+         }
+         let (instructions, inherited_exec_policy, extensions, mcp_manager, multi_agent_version) =
+             if isolation == codex_extension_api::SessionIsolation::Isolated {
+-                let extensions = thread_extension_init
++                let extensions = if cfg!(feature = "edi-runtime") { empty_extension_registry() } else { thread_extension_init
+                     .get::<codex_extension_api::IsolatedSessionExtensions<Config>>()
+                     .map(|extensions| Arc::clone(&extensions.0))
+-                    .unwrap_or_else(empty_extension_registry);
++                    .unwrap_or_else(empty_extension_registry) };
+                 let mcp_manager = McpManager::new_with_extensions(
+                     Arc::clone(&self.plugins_manager),
+                     Arc::clone(&extensions),
+--- a/codex-rs/core/src/tools/handlers/dynamic.rs
++++ b/codex-rs/core/src/tools/handlers/dynamic.rs
+@@ -154,6 +154,10 @@
+             content_items,
+             success,
+         } = response;
++        #[cfg(feature = "edi-runtime")]
++        if content_items.iter().any(|item| !matches!(item, codex_protocol::dynamic_tools::DynamicToolCallOutputContentItem::InputText { .. })) {
++            return Err(FunctionCallError::RespondToModel("Only projected text results are available in Edi".into()));
++        }
+         let body = content_items
+             .into_iter()
+             .map(FunctionCallOutputContentItem::from)
+--- a/codex-rs/core/src/tools/mod.rs
++++ b/codex-rs/core/src/tools/mod.rs
+@@ -73,6 +73,7 @@
+ }
+ 
+ pub(crate) fn requested_tool_mode(turn_context: &TurnContext, model_info: &ModelInfo) -> ToolMode {
++    if cfg!(feature = "edi-runtime") { return ToolMode::Direct; }
+     model_info.tool_mode.unwrap_or_else(|| {
+         if turn_context.config.features.enabled(Feature::CodeModeOnly) {
+             ToolMode::CodeModeOnly
+--- a/codex-rs/core/src/tools/registry.rs
++++ b/codex-rs/core/src/tools/registry.rs
+@@ -535,6 +535,10 @@
+         mut invocation: ToolInvocation,
+         call_state: Option<Arc<ToolCallState>>,
+     ) -> Result<AnyToolResult, FunctionCallError> {
++        #[cfg(feature = "edi-runtime")]
++        if !self.tool_policy.allows(&invocation.tool_name) || !invocation.tool_name.is_default_namespace() {
++            return Err(FunctionCallError::RespondToModel("Tool is unavailable in Edi".into()));
++        }
+         let tool_name = invocation.tool_name.clone();
+         let call_id_owned = invocation.call_id.clone();
+         let otel = invocation
+--- a/codex-rs/core/src/tools/spec_plan.rs
++++ b/codex-rs/core/src/tools/spec_plan.rs
+@@ -148,6 +148,12 @@
+         wait_agent_timeouts: wait_agent_timeout_options(turn_context),
+     };
+     let mut registry = ToolRegistry::with_tool_policy(Arc::clone(&session.tool_policy));
++    #[cfg(feature = "edi-runtime")]
++    {
++        if !session.edi_ceiling.same_request(&turn_context.dynamic_tools) { return Err(codex_protocol::error::CodexErr::InvalidRequest("Edi catalogue changed".into())); }
++        append_dynamic_tool_runtimes(&turn_context.dynamic_tools, &mut registry);
++        return finalize_tool_router(turn_context, model_info, registry, Vec::new(), &session.services.tool_search_handler_cache);
++    }
+     add_core_tool_sources(&context, &mut registry);
+ 
+     let registered_mcp_tools = session.services.mcp_handler_cache.append_mcp_tools(
+@@ -503,6 +509,13 @@
+         &code_mode_tool_names,
+         hosted_specs,
+     );
++    #[cfg(feature = "edi-runtime")]
++    {
++        let expected = crate::edi_runtime::EdiCeiling::capture(&turn_context.dynamic_tools)?;
++        let dispatch = registry.entries().map(|tool| tool.runtime.spec()).collect::<Vec<_>>();
++        expected.verify(&model_visible_specs, &dispatch)?;
++        if registry.first_collision().is_some() { return Err(codex_protocol::error::CodexErr::InvalidRequest("Edi tool collision".into())); }
++    }
+     let tool_namespaces_info = include_tool_namespaces_info
+         .then(|| {
+             collect_tool_namespaces_info(&registry, &code_mode_tool_names, &model_visible_specs)

@@ -1253,3 +1253,21 @@ and lifetime retire original ownership on actual changes; value-role publication
 does not become a new owner. No parent.model/index inference or synthetic input
 is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
 and all unrelated original controls remain unchanged.
+
+
+### Ordered assistant parameter arrays through the original manual controls
+
+The first implementation is the existing NativeWidget scalar parameter route: ParameterItem, the ProjectViewModel final-event receipt, ParametersGroup/ParameterCell and the original AssistantWidgetInput. The existing relation/background sequences supply the factual partial-result convention. Parameter/free arrays extend that same route with one bounded ordered cursor; there is no batch form, second editor or native atomic edit behind decorative input.
+
+The whole native array validator and initial original-control mapping run before visibility or input. An initially invalid/unmapped/manual-draft request refuses before the first scientific change. Instrument and Cell fields retain their original selected-owner routes; Analysis is limited to parameters actually represented by its original table, including the current scan scope. No hidden selection or universal Analysis fallback is implied.
+
+Every continuation retains its immutable entry identity, original owner/receipt and actual ParameterItem/native member. Controls are located through fresh membership and geometry after original tab, Main-sidebar, group, scroll and filter actions. Equal entries settle before those actions. A changed entry uses the ordinary prepared final event and native edit/Undo; only confirmed consumed/applied/published readback advances its cursor. Stop, takeover, refusal or retirement cannot redirect an old callback or its cleanup to the next entry. No rollback, retry or silent mode switch is provided.
+
+For visible parameter/free arrays, steps_completed is the settled requested-entry prefix including no-ops; it is not the Undo count. Each actual changed control has its ordinary Undo. Complete results say atomic:false and unchanged or edited; interruptions preserve the factual partial or uncertain outcome without counting an unconfirmed current entry as settled. Normal mode retains the complete atomic native edit and one Undo. Original source/fit/calculation/IME/manual-draft and objective-wide sidebar behavior remain authoritative.
+
+
+### Current original parameter binding before visible admission
+
+A selected block name and a cached QObject path are not a live control binding. The original ProjectViewModel's sole ParameterRegistry current maps/items and original model parameter roles are authoritative; deferred-deletion children are never lookup candidates. Instrument additionally requires its original selected native experiment/model and usedByProfile visibility role, including the retained-free-but-inert case. Cell requires the actual selected native structure and exact six Cell model/member pairs. Analysis requires the actual current table parameter role, preserving its scan scope. No fallback, profile/selection change or extra input is inferred.
+
+The same pinned registry/model/ParameterItem/native member/path is checked before scalar/array no-op, each currentness continuation and the genuine final event/readback. The original creation child's scalar parameter path uses this same entrance. An initially unavailable later array entry refuses the whole request before earlier inputs; a later retired binding stops with the original factual partial/uncertain result. Original scalar result shape, atomic normal mode, per-change visible Undo, old-owner once/ACK and retained callback budgets are preserved. Added weak identities are part of the existing typed frame size, and scalar path/callback backing uses the same prospective and retired-frame accounting as arrays.

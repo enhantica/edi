@@ -34,10 +34,10 @@ QJsonArray assistant_native_tool_specs() {
     add("inspect_project", "Inspect Edi's actual currently displayed project/context. No mutation.");
     add("list_parameters", "Read actual native parameter paths/values/free flags and dependence. No mutation.");
     add("diagnostics", "Read actual available native physical diagnostics. No mutation.");
-    add("set_parameters", "Atomically set independent parameter values in the displayed project through Edi's validated native editor.",
+    add("set_parameters", "Set independent parameter values after complete native validation. Normal mode is one atomic edit/Undo; Show actions uses original exposed controls in order, separate Undo per change and honest complete/partial/uncertain outcomes.",
         {{"values", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"value", Object{{"type", "number"}}}}, {"path", "value"})}}}}, {"values"});
-    add("set_free", "Atomically choose actual independent fittable native parameter flags; preserves physical/symmetry validation.",
+    add("set_free", "Choose actual independent fittable parameter flags with physical/symmetry validation. Normal mode is one atomic edit/Undo; Show actions uses original exposed controls in order with separate Undo per change and honest complete/partial/uncertain outcomes.",
         {{"flags", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"free", Object{{"type", "boolean"}}}}, {"path", "free"})}}}}, {"flags"});
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");

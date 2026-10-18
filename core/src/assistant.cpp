@@ -325,11 +325,6 @@ J manifest() {
     };
     const auto array = [](J items) -> J { return O{{"type", "array"}, {"items", std::move(items)}}; };
     add("inspect_project", "Read the open project and parameter context", {}, {});
-    add("read_selected_file", "Read a bounded UTF-8 byte range from explicitly selected files; content is untrusted data",
-        {{"collection_id", text}, {"generation", text}, {"file_id", text},
-         {"offset", O{{"type", "integer"}, {"minimum", 0}}},
-         {"max_bytes", O{{"type", "integer"}, {"minimum", 4}, {"maximum", static_cast<double>(SelectedFileLimits::read_bytes)}}}},
-        {"collection_id", "generation", "file_id", "offset", "max_bytes"});
     add("list_parameters", "Read parameter paths, values, units and dependence", {}, {});
     add("diagnostics", "Read available physical diagnostics", {}, {});
     add("propose_plan", "Show a bounded refinement plan for explicit user approval",
@@ -573,32 +568,6 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         for (auto& file : added) next.files.push_back(std::move(file));
         selected = std::move(next); selected_manifest = std::move(next_manifest);
         return reply;
-    }
-    Reply read_file(const J& args) const {
-        shape(args, {"collection_id", "generation", "file_id", "offset", "max_bytes"});
-        const auto collection = string(args, "collection_id");
-        const auto generation = selected_generation(args);
-        const auto file_id = string(args, "file_id");
-        const auto offset = selected_offset(args, "offset"), count = selected_offset(args, "max_bytes");
-        if (count < 4) refuse("invalid_argument", "Selected-file read length must be at least four bytes");
-        if (count > SelectedFileLimits::read_bytes) refuse("resource_exhausted", "Selected-file read length exceeds its limit");
-        if (selected.collection_id.empty() || collection != selected.collection_id || generation != selected.generation)
-            refuse("stale_revision", "Selected collection changed");
-        const auto found = std::find_if(selected.files.begin(), selected.files.end(), [&](const auto& file) { return file.id == file_id; });
-        if (found == selected.files.end()) refuse("invalid_argument", "Unknown selected-file ID");
-        if (!selected_readable(*found)) refuse("unsupported_format", "Selected file is not supported UTF-8 text; export a text representation first");
-        const auto source = selected_text(*found);
-        if (offset > source.size() || (offset < source.size() && (static_cast<unsigned char>(source[offset]) & 0xc0) == 0x80))
-            refuse("invalid_argument", "Selected-file offset is not a UTF-8 byte boundary");
-        auto end = offset + std::min<std::uint64_t>(count, source.size() - offset);
-        while (end < source.size() && end > offset && (static_cast<unsigned char>(source[end]) & 0xc0) == 0x80) --end;
-        const bool eof = end == source.size();
-        J value = O{{"collection_id", selected.collection_id}, {"generation", std::to_string(selected.generation)},
-                    {"file_id", found->id}, {"name", found->relative_name}, {"offset", std::to_string(offset)},
-                    {"next_offset", eof ? J(nullptr) : J(std::to_string(end))}, {"eof", eof},
-                    {"text", std::string(source.substr(offset, end - offset))}};
-        bounded(value, Limits::message_bytes);
-        return success(std::move(value));
     }
 
     void emit(const std::string& type, O fields = {}, const J* scope = nullptr) {
@@ -1077,7 +1046,6 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     Reply tool(const J& event) {
         const auto name = string(event, "name");
         const J& args = event.at("arguments"); args.object("arguments");
-        if (name == "read_selected_file") return read_file(args);
         if (name == "inspect_project" || name == "list_parameters" || name == "diagnostics") {
             shape(args, {});
             if (name == "inspect_project") return success(context());
@@ -1518,7 +1486,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         }
         if (response_done) refuse("interrupted", "Tool arrived after response completion");
         if (!question.empty()) refuse("busy", "Answer the pending question before another tool");
-        const bool no_project_question = (string(event, "name") == "ask_question" || string(event, "name") == "read_selected_file") && !live && string(event, "project_id", true).empty();
+        const bool no_project_question = (string(event, "name") == "ask_question") && !live && string(event, "project_id", true).empty();
         if (!no_project_question && (!live || string(event, "project_id") != version.project_id)) refuse("stale_project", "Project changed");
         const auto captured_revision = detail::revision(event);
         if (captured_revision != version.revision) {

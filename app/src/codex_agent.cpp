@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QScopeGuard>
 #include <QJsonArray>
 #include <QPointer>
 #include <QJsonParseError>
@@ -98,10 +99,18 @@ void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
 }
 bool CodexAgent::remainingOutput(quint64 bytes, quint64& available) const noexcept {
     available = 0;
+    // Revocation is not destruction. While old frames or the detached original
+    // process own buffers, do not admit replacement growth against a reset view.
+    if(retired_process_ || (active_frames_ && (!process_ || failed_)))return false;
     if (bytes > Limits::stream_retained_bytes || record_bytes_ > Limits::stream_retained_bytes - bytes ||
         static_cast<quint64>(incoming_.size()) > Limits::stream_retained_bytes - bytes - record_bytes_)
         return false;
     available = Limits::stream_retained_bytes - bytes - record_bytes_ - static_cast<quint64>(incoming_.size());
+    const auto queued=process_?static_cast<quint64>(process_->bytesToWrite()):0;
+    const auto held=static_cast<quint64>(deferred_required_.size());
+    if(request_bytes_>available || read_bytes_>available-request_bytes_ ||
+       queued>available-request_bytes_-read_bytes_ || held>available-request_bytes_-read_bytes_-queued)return false;
+    available-=request_bytes_+read_bytes_+queued+held;
     return true;
 }
 bool CodexAgent::retainOutput(quint64 bytes) {
@@ -141,16 +150,30 @@ void CodexAgent::preemptOptionalUsage() {
 }
 void CodexAgent::flushRequired() noexcept {
     const QPointer<CodexAgent> receiver(this); const auto scope = generation_; auto* process = process_;
+    if(active_frames_==std::numeric_limits<quint64>::max())return;
+    ++active_frames_;
+    const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
     if (deferred_required_.isEmpty() || !process_ || failed_) return;
     try {
         checkDeadline();
         if (!receiver || generation_ != scope || process_ != process || failed_ || !process_ || process_->state() != QProcess::Running) return;
         const auto queued = static_cast<quint64>(process_->bytesToWrite());
         if (queued > Limits::request_bytes || static_cast<quint64>(deferred_required_.size()) > Limits::request_bytes - queued) return;
+        const auto lineSize=static_cast<quint64>(deferred_required_.size());
+        quint64 available=0;
+        if(!remainingOutput(output_bytes_,available) || lineSize>available)return;
+        request_bytes_+=lineSize; // Preown the future QProcess queue copy.
+        quint64 heldRole=lineSize;
+        const auto transfer=qScopeGuard([receiver,&heldRole] {
+            if(receiver)receiver->request_bytes_-=heldRole;
+        });
         auto line = std::move(deferred_required_); deferred_required_.clear(); deferred_deadline_ = -1;
+        request_bytes_+=lineSize;heldRole+=lineSize; // Transfer old member ownership to the local line.
         // Transfer this exact prepared original once. Any partial write is a
         // fatal uncertain delivery; never replay or rebuild it from current UI.
-        if (process->write(line) != line.size() && receiver && generation_ == scope && process_ == process)
+        const auto written=process->write(line);
+        if(receiver && generation_==scope && process_==process){request_bytes_-=lineSize;heldRole-=lineSize;}
+        if (written != line.size() && receiver && generation_ == scope && process_ == process)
             fail("The official agent request could not be delivered.");
     } catch (...) { if (receiver && generation_ == scope && process_ == process) fail("The official agent queued control could not be delivered."); }
 }
@@ -193,6 +216,8 @@ QString CodexAgent::idKey(const QJsonValue& value) {
     return {};
 }
 
+QString CodexAgent::policyPatch() { return QString::fromLatin1(EDI_CODEX_SOURCE_PATCH_SHA256); }
+
 QString CodexAgent::executable() {
     if (qEnvironmentVariableIsSet("EDI_CODEX_DEVELOPMENT_EXECUTABLE")) {
         const auto path = qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE");
@@ -214,13 +239,17 @@ QString CodexAgent::executable() {
         metadata.value("target") != QString::fromUtf8(EDI_CODEX_RUNTIME_TARGET) ||
         metadata.value("variant") != "codex-app-server" || metadata.value("entrypoint") != "bin/codex-app-server" ||
         metadata.value("resourcesDir") != "codex-resources" || metadata.value("pathDir") != "codex-path") return {};
+    if (!policyPatch().isEmpty() &&
+        (metadata.value("ediPolicySchema")!="edi.runtime-policy/1" || metadata.value("ediFlavour")!="edi-app-server/1" ||
+         metadata.value("upstreamCommit")!="092d3acd6bec3e3a14bdc7e7a2810ab628ab759d" ||
+         metadata.value("sourcePatchSha256")!=policyPatch())) return {};
     const auto executable = root + "/bin/codex-app-server";
     if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) return {};
     return executable;
 }
 
 bool CodexAgent::start(const QString& executable, const QString& workspace) {
-    if (process_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
+    if (process_ || retired_process_ || active_frames_ || request_bytes_ || read_bytes_ || record_bytes_ || reading_ || executable.isEmpty() || !QFileInfo(workspace).isAbsolute() || !QFileInfo(workspace).isDir())
         return false;
     const QPointer<CodexAgent> receiver(this);
     QPointer<QProcess> prepared;
@@ -229,10 +258,10 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
     try {
         if (generation_ == std::numeric_limits<quint64>::max()) return false;
         scope = ++generation_;
-        failed_ = false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
+        failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
-        pending_bytes_ = 0; output_bytes_ = 0; record_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
+        pending_bytes_ = 0; output_bytes_ = 0; record_bytes_ = 0; request_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
         auto* process = new QProcess(this);
         prepared = process; process_ = process;
         process->setProgram(executable);
@@ -262,12 +291,20 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             const QPointer<CodexAgent> receiver(this);
             const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
             if (!current()) return;
+            if(active_frames_==std::numeric_limits<quint64>::max())return;
+            ++active_frames_;
+            const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
             try {
                 original->setReadChannel(QProcess::StandardError);
                 while (current() && !failed_ && original->bytesAvailable() > 0) {
                     const auto remaining = Limits::stream_wire_bytes - wire_bytes_;
                     if (remaining == 0) { fail("The official agent operation exceeded its wire capacity."); break; }
-                    const auto discarded = original->read(qMin<quint64>(Limits::http_chunk_bytes, remaining));
+                    quint64 available=0;
+                    if(!remainingOutput(output_bytes_,available) || !available){fail("The official agent diagnostic exceeds joint retained capacity.");return;}
+                    const auto count=std::min({static_cast<quint64>(Limits::http_chunk_bytes),remaining,available});
+                    read_bytes_+=count;
+                    const auto discardedRole=qScopeGuard([receiver,count]{if(receiver)receiver->read_bytes_-=count;});
+                    const auto discarded = original->read(count);
                     if (!current() || failed_) return;
                     if (discarded.isEmpty()) break;
                     wire_bytes_ += static_cast<quint64>(discarded.size());
@@ -282,15 +319,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         });
         connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
                 [this, original = prepared, scope](int, QProcess::ExitStatus) {
-            const QPointer<CodexAgent> receiver(this);
-            const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
-            if (!current()) return;
-            read(original.data(), scope);
-            if (!current()) return;
-            if (!failed_) fail("The official agent process ended. Unfinished work was interrupted.");
-            if (!current()) return;
-            process_ = nullptr;
-            original->deleteLater();
+            if (original) read(original.data(), scope, true);
         });
         beginOperation(Limits::http_json_ms, 0);
         if (!current() || !prepared || failed_) return false;
@@ -304,6 +333,9 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
 
 bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>& prepare, bool nonfatalPreflight, bool optionalUsage) {
     const QPointer<CodexAgent> receiver(this);
+    if(active_frames_==std::numeric_limits<quint64>::max())return false;
+    ++active_frames_;
+    const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
     auto* process = process_; const auto epoch = generation_;
     if (!process_ || failed_ || process_->state() != QProcess::Running) return false;
     checkDeadline(); if (!receiver || process_ != process || generation_ != epoch || failed_) return false;
@@ -335,6 +367,19 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     if (deferred && (optionalUsage || held > Limits::retained_record_bytes || lineSize > Limits::retained_record_bytes - held)) {
         if (!nonfatalPreflight) fail("The official agent queued control exceeds retained capacity."); return false;
     }
+    // Actual wire and LF-appended line coexist; a detached holding copy grows
+    // only on the deferred path. Charge them beside current VM/record/unread,
+    // old holding bytes and QProcess's actual queue before serialization.
+    quint64 available=0;
+    const quint64 wireRole=encoded+lineSize+(deferred?held+lineSize:lineSize);
+    if(!remainingOutput(output_bytes_,available) || wireRole>available) {
+        if(!nonfatalPreflight)fail("The official agent request exceeds joint retained capacity.");return false;
+    }
+    request_bytes_+=wireRole;
+    quint64 retainedRequest=wireRole;
+    const auto requestRole=qScopeGuard([receiver,&retainedRequest] {
+        if(receiver)receiver->request_bytes_-=retainedRequest;
+    });
     const auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
     if (static_cast<quint64>(wire.size()) != encoded) {
         if (!nonfatalPreflight) fail("The official agent request could not be encoded consistently."); return false;
@@ -347,6 +392,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     if (!receiver || failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
     if (deferred) {
         deferred_required_.swap(heldWire); // Nonallocating ownership commit; original deadline stays armed.
+        request_bytes_-=lineSize;retainedRequest-=lineSize; // New held member owns this line; old heldWire remains local.
         if (deferred_deadline_ < 0) deferred_deadline_ = clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms);
         flushRequired(); return receiver && process_ == process && generation_ == epoch && !failed_;
     }
@@ -355,11 +401,15 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
         if (receiver && process_ == process && generation_ == epoch) fail("The official agent request could not be delivered.");
         return false;
     }
+    if(receiver && process_==process && generation_==epoch){request_bytes_-=lineSize;retainedRequest-=lineSize;}
     return receiver && process_ == process && generation_ == epoch && !failed_;
 }
 
 QString CodexAgent::request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare) {
     const QPointer<CodexAgent> receiver(this);
+    if(active_frames_==std::numeric_limits<quint64>::max())return {};
+    ++active_frames_;
+    const auto frame=qScopeGuard([receiver]{if(receiver)--receiver->active_frames_;});
     auto* originalProcess = process_; const auto scope = generation_;
     QString id; bool charged = false;
     const auto discard = [&] {
@@ -408,47 +458,93 @@ bool CodexAgent::reject(const QJsonValue& originalId) {
     return write({{"id", id}, {"error", QJsonObject{{"code", -32601}, {"message", "This client does not support this request."}}}});
 }
 void CodexAgent::resolved(const QJsonValue& originalId) { const auto key = idKey(originalId); server_requests_.remove(key); pending_bytes_ -= server_sizes_.take(key); }
-void CodexAgent::read(QProcess* process, quint64 scope) {
-    if (!process || process_ != process || generation_ != scope || failed_) return;
+void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
+    if (!process || process_ != process || generation_ != scope) return;
+    // A nested finished notification records only this original process's EOF.
+    // The active reader retains delivery and drains its assembled/buffered tail.
+    if (finished) eof_pending_=true;
+    if (reading_) return;
     const QPointer<CodexAgent> receiver(this);
     const QPointer<QProcess> original(process);
+    if(active_frames_==std::numeric_limits<quint64>::max())return;
+    ++active_frames_;reading_=true;
+    const auto frame=qScopeGuard([receiver]{if(receiver){receiver->reading_=false;--receiver->active_frames_;}});
     const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
-    if (!current() || failed_) return;
-    try {
-        process->setReadChannel(QProcess::StandardOutput);
-        while (current() && !failed_ && original->bytesAvailable() > 0) {
-            // Bound every app-owned append; do not use readAll on a line that has
-            // not yet acquired its delimiter. QProcess/OS buffers are distinct.
-            const auto capacity = recordLimit + 1 - incoming_.size();
-            if (capacity <= 0) { fail("The official agent response exceeds the transport capacity."); return; }
-            checkDeadline(); if (!current() || failed_) return;
-            const auto bytes = process->read(qMin<qsizetype>(Limits::http_chunk_bytes, capacity));
-            if (!current() || failed_) return;
-            if (bytes.isEmpty()) return;
-            if (static_cast<quint64>(bytes.size()) > Limits::stream_wire_bytes - wire_bytes_) {
-                fail("The official agent operation exceeded its wire capacity."); return;
-            }
-            wire_bytes_ += static_cast<quint64>(bytes.size());
-            if (static_cast<quint64>(incoming_.size()) + static_cast<quint64>(bytes.size()) > Limits::stream_retained_bytes - output_bytes_) {
-                fail("The official agent assembly exceeds retained capacity."); return;
-            }
-            incoming_.append(bytes);
-            qsizetype newline;
-            while (current() && !failed_ && (newline = incoming_.indexOf('\n')) >= 0) {
-                if (newline > recordLimit) { fail("The official agent response exceeds the transport capacity."); return; }
-                const auto record = incoming_.left(newline);
-                incoming_.remove(0, newline + 1);
-                if (!record.trimmed().isEmpty()) {
-                    if (event_count_ >= Limits::stream_events) { fail("The official agent operation exceeded its event capacity."); return; }
-                    ++event_count_;
-                    record_bytes_ = static_cast<quint64>(record.size());
-                    receive(record);
-                    if (!current()) return;
-                    record_bytes_ = 0;
+    const auto drain=[&] {
+        if (!current() || failed_) return;
+        try {
+            process->setReadChannel(QProcess::StandardOutput);
+            while (current() && !failed_ && original->bytesAvailable() > 0) {
+                const auto capacity = recordLimit + 1 - incoming_.size();
+                if (capacity <= 0) { fail("The official agent response exceeds the transport capacity."); return; }
+                checkDeadline(); if (!current() || failed_) return;
+                const auto old=static_cast<quint64>(incoming_.size());
+                quint64 available=0;
+                if(!remainingOutput(output_bytes_,available) || available<=old) {
+                    fail("The official agent assembly exceeds retained capacity.");return;
+                }
+                const auto wireRoom=Limits::stream_wire_bytes-wire_bytes_;
+                const auto requested=std::min({static_cast<quint64>(capacity),static_cast<quint64>(Limits::http_chunk_bytes),
+                                               (available-old)/2,wireRoom});
+                if(!requested){fail("The official agent response has no admitted input capacity.");return;}
+                // The local read chunk and complete replacement assembly coexist
+                // with the old incoming member. Reserve both before QProcess reads.
+                quint64 prepared=requested+old+requested;
+                read_bytes_+=prepared;
+                const auto assembly=qScopeGuard([receiver,&prepared]{if(receiver)receiver->read_bytes_-=prepared;});
+                const auto bytes=process->read(static_cast<qint64>(requested));
+                if(!current() || failed_)return;
+                if(bytes.isEmpty())return;
+                if(static_cast<quint64>(bytes.size())>requested)throw std::logic_error("Agent read exceeded admitted bytes");
+                wire_bytes_+=static_cast<quint64>(bytes.size());
+                read_bytes_-=requested-static_cast<quint64>(bytes.size());prepared-=requested-static_cast<quint64>(bytes.size());
+                QByteArray assembled;assembled.reserve(static_cast<qsizetype>(old)+bytes.size());
+                assembled.append(incoming_);assembled.append(bytes);
+                incoming_.swap(assembled);
+                // The new member owns its growth. The old assembly and chunk stay
+                // charged until their local destructors, including across callbacks.
+                read_bytes_-=static_cast<quint64>(bytes.size());prepared-=static_cast<quint64>(bytes.size());
+                qsizetype newline;
+                while (current() && !failed_ && (newline = incoming_.indexOf('\n')) >= 0) {
+                    if (newline > recordLimit) { fail("The official agent response exceeds the transport capacity."); return; }
+                    quint64 recordOwner=0;
+                    const auto raw=qScopeGuard([receiver,&recordOwner]{if(receiver)receiver->record_bytes_-=recordOwner;});
+                    QByteArray record;
+                    {
+                        const auto originalSize=static_cast<quint64>(incoming_.size());
+                        const auto prospective=originalSize-1; // Record and remaining tail, excluding the delimiter.
+                        quint64 room=0;
+                        if(!remainingOutput(output_bytes_,room) || prospective>room){fail("The official agent record exceeds joint retained capacity.");return;}
+                        quint64 preparation=prospective;read_bytes_+=preparation;
+                        const auto split=qScopeGuard([receiver,&preparation]{if(receiver)receiver->read_bytes_-=preparation;});
+                        record=incoming_.left(newline);
+                        recordOwner=static_cast<quint64>(record.size());record_bytes_+=recordOwner;
+                        read_bytes_-=recordOwner;preparation-=recordOwner;
+                        auto tail=incoming_.mid(newline+1);
+                        incoming_.swap(tail);
+                        // The local tail now owns the OLD member, including LF.
+                        // Transfer its prior member charge, never admit a new byte.
+                        read_bytes_+=recordOwner+1;preparation+=recordOwner+1;
+                    }
+                    const bool blank=std::all_of(record.cbegin(),record.cend(),[](char c){return c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='\v' || c=='\f';});
+                    if (!blank) {
+                        if (event_count_ >= Limits::stream_events) { fail("The official agent operation exceeded its event capacity."); return; }
+                        ++event_count_;
+                        receive(record);
+                        if (!current()) return;
+                    }
                 }
             }
-        }
-    } catch (...) { if (current()) fail("The official agent response could not be retained."); }
+        } catch (...) { if (current()) fail("The official agent response could not be retained."); }
+    };
+    drain(); // All local record/parse/assembly owners settle before EOF effects.
+    if (!current() || !eof_pending_) return;
+    eof_pending_=false;
+    if (!failed_) fail("The official agent process ended. Unfinished work was interrupted.");
+    if (!current()) return;
+    retired_process_=original;
+    process_=nullptr;
+    original->deleteLater();
 }
 void CodexAgent::receive(const QByteArray& record) {
     const QPointer<CodexAgent> receiver(this);
@@ -467,6 +563,12 @@ void CodexAgent::receive(const QByteArray& record) {
             if (++depth > Limits::json_depth) { fail("The official agent response exceeds the JSON depth capacity."); return; }
         } else if ((c == '}' || c == ']') && depth) --depth;
     }
+    // Preserve the original encoded-record accounting convention for the
+    // parsed representation as a distinct owner beside the raw local frame.
+    const auto parsedBytes=static_cast<quint64>(record.size());quint64 available=0;
+    if(!remainingOutput(output_bytes_,available) || parsedBytes>available){fail("The official agent parsed response exceeds joint retained capacity.");return;}
+    read_bytes_+=parsedBytes;
+    const auto parsedRole=qScopeGuard([receiver,parsedBytes]{if(receiver)receiver->read_bytes_-=parsedBytes;});
     QJsonParseError error;
     const auto document = QJsonDocument::fromJson(record, &error);
     if (error.error != QJsonParseError::NoError || !document.isObject()) {
@@ -525,9 +627,11 @@ void CodexAgent::fail(const char* explanation) noexcept {
 }
 void CodexAgent::retire() {
     if (generation_ != std::numeric_limits<quint64>::max()) ++generation_;
+    // Live stack owners settle their own counters even after this revocation.
     failed_ = true; deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1; pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
     const QPointer<QProcess> process(process_); process_ = nullptr;
     if (!process) return;
+    retired_process_=process;
     process->disconnect(this);
     if (!process) return;
     // Only the detached original process is touched after these callbacks. A

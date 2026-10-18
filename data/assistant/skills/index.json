@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.19",
+      "version": "1.5.21",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "d7f70fa26727cfba639608926a3624d0a6ec8de353cd2a53a59e2ddbbef0c427",
+      "sha256": "17d2f548473006eebeb109100f3bb862e7cb4a0a851db0cdf4b3aacbc1dc5c6c",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,16 +25,16 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "title": "Inspect a FullProf project",
-      "summary": "Inspect selected PCR/data companions; conversion remains unavailable.",
+      "summary": "Use native input metadata; general project conversion and raw model file inspection are unavailable.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "43d2d504db7fe336a1e4a4251b84f4376c2234265bcfc47af1544564892a6c10",
+      "sha256": "5e9308772fb47496a02dda96cbbc1e96ba48ad2936435c7012a4bacf66adb3da",
       "requires": [
         "selected_files"
       ],
       "capabilities": [
-        "read_selected_file",
+        "inspect_project",
         "ask_question"
       ],
       "references": [
@@ -46,16 +46,16 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "title": "Inspect GSAS/GSAS-II material",
-      "summary": "Inspect selected text exports; binary GPX conversion remains unavailable.",
+      "summary": "Use native input metadata; general project conversion and raw model file inspection are unavailable.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "5cd3de0942c2b17d6e90e54e1ad3a23d3256278e9f004997e9c1128cb9c6f64a",
+      "sha256": "2a36fc99521228196c5e6bba19dd2de8cbd5b24309802c83bd10aa7d6ac7bd0b",
       "requires": [
         "selected_files"
       ],
       "capabilities": [
-        "read_selected_file",
+        "inspect_project",
         "ask_question"
       ],
       "references": [
@@ -67,11 +67,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "266f9d54e8c8b0bf9ce205365854d112e0e3f1d0a0b6d15feaa1957f084290a9",
+      "sha256": "747170284997ce9d59c5c47858cebc93b34cc93b7764faae31bd44d95906c395",
       "requires": [],
       "capabilities": [
         "inspect_project",
