@@ -6297,7 +6297,10 @@ def save211_compare_model(expected, actual):
     assert native_inputs(actual) == native_inputs(expected), (
         'SAVE: all measured coordinates/intensities/sigmas/exclusions/weights/phase links survive'
     )
-    assert actual['project']['mode'] == expected['project']['mode'], (
+    expected_mode, actual_mode = expected['project']['mode'], actual['project']['mode']
+    assert all(type(mode) is str and mode in ('', 'single', 'joint', 'sequential', 'independent')
+               for mode in (expected_mode, actual_mode)), 'SAVE: native mode has a declared spelling or the original empty default'
+    assert (actual_mode or 'single') == (expected_mode or 'single'), (
         'SAVE: actual single/joint objective mode is preserved'
     )
     old, new = (value['project']['science_observer'] for value in (expected, actual))
