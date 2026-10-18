@@ -27,8 +27,7 @@ def half_step(token):
 
 def parameter_state(project):
     return [
-        (p.name, p.value, p.uncertainty, p.free, p.user_constrained)
-        for p in project.parameters
+        (p.name, p.value, p.uncertainty, p.free, p.user_constrained) for p in project.parameters
     ]
 
 
