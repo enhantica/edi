@@ -437,9 +437,18 @@ bool move_back(const edi::Project& project, const fs::path& aside, const std::ve
     return all;
 }
 
+// A set-aside folder that cannot be removed stays where it is: its name is never taken again (fresh_name), so nothing
+// is written into it later.
 void drop_set_aside(const fs::path& aside) {
-    std::error_code ignored;
-    crysta::output::remove_all(aside, ignored);
+    std::error_code error;
+    (void)crysta::output::remove_all(aside, error);
+}
+
+// A staged file that cannot be removed stays: the next write at its name removes it first, or refuses
+// (write_temporary_file), so it is never written through.
+void drop_staged(const fs::path& directory, int which) {
+    std::error_code error;
+    (void)crysta::output::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), error);
 }
 
 QString kept_aside(const fs::path& aside, const std::exception& refusal) {
@@ -503,8 +512,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         }
     } catch (const std::exception& refusal) {
         for (const int which : staged) {
-            std::error_code ignored;
-            crysta::output::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
+            drop_staged(directory, which);
         }
         return QString::fromUtf8(refusal.what());
     }
@@ -533,8 +541,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
             return kept_aside(aside, refusal);
         }
         for (const int which : staged) {
-            std::error_code ignored;
-            crysta::output::remove(directory / (std::string(kResultFiles[which]) + ".edi-staged"), ignored);
+            drop_staged(directory, which);
         }
         drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
