@@ -306,6 +306,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     });
     connect(fit_, &FitViewModel::canUndoChanged, this, [this] { syncUndo(); });
     connect(fit_, &FitViewModel::runningChanged, this, [this] { syncUndo(); });
+    // A running fit is a calculation of the report too (ReportViewModel::calculating). A fit says it ended before it
+    // publishes its outcome (FitViewModel::ended), so the report hears of it afterwards, from the event loop.
+    connect(fit_, &FitViewModel::runningChanged, report_, &ReportViewModel::calculatingChanged, Qt::QueuedConnection);
     note_fit();
     if (scan_session_ != nullptr) {
         showScanResults();

@@ -14,8 +14,8 @@ WorkflowPage {
 
     readonly property ProjectViewModel project: Session.project
     readonly property ReportViewModel report: project ? project.report : null
-    // Export's save that waits for the project's calculation to end.
-    property bool savePending: false
+    // Export's save under way (ExportGroup.saving): the report stays built and the preview drawn until it is written.
+    property bool saving: false
 
     pageName: "report"
     defaultInfo: project ? "" : qsTr("No report generated")
@@ -31,8 +31,8 @@ WorkflowPage {
             id: reportPreview
             objectName: "report.preview"
             report: page.report
-            // Drawn while the page is shown, and while a save waits for a calculation: a PDF takes its figures.
-            drawn: page.current || page.savePending
+            // Drawn while the page is shown, and while a save is under way: a PDF takes its figures.
+            drawn: page.current || page.saving
         }
     ]
     textEnabled: project !== null
@@ -42,7 +42,7 @@ WorkflowPage {
                 report: page.report
                 preview: reportPreview
                 shown: page.current
-                onSavePendingChanged: page.savePending = savePending
+                onSavingChanged: page.saving = saving
             }
             ContentsGroup {
                 report: page.report
@@ -66,11 +66,12 @@ WorkflowPage {
         when: page.report !== null
     }
 
-    // The report rebuilds at once only while this page is shown.
+    // The report rebuilds at once only while this page is shown, or while a save is under way: a save that waited
+    // for a calculation takes the report from its outcome, which a hidden page has only marked stale.
     Binding {
         target: page.report
         property: "active"
-        value: page.current
+        value: page.current || page.saving
         when: page.report !== null
     }
 }

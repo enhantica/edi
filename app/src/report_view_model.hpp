@@ -70,7 +70,7 @@ class ReportViewModel : public QObject {
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     // The app's colour scheme (a token of edi::colour_scheme_from_name), whose light colours the report's charts take.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
-    // The project's calculation is in flight or owed, so the model is not yet its outcome; a save waits for it.
+    // The project's calculation or fit is in flight or owed, so the model is not yet its outcome; a save waits for it.
     Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
 
    public:

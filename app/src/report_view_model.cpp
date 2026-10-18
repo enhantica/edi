@@ -20,6 +20,7 @@
 #include "edi/io.hpp"
 #include "edi/report_html.hpp"
 #include "edi/report_save.hpp"
+#include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "report_pdf.hpp"
 #include "web_files.hpp"
@@ -28,13 +29,16 @@ namespace edi_app {
 
 ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
-    // end rebuilds from the outcome.
+    // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
     refresh();
 }
 
 bool ReportViewModel::calculating() const {
-    return project_.calculating();
+    // A fit counts until it ends: between its own calculations the project is idle, but the report is not yet the
+    // fit's outcome.
+    const FitViewModel* fit = project_.fit();
+    return project_.calculating() || (fit != nullptr && fit->running());
 }
 
 void ReportViewModel::setColourScheme(const QString& scheme) {
