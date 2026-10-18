@@ -24,10 +24,11 @@ EaElements.Label {
     onAnimatingChanged: if (!animating) workGlyph.rotation = 0
     readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
     leftPadding: iconExtent + AppSizes.unit * 0.5
-    // Use the same baseline/ink-centre convention as IconLine and DigitText.
-    readonly property real textInkCenter: textMetrics.ascent + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
-    topPadding: Math.max(0, iconExtent / 2 - textInkCenter)
-    bottomPadding: Math.max(0, iconExtent / 2 - (contentHeight - textInkCenter))
+    // Use the rendered Label baseline, including its actual padding/alignment.
+    readonly property real textInkCenter: baselineOffset + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
+    readonly property real naturalTextInkCenter: textMetrics.ascent + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
+    topPadding: Math.max(0, iconExtent / 2 - naturalTextInkCenter)
+    bottomPadding: Math.max(0, iconExtent / 2 - (contentHeight - naturalTextInkCenter))
     FontMetrics { id: textMetrics; font: workStatus.font }
     TextMetrics { id: textInk; font: workStatus.font; text: workStatus.text }
     onVisibleChanged: {
@@ -38,7 +39,7 @@ EaElements.Label {
         width: workStatus.iconExtent
         height: width
         anchors.left: parent.left
-        y: workStatus.topPadding + workStatus.textInkCenter - height / 2
+        y: workStatus.textInkCenter - height / 2
         Item {
             id: workGlyph
             width: workStatus.iconExtent
@@ -63,9 +64,12 @@ EaElements.Label {
                 visible: workStatus.variant === 2
                 width: robotMetrics.tightBoundingRect.width
                 height: robotMetrics.tightBoundingRect.height
-                // Centre actual native ink and give its rotating diagonal the
-                // same maximum paint width as the existing circular logo.
-                scale: Math.hypot(width, height) > 0 ? workStatus.iconExtent / Math.hypot(width, height) : 1
+                // Fit the actual rotated ink to the same slot as the logo;
+                // a permanently reserved diagonal makes the upright robot small.
+                readonly property real angle: workGlyph.rotation * Math.PI / 180
+                readonly property real rotatedWidth: Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle))
+                readonly property real rotatedHeight: Math.abs(width * Math.sin(angle)) + Math.abs(height * Math.cos(angle))
+                scale: Math.max(rotatedWidth, rotatedHeight) > 0 ? workStatus.iconExtent / Math.max(rotatedWidth, rotatedHeight) : 1
                 EaElements.Label {
                     id: robotGlyph
                     x: -robotMetrics.tightBoundingRect.x

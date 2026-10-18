@@ -32,18 +32,6 @@ Rectangle {
     property string status: ""
     property string rowId: ""
     property AssistantViewModel assistant: null
-    property int filePresentationRevision: 0
-    Connections {
-        target: row.assistant ? row.assistant.selectedFiles : null
-        function onCountChanged() { ++row.filePresentationRevision; }
-        function onDataChanged() { ++row.filePresentationRevision; }
-    }
-    function fileIsSelected(id, revision) {
-        if (!assistant) return false;
-        for (let i = 0; i < assistant.selectedFiles.count; ++i)
-            if (assistant.selectedFiles.text(i, "id") === id) return true;
-        return false;
-    }
     property bool highlighted: false
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
     readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
@@ -71,12 +59,10 @@ Rectangle {
         technicalCopied = false;
         if (copyFeedback) copyFeedback.stop();
         if (commandDisclosure) commandDisclosure.checked = false;
-        if (disclosure) disclosure.checked = false;
-        if (originalDisclosure) originalDisclosure.checked = false;
-        for (const viewport of [commandViewport, activityViewport, technicalViewport])
+        for (const viewport of [technicalViewport])
             if (viewport && viewport.contentItem && viewport.contentItem.contentY !== undefined)
                 viewport.contentItem.contentY = 0;
-        for (const field of [body, commandText, directoryText, outputText, activityText, technicalText, originalText])
+        for (const field of [body, commandText, directoryText, outputText, activityText, technicalText, decisionText])
             if (field) field.deselect();
     }
     onDisclosureIdentityChanged: resetDetails()
@@ -111,7 +97,7 @@ Rectangle {
             const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
                 mcpToolCall: qsTr("Tool activity"), dynamicToolCall: qsTr("Tool activity"),
                 collabAgentToolCall: qsTr("Agent activity"), plan: qsTr("Plan update")};
-            return names[payload.type] || qsTr("Activity");
+            return names[payload && payload.type] || qsTr("Activity");
         }
         // Retained JSON arrays arrive as QVariantList/QML sequences, which
         // need not satisfy Array.isArray. Project this bounded JSON field only;
@@ -144,6 +130,7 @@ Rectangle {
         return action.type === "unknown";
     }
     function activityDescription() {
+        if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
                        : typeof payload.description === "string" ? payload.description
                        : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
@@ -158,19 +145,24 @@ Rectangle {
             if (action.type === "read") labels.push(qsTr("Read %1").arg(action.name || action.path));
             else if (action.type === "listFiles") labels.push(action.path ? qsTr("List %1").arg(action.path) : qsTr("List files"));
             else if (action.type === "search") labels.push(action.query ? qsTr("Search for %1").arg(action.query) : qsTr("Search files"));
+            else if (action.type === "unknown" && action.command.trim().length)
+                labels.push(qsTr("Run %1").arg(shortActionObject(action.command, false)));
         }
         return shortActionObject(labels.join(" · "), false);
     }
     function activityCaption() {
-        if (payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string") return shortActionObject(payload.title, false);
+        if (payload && payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string") return shortActionObject(payload.title, false);
         const description = activityDescription();
         if (description.length) return description;
         if (decisionActivity) return qsTr("Request");
-        if (commandActivity) return qsTr("Command");
+        if (commandActivity) {
+            const command = typeof payload.command === "string" ? shortActionObject(payload.command, false) : "";
+            return command.length ? qsTr("Run %1").arg(command) : qsTr("Run command");
+        }
         const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
             mcpToolCall: qsTr("Native operation"), dynamicToolCall: qsTr("Native operation"),
             collabAgentToolCall: qsTr("Agent operation"), plan: qsTr("Plan update")};
-        return names[payload.type] || qsTr("Activity");
+        return names[payload && payload.type] || qsTr("Activity");
     }
     function activityState() {
         if (commandActivity) {
@@ -178,7 +170,7 @@ Rectangle {
             if (["completed", "failed", "declined", "interrupted"].indexOf(actual) >= 0 && row.status === actual) return actual;
             return actual === "inProgress" && row.status === "in_progress" ? "in_progress" : "unconfirmed";
         }
-        if (payload.nativeOutcome && ["unconfirmed", "applied_unconfirmed"].indexOf(payload.nativeOutcome.status) >= 0) return "unconfirmed";
+        if (payload && payload.nativeOutcome && ["unconfirmed", "applied_unconfirmed"].indexOf(payload.nativeOutcome.status) >= 0) return "unconfirmed";
         return ["completed", "failed", "refused", "declined", "interrupted", "in_progress"].indexOf(row.status) >= 0 ? row.status : "unconfirmed";
     }
     function activityExplanation() {
@@ -188,7 +180,7 @@ Rectangle {
         const statuses = {completed: qsTr("completed"), failed: qsTr("failed"), refused: qsTr("refused"),
             declined: qsTr("declined"), interrupted: qsTr("interrupted"), in_progress: qsTr("in progress")};
         const reported = statuses[row.status] || qsTr("unknown");
-        const native = payload.nativeOutcome ? payload.nativeOutcome.status : "";
+        const native = payload && payload.nativeOutcome ? payload.nativeOutcome.status : "";
         if (native === "applied_unconfirmed")
             return qsTr("%1 · Activity status: %2 · Native changes applied; publication unconfirmed").arg(category).arg(reported);
         if (native === "unconfirmed")
@@ -205,10 +197,8 @@ Rectangle {
     function activityCategoryIcon() {
         const icons = {commandExecution:"terminal",fileChange:"file",webSearch:"search",mcpToolCall:"cog",
             dynamicToolCall:"cog",collabAgentToolCall:"users",plan:"clipboard-list",ediOutcome:"info-circle"};
-        return icons[payload.type] || "info-circle";
+        return icons[payload && payload.type] || "info-circle";
     }
-    TextMetrics { id: technicalCaptionMetrics; font: technicalCaptionLabel.font; text: disclosure.text }
-    TextMetrics { id: originalCaptionMetrics; font: originalCaptionLabel.font; text: originalDisclosure.text }
     color: "transparent"
     implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
     TextMetrics {
@@ -249,20 +239,10 @@ Rectangle {
         y: row.kind === "user" ? AppSizes.unit * 0.75 : AppSizes.unit * 0.25
         width: bubble.width - (row.kind === "user" ? AppSizes.unit * 2 : 0)
         spacing: AppSizes.unit * 0.4
-        EaElements.Label {
-            visible: row.kind !== "user" && row.kind !== "assistant" && !row.summarizedActivity
-            text: qsTr("Activity")
-            font.bold: true
-        }
-        EaElements.Label {
-            visible: row.kind !== "user" && row.kind !== "assistant" && !row.summarizedActivity && row.status.length > 0
-            text: row.status
-            textFormat: Text.PlainText
-        }
         TextEdit {
             id: body
             width: parent.width
-            visible: !row.summarizedActivity
+            visible: row.kind !== "activity"
             AssistantMarkdown {
                 anchors.fill: parent
                 document: body.textDocument
@@ -311,220 +291,169 @@ Rectangle {
                         color: EaStyle.Colors.themeForegroundMinor
                         Accessible.name: qsTr("Sent file snapshot: %1, %2 bytes").arg(modelData.name).arg(modelData.bytes)
                     }
-                    EaElements.ToolButton {
-                        objectName: "assistant.sentFile.remove." + modelData.id
-                        fontIcon: "times"
-                        implicitWidth: EaStyle.Sizes.toolButtonHeight * 0.75
-                        implicitHeight: implicitWidth
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
-                        showBackground: false
-                        visible: row.fileIsSelected(modelData.id, row.filePresentationRevision)
-                        enabled: row.assistant !== null && !row.assistant.canCancel
-                        ToolTip.text: qsTr("Remove %1 from future assistant requests").arg(modelData.name)
-                        Accessible.name: ToolTip.text
-                        onClicked: row.assistant.removeSelectedFile(modelData.id)
-                    }
                 }
-            }
-        }
-        EaElements.Button {
-            id: commandDisclosure
-            objectName: row.commandActivity ? "assistant.command.toggle" : "assistant.activity.toggle"
-            visible: row.summarizedActivity
-            checkable: true
-            text: row.activityCaption()
-            width: parent.width
-            contentItem: RowLayout {
-                spacing: AppSizes.unit * 0.5
-                EaElements.Label {
-                    id: activityGlyph
-                    text: row.activityCategoryIcon()
-                    Layout.preferredWidth: AppSizes.unit
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                    font.family: EaStyle.Fonts.iconsFamily
-                    color: EaStyle.Colors.themeForegroundMinor
-                    Accessible.ignored: true
-                }
-                EaElements.Label {
-                    text: row.activityState() === "in_progress" ? "hourglass-half" : FitOutcomes.icon(row.activityOutcomeKey())
-                    Layout.preferredWidth: AppSizes.unit
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                    font.family: EaStyle.Fonts.iconsFamily
-                    color: row.activityState() === "in_progress" ? EaStyle.Colors.themeAccent : FitOutcomes.color(row.activityOutcomeKey())
-                    Accessible.ignored: true
-                }
-                EaElements.Label {
-                    id: activityCaptionLabel
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 0
-                    text: commandDisclosure.text
-                    color: EaStyle.Colors.themeForegroundMinor
-                    textFormat: Text.PlainText
-                    wrapMode: Text.NoWrap
-                    maximumLineCount: 1
-                    elide: Text.ElideRight
-                }
-            }
-            ToolTip.text: row.activityExplanation() + " · " + text
-            EaElements.ToolTip {
-                text: commandDisclosure.ToolTip.text
-                visible: commandDisclosure.visible && commandDisclosure.hovered && EaGlobals.Vars.showToolTips && text !== ""
-            }
-            Accessible.name: ToolTip.text
-            Accessible.checkable: true
-            Accessible.checked: checked
-            Accessible.description: checked ? qsTr("Hide activity details") : qsTr("Show activity details")
-            onPressed: row.detailsChanging()
-        }
-        ScrollView {
-            id: commandViewport
-            objectName: "assistant.command.details"
-            width: parent.width
-            visible: row.commandActivity && commandDisclosure.checked
-            height: visible ? Math.min(commandFields.implicitHeight, AppSizes.unit * 18) : 0
-            contentWidth: availableWidth
-            contentHeight: commandFields.implicitHeight
-            clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
-            Column {
-                id: commandFields
-                width: commandViewport.availableWidth
-                spacing: AppSizes.unit * 0.4
-                LiteralDetails {
-                    width: parent.width
-                    fieldName: qsTr("Retained command status")
-                    text: commandViewport.visible ? qsTr("Status: %1").arg(row.payload.status || qsTr("unavailable"))
-                        + (typeof row.payload.exitCode === "number" && Number.isInteger(row.payload.exitCode)
-                            ? qsTr(" · exit %1").arg(row.payload.exitCode) : "") : ""
-                }
-                EaElements.Label { text: qsTr("Command"); font.bold: true }
-                LiteralDetails {
-                    id: commandText
-                    objectName: "assistant.command.literal"
-                    width: parent.width
-                    fieldName: qsTr("Command")
-                    text: commandViewport.visible && typeof row.payload.command === "string" ? row.payload.command : ""
-                }
-                EaElements.Label { text: qsTr("Working directory"); font.bold: true }
-                LiteralDetails {
-                    id: directoryText
-                    width: parent.width
-                    fieldName: qsTr("Working directory")
-                    text: commandViewport.visible && typeof row.payload.cwd === "string" ? row.payload.cwd : ""
-                }
-                EaElements.Label {
-                    text: !row.payload || typeof row.payload.aggregatedOutput !== "string" ? qsTr("Output unavailable")
-                          : row.payload.aggregatedOutput.length === 0 ? qsTr("Output (empty)") : qsTr("Output")
-                    font.bold: true
-                }
-                LiteralDetails {
-                    id: outputText
-                    objectName: "assistant.command.output"
-                    width: parent.width
-                    fieldName: qsTr("Output")
-                    text: commandViewport.visible && typeof row.payload.aggregatedOutput === "string" ? row.payload.aggregatedOutput : ""
-                }
-            }
-        }
-        ScrollView {
-            id: activityViewport
-            width: parent.width
-            visible: row.summarizedActivity && !row.commandActivity && commandDisclosure.checked
-                && !(row.payload.type === "dynamicToolCall" && row.text === "dynamicToolCall")
-            height: visible ? Math.min(activityText.implicitHeight, AppSizes.unit * 18) : 0
-            contentWidth: availableWidth
-            contentHeight: activityText.implicitHeight
-            clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
-            LiteralDetails {
-                id: activityText
-                width: activityViewport.availableWidth
-                fieldName: qsTr("Activity")
-                text: activityViewport.visible ? row.text : ""
             }
         }
         RowLayout {
-            id: technicalHeader
-            x: row.summarizedActivity ? AppSizes.unit * 1.5 : 0
-            width: Math.max(0, parent.width - x)
-            visible: row.kind !== "assistant" && row.kind !== "user" && Object.keys(row.payload || {}).length > 0 && (!row.summarizedActivity || commandDisclosure.checked)
-            spacing: AppSizes.unit * 0.25
+            width: parent.width
+            visible: row.kind !== "assistant" && row.kind !== "user"
+            spacing: AppSizes.unit * 0.5
             EaElements.Button {
-                id: disclosure
-                checkable: true
-                text: checked ? qsTr("Hide technical details") : qsTr("Technical details")
-                implicitWidth: technicalGlyph.width + Math.ceil(technicalCaptionMetrics.advanceWidth) + AppSizes.unit * 0.5 + leftPadding + rightPadding
+                id: commandDisclosure
+                objectName: row.commandActivity ? "assistant.command.toggle" : "assistant.activity.toggle"
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                Layout.maximumWidth: implicitWidth
-                contentItem: Row {
+                checkable: true
+                text: row.activityCaption()
+                contentItem: RowLayout {
                     spacing: AppSizes.unit * 0.5
-                    EaElements.Label { id: technicalGlyph; text: disclosure.checked ? "chevron-down" : "chevron-right"; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
-                    EaElements.Label { id: technicalCaptionLabel; width: Math.max(0, disclosure.availableWidth - technicalGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: disclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+                    EaElements.Label {
+                        text: row.activityState() === "in_progress" ? "hourglass-half" : FitOutcomes.icon(row.activityOutcomeKey())
+                        Layout.preferredWidth: AppSizes.unit
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                        font.family: EaStyle.Fonts.iconsFamily
+                        color: row.activityState() === "in_progress" ? EaStyle.Colors.themeAccent : FitOutcomes.color(row.activityOutcomeKey())
+                        Accessible.ignored: true
+                    }
+                    EaElements.Label {
+                        id: activityGlyph
+                        text: row.activityCategoryIcon()
+                        Layout.preferredWidth: AppSizes.unit
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                        font.family: EaStyle.Fonts.iconsFamily
+                        color: EaStyle.Colors.themeForegroundMinor
+                        Accessible.ignored: true
+                    }
+                    EaElements.Label {
+                        id: activityCaptionLabel
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: commandDisclosure.text
+                        color: EaStyle.Colors.themeForegroundMinor
+                        textFormat: Text.PlainText
+                        wrapMode: Text.NoWrap
+                        maximumLineCount: 1
+                        elide: Text.ElideRight
+                    }
                 }
-                Accessible.name: text
-                Accessible.description: qsTr("Show or hide the original retained technical payload. The explanation and actual outcome remain above.")
+                ToolTip.text: row.activityExplanation() + " · " + text
+                EaElements.ToolTip {
+                    text: commandDisclosure.ToolTip.text
+                    visible: commandDisclosure.visible && commandDisclosure.hovered && EaGlobals.Vars.showToolTips && text !== ""
+                }
+                Accessible.name: ToolTip.text
+                Accessible.checkable: true
+                Accessible.checked: checked
+                Accessible.description: checked ? qsTr("Hide activity details") : qsTr("Show activity details")
                 onPressed: row.detailsChanging()
             }
             EaElements.ToolButton {
+                id: activityCopy
                 objectName: "assistant.activity.copyTechnical"
                 fontIcon: row.technicalCopied ? "check" : "copy"
                 showBackground: false
-                ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy technical details")
+                contentItem: EaElements.Label {
+                    text: activityCopy.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                    color: !activityCopy.enabled ? EaStyle.Colors.themeForegroundDisabled
+                        : activityCopy.hovered || activityCopy.down ? EaStyle.Colors.themeForegroundHovered
+                        : EaStyle.Colors.themeForegroundMinor
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    Accessible.ignored: true
+                }
+                ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy activity details")
                 Accessible.name: ToolTip.text
                 onClicked: row.copyTechnicalPayload()
             }
         }
-        ScrollView {
-            id: technicalViewport
-            x: technicalHeader.x
-            width: Math.max(0, parent.width - x)
-            visible: technicalHeader.visible && disclosure.checked
-            height: visible ? Math.min(technicalFields.implicitHeight, AppSizes.unit * 18) : 0
-            contentWidth: availableWidth
-            contentHeight: technicalFields.implicitHeight
-            clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
-            Column {
-                id: technicalFields
-                width: technicalViewport.availableWidth
-                spacing: AppSizes.unit * 0.4
-                LiteralDetails {
-                    id: technicalText
-                    width: parent.width
-                    fieldName: qsTr("Technical details")
-                    text: !technicalViewport.visible ? "" : row.decisionActivity
-                        ? qsTr("Decision: %1\nAction reference: %2").arg(row.payload.decision === "decline" ? qsTr("Declined") : row.payload.decision).arg(row.payload.item_id)
-                        : JSON.stringify(row.payload, null, 2)
-                }
-                EaElements.Button {
-                    id: originalDisclosure
-                    visible: row.decisionActivity
-                    checkable: true
-                    text: qsTr("Original payload")
-                    implicitWidth: originalGlyph.width + Math.ceil(originalCaptionMetrics.advanceWidth) + AppSizes.unit * 0.5 + leftPadding + rightPadding
-                    width: Math.min(parent.width, implicitWidth)
-                    contentItem: Row {
-                        spacing: AppSizes.unit * 0.5
-                        EaElements.Label { id: originalGlyph; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; text: originalDisclosure.checked ? "chevron-down" : "chevron-right"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
-                        EaElements.Label { id: originalCaptionLabel; width: Math.max(0, originalDisclosure.availableWidth - originalGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: originalDisclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+        Rectangle {
+            width: parent.width
+            visible: row.kind !== "assistant" && row.kind !== "user" && commandDisclosure.checked
+            height: visible ? technicalViewport.height + AppSizes.unit * 1.5 : 0
+            color: EaStyle.Colors.contentBackground
+            radius: AppSizes.unit * 0.75
+            ScrollView {
+                id: technicalViewport
+                objectName: row.commandActivity ? "assistant.command.details" : "assistant.activity.details"
+                x: AppSizes.unit
+                y: AppSizes.unit * 0.75
+                width: Math.max(0, parent.width - AppSizes.unit * 2)
+                height: Math.min(technicalFields.implicitHeight, AppSizes.unit * 18)
+                contentWidth: availableWidth
+                contentHeight: technicalFields.implicitHeight
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+                Column {
+                    id: technicalFields
+                    width: technicalViewport.availableWidth
+                    spacing: AppSizes.unit * 0.4
+                    Column {
+                        width: parent.width
+                        visible: row.commandActivity
+                        spacing: AppSizes.unit * 0.4
+                        LiteralDetails {
+                            width: parent.width
+                            fieldName: qsTr("Retained command status")
+                            text: technicalViewport.visible && row.commandActivity ? qsTr("Status: %1").arg(row.payload.status || qsTr("unavailable"))
+                                + (typeof row.payload.exitCode === "number" && Number.isInteger(row.payload.exitCode)
+                                    ? qsTr(" · exit %1").arg(row.payload.exitCode) : "") : ""
+                        }
+                        EaElements.Label { text: qsTr("Command"); font.bold: true }
+                        LiteralDetails {
+                            id: commandText
+                            objectName: "assistant.command.literal"
+                            width: parent.width
+                            fieldName: qsTr("Command")
+                            text: technicalViewport.visible && row.commandActivity && typeof row.payload.command === "string" ? row.payload.command : ""
+                        }
+                        EaElements.Label { text: qsTr("Working directory"); font.bold: true }
+                        LiteralDetails {
+                            id: directoryText
+                            width: parent.width
+                            fieldName: qsTr("Working directory")
+                            text: technicalViewport.visible && row.commandActivity && typeof row.payload.cwd === "string" ? row.payload.cwd : ""
+                        }
+                        EaElements.Label {
+                            text: !row.payload || typeof row.payload.aggregatedOutput !== "string" ? qsTr("Output unavailable")
+                                  : row.payload.aggregatedOutput.length === 0 ? qsTr("Output (empty)") : qsTr("Output")
+                            font.bold: true
+                        }
+                        LiteralDetails {
+                            id: outputText
+                            objectName: "assistant.command.output"
+                            width: parent.width
+                            fieldName: qsTr("Output")
+                            text: technicalViewport.visible && row.commandActivity && typeof row.payload.aggregatedOutput === "string" ? row.payload.aggregatedOutput : ""
+                        }
                     }
-                    Accessible.name: text
-                    onPressed: row.detailsChanging()
-                }
-                LiteralDetails {
-                    id: originalText
-                    width: parent.width
-                    visible: row.decisionActivity && originalDisclosure.checked
-                    fieldName: qsTr("Original payload")
-                    text: visible && technicalViewport.visible ? JSON.stringify(row.payload, null, 2) : ""
+                    LiteralDetails {
+                        id: activityText
+                        width: parent.width
+                        visible: !row.commandActivity && !(row.payload && row.payload.type === "dynamicToolCall" && row.text === "dynamicToolCall")
+                        fieldName: qsTr("Activity")
+                        text: visible && technicalViewport.visible ? row.text : ""
+                    }
+                    LiteralDetails {
+                        id: decisionText
+                        width: parent.width
+                        visible: row.decisionActivity
+                        fieldName: qsTr("Decision")
+                        text: visible && technicalViewport.visible
+                            ? qsTr("Decision: %1\nAction reference: %2").arg(row.payload.decision === "decline" ? qsTr("Declined") : row.payload.decision).arg(row.payload.item_id) : ""
+                    }
+                    LiteralDetails {
+                        id: technicalText
+                        width: parent.width
+                        fieldName: qsTr("Retained item")
+                        text: technicalViewport.visible ? JSON.stringify(row.payload, null, 2) : ""
+                    }
                 }
             }
         }

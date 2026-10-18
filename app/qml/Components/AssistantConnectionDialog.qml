@@ -62,6 +62,20 @@ AppDialog {
         - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
         - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
     standardButtons: Dialog.Ok | Dialog.Cancel
+    footer: EaElements.DialogButtonBox {
+        id: connectionButtons
+        visible: count > 0
+        // The box knows the live natural widths of its standard buttons.
+        // Its view must not position a renamed action using a cached row width.
+        contentItem: ListView {
+            implicitWidth: connectionButtons.contentWidth
+            model: connectionButtons.contentModel
+            spacing: connectionButtons.spacing
+            orientation: ListView.Horizontal
+            boundsBehavior: Flickable.StopAtBounds
+            snapMode: ListView.SnapToItem
+        }
+    }
     function updateAcceptButton() {
         const acceptButton = standardButton(Dialog.Ok);
         if (acceptButton) {

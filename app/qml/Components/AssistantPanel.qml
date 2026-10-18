@@ -368,6 +368,61 @@ Popup {
                     spacing: AppSizes.unit * 0.5
                     model: panel.assistant.messages
                     reuseItems: true
+                    footer: Column {
+                        width: conversation.width
+                        spacing: chatBody.spacing
+                        AssistantPlan {
+                            width: parent.width
+                            assistant: panel.assistant
+                        }
+                        AssistantQuestion {
+                            width: parent.width
+                            assistant: panel.assistant
+                        }
+                        AssistantTrial {
+                            width: parent.width
+                            assistant: panel.assistant
+                        }
+                        Item {
+                            objectName: "assistant.currentNotice"
+                            width: conversation.width
+                            visible: panel.assistant.lastError.length > 0
+                            height: visible ? noticeContent.implicitHeight + AppSizes.unit * 0.5 : 0
+                            Column {
+                                id: noticeContent
+                                y: AppSizes.unit * 0.5
+                                width: parent.width
+                                spacing: AppSizes.unit * 0.25
+                                EaElements.Label {
+                                    text: qsTr("Edi")
+                                    color: EaStyle.Colors.themeForegroundMinor
+                                }
+                                TextEdit {
+                                    width: parent.width
+                                    text: panel.assistant.lastError
+                                    textFormat: TextEdit.PlainText
+                                    readOnly: true
+                                    selectByMouse: true
+                                    persistentSelection: true
+                                    wrapMode: TextEdit.Wrap
+                                    color: EaStyle.Colors.themeForeground
+                                    selectionColor: EaStyle.Colors.themeAccent
+                                    selectedTextColor: EaStyle.Colors.themeBackground
+                                    font.family: EaStyle.Fonts.fontFamily
+                                    font.pixelSize: EaStyle.Sizes.fontPixelSize
+                                    Accessible.role: Accessible.StaticText
+                                    Accessible.name: qsTr("Edi notice: %1").arg(text)
+                                }
+                            }
+                        }
+                        AssistantWorking {
+                            objectName: "assistant.working"
+                            width: parent.width
+                            height: Math.max(implicitHeight, iconExtent)
+                            assistant: panel.assistant
+                            presented: panel.shown && panel.visible
+                        }
+                    }
                     delegate: AssistantMessage {
                         assistant: panel.assistant
                         required property var model
@@ -490,32 +545,6 @@ Popup {
                             }
                         }
                     }
-                }
-                AssistantPlan {
-                    Layout.fillWidth: true
-                    assistant: panel.assistant
-                }
-                AssistantQuestion {
-                    Layout.fillWidth: true
-                    assistant: panel.assistant
-                }
-                AssistantTrial {
-                    Layout.fillWidth: true
-                    assistant: panel.assistant
-                }
-                EaElements.Label {
-                    textFormat: Text.PlainText
-                    Layout.fillWidth: true
-                    visible: panel.assistant.lastError.length > 0
-                    text: panel.assistant.lastError
-                    wrapMode: Text.Wrap
-                }
-                AssistantWorking {
-                    objectName: "assistant.working"
-                    Layout.fillWidth: true
-                    Layout.minimumHeight: iconExtent
-                    assistant: panel.assistant
-                    presented: panel.shown && panel.visible
                 }
                 Rectangle {
                     Layout.fillWidth: true

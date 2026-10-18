@@ -1493,3 +1493,63 @@ admitted scientific edit and can be corrected with a fresh lawful request.
 This does not attribute or weaken a separate retained-native-outcome fence.
 After scientific work or uncertain publication, the original once-owned result,
 inspection/Stop/Clear and no-automatic-replay rules remain authoritative.
+
+
+### Live standard-footer sizing and shared activity ink
+
+The connection dialog keeps the original EaElements.DialogButtonBox, its native
+standard Ok/Cancel buttons, role dispatch and app styling. As in the original
+WarningsDialog local footer override, only the owning dialog specializes its
+footer. The original horizontal ListView measures its implicit width from the
+button box's live natural contentWidth instead of the view's cached contentWidth.
+Thus the standard Sign in with ChatGPT / Approve context label can change without
+right-aligning its real action outside the popup. No hit target, synthetic accept,
+extra delay or consent/offer behavior is introduced.
+
+The shared working cue uses the actual Label baseline plus native tight text ink,
+including the current label alignment/padding. The robot is fitted by its current
+rotated natural ink bounds to the same fixed slot as the existing circular logo,
+instead of permanently shrinking its upright ink by the full diagonal. Slot,
+text placement, clipping, all three variants, rotation/reset and reduced-motion
+guards remain shared between sidebar and status bar. Native rendered acceptance
+is separate from these source changes.
+
+A command activity still prefers an explicit purpose and validated structured
+read/list/search actions. An unknown structured action or final command fallback
+can show its retained literal command on the existing one-line, right-elided row.
+It is display only: no shell parsing/execution or inferred purpose/outcome. With
+no literal command it says Run command. Original status explanation, full literal
+technical copy and canonical payload remain unchanged.
+
+
+### Direct activity disclosure
+
+The activity header now orders the truthful status icon before the type icon.
+Every activity has its existing native main disclosure and a separate small,
+muted native copy action at the far right, including while details are collapsed.
+The copy glyph uses the type icon font size/color and original current-row,
+canonical-payload clipboard guard and Copied feedback. Keyboard/disclosure and
+uncertainty explanations remain native and truthful.
+
+The main disclosure directly opens all retained details in one full-width,
+rounded surface using the existing user-message contentBackground, radius and
+padding conventions. One bounded vertical viewport contains the literal command,
+working directory/output when applicable, readable activity/decision information
+and the full selectable retained JSON. There is no secondary Technical details
+or Original payload toggle. This supersedes the older nested technical layout;
+no canonical payload or selectable literal is truncated or interpreted as HTML.
+
+Sent attachment history is a read-only snapshot of the original filename and
+byte count. Its former future-scope removal action and now-unused selection
+listeners are removed. Pending composer attachment removal and explicit Clear
+retain their existing selected-ID/grant behavior; history never revokes access.
+
+The current Edi notice is an inline conversation ListView footer, with Edi as its
+visible author and the exact current lastError in selectable plain text. It
+replaces the former fixed label above the composer. It is not an assistant
+message, retained history write or inference input; repeated updates replace the
+one current notice, and the backend alone clears it. Existing tail-follow and
+user scroll behavior apply. The same existing plan, question, trial and working controls also live in that
+inline footer; their handlers, IDs and backend ownership are unchanged. The
+composer area contains inputs and its separator only. The hidden-chat statusbar
+working indicator is unchanged.
