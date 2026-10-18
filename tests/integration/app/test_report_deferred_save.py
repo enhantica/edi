@@ -10,17 +10,8 @@ from tests.integration.app.test_e04_t1_projects import APP_TESTS, ROOT, runner
 
 @pytest.fixture(scope='module')
 def deferred_save_run():
-    environment = {
-        key: value
-        for key, value in os.environ.items()
-        if key not in {'QT_QPA_PLATFORM', 'QT_QUICK_BACKEND'}
-    }
     return subprocess.run(
         [
-            'bash',
-            '-c',
-            'source tools/ci/app-platform.sh && app_capture_platform report-save && "$@"',
-            'report-save',
             str(runner()),
             '-input',
             str(APP_TESTS / 'tst_report_deferred_save.qml'),
@@ -28,7 +19,11 @@ def deferred_save_run():
             '-,txt',
         ],
         cwd=ROOT,
-        env=environment,
+        env={
+            **os.environ,
+            'QT_QPA_PLATFORM': 'offscreen',
+            'QT_QUICK_BACKEND': 'software',
+        },
         capture_output=True,
         text=True,
         timeout=120,
