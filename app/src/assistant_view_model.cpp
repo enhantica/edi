@@ -6558,6 +6558,8 @@ struct AssistantViewModel::State {
         if(!publication.input_current())return;
         if (!approved || usage_read_epoch != usage_epoch)
             throw std::runtime_error("The approved account/project disclosure changed during bootstrap");
+        if (!select_from_catalog(generic_native.value("models").toArray(), true)) return;
+        if (!publication.input_current()) return;
         bootstrap_scope = approved_scope;
         invalidate_policy();
         generic_settings_model=model; generic_settings_effort=effective_effort();
@@ -8681,17 +8683,29 @@ struct AssistantViewModel::State {
             try { preference_save_error = QObject::tr("The assistant selection changed, but its preference could not be saved."); } catch (...) {}
         }
     }
-    void select_from_catalog(const QJsonArray& choices) {
+    bool select_from_catalog(const QJsonArray& choices, bool starting_thread = false) {
         const auto projection = file_projection();
-        const auto current = [&] { return projection.publication_current(); };
-        if (native.value("status") != "ready" || choices.isEmpty()) {
+        const auto current = [&] {
+            if (!projection.publication_current()) return false;
+#ifndef __EMSCRIPTEN__
+            if (starting_thread) return generic_mode && generic_connecting && generic_thread.isEmpty() &&
+                usage_account_ready && !usage_epoch_exhausted && usage_read_epoch == usage_epoch &&
+                !native_worker_admitted() && !generic_retiring && !generic_busy &&
+                !generic_clear_pending && !generic_context_pending && !file_selection && !file_staging &&
+                choices == generic_native.value("models").toArray();
+#endif
+            return !starting_thread;
+        };
+        if (!current()) return false;
+        if ((!starting_thread && native.value("status") != "ready") || choices.isEmpty()) {
             restore_choice_pending = true;
-            return; // Sign-out/empty catalogs must neither erase nor persist an automatic fallback.
+            if (starting_thread) throw std::runtime_error("The selected model has no supported default effort");
+            return false; // Sign-out/empty catalogs must neither erase nor persist an automatic fallback.
         }
         const bool busy = owner.canCancel();
-        if (!current() || busy) return;
+        if (!current() || (busy && !starting_thread)) return false;
         load_choice_preference();
-        if (!current()) return;
+        if (!current()) return false;
         const auto available = [&](const QString& id) {
             for (const auto& value : choices) {
                 const auto row = value.toObject();
@@ -8729,6 +8743,7 @@ struct AssistantViewModel::State {
             effort.clear();
             preference_error = QObject::tr("The previous reasoning effort is unavailable. Selection reset to Provider default.");
         }
+        return true;
     }
     void sync_skills() {
         const auto projection = file_projection();

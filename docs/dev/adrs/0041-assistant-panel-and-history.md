@@ -48,7 +48,8 @@ dispatch fences. Composer clearing observes a new actual user-row ID, never last
 Queued initial/continuation sends recheck live connection, turn and privately captured request identity,
 project generation and exact disclosure consent before physical I/O.
 
-Empty reasoning effort means Provider default and stays empty on the wire; explicit tags use localized
+Empty reasoning effort means Provider default and stays empty in the saved selection. Official-runtime
+thread/settings requests resolve it through the selected model's advertised default; explicit tags use localized
 app-owned labels. Incompatible model effort resets visibly to that default; busy setters refuse changes.
 The existing canCancel/state/connectionLabel properties include the VM's accepted pending browser sign-in.
 Stop uses existing native sign-out/teardown to retire that attempt and its late callbacks; no token getter,
@@ -1392,3 +1393,10 @@ The existing joint VM/transport budget admits the typed container and decoded pa
 A selected block name and a cached QObject path are not a live control binding. The original ProjectViewModel's sole ParameterRegistry current maps/items and original model parameter roles are authoritative; deferred-deletion children are never lookup candidates. Instrument additionally requires its original selected native experiment/model and usedByProfile visibility role, including the retained-free-but-inert case. Cell requires the actual selected native structure and exact six Cell model/member pairs. Analysis requires the actual current table parameter role, preserving its scan scope. No fallback, profile/selection change or extra input is inferred.
 
 The same pinned registry/model/ParameterItem/native member/path is checked before scalar/array no-op, each currentness continuation and the genuine final event/readback. The original creation child's scalar parameter path uses this same entrance. An initially unavailable later array entry refuses the whole request before earlier inputs; a later retired binding stops with the original factual partial/uncertain result. Original scalar result shape, atomic normal mode, per-change visible Undo, old-owner once/ACK and retained callback budgets are preserved. Added weak identities are part of the existing typed frame size, and scalar path/callback backing uses the same prospective and retired-frame accounting as arrays.
+
+
+### Catalogue selection before thread creation
+
+The original catalogue selector also serves the official runtime's initial and replacement-thread bootstrap. After the complete validated model catalogue and current account are available, the common stock/dedicated thread-start entrance resolves the existing saved, explicit or offered fallback choice before requesting its effective default effort. This internal bootstrap does not publish ready or enable busy user setters. It requires the original account/owner projection, exact current catalogue, connecting state and no live thread or other active-operation cause; these are rechecked after preference loading before selection can mutate or thread creation can continue.
+
+The original hidden/unavailable filtering and model/effort compatibility rules remain shared with ready-state selection. A valid saved choice restores as before; an unsupported or unavailable saved choice retains its saved value and warning while the ordinary offered fallback is used. Only a genuine explicit ready-state choice persists a preference. No model/effort literal, permission, catalogue validation or skill/consent/policy check is bypassed.
