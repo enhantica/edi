@@ -28,8 +28,12 @@ PEER = ROOT / 'tests/integration/py/assistant_vm_probe/codex_stdio_peer.py'
 
 
 class Generic(prior.Component):
-    def __init__(self, binary, *, ui=False):
+    def __init__(self, binary, *, ui=False, retain_stderr511=False):
         self.probe_observation_directory = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).parent
+        assert type(retain_stderr511) is bool, 'GENERIC511: capture opt-in is an explicit Boolean only'
+        self.stderr511 = None
+        self.stderr511_identity = None
+        self.stderr511_path = self.probe_observation_directory / 'original-probe.stderr.bin'
         argv = (
             [
                 str(binary),
@@ -39,14 +43,30 @@ class Generic(prior.Component):
             if ui
             else [str(binary), '--codex']
         )
-        self.process = subprocess.Popen(
-            argv,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding='utf-8',
-        )
+        try:
+            if retain_stderr511:
+                import stat
+                self.stderr511 = self.stderr511_path.open('xb', buffering=0)
+                identity511 = os.fstat(self.stderr511.fileno())
+                assert stat.S_ISREG(identity511.st_mode), 'GENERIC511: actual fresh owned stderr endpoint is an ordinary file'
+                self.stderr511_identity = (identity511.st_dev, identity511.st_ino)
+            self.process = subprocess.Popen(
+                argv,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=self.stderr511 if retain_stderr511 else subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+            )
+        except BaseException as error511:
+            if self.stderr511 is not None:
+                try:
+                    self.stderr511.close()
+                except BaseException as cleanup511:
+                    error511.add_note('Owned stderr close also failed: ' + repr(cleanup511))
+                    if isinstance(cleanup511, (KeyboardInterrupt, SystemExit)) and not isinstance(error511, (KeyboardInterrupt, SystemExit)):
+                        raise cleanup511 from error511
+            raise
         self.reply_timeout = 5.0
         self.last = None
         self.handled = set()
@@ -62,6 +82,54 @@ class Generic(prior.Component):
 
 
     def close(self):
+        if self.stderr511 is not None:
+            primary511 = None
+            try:
+                self.process.stdin.close()
+                try:
+                    self.process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait()
+                import stat
+                metadata511 = os.fstat(self.stderr511.fileno())
+                entry511 = self.stderr511_path.lstat()
+                assert stat.S_ISREG(entry511.st_mode) and (entry511.st_dev, entry511.st_ino) == self.stderr511_identity == (
+                    metadata511.st_dev, metadata511.st_ino
+                ), 'GENERIC511: retained raw stderr path is still the original held ordinary-file identity'
+                self.probe_observation_directory.joinpath('original-probe-terminal.json').write_text(
+                    json.dumps({'pid': self.process.pid, 'argv': self.process.args,
+                                'returncode': self.process.returncode, 'direct_child_reaped': True,
+                                'stderr_pending_at_snapshot': metadata511.st_size, 'stderr_bytes': metadata511.st_size,
+                                'stderr_eof_observed': None,
+                                'stderr_limit': 'Owned regular-file size snapshot after direct-child reap; no pipe EOF or descendant-writer closure claimed',
+                                'stderr_capture': 'owned-regular-file-from-launch',
+                                'stderr_file_identity': list(self.stderr511_identity)}, indent=2) + '\n')
+            except BaseException as error511:
+                primary511 = error511
+                raise
+            finally:
+                try:
+                    self.process.stdout.close()
+                except BaseException as cleanup511:
+                    if primary511 is None:
+                        primary511 = cleanup511
+                        raise
+                    primary511.add_note('Original stdout close also failed: ' + repr(cleanup511))
+                    if isinstance(cleanup511, (KeyboardInterrupt, SystemExit)) and not isinstance(primary511, (KeyboardInterrupt, SystemExit)):
+                        previous511 = primary511
+                        primary511 = cleanup511
+                        raise cleanup511 from previous511
+                finally:
+                    try:
+                        self.stderr511.close()
+                    except BaseException as cleanup511:
+                        if primary511 is None:
+                            raise
+                        primary511.add_note('Owned stderr close also failed: ' + repr(cleanup511))
+                        if isinstance(cleanup511, (KeyboardInterrupt, SystemExit)) and not isinstance(primary511, (KeyboardInterrupt, SystemExit)):
+                            raise cleanup511 from primary511
+            return
         # Original Native.close input/wait/kill/reap sequence, unchanged.
         self.process.stdin.close()
         try:
@@ -108,7 +176,7 @@ class Generic(prior.Component):
 def generic(monkeypatch, tmp_path):
     actors = []
 
-    def create(scenario='complete', *, override='peer', ui=False):
+    def create(scenario='complete', *, override='peer', ui=False, retain_stderr511=False):
         owned = tmp_path / str(len(actors))
         owned.mkdir()
         trace = owned / 'original-client-lines.jsonl'
@@ -140,7 +208,7 @@ def generic(monkeypatch, tmp_path):
                     'EDI_ASSISTANT_CONSENT_PROBE' if ui else 'EDI_ASSISTANT_WORKFLOW_VM_PROBE'
                 ]
             ),
-            ui=ui,
+            ui=ui, retain_stderr511=retain_stderr511,
         )
         actor.command('inspect')
         actor.peer_pid_file = config.with_suffix('.peer-pid')
@@ -2259,8 +2327,9 @@ def native_records(trace, suffix):
     return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
 
-def native_case(generic, calls, *, project=None, hold=False, script=None, connect_now=True):
-    actor, trace = generic('native:original')
+def native_case(generic, calls, *, project=None, hold=False, script=None, connect_now=True, retain_stderr511=False):
+    actor, trace = (generic('native:original') if retain_stderr511 is False
+                    else generic('native:original', retain_stderr511=retain_stderr511))
     if project is not None:
         owned_project = trace.parent / 'original-owned-project'
         shutil.copytree(project, owned_project)
@@ -10820,11 +10889,14 @@ def test_action495_parsed_long_block_refuses_before_edit_and_keeps_native_inspec
         'RESULT499: history discrimination retains all original selected source identities and descriptors')
 
 
-def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(generic, tmp_path):
+def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(generic, tmp_path, monkeypatch):
     """One original proper-host owner workflow; no numerical optimum or partial-success substitute."""
     import math
 
-    actor, trace = native_case(generic, [], connect_now=False, script={'scenario': 'native:script'})
+    elapsed_rules511 = os.environ.get('QT_LOGGING_RULES', '')
+    monkeypatch.setenv('QT_LOGGING_RULES', elapsed_rules511 + ('\n' if elapsed_rules511 else '') + 'edi.assistant.elapsed.debug=true')
+    monkeypatch.setenv('QT_MESSAGE_PATTERN', '[%{time process} pid=%{pid} tid=%{threadid} %{type} %{category} %{file}:%{line}] %{message}')
+    actor, trace = native_case(generic, [], connect_now=False, script={'scenario': 'native:script'}, retain_stderr511=True)
     directory = tmp_path / 'Original LBCO staged owner'
     requested = dict(name='Original LBCO owner outcome', title='Original staged LBCO outcome',
                      description='Authentic LBCO and HRPT, explicit1.49A, shared La Ba Biso',
@@ -10868,6 +10940,7 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     adp_paths = ['structure.atom_sites[' + site + '].adp_iso' for site in ('La', 'Ba', 'Co', 'O')]
     profile_paths = ['experiment.peak.' + key for key in metadata['profile_parameters']]
     zero_path = 'experiment.instrument.calib_twotheta_offset'
+    nuisance_paths = ['structure.cell.length_a', 'experiment.background[1].intensity', 'experiment.background[2].intensity']
     relation = native145_relation_args(adp_paths[0], adp_paths[1])
     scale = {'$original_parameter_suffix': '.scale'}  # Original existing closed selector, actual successful list only.
     turns = [
@@ -10876,11 +10949,11 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         [native_call('set_parameters', values=[{'path': path, 'value': .5} for path in adp_paths]),
          native_call('add_relations', **relation),
          native_call('set_free', flags=[{'path': scale, 'free': True}, {'path': zero_path, 'free': True}]
-                     + [{'path': path, 'free': True} for path in profile_paths]),
+                     + [{'path': path, 'free': True} for path in profile_paths + nuisance_paths]),
          native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics')],
         [native_call('set_free', flags=[{'path': zero_path, 'free': False}]
                      + [{'path': path, 'free': False} for path in profile_paths]
-                     + [{'path': path, 'free': True} for path in (adp_paths[0], adp_paths[2], adp_paths[3])]),
+                     + [{'path': path, 'free': True} for path in [adp_paths[0], adp_paths[2], adp_paths[3], *nuisance_paths]]),
          native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics'),
          native_call('save_project', destination='current')],
     ]
@@ -10899,6 +10972,15 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         'OUTCOME500: genuine original LBCO import and healthy current reads complete, never setup/refusal-as-positive')
     assert imported['project']['empty_completion_observer']['same_owner'] and imported['project']['empty_completion_observer']['same_core'], (
         'OUTCOME500: native completion populates this original owner/core instead of replacing user metadata')
+    nuisance_identities510 = {}
+    for path in nuisance_paths:
+        matches = [row for row in replies[1]['decoded']['parameters'] if row['path'] == path]
+        assert len(matches) == 1 and matches[0]['dependence'] == 'independent' and matches[0]['free'] is False and (
+            type(matches[0]['unique_name']) is str and matches[0]['unique_name']
+        ), 'STAGE510: original successful initial list identifies each actual independent fixed cell/background member before release'
+        nuisance_identities510[path] = matches[0]['unique_name']
+    assert len(set(nuisance_identities510.values())) == len(nuisance_paths), (
+        'STAGE510: three literal nuisance roles are distinct actual original physical parameters')
     expected_alias_targets = {}
     for alias in relation['aliases']:
         matching = [row for row in replies[1]['decoded']['parameters'] if row['path'] == alias['path']]
@@ -10921,6 +11003,11 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     native145_approve(actor)
     _, replies = native_send(actor, trace, 10)
     profiled = native145_science_settled(actor)
+    for path in nuisance_paths:
+        matches = [row for row in replies[7]['decoded']['parameters'] if row['path'] == path]
+        assert len(matches) == 1 and matches[0]['unique_name'] == nuisance_identities510[path] and (
+            matches[0]['dependence'] == 'independent' and matches[0]['free'] is True
+        ), 'STAGE510: first post-fit read retains every intended independent cell/background role actually free on its original member'
     profile_adps = {path: native_parameter(profiled, path)['value'] for path in adp_paths}
     assert all(value == .5 for value in profile_adps.values()) and all(
         native_parameter(profiled, path)['free'] is False for path in adp_paths
@@ -10946,6 +11033,11 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     _, replies = native_send(actor, trace, 16)
     saved = save211_settled(actor)
     adp_fit, saved_result = replies[11]['decoded'], replies[15]['decoded']
+    for path in nuisance_paths:
+        matches = [row for row in replies[12]['decoded']['parameters'] if row['path'] == path]
+        assert len(matches) == 1 and matches[0]['unique_name'] == nuisance_identities510[path] and (
+            matches[0]['dependence'] == 'independent' and matches[0]['free'] is True
+        ), 'STAGE510: structural-ADP stage carries each SAME original cell/background freedom through its genuine post-fit read'
     postfit_adps = {}
     for path in (adp_paths[0], adp_paths[2], adp_paths[3]):
         matching = [row for row in replies[12]['decoded']['parameters'] if row['path'] == path]
