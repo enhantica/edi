@@ -1553,3 +1553,14 @@ user scroll behavior apply. The same existing plan, question, trial and working 
 inline footer; their handlers, IDs and backend ownership are unchanged. The
 composer area contains inputs and its separator only. The hidden-chat statusbar
 working indicator is unchanged.
+
+
+### Compact activity header extent
+
+The activity copy action retains the original native ToolButton and icon/hover/
+clipboard/ownership behavior, but uses a square natural extent equal to the
+existing main disclosure's implicit text-line height. The original ToolButton
+background has a toolbar-height implicit size even when hidden; that default
+must not enlarge a compact conversation header. The real copy target fits the
+same visible row rather than overlapping adjacent history. Existing message and
+ListView spacing, details surface and glyph sizing are unchanged.

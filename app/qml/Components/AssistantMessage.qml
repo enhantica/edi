@@ -354,6 +354,8 @@ Rectangle {
             EaElements.ToolButton {
                 id: activityCopy
                 objectName: "assistant.activity.copyTechnical"
+                implicitWidth: commandDisclosure.implicitHeight
+                implicitHeight: commandDisclosure.implicitHeight
                 fontIcon: row.technicalCopied ? "check" : "copy"
                 showBackground: false
                 contentItem: EaElements.Label {
