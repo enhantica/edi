@@ -19,7 +19,7 @@ def deferred_save_run():
         [
             'bash',
             '-c',
-            'source tools/ci/app-platform.sh && app_capture_platform report-save && exec "$@"',
+            'source tools/ci/app-platform.sh && app_capture_platform report-save && "$@"',
             'report-save',
             str(runner()),
             '-input',
@@ -41,6 +41,10 @@ def deferred_save_run():
 )
 def test_real_save_route_keeps_finished_content_and_completed_rows(deferred_save_run, route):
     output = deferred_save_run.stdout + deferred_save_run.stderr
+    assert deferred_save_run.returncode >= 0 and all(
+        f'PASS   : edi_app::ReportDeferredSave::{phase}()' in output
+        for phase in ['initTestCase', 'cleanupTestCase']
+    ), 'The real application host must complete setup and teardown without a crash: ' + output
     assert (
         f'PASS   : edi_app::ReportDeferredSave::test_finished_figures_survive_navigation({route})'
     ) in output, (
