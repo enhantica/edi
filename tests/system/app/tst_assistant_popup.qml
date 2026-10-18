@@ -6541,8 +6541,13 @@ TestCase {
                 + Math.pow((label.color.g - background.color.g) * alpha, 2)
                 + Math.pow((label.color.b - background.color.b) * alpha, 2);
         }
-        verify(contrast(effort[0]) < contrast(model[0]),
-            "GUI393: actual effort ink is less pronounced against SAME real background than model ink");
+        if (pill.hovered || pill.down || pill.visualFocus) {
+            tryVerify(() => [model[0], effort[0]].every(label => Qt.colorEqual(label.color, EaStyle.Colors.themeAccent)), 2000,
+                "GUI494: actual active pill model AND effort use owner-requested native accent ink");
+        } else {
+            tryVerify(() => contrast(effort[0]) < contrast(model[0]), 2000,
+                "GUI393: resting effort ink is less pronounced against SAME persistent neutral background than model ink");
+        }
         gui398FontMetrics.font = model[0].font;
         const modelBounds = rect(model[0]), effortBounds = rect(effort[0]);
         verify(Math.abs(effortBounds[0] - modelBounds[0] - modelBounds[2]
@@ -6570,7 +6575,7 @@ TestCase {
             mouseMove(window.contentItem, 0, 0); rendered();
             gui398_noBlueOutline(control);
             tryVerify(() => !Qt.colorEqual(background.color, send.background.color), 2000,
-                "GUI393: light footer treatment remains distinct from stronger original Send fill: " + name);
+                "GUI494: persistent neutral footer treatment remains distinct from stronger original Send fill: " + name);
         }
             const previous = rect(item("assistant.previousUserMessage")), next = rect(item("assistant.nextUserMessage")), submit = rect(send);
         const firstGap = next[0] - previous[0] - previous[2], secondGap = submit[0] - next[0] - next[2];
@@ -7184,9 +7189,18 @@ TestCase {
         // for pill/avatar/footer remain independently mandatory at their callers.
         const outlines = background === null ? [] : Ui.itemsWithProperty(background, "border");
         for (const item of outlines) {
-            if (["assistant.modelEffort", "assistant.files.add", "assistant.showActions", "assistant.previousUserMessage",
-                 "assistant.nextUserMessage", "assistant.send", "assistant.stop"].includes(control.objectName)) {
-                compare(item.border.width, 0, "GUI399: composer action/model pill has NO border of ANY color in actual normal/hover/focus/checked state");
+            // Bounded native identity/presentation facts BEFORE the original strict comparison.
+            // Rectangle's default width getter alone is not evidence of a painted valid pen.
+            console.log("GUI494_BORDER_RECEIVER", JSON.stringify({control: control.objectName,
+                receiver: String(item).slice(0, 200), receiverName: String(item.objectName).slice(0, 80),
+                parent: String(item.parent).slice(0, 200), parentName: item.parent ? String(item.parent.objectName).slice(0, 80) : "",
+                sameBackground: item === background, visible: item.visible, enabled: item.enabled,
+                geometry: [item.x, item.y, item.width, item.height], width: item.border.width,
+                color: String(item.border.color), alpha: item.border.color.a}));
+            if (["assistant.modelEffort", "assistant.files.add", "assistant.showActions",
+                 "assistant.previousUserMessage", "assistant.nextUserMessage", "assistant.send", "assistant.stop",
+                 "assistant.clear", "assistant.usage", "assistant.connection"].includes(control.objectName)) {
+                compare(item.border.width, 0, "GUI494: original custom composer/header surface explicitly has zero border in actual normal/hover/focus/checked state");
                 continue;
             }
             const color = String(item.border.color).toLowerCase();
@@ -7209,7 +7223,15 @@ TestCase {
             "GUI398: eraser glyph has same small native size as original composer Plus, not an enlarged header icon");
         compare(glyphs[0].font.pixelSize, glyphs[2].font.pixelSize,
             "GUI398: eraser glyph also matches original eye, preserving actual action hitboxes");
-        for (const control of [avatar, clear, item("assistant.usage")]) gui398_noBlueOutline(control);
+        const usage = item("assistant.usage"), pill = item("assistant.modelEffort");
+        const headerRects = [clear, usage, avatar].map(control => rect(control));
+        const footerGap = rect(eye)[0] - rect(plus)[0] - rect(plus)[2];
+        verify(footerGap >= 0 && Math.abs(headerRects[1][0] - headerRects[0][0] - headerRects[0][2] - footerGap) < 0.5
+            && Math.abs(headerRects[2][0] - headerRects[1][0] - headerRects[1][2] - footerGap) < 0.5,
+            "GUI494: actual rounded header action gaps match original composer Plus/Eye spacing");
+        compare(usage.leftPadding, pill.leftPadding, "GUI494: original Usage left padding matches accepted model pill");
+        compare(usage.rightPadding, pill.rightPadding, "GUI494: original Usage right padding matches accepted model pill");
+        for (const control of [avatar, clear, usage]) gui398_noBlueOutline(control);
         const titles = gui392_labels(popup.contentItem).filter(label => label.text === "Assistant");
         compare(titles.length, 1, "GUI398: actual sidebar has ONE native Assistant header title");
         const bounds = rect(titles[0]), side = rect(popup.contentItem), image = grabImage(window.contentItem);
@@ -7458,7 +7480,8 @@ TestCase {
     function gui399_avatar(avatar) {
         const original = {owner: Session.project, assistant: Session.assistant, theme: EaStyle.Colors.theme};
         const life = lifetime313(avatar), target = rect(avatar);
-        compare(target[2], EaStyle.Sizes.toolButtonHeight, "GUI399: original connected avatar click WIDTH is unchanged native toolButtonHeight");
+        compare(target[2], rect(item("assistant.files.add"))[2],
+            "GUI494: connected avatar footprint matches accepted original composer action extent");
         compare(target[3], EaStyle.Sizes.toolButtonHeight, "GUI399: original connected avatar click HEIGHT is unchanged native toolButtonHeight");
         function distance(a, b) { return Math.pow(a.r - b.r, 2) + Math.pow(a.g - b.g, 2) + Math.pow(a.b - b.b, 2); }
         function observe() {
@@ -7470,22 +7493,20 @@ TestCase {
                 && Math.abs(control.width - control.height) < 0.5 && control.radius >= control.height / 2 - 0.5);
             compare(circles.length, 1, "GUI399: original native avatar owns ONE actual painted circle, not a duplicate overlay");
             const circle = circles[0], origin = circle.mapToItem(avatar, 0, 0);
-            verify(circle.width < avatar.width && circle.height < avatar.height
+            verify(circle.width <= avatar.width && circle.height < avatar.height
                 && Math.abs(origin.x + circle.width / 2 - avatar.width / 2) < 0.5
                 && Math.abs(origin.y + circle.height / 2 - avatar.height / 2) < 0.5,
-                "GUI399: visual circle is genuinely SMALLER and centered inside unchanged original click target");
-            verify(circle.border.width > 0 && circle.border.width <= EaStyle.Sizes.borderThickness && circle.border.color.a > 0,
-                "GUI399: native avatar faint outline is permanently present, not hover-only");
-            const fill = circle.color, ink = circle.border.color;
-            const borderLuma = (ink.r * 0.2126 + ink.g * 0.7152 + ink.b * 0.0722) * ink.a
-                + (fill.r * 0.2126 + fill.g * 0.7152 + fill.b * 0.0722) * (1 - ink.a);
-            const fillLuma = fill.r * 0.2126 + fill.g * 0.7152 + fill.b * 0.0722;
-            const nativeBorder = EaStyle.Colors.appBorder, nativeSurface = EaStyle.Colors.contentBackground;
-            const nativeBoundary = Math.max(Math.abs(nativeBorder.r - nativeSurface.r),
-                Math.abs(nativeBorder.g - nativeSurface.g), Math.abs(nativeBorder.b - nativeSurface.b));
-            const borderDelta = Math.max(Math.abs(ink.r - fill.r), Math.abs(ink.g - fill.g), Math.abs(ink.b - fill.b)) * ink.a;
-            verify(borderLuma < fillLuma && borderDelta > 0 && borderDelta <= nativeBoundary + 1 / 255,
-                "GUI400: avatar border is independently faint/darker: no stronger channel step than FIRST native app boundary plus one8bit quantization level");
+                "GUI494: accepted small visual circle is centered and contained in original header target");
+            compare(circle.border.width, 0, "GUI494: connected avatar is borderless, including real hover and both palettes");
+            const fill = circle.color;
+            tryVerify(() => Qt.colorEqual(circle.color, EaStyle.Colors.isDarkPalette ? "white" : "black"), 2000,
+                "GUI494: actual avatar retains strong enabled-Send-like contrasting native fill");
+            const labels = gui392_labels(avatar).filter(label => label.text === avatar.text && gui393_under(label, avatar.contentItem));
+            compare(labels.length, 1, "GUI494: SAME actual avatar owns its unique painted initial label");
+            tryVerify(() => Qt.colorEqual(labels[0].color,
+                avatar.hovered || avatar.down || avatar.visualFocus ? EaStyle.Colors.themeAccent
+                    : EaStyle.Colors.isDarkPalette ? "black" : "white"), 2000,
+                "GUI494: actual avatar initial retains native contrasting resting ink and real active accent");
             verify(distance(fill, EaStyle.Colors.contentBackground) * fill.a * fill.a > 0,
                 "GUI400: actual avatar fill separately contrasts native header in both palettes/real hover, without cross-distance ordering");
         }
