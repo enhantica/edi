@@ -29,6 +29,22 @@ TestCase {
         Main {}
     }
 
+    // Independent native window: ordinary focus/activation and input, never another Main/Session.
+    Component {
+        id: otherWindow479
+        ApplicationWindow {
+            width: 240
+            height: 100
+            visible: false
+            title: "Acceptance unrelated window"
+            Button {
+                objectName: "input479.unrelated"
+                anchors.centerIn: parent
+                text: "Unrelated window input"
+            }
+        }
+    }
+
     // Existing Probe.watch owns a QPointer and signal spies; retain only its
     // integer handle and a scalar identity captured while the QObject is alive.
     function lifetime313(object) {
@@ -956,7 +972,8 @@ TestCase {
         const current = Session.project;
         const history = JSON.stringify(Probe.rows(assistant.messages));
         const parameters = current ? JSON.stringify(Probe.rows(current.parameters)) : "";
-        const row = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(item => item.rowId === retained.id
+        const row = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(item => item.rowId === retained.id && item.assistant === assistant
+            && typeof item.resetDetails === "function" && typeof item.copyTechnicalPayload === "function"
             && item.kind === "assistant" && item.status === "completed");
         compare(row.length, 1, "REPORT171: real production delegate belongs to the retained row");
         const bodies = Ui.itemsWithProperty(row[0], "readOnly").filter(item => item.visible
@@ -1284,6 +1301,9 @@ TestCase {
         let draftField = null, draft = "", draftFocus = null, draftSelection = null, draftPage = -1;
         const call = "visible185-action-" + data.tag;
         const requestPreviousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
+        const scope481=data.tag==="manual-override" ? {
+            controller:assistant,project:project,connection:assistant.connectionLabel,
+            files:JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles)))} : null;
         const timelineEnabled = data.tag === "analysis-value-free";
         const timelinePriorIds = timelineEnabled ? new Set(Probe.rows(assistant.messages).map(row => row.id)) : null;
         let timelineCount = 0;
@@ -1405,6 +1425,83 @@ TestCase {
             visible185_ready("before-original-send");
             // Direct public Send is setup only: it intentionally does not blur a manual draft.
             assistant.send("Original delegated visible operation " + data.tag);
+            if (data.tag === "analysis-value-free") {
+                // SAME existing positive tool, genuinely before its original value input/commit.
+                const activeCall479="visible185-value-"+data.tag;
+                tryVerify(() => assistant.showingActions && assistant.canCancel && typed === 0
+                    && Ui.rendered(item("assistant.actionPointer")),pacedObservation,
+                    "INPUT479: actual original visible tool/pointer is active BEFORE unrelated native input");
+                compare(visible185_outcome(activeCall479,requestPreviousIds),null,
+                    "INPUT479: exact original tool is genuinely pending, not completed/setup-refused");
+                verify(window.active,"INPUT479: SAME original Main genuinely owns activation before the switch");
+                const ownerLife479=lifetime313(project), controllerLife479=lifetime313(assistant);
+                const other479=createTemporaryObject(otherWindow479,null);
+                verify(other479!==null,"INPUT479: independent ordinary Qt window is created without another Session");
+                const otherLife479=lifetime313(other479), mainLife479=lifetime313(window);
+                const button479=findChild(other479,"input479.unrelated"), buttonLife479=lifetime313(button479);
+                verify(button479!==null,"INPUT479: unrelated native window owns its original actual Button");
+                let deactivated479=0,reactivated479=0,pressed479=0,released479=0,clicked479=0,takeover479=0,pendingAtEdge482=false;
+                function activation479(){
+                    if(window.active)++reactivated479;
+                    else {++deactivated479;pendingAtEdge482=assistant.showingActions && assistant.canCancel
+                        && visible185_outcome(activeCall479,requestPreviousIds)===null;}
+                }
+                function press479(){++pressed479;}
+                function release479(){++released479;}
+                function click479(){++clicked479;}
+                function manual479(){++takeover479;}
+                window.activeChanged.connect(activation479);
+                button479.pressed.connect(press479);button479.released.connect(release479);button479.clicked.connect(click479);
+                assistant.actionManualTakeover.connect(manual479);
+                try {
+                    other479.show();other479.requestActivate();
+                    tryVerify(() => other479.active && !window.active,2000,
+                        "INPUT479: real OTHER Qt window activates and original Main genuinely deactivates");
+                    verify(deactivated479>0 && pendingAtEdge482,
+                        "INPUT482: original Main genuinely deactivates WHILE original tool is actually pending");
+                    verify(button479.visible && button479.enabled && button479.width>0 && button479.height>0,
+                        "INPUT479: actual unrelated native input target is actionable");
+                    mouseMove(button479,button479.width/2,button479.height/2);
+                    mouseClick(button479,button479.width/2,button479.height/2);
+                    compare(pressed479,1,"INPUT479: unrelated window received ONE real native press");
+                    compare(released479,1,"INPUT479: unrelated window received ONE real native release");
+                    compare(clicked479,1,"INPUT479: unrelated window received ONE real native click");
+                    verify(alive313(ownerLife479) && alive313(controllerLife479) && Session.project===project
+                        && Session.assistant===assistant,"INPUT479: switching/input preserves original live owner and controller");
+                    verify(other479.active && !window.active,
+                        "INPUT479: original helper does not steal foreground activation from unrelated window input");
+                    const progress482=visible185_outcome(activeCall479,requestPreviousIds);
+                    if(progress482!==null)compare(progress482.status,"edited",
+                        "INPUT482: genuine original progress may complete truthfully; unrelated input cannot cause refusal/interruption");
+                    compare(takeover479,0,"INPUT479: unrelated window input is NOT a manual project takeover");
+                    window.requestActivate();
+                    tryVerify(() => window.active && !other479.active,2000,
+                        "INPUT479: genuine activation returns to SAME original Main");
+                    verify(reactivated479>0,"INPUT479: original Main emitted native reactivation");
+                    const safe479=item("assistant.toggle"), point479=Ui.clickPoint(safe479);
+                    verify(point479!==null && safe479.visible && safe479.enabled,
+                        "INPUT479: original assistant appbar is a real safe pointer destination");
+                    mouseMove(safe479,point479.x,point479.y);
+                    compare(takeover479,0,"INPUT479: harmless assistant pointer motion is NOT conflicting scientific input");
+                } finally {
+                    console.log("INPUT479_NATIVE",JSON.stringify({call:activeCall479,
+                        deactivated:deactivated479,pendingAtEdge:pendingAtEdge482,reactivated:reactivated479,pressed:pressed479,
+                        released:released479,clicked:clicked479,manualTakeover:takeover479,
+                        sameOwner:alive313(ownerLife479)&&Session.project===project,
+                        sameController:alive313(controllerLife479)&&Session.assistant===assistant,
+                        mainActive:alive313(mainLife479)?window.active:null,
+                        otherActive:alive313(otherLife479)?other479.active:null,
+                        showingActions:assistant.showingActions,canCancel:assistant.canCancel,
+                        outcome:visible185_outcome(activeCall479,requestPreviousIds)}));
+                    disconnect313(mainLife479,window,"activeChanged",activation479);
+                    disconnect313(buttonLife479,button479,"pressed",press479);
+                    disconnect313(buttonLife479,button479,"released",release479);
+                    disconnect313(buttonLife479,button479,"clicked",click479);
+                    disconnect313(controllerLife479,assistant,"actionManualTakeover",manual479);
+                    if(alive313(otherLife479))other479.close();
+                    if(alive313(mainLife479)&&!window.active)window.requestActivate();
+                }
+            }
             if (["manual-override", "close-owner"].includes(data.tag)) {
                 tryVerify(() => assistant.showingActions && field.activeFocus && field.text !== field.editText,
                     pacedObservation, "VA2/VA4 SETUP: genuine paced original draft is active before intervention");
@@ -1465,6 +1562,85 @@ TestCase {
                 const stop = item("assistant.stopVisibleAction");
                 verify(stop.visible && stop.enabled && Ui.exposed(stop), "VA FIT SETUP: real appbar Stop is available");
                 mouseClick(stop);
+            }
+            if (data.tag === "manual-override") {
+                compare(originalValue,0.5,"FRESH481 SETUP: original literal editable-project La ADP is 0.5 before any requested edit");
+                tryVerify(() => visible185_outcome(call,requestPreviousIds)!==null
+                    && visible185_outcome("visible481-fresh",requestPreviousIds)!==null
+                    && assistant.canCancel && !assistant.showingActions,pacedObservation,
+                    "FRESH481: old operation really settled and genuine fresh inspection completed in SAME active turn");
+                const old481=JSON.stringify(gui392_json(visible185_outcome(call,requestPreviousIds)));
+                verify(visible185_outcome(call,requestPreviousIds).status!=="edited",
+                    "FRESH481: old pending write NEVER inherits renewed authority or claims success");
+                const fresh481=gui392_json(visible185_outcome("visible481-fresh",requestPreviousIds));
+                verify(Array.isArray(fresh481.parameters),"FRESH481: actual fresh inspect returns its public current parameter inventory");
+                const manual481=fresh481.parameters.filter(row=>row.path===la.path);
+                compare(manual481.length,1,"FRESH481: real fresh inspection resolves the exact original current La path once");
+                compare(manual481[0].value,0.5,"FRESH481: old 0.6 write is absent from genuinely returned inspection");
+                compare(manual481[0].free,true,"FRESH481: real fresh inspection observes independent genuinely committed manual free=true");
+                const expectedManual481=JSON.parse(originalValues).map(row=>row[0]===la.path
+                    ? [row[0],row[1],true,row[3],row[4]] : row);
+                compare(visible185_values(project),JSON.stringify(expectedManual481),
+                    "FRESH481: only actual original user toggle exists before the separate fresh action");
+                compare(visible185_outcome("visible481-later",requestPreviousIds),null,
+                    "FRESH481: later action has NOT been emitted/admitted before public barrier release");
+                verify(Session.project===scope481.project && Session.assistant===scope481.controller && assistant.connected,
+                    "FRESH481: inspection does NOT replace original project/controller/account connection");
+                compare(assistant.connectionLabel,scope481.connection,"FRESH481: original connected account presentation is unchanged");
+                compare(JSON.stringify(gui392_json(Probe.rows(assistant.selectedFiles))),scope481.files,
+                    "FRESH481: inspection never reacquires or changes any original selected input scope");
+                const bound481=Probe.readReferenceFile("original-client-lines.native-emitted.jsonl").trim().split("\n").map(line=>JSON.parse(line));
+                compare(bound481.filter(row=>row.params.callId==="visible481-later").length,0,
+                    "FRESH481: exact owned peer has NOT sent the later write before genuine Usage release");
+                const manualUndo482=project.canUndo;
+                const fields481=[], spellings481=[];
+                function scan481(){
+                    const fields=Ui.itemsWithProperty(Ui.page(window),"item").filter(candidate=>
+                        candidate.objectName.startsWith("parameters.value.") && candidate.item===la
+                        && candidate.visible && Ui.exposed(candidate));
+                    for(const receiver of fields)if(!fields481.some(entry=>entry.receiver===receiver)){
+                        const life=lifetime313(receiver),slot=function(){
+                            verify(alive313(life) && Session.project===project && Session.assistant===assistant
+                                && receiver.item===la,"FRESH481: real later input receipt belongs to SAME live original owner/parameter");
+                            spellings481.push(receiver.text);
+                        };
+                        receiver.textEdited.connect(slot);fields481.push({receiver:receiver,life:life,slot:slot});
+                    }
+                }
+                assistant.actionPointerShown.connect(scan481);assistant.actionPointerMoved.connect(scan481);
+                assistant.actionPointerPressed.connect(scan481);
+                try {
+                    scan481();
+                    assistant.refreshUsage(); // SAME existing public successful-call barrier, no invented control.
+                    tryVerify(() => visible185_outcome("visible481-later",requestPreviousIds)!==null
+                        && !assistant.canCancel && !assistant.showingActions,pacedObservation,
+                        "FRESH481: ONLY separate later action settles normally after fresh retained inspection");
+                    compare(visible185_outcome("visible481-later",requestPreviousIds).status,"edited",
+                        "FRESH481: later original action genuinely succeeds; setup/early refusal is not a positive");
+                    verify(spellings481.includes("0.7"),"FRESH481: later action types exact independent 0.7 into actual current native receiver");
+                    compare(JSON.stringify(writes),JSON.stringify([0.7]),
+                        "FRESH481: only NEW requested 0.7 writes science once; old 0.6 callback never gains fresh stamps");
+                    compare(la.value,0.7,"FRESH481: separate new action commits exact independently requested value");
+                    compare(la.free,true,"FRESH481: separate value action preserves genuine manual free flag");
+                    compare(JSON.stringify(JSON.parse(visible185_values(project)).filter(row=>row[0]!==la.path)),
+                        JSON.stringify(expectedManual481.filter(row=>row[0]!==la.path)),
+                        "FRESH481: later action preserves EVERY unrelated value/free/SU and physical path");
+                    compare(JSON.stringify(gui392_json(visible185_outcome(call,requestPreviousIds))),old481,
+                        "FRESH481: old retired result remains exact after fresh inspection/new action, never blessed by replacement stamps");
+                    Ui.click(this,Probe,window,"appBar.button.undo");
+                    compare(visible185_values(project),JSON.stringify(expectedManual481),
+                        "FRESH481: ONE ordinary Undo removes only genuinely new edit, retaining manual change");
+                    compare(project.canUndo,manualUndo482,
+                        "FRESH482: new action Undo restores original manual-only recorded-history availability, never consumes unrelated prior history");
+                } finally {
+                    assistant.actionPointerShown.disconnect(scan481);assistant.actionPointerMoved.disconnect(scan481);
+                    assistant.actionPointerPressed.disconnect(scan481);
+                    for(const entry of fields481)disconnect313(entry.life,entry.receiver,"textEdited",entry.slot);
+                }
+                console.log("FRESH481_NATIVE",JSON.stringify({oldCall:call,inspection:"visible481-fresh",later:"visible481-later",
+                    freshValue:manual481[0].value,freshFree:manual481[0].free,
+                    actualLaterSpellings:spellings481,sameOwner:Session.project===project,
+                    sameController:Session.assistant===assistant,originalInputs:visible185_inputs(project)===inputs}));
             }
             if (data.tag !== "close-owner") {
                 try {
@@ -2510,7 +2686,6 @@ TestCase {
                 compare(field.text, beforeText, "SL1 QUERY: original text is untouched");
                 compare(field.preeditText, beforePreedit, "SL1 QUERY: query neither starts nor clears composition");
                 compare(target.value, originalValue, "SL1 QUERY: query cannot write a scientific value");
-                assistant.cancel(); // Explicit ordinary cleanup AFTER the inertness assertions.
             } else {
                 if (!gap) {
                     verify(takeovers > 0, "SL1 HELPER: original focused input invokes active-helper manual takeover");
@@ -2525,24 +2700,116 @@ TestCase {
                 retainedText = field.text;
                 retainedPreedit = field.preeditText;
             }
-            tryVerify(() => !assistant.canCancel && !assistant.showingActions, 10000,
-                "SL1: actual original request/helper retires before final observation");
-            rendered();
+            const retirementDeadline480=Date.now()+10000; // Share original post-input retirement allowance across operation and explicit Stop.
+            verify(assistant.canCancel,"ONLYSTOP480: actual ordinary/conflicting focused input leaves the original official turn ACTIVE");
+            if (!gap && !query) {
+                tryVerify(() => visible185_outcome(call,previousIds)!==null && !assistant.showingActions
+                    && assistant.canCancel,Math.max(0,retirementDeadline480-Date.now()),
+                    "ONLYSTOP480: conflicting input settles ONLY its original operation, never the held official turn");
+                verify(visible185_outcome(call,previousIds).status!=="edited",
+                    "ONLYSTOP480: superseded partial original operation cannot invent a completed scientific edit");
+            }
             if (!query) {
-                compare(field.text, retainedText, "SL1: no later helper cleanup/typing overwrites genuine user text");
-                compare(field.preeditText, retainedPreedit, "SL1: original composition survives retirement/rendering");
-                verify(field.activeFocus && window.activeFocusItem === field,
-                    "SL1: original event keeps its original focused target after cancellation/restore");
-                if (!gap) {
-                    const outcome = visible185_outcome(call, previousIds);
-                    verify(outcome !== null && outcome.status !== "edited",
-                        "SL1: cancelled helper never claims its scientific edit completed");
-                }
+                compare(field.text,retainedText,"SL1: before Stop no late helper cleanup overwrites genuine user draft");
+                compare(field.preeditText,retainedPreedit,"SL1: before Stop original composition is retained exactly");
+                verify(field.activeFocus && window.activeFocusItem===field,
+                    "SL1: before Stop original real focused event target retains actual focus");
+            }
+            compare(visible185_values(project),values,
+                "SL1: BEFORE real Stop, focused user input without Return makes NO scientific mutation");
+            const fieldLife482=lifetime313(field),targetLife482=lifetime313(target);
+            const draft482=field.text,preedit482=field.preeditText,undoBefore482=project.canUndo;
+            const lo482=Math.min(field.selectionStart,field.selectionEnd),hi482=Math.max(field.selectionStart,field.selectionEnd);
+            const committedIme482=draft482.slice(0,lo482)+preedit482+draft482.slice(hi482);
+            let lostFocus482=0,terminals482=0,recordStop482=true;
+            const stopWrites482=[];
+            function focus482(){if(recordStop482 && !field.activeFocus)++lostFocus482;}
+            function terminal482(){if(recordStop482)++terminals482;}
+            function write482(){if(recordStop482){
+                verify(alive313(fieldLife482) && alive313(targetLife482) && field.item===target,
+                    "STOP482: actual terminal write observer retains original live field/parameter");
+                stopWrites482.push({value:target.value,text:field.text});
+            }}
+            field.activeFocusChanged.connect(focus482);field.editingFinished.connect(terminal482);
+            target.valueChanged.connect(write482);
+            try {
+            const beforeStop480=Probe.readReferenceFile("original-client-lines.jsonl").trim();
+            verify(beforeStop480.length>0,"ONLYSTOP480: original owned peer trace exists BEFORE explicit Stop");
+            const requests480=beforeStop480.split("\n").map(line=>JSON.parse(line));
+            compare(requests480.filter(row=>row.method==="turn/interrupt").length,0,
+                "ONLYSTOP480: genuine user input emitted ZERO whole-turn interrupts before Stop");
+            // Original inert query can open chat without committing any draft; other rows retain manual focus.
+            if (gap && query) toggle();
+            const stopName480=gap && query ? "assistant.stop" : "assistant.stopVisibleAction";
+            const stop480=item(stopName480), stopLife480=lifetime313(stop480);
+            verify(stop480.visible && stop480.enabled && Ui.exposed(stop480),
+                "ONLYSTOP480: existing sidebar/status AI Stop is a genuine exposed native action");
+            let stopClicks480=0;
+            function stopClicked480(){++stopClicks480;}
+            stop480.clicked.connect(stopClicked480);
+            try {
+                const point480=Ui.clickPoint(stop480);
+                verify(point480!==null,"ONLYSTOP480: exact original Stop has a real native input point");
+                mouseClick(stop480,point480.x,point480.y);
+                compare(stopClicks480,1,"ONLYSTOP480: ONE real native AI Stop click authorizes official interruption");
+            } finally {disconnect313(stopLife480,stop480,"clicked",stopClicked480);}
+            console.log("ONLYSTOP480_NATIVE",JSON.stringify({case:data.tag,stop:stopName480,
+                clicks:stopClicks480,preStopInterrupts:0,preStopRequests:requests480.length,
+                sameOwner:Session.project===project,controller:Session.assistant===assistant}));
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions,Math.max(0,retirementDeadline480-Date.now()),
+                "ONLYSTOP480: original official turn retires AFTER actual explicit AI Stop");
+            rendered();
+
+            verify(alive313(fieldLife482) && alive313(targetLife482) && field.item===target && Session.project===project,
+                "STOP482: ordinary native Stop transition retains original live editor/parameter owner");
+            verify(stopWrites482.length<=1,"STOP482: one ordinary editor terminal cannot duplicate a scientific write");
+            if(query)compare(stopWrites482.length,0,"STOP482: inert query plus Stop cannot commit an assistant partial draft");
+            for(const write of stopWrites482){
+                verify(!query && (lostFocus482>0 || terminals482>0),
+                    "STOP482: post-Stop scientific write needs an ACTUAL ordinary editor focus/terminal event");
+                verify(write.text===draft482 || (preedit482.length>0 && write.text===committedIme482),
+                    "STOP482: only original genuine draft/IME selection replacement may be committed, never stale helper spelling");
+                verify(/^[0-9]+(?:\.[0-9]*)?$/.test(write.text) && Number.isFinite(Number(write.text)),
+                    "STOP482: actual terminal operand is the independently finite decimal user draft");
+                compare(write.value,Number(write.text),"STOP482: ordinary manual terminal commits its exact original numeric operand");
+            }
+            if(query){
+                compare(target.value,originalValue,"STOP482: query cannot authorize committing an assistant draft");
+                verify(field.text===field.value || field.text===field.editText,
+                    "STOP482: explicit Stop restores clean authoritative formatting for non-manual query case");
+                compare(field.preeditText,beforePreedit,"STOP482: inert query and ordinary Stop do not create composition");
+            }else if(lostFocus482===0 && terminals482===0){
+                compare(field.text,draft482,"STOP482: no native terminal means no overwrite of original draft");
+                compare(field.preeditText,preedit482,"STOP482: no native terminal means no loss of original composition");
+            }else if(field.inputMethodComposing){
+                compare(stopWrites482.length,0,"STOP482: still-composing native editor cannot commit science");
+                compare(field.text,draft482,"STOP482: retained native composition preserves its original draft");
+                compare(field.preeditText,preedit482,"STOP482: retained native composition preserves exact preedit");
+            }else verify(field.text===field.value || field.text===field.editText,
+                "STOP482: actual ordinary terminal refreshes the original editor's normal authoritative formatting");
+            const otherValues482=JSON.parse(visible185_values(project)).filter(row=>row[0]!==target.path);
+            compare(JSON.stringify(otherValues482),JSON.stringify(JSON.parse(values).filter(row=>row[0]!==target.path)),
+                "STOP482: ordinary Stop blur cannot alter ANY unrelated scientific value/free/SU");
+            compare(target.free,JSON.parse(values).filter(row=>row[0]===target.path)[0][2],
+                "STOP482: ordinary numeric terminal cannot alter original free flag");
+            recordStop482=false;
+            compare(project.canUndo,undoBefore482,
+                "STOP482: ordinary unrecorded manual terminal preserves original history; no phantom assistant step or unrelated Undo");
+            if(stopWrites482.length)compare(target.value,stopWrites482[0].value,
+                "STOP482: only actually observed original manual terminal value survives, no later stale assistant write");
+            else compare(visible185_values(project),values,"STOP482: no terminal write preserves ALL original science exactly");
+            if(!gap)verify(visible185_outcome(call,previousIds)!==null && visible185_outcome(call,previousIds).status!=="edited",
+                "STOP482: old helper outcome stays non-edited despite ordinary user terminal effects");
+            console.log("STOP482_TERMINAL",JSON.stringify({case:data.tag,lostFocus:lostFocus482,
+                terminals:terminals482,writes:stopWrites482,draft:draft482,preedit:preedit482}));
+            } finally {
+                disconnect313(fieldLife482,field,"activeFocusChanged",focus482);
+                disconnect313(fieldLife482,field,"editingFinished",terminal482);
+                disconnect313(targetLife482,target,"valueChanged",write482);
             }
             if (gap) compare(JSON.stringify(visible185_outcome(call, previousIds)), gapOutcome,
                 "SL1 GAP: already completed original read stays truthful through request retirement");
-            compare(visible185_values(project), values,
-                "SL1: focused user input without Return and cancelled original work make no scientific mutation");
+
             compare(visible185_inputs(project), inputs, "SL1: original observations/sigmas/masks/weights/links survive");
             compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
                 declarations, "SL1: original scientific declarations remain intact");
@@ -4207,7 +4474,8 @@ TestCase {
                     "UX289: every bounded descriptor field retains the exact original selected snapshot");
         compare(Probe.rows(assistant.selectedFiles)[0].pending, false,
             "UX289: only acknowledged selected identity changes its pending presentation role");
-        const rows = Ui.itemsWithProperty(window.contentItem, "rowId").filter(row => row.rowId === original.id);
+        const rows = Ui.itemsWithProperty(window.contentItem, "rowId").filter(row => row.rowId === original.id && row.assistant === assistant
+            && typeof row.resetDetails === "function" && typeof row.copyTechnicalPayload === "function");
         compare(rows.length, 1, "UX289: exactly one actual original user bubble owns the sent attachment presentation");
         const sent = findChild(rows[0], "assistant.sentFile." + selectedId);
         verify(sent !== null && sent.visible, "UX289: exact acknowledged user bubble owns the actual original sent-chip ID");
@@ -4242,7 +4510,8 @@ TestCase {
             compare(JSON.stringify(retained[0].payload), JSON.stringify(completed[0].payload),
                 "UX295: later selection cannot rewrite historical acknowledged descriptor payload");
             const authority471 = canonicalSelected();
-            const snapshotRows471 = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === original.id);
+            const snapshotRows471 = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === original.id && row.assistant === assistant
+            && typeof row.resetDetails === "function" && typeof row.copyTechnicalPayload === "function");
             compare(snapshotRows471.length,1,"UX471: original historical row is re-resolved after actual later-file layout publication");
             gui471_sentSnapshot(snapshotRows471[0], selectedId);
             compare(canonicalSelected(), authority471,
@@ -4312,9 +4581,29 @@ TestCase {
             verify(gui393_under(controls[0],list.footerItem),
                 "GUI471: SAME original pending decision belongs to conversation flow, not reserved composer region");
         }
-        const notices = Ui.itemsWithProperty(popup.contentItem,"objectName").filter(object => object.objectName === "assistant.currentNotice");
-        compare(notices.length,1,"GUI471: original app-owned current notice has ONE public native presentation");
-        verify(gui393_under(notices[0],list.footerItem),"GUI471: app notice is in conversation, never pinned over input");
+        // Owner477: a REAL current Edi error is a chronological chat item, not a footer/fixed strip.
+        // Healthy activity must not require a fake inactive notice instance.
+        if (assistant.lastError.length > 0) {
+            const error477=assistant.lastError;
+            const notices=Ui.itemsWithProperty(popup.contentItem,"objectName").filter(object =>
+                object.objectName === "assistant.currentNotice" && object.visible);
+            compare(notices.length,1,"GUI477: actual active Edi error owns exactly ONE visible current notice");
+            const notice=notices[0];
+            verify(list.contentItem !== null && gui393_under(notice,list.contentItem)
+                && !gui393_under(notice,list.footerItem) && !gui393_under(notice,composer),
+                "GUI477: actual Edi notice belongs to scrolling CHAT CONTENT, never footer/input/fixed overlay");
+            Ui.scrollIntoView(notice);rendered();
+            verify(Ui.rendered(notice) && Ui.text(notice).includes(error477),
+                "GUI480: actual exposed scrolling notice preserves its complete truthful current error without a redundant visible heading");
+            const accessible482=Ui.itemsWithProperty(notice,"readOnly").filter(receiver=>receiver.readOnly
+                && receiver.visible && Ui.rendered(receiver) && receiver.text===error477
+                && receiver.Accessible.role===Accessible.StaticText
+                && receiver.Accessible.name==="Edi notice: "+error477);
+            compare(accessible482.length,1,"GUI482: SAME unique notice owns ONE actual exposed accessible error text receiver");
+            compare(accessible482[0].textFormat,TextEdit.PlainText,"GUI482: complete current Edi error remains literal native text");
+            verify(accessible482[0].selectByMouse,"GUI482: actual Edi notice text remains natively selectable");
+            compare(assistant.lastError,error477,"GUI477: observing original notice never clears or bypasses the error/fence");
+        }
         const trials = Ui.itemsWithProperty(popup.contentItem,"text").filter(object =>
             object.assistant === assistant && object.text === "Refinement trial running · "+assistant.activeJobId);
         compare(trials.length,1,"GUI471: original Trial presentation remains uniquely owned even while inactive");
@@ -4330,7 +4619,8 @@ TestCase {
         const list = item("assistant.messages"), index = Probe.rows(assistant.messages).findIndex(row => row.id === canonical.id);
         verify(index >= 0,"GUI471: canonical original activity has actual native ListView model index");
         list.positionViewAtIndex(index,ListView.Contain);rendered();
-        const rows = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === canonical.id);
+        const rows = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === canonical.id && row.assistant === assistant
+            && typeof row.resetDetails === "function" && typeof row.copyTechnicalPayload === "function");
         compare(rows.length,1,"GUI471: actual rendered original activity delegate is unique");
         const row = rows[0], life = lifetime313(row), owner = Session.project;
         compare(row.assistant,assistant,"GUI471: activity retains original controller");
@@ -5344,7 +5634,8 @@ TestCase {
             compare(JSON.stringify(originalRows[0].payload.files.map(file => ({id: file.id, name: file.name,
                 bytes: file.bytes, textReadable: file.textReadable, format: file.format}))), JSON.stringify(files),
                 "UX356: original completed user snapshot retains every exact submitted source descriptor");
-            const userRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
+            const userRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id && row.assistant === assistant
+            && typeof row.resetDetails === "function" && typeof row.copyTechnicalPayload === "function");
             compare(userRows.length, 1, "UX356: exact original user row owns short-message sent chip presentation");
             for (const file of files) ux356_chip(userRows[0], file, true);
             verify(!assistant.contextConsentRequired, "UX356: completed approved current scope does not request repeat consent");
@@ -5378,7 +5669,8 @@ TestCase {
                 "UX358: second acknowledged user snapshot retains every exact corresponding submitted source descriptor");
             verify(retained.every(row => Probe.rows(assistant.messages).some(actual => JSON.stringify(actual) === row)),
                 "UX356: ordinary repeated work retains every completed original message unchanged");
-            const retainedRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id);
+            const retainedRows = Ui.itemsWithProperty(popup.contentItem, "rowId").filter(row => row.rowId === original.id && row.assistant === assistant
+            && typeof row.resetDetails === "function" && typeof row.copyTechnicalPayload === "function");
             compare(retainedRows.length, 1, "UX356: original ID is re-resolved after later delegate/layout publication");
             ux356_chip(retainedRows[0], files[0], true);
             ux356_chip(retainedRows[0], files[1], true);
@@ -5756,11 +6048,12 @@ TestCase {
             for (const pair of bindings) disconnect313(lives[3],button,pair[0],pair[1]);
         }
     }
-    function gui392_signIn() {
+    function gui392_signIn(showDetails476) {
         if (assistant.connected) return;
         Ui.click(this, Probe, window, "assistant.connection");
         const dialog = ux356_dialog();
         tryCompare(dialog, "opened", true, 2000, "GUI392: actual header Sign in opens original provider dialog");
+        if (showDetails476 === true) gui398_details(dialog); // Existing original exact-preview observer, SAME disconnected offer.
         gui470_standardAction(dialog.standardButton(Dialog.Ok), dialog, "sign-in");
         report187_ready("gui392-genuine-header-signin", false);
         tryCompare(dialog, "visible", false, 2000, "GUI398: original ready sign-in dialog genuinely finishes native exit before reuse");
@@ -6424,7 +6717,7 @@ TestCase {
         console.log("GUI393_CHOICE", JSON.stringify({tag: data.tag, model: assistant.selectedModel, effort: assistant.selectedEffort}));
     }
     function test_gui393_first_delivery_eye_clear() {
-        const before = gui392_setup(); gui392_signIn();
+        const before = gui392_setup(); gui392_signIn(true);
         compare(assistant.contextApprovalBlocked, false,
             "CONSENT464 SETUP: original healthy native controller has no retained outcome fence");
         const account = JSON.stringify(gui392_json(Probe.rows(assistant.models)));
@@ -6476,6 +6769,7 @@ TestCase {
             Ui.click(this, Probe, window, "assistant.send");
             tryCompare(dialog, "opened", true, 2000, "GUI404: actual Send directly opens original required consent");
             gui398_nativeDialog(dialog);
+            gui398_details(dialog); // Once in original first connected approval offer, before its genuine Cancel.
             compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(assistant.contextPreview)),
                 "GUI404: actual consent discloses the SAME complete original current scope");
             compare(JSON.stringify(gui392_json(Probe.rows(assistant.messages))), historyBefore,
@@ -6533,6 +6827,90 @@ TestCase {
             compare(selected.length, 1, "GUI393: ACK retains actual canonical source authority before Clear");
             compare(selected[0].id, originalFile.id, "GUI393: actual original ACK preserves exact source ID");
             compare(selected[0].pending, false, "GUI393: actual matching ACK consumes pending source presentation");
+            // GUI475: native leaf-hover and plain-text Copy on the SAME actual acknowledged user row.
+            {
+                const list475 = item("assistant.messages");
+                const record475 = Probe.rows(assistant.messages).filter(row => row.id === originalUserId);
+                compare(record475.length,1,"GUI475: actual matching ACK retains ONE original user identity");
+                compare(record475[0].text,originalText,"GUI475: immutable expected copy text is original independently typed literal");
+                compare(record475[0].status,"completed","GUI475: sent-copy witness begins only AFTER actual original ACK");
+                const canonical475 = JSON.stringify(gui392_json(record475[0]));
+                const index475 = Probe.rows(assistant.messages).findIndex(row => row.id === originalUserId);
+                list475.positionViewAtIndex(index475,ListView.Contain);rendered();
+                const rows475 = Ui.itemsWithProperty(popup.contentItem,"rowId").filter(row => row.rowId === originalUserId && row.assistant === assistant
+            && typeof row.resetDetails === "function" && typeof row.copyTechnicalPayload === "function");
+                compare(rows475.length,1,"GUI475: actual rendered user-row receiver is unique after native positioning");
+                const row475=rows475[0], owner475=Session.project, controller475=Session.assistant;
+                const rowLife475=lifetime313(row475);
+                const bodies475=Ui.itemsWithProperty(row475,"readOnly").filter(field => field.readOnly
+                    && field.selectByMouse && field.text === originalText && typeof field.positionToRectangle === "function");
+                compare(bodies475.length,1,"GUI475: original exact user text has ONE real selectable native TextEdit");
+                const body475=bodies475[0], copies475=Probe.objectsWithProperty(row475,"objectName")
+                    .filter(control => control.objectName === "assistant.user.copyText");
+                compare(copies475.length,1,"GUI475: SAME original sent row owns ONE public native Copy target");
+                const copy475=copies475[0], copyLife475=lifetime313(copy475), bodyLife475=lifetime313(body475);
+                const bubbles475=Ui.itemsWithProperty(row475,"radius").filter(box => box.visible && box.radius>0
+                    && String(box.color) === String(EaStyle.Colors.contentBackground));
+                compare(bubbles475.length,1,"GUI475: actual user text has ONE original rounded native bubble surface");
+                const bubble475=bubbles475[0];
+                ux356_fullyExposed(body475);ux356_fullyExposed(bubble475);
+                verify(copy475.width>0 && copy475.height>0 && !copy475.activeFocus,
+                    "GUI475: original completed row reserves a real copy extent without fabricated keyboard focus");
+                const geometry475=[rect(row475),rect(body475),rect(bubble475),rect(copy475)];
+                const rb475=geometry475[2], rc475=geometry475[3];
+                verify(rc475[0]>rb475[0]+rb475[2],"GUI475: native Copy is OUTSIDE user bubble with a positive actual gap");
+                function current475() {
+                    verify(alive313(rowLife475) && alive313(copyLife475) && alive313(bodyLife475)
+                        && Session.project===owner475 && Session.assistant===controller475
+                        && row475.rowId===originalUserId && row475.assistant===controller475,
+                        "GUI475: actual native hover/copy retains original living row/controller/project");
+                    [row475,body475,bubble475,copy475].forEach((object,index)=>sameRect(rect(object),geometry475[index]));
+                    compare(JSON.stringify(gui392_json(Probe.rows(assistant.messages).find(row=>row.id===originalUserId))),canonical475,
+                        "GUI475: pointer and clipboard actions preserve whole immutable original acknowledged row");
+                }
+                const outside475=Ui.clickPoint(editor);
+                verify(outside475!==null,"GUI475: original composer supplies genuine outside-bubble pointer destination");
+                const outsideScene475=editor.mapToItem(window.contentItem,outside475.x,outside475.y);
+                verify(outsideScene475.y>rb475[1]+rb475[3] || outsideScene475.y<rb475[1]
+                    || outsideScene475.x<rb475[0] || outsideScene475.x>rc475[0]+rc475[2],
+                    "GUI475: idle pointer really leaves original bubble AND copy rail");
+                mouseMove(editor,outside475.x,outside475.y);rendered();current475();
+                verify(!copy475.visible || copy475.opacity===0,"GUI475: original user Copy is hidden at genuine pointer-idle outside state");
+                // Existing native TextEdit layout identifies first visible character, not bubble padding.
+                const cursor475=body475.positionToRectangle(0), next475=body475.positionToRectangle(1);
+                verify(cursor475.height>0 && next475.x>cursor475.x && Math.abs(cursor475.y-next475.y)<0.5,
+                    "GUI475: original literal starts in one actual laid-out native text line with positive character advance");
+                const inkPoint475={x:(cursor475.x+next475.x)/2,y:cursor475.y+cursor475.height/2};
+                verify(inkPoint475.x>=0 && inkPoint475.x<body475.width && inkPoint475.y>=0 && inkPoint475.y<body475.height,
+                    "GUI475: native hover targets first-character TextEdit descendant region, NEVER blank bubble padding");
+                mouseMove(body475,inkPoint475.x,inkPoint475.y);rendered();current475();
+                verify(copy475.visible && copy475.opacity===1,"GUI475: real TEXTEDIT LEAF hover reveals SAME reserved user Copy");
+                const gapScene475={x:(rb475[0]+rb475[2]+rc475[0])/2,y:rc475[1]+rc475[3]/2};
+                verify(gapScene475.x>rb475[0]+rb475[2] && gapScene475.x<rc475[0],
+                    "GUI475: native route crosses the ACTUAL blank gap between original bubble and Copy");
+                const gap475=window.contentItem.mapToItem(row475,gapScene475.x,gapScene475.y);
+                verify(gap475.x>=0 && gap475.x<row475.width && gap475.y>=0 && gap475.y<row475.height,
+                    "GUI475: original copy-gap pointer stays in SAME bounded sent-user row");
+                mouseMove(row475,gap475.x,gap475.y);rendered();current475();
+                verify(copy475.visible && copy475.opacity===1,"GUI475: genuine gap traversal retains SAME revealed Copy target without geometry jump");
+                const point475=Ui.clickPoint(copy475);
+                verify(point475!==null,"GUI475: actual revealed Copy owns a genuine unclipped native target");
+                mouseMove(copy475,point475.x,point475.y);rendered();current475();
+                verify(copy475.visible && copy475.opacity===1,"GUI475: original real copy-target descendant hover retains reveal");
+                let clicks475=0;
+                const clicked475=function(){current475();++clicks475;};
+                try {
+                    copy475.clicked.connect(clicked475);
+                    status410Clipboard.text="";
+                    gui392_button(copy475,popup);status410Clipboard.paste();
+                    compare(clicks475,1,"GUI475: ONE original native user Copy clicked receipt, never synthetic/repeated input");
+                    compare(status410Clipboard.text,originalText,"GUI475: actual clipboard is EXACT original plain user text, not metadata/JSON/files");
+                    current475();
+                    console.info("GUI475_USER_COPY",JSON.stringify({row:originalUserId,text:originalText,clicks:clicks475,
+                        geometry:geometry475,inkPoint:[inkPoint475.x,inkPoint475.y],gap:[gap475.x,gap475.y],
+                        owner:String(owner475),receiver:String(copy475)}));
+                } finally {disconnect313(copyLife475,copy475,"clicked",clicked475);}
+            }
             gui404_table(oldIds, markdown);
             console.log("GUI404_APPROVAL", JSON.stringify({user: originalUserId, text: originalText,
                 files: selected.map(file => ({id:file.id,name:file.name,bytes:file.bytes,textReadable:file.textReadable,format:file.format})),
@@ -7161,7 +7539,8 @@ TestCase {
         compare(Probe.rows(assistant.messages).filter(row => row.id === rowId && row.kind === "assistant"
             && row.status === "completed" && row.text === markdown).length, 1,
             "GUI405: SAME exact original completed row survives genuine layout before unique native lookup");
-        const delegates = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(object => object.rowId === rowId
+        const delegates = Ui.itemsWithProperty(Ui.windowRoot(window), "rowId").filter(object => object.rowId === rowId && object.assistant === assistant
+            && typeof object.resetDetails === "function" && typeof object.copyTechnicalPayload === "function"
             && object.kind === "assistant" && object.status === "completed");
         compare(delegates.length, 1, "GUI404: exact original response has ONE current native message delegate");
         const bodies = Ui.itemsWithProperty(delegates[0], "readOnly").filter(object => object.visible

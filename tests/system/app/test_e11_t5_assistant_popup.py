@@ -218,6 +218,12 @@ def visible187_script(case):
         if case == 'unsupported-values':
             values.append({'path': other, 'value': 0.7})
         calls.append(call('set_parameters', identifier, values=values))
+    if case == 'manual-override':
+        calls += [
+            call('inspect_project', 'visible481-fresh'),
+            call('set_parameters', 'visible481-later',
+                 values=[{'path': path, 'value': 0.7}]),
+        ]
     return [calls]
 
 
@@ -231,6 +237,9 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     config = json.loads(config_path.read_text(encoding='utf-8'))
     config.pop('report_page_reply')
     config.update(scenario='native:script', native_turn_calls=visible187_script(case))
+    if case == 'manual-override':
+        config['relation246_wait_for_usage'] = ['visible481-fresh']
+        environment['EDI_ACCEPTANCE_REFERENCE'] = str(Path(config['trace']).parent.resolve())
     config_path.write_text(json.dumps(config), encoding='utf-8')
     original_config = config_path.read_bytes()
     argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
@@ -274,6 +283,11 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     assert len(starts) == 1 and starts[0]['params']['clientUserMessageId'], (
         'VA: one genuinely admitted original input owns native authority without replay'
     )
+    interrupts480 = [row for row in requests if row.get('method') == 'turn/interrupt']
+    if case != 'close-owner':
+        assert len(interrupts480) == (1 if case == 'fit-stop' else 0), (
+            'ONLYSTOP480: ordinary/other-window/conflicting input sends NO whole-turn interrupt; explicit status AI Stop sends ONE'
+        )
     assert not any(row.get('method') in {'account/login/start', 'account/logout'}
                    for row in requests), (
         'VA: native input cannot repair a lost account through another login/logout'
@@ -281,6 +295,17 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     responses = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl')
                  .read_text().splitlines()]
     expected_calls = config['native_turn_calls'][0]
+    if case == 'fit-stop':
+        originals482 = [row['original']['params'] for row in responses
+                        if row['original']['params']['callId'] == 'visible185-action-fit-stop']
+        assert len(originals482) == 1, 'STOP482: exact original fit RPC supplies independent scope'
+        original_scope482 = originals482[0]
+        assert all(type(original_scope482.get(key)) is str and original_scope482[key]
+                   for key in ('threadId', 'turnId')), 'STOP482: original fit scope is nonempty typed identity'
+        assert interrupts480[0]['params'] == {key: original_scope482[key]
+                                             for key in ('threadId', 'turnId')}, (
+            'STOP482: sole actual status Stop interrupt targets EXACT original thread/turn, no missing/wrong/extra scope'
+        )
     if case == 'close-owner':
         assert 1 <= len(responses) <= len(expected_calls), (
             'VA4: actual owner retirement may revoke the old call, never duplicate it'
@@ -302,6 +327,26 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
         )
         assert observed['id'] not in envelopes, 'VA: each original reverse RPC is answered once'
         envelopes.add(observed['id'])
+        if case == 'manual-override':
+            actual481 = response['response']['result']
+            body481 = json.loads(actual481['contentItems'][0]['text'])
+            if original['call_id'] == 'visible185-action-manual-override':
+                assert actual481['success'] is False and body481['status'] != 'edited', (
+                    'FRESH481: exact old pending numeric write is refused/partial, never silently renewed'
+                )
+            elif original['call_id'] == 'visible481-fresh':
+                assert actual481['success'] is True and isinstance(body481['parameters'], list), (
+                    'FRESH481: fresh inspection really returns current parameter facts, not a refusal positive'
+                )
+                manual481 = [row for row in body481['parameters']
+                             if row['path'] == 'structure.atom_sites[La].adp_iso']
+                assert len(manual481) == 1 and manual481[0]['free'] is True and manual481[0]['value'] == 0.5, (
+                    'FRESH481: actual wire inspection contains literal fixture 0.5 and genuine manual free=true'
+                )
+            elif original['call_id'] == 'visible481-later':
+                assert actual481['success'] is True and body481['status'] == 'edited', (
+                    'FRESH481: only separate newly requested 0.7 action succeeds after fresh inspection'
+                )
         content = response['response']['result']['contentItems']
         assert len(content) == 1 and content[0]['type'] == 'inputText', (
             'VA: actual host outcome uses the pinned typed original response channel'
@@ -314,6 +359,21 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
                 decoded['status'] in {'refused', 'unavailable'}
                 and isinstance(decoded.get('message'), str) and decoded['message']
             ), 'VA: actual before-write failure is truthful, bounded and never a success'
+
+    if case == 'manual-override':
+        events481 = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text().splitlines()]
+        waits481 = [row for row in events481 if row['kind'] == 'relation246-waiting-after-edit']
+        releases481 = [row for row in events481 if row['kind'] == 'relation246-release-after-observed-settlement']
+        assert [row['call_id'] for row in waits481] == ['visible481-fresh'] and (
+            [row['call_id'] for row in releases481] == ['visible481-fresh']
+        ), 'FRESH481: exactly ONE successful original inspection owns the unchanged public barrier'
+        reads481 = {row['id'] for row in requests if row.get('method') == 'account/rateLimits/read'}
+        assert releases481[0]['read_id'] in reads481, (
+            'FRESH481: genuine original Usage read releases the later action, no fabricated callback'
+        )
+        assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists(), (
+            'FRESH481: no old callback/envelope is replayed or adopted as new write authority'
+        )
 
 
 DRAFT226_CASES = [
@@ -616,7 +676,8 @@ def test_sl1_233_original_focused_input_and_request_retirement(case, tmp_path): 
     if not gap:
         call['arguments']['values'] = [{'path': 'structure.atom_sites[La].adp_iso', 'value': 0.6}]
     config.update(scenario='native:script', native_turn_calls=[[call]],
-                  native_hold_after_calls=gap)
+                  native_hold_after_calls=True)
+    environment['EDI_ACCEPTANCE_REFERENCE'] = str(Path(config['trace']).parent.resolve())
     config_path.write_text(json.dumps(config), encoding='utf-8')
     original_config = config_path.read_bytes()
     fixture = ROOT / 'tests/fixtures/e04_t1/editable-project'
@@ -666,13 +727,28 @@ def test_sl1_233_original_focused_input_and_request_retirement(case, tmp_path): 
         'SL1: original input retirement cannot repair/reset auth'
     )
     interrupts = [request for request in requests if request.get('method') == 'turn/interrupt']
-    assert len(interrupts) == 1 if gap else len(interrupts) <= 1, (
-        'SL1: held request needs one interrupt; helper must not duplicate control after terminal'
+    assert len(interrupts) == 1, (
+        'ONLYSTOP480: each held original turn has exactly ONE interrupt authorized by its genuine sidebar/status AI Stop'
     )
+    stop_receipts480 = [json.loads(line.split('ONLYSTOP480_NATIVE ', 1)[1])
+                        for line in output.splitlines() if 'ONLYSTOP480_NATIVE ' in line]
+    assert len(stop_receipts480) == 1 and stop_receipts480[0]['case'] == case and (
+        stop_receipts480[0]['clicks'] == 1 and stop_receipts480[0]['preStopInterrupts'] == 0
+        and stop_receipts480[0]['sameOwner'] is True
+        and stop_receipts480[0]['controller'] is True
+        and stop_receipts480[0]['stop'] == ('assistant.stop' if case == 'gap-query'
+                                           else 'assistant.stopVisibleAction')
+    ), 'ONLYSTOP480: SAME original native case proves zero prior wire interrupts and one explicit Stop input'
     replies = [json.loads(line) for line in Path(config['trace']).with_suffix(
         '.native-replies.jsonl').read_text(encoding='utf-8').splitlines()]
     assert len(replies) == 1, 'SL1: exact original reverse RPC settles once'
     original, response = replies[0]['original'], replies[0]['response']
+    assert all(type(original['params'].get(key)) is str and original['params'][key]
+               for key in ('threadId', 'turnId')), 'STOP482: independently captured original reverse RPC scope is nonempty and typed'
+    assert interrupts[0]['params'] == {key: original['params'][key]
+                                     for key in ('threadId', 'turnId')}, (
+        'STOP482: sole sidebar/status Stop interrupt targets original RPC thread/turn EXACTLY, never the permissive peer default'
+    )
     assert original['params']['tool'] == call['tool']
     assert original['params']['callId'] == call['call_id']
     assert original['params']['arguments'] == call['arguments']
@@ -1387,7 +1463,8 @@ def test_ux289_real_main_activity_and_folder_presentation(case, tmp_path):
     ), 'UX289: real original activity/scope controls and identity assertions must execute\n' + output
     assert original == config_path.read_bytes(), 'UX289: actual original peer configuration remains immutable'
     assert not any(('Binding loop detected' in line and any(name in line for name in (
-        'assistantHomeFocusCovered', 'implicitHeight', 'AssistantWorking', 'AssistantComposer'
+        'assistantHomeFocusCovered', 'implicitHeight', 'AssistantWorking', 'AssistantComposer',
+        'AssistantMessage.qml', 'AssistantConnectionDialog.qml'
     ))) or ('Cannot assign [undefined]' in line and any(name in line for name in (
         'AssistantWorking', 'AssistantPanel', 'AssistantComposer', 'NativeCwlImportDialog'
     ))) for line in output.splitlines()), 'UX289: covered real presentation paths emit no named Qt loop/undefined warning\n' + output

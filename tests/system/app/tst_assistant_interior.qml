@@ -398,54 +398,72 @@ TestCase {
         compareRetainedPayload(row.payload, original);
     }
     function test_activity_description_uses_original_structured_source_data() {
-        // Pinned0.162.1 CommandAction: read has name/path; list/search metadata
-        // may be absent/null; none supplies semantic intent. Owner115 rejects action/object
-        // repetition as invented purpose: only explicit original goal metadata supplies a suffix.
+        // Original pinned CommandAction read(name/path), listFiles(path), search(query/path), unknown.
+        // These literal UI fixtures do not claim an actual shell execution or admitted Session transcript.
         return [
-            {tag: "read-name", action: {type: "read", name: "original.cif", path: "/owned/original.cif"}, evidence: "original.cif", category: /read/i},
-            {tag: "list-path", action: {type: "listFiles", path: "/owned/original-series"}, evidence: "original-series", category: /list/i},
-            {tag: "search-query", action: {type: "search", query: "peak position", path: null}, evidence: "peak position", category: /search/i},
-            {tag: "opaque-command", action: {type: "unknown"}, evidence: "", category: /command|ran/i},
-            {tag: "explicit-purpose", action: {type: "read", name: "original.cif", path: "/owned/original.cif"}, purpose: "Inspect profile inputs", evidence: "Inspect profile inputs", category: /read/i},
-            {tag: "explicit-description", action: {type: "search", query: "peak position", path: null}, description: "Locate lattice setting", evidence: "Locate lattice setting", category: /search/i}
+            {tag: "read-name", action: {type: "read", name: "SKILL.md", path: "/owned/.agents/skills/project-assistance/SKILL.md"},
+                command: "sed -n '1,40p' /owned/.agents/skills/project-assistance/SKILL.md", expected: "Read assistant workflow instructions", category: /read/i},
+            {tag: "list-path", action: {type: "listFiles", path: "/owned/original-series"}, category: /list/i},
+            {tag: "search-query", action: {type: "search", query: "peak position", path: null}, category: /search/i},
+            {tag: "opaque-command", action: {type: "unknown"},
+                command: "cat /owned/.agents/skills/project-assistance/SKILL.md /owned/input.edi", category: /^(?:run|execute)(?:\s+an?)?\s+(?:(?:shell\s+)?command|operation)$/i},
+            {tag: "explicit-purpose", action: {type: "read", name: "original.cif", path: "/owned/original.cif"},
+                purpose: "Inspect profile inputs", description: "A lower-priority conflicting description", expected: "Inspect profile inputs", category: /read/i},
+            {tag: "explicit-description", action: {type: "search", query: "peak position", path: null},
+                description: "Locate lattice setting", expected: "Locate lattice setting", category: /search/i}
         ];
     }
     function test_activity_description_uses_original_structured_source(data) {
         const original = commandItem("completed", 0);
-        original.command = "printf 'read files search web scientific fit succeeded'";
+        original.command = data.command !== undefined ? data.command : "printf 'read files search web scientific fit succeeded'";
         original.commandActions = [Object.assign({command: original.command}, data.action)];
         if (data.purpose !== undefined) original.purpose = data.purpose;
         if (data.description !== undefined) original.description = data.description;
         const row = createTemporaryObject(message, window.contentItem, {
             kind: "activity", text: original.command, status: "completed", payload: original
         });
-        verify(row !== null, "DESC1: actual activity presents independent structured metadata");
+        verify(row !== null, "DESC1: actual activity presents independent original structured metadata");
         renderedRow(row);
-        const control = commandDisclosure(row);
-        const summary = control.text;
-        const dot = summary.indexOf("·");
-        const hasPurpose = data.purpose !== undefined || data.description !== undefined;
-        if (hasPurpose) {
-            verify(dot > 0 && summary.slice(dot + 1).trim().length > 0,
-                "DESC1: explicit original semantic goal supplies a short description after the dot");
-            verify(summary.slice(dot + 1).trim().includes(data.evidence),
-                "DESC1: the visible goal is independently supplied purpose, not an action/object echo");
-        } else {
-            compare(dot, -1, "DESC1: absent semantic purpose shows category/status alone without fabricated suffix");
-        }
-        verify(data.category.test(dot < 0 ? summary : summary.slice(0, dot)),
-            "DESC1: optional purpose never replaces the truthful original activity category");
-        verify(!summary.includes("scientific fit succeeded"),
-            "DESC1: opaque shell words cannot manufacture a scientific-success description");
-        if (data.tag === "opaque-command")
-            verify(!/read.*file|search.*web|web.*search/i.test(summary),
-                "DESC1: missing purpose metadata cannot turn opaque shell text into a different action");
-        verify(!Ui.text(row).includes(original.aggregatedOutput),
-            "DESC1: compact description does not replace collapsed literal-output disclosure");
+        const control = commandDisclosure(row), summary = control.text;
+        verify(typeof summary === "string" && summary.trim().length>0 && !/[\r\n]/.test(summary),
+            "GUI477: actual collapsed activity has a nonempty short single-line HUMAN purpose");
+        if (data.expected !== undefined) compare(summary,data.expected,
+            "GUI477: independent declared purpose wins over description/action; known workflow read has exact human purpose");
+        if (data.purpose === undefined && data.description === undefined)
+            verify(data.category.test(summary),"GUI477: absent semantic intent keeps truthful structured action/unknown verb category");
+        for (const raw of [original.command,"printf", "sed -n", "cat ", "scientific fit succeeded"])
+            verify(!summary.includes(raw),"GUI477: collapsed human purpose NEVER exposes raw command prefix or fabricates a scientific outcome");
+        if (data.tag === "opaque-command") verify(!/read.*file|search.*web|web.*search/i.test(summary),
+            "DESC1: unknown opaque shell words cannot invent file-read or web-search purpose");
+        const details478 = Ui.itemsWithProperty(row,"objectName").filter(item => item.objectName === "assistant.command.details");
+        compare(details478.length,1,"GUI478: SAME original command owns ONE native details viewport");
+        verify(!control.checked && !details478[0].visible && !Ui.rendered(details478[0]),
+            "GUI478: collapsed original command details have NO visible native exposure");
+        // Text/Label/TextEdit paint; a Rectangle/Column retaining a text role does not.
+        const painted478 = Ui.itemsWithProperty(row,"textFormat").filter(item =>
+            typeof item.text === "string" && item.font !== undefined && item.visible && Ui.rendered(item));
+        verify(painted478.some(item => item.text === summary),
+            "GUI478: actual human header is present in a rendered native text control");
+        for (const raw of [original.command,original.aggregatedOutput])
+            verify(painted478.every(item => !item.text.includes(raw)),
+                "GUI478: NO actually painted collapsed header/text control exposes retained literal command/output");
         mouseClick(control);
         renderedRow(row);
         literalCommandDetails(row, original);
         compareRetainedPayload(row.payload, original);
+        if (data.tag === "read-name") {
+            const unrelated=commandItem("completed",0);
+            unrelated.command="cat /owned/unrelated/SKILL.md";
+            unrelated.commandActions=[{type:"read",name:"SKILL.md",path:"/owned/unrelated/SKILL.md",command:unrelated.command}];
+            const other=createTemporaryObject(message,window.contentItem,{
+                kind:"activity",text:unrelated.command,status:"completed",payload:unrelated});
+            verify(other!==null,"GUI477: same basename outside known public workflow uses SAME real native delegate");
+            renderedRow(other);
+            const generic=commandDisclosure(other).text;
+            verify(generic!==data.expected && /read/i.test(generic) && !generic.includes("cat "),
+                "GUI477: arbitrary SKILL.md basename cannot invent project-assistance workflow identity/purpose");
+            compareRetainedPayload(other.payload,unrelated);
+        }
     }
     function hasCompleteUnicodeScalars(text) {
         for (let index = 0; index < text.length; ++index) {
