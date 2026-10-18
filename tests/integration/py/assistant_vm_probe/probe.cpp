@@ -30,6 +30,7 @@
 #include <QMetaProperty>
 #endif
 #include <QPointer>
+#include <QQmlEngine>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QUuid>
@@ -267,7 +268,23 @@ int main(int argc,char** argv) {
         if(codex_mode)return std::make_unique<edi_app::Session>(nullptr);
         return std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     };
-    auto session=make_session();
+    std::unique_ptr<QQmlEngine> engine;
+    QPointer<edi_app::Session> session; // Observes the actual engine-owned incarnation only.
+    const auto destroy_session=[&] {
+        session.clear(); // Destruction callbacks cannot observe retiring A as current.
+        engine.reset();
+    };
+    const auto create_session=[&] {
+        if(session || engine)throw std::invalid_argument("retire the real host before composition");
+        auto next_engine=std::make_unique<QQmlEngine>();
+        auto owned=make_session(); // Preserve the original default/fixture dependency branch.
+        QPointer<edi_app::Session> next=owned.get();
+        edi_app::configure_engine(*next_engine,std::move(owned));
+        // Local next_engine owns any transferred Session if configuration throws.
+        if(!next)throw std::runtime_error("actual Session retired during host composition");
+        engine=std::move(next_engine);
+        session=next; // Publish B only after its own complete host composition succeeds.
+    };
 #ifdef EDI_TEST_WORKFLOW_CONTEXT
     PublicTransport304 public_transport304;
 #endif
@@ -289,7 +306,7 @@ int main(int argc,char** argv) {
     QString notice_intent;
     Object notice_barrier;
     auto observe=[&] {
-        QObject::connect(session.get(),&edi_app::Session::projectChanged,session.get(),[&] {
+        QObject::connect(session.data(),&edi_app::Session::projectChanged,session.data(),[&] {
             if(!arm_notice_barrier || !session || !session->hasProject())return;
             arm_notice_barrier=false;
             notice_barrier={{"intent",notice_intent},{"project_present",true},
@@ -315,14 +332,13 @@ int main(int argc,char** argv) {
         });
 #ifdef EDI_TEST_SELECTED_FILES
         QObject::connect(session->assistant(), &edi_app::AssistantViewModel::fileSelectionRetired,
-            session.get(), [&](const QString& id){retired_selections.push_back(id);});
+            session.data(), [&](const QString& id){retired_selections.push_back(id);});
 #endif
         if(codex_mode && session->assistant()->metaObject()->indexOfSignal("usageChanged()")>=0)
             QObject::connect(session->assistant(),SIGNAL(usageChanged()),&report_urls,SLOT(changed()));
         QObject::connect(session->assistant()->messages(),&edi_app::RowTableModel::countChanged,
-            session.get(),[&]{++model_changes;});
+            session.data(),[&]{++model_changes;});
     };
-    observe();
     auto archive=[&]()->Object {
         QFile file(history);QByteArray bytes;
         if(QFileInfo(history).isFile() && file.open(QIODevice::ReadOnly))bytes=file.readAll();
@@ -624,6 +640,10 @@ int main(int argc,char** argv) {
             throw std::invalid_argument("only genuine fixture transport callbacks may be queued");
         fixture.dispatch(value);
     };
+    // All receipt/callback storage exists before any live composition and outlives its teardown.
+    const auto cleanup_session=qScopeGuard([&] { destroy_session(); });
+    create_session();
+    observe();
     std::string line;
     while(std::getline(std::cin,line)) {
         try {
@@ -660,17 +680,17 @@ int main(int argc,char** argv) {
                     Q_ARG(QString,input["href"].toString()))}};
             } else if(codex_mode && op=="save_as_begin") {
                 QString intent;
-                const bool invoked=QMetaObject::invokeMethod(session.get(),"beginSaveAs",Qt::DirectConnection,
+                const bool invoked=QMetaObject::invokeMethod(session.data(),"beginSaveAs",Qt::DirectConnection,
                     Q_RETURN_ARG(QString,intent));
                 result={{"invoked",invoked},{"intent",intent}};
             } else if(codex_mode && op=="save_as_complete") {
                 bool accepted=false;
-                const bool invoked=QMetaObject::invokeMethod(session.get(),"completeSaveAs",Qt::DirectConnection,
+                const bool invoked=QMetaObject::invokeMethod(session.data(),"completeSaveAs",Qt::DirectConnection,
                     Q_RETURN_ARG(bool,accepted),Q_ARG(QString,input["intent"].toString()),
                     Q_ARG(QUrl,QUrl::fromLocalFile(input["parent"].toString())),Q_ARG(QString,input["leaf"].toString()));
                 result={{"invoked",invoked},{"accepted",accepted}};
             } else if(codex_mode && op=="save_as_cancel") {
-                result={{"invoked",QMetaObject::invokeMethod(session.get(),"cancelSaveAs",Qt::DirectConnection,
+                result={{"invoked",QMetaObject::invokeMethod(session.data(),"cancelSaveAs",Qt::DirectConnection,
                     Q_ARG(QString,input["intent"].toString()))}};
             }
             else if(op=="select_skill") {
@@ -688,7 +708,7 @@ int main(int argc,char** argv) {
                 const auto draft=input["text"].toString();
                 if(draft.isEmpty())throw std::invalid_argument("original admitted draft required");
                 terminal_selection_connection=QObject::connect(session->assistant(),
-                    &edi_app::AssistantViewModel::stateChanged,session.get(),[&,draft] {
+                    &edi_app::AssistantViewModel::stateChanged,session.data(),[&,draft] {
                     auto* vm=session->assistant();
                     if(!terminal_selection_armed || !vm->connected() || vm->state()!="idle")return;
                     QFile file(history);if(!file.open(QIODevice::ReadOnly))return;
@@ -769,21 +789,21 @@ int main(int argc,char** argv) {
                 };
                 const auto type=queued?Qt::QueuedConnection:Qt::DirectConnection;
                 if(signal=="conversationRetired")retirement_connection=QObject::connect(session->assistant(),
-                    &edi_app::AssistantViewModel::conversationRetired,session.get(),callback,type);
+                    &edi_app::AssistantViewModel::conversationRetired,session.data(),callback,type);
                 else if(signal=="fileSelectionRetired")retirement_connection=QObject::connect(session->assistant(),
-                    &edi_app::AssistantViewModel::fileSelectionRetired,session.get(),callback,type);
+                    &edi_app::AssistantViewModel::fileSelectionRetired,session.data(),callback,type);
                 else if(signal=="rowsAboutToBeRemoved")retirement_connection=QObject::connect(session->assistant()->messages(),
-                    &QAbstractItemModel::rowsAboutToBeRemoved,session.get(),callback,type);
+                    &QAbstractItemModel::rowsAboutToBeRemoved,session.data(),callback,type);
                 else if(signal=="rowsRemoved")retirement_connection=QObject::connect(session->assistant()->messages(),
-                    &QAbstractItemModel::rowsRemoved,session.get(),callback,type);
+                    &QAbstractItemModel::rowsRemoved,session.data(),callback,type);
                 else if(signal=="countChanged")retirement_connection=QObject::connect(session->assistant()->messages(),
-                    &edi_app::RowTableModel::countChanged,session.get(),callback,type);
+                    &edi_app::RowTableModel::countChanged,session.data(),callback,type);
                 else if(signal=="rowsAboutToBeInserted")retirement_connection=QObject::connect(session->assistant()->messages(),
-                    &QAbstractItemModel::rowsAboutToBeInserted,session.get(),callback,type);
+                    &QAbstractItemModel::rowsAboutToBeInserted,session.data(),callback,type);
                 else if(signal=="rowsInserted")retirement_connection=QObject::connect(session->assistant()->messages(),
-                    &QAbstractItemModel::rowsInserted,session.get(),callback,type);
+                    &QAbstractItemModel::rowsInserted,session.data(),callback,type);
                 else if(signal=="dataChanged")retirement_connection=QObject::connect(session->assistant()->messages(),
-                    &QAbstractItemModel::dataChanged,session.get(),callback,type);
+                    &QAbstractItemModel::dataChanged,session.data(),callback,type);
                 else throw std::invalid_argument("actual retirement or message notification signal required");
                 result={{"armed",true}};
             }
@@ -844,9 +864,9 @@ int main(int argc,char** argv) {
                     publication_observer["destination_exists"]=QFileInfo::exists(destination);
                     publication_observer["returned"]=true;
                 };
-                if(signal=="projectEdited")publication_connection=QObject::connect(owner,&edi_app::ProjectViewModel::projectEdited,session.get(),callback);
-                else if(signal=="modifiedChanged")publication_connection=QObject::connect(owner,&edi_app::ProjectViewModel::modifiedChanged,session.get(),callback);
-                else if(signal=="rowsInserted")publication_connection=QObject::connect(owner->structures(),&QAbstractItemModel::rowsInserted,session.get(),callback);
+                if(signal=="projectEdited")publication_connection=QObject::connect(owner,&edi_app::ProjectViewModel::projectEdited,session.data(),callback);
+                else if(signal=="modifiedChanged")publication_connection=QObject::connect(owner,&edi_app::ProjectViewModel::modifiedChanged,session.data(),callback);
+                else if(signal=="rowsInserted")publication_connection=QObject::connect(owner->structures(),&QAbstractItemModel::rowsInserted,session.data(),callback);
                 else throw std::invalid_argument("undeclared finite publication signal");
                 result={{"armed",true}};
             }
@@ -880,13 +900,13 @@ int main(int argc,char** argv) {
                     throw std::invalid_argument("actual public policy callback required");
                 if(choice!="model" && choice!="effort" && choice!="unchanged")throw std::invalid_argument("declared original choice required");
                 QPointer<edi_app::AssistantViewModel> original=session->assistant();
-                QPointer<edi_app::Session> original_session=session.get();QPointer<edi_app::ProjectViewModel> owner=session->project();
+                QPointer<edi_app::Session> original_session=session.data();QPointer<edi_app::ProjectViewModel> owner=session->project();
                 auto* model=original->messages();QPointer<edi_app::RowTableModel> model_life=model;const auto text=input["text"].toString();
                 const auto identity=[](const void* p){return QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(p)),16);};
                 policy410={{"armed",true},{"callbacks",0},{"receiver",identity(original.data())},{"model",identity(model)},
                     {"project",identity(owner.data())},{"text",text},{"trigger",trigger},{"choice",choice}};policy410_armed=true;
                 auto act=[&,original,original_session,owner,model,model_life,identity,text,choice,trigger] {
-                    if(!policy410_armed || !original || !owner || !model_life || original->messages()!=model_life.data() || !original_session || session.get()!=original_session.data() || session->project()!=owner.data() || original->canCancel())return;
+                    if(!policy410_armed || !original || !owner || !model_life || original->messages()!=model_life.data() || !original_session || session.data()!=original_session.data() || session->project()!=owner.data() || original->canCancel())return;
                     policy410_armed=false;policy410["entered"]=true;policy410["callbacks"]=1;
                     policy410["owner_current"]=session->project()==owner.data();policy410["rows_at_entry"]=rows(model);
                     policy410["can_cancel_at_entry"]=original->canCancel();
@@ -909,7 +929,7 @@ int main(int argc,char** argv) {
                    (trigger=="failure" && action!="refused-input"))
                     throw std::invalid_argument("319 finite original callback declaration required");
                 QPointer<edi_app::AssistantViewModel> original=session->assistant();
-                QPointer<edi_app::Session> original_session=session.get();
+                QPointer<edi_app::Session> original_session=session.data();
                 QPointer<edi_app::ProjectViewModel> original_project=session->project();
                 const auto identity=[](const void* value) {return QString::number(static_cast<qulonglong>(reinterpret_cast<quintptr>(value)),16);};
                 const auto receiver_id=identity(original.data()),session_id=identity(original_session.data());
@@ -920,7 +940,7 @@ int main(int argc,char** argv) {
                     {"notices",Array{}},{"callbacks",0},{"sequence",0}};
                 callback319_armed=true;
                 auto action319=[&,original,original_session,original_project,receiver_id,session_id,model_id,trigger,action,text,identity](const QString& signal,int first,int last,const QList<int>& roles) {
-                    if(!callback319_armed || !original || !original_session || session.get()!=original_session.data())return;
+                    if(!callback319_armed || !original || !original_session || session.data()!=original_session.data())return;
                     Object user;int user_index=-1;Array role_names;
                     if(trigger=="completed-user") {
                         if(first<0 || last<first)return;
@@ -975,7 +995,7 @@ int main(int argc,char** argv) {
                         session->closeProject();
                         callback319["replacement_created"]=session->createProject("Original319 B","Actual public notification successor");
                     } else if(action=="recreate-session") {
-                        session.reset();session=make_session();observe();
+                        destroy_session();create_session();observe();
                         callback319["replacement_present"]=session && session->assistant();
                         // Explicit real B account admission happens IN original A callback.
                         session->assistant()->signIn();callback319["replacement_signin_returned"]=true;
@@ -991,7 +1011,7 @@ int main(int argc,char** argv) {
                     callback319["original_session_alive_after_action"]=!original_session.isNull();
                     callback319["original_project_alive_after_action"]=!original_project.isNull();
                     callback319["current_receiver_after_action"]=identity(session->assistant());
-                    callback319["current_session_after_action"]=identity(session.get());
+                    callback319["current_session_after_action"]=identity(session.data());
                     --callback319_depth;
                 };
                 if(trigger=="completed-user")callback319_model=QObject::connect(original_model,&QAbstractItemModel::dataChanged,
@@ -1117,10 +1137,10 @@ int main(int argc,char** argv) {
                 }
             }
             else if(op=="close_project")session->closeProject();
-            else if(op=="destroy")session.reset();
+            else if(op=="destroy")destroy_session();
             else if(op=="recreate") {
                 if(session)throw std::invalid_argument("retire the real Session before recreation");
-                session=make_session();observe();
+                create_session();observe();
             } else if(op=="archive_seed") {
                 if(session)throw std::invalid_argument("seed isolated persisted history only without a live VM");
                 QDir().mkpath(QFileInfo(history).absolutePath());QFile file(history);
@@ -1173,7 +1193,7 @@ int main(int argc,char** argv) {
                 if(retire=="clear")session->assistant()->clearHistory();
                 else if(retire=="project")session->closeProject();
                 else if(retire=="account")session->assistant()->signOut();
-                else if(retire=="session")session.reset();
+                else if(retire=="session")destroy_session();
                 else throw std::invalid_argument("unknown explicit real-owner retirement");
             } else result=fixture.dispatch(input);
             drain();
@@ -1186,7 +1206,7 @@ int main(int argc,char** argv) {
             std::cout<<encode(Object{{"host_error",QString::fromUtf8(error.what())}}).toStdString()<<'\n'<<std::flush;
         }
     }
-    session.reset();
+    destroy_session();
 }
 
 #include "probe.moc"
