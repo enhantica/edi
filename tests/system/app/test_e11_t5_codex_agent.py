@@ -2322,7 +2322,12 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'add_relations',
         'save_project',
         'edit_background',
-    }, 'NATIVE: this declared background increment advertises exactly ten wired capabilities'
+        'acquire_inputs',
+        'load_structure',
+        'create_experiment',
+        'set_experiment_type',
+        'load_data',
+    }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
         'NATIVE: registered reads use original rpc and retained purpose'
@@ -4737,6 +4742,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'add_relations',
         'save_project',
         'edit_background',
+                             'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
     }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
@@ -5198,7 +5204,8 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'add_relations',
         'save_project',
         'edit_background',
-    }, 'BOOTSTRAP: native background stage truthfully advertises exactly ten implemented tools'
+                                                                    'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
+    }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
         'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
@@ -5689,7 +5696,8 @@ def signin206_shipped(state, trace):
         'run_fit', 'create_cwl_project', 'add_relations',
         'save_project',
         'edit_background',
-    }, 'SIGNIN206: discovery errors cannot silently expand or trim the real ten-tool background stage'
+                                                                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
+    }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
 
 
 @pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
@@ -9383,6 +9391,7 @@ def gui392_run(tmp_path, case):
             assert {tool['name'] for tool in start['dynamicTools']} == {
                 'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
                 'run_fit', 'create_cwl_project', 'add_relations', 'save_project', 'edit_background',
+                                                                           'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
             }, 'GUI392: custom guidance cannot register or expand native tool authority'
         emitted = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         # Actual peer request/reply/client IDs, not a guessed process/row ID.
@@ -10094,7 +10103,8 @@ def gui415_policy(trace, expected):
 PREFS417_CASES = ('lifecycle', 'malformed', 'retirement', 'local', 'all-off', 'stage-changed')
 PREFS417_NATIVE_TOOLS = {'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters',
                        'set_free', 'run_fit', 'create_cwl_project', 'add_relations',
-                       'save_project', 'edit_background', 'acquire_inputs'}
+                       'save_project', 'edit_background', 'acquire_inputs',
+                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data'}
 
 
 def prefs417_inventory(skills, expected):
@@ -10387,3 +10397,380 @@ def prefs419_storage_bond(stdout, events, environment, reference, reads):
 @pytest.mark.parametrize('case', PREFS419_CASES)
 def test_prefs419_source_publication_and_send_retirement(tmp_path, case):
     prefs417_run(tmp_path,case)
+
+
+def test_action484_individual_reads_complete_saved_structure_owner(generic, tmp_path):
+    """Public421 actions; native159 literal science, not a provider or Show-actions witness."""
+    original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
+    provenance = json.loads((original / 'provenance.json').read_text())
+    schemas = json.loads((ROOT / 'tests/fixtures/assistant/action484-schemas.json').read_text())
+    actor, trace = native_case(generic, [], connect_now=False,
+                               script={'scenario': 'native:script', 'action484': True})
+    requested = dict(name='Independent app-action owner', title='Retained action title',
+                     description='Saved structure-only completion, no fit or automatic Save',
+                     authors='Independent action author', su_rule='iucr_99', report_libraries=True,
+                     location=str(tmp_path / 'saved-owner'))
+    created = actor.command('named_empty_create', **requested)
+    assert created['reply']['created'], 'ACTION484 SETUP: original Session creates the real saved empty owner'
+    assert actor.command('native_science_enable')['reply']['enabled'], 'ACTION484 SETUP: original independent physical science observer is enabled'
+    assert actor.command('background285_observe')['reply']['enabled'], 'ACTION484 SETUP: original bank identity/grid observer is enabled'
+    owned = []
+    for entry in provenance['inputs']:
+        data = (original / entry['path']).read_bytes()
+        assert len(data) == entry['bytes'] and hashlib.sha256(data).hexdigest() == entry['sha256'], (
+            'ACTION484 SETUP: independent committed LBCO/HRPT source bytes match their original provenance')
+        path = tmp_path / entry['path']
+        path.write_bytes(data)
+        owned.append(path)
+    originals = {path.name: path.read_bytes() for path in owned}
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert token and actor.command('selected_add', request_id=token, urls=[p.as_uri() for p in owned])['reply']['accepted'], (
+        'ACTION484 SETUP: genuine original selection admits both immutable files')
+    selected = settle(actor, lambda value: len(value['selected_files']) == 2 and not value['can_cancel'])
+    descriptors = [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+                   for row in selected['selected_files']]
+    ids = {row['name']: row['id'] for row in descriptors}
+    dataset = {'$original_action484_dataset': True}
+    turns = [
+        [native_call('load_structure', file_id=ids['lbco.cif']), native_call('inspect_project')],
+        [native_call('create_experiment'), native_call('inspect_project')],
+        [native_call('set_experiment_type', experiment=dataset, axis='radiationProbe', token='xray'),
+         native_call('inspect_project')],
+        [native_call('set_experiment_type', experiment=dataset, axis='radiationProbe', token='neutron'),
+         native_call('inspect_project')],
+        [native_call('set_experiment_type', experiment=dataset, axis='beamMode', token='constant wavelength'),
+         native_call('inspect_project')],
+        [native_call('load_data', experiment=dataset, file_id=ids['hrpt.xye']), native_call('inspect_project')],
+        [native_call('load_data', experiment=dataset, file_id=ids['hrpt.xye']), native_call('inspect_project')],
+        [native_call('load_structure', file_id='independent-absent-source'), native_call('inspect_project')],
+        [native_call('load_data', experiment='independent-absent-dataset', file_id=ids['hrpt.xye']), native_call('inspect_project')],
+        [native_call('load_structure'), native_call('inspect_project')],
+    ]
+    readonly409_configure(trace)
+    native145_configure(actor, trace, turns)
+    before = actor.last['vm']
+    owner = before['project']['empty_completion_observer']
+    assert owner['same_owner'] and owner['same_core'] and owner['structures'] == owner['experiments'] == 0, (
+        'ACTION484 SETUP: actual saved original owner/core is scientifically empty')
+    assert all(owner['metadata'][key] == requested[key] for key in ('name', 'title', 'description', 'authors')), (
+        'ACTION484 SETUP: independent user metadata exists before any model action')
+    directory = Path(owner['path'])
+    assert directory.resolve() == Path(requested['location']).resolve() and directory.resolve().is_relative_to(tmp_path.resolve()), (
+        'ACTION484 SETUP: saved byte oracle belongs to the isolated original owner')
+    saved = save211_files(directory)
+    original_relations = {key: before['project']['science_observer'][key] for key in ('aliases', 'constraints')}
+
+    def step(index, expected_status, error=None):
+        _, replies = native_send(actor, trace, (index + 1) * 2)
+        state = native145_science_settled(actor)
+        action, inspection = replies[-2:]
+        outcome = action['decoded']
+        if 'experiment' in turns[index][0]['arguments'] and type(turns[index][0]['arguments']['experiment']) is dict:
+            prior = replies[index * 2 - 1]['decoded']['datasets']
+            assert len(prior) == 1 and action['original']['params']['arguments']['experiment'] == prior[0]['id'], (
+                'ACTION484: actual emitted selector equals only the immediately preceding successful current inspection ID')
+        assert outcome['status'] == expected_status, 'ACTION484: exact genuine action settlement is required, never a setup refusal positive'
+        if expected_status in {'completed', 'no_change'}:
+            assert action['response']['result']['success'] is True and outcome['complete'] is True, (
+                'ACTION484: healthy action must genuinely complete on its original RPC')
+        else:
+            assert action['response']['result']['success'] is False, 'ACTION484: rejected action cannot claim successful admission'
+        if error is not None:
+            assert outcome.get('action_error') == error, 'ACTION484: actual named refusal has the independent fixed actionable reason'
+        for reply in replies:
+            for key in ('action_error', 'action_field'):
+                if key in reply['decoded']:
+                    assert type(reply['decoded'][key]) is str and reply['decoded'][key] in schemas['result_additions'][key]['enum'], (
+                        'ACTION484: optional action result roles are closed typed enums, never arbitrary messages')
+        assert inspection['response']['result']['success'] and inspection['original']['params']['tool'] == 'inspect_project', (
+            'ACTION484: every boundary includes a genuine completed current inspection')
+        current = state['project']['empty_completion_observer']
+        assert current['same_owner'] and current['same_core'] and all(current[key] == owner[key] for key in (
+            'owner_identity', 'core_identity', 'metadata', 'settings', 'path', 'metadata_path')), (
+            'ACTION484: separate app operations preserve original owner/core/metadata/settings/path')
+        assert all(state['project']['science_observer'][key] == value for key, value in original_relations.items()), (
+            'ACTION484: original unrelated aliases and constraints survive every separate app action')
+        assert save211_files(directory) == saved and {p.name: p.read_bytes() for p in owned} == originals, (
+            'ACTION484: no implicit Save or input rewrite is allowed')
+        assert [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+                for row in state['selected_files']] == descriptors, 'ACTION484: immutable source IDs/descriptors remain original'
+        assert state['connected'] and state['models'] == before['models'] and state['handoff']['account_label'] == before['handoff']['account_label'], (
+            'ACTION484: real account and negotiated choices survive each original action')
+        return state, outcome, inspection['decoded']
+
+    structure_only, _, inspected = step(0, 'completed')
+    assert native_inputs(structure_only) == [] and len(inspected['structures']) == 1, (
+        'ACTION484: loading a structure cannot create or recreate an experiment')
+    structure = structure_only['project']['science_observer']['structures'][0]
+    assert structure['space_group'] == 'P m -3 m', 'ACTION484: original LBCO space group comes from the independent reference'
+    sites = {row['id']: row for row in structure['sites']}
+    assert set(sites) == {'La', 'Ba', 'Co', 'O'}, 'ACTION484: exact independent reference sites survive structure loading'
+    for label, coordinates, occupancy in [('La', [0, 0, 0], .5), ('Ba', [0, 0, 0], .5),
+                                           ('Co', [.5, .5, .5], 1), ('O', [0, .5, .5], 1)]:
+        assert sites[label]['fractional'] == coordinates and sites[label]['occupancy'] == occupancy and (
+            sites[label]['type_symbol'] == label and sites[label]['adp_type'] == 'Biso' and sites[label]['adp_iso'] == 0
+        ), 'ACTION484: original coordinates/composition/ADP remain literal independent scientific operands'
+    created, result, inspected = step(1, 'completed')
+    assert len(inspected['datasets']) == len(result['datasets']) == len(native_inputs(created)) == 1, (
+        'ACTION484: original Create adds exactly one actual experiment')
+    assert result['datasets'][0]['id'] == inspected['datasets'][0]['id'], 'ACTION484: Create returns the actual current canonical member'
+    assert inspected['datasets'][0]['calculation_only'] is True and inspected['datasets'][0]['beam_mode'] == 'constant wavelength' and inspected['datasets'][0]['probe'] == 'neutron', 'ACTION484: original io.hpp default tokens are CW/neutron and a calculation-only member'
+    _, _, xray = step(2, 'completed')
+    assert xray['datasets'][0]['probe'] == 'xray', 'ACTION484: actual enabled probe selection reaches its literal requested type'
+    neutron, _, inspected = step(3, 'completed')
+    assert inspected['datasets'][0]['probe'] == 'neutron', 'ACTION484: actual second type action reaches independently requested neutron'
+    simulation = native_inputs(neutron)
+    nooped, noop, _ = step(4, 'no_change')
+    assert noop['applied'] is False and native_inputs(nooped) == simulation and (
+        nooped['project']['native_observer']['can_undo'] == neutron['project']['native_observer']['can_undo']
+    ), 'ACTION484: equal type is a scientific/history no-op before any new edit'
+    loaded, result, inspected = step(5, 'completed')
+    assert len(result['datasets']) == len(inspected['datasets']) == len(native_inputs(loaded)) == 1 and (
+        result['datasets'][0]['id'] == inspected['datasets'][0]['id'] and inspected['datasets'][0]['calculation_only'] is False
+    ), 'ACTION484: reader returns the actual renamed/replaced current measured member, never its old row address'
+    expected = [[float(item) for item in line.split()] for line in owned[1].read_text().splitlines()
+                if line.strip() and not line.startswith('#')]
+    assert len(expected) == provenance['measurement_rows'], 'ACTION484 SETUP: independent original measured row count is pinned'
+    measured = native_inputs(loaded)[0]
+    assert all(measured[key] == [row[column] for row in expected]
+               for key, column in [('axis', 0), ('intensity', 1), ('sigma', 2)]), (
+        'ACTION484: actual original reader preserves every independent XYE triple')
+    assert measured['weight'] == 1 and measured['exclusions'] == [] and measured['phases'] == [structure['id']], (
+        'ACTION484: independent default weighting/exclusions and retained literal phase link remain exact')
+    for index, reason in [(6, 'data_already_present'), (7, 'input_unavailable'), (8, 'target_unavailable'), (9, 'input_required')]:
+        refused, _, _ = step(index, 'refused', reason)
+        assert native_inputs(refused) == native_inputs(loaded) and refused['project']['parameters'] == loaded['project']['parameters'] and (
+            refused['project']['science_observer']['structures'] == loaded['project']['science_observer']['structures']
+            and refused['project']['native_observer']['can_undo'] == loaded['project']['native_observer']['can_undo']
+        ), 'ACTION484: invalid source/target/schema or measured replacement cannot mutate existing science or Undo'
+    assert actor.command('native_undo')['reply']['was_available'], 'ACTION484: genuine ordinary Undo remains available for the last successful reader action'
+    undone = native145_science_settled(actor)
+    assert native_inputs(undone) == simulation and undone['project']['science_observer']['structures'] == structure_only['project']['science_observer']['structures'], (
+        'ACTION484: one genuine reader Undo restores the independent pre-load simulation and preserved structure')
+    readonly409_policy(trace)
+    assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == len(turns) and (
+        len(native_records(trace, '.native-emitted.jsonl')) == len(native_records(trace, '.native-replies.jsonl')) == 2 * len(turns)
+        and not any(row.get('method') in {'turn/interrupt', 'account/login/start', 'account/logout'} for row in records(trace))
+    ), 'ACTION484: each explicit user turn and original reverse request executes once without implicit stop/account mutation/replay'
+    tools = next(row['params']['dynamicTools'] for row in records(trace) if row.get('method') == 'thread/start')
+    for name, schema in schemas['arguments'].items():
+        declared = [row for row in tools if row['name'] == name]
+        assert len(declared) == 1 and declared[0]['inputSchema'] == schema, 'ACTION484: actual registered new action schema equals the independently sealed public declaration'
+
+
+def test_action491_legal_escaped_structure_links_complete_original_rpc(generic, tmp_path):
+    """Original reader/editor + actual new action: escaped IDs are INPUT, never a size formula."""
+    actor, trace = native_case(generic, [], connect_now=False,
+                               script={'scenario': 'native:script', 'action484': True})
+    directory = tmp_path / 'legal-escaped-owner'
+    created = actor.command('named_empty_create', name='Literal escaped ID owner',
+                            description='Independent native reader fixture', location=str(directory),
+                            title='Original owner with twenty linked phases', authors='Independent author',
+                            su_rule='iucr_99', report_libraries=True)
+    assert created['reply']['created'], 'ESCAPED491 SETUP: original Session saves a genuine owned empty project'
+    actor.command('close_project')
+    assert not actor.last['vm']['project_present'], 'ESCAPED491 SETUP: ordinary closed owner permits fixture file preparation'
+    original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
+    provenance = json.loads((original / 'provenance.json').read_text())
+    source = (original / 'lbco.cif').read_bytes()
+    declared = next(row for row in provenance['inputs'] if row['path'] == 'lbco.cif')
+    assert len(source) == declared['bytes'] and hashlib.sha256(source).hexdigest() == declared['sha256'], (
+        'ESCAPED491 SETUP: literal crystallographic source is the original independently pinned LBCO input')
+    header, separator, body = source.partition(b'\n')
+    assert header == b'data_lbco' and separator == b'\n', 'ESCAPED491 SETUP: original independent CIF block header is known'
+    native_source = (ROOT / 'tests/fixtures/e04_t5/independent/structures/lbco.edi').read_bytes()
+    assert len(native_source) == 715 and hashlib.sha256(native_source).hexdigest() == '7f69d050d5ba4d9e5a43e551377f8be5d71b487418c83645044cbec0c3c16af2', (
+        'ESCAPED497 SETUP: original independently owned native schema3 LBCO grammar is exact, not a CIF extension alias')
+    native_header, native_separator, native_body = native_source.partition(b'\n')
+    assert native_header == b'data_lbco' and native_separator == b'\n' and native_body.count(b'3.88()') == 1 and (
+        native_body.count(b'0.5() Biso') == 4
+    ), 'ESCAPED497 SETUP: original native witness has its declared cell and four explicit Biso0.5 operands'
+    # Keep ALL native vocabulary/schema/geometry/scattering fields. Independent CIF science requires
+    # Biso0, not the native prior-art Biso0.5; remove its explicit cell SU spelling as in the CIF.
+    native_body = native_body.replace(b'3.88()', b'3.88', 1).replace(b'0.5() Biso', b'0 Biso')
+    names = ['s' + '"' * 253 + f'{index:02d}' for index in range(20)]
+    assert len(set(names)) == 20 and all(len(name.encode('utf-8')) == 256 for name in names), (
+        'ESCAPED491 SETUP: twenty distinct legal-width raw identifiers require actual JSON escaping')
+    structures = directory / 'structures'
+    structures.mkdir(exist_ok=True)
+    assert not list(structures.iterdir()), 'ESCAPED491 SETUP: fixture cannot overwrite an existing scientific member'
+    for index, name in enumerate(names):
+        # Ordinary Project Open requires FULL native .edi grammar; selected CIF readers remain separate.
+        (structures / f'literal-{index:02d}.edi').write_bytes(b'data_' + name.encode() + b'\n' + native_body)
+    saved = save211_files(directory)
+    assert actor.command('open', path=str(directory))['reply']['opened'], (
+        'ESCAPED491 SETUP: original ordinary reader must actually accept all literal IDs before model admission')
+    assert actor.command('native_science_enable')['reply']['enabled'], 'ESCAPED491 SETUP: original physical science observer is active'
+    assert actor.command('background285_observe')['reply']['enabled'], 'ESCAPED491 SETUP: original current owner/core observer is active'
+    before = actor.last['vm']
+    physical = before['project']['science_observer']['structures']
+    assert len(physical) == 20 and {row['id'] for row in physical} == set(names) and native_inputs(before) == [], (
+        'ESCAPED491 SETUP: original live native reader produces all exact untrimmed IDs and no experiments')
+    for row in physical:
+        assert row['space_group'] == 'P m -3 m' and {site['id'] for site in row['sites']} == {'La', 'Ba', 'Co', 'O'}, (
+            'ESCAPED491 SETUP: unusual names do not substitute an empty/nonphysical structure fixture')
+        sites = {site['id']: site for site in row['sites']}
+        for label, coordinates, occupancy in [('La', [0, 0, 0], .5), ('Ba', [0, 0, 0], .5),
+                                               ('Co', [.5, .5, .5], 1), ('O', [0, .5, .5], 1)]:
+            assert sites[label]['fractional'] == coordinates and sites[label]['occupancy'] == occupancy and (
+                sites[label]['type_symbol'] == label and sites[label]['adp_type'] == 'Biso' and sites[label]['adp_iso'] == 0
+            ), 'ESCAPED491 SETUP: all structures retain original literal coordinates/composition/ADP'
+    readonly409_configure(trace)
+    native145_configure(actor, trace, [[native_call('inspect_project'), native_call('create_experiment'), native_call('inspect_project')]])
+    state, replies = native_send(actor, trace, 3)
+    state = native145_science_settled(actor)
+    assert all(reply['response']['result']['success'] is True for reply in replies), (
+        'ESCAPED491: actual original read/Create/read must complete, never capacity/setup refusal as positive coverage')
+    result = replies[1]['decoded']
+    assert result['status'] == 'completed' and result['applied'] is True and result['published'] is True and result['complete'] is True, (
+        'ESCAPED491: factual settled completion and complete original reverse reply are mandatory')
+    assert len(result['datasets']) == 1 and len(replies[2]['decoded']['datasets']) == 1, (
+        'ESCAPED491: actual response retains the sole original created dataset row')
+    dataset = result['datasets'][0]
+    assert dataset['id'] == replies[2]['decoded']['datasets'][0]['id'] and dataset['beam_mode'] == 'constant wavelength' and (
+        dataset['probe'] == 'neutron' and dataset['calculation_only'] is True
+    ), 'ESCAPED491: actual original Create returns its current default identity and factual original type'
+    assert len(dataset['phases']) == 20 and {row['structure_id'] for row in dataset['phases']} == set(names) and (
+        all(row['enabled'] is True for row in dataset['phases'])
+    ), 'ESCAPED491: complete affected result row preserves every literal escaped link, not a trimmed substitute'
+    measured = native_inputs(state)
+    assert len(measured) == 1 and len(measured[0]['phases']) == 20 and set(measured[0]['phases']) == set(names) and measured[0]['phases'] == [row['structure_id'] for row in dataset['phases']], (
+        'ESCAPED491: actual native editor independently holds every real original link exactly once')
+    assert state['project']['science_observer']['structures'] == physical and save211_files(directory) == saved, (
+        'ESCAPED491: completed Create preserves all original structures and saved bytes without implicit Save')
+    assert state['project']['background285']['owner'] == before['project']['background285']['owner'] and (
+        state['project']['background285']['core'] == before['project']['background285']['core']
+    ), 'ESCAPED491: no replacement project/core may stand in for the original actual operation'
+    expected_fragment = {'phases': [{'structure_id': name, 'enabled': True} for name in names]}
+    minimum_fragment = len(json.dumps(expected_fragment, separators=(',', ':'), ensure_ascii=False).encode())
+    actual_text = replies[1]['response']['result']['contentItems'][0]['text']
+    assert len(actual_text.encode()) >= minimum_fragment and json.loads(actual_text)['datasets'][0]['phases'] == dataset['phases'], (
+        'ESCAPED491: actual original wire carries the complete escaped role; independent fragment is a necessary lower bound, not a mirrored reservation formula')
+    readonly409_policy(trace)
+    assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == 1 and (
+        len(native_records(trace, '.native-emitted.jsonl')) == len(native_records(trace, '.native-replies.jsonl')) == 3
+    ), 'ESCAPED491: one explicit original Send has exactly the three original reverse requests, no recovery/replay'
+    assert actor.command('native_undo')['reply']['was_available'], 'ESCAPED491: original ordinary Create Undo must be available'
+    undone = native145_science_settled(actor)
+    assert native_inputs(undone) == [] and undone['project']['science_observer']['structures'] == physical, (
+        'ESCAPED491: one actual ordinary Undo restores the original structure-only science')
+
+
+def test_action495_parsed_long_block_refuses_before_edit_and_keeps_native_inspection(generic, tmp_path):
+    """Public428: one real healthy reader action, then an independently unsupported result ID."""
+    actor, trace = native_case(generic, [], connect_now=False,
+                               script={'scenario': 'native:script', 'action484': True})
+    directory = tmp_path / 'pre-edit-owner'
+    assert actor.command('named_empty_create', name='Original bounded reader owner',
+                         description='Independent parsed result identity boundary',
+                         title='Original scientific owner', authors='Independent author',
+                         location=str(directory), su_rule='iucr_99', report_libraries=True)['reply']['created'], (
+        'RESULT495 SETUP: genuine original Session owns and saves the empty project')
+    original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
+    provenance = json.loads((original / 'provenance.json').read_text())
+    source = (original / 'lbco.cif').read_bytes()
+    declared = next(row for row in provenance['inputs'] if row['path'] == 'lbco.cif')
+    assert len(source) == declared['bytes'] and hashlib.sha256(source).hexdigest() == declared['sha256'], (
+        'RESULT495 SETUP: independent literal LBCO source matches the original pinned scientific bytes')
+    first, separator, body = source.partition(b'\n')
+    assert first == b'data_lbco' and separator == b'\n', 'RESULT495 SETUP: independently known original data-block header exists'
+    long_bytes = b'data_' + b'A' * 300 + b'\n' + body
+    healthy, oversized = tmp_path / 'healthy.cif', tmp_path / 'long-block.cif'
+    healthy.write_bytes(source)
+    oversized.write_bytes(long_bytes)
+    originals = {path.name: path.read_bytes() for path in (healthy, oversized)}
+    assert len(oversized.name.encode()) < 256 and long_bytes.partition(b'\n')[2] == body, (
+        'RESULT495 SETUP: ONLY the parsed block ID is300 ASCII bytes; ordinary basename and all original science are unchanged')
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert token and actor.command('selected_add', request_id=token, urls=[healthy.as_uri(), oversized.as_uri()])['reply']['accepted'], (
+        'RESULT495 SETUP: original selected-file entrance genuinely captures both immutable file IDs')
+    selected = settle(actor, lambda value: len(value['selected_files']) == 2 and not value['can_cancel'])
+    descriptors = [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+                   for row in selected['selected_files']]
+    ids = {row['name']: row['id'] for row in descriptors}
+    assert set(ids) == set(originals) and all(row['textReadable'] is True and row['bytes'] == len(originals[row['name']])
+                                            for row in descriptors), (
+        'RESULT495 SETUP: real immutable descriptors retain the exact independent names/lengths/readability')
+    assert actor.command('native_science_enable')['reply']['enabled'], 'RESULT495 SETUP: original physical scientific observer is active'
+    assert actor.command('background285_observe')['reply']['enabled'], 'RESULT495 SETUP: original native owner/core/parameter identity observer is active'
+    empty = native145_science_settled(actor)
+    assert empty['project']['science_observer']['structures'] == [] and native_inputs(empty) == [] and (
+        empty['project']['science_observer']['aliases'] == [] and empty['project']['science_observer']['constraints'] == []
+        and not empty['project']['native_observer']['can_undo']
+    ), 'RESULT499 SETUP: independently observed original prehealthy owner has empty science and no inherited Undo'
+    empty_saved = save211_files(directory)
+    turns = [[native_call('load_structure', file_id=ids[healthy.name]), native_call('inspect_project')],
+             [native_call('load_structure', file_id=ids[oversized.name]), native_call('inspect_project')]]
+    readonly409_configure(trace)
+    native145_configure(actor, trace, turns)
+    _, positive = native_send(actor, trace, 2)
+    before = native145_science_settled(actor)
+    good = positive[0]['decoded']
+    assert good['status'] == 'completed' and good['applied'] is True and good['published'] is True and good['complete'] is True and (
+        all(reply['response']['result']['success'] is True for reply in positive)
+    ), 'RESULT495: actual healthy original load+inspection MUST complete before testing any refusal'
+    structures = before['project']['science_observer']['structures']
+    assert len(structures) == 1 and structures[0]['id'] == 'lbco' and structures[0]['space_group'] == 'P m -3 m' and native_inputs(before) == [], (
+        'RESULT495: positive prerequisite reaches the literal original parsed structure and no invented experiment')
+    sites = {row['id']: row for row in structures[0]['sites']}
+    assert set(sites) == {'La', 'Ba', 'Co', 'O'}, 'RESULT495: healthy original structure retains exactly its independently known sites'
+    for label, coordinates, occupancy in [('La', [0, 0, 0], .5), ('Ba', [0, 0, 0], .5),
+                                           ('Co', [.5, .5, .5], 1), ('O', [0, .5, .5], 1)]:
+        assert sites[label]['fractional'] == coordinates and sites[label]['occupancy'] == occupancy and (
+            sites[label]['type_symbol'] == label and sites[label]['adp_type'] == 'Biso' and sites[label]['adp_iso'] == 0
+        ), 'RESULT495: healthy native reader preserves every literal coordinate/occupancy/ADP operand'
+    assert before['project']['native_observer']['can_undo'], 'RESULT495: genuine healthy original load has its ordinary Undo before refusal'
+    saved = save211_files(directory)
+    _, replies = native_send(actor, trace, 4)
+    after = native145_science_settled(actor)
+    action, inspection = replies[-2:]
+    outcome = action['decoded']
+    assert action['original']['params']['tool'] == 'load_structure' and action['original']['params']['arguments'] == turns[1][0]['arguments'], (
+        'RESULT495: refusal belongs to the exact original load_structure call and independently selected oversized input ID')
+    assert action['response']['result']['success'] is False and outcome['status'] == 'refused' and (
+        outcome['applied'] is False and outcome['published'] is False and outcome['complete'] is False
+        and outcome['action_error'] == 'unsupported_input' and outcome['action_field'] == 'file_id'
+    ), 'RESULT495: unsupported parsed result identity has the exact public closed PRE-Edit no-write refusal, never reader/setup/capacity fallback'
+    assert after['project']['background285'] == before['project']['background285'] and (
+        after['project']['native_observer']['edits_at'] == before['project']['native_observer']['edits_at']
+        and after['project']['native_observer']['can_undo'] == before['project']['native_observer']['can_undo']
+        and after['project']['parameters'] == before['project']['parameters']
+        and native_inputs(after) == native_inputs(before)
+    ), 'RESULT495: original owner/core/path/physical values/free/SUs/history and Edit stamp stay EXACT; rollback-after-Edit cannot masquerade as refusal'
+    for key in ('structures', 'aliases', 'constraints', 'calculations', 'calculating', 'owner_identity'):
+        assert after['project']['science_observer'][key] == before['project']['science_observer'][key], (
+            'RESULT495: unsupported original input cannot change independent scientific state or native owner identity')
+    assert all(after['project']['empty_completion_observer'][key] == before['project']['empty_completion_observer'][key]
+               for key in ('owner_identity', 'core_identity', 'metadata', 'settings', 'path', 'metadata_path')), (
+        'RESULT495: unsupported bounded result cannot replace or rename the scientific owner or its saved metadata')
+    assert inspection['original']['params']['tool'] == 'inspect_project' and inspection['response']['result']['success'] is True and (
+        inspection['decoded']['structures'] == positive[1]['decoded']['structures'] and inspection['decoded']['datasets'] == []
+    ), 'RESULT495: SAME turn genuinely completes a subsequent original inspection; refusal cannot fence/quarantine native operation'
+    assert save211_files(directory) == saved and {path.name: path.read_bytes() for path in (healthy, oversized)} == originals, (
+        'RESULT495: both immutable scientific sources and all original saved project bytes survive without automatic Save')
+    assert [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+            for row in after['selected_files']] == descriptors and after['connected'], (
+        'RESULT495: refusal retains exact admitted source identities/descriptors and real current account')
+    readonly409_policy(trace)
+    assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == 2 and (
+        len(native_records(trace, '.native-emitted.jsonl')) == len(native_records(trace, '.native-replies.jsonl')) == 4
+        and not any(row.get('method') == 'turn/interrupt' for row in records(trace))
+    ), 'RESULT495: two explicit original turns/four exact reverse replies occur once, without implicit stop/recovery/replay'
+    # All strict refusal/no-write/Edit-stamp/once assertions above precede this ONE original Undo.
+    assert actor.command('native_undo')['reply']['was_available'], (
+        'RESULT499: actual ordinary Undo after refusal must consume the genuine healthy load, not a phantom no-edit entry')
+    restored = native145_science_settled(actor)
+    assert native_inputs(restored) == native_inputs(empty) and restored['project']['parameters'] == empty['project']['parameters'] and (
+        restored['project']['background285'] == empty['project']['background285']
+    ), 'RESULT499: ONE genuine Undo restores original empty physical state/history with SAME owner/core/path'
+    for key in ('structures', 'aliases', 'constraints', 'calculations', 'calculating', 'owner_identity'):
+        assert restored['project']['science_observer'][key] == empty['project']['science_observer'][key], (
+            'RESULT499: genuine healthy-load Undo restores independent prehealthy science, not a captured postrefusal golden')
+    assert all(restored['project']['empty_completion_observer'][key] == empty['project']['empty_completion_observer'][key]
+               for key in ('owner_identity', 'core_identity', 'metadata', 'settings', 'path', 'metadata_path')), (
+        'RESULT499: actual Undo cannot replace the original scientific owner or rewrite its saved metadata/settings')
+    assert save211_files(directory) == empty_saved == saved and {path.name: path.read_bytes() for path in (healthy, oversized)} == originals, (
+        'RESULT499: original ordinary Undo preserves independently saved empty-project bytes and both immutable sources')
+    assert [{key: row[key] for key in ('id', 'name', 'bytes', 'textReadable', 'format')}
+            for row in restored['selected_files']] == descriptors, (
+        'RESULT499: history discrimination retains all original selected source identities and descriptors')

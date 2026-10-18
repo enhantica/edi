@@ -470,6 +470,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     struct WidgetCreationInput {
         CreationAction expected;
+        // Opted in only by individual assistant actions; manual/compound readers unchanged.
+        bool bounded_result = false, result_identity_refused = false;
+        edi::Edit::AppliedResult applied_result;
         bool consumed = false;
         EditOutcome outcome;
     };
@@ -481,6 +484,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         enum class Kind { Structure, Measurement };
         Kind kind = Kind::Structure;
         const edi::ExperimentBase* experiment = nullptr;
+        bool bounded_result = false, result_identity_refused = false;
+        edi::Edit::AppliedResult applied_result;
         std::size_t points = 0, skipped = 0, nonpositive = 0, duplicates = 0, reordered = 0, derived = 0;
         QUrl path;
         std::shared_ptr<const edi::assistant::SelectedFile> source;

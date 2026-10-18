@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_tools.hpp"
+#include "assistant_action_refusal.hpp"
+#include <QJsonDocument>
 #include "assistant_native_create.hpp"
 #include "background_input.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
@@ -43,6 +45,15 @@ QJsonArray assistant_native_tool_specs() {
     add("run_fit", "Run the displayed Edi project's real single/joint native fit and await actual publication/outcome. This is a live fit, not an isolated accepted-best trial.");
     add("create_cwl_project", "Create a native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe, or populate the SAME scientifically empty current project with one Undo while preserving its identity/metadata/settings/path. Never replaces a nonempty project. Show actions uses the existing Project Create, Structure Load, Experiment Create/type/data/instrument/profile/background and Analysis controls with factual per-step partial outcomes and ordinary Undo behavior. No duplicate import form or atomic GUI batch is used. Normal mode uses the native preparation directly. recipe project_name/description apply only when no project is open. No fit or save is implied; existing-directory saving is not this operation.",
         {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
+    // Public canonical schemas apply only to these four new native actions.
+    tools.append(Object{{"type","function"},{"name","load_structure"},{"description","Append one structure to the current project from an admitted immutable file_id through the original Structure Load reader/control. No recreation, path grant, fit or save."},
+        {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"file_id":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","file_id"],"additionalProperties":false})schema")).object()}});
+    tools.append(Object{{"type","function"},{"name","create_experiment"},{"description","Append one original default calculation-only experiment, preserving the current project and structures. Return actual member/type/links; configure only needed type choices before data."},
+        {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120}},"required":["purpose"],"additionalProperties":false})schema")).object()}});
+    tools.append(Object{{"type","function"},{"name","set_experiment_type"},{"description","Set one original enabled beam/probe choice on the exact calculation-only experiment, returning its actual replaced member. Equal type is a no-op. Replacement can reset settings, reported factually."},
+        {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"oneOf":[{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"experiment":{"type":"string","minLength":1,"maxLength":256},"axis":{"const":"beamMode"},"token":{"enum":["constant wavelength","time-of-flight"]}},"required":["purpose","experiment","axis","token"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"experiment":{"type":"string","minLength":1,"maxLength":256},"axis":{"const":"radiationProbe"},"token":{"enum":["neutron","xray"]}},"required":["purpose","experiment","axis","token"],"additionalProperties":false}]})schema")).object()}});
+    tools.append(Object{{"type","function"},{"name","load_data"},{"description","Load an admitted immutable measurement into the exact calculation-only experiment through original Load data/readers/Undo. Return actual renamed member/reader facts; do not replace measured data or implicitly change type."},
+        {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"experiment":{"type":"string","minLength":1,"maxLength":256},"file_id":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","experiment","file_id"],"additionalProperties":false})schema")).object()}});
     add("acquire_inputs", "Capture immutable local input files only from an opaque scope_id in the current genuine user input_scopes. No path, URL, glob or command argument is accepted. Returns file IDs, source ordinal, reader hints and counts; it does not claim scientific import. Use returned IDs with create_cwl_project and inspect the actual native project afterward. Already captured sources are not reread. Stale, changed, protected or oversized sources refuse without replacing the prior selection.",
         {{"scope_id",text}},{"scope_id"});
     add("save_project", "Save the settled current single/joint native project, verify reopen and keep the same active owner. The default uses a fresh name and the original human Save As destination choice for this one operation. Explicit destination=current saves only its genuine already-owned directory, without a name or path. Show actions uses the genuine Save button and fresh-name Save As form; normal mode uses the same bounded writer directly. No unrelated overwrite, scan or external report assets.",
@@ -63,7 +74,7 @@ QJsonArray assistant_native_tool_specs() {
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
-    return name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
+    return individual_app_action(name) || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project" || name == "edit_background";
 }
 QString assistant_native_purpose(const Object& args) {
@@ -78,7 +89,16 @@ QString assistant_native_purpose(const Object& args) {
 }
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
-    if(name=="acquire_inputs") shape(args,{"purpose","scope_id"});
+    if(individual_app_action(name)) {
+        if((name=="load_structure" || name=="load_data") && (!args.value("file_id").isString() || args.value("file_id").toString().isEmpty()))
+            throw ActionRefusal("input_required","file_id");
+        if((name=="load_data" || name=="set_experiment_type") && (!args.value("experiment").isString() || args.value("experiment").toString().isEmpty()))
+            throw ActionRefusal("target_unavailable","experiment");
+    }
+    if(name=="load_structure") shape(args,{"purpose","file_id"});
+    else if(name=="load_data") shape(args,{"purpose","experiment","file_id"});
+    else if(name=="set_experiment_type") shape(args,{"purpose","experiment","axis","token"});
+    else if(name=="acquire_inputs") shape(args,{"purpose","scope_id"});
     else if (name == "edit_background") {
         if (args.value("operation") == "remove") shape(args,{"purpose","experiment","operation","id"});
         else shape(args,{"purpose","experiment","operation","id","position","intensity","free"});

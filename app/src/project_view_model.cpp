@@ -55,6 +55,18 @@ QString original_input_error(const char* text) {
     while (length<edi::assistant::Limits::error_bytes && text[length]) ++length;
     return QString::fromUtf8(text,static_cast<qsizetype>(length));
 }
+// The same native byte bound used by individual result/context projection.
+// Empty native names retain the original short canonical category fallback.
+// No parser, normalization, truncation or extra identifier domain is introduced.
+bool assistant_result_name(const std::string& name) noexcept {
+    return name.size() <= edi::assistant::Limits::id_bytes;
+}
+bool assistant_result_experiment(const edi::BraggPdExperiment& experiment) noexcept {
+    if (!assistant_result_name(experiment.name.value())) return false;
+    for (const auto& link : experiment.linked_structures)
+        if (!link || !assistant_result_name(link->structure_id.value())) return false;
+    return true;
+}
 // A name as a save tells names apart: saved files are compared without letter case (crysta refuses
 // two datablock names that differ only by case, as one file on a case-insensitive filesystem).
 std::string folded_name(std::string name) {
@@ -696,6 +708,15 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
         auto structure = input ? edi::structure_from_edi_text(std::string(
             reinterpret_cast<const char*>(input->source->bytes.data()), input->source->bytes.size()))
             : edi::load_structure_file(file.toLocalFile().toStdString());
+        if (input && input->bounded_result && !assistant_result_name(structure.name.value())) {
+            input->consumed = true; // The original refused input is one-shot before notifying.
+            input->result_identity_refused = true;
+            input->outcome.message = tr("The parsed structure identity exceeds the assistant result limit; no edit was made");
+            const auto message = input->outcome.message;
+            setLastError(message);
+            if (self && !retired_) emit refused(message);
+            return false;
+        }
         if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) {
             emit refused(refusal); return false;
         }
@@ -782,6 +803,16 @@ bool ProjectViewModel::createExperiment() {
     std::vector<std::string> structures;
     for (const auto& structure : project.structures) {
         structures.emplace_back(structure->name.value());
+    }
+    if (input && input->bounded_result && (!assistant_result_name(name) ||
+        !std::all_of(structures.begin(), structures.end(), assistant_result_name))) {
+        input->consumed = true; // The original refused input is one-shot before notifying.
+        input->result_identity_refused = true;
+        input->outcome.message = tr("The experiment or phase identity exceeds the assistant result limit; no edit was made");
+        const auto message = input->outcome.message;
+        setLastError(message);
+        if (self && !retired_) emit refused(message);
+        return false;
     }
     AddedExperiments added;
     added.experiments.push_back(nullptr); // exact one new member, no post-write vector growth
@@ -871,6 +902,15 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
         // Within one beam mode the grid stays as it was set.
         if (replacement.effective_beam_mode() == experiment.effective_beam_mode() && experiment.data.has_value()) {
             replacement.data = experiment.data;
+        }
+        if (input && input->bounded_result && !assistant_result_experiment(replacement)) {
+            input->consumed = true; // The original refused input is one-shot before notifying.
+            input->result_identity_refused = true;
+            input->outcome.message = tr("The replacement experiment or phase identity exceeds the assistant result limit; no edit was made");
+            const auto message = input->outcome.message;
+            setLastError(message);
+            if (self && !retired_) emit refused(message);
+            return false;
         }
         const edi::ExperimentBase* before = &experiment;
         error = apply_creation_control(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true,
@@ -992,6 +1032,11 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         if (held.get() != &experiment && folded_name(held->name) == wanted) {
             load.experiment.name = name;
         }
+    }
+    if (input && input->bounded_result && !assistant_result_experiment(load.experiment)) {
+        input->consumed = true; // The original refused input is one-shot before notifying.
+        input->result_identity_refused = true;
+        return refuse(tr("The parsed data or phase identity exceeds the assistant result limit; no edit was made"));
     }
     const QString file_name = QString::fromStdString(load.file_name);
     LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment)};
@@ -2248,13 +2293,15 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     const auto parameter_input = widget_input_executing_ ? widget_input_ : nullptr;
     const auto file_input = widget_input_executing_ ? widget_file_input_ : nullptr;
     const auto creation_input = widget_input_executing_ ? widget_creation_input_ : nullptr;
+    auto* applied_result = creation_input && creation_input->consumed ? &creation_input->applied_result
+        : file_input && file_input->consumed ? &file_input->applied_result : nullptr;
     bool* applied = creation_input && creation_input->consumed ? &creation_input->outcome.applied
         : file_input && file_input->consumed ? &file_input->outcome.applied
         : relation_input && relation_input->consumed ? &relation_input->outcome.applied
         : background_input && background_input->consumed ? &background_input->outcome.applied
         : parameter_input && parameter_input->consumed ? &parameter_input->outcome.applied : &result.applied;
     try {
-        preview_->apply(change, applied);
+        preview_->apply(change, applied, applied_result);
         result.applied = *applied;
         if (!self || retired_) { result.message = applied_warning; return result; }
         // An admitted edit while a scan dataset is shown (edi ADR-0017 §19): a project-wide setting goes to the

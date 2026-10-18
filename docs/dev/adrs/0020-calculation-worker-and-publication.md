@@ -323,3 +323,10 @@ original lifetime/currentness after surrounding callbacks. Assistant input,
 own-edit refresh, creation attachment and fresh inspection use the same bounded
 entry; their local, old/new and late-callback roles remain jointly charged. A
 new inspection receipt never changes stamps shared by an earlier operation.
+
+
+### Closed applied identity before observation
+
+The original LivePreview apply door retains its bool receipt and gains an additive typed Edit::AppliedResult destination. The same closed named Edit executes once and returns its actual appended/replacement Structure or ExperimentBase identity. LivePreview writes that preowned result and the applied flag before note_edit, Applied tracing, edited hooks, requests or publication. Other edits return an empty identity; no public callable constructor or arbitrary scientific executor is introduced. The original apply overload and Edit call operator delegate to the same operation semantics.
+
+PVM's existing prearmed creation/file input owns the receipt, so an Applied observer, thrown publication, retirement or UI-owner deletion cannot erase the factual original identity. Post-callback use still requires original owner/input and actual membership; a pointer is not a lifetime or authorization grant. Published remains separate from applied, and the original Undo/partial facts survive. Capture never infers a later current row. Early original-control settlement records may_have_written from this real applied latch, not a guessed row or replay.

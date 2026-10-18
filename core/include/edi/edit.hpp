@@ -400,7 +400,17 @@ class Edit {
     }
 
     // Runs the operation: its refusal, with nothing written, or the whole write.
-    void operator()() const { operation_(); }
+    struct AppliedResult {
+        const Structure* structure = nullptr;
+        const ExperimentBase* experiment = nullptr;
+    };
+    // Executes this same closed operation once. The result is an identity fact,
+    // not a getter or a grant to use a row after its owner has retired.
+    AppliedResult apply_result() const {
+        if (result_operation_) return result_operation_();
+        operation_(); return {};
+    }
+    void operator()() const { (void)apply_result(); }
 
     // --- One assignment ---------------------------------------------------------------------------
     // `field = value`, for the model's plain fields: a flag, recorded or plain, a number, a text, an
@@ -821,8 +831,9 @@ class Edit {
     // --- Loaded blocks ----------------------------------------------------------------------------
     // A loaded structure added (add_loaded_structure's rule: its name is not taken).
     static Edit add_structure(Project& project, Structure structure) {
-        return Edit([&project, structure = std::make_shared<Structure>(std::move(structure))] {
+        return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(std::move(structure))] {
             add_loaded_structure(project, *structure);
+            return AppliedResult{project.structures.back().get(), nullptr};
         });
     }
     // A structure removed with every experiment's link to it and texture row for it, all or none.
@@ -917,7 +928,7 @@ class Edit {
     // against the project's. It may join experiments with measured data: a fit skips it.
     static Edit create_experiment(Project& project, BraggPdExperiment experiment) {
         auto created = std::make_shared<BraggPdExperiment>(std::move(experiment));
-        return Edit([&project, created] {
+        return Edit(ResultOperation{}, [&project, created] {
             require_scan_template(project, project.experiments.size() + 1);
             const std::string key = KeyTraits<BraggPdExperiment>::canonical(created->name);
             for (const auto& held : project.experiments) {
@@ -926,14 +937,16 @@ class Edit {
                                   "' is already in the project");
                 }
             }
-            project.experiments.push_back(std::make_shared<BraggPdExperiment>(*created));
+            auto inserted = std::make_shared<BraggPdExperiment>(*created);
+            project.experiments.push_back(inserted);
+            return AppliedResult{nullptr, inserted.get()};
         });
     }
     // An experiment without measured data replaced in its place by `replacement` (a new type of it, from
     // simulation_experiment): refused once the experiment holds measured data, whose type the data fixes.
     static Edit replace_experiment(Project& project, const ExperimentBase& experiment, BraggPdExperiment replacement) {
         auto next = std::make_shared<BraggPdExperiment>(std::move(replacement));
-        return Edit([&project, &experiment, next] {
+        return Edit(ResultOperation{}, [&project, &experiment, next] {
             if (!experiment.calculation_only) {
                 throw std::invalid_argument("the experiment '" + experiment.name +
                                             "' holds measured data, which fixes its type");
@@ -945,8 +958,10 @@ class Edit {
             if (found == all.end()) {
                 throw std::invalid_argument("the experiment is not in the project");
             }
-            *found = std::make_shared<BraggPdExperiment>(*next);
+            auto inserted = std::make_shared<BraggPdExperiment>(*next);
+            *found = inserted;
             project.experiments.assign(std::move(all));
+            return AppliedResult{nullptr, inserted.get()};
         });
     }
     // An experiment made with Create experiment replaced in its place by `replacement`: the same experiment with
@@ -954,7 +969,7 @@ class Edit {
     // the other experiments'.
     static Edit load_data(Project& project, const ExperimentBase& experiment, BraggPdExperiment replacement) {
         auto next = std::make_shared<BraggPdExperiment>(std::move(replacement));
-        return Edit([&project, &experiment, next] {
+        return Edit(ResultOperation{}, [&project, &experiment, next] {
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             const auto found = std::find_if(all.begin(), all.end(), [&experiment](const auto& held) {
                 return held.get() == &experiment;
@@ -969,8 +984,10 @@ class Edit {
                                   "' is already in the project");
                 }
             }
-            *found = std::make_shared<BraggPdExperiment>(*next);
+            auto inserted = std::make_shared<BraggPdExperiment>(*next);
+            *found = inserted;
             project.experiments.assign(std::move(all));
+            return AppliedResult{nullptr, inserted.get()};
         });
     }
     // The calculation grid of an experiment without measured data: `start` to `end` by `step`, as the
@@ -1113,7 +1130,9 @@ class Edit {
     }
 
    private:
+    struct ResultOperation {};
     explicit Edit(std::function<void()> operation) : operation_(std::move(operation)) {}
+    Edit(ResultOperation, std::function<AppliedResult()> operation) : result_operation_(std::move(operation)) {}
 
     // The row factories' one body each, for the model row types above only: nothing outside this
     // class names them.
@@ -1152,6 +1171,7 @@ class Edit {
     }
 
     std::function<void()> operation_;
+    std::function<AppliedResult()> result_operation_;
 };
 
 }  // namespace edi

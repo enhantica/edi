@@ -59,6 +59,9 @@ class LivePreview {
     // the closed Edit completes, before any fallible trace/hook/request publication.
     // A later exception does not turn an actual edit into a refusal.
     void apply(const Edit& edit, bool* applied = nullptr);
+    // Preowned owner-local result, populated at the closed applied boundary,
+    // before Applied trace, edited hooks or publication can reenter/throw.
+    void apply(const Edit& edit, bool* applied, Edit::AppliedResult* result);
     // An edit of a setting no calculation reads (the report's, ADR-0036 §7): runs it on the live project at once and
     // refuses as `apply` does, but is neither noted nor a request, so the publication stays current. The owner
     // publishes what the setting changes; `edited` is not called.

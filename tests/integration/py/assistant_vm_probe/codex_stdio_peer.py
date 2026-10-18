@@ -921,6 +921,7 @@ native_start_pending = None
 native_steers = []
 native_disclosed_parameters = []
 native_disclosed_sources = []
+native_action484_datasets = []
 
 
 def native_original_addresses(value):
@@ -940,6 +941,14 @@ def native_original_addresses(value):
                    if row['name'] == value['$original_selected_name'] and row['text_readable']]
         assert len(matches) == 1, 'IMPORT267 SETUP: actual original disclosed selected source ID is unique'
         return matches[0]
+    if isinstance(value, dict) and set(value) == {'$original_action484_dataset'}:
+        assert config.get('action484') is True and value['$original_action484_dataset'] is True, (
+            'ACTION484 SETUP: only the closed declared ID selector is allowed')
+        assert len(native_action484_datasets) == 1, (
+            'ACTION484 SETUP: actual successful current inspection exposes exactly one dataset')
+        identifier = native_action484_datasets[0]['id']
+        assert type(identifier) is str and identifier, 'ACTION484 SETUP: current canonical dataset ID is mandatory'
+        return identifier
     if isinstance(value, dict):
         return {key: native_original_addresses(item) for key, item in value.items()}
     if isinstance(value, list):
@@ -1151,6 +1160,14 @@ def native_reply(request):
             'sources': [{'name': row['name'], 'id': row['id'], 'text_readable': row['text_readable']}
                         for row in native_disclosed_sources],
         })
+    if (config.get('action484') is True and original['params']['tool'] == 'inspect_project'):
+        native_action484_datasets.clear()
+        disclosed = json.loads(result['contentItems'][0]['text']) if result and result.get('success') else {'datasets': []}
+        datasets = disclosed['datasets']
+        assert type(datasets) is list and all(type(row) is dict and type(row.get('id')) is str
+                                             and row['id'] for row in datasets), (
+            'ACTION484 SETUP: source is actual successful current dataset inspection, never fixture science')
+        native_action484_datasets[:] = [{'id': row['id']} for row in datasets]
     item = {
         **original['item'],
         'status': 'completed' if result and result.get('success') else 'failed',

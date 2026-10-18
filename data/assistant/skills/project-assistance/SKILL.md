@@ -44,3 +44,13 @@ The bundled `create_from_selected.py` and repository examples are development/te
 References:
 - IUCr Rietveld refinement guidelines: https://journals.iucr.org/j/issues/1999/01/00/gl0561/
 - GSAS-II sequential-refinement tutorial: https://advancedphotonsource.github.io/GSAS-II-tutorials/SeqRefine/SequentialTutorial.htm
+
+
+## Complete an existing partial project with individual app actions
+
+Inspect first. Preserve the current owner, loaded structures, metadata, constraints, composition and explicit scientific choices. Use `load_structure(file_id)` only for a genuinely missing structure; `create_experiment` only for a missing experiment. Its reply describes actual defaults and links. If needed, use `set_experiment_type(experiment, axis, token)` for an enabled original beam/probe choice before data, then `load_data(experiment, file_id)` into the calculation-only target. Use its returned actual dataset ID after type/data replacement or automatic naming. All calls also require a short purpose. Normal and Show actions have the same logical operations and original readers/Undo; visible mode uses genuine original controls/pickers.
+
+Reuse admitted file IDs; use `acquire_inputs` for an existing uncaptured genuine user scope. Ask only a focused question for actual missing/unsupported information identified by closed `action_error`/`action_field`. Never request resending an already captured file, invent a path or parameter, change modes, replace measured data, automatically recreate or retry an uncertain operation. The compound `create_cwl_project` remains the original no-project/current-empty transaction and keeps its nonempty guard; it is not partial-project recovery. Subsequent parameter/free/relation/background/fit/save calls retain their original contracts. Unsupported profile/link edits remain explicit limits.
+
+
+A successful type replacement reports diagnostic `experiment_type_settings_reinitialized`: the original selector rebuilds experiment settings for that type and can reset wavelength or phase scales. Inspect the actual returned/current values and reapply explicitly supplied supported scientific values through existing parameter controls after the type choice. Do not claim those settings were preserved, invent a value or hide that a requested profile/link edit is unavailable. An equal-type no-op does not reinitialize settings.

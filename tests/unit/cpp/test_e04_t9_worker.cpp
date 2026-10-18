@@ -309,7 +309,7 @@ TEST_CASE("E04-T9 C1 C2 C3 C4 C7 C8 newest previews and independent ordered stre
             const auto prior_measured = project.experiment().data->intensity_meas;
             const auto before = edi::snapshot_for_work(project).stamps;
             const auto callback = [&] { project.structure().cell.length_a.value = a + .03; };
-            using Apply = decltype(&edi::LivePreview::apply);
+            using Apply = decltype(static_cast<void (edi::LivePreview::*)(const edi::Edit&, bool*)>(&edi::LivePreview::apply));
             CHECK_MESSAGE((!std::is_invocable_v<Apply, edi::LivePreview&, decltype(callback)>),
                           " C4 the edit door cannot accept a raw state-writing lambda");
             CHECK_MESSAGE((!std::is_invocable_v<Apply, edi::LivePreview&, std::function<void()>>),
@@ -564,6 +564,151 @@ TEST_CASE("E11-T5 R1 pre-submit preparation failure preserves edit and permits r
     CHECK_FALSE(preview.busy());
     CHECK(live.structure().cell.length_a.value.get() == original + 0.01);
     CHECK(fired == 1);
+}
+
+
+TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observers") {
+    using Result = edi::Edit::AppliedResult;
+    static_assert(std::is_trivially_copyable_v<Result>);
+    static_assert(std::is_same_v<decltype(Result{}.structure), const edi::Structure*>);
+    static_assert(std::is_same_v<decltype(Result{}.experiment), const edi::ExperimentBase*>);
+    // All FOUR original closed factories; direct success is independent of the fallible observers.
+    for (int factory = 0; factory != 4; ++factory) {
+        for (int entrance = 0; entrance != 3; ++entrance) {
+            CAPTURE(factory, entrance);
+            auto live = edi::load_project(e04_t9_fixture::silicon);
+            const auto original_structure = live.structures.front();
+            const auto measured_source = live.experiments.front();
+            REQUIRE_MESSAGE(measured_source->data.has_value(), "RECEIPT491 SETUP original reader fixture has actual measured data");
+            const auto original_structure_count = live.structures.size();
+            auto initial = edi::simulation_experiment("receipt491_target", {}, std::vector<std::string>{original_structure->name.value()});
+            edi::Edit::create_experiment(live, std::move(initial))(); // Original ordinary setup; not the operation under test.
+            const auto target = live.experiments.back();
+            REQUIRE_MESSAGE(target->calculation_only, "RECEIPT491 SETUP original simulation target is genuinely eligible for replacement");
+            const auto target_index = live.experiments.size() - 1;
+            edi::Edit::create_experiment(live, edi::simulation_experiment(
+                "receipt491_unrelated_tail", {}, std::vector<std::string>{original_structure->name.value()}))();
+            const auto unrelated_tail = live.experiments.back();
+            const auto count = live.experiments.size();
+            const auto original_structure_text = edi::project_edi_files(live);
+            auto make_operation = [&]() -> edi::Edit {
+                if (factory == 0) {
+                    auto structure = *original_structure;
+                    structure.name = "receipt491_appended_structure";
+                    return edi::Edit::add_structure(live, std::move(structure));
+                }
+                if (factory == 1)
+                    return edi::Edit::create_experiment(live, edi::simulation_experiment(
+                        "receipt491_appended_experiment", {}, std::vector<std::string>{original_structure->name.value()}));
+                if (factory == 2) {
+                    edi::ExperimentTypeTokens type;
+                    type.radiation_probe = "xray";
+                    return edi::Edit::replace_experiment(live, *target, edi::simulation_experiment(
+                        "receipt491_target", type, std::vector<std::string>{original_structure->name.value()}));
+                }
+                auto loaded = *measured_source;
+                loaded.name = "receipt491_loaded_experiment";
+                return edi::Edit::load_data(live, *target, std::move(loaded));
+            };
+            const auto operation = make_operation();
+            bool applied = true; // Each actual Input entrance must clear BOTH supplied destinations.
+            Result result{original_structure.get(), target.get()};
+            int inputs = 0, applied_events = 0, edited = 0;
+            auto require_identity = [&] {
+                if (entrance != 0) CHECK_MESSAGE(applied, "RECEIPT491 actual applied flag exists before every fallible observer");
+                CHECK_MESSAGE(live.structures.front() == original_structure,
+                              "RECEIPT491 original unrelated structure retains its actual identity");
+                if (factory == 0) {
+                    REQUIRE_MESSAGE(live.structures.size() == original_structure_count + 1,
+                                    "RECEIPT491 structure factory executes exactly once");
+                    CHECK_MESSAGE((result.structure == live.structures.back().get() && result.experiment == nullptr),
+                                  "RECEIPT491 structure pin is the actual appended member before publication");
+                    CHECK_MESSAGE(live.structures.back()->name == "receipt491_appended_structure",
+                                  "RECEIPT491 actual appended identity belongs to the independent literal operation");
+                } else {
+                    REQUIRE_MESSAGE(live.experiments.size() == count + (factory == 1 ? 1 : 0),
+                                    "RECEIPT491 experiment factory executes exactly once without duplicate members");
+                    const auto actual_member = factory == 1 ? live.experiments.back() : live.experiments[target_index];
+                    CHECK_MESSAGE(live.experiments[count - 1] == unrelated_tail,
+                                  "RECEIPT491 replacement cannot select the unrelated later member by row position");
+                    CHECK_MESSAGE((result.structure == nullptr && result.experiment == actual_member.get()),
+                                  "RECEIPT491 experiment pin is the actual current appended/replacement member");
+                    CHECK_MESSAGE(actual_member->name == (factory == 1 ? "receipt491_appended_experiment" :
+                                  factory == 2 ? "receipt491_target" : "receipt491_loaded_experiment"),
+                                  "RECEIPT491 receipt belongs to the independent literal closed operation");
+                    if (factory >= 2)
+                        CHECK_MESSAGE(result.experiment != target.get(),
+                                      "RECEIPT491 replacement receipt never keeps the old still-live member pointer");
+                    if (factory == 3) {
+                        REQUIRE_MESSAGE(actual_member->data.has_value(),
+                                        "RECEIPT491 real measurement replacement actually holds original data");
+                        CHECK_MESSAGE(actual_member->data->intensity_meas.get() == measured_source->data->intensity_meas.get(),
+                                      "RECEIPT491 measurement replacement preserves independent original reader observations");
+                    }
+                }
+            };
+            if (entrance == 0) {
+                result = operation.apply_result(); // Executes ONCE, never a getter after a separate operator().
+                require_identity();
+            } else {
+                e04_t9::OwnerQueue queue;
+                edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+                    {{}, [&](const edi::work::Event& event) {
+                        if (event.kind == edi::work::EventKind::Input) {
+                            ++inputs;
+                            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr),
+                                          "RECEIPT491 both caller destinations clear before the original Input trace");
+                            CHECK_MESSAGE(edi::project_edi_files(live) == original_structure_text,
+                                          "RECEIPT491 Input trace precedes the actual closed operation");
+                        }
+                        if (event.kind == edi::work::EventKind::Applied) {
+                            ++applied_events;
+                            require_identity();
+                            if (entrance == 1) throw std::runtime_error("receipt491 Applied trace failure");
+                        }
+                    }});
+                edi::LivePreview preview(live, worker, {[&] {
+                    ++edited;
+                    require_identity();
+                    throw std::runtime_error("receipt491 edited publication failure");
+                }, {}});
+                const std::string expected = entrance == 1 ? "receipt491 Applied trace failure" : "receipt491 edited publication failure";
+                bool exact_failure = false;
+                try { preview.apply(operation, &applied, &result); }
+                catch (const std::runtime_error& failure) { exact_failure = failure.what() == expected; }
+                CHECK_MESSAGE(exact_failure, "RECEIPT491 reached real original fallible observer, never an earlier setup refusal");
+                CHECK_MESSAGE((inputs == 1 && applied_events == 1 && edited == (entrance == 2 ? 1 : 0)),
+                              "RECEIPT491 one actual Input/Applied boundary and expected original hook are reached");
+                require_identity(); // Throw cannot erase factual applied state or its ORIGINAL identity.
+            }
+        }
+    }
+}
+
+TEST_CASE("E11-T5 Input refusal clears applied identity before any closed edit") {
+    auto live = edi::load_project(e04_t9_fixture::silicon);
+    const auto before = edi::project_edi_files(live);
+    bool applied = true;
+    edi::Edit::AppliedResult result{live.structures.front().get(), live.experiments.front().get()};
+    int inputs = 0;
+    e04_t9::OwnerQueue queue;
+    edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
+        {{}, [&](const edi::work::Event& event) {
+            if (event.kind != edi::work::EventKind::Input) return;
+            ++inputs;
+            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr),
+                          "RECEIPT491 original Input observes cleared caller-owned storage");
+            throw std::runtime_error("receipt491 refused at Input");
+        }});
+    edi::LivePreview preview(live, worker, {});
+    auto structure = live.structure(); structure.name = "receipt491_must_not_append";
+    const auto operation = edi::Edit::add_structure(live, std::move(structure));
+    bool refused = false;
+    try { preview.apply(operation, &applied, &result); }
+    catch (const std::runtime_error& failure) { refused = std::string(failure.what()) == "receipt491 refused at Input"; }
+    CHECK_MESSAGE((refused && inputs == 1 && !applied && result.structure == nullptr && result.experiment == nullptr),
+                  "RECEIPT491 actual pre-write Input refusal has no false or inherited applied identity");
+    CHECK_MESSAGE(edi::project_edi_files(live) == before, "RECEIPT491 Input refusal preserves every original scientific saved byte");
 }
 
 #else

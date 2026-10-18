@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
 #include "assistant_recipe_refusal.hpp"
+#include "assistant_action_refusal.hpp"
 
 #include <QFile>
 #include <QCoreApplication>
@@ -13,6 +14,7 @@
 #include <QScopeGuard>
 #include <array>
 #include <cstdlib>
+#include <cstdio>
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
 #include <dirent.h>
 #include <limits.h>
@@ -1004,7 +1006,7 @@ struct AssistantViewModel::State {
         // The dedicated host proves full parsed-schema equality with these
         // exact requested schemas. Independently reject extra/shadow namespaces
         // and missing/duplicate/nonfunction/deferred callable advertisements.
-        static constexpr std::array<QStringView,11> expectedNames{u"inspect_project",u"list_parameters",u"diagnostics",u"set_parameters",u"set_free",u"run_fit",u"create_cwl_project",u"acquire_inputs",u"save_project",u"add_relations",u"edit_background"};
+        static constexpr std::array<QStringView,15> expectedNames{u"inspect_project",u"list_parameters",u"diagnostics",u"set_parameters",u"set_free",u"run_fit",u"create_cwl_project",u"acquire_inputs",u"save_project",u"add_relations",u"edit_background",u"load_structure",u"create_experiment",u"set_experiment_type",u"load_data"};
         std::array<bool,expectedNames.size()> names{};
         const auto accept=[&](const Object& function) {
             if(function.value("type")!="function" || !function.value("name").isString() ||
@@ -1795,11 +1797,18 @@ struct AssistantViewModel::State {
         std::uint64_t edit_scope = 0;
         qsizetype completed_steps = 0;
         bool ordinary = false, step_counted = false;
+        bool visible_delivery = true, operation_published = false;
+        QString individual_tool;
+        QPointer<ExperimentViewModel> operation_view;
+        const edi::ExperimentBase* operation_member = nullptr;
+        const edi::ExperimentBase* result_member = nullptr;
+        const edi::Structure* result_structure = nullptr;
         QMetaObject::Connection calculation_wait;
         qsizetype step = 0;
         bool manual_takeover = false;
     };
     std::shared_ptr<NativeCreateWidget> native_create_widget;
+    std::vector<std::weak_ptr<NativeCreateWidget>> creation_widget_frames;
 
     const QString widget_outcome_error = QStringLiteral("The actual widget outcome could not be confirmed; inspect the project");
     bool widget_owned(const std::shared_ptr<NativeWidget>& run) const {
@@ -3449,6 +3458,52 @@ struct AssistantViewModel::State {
     }
     quint64 native_serial = 0, native_accepted_serial = 0;
     bool native_blocked = false, native_discard_pending = false;
+    // Fixed local first-cause facts only: no payload, identity, path or what().
+    // This is diagnostic storage, never a recovery or admission authority.
+    struct NativeFailure {
+        const char* stage = nullptr;
+        const char* reason = nullptr;
+        const char* role = nullptr;
+        quint64 bound = 0;
+        int may_have_written = -1, retired = -1, outcome_ready = -1;
+        int applied = -1, published = -1; // -1 means the actual result has no such fact.
+    } native_first_failure;
+    static const char* native_failure_class() noexcept {
+        // Called only by an active catch. Never inspect exception text.
+        try { throw; }
+        catch (const std::bad_alloc&) { return "ALLOCATION"; }
+        catch (const std::length_error&) { return "CAPACITY"; }
+        catch (const std::invalid_argument&) { return "VALIDATION"; }
+        catch (const std::runtime_error&) { return "STATE"; }
+        catch (const std::exception&) { return "EXCEPTION"; }
+        catch (...) { return "NONSTANDARD"; }
+    }
+    void native_failure(const char* stage, const char* role, quint64 bound, const char* reason,
+                        const NativeCall* call = nullptr, const Object* outcome = nullptr, int retired_fact = -1) noexcept {
+        if (native_first_failure.stage) return;
+        NativeFailure first;
+        first.stage = stage; first.role = role; first.bound = bound; first.reason = reason;
+        if (call) {
+            first.may_have_written = call->may_have_written;
+            first.retired = call->retiring || call->record->retired || call->receipt->retired;
+            first.outcome_ready = call->record->outcome_ready;
+        }
+        if (outcome) {
+            const auto applied = outcome->value(QLatin1StringView("applied"));
+            const auto published = outcome->value(QLatin1StringView("published"));
+            first.applied = applied.isBool() ? int(applied.toBool()) : -1;
+            first.published = published.isBool() ? int(published.toBool()) : -1;
+            const auto retired = outcome->value(QLatin1StringView("request_retired"));
+            if (retired.isBool()) first.retired = first.retired == 1 || retired.toBool();
+        }
+        if (retired_fact >= 0) first.retired = first.retired == 1 || retired_fact;
+        native_first_failure = first; // Preserve FIRST cause before notification or cleanup.
+        // C stdio avoids callback-capable Qt message handlers at this failure boundary.
+        // Every text operand above is an app-owned closed literal; no JSON is emitted.
+        std::fprintf(stderr, "Edi assistant retention first stage=%s class=%s role=%s bound=%llu may_have_written=%d applied=%d published=%d retired=%d outcome_ready=%d\n",
+            first.stage, first.reason, first.role, static_cast<unsigned long long>(first.bound),
+            int(first.may_have_written), first.applied, first.published, int(first.retired), int(first.outcome_ready));
+    }
     const QString native_capacity_error = QStringLiteral("The actual native outcome or complete project context is pending retention. Project state is preserved; clear the conversation before new work.");
     static QString native_key(const QString& thread, const QString& turn, const QString& call) {
         // Protocol IDs may contain separators: use the actual JSON tuple.
@@ -3630,35 +3685,41 @@ struct AssistantViewModel::State {
         raw(parameter_widget_frames.capacity()*sizeof(std::weak_ptr<NativeWidget>));
         for(const auto& weak:parameter_widget_frames)widget_frame(weak.lock());
         widget_frame(native_widget);
-        if (native_create_widget) {
-            raw(sizeof(NativeCreateWidget) + sizeof(AssistantWidgetInput::Request) +
-                static_cast<quint64>(native_create_widget->inputs.capacity()) * sizeof(NativeCreateWidget::Input));
+        QSet<const NativeCreateWidget*> creation_frames;
+        const auto creation_frame = [&](const std::shared_ptr<NativeCreateWidget>& frame) {
+            if(!frame || creation_frames.contains(frame.get()))return;
+            creation_frames.insert(frame.get());
+            raw(sizeof(NativeCreateWidget) + sizeof(FileProjection) + sizeof(QPointer<CodexAgent>) + sizeof(quint64) + sizeof(AssistantWidgetInput::Request) +
+                static_cast<quint64>(frame->inputs.capacity()) * sizeof(NativeCreateWidget::Input));
             raw(2 * Limits::error_bytes * sizeof(QChar));
-            receipt(native_create_widget->call.receipt); value(native_create_widget->call.rpc);
-            value(native_create_widget->arguments); value(native_create_widget->id);
-            value(native_create_widget->fallback_outcome); value(native_create_widget->fallback_response); value(native_create_widget->fallback_row);
+            record(frame->call.record); receipt(frame->call.receipt); value(frame->call.rpc);
+            value(frame->arguments); value(frame->id); value(frame->individual_tool);
+            value(frame->fallback_outcome); value(frame->fallback_response); value(frame->fallback_row);
             Object maximumFacts;
             for (const auto* key : {"points","skipped","nonpositive","duplicates","reordered","derived_sigma"})
                 maximumFacts[key]=static_cast<double>(edi::assistant::SelectedFileLimits::file_bytes);
-            raw(std::max(generic_size(native_create_widget->reader_facts,Limits::context_bytes),generic_size(maximumFacts,Limits::context_bytes)));
+            raw(std::max(generic_size(frame->reader_facts,Limits::context_bytes),generic_size(maximumFacts,Limits::context_bytes)));
             raw(sizeof(ProjectViewModel::WidgetFileInput) + sizeof(ProjectViewModel::WidgetCreationInput) + sizeof(ProjectViewModel::WidgetParameterInput));
-            if (native_create_widget->control_input) {
-                value(native_create_widget->control_input->expected.field); value(native_create_widget->control_input->expected.text);
-                value(native_create_widget->control_input->outcome.message);
+            if (frame->control_input) {
+                value(frame->control_input->expected.field); value(frame->control_input->expected.text);
+                value(frame->control_input->outcome.message);
             }
             // One original helper/editor draft and restore string can coexist
             // with its retained plan spelling. The model itself remains the
             // ordinary user's project, not an assistant-owned duplicate.
-            for (const auto& source : {native_create_widget->structure_source, native_create_widget->measurement_source}) if (source) {
+            for (const auto& source : {frame->structure_source, frame->measurement_source}) if (source) {
                 raw(sizeof(edi::assistant::SelectedFile) + source->bytes.capacity() + source->id.size() + source->relative_name.size());
             }
-            if (native_create_widget->structure_source) raw(native_create_widget->structure_source->bytes.size()); // Original CIF reader's simultaneous text argument.
-            for (const auto& path : {native_create_widget->structure_path, native_create_widget->measurement_path})
+            if (frame->structure_source) raw(frame->structure_source->bytes.size()); // Original CIF reader's simultaneous text argument.
+            for (const auto& path : {frame->structure_path, frame->measurement_path})
                 raw(4 * static_cast<quint64>(path.toLocalFile().size()) * sizeof(QChar)); // URL, current helper, picker draft and original callback spelling.
-            for (const auto& input : native_create_widget->inputs) {
+            for (const auto& input : frame->inputs) {
                 value(input.target); raw(4 * static_cast<quint64>(input.text.size()) * sizeof(QChar));
             }
-        }
+        };
+        raw(creation_widget_frames.capacity()*sizeof(std::weak_ptr<NativeCreateWidget>));
+        for(const auto& frame:creation_widget_frames)creation_frame(frame.lock());
+        creation_frame(native_create_widget);
         if (native_creation) {
             raw(sizeof(NativeCreation)); value(native_creation->population_outcome);
             if (native_creation->population) raw(sizeof(edi::EmptyProjectPopulation)); // moved graph, no duplicated payload
@@ -3745,7 +3806,7 @@ struct AssistantViewModel::State {
     void native_complete_discard() noexcept {
         if (!native_discard_pending || native_worker_admitted() || (native_fit && native_fit->nativeRunning())) return;
         if (native_call && !native_call->resolved && !native_call->record->answered) return; // A live original response is still owed.
-        native_call.reset(); native_fit.clear(); native_blocked = false; native_records.clear(); native_discard_pending = false;
+        native_call.reset(); native_fit.clear(); native_blocked = false; native_records.clear(); native_discard_pending = false; native_first_failure = {};
         native_restore_charge();
     }
     Object native_response(bool success, const Object& outcome) {
@@ -3777,6 +3838,8 @@ struct AssistantViewModel::State {
             {"status", success ? "completed" : "failed"}, {"payload", payload}};
     }
     void native_fence() noexcept {
+        native_failure("OTHER_NATIVE_BOUNDARY", "UNSPECIFIED", 0, "UNCLASSIFIED",
+            native_call ? &*native_call : nullptr, native_call && native_call->record->outcome_ready ? &native_call->record->outcome : nullptr);
         native_blocked = true;
         consented_context.clear();
         try { error = native_capacity_error; notify(); } catch (...) {}
@@ -3859,56 +3922,71 @@ struct AssistantViewModel::State {
         const auto current = [&] { return publication.input_current() && !call.receipt->stale && native_owner(call.receipt) &&
             native_call && native_call->record == call.record && native_call->receipt == call.receipt && native_call->rpc == call.rpc; };
         if (!call.may_have_written || !current()) return;
-        std::optional<edi::WorkStamps> stamps;
-        quint64 stamp_role = 0;
-        const QPointer<CodexAgent> transport(agent.get());
-        const auto transport_generation = transport ? transport->outputGeneration() : 0;
-        const auto release_stamps = qScopeGuard([&, publication] {
-            if (!publication.receiver || publication.receiver->state_.get() != this) return;
-            disclosure_preparing_bytes -= stamp_role;
-            native_release_charge(publication, transport, transport_generation);
-        });
-        if (project) {
-            stamps = edi::work_stamps(*project->assistantProject(), static_cast<std::size_t>(native_room()));
-            stamp_role = native_stamp_bytes(*stamps);
-            disclosure_preparing_bytes += stamp_role; // Callback-free bounded capture transfers its actual local role.
-        }
-        if (controller) controller->notify_changed();
-        if (!current()) return;
-        const auto context = outgoing_context();
-        if (!current()) return;
-        if (context.contains("error")) throw std::length_error("Complete native context is unavailable");
-        if (!native_owner(call.receipt) || !native_call || native_call->record != call.record || native_call->receipt != call.receipt) return;
-        if (!same_disclosure(call.receipt->disclosure, approved_scope)) throw std::runtime_error("The original native disclosure retired");
-        const auto refreshed_scope = current_disclosure(&context);
-        if(!current())return;
-        if (call.record->tool != "create_cwl_project" && !same_disclosure(call.receipt->disclosure, refreshed_scope))
-            throw std::runtime_error("The native result changed its original input disclosure");
-        auto encoded = QJsonDocument(context).toJson(QJsonDocument::Compact);
-        generic_size(context, Limits::context_bytes);
-        // Temporary stamps/context are admitted with their actual owning roles
-        // before replacing the old receipt. Failure leaves the actual edit and
-        // prepared uncertainty outcome intact, with further execution fenced.
-        const auto new_stamp_role = stamp_role;
-        const auto old_stamp_role = call.receipt->stamps ? native_stamp_bytes(*call.receipt->stamps) : 0;
-        auto old = std::move(call.receipt->stamps);
-        call.receipt->stamps = std::move(stamps);
-        // These are the same concurrently owned two payloads, just exchanged
-        // between the current receipt and its original local rollback frame.
-        disclosure_preparing_bytes -= stamp_role; disclosure_preparing_bytes += old_stamp_role; stamp_role = old_stamp_role;
-        call.receipt->approved_context.swap(encoded);
-        try { native_charge(); }
-        catch (...) {
-            if (!publication.receiver || publication.receiver->state_.get() != this) throw;
-            call.receipt->stamps.swap(old); call.receipt->approved_context.swap(encoded);
-            disclosure_preparing_bytes -= stamp_role; disclosure_preparing_bytes += new_stamp_role; stamp_role = new_stamp_role;
+        const char* stage = "REFRESH_STAMPS";
+        const char* role = "JOINT_RETAINED";
+        quint64 bound = Limits::stream_retained_bytes;
+        try {
+            std::optional<edi::WorkStamps> stamps;
+            quint64 stamp_role = 0;
+            const QPointer<CodexAgent> transport(agent.get());
+            const auto transport_generation = transport ? transport->outputGeneration() : 0;
+            const auto release_stamps = qScopeGuard([&, publication] {
+                if (!publication.receiver || publication.receiver->state_.get() != this) return;
+                disclosure_preparing_bytes -= stamp_role;
+                native_release_charge(publication, transport, transport_generation);
+            });
+            if (project) {
+                stamps = edi::work_stamps(*project->assistantProject(), static_cast<std::size_t>(native_room()));
+                stamp_role = native_stamp_bytes(*stamps);
+                disclosure_preparing_bytes += stamp_role; // Callback-free bounded capture transfers its actual local role.
+            }
+            stage = "REFRESH_NOTIFY";
+            if (controller) controller->notify_changed();
+            if (!current()) return;
+            stage = "REFRESH_CONTEXT"; role = "CONTEXT"; bound = Limits::context_bytes;
+            const auto context = outgoing_context();
+            if (!current()) return;
+            if (context.contains("error")) throw std::length_error("Complete native context is unavailable");
+            if (!native_owner(call.receipt) || !native_call || native_call->record != call.record || native_call->receipt != call.receipt) return;
+            if (!same_disclosure(call.receipt->disclosure, approved_scope)) throw std::runtime_error("The original native disclosure retired");
+            stage = "REFRESH_DISCLOSURE";
+            const auto refreshed_scope = current_disclosure(&context);
+            if(!current())return;
+            const bool individual_transition = individual_disclosure_transition(call,refreshed_scope);
+            if (call.record->tool != "create_cwl_project" && !individual_transition && !same_disclosure(call.receipt->disclosure, refreshed_scope))
+                throw std::runtime_error("The native result changed its original input disclosure");
+            stage = "REFRESH_ENCODING";
+            auto encoded = QJsonDocument(context).toJson(QJsonDocument::Compact);
+            generic_size(context, Limits::context_bytes);
+            // Temporary stamps/context are admitted with their actual owning roles
+            // before replacing the old receipt. Failure leaves the actual edit and
+            // prepared uncertainty outcome intact, with further execution fenced.
+            const auto new_stamp_role = stamp_role;
+            const auto old_stamp_role = call.receipt->stamps ? native_stamp_bytes(*call.receipt->stamps) : 0;
+            auto old = std::move(call.receipt->stamps);
+            call.receipt->stamps = std::move(stamps);
+            // These are the same concurrently owned two payloads, just exchanged
+            // between the current receipt and its original local rollback frame.
+            disclosure_preparing_bytes -= stamp_role; disclosure_preparing_bytes += old_stamp_role; stamp_role = old_stamp_role;
+            call.receipt->approved_context.swap(encoded);
+            stage = "REFRESH_CHARGE"; role = "JOINT_RETAINED"; bound = Limits::stream_retained_bytes;
+            try { native_charge(); }
+            catch (...) {
+                if (!publication.receiver || publication.receiver->state_.get() != this) throw;
+                call.receipt->stamps.swap(old); call.receipt->approved_context.swap(encoded);
+                disclosure_preparing_bytes -= stamp_role; disclosure_preparing_bytes += new_stamp_role; stamp_role = new_stamp_role;
+                throw;
+            }
+            if (!current()) return;
+            call.receipt->disclosure = refreshed_scope;
+            approved_scope = refreshed_scope; backend_scope = refreshed_scope;
+            consented_context.clear();
+        } catch (...) {
+            if (current()) native_failure(stage, role, bound, native_failure_class(), &call, call.record->outcome_ready ? &call.record->outcome : nullptr);
             throw;
         }
-        if (!current()) return;
-        call.receipt->disclosure = refreshed_scope;
-        approved_scope = refreshed_scope; backend_scope = refreshed_scope;
-        consented_context.clear();
     }
+
     // A final report/response may reenter normal Session/input publication.
     // Scope its remaining controls to the existing original call and ledger;
     // explicit successful discard may legitimately empty that original ledger.
@@ -3961,39 +4039,55 @@ struct AssistantViewModel::State {
         const auto original_call = [&] {
             return receiver && receiver->state_.get() == this && native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc;
         };
-        bool retained = false;
+        const char* stage = "FINISH_RESPONSE";
+        const char* role = "RESPONSE";
+        quint64 bound = Limits::message_bytes;
+        bool retained = false, request_retired = false;
         try {
             const bool visible = native_visible(call);
             auto actual = outcome;
             const bool authorized = native_owner(call.receipt);
+            request_retired = !authorized;
             if (!authorized) { success = false; actual["request_retired"] = true; }
             auto response = native_response(success, actual);
+            stage = "FINISH_ROW"; role = "ROW"; bound = record->row_bytes;
             auto row = native_row(*record, actual, success);
             if (!authorized) row["status"] = "interrupted";
-            if (generic_size(actual, Limits::context_bytes) > record->outcome_bytes ||
-                generic_size(row, Limits::message_bytes) > record->row_bytes ||
-                generic_size(response, Limits::message_bytes) > generic_size(record->maximum_response, Limits::message_bytes))
+            stage = "FINISH_OUTCOME_SIZE"; role = "OUTCOME"; bound = record->outcome_bytes;
+            if (generic_size(actual, Limits::context_bytes) > bound)
+                throw std::length_error("Native terminal exceeds its prepared role");
+            stage = "FINISH_ROW_SIZE"; role = "ROW"; bound = record->row_bytes;
+            if (generic_size(row, Limits::message_bytes) > bound)
+                throw std::length_error("Native terminal exceeds its prepared role");
+            stage = "FINISH_RESPONSE_SIZE"; role = "RESPONSE"; bound = Limits::message_bytes;
+            bound = generic_size(record->maximum_response, Limits::message_bytes);
+            if (generic_size(response, Limits::message_bytes) > bound)
                 throw std::length_error("Native terminal exceeds its prepared role");
             // Own the actual result before any storage, post-write fingerprint or
             // wire operation. The preprepared uncertainty roles remain a fallback.
             record->outcome = std::move(actual); record->response = std::move(response); record->terminal = std::move(row);
             record->outcome_ready = true;
+            stage = "FINISH_CHARGE"; role = "JOINT_RETAINED"; bound = Limits::stream_retained_bytes;
             native_charge();
+            stage = "FINISH_REFRESH";
             try { native_refresh(call); }
-            catch (...) { if (!original_call()) return; native_fence(); }
+            catch (...) { if (!original_call()) return; native_failure(stage, role, bound, native_failure_class(), &call, &outcome, int(request_retired)); native_fence(); }
             if (!original_call()) return;
+            stage = "FINISH_HISTORY"; role = "HISTORY"; bound = Limits::ui_history_bytes;
             if (visible) retained = generic_present(record->terminal);
             else retained = true; // No append into a discarded conversation; no durability claim.
             record->reserved = !retained;
-            if (!retained) native_fence();
+            if (!retained) { native_failure(stage, role, bound, "REFUSAL", &call, &outcome, int(request_retired)); native_fence(); }
             if (!original_call()) return;
             if (!call.resolved && !record->answered) {
                 record->answered = true; // Transfer the original ID at most once, including write failure.
+                stage = "FINISH_ANSWER"; role = "RESPONSE"; bound = Limits::message_bytes;
                 if (!agent->answer(call.rpc, record->response)) throw std::runtime_error("Native response delivery is uncertain");
             }
             if (!original_call()) return;
             record->completed = true;
             if (retained) { record->maximum_row = {}; record->maximum_response = {}; }
+            stage = "FINISH_INSPECTION"; role = "DISCLOSURE"; bound = Limits::context_bytes;
             const auto inspection = call.inspection;
             bool advance = false;
             if (success && retained && inspection && native_receipt == call.receipt && native_owner(call.receipt)) {
@@ -4016,12 +4110,14 @@ struct AssistantViewModel::State {
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
             if (!receiver || !settled()) return;
             if (!retained) generic_blocked = true;
+            stage = "FINISH_NOTIFY"; role = "PUBLICATION"; bound = 0;
             notify();
         } catch (...) {
             // The prepared outcome/response/row and original ID remain owned.
             // A failed post-write allocation is uncertainty, not account loss or
             // a fabricated durable success. Clear can explicitly discard it.
             if (!original_call()) return;
+            native_failure(stage, role, bound, native_failure_class(), &call, &outcome, int(request_retired));
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
             if (!receiver || !original_call()) return;
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
@@ -4341,9 +4437,10 @@ struct AssistantViewModel::State {
         if (!readonly && project && (project->fit()->nativeRunning() || project->calculating())) {
             native_reply(rpc, false, {{"status", "busy"}, {"message", "The current native calculation or fit has not settled."}}); return;
         }
-        if (show_actions && !readonly && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "add_relations" && name != "create_cwl_project" && name != "edit_background" && name != "save_project") {
+        if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "add_relations" && name != "create_cwl_project" && name != "edit_background" && name != "save_project") {
             native_reply(rpc, false, {{"status", "unavailable"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
         }
+        if(individual_app_action(name)){native_start_individual(rpc,id,purpose,original,args,name);return;}
         if(name=="acquire_inputs"){native_acquire_inputs(rpc,id,purpose,original,args);return;}
         if (name == "create_cwl_project") {
             if (show_actions) { native_start_visible_creation(rpc, id, purpose, original, args); return; }
@@ -4675,6 +4772,28 @@ struct AssistantViewModel::State {
             return std::move(completion);
         };
     }
+    std::unique_ptr<QTemporaryDir> native_input_snapshot() {
+        const auto appData=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        if(appData.isEmpty())throw std::runtime_error("Native input host directory is unavailable");
+        const auto base=QDir(appData).filePath("assistant");
+        if(!QDir().mkpath(base))throw std::runtime_error("Native input host directory is unavailable");
+        const auto root=QFileInfo(base).canonicalFilePath();
+        const auto workspace=generic_workspace.isEmpty()?QString{}:QFileInfo(generic_workspace).canonicalFilePath();
+        if(root.isEmpty() || workspace.isEmpty() || root==workspace || root.startsWith(workspace+'/'))
+            throw std::runtime_error("Native input snapshot must remain outside the internal instruction stage");
+        auto result=std::make_unique<QTemporaryDir>(root+"/native-input-XXXXXX");
+        if(!result->isValid())throw std::runtime_error("Native input snapshot is unavailable");
+        return result;
+    }
+    static QUrl native_snapshot_file(const QTemporaryDir& snapshot,const edi::assistant::SelectedFile& source,const QString& name) {
+        const auto leaf=QFileInfo(name).fileName();
+        if(leaf.isEmpty() || leaf=="." || leaf==".." || leaf.contains(QChar(0)))throw std::invalid_argument("Native snapshot filename is unavailable");
+        const auto path=snapshot.filePath(leaf);QSaveFile file(path);
+        if(!file.open(QIODevice::WriteOnly) || !file.setPermissions(QFile::ReadOwner|QFile::WriteOwner) ||
+            file.write(reinterpret_cast<const char*>(source.bytes.data()),static_cast<qint64>(source.bytes.size()))!=static_cast<qint64>(source.bytes.size()) || !file.commit())
+            throw std::runtime_error("Native input snapshot could not be retained");
+        return QUrl::fromLocalFile(path);
+    }
     std::pair<std::string, std::string> creation_input(const std::shared_ptr<NativeCreation>& creation,
                                                      const QString& cifId, const QString& dataId, bool copyStructureText = true) {
         const edi::assistant::SelectedFile* cif = nullptr; const edi::assistant::SelectedFile* data = nullptr;
@@ -4683,22 +4802,9 @@ struct AssistantViewModel::State {
             if (file.id == dataId.toStdString()) data = &file;
         }
         if (!cif || !data || cifId == dataId) throw std::runtime_error("Choose distinct admitted CIF and measurement files");
-        const auto appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-        if (appData.isEmpty()) throw std::runtime_error("Native input host directory is unavailable");
-        const auto hostBase = QDir(appData).filePath("assistant");
-        if (!QDir().mkpath(hostBase)) throw std::runtime_error("Native input host directory is unavailable");
-        const auto hostRoot = QFileInfo(hostBase).canonicalFilePath();
-        const auto workspace = generic_workspace.isEmpty() ? QString{} : QFileInfo(generic_workspace).canonicalFilePath();
-        if (hostRoot.isEmpty() || workspace.isEmpty() ||
-            (!workspace.isEmpty() && (hostRoot == workspace || hostRoot.startsWith(workspace + '/'))))
-            throw std::runtime_error("Native input snapshot must remain outside the internal instruction stage");
-        creation->snapshot = std::make_unique<QTemporaryDir>(hostRoot + "/native-input-XXXXXX");
-        if (!creation->snapshot->isValid()) throw std::runtime_error("Native input snapshot is unavailable");
-        const auto dataPath = creation->snapshot->filePath("measurement.xye"); QSaveFile snapshot(dataPath);
-        if (!snapshot.open(QIODevice::WriteOnly) || !snapshot.setPermissions(QFile::ReadOwner | QFile::WriteOwner) ||
-            snapshot.write(reinterpret_cast<const char*>(data->bytes.data()), static_cast<qint64>(data->bytes.size())) != static_cast<qint64>(data->bytes.size()) || !snapshot.commit())
-            throw std::runtime_error("Native measurement snapshot could not be retained");
-        return {copyStructureText ? std::string(reinterpret_cast<const char*>(cif->bytes.data()), cif->bytes.size()) : std::string{}, dataPath.toStdString()};
+        creation->snapshot=native_input_snapshot();
+        const auto dataPath=native_snapshot_file(*creation->snapshot,*data,QStringLiteral("measurement.xye"));
+        return {copyStructureText ? std::string(reinterpret_cast<const char*>(cif->bytes.data()), cif->bytes.size()) : std::string{}, dataPath.toLocalFile().toStdString()};
     }
 
     NativeAttachment* prepare_creation_attachment(const std::shared_ptr<NativeCreation>& creation, ProjectViewModel* target, const Object& outcome) {
@@ -5423,8 +5529,312 @@ struct AssistantViewModel::State {
         }
     }
 
+    std::shared_ptr<NativeCreateWidget> make_creation_frame() {
+        const auto publication=file_projection();
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto output=transport?transport->outputGeneration():0;
+        return std::shared_ptr<NativeCreateWidget>(new NativeCreateWidget,
+            [this,publication,transport,output](NativeCreateWidget* frame) noexcept {
+                delete frame;
+                if(publication.receiver && publication.receiver->state_.get()==this)
+                    native_release_charge(publication,transport,output);
+            });
+    }
+    void track_creation_frame(const std::shared_ptr<NativeCreateWidget>& run) {
+        creation_widget_frames.erase(std::remove_if(creation_widget_frames.begin(),creation_widget_frames.end(),
+            [](const auto& frame){return frame.expired();}),creation_widget_frames.end());
+        if(creation_widget_frames.size()>=Limits::stream_calls)throw std::length_error("Original input callback capacity is unavailable");
+        const auto role=reserve_disclosure((creation_widget_frames.size()+1)*sizeof(std::weak_ptr<NativeCreateWidget>));
+        creation_widget_frames.reserve(creation_widget_frames.size()+1);
+        creation_widget_frames.push_back(run);
+    }
+    int individual_member_index(const std::shared_ptr<NativeCreateWidget>& run) const {
+        if(!run || !run->project)return -1;
+        const auto* member=run->result_member?run->result_member:run->operation_member;
+        const auto& members=run->project->assistantProject()->experiments;
+        for(std::size_t i=0;i<members.size();++i)if(members[i].get()==member)return static_cast<int>(i);
+        return -1;
+    }
+    bool individual_member_current(const std::shared_ptr<NativeCreateWidget>& run) const {
+        if(!run || !run->project || project!=run->project || !policy_current() || generic_connecting)return false;
+        if(run->result_structure) {
+            bool found=false;
+            for(const auto& member:run->project->assistantProject()->structures)if(member.get()==run->result_structure)found=true;
+            return found;
+        }
+        if(!run->operation_member && !run->result_member)return true;
+        const int index=individual_member_index(run);
+        if(index<0)return false;
+        if(run->result_member)return true; // Only an actual applied original input installs this pin.
+        return run->operation_view && run->operation_view->experiment()==run->operation_member &&
+            index<run->project->experiment_models_.size() && run->project->experiment_models_.at(index)==run->operation_view;
+    }
+    bool individual_disclosure_transition(const NativeCall& call,const std::shared_ptr<const DisclosureScope>& next) const {
+        const auto run=native_create_widget;
+        if(!run || run->individual_tool.isEmpty() || !create_widget_owned(run) || run->call.record!=call.record ||
+            !run->completed_steps || !individual_member_current(run) || (!run->result_member && !run->result_structure))return false;
+        const auto old=call.receipt->disclosure;
+        // Only the committed scientific member/raw-data identity may advance.
+        // No account, selected-file, skill, capability or project replacement
+        // is laundered into the original approved call.
+        return old && next && old->project==next->project && old->model==next->model && old->has_project==next->has_project &&
+            old->account==next->account && old->selected==next->selected && old->capabilities==next->capabilities &&
+            old->skill_configuration==next->skill_configuration && old->skills && next->skills &&
+            old->skills->fingerprint==next->skills->fingerprint;
+    }
+    Object individual_progress(const std::shared_ptr<NativeCreateWidget>& run,bool complete) const {
+        const bool applied=run->completed_steps>0;
+        Object result{{"status",complete?"completed":applied?"applied_unconfirmed":"refused"},
+            {"applied",applied},{"published",run->operation_published || (complete && !applied)},{"complete",complete},
+            {"calculation_pending",run->project && run->project->calculating()}};
+        if(!complete) {
+            result["action_error"]=applied?"operation_superseded":"control_unavailable";
+            result["action_field"]=run->individual_tool=="load_structure"?"file_id":"experiment";
+        }
+        const bool identity_refused = (run->file_input && run->file_input->result_identity_refused) ||
+            (run->control_input && run->control_input->result_identity_refused);
+        if (identity_refused && !applied) {
+            result["action_error"] = "unsupported_input";
+            result["action_field"] = run->file_input ? "file_id" : run->individual_tool == "create_experiment" ? "project" : "experiment";
+        }
+        if(!individual_member_current(run))return result;
+        if(run->result_structure) {
+            const auto& name=run->result_structure->name.value();
+            if(name.size()>Limits::id_bytes)throw std::length_error("Original structure identity exceeds capacity");
+            result["structures"]=QJsonArray{Object{{"id",QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(name))}}};
+        }
+        const auto* member=run->result_member;
+        if(member) {
+            if(member->name.value().size()>Limits::id_bytes)throw std::length_error("Original experiment identity exceeds capacity");
+            Object row{{"id",QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))},
+                {"beam_mode",QString::fromLatin1(edi::token(member->effective_beam_mode()))},
+                {"probe",QString::fromLatin1(edi::token(member->experiment_type.effective_radiation_probe()))},
+                {"calculation_only",member->calculation_only}};
+            QJsonArray phases;
+            for(const auto& link:member->linked_structures) {
+                if(link->structure_id.value().size()>Limits::id_bytes)throw std::length_error("Original phase identity exceeds capacity");
+                phases.append(Object{{"structure_id",QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(link->structure_id.value()))},{"enabled",link->enabled.get()}});
+            }
+            row["phases"]=phases;result["datasets"]=QJsonArray{row};
+            if(run->individual_tool=="set_experiment_type" && applied)
+                result["diagnostics"]=QJsonArray{Object{{"code","experiment_type_settings_reinitialized"},
+                    {"severity","info"},{"path",row.value("id")},{"actionable",true}}};
+        }
+        if(!run->reader_facts.isEmpty())result["reader_facts"]=run->reader_facts;
+        return result;
+    }
+    void individual_normal(const std::shared_ptr<NativeCreateWidget>& run) {
+        if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
+        const auto receiver=run->receiver;
+        using Action=ProjectEditor::CreationAction;
+        const auto cleanup=qScopeGuard([this,run,receiver] {
+            if(run->project) {
+                run->project->finishWidgetFile(run->file_input);
+                run->project->finishWidgetCreation(run->control_input);
+            }
+            if(receiver && receiver->state_.get()==this && run->edit_scope) {
+                const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);
+            }
+        });
+        if(run->individual_tool=="load_structure")
+            run->file_input=run->project->prepareWidgetStructureFile(run->structure_path,run->structure_source);
+        else if(run->individual_tool=="load_data")
+            run->file_input=run->project->prepareWidgetMeasurementFile(run->measurement_path,run->measurement_source,run->operation_view);
+        else if(run->individual_tool=="create_experiment")
+            run->control_input=run->project->prepareWidgetCreation(Action{Action::Kind::ExperimentAppend});
+        else run->control_input=run->project->prepareWidgetCreation(Action{Action::Kind::ExperimentType,run->operation_member,
+            run->arguments.value("axis").toString(),run->arguments.value("token").toString()});
+        if (run->file_input) run->file_input->bounded_result = true;
+        if (run->control_input) run->control_input->bounded_result = true;
+        native_charge();
+        if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
+        run->edit_scope=begin_own_edit();
+        if(run->individual_tool=="load_structure")run->project->loadStructure(run->structure_path);
+        else if(run->individual_tool=="load_data")run->project->loadDataInto(run->operation_view,run->measurement_path);
+        else if(run->individual_tool=="create_experiment")run->project->createExperiment();
+        else run->project->setExperimentType(individual_member_index(run),run->arguments.value("axis").toString(),run->arguments.value("token").toString());
+        if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+        create_widget_capture_step(run);
+        native_call->may_have_written=run->completed_steps>0;
+        const auto& outcome=run->file_input?run->file_input->outcome:run->control_input->outcome;
+        if(!outcome.applied || !outcome.published || !individual_member_current(run)) {
+            auto result=individual_progress(run,false);
+            if(!outcome.applied && !(run->file_input && run->file_input->result_identity_refused) &&
+                !(run->control_input && run->control_input->result_identity_refused)) {
+                result["action_error"]=run->file_input?"reader_refused":"unsupported_type";
+                result["action_field"]=run->file_input?"file_id":"token";
+            }
+            native_finish(false,result);return;
+        }
+        native_finish(true,individual_progress(run,true));
+    }
+    void native_start_individual(const QJsonValue& rpc,const QString& id,const QString& purpose,
+                                 const Object& original,const Object& args,const QString& name) {
+        const auto publication=file_projection();const auto receipt=native_receipt;
+        const QPointer<AssistantViewModel> receiver(&owner);
+        // Reserve preparation owners before the schema/result/cursor exists.
+        const auto plan_role=reserve_disclosure(sizeof(NativeCreateWidget)+sizeof(FileProjection)+sizeof(QPointer<CodexAgent>)+sizeof(quint64)+sizeof(AssistantWidgetInput::Request)+
+            5*sizeof(NativeCreateWidget::Input)+6*Limits::id_bytes*sizeof(QChar)+
+            generic_size(args,Limits::context_bytes));
+        auto run=make_creation_frame();run->individual_tool=name;run->ordinary=true;
+        run->visible_delivery=show_actions;run->project=project;run->receiver=receiver;run->window=action_window;
+        run->arguments=args;run->id=QUuid::createUuid().toString(QUuid::WithoutBraces);
+        run->epoch=result_session()?result_session()->assistantEpoch():0;
+        const auto original_current=[&] { return publication.input_current() && native_receipt==receipt &&
+            native_current(receipt) && !native_call && policy_current() && !generic_connecting; };
+        const auto prepare_refusal=[&](const char* error,const char* field) {
+            Object result{{"status","refused"},{"applied",false},{"published",false},{"complete",false},
+                {"action_error",error},{"action_field",field}};
+            if(!original_current())return;
+            const auto refusal_role=reserve_disclosure(generic_size(result,Limits::context_bytes)+
+                sizeof(R"({"schema":"edi.assistant.outgoing/1","code":"resource_exhausted"})")-1);
+            auto maximum=result;
+            maximum["schema"]="edi.assistant.outgoing/1";maximum["code"]="resource_exhausted";
+            native_prepare(rpc,id,name,purpose,original,maximum);
+            if(receiver && publication.input_current() && native_call && native_call->record->call==id && native_call->receipt==receipt)
+                native_finish(false,result);
+        };
+        if(!project){prepare_refusal("project_required","project");return;}
+        if(!result_session() || result_session()->project()!=project){prepare_refusal("operation_superseded","project");return;}
+        if(name=="load_data" || name=="set_experiment_type") {
+            if(!args.value("experiment").isString()){prepare_refusal("target_unavailable","experiment");return;}
+            const auto target=generic_id(args.value("experiment"));
+            for(std::size_t i=0;i<project->assistantProject()->experiments.size();++i) {
+                const auto* member=project->assistantProject()->experiments[i].get();
+                if(member->name.value().size()<=Limits::id_bytes && QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))==target) {
+                    run->operation_member=member;run->operation_view=project->experiment_models_.value(static_cast<int>(i));break;
+                }
+            }
+            if(!individual_member_current(run) || !run->operation_member){prepare_refusal("target_unavailable","experiment");return;}
+            if(!run->operation_member->calculation_only) {
+                prepare_refusal(name=="load_data"?"data_already_present":"type_locked","experiment");return;
+            }
+        }
+        bool no_change=false;
+        if(name=="set_experiment_type") {
+            const auto axis=args.value("axis").toString(),token=args.value("token").toString();
+            if((axis!="beamMode" && axis!="radiationProbe") ||
+                (axis=="beamMode" && token!="constant wavelength" && token!="time-of-flight") ||
+                (axis=="radiationProbe" && token!="neutron" && token!="xray")) {
+                prepare_refusal("unsupported_type",axis=="beamMode" || axis=="radiationProbe"?"token":"axis");return;
+            }
+            edi::ExperimentTypeTokens type{edi::token(run->operation_member->experiment_type.effective_sample_form()),
+                edi::token(run->operation_member->effective_beam_mode()),edi::token(run->operation_member->experiment_type.effective_radiation_probe()),
+                edi::token(run->operation_member->experiment_type.effective_scattering_type())};
+            if(axis=="beamMode"){no_change=type.beam_mode==token.toStdString();type.beam_mode=token.toStdString();}
+            else {no_change=type.radiation_probe==token.toStdString();type.radiation_probe=token.toStdString();}
+            // The original type factory runs before its closed Edit applies;
+            // do not construct a second scientific model merely for admission.
+        }
+        QString file_id;
+        if(name=="load_structure" || name=="load_data") {
+            if(!args.value("file_id").isString() || args.value("file_id").toString().isEmpty()) {prepare_refusal("input_required","file_id");return;}
+            file_id=generic_id(args.value("file_id"));bool found=false,readable=false;
+            for(const auto& value:receipt->selected_context.value("files").toArray()) {
+                const auto row=value.toObject();if(row.value("id")==file_id){found=true;readable=row.value("text_readable").toBool();break;}
+            }
+            if(!found){prepare_refusal("input_unavailable","file_id");return;}
+            if(!readable){prepare_refusal("unsupported_input","file_id");return;}
+        }
+        if(show_actions && !no_change && (!widget_input || !action_window || native_widget || native_create_widget || widget_input->manualDraftPresent())) {
+            prepare_refusal("control_unavailable","project");return;
+        }
+        // Known phase identities are reused verbatim, including their legal
+        // JSON escapes. Unknown resulting IDs use an internal escaped maximum,
+        // never a restriction or replacement of the real scientific name.
+        constexpr auto fixed=sizeof(R"({"schema":"edi.assistant.outgoing/1","code":"resource_exhausted","message":"","request_retired":true,"status":"applied_unconfirmed","applied":false,"published":false,"complete":false,"calculation_pending":false,"action_error":"operation_superseded","action_field":"experiment","structures":[{"id":""}],"datasets":[{"id":"","beam_mode":"constant wavelength","probe":"neutron","calculation_only":false,"phases":[]}],"reader_facts":{"points":1.7976931348623157e308,"skipped":1.7976931348623157e308,"nonpositive":1.7976931348623157e308,"duplicates":1.7976931348623157e308,"reordered":1.7976931348623157e308,"derived_sigma":1.7976931348623157e308},"diagnostics":[{"code":"experiment_type_settings_reinitialized","severity":"info","path":"","actionable":false}]})")-1;
+        const auto phase_names = [&](auto&& accept) {
+            if(name=="create_experiment") {
+                for(const auto& member:project->assistantProject()->structures)accept(member->name.value());
+            } else if(run->operation_member) {
+                for(const auto& link:run->operation_member->linked_structures)accept(link->structure_id.value());
+            }
+        };
+        quint64 phase_preparation=2;
+        phase_names([&](const std::string& value) {
+            // datablock canonicalization can substitute only the named fallback.
+            const auto bytes=std::max(value.size(),sizeof("structure")-1);
+            constexpr auto fields=sizeof(R"({"structure_id":"","enabled":false},)")-1;
+            if(bytes>(Limits::stream_retained_bytes-fields)/9)throw std::length_error("Original phase result exceeds capacity");
+            const auto role=fields+9*bytes; // encoded escape bound + simultaneous native/UTF-16 spelling
+            if(role>Limits::stream_retained_bytes-phase_preparation)throw std::length_error("Original phase result exceeds capacity");
+            phase_preparation+=role;
+        });
+        const auto phases_role=reserve_disclosure(phase_preparation);
+        QJsonArray phases;
+        phase_names([&](const std::string& value) {
+            phases.append(Object{{"structure_id",QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(value))},{"enabled",false}});
+        });
+        const auto result_role=reserve_disclosure(fixed+18*Limits::id_bytes+6*Limits::error_bytes);
+        // NUL encodes as six JSON bytes and seven inside the response JSON text;
+        // each bounded UTF-8 identifier uses no more UTF-16 units than its bytes.
+        // The template is internal only and is never sent or used as an ID.
+        const QString maximum_id(static_cast<qsizetype>(Limits::id_bytes),QChar(0));
+        Object maximum{{"schema","edi.assistant.outgoing/1"},{"code","resource_exhausted"},
+            {"message",QString(static_cast<qsizetype>(Limits::error_bytes),QChar(0))},
+            {"status","applied_unconfirmed"},{"applied",false},{"published",false},{"complete",false},{"calculation_pending",false},
+            {"action_error","operation_superseded"},{"action_field","experiment"},
+            {"structures",QJsonArray{Object{{"id",maximum_id}}}},
+            {"datasets",QJsonArray{Object{{"id",maximum_id},{"beam_mode","constant wavelength"},{"probe","neutron"},{"calculation_only",false},{"phases",phases}}}}};
+        Object maximum_facts;for(const auto* key:{"points","skipped","nonpositive","duplicates","reordered","derived_sigma"})maximum_facts[key]=static_cast<double>(edi::assistant::SelectedFileLimits::file_bytes);
+        maximum["reader_facts"]=maximum_facts;
+        maximum["diagnostics"]=QJsonArray{Object{{"code","experiment_type_settings_reinitialized"},{"severity","info"},{"path",maximum_id},{"actionable",false}}};
+        if(!original_current())return;
+        native_prepare(rpc,id,name,purpose,original,maximum);
+        if(!receiver || !publication.input_current() || !native_call || native_call->record->call!=id || native_call->receipt!=receipt)return;
+        if(no_change)run->visible_delivery=false;
+        run->call=*native_call;run->fallback_outcome=run->call.record->outcome;run->fallback_response=run->call.record->response;
+        run->fallback_row=run->call.record->terminal;run->fallback_ready=true;
+        track_creation_frame(run);native_create_widget=run;native_charge();
+        if(!receiver || !create_widget_current(run))return;
+        try {
+            if(no_change) {
+                run->result_member=run->operation_member;
+                auto result=individual_progress(run,true);result["status"]="no_change";result["applied"]=false;
+                native_finish(true,result);if(receiver && create_widget_owned(run))create_widget_end(run);return;
+            }
+            if(!file_id.isEmpty()) {
+                const auto capture_role=reserve_disclosure(creation_capture_bytes(*receipt));
+                auto captured=native_selected_bytes(*receipt);
+                for(auto& file:captured)if(QString::fromStdString(file.id)==file_id) {
+                    auto source=std::make_shared<const edi::assistant::SelectedFile>(std::move(file));
+                    if(name=="load_structure")run->structure_source=std::move(source);else run->measurement_source=std::move(source);
+                }
+                if(!run->structure_source && !run->measurement_source)throw ActionRefusal("input_unavailable","file_id");
+                run->input_snapshot=native_input_snapshot();
+                const auto source=run->structure_source?run->structure_source:run->measurement_source;
+                const auto path=native_snapshot_file(*run->input_snapshot,*source,QString::fromUtf8(source->relative_name.data(),static_cast<qsizetype>(source->relative_name.size())));
+                if(run->structure_source)run->structure_path=path;else run->measurement_path=path;
+            }
+            native_charge();if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
+            if(!run->visible_delivery) {
+                individual_normal(run);
+                if(receiver && create_widget_owned(run))create_widget_end(run);return;
+            }
+            using Kind=AssistantWidgetInput::Kind;
+            const auto page=name=="load_structure"?QStringLiteral("structure"):QStringLiteral("experiment");
+            run->inputs.reserve(5);run->inputs.push_back({Kind::Navigate,"appBar.tab."+page});
+            run->inputs.push_back({Kind::Navigate,"sideBar.tab.basic"});
+            if(run->operation_member)run->inputs.push_back({Kind::Navigate,QString("experiments.row.%1").arg(individual_member_index(run))});
+            if(name=="load_structure")run->inputs.push_back({Kind::Navigate,"structures.load"});
+            else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.loadData.%1").arg(individual_member_index(run))});
+            else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
+            else {
+                const auto axis=args.value("axis").toString(),token=args.value("token").toString();
+                const int option=token=="constant wavelength" || token=="neutron"?0:1;
+                run->inputs.push_back({Kind::Choose,"experimentType."+axis,{},option});
+            }
+            native_charge();if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
+            widget_showing(true);if(create_widget_current(run))create_widget_next(run);
+        } catch(const ActionRefusal& refusal) {
+            if(!receiver || !create_widget_owned(run))return;
+            auto result=individual_progress(run,false);result["action_error"]=refusal.error;result["action_field"]=refusal.field;
+            native_finish(false,result);if(receiver && create_widget_owned(run))create_widget_end(run);
+        } catch(...) { if(receiver && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error); }
+    }
+
     bool create_widget_owned(const std::shared_ptr<NativeCreateWidget>& run) const {
-        return run && run->receiver && run->receiver->state_.get() == this && native_create_widget == run && run->window && action_window == run->window && native_call &&
+        return run && run->receiver && run->receiver->state_.get() == this && native_create_widget == run && (!run->visible_delivery || (run->window && action_window == run->window)) && native_call &&
             native_call->record == run->call.record && native_call->receipt == run->call.receipt && native_call->rpc == run->call.rpc;
     }
     bool create_widget_current(const std::shared_ptr<NativeCreateWidget>& run) const {
@@ -5434,6 +5844,7 @@ struct AssistantViewModel::State {
         // An ordinary applied editor advances Session's save/intent epoch too.
         // Its SAME owner is proved by the original PVM, current native receipt
         // and work stamps, never an assumed notification-count increment.
+        if (!run->individual_tool.isEmpty() && !individual_member_current(run)) return false;
         return session && project == run->project &&
             (run->project ? session->project() == run->project
                           : session->assistantEpoch()==run->epoch && session->emptyAssistantOwner(run->epoch));
@@ -5442,7 +5853,15 @@ struct AssistantViewModel::State {
         const bool applied=(run->control_input && run->control_input->outcome.applied) ||
             (run->parameter_input && run->parameter_input->outcome.applied) || (run->file_input && run->file_input->outcome.applied);
         if (applied && !run->step_counted) { ++run->completed_steps; run->step_counted=true; }
+        if (run->control_input && run->control_input->outcome.applied && run->control_input->applied_result.experiment)
+            run->result_member=run->control_input->applied_result.experiment;
+        if(run->control_input && run->control_input->outcome.applied)run->operation_published=run->control_input->outcome.published;
         const auto input=run->file_input;
+        if(input && input->outcome.applied)run->operation_published=input->outcome.published;
+        if(input && input->outcome.applied) {
+            if(input->applied_result.experiment)run->result_member=input->applied_result.experiment;
+            if(input->applied_result.structure)run->result_structure=input->applied_result.structure;
+        }
         if (input && input->outcome.applied && input->kind==ProjectViewModel::WidgetFileInput::Kind::Measurement)
             run->reader_facts={{"points",static_cast<double>(input->points)},{"skipped",static_cast<double>(input->skipped)},
                 {"nonpositive",static_cast<double>(input->nonpositive)},{"duplicates",static_cast<double>(input->duplicates)},
@@ -5471,7 +5890,7 @@ struct AssistantViewModel::State {
                 (!native_call || (native_call->record == run->call.record && native_call->receipt == run->call.receipt && native_call->rpc == run->call.rpc));
         };
         // Balance only the original helper before any QML cleanup can admit B.
-        try { if (original_cleanup() && helper) helper->cancel(); } catch (...) {}
+        try { if (run->visible_delivery && original_cleanup() && helper) helper->cancel(); } catch (...) {}
         try { if (original_cleanup() && child && native_widget==child) widget_end(child); } catch (...) {}
         if (original_cleanup() && publishing && (!generic_busy || generic_revoke_pending ||
             generic_clear_pending || generic_context_pending || !generic_authenticated || generic_retiring))
@@ -5508,7 +5927,23 @@ struct AssistantViewModel::State {
             return; // Only the actual original Worker finalDelivery answers this RPC.
         }
         if (!uncertain) try {
-            if (run->ordinary) { create_widget_retain(run); native_finish(false, create_widget_progress(run, false, message)); }
+            if (run->ordinary) {
+                create_widget_capture_step(run);
+                if(run->completed_steps)native_call->may_have_written=true;
+                else if (!run->individual_tool.isEmpty() &&
+                    ((run->file_input && run->file_input->result_identity_refused) ||
+                     (run->control_input && run->control_input->result_identity_refused)))
+                    native_call->may_have_written=false; // The original pre-Edit refusal proves no write.
+                create_widget_retain(run);
+                auto outcome=create_widget_progress(run,false,message);
+                if(!run->individual_tool.isEmpty() && !run->completed_steps &&
+                    !(run->file_input && run->file_input->result_identity_refused) &&
+                    !(run->control_input && run->control_input->result_identity_refused)) {
+                    if(run->file_input && run->file_input->consumed) {outcome["action_error"]="reader_refused";outcome["action_field"]="file_id";}
+                    else if(run->control_input && run->control_input->consumed) {outcome["action_error"]="unsupported_type";outcome["action_field"]="token";}
+                }
+                native_finish(false,outcome);
+            }
             else native_finish(false, {{"status", "refused"}, {"adopted", false}, {"message", bounded_error(message)}});
         }
         catch (...) { uncertain = true; }
@@ -5569,6 +6004,7 @@ struct AssistantViewModel::State {
             const bool measured = run->inputs.at(run->step).target.startsWith("experiments.loadData.");
             run->file_input = measured ? run->project->prepareWidgetMeasurementFile(run->measurement_path, run->measurement_source, run->project->currentExperiment())
                 : run->project->prepareWidgetStructureFile(run->structure_path, run->structure_source);
+            run->file_input->bounded_result = !run->individual_tool.isEmpty();
             native_charge();
             if (!create_widget_picker_current(run)) return false;
             run->edit_scope = begin_own_edit();
@@ -5641,13 +6077,25 @@ struct AssistantViewModel::State {
     }
     void create_widget_load_structure(const std::shared_ptr<NativeCreateWidget>& run) {
         if (!create_widget_current(run) || !run->ordinary || !run->project || !widget_input ||
-            !run->structure_source || !run->input_snapshot || !run->input_snapshot->isValid())
+            (!run->structure_source && !run->measurement_source) || !run->input_snapshot || !run->input_snapshot->isValid())
             throw std::runtime_error("The admitted original Structure Load is unavailable");
         const bool measured = run->inputs.at(run->step).target.startsWith("experiments.loadData.");
         auto* group = create_widget_named(run, measured ? "group.experiments" : "group.structures");
-        auto* load = create_widget_named(run, measured ? "experiments.loadData.0" : "structures.load");
-        if (!group || !load || group->property("project").value<ProjectViewModel*>() != run->project)
+        const auto target_name = measured && !run->individual_tool.isEmpty()
+            ? QString("experiments.loadData.%1").arg(individual_member_index(run)) : measured ? QString("experiments.loadData.0") : QString("structures.load");
+        auto* load = create_widget_named(run, target_name);
+        if (measured && !run->individual_tool.isEmpty() && (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))
+            throw ActionRefusal("target_unavailable","experiment");
+        if (!group || !load || group->property("project").value<ProjectViewModel*>() != run->project) {
+            if(!load && !run->individual_tool.isEmpty() && create_widget_missing_target(run,run->inputs.at(run->step)))return;
             throw std::runtime_error("The original Structure group is unavailable");
+        }
+        if(measured && !run->individual_tool.isEmpty()) {
+            auto* row=create_widget_named(run,QString("experiments.row.%1").arg(individual_member_index(run)));
+            bool inside=false;for(auto* parent=load;parent;parent=parent->parentItem())if(parent==row)inside=true;
+            if(!row || !inside || row->property("experiment").value<QObject*>()!=run->operation_view)
+                throw ActionRefusal("target_unavailable","experiment");
+        }
         if (!widget_input->usableTarget(*load)) { create_widget_reveal(run,load); return; }
         run->file_group = group;
         QVariant prepared;
@@ -5714,6 +6162,7 @@ struct AssistantViewModel::State {
         result["saved"] = false; result["presentation_complete"] = complete;
         result["calculation_pending"] = run->project && run->project->calculating();
         result["message"] = bounded_error(message);
+        if(!run->individual_tool.isEmpty())return individual_progress(run,complete);
         return result;
     }
     void create_widget_retain(const std::shared_ptr<NativeCreateWidget>& run) {
@@ -5799,7 +6248,7 @@ struct AssistantViewModel::State {
         } else if (step.target.startsWith("linkedStructure.")) {
             groupName="group.linked_structure"; tableName="linkedStructure.list"; index=step.target.section('.',-1).toLongLong();
         } else if (step.target.startsWith("experiments.")) {
-            groupName="group.experiments"; tableName="experiments.list"; index=0;
+            groupName="group.experiments"; tableName="experiments.list"; index=run->individual_tool.isEmpty()?0:individual_member_index(run);
         } else if (step.target.startsWith("peak.")) groupName="group.peak";
         else if (step.target.startsWith("instrument.")) groupName="group.instrument";
         else return false;
@@ -5854,6 +6303,12 @@ struct AssistantViewModel::State {
         if (step.target.startsWith("appBar.tab.")) run->page = step.target.mid(11);
         if (step.target == "structures.load" || step.target.startsWith("experiments.loadData.")) { create_widget_load_structure(run); return; }
         const QPointer<QQuickItem> target(create_widget_named(run, step.target));
+        if (!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.")) {
+            if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","experiment"); }
+            if(target->property("experiment").value<QObject*>()!=run->operation_view || !individual_member_current(run))
+                throw ActionRefusal("target_unavailable","experiment");
+            if(run->project->currentExperiment()==run->operation_view) {create_widget_advance(run);return;}
+        }
         if (step.target == "project.create") {
             auto* group = create_widget_named(run, "group.getStarted"); QVariant ok;
             run->create_group = group;
@@ -5866,6 +6321,12 @@ struct AssistantViewModel::State {
             throw std::runtime_error("The original human control is unavailable");
         }
         if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic") && target->property("checked").toBool()) { create_widget_advance(run); return; }
+        if (!run->individual_tool.isEmpty() && step.target.startsWith("experimentType.")) {
+            auto* group=create_widget_named(run,"experimentType");
+            if(!group || group->property("project").value<ProjectViewModel*>()!=run->project ||
+                group->property("experiment").value<QObject*>()!=run->operation_view || !individual_member_current(run))
+                throw ActionRefusal("target_unavailable","experiment");
+        }
         int option = step.option;
         if (step.target == "peak.type") {
             auto* model = run->project->currentExperiment()->peakTypeOptions(); option = model->indexOf(step.text);
@@ -5884,15 +6345,20 @@ struct AssistantViewModel::State {
         input.restoreCurrent = [this, run] { return run->receiver && run->receiver->state_.get() == this && run->project && project == run->project && action_window == run->window; };
         input.prepareCommit = [this, run, step, target = QPointer<QQuickItem>(target)] {
             if (!create_widget_current(run) || !target) return false;
+            if (!run->individual_tool.isEmpty()) {
+                if(!individual_member_current(run))return false;
+                if(step.target.startsWith("experiments.row.") && target->property("experiment").value<QObject*>()!=run->operation_view)return false;
+                if(step.target.startsWith("experimentType.") && run->project->currentExperiment()!=run->operation_view)return false;
+            }
             if (step.target == "createProject.accept") { run->creating_project = true; return true; }
             if (!run->project) return true;
-            auto* experiment = run->project->assistantProject()->experiments.empty() ? nullptr : run->project->assistantProject()->experiments[0].get();
+            auto* experiment = !run->individual_tool.isEmpty() ? run->operation_member : run->project->assistantProject()->experiments.empty() ? nullptr : run->project->assistantProject()->experiments[0].get();
             std::optional<ProjectEditor::CreationAction> action;
             using Action = ProjectEditor::CreationAction;
             if (step.target == "experiments.create") action = Action{Action::Kind::ExperimentAppend};
             else if (step.target.startsWith("experiments.name.")) action = Action{Action::Kind::ExperimentName, experiment, {}, step.text};
-            else if (step.target == "experimentType.beamMode") action = Action{Action::Kind::ExperimentType, experiment, "beamMode", "constant wavelength"};
-            else if (step.target == "experimentType.radiationProbe") action = Action{Action::Kind::ExperimentType, experiment, "radiationProbe", "neutron"};
+            else if (step.target == "experimentType.beamMode") action = Action{Action::Kind::ExperimentType, experiment, "beamMode", run->individual_tool.isEmpty()?QStringLiteral("constant wavelength"):run->arguments.value("token").toString()};
+            else if (step.target == "experimentType.radiationProbe") action = Action{Action::Kind::ExperimentType, experiment, "radiationProbe", run->individual_tool.isEmpty()?QStringLiteral("neutron"):run->arguments.value("token").toString()};
             else if (step.target == "peak.type") action = Action{Action::Kind::PeakProfile, experiment, {}, step.text};
             else if (step.target == "excludedRegions.append") action = Action{Action::Kind::ExclusionAppend, experiment};
             else if (step.target.startsWith("excludedRegion.start.") || step.target.startsWith("excludedRegion.end.")) {
@@ -5904,6 +6370,7 @@ struct AssistantViewModel::State {
             if (action) {
                 const auto role=reserve_disclosure(sizeof(ProjectViewModel::WidgetCreationInput) + generic_size(action->field,Limits::context_bytes) + generic_size(action->text,Limits::context_bytes));
                 run->control_input = run->project->prepareWidgetCreation(*action);
+                run->control_input->bounded_result = !run->individual_tool.isEmpty();
             }
             else if (step.kind == AssistantWidgetInput::Kind::Value) {
                 run->control_parameter = qobject_cast<ParameterItem*>(target->property("item").value<QObject*>());
@@ -5924,6 +6391,8 @@ struct AssistantViewModel::State {
             try {
                 create_widget_capture_step(run);
                 create_widget_retain(run);
+                if(!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.") &&
+                    (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))throw ActionRefusal("target_unavailable","experiment");
                 if (!delivered || !target) { create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message); return; }
                 if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic") && !target->property("checked").toBool()) throw std::runtime_error("The original tab was not selected");
                 if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) throw std::runtime_error("The original choice was refused");
@@ -5975,13 +6444,13 @@ struct AssistantViewModel::State {
             if (!readable) throw std::invalid_argument("Choose two admitted readable text files");
         }
         std::optional<decltype(reserve_disclosure(0))> plan_role;
-        plan_role.emplace(reserve_disclosure(sizeof(NativeCreateWidget) + sizeof(AssistantWidgetInput::Request)));
-        auto run = std::make_shared<NativeCreateWidget>(); run->ordinary = true; run->id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        plan_role.emplace(reserve_disclosure(sizeof(NativeCreateWidget) + sizeof(FileProjection) + sizeof(QPointer<CodexAgent>) + sizeof(quint64) + sizeof(AssistantWidgetInput::Request)));
+        auto run = make_creation_frame(); run->ordinary = true; run->id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         run->epoch = session->assistantEpoch(); run->project = project; run->completed_existing = project != nullptr;
         run->receiver = receiver; run->window = action_window; run->arguments = args;
         using Kind = AssistantWidgetInput::Kind;
         const auto inputSlots = 24 + 2 * recipe.background.size() + 3 * recipe.exclusions.size() + recipe.initial_parameters.size();
-        quint64 plan_bytes = sizeof(NativeCreateWidget) + sizeof(AssistantWidgetInput::Request) + static_cast<quint64>(inputSlots) * sizeof(NativeCreateWidget::Input);
+        quint64 plan_bytes = sizeof(NativeCreateWidget) + sizeof(FileProjection) + sizeof(QPointer<CodexAgent>) + sizeof(quint64) + sizeof(AssistantWidgetInput::Request) + static_cast<quint64>(inputSlots) * sizeof(NativeCreateWidget::Input);
         bool writing = false;
         const auto add = [&](Kind kind, const QString& target, const QString& text = {}, int option = -1) {
             if (writing) { run->inputs.push_back({kind,target,text,option}); return; }
@@ -6036,6 +6505,7 @@ struct AssistantViewModel::State {
         run->fallback_response = run->call.record->response;
         run->fallback_row = run->call.record->terminal;
         run->fallback_ready = true;
+        track_creation_frame(run);
         native_create_widget = run;
         plan_role.reset();
         native_charge();
@@ -6055,11 +6525,7 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("The original captures are unavailable");
             run->input_snapshot = std::move(capture->snapshot);
             run->measurement_path = QUrl::fromLocalFile(QString::fromStdString(paths.second));
-            const auto cifPath = run->input_snapshot->filePath("structure.cif"); QSaveFile file(cifPath);
-            if (!file.open(QIODevice::WriteOnly) || !file.setPermissions(QFile::ReadOwner | QFile::WriteOwner) ||
-                file.write(reinterpret_cast<const char*>(run->structure_source->bytes.data()), static_cast<qint64>(run->structure_source->bytes.size())) != static_cast<qint64>(run->structure_source->bytes.size()) || !file.commit())
-                throw std::runtime_error("The immutable structure capture could not be retained");
-            run->structure_path = QUrl::fromLocalFile(cifPath);
+            run->structure_path=native_snapshot_file(*run->input_snapshot,*run->structure_source,QStringLiteral("structure.cif"));
             }
             native_charge();
             if (!create_widget_current(run)) return;
@@ -6768,6 +7234,7 @@ struct AssistantViewModel::State {
         params["developerInstructions"] = QStringLiteral(
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project with explicit destination=current saves that same genuine already-owned directory; omit name/path for this branch. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: explicit destination=current preserves its actual owned directory, while default purpose/name starts the original one-operation Save As chooser and fresh-name form before writing. It verifies reopen and adopts the saved path/rounded state on the same owner.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: prefer explicit destination=current for its genuine already-owned directory, otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. Show actions uses the real Save control and fresh-name Save As form; do not silently change the mode or use a direct native fallback. Current-directory exchange retains the previous tree in Edi's local recovery receipt; report actual committed uncertainty honestly and never blindly repeat it. Local recovery paths are not model data. Native report generation remains unavailable; offer the existing Report page link instead. "
+            "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
             "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original file picker/data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. The same toolkit picker receives real input to the admitted immutable source capture, not a synthetic accepted signal or a new path grant. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Visible relation actions select Analysis Extra only if needed, append and edit the existing Aliases/Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions click the genuine reset-filters control and type the actual parameter path in its name filter before the exact scientific control is used; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs, never row indices; add/update supply finite measured-domain position, intensity and free, while remove omits all three. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, ID, position, intensity, parameter-menu free and Remove controls. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
@@ -7137,7 +7604,7 @@ struct AssistantViewModel::State {
             if(!publication.input_current())return;
             if (!same_disclosure(bootstrap_scope, actual_scope) || !same_disclosure(bootstrap_scope, approved_scope))
                 throw std::runtime_error("The original bootstrap disclosure scope changed");
-            native_records.clear(); native_blocked = false;
+            native_records.clear(); native_blocked = false; native_first_failure = {};
             const auto actual_thread=generic_id(thread.value("id"));
             std::optional<decltype(reserve_disclosure(0))> proof_role;
             if(!CodexAgent::policyPatch().isEmpty())proof_role.emplace(reserve_disclosure(generic_size(result.value("ediPolicy"),Limits::context_bytes)));
@@ -7223,99 +7690,121 @@ struct AssistantViewModel::State {
     }
     bool generic_item(const Object& item, bool completed, bool snapshot = false) {
         const auto publication = file_projection();
-        const auto id = generic_id(item.value("id")), type = generic_id(item.value("type"));
-        if (type == "ediOutcome") throw std::runtime_error("Host outcome type is reserved for Edi");
-        if (!generic_items.contains(id) && generic_items.size() >= static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Agent item limit exceeded");
-        const auto old = generic_items.value(id);
-        if (!old.isEmpty() && old.value("type") != type) throw std::runtime_error("Agent item type changed");
-        if (generic_final_items.contains(id)) {
-            if ((completed || snapshot) && old == item) return false;
-            throw std::runtime_error("An agent item changed after finalization");
-        }
-        if (!completed && !snapshot && !old.isEmpty()) {
-            if (old == item) return false;
-            throw std::runtime_error("A repeated agent item declaration changed");
-        }
-        if (type == "agentMessage" && !item.value("text").isString()) throw std::runtime_error("Agent text item is invalid");
-        if (type == "commandExecution") {
-            if (!item.value("command").isString() || !item.value("cwd").isString() || !item.value("commandActions").isArray() ||
-                !item.value("status").isString()) throw std::runtime_error("Agent command item is invalid");
-            if (!old.isEmpty() && (old.value("command") != item.value("command") || old.value("cwd") != item.value("cwd"))) throw std::runtime_error("Agent command identity changed");
-        }
-        if (type == "dynamicToolCall") {
-            if (!item.value("tool").isString() || !item.value("arguments").isObject() ||
-                (!item.value("namespace").isUndefined() && !item.value("namespace").isNull() && !item.value("namespace").isString()))
-                throw std::runtime_error("Agent dynamic tool identity is invalid");
-            const auto bound = native_records.value(native_key(generic_thread, generic_turn, id));
-            const auto identity = bound ? bound->original : old;
-            if (!identity.isEmpty() && (identity.value("tool") != item.value("tool") ||
-                identity.value("namespace") != item.value("namespace") || identity.value("arguments") != item.value("arguments")))
-                throw std::runtime_error("Agent dynamic tool identity changed");
-        }
-        if (type == "fileChange" && (!item.value("changes").isArray() || !item.value("status").isString())) throw std::runtime_error("Agent file item is invalid");
-        if (generic_status_item(type)) {
-            if (!item.value("status").isString() || (item.value("status") != "inProgress" && !generic_final_status(type, item.value("status"))))
-                throw std::runtime_error("Agent tool status is invalid");
-            if (completed && !generic_final_status(type, item.value("status"))) throw std::runtime_error("Agent tool final item is not settled");
-        }
-        const auto oldBytes = old.isEmpty() ? 0 : generic_size(old, Limits::stream_retained_bytes);
-        const auto bytes = generic_size(item, Limits::stream_retained_bytes);
-        if (bytes > Limits::stream_retained_bytes - (generic_item_bytes - oldBytes)) throw std::length_error("Agent output exceeds retained limit");
-        const auto nextBytes = generic_item_bytes - oldBytes + bytes;
-        const auto record = type == "dynamicToolCall" ? native_records.value(native_key(generic_thread, generic_turn, id)) : std::shared_ptr<NativeRecord>{};
-        Object previousCanonical, previousMaximum;
-        quint64 previousLimit = 0;
-        if (record) {
-            previousCanonical = record->canonical; previousMaximum = record->maximum_row; previousLimit = record->row_bytes;
-        }
+        const char* stage = "ITEM_VALIDATE";
+        const char* role = "ITEM";
+        quint64 bound = Limits::stream_retained_bytes;
+        std::shared_ptr<NativeRecord> record;
         try {
+            const auto id = generic_id(item.value("id")), type = generic_id(item.value("type"));
+            if (type == "ediOutcome") throw std::runtime_error("Host outcome type is reserved for Edi");
+            if (!generic_items.contains(id) && generic_items.size() >= static_cast<qsizetype>(Limits::stream_items)) throw std::length_error("Agent item limit exceeded");
+            const auto old = generic_items.value(id);
+            if (!old.isEmpty() && old.value("type") != type) throw std::runtime_error("Agent item type changed");
+            if (generic_final_items.contains(id)) {
+                if ((completed || snapshot) && old == item) return false;
+                throw std::runtime_error("An agent item changed after finalization");
+            }
+            if (!completed && !snapshot && !old.isEmpty()) {
+                if (old == item) return false;
+                throw std::runtime_error("A repeated agent item declaration changed");
+            }
+            if (type == "agentMessage" && !item.value("text").isString()) throw std::runtime_error("Agent text item is invalid");
+            if (type == "commandExecution") {
+                if (!item.value("command").isString() || !item.value("cwd").isString() || !item.value("commandActions").isArray() ||
+                    !item.value("status").isString()) throw std::runtime_error("Agent command item is invalid");
+                if (!old.isEmpty() && (old.value("command") != item.value("command") || old.value("cwd") != item.value("cwd"))) throw std::runtime_error("Agent command identity changed");
+            }
+            if (type == "dynamicToolCall") {
+                if (!item.value("tool").isString() || !item.value("arguments").isObject() ||
+                    (!item.value("namespace").isUndefined() && !item.value("namespace").isNull() && !item.value("namespace").isString()))
+                    throw std::runtime_error("Agent dynamic tool identity is invalid");
+                const auto bound = native_records.value(native_key(generic_thread, generic_turn, id));
+                record = bound;
+                const auto identity = bound ? bound->original : old;
+                if (!identity.isEmpty() && (identity.value("tool") != item.value("tool") ||
+                    identity.value("namespace") != item.value("namespace") || identity.value("arguments") != item.value("arguments")))
+                    throw std::runtime_error("Agent dynamic tool identity changed");
+            }
+            if (type == "fileChange" && (!item.value("changes").isArray() || !item.value("status").isString())) throw std::runtime_error("Agent file item is invalid");
+            if (generic_status_item(type)) {
+                if (!item.value("status").isString() || (item.value("status") != "inProgress" && !generic_final_status(type, item.value("status"))))
+                    throw std::runtime_error("Agent tool status is invalid");
+                if (completed && !generic_final_status(type, item.value("status"))) throw std::runtime_error("Agent tool final item is not settled");
+            }
+            stage = "ITEM_SIZE";
+            const auto oldBytes = old.isEmpty() ? 0 : generic_size(old, Limits::stream_retained_bytes);
+            const auto bytes = generic_size(item, Limits::stream_retained_bytes);
+            if (bytes > Limits::stream_retained_bytes - (generic_item_bytes - oldBytes)) throw std::length_error("Agent output exceeds retained limit");
+            const auto nextBytes = generic_item_bytes - oldBytes + bytes;
+            record = type == "dynamicToolCall" ? native_records.value(native_key(generic_thread, generic_turn, id)) : std::shared_ptr<NativeRecord>{};
+            Object previousCanonical, previousMaximum;
+            quint64 previousLimit = 0;
             if (record) {
-                record->canonical = item;
-                if (!record->completed) {
-                    const auto maximum = record->maximum_row.value("payload").toObject().value("nativeOutcome").toObject();
-                    auto maximumRow = native_row(*record, maximum, false);
-                    maximumRow["status"] = "interrupted";
-                    const auto maximumBytes = generic_size(maximumRow, Limits::message_bytes);
-                    record->maximum_row = std::move(maximumRow); record->row_bytes = maximumBytes;
-                    if (!admit(history)) throw std::length_error("Native terminal history capacity is unavailable");
+                previousCanonical = record->canonical; previousMaximum = record->maximum_row; previousLimit = record->row_bytes;
+            }
+            try {
+                if (record) {
+                    record->canonical = item;
+                    if (!record->completed) {
+                        const auto maximum = record->maximum_row.value("payload").toObject().value("nativeOutcome").toObject();
+                        auto maximumRow = native_row(*record, maximum, false);
+                        maximumRow["status"] = "interrupted";
+                        stage = "ITEM_MAXIMUM_ROW"; role = "ROW"; bound = Limits::message_bytes;
+                        const auto maximumBytes = generic_size(maximumRow, Limits::message_bytes);
+                        record->maximum_row = std::move(maximumRow); record->row_bytes = maximumBytes;
+                        stage = "ITEM_HISTORY_ADMISSION"; role = "HISTORY"; bound = Limits::ui_history_bytes;
+                        if (!admit(history)) throw std::length_error("Native terminal history capacity is unavailable");
+                    }
+                }
+                stage = "ITEM_CHARGE"; role = "JOINT_RETAINED"; bound = Limits::stream_retained_bytes;
+                native_charge(nextBytes); // One prospective complete joint state, including current transport roles.
+                generic_items[id] = item;
+                generic_item_bytes = nextBytes;
+            } catch (...) {
+                if (!publication.input_current()) return false;
+                if (record && native_records.value(record->key) == record)
+                    native_failure(stage, role, bound, native_failure_class(), native_call && native_call->record == record ? &*native_call : nullptr, record->outcome_ready ? &record->outcome : nullptr);
+                if (record) {
+                    record->canonical = std::move(previousCanonical); record->maximum_row = std::move(previousMaximum); record->row_bytes = previousLimit;
+                }
+                // Registration may have changed before a map allocation failed.
+                // Restore the still-owned old state; never silently uncharge it.
+                native_restore_charge(); throw;
+            }
+            if (completed) { generic_final_items.insert(id); if (generic_question_item == id && !generic_retire_question()) return false; }
+            if (!publication.input_current()) return false;
+            if (type == "userMessage" || type == "reasoning") return true;
+            if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
+            Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
+                {"status", completed ? (type == "agentMessage" ? "in_progress" : item.value("status").toString("completed")) : "in_progress"}, {"payload", type == "agentMessage" ? Object{} : item}};
+            if (type == "dynamicToolCall") {
+                const auto record = native_records.value(native_key(generic_thread, generic_turn, id));
+                if (record) {
+                    auto payload = row.value("payload").toObject(); payload["purpose"] = record->purpose;
+                    if (record->completed || record->outcome_ready) payload["nativeOutcome"] = record->outcome;
+                    row["payload"] = payload;
                 }
             }
-            native_charge(nextBytes); // One prospective complete joint state, including current transport roles.
-            generic_items[id] = item;
-            generic_item_bytes = nextBytes;
-        } catch (...) {
+            stage = "ITEM_HISTORY"; role = "HISTORY"; bound = Limits::ui_history_bytes;
+            const bool retained = generic_present(row);
             if (!publication.input_current()) return false;
-            if (record) {
-                record->canonical = std::move(previousCanonical); record->maximum_row = std::move(previousMaximum); record->row_bytes = previousLimit;
+            if (!retained) {
+                if (type == "dynamicToolCall" && native_records.contains(native_key(generic_thread, generic_turn, id))) {
+                    native_failure(stage, role, bound, "REFUSAL", native_call && native_call->record == record ? &*native_call : nullptr, record && record->outcome_ready ? &record->outcome : nullptr);
+                    native_fence();
+                }
+                else generic_fail(storage_error);
+                return false;
             }
-            // Registration may have changed before a map allocation failed.
-            // Restore the still-owned old state; never silently uncharge it.
-            native_restore_charge(); throw;
+            return true;
+        } catch (...) {
+            if (publication.input_current() && record && native_records.value(record->key) == record)
+                native_failure(stage, role, bound, native_failure_class(), native_call && native_call->record == record ? &*native_call : nullptr, record->outcome_ready ? &record->outcome : nullptr);
+            throw;
         }
-        if (completed) { generic_final_items.insert(id); if (generic_question_item == id && !generic_retire_question()) return false; }
-        if (!publication.input_current()) return false;
-        if (type == "userMessage" || type == "reasoning") return true;
-        if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type;
-        Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
-            {"status", completed ? (type == "agentMessage" ? "in_progress" : item.value("status").toString("completed")) : "in_progress"}, {"payload", type == "agentMessage" ? Object{} : item}};
-        if (type == "dynamicToolCall") {
-            const auto record = native_records.value(native_key(generic_thread, generic_turn, id));
-            if (record) {
-                auto payload = row.value("payload").toObject(); payload["purpose"] = record->purpose;
-                if (record->completed || record->outcome_ready) payload["nativeOutcome"] = record->outcome;
-                row["payload"] = payload;
-            }
-        }
-        const bool retained = generic_present(row);
-        if (!publication.input_current()) return false;
-        if (!retained) {
-            if (type == "dynamicToolCall" && native_records.contains(native_key(generic_thread, generic_turn, id))) native_fence();
-            else generic_fail(storage_error);
-            return false;
-        }
-        return true;
     }
+
     void generic_event(const QString& method, const Object& params) {
         if (!publishing) return;
         if (method == "thread/settings/updated") {
@@ -7611,6 +8100,9 @@ struct AssistantViewModel::State {
                         outcome["refusal_reason"]=QLatin1StringView(recipe_reasons[reason]);
                         if(recipe->reason()==RecipeReason::MinimumItems)outcome["minimum_items"]=recipe->bound();
                         if(recipe->reason()==RecipeReason::MaximumItems)outcome["maximum_items"]=recipe->bound();
+                    }
+                    if(const auto* action=dynamic_cast<const ActionRefusal*>(&failure); action && individual_app_action(params.value("tool").toString())) {
+                        outcome["action_error"]=action->error;outcome["action_field"]=action->field;
                     }
                     native_reply(id, false, outcome);
                 }

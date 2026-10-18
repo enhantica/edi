@@ -321,6 +321,7 @@ Rectangle {
     signal nextUserRequested()
     signal contextApprovalRequested(string draft)
     signal submissionRequested(var draft)
+    signal submissionBlocked()
     property int textRevision: 0
     property int selectionRevision: -1
     property int savedSelectionStart: 0
@@ -480,8 +481,30 @@ Rectangle {
         if (required || original.state !== "idle" || original.canCancel) return;
         component.submit(draft);
     }
+    function explainBlockedSubmission() {
+        const component = composer, original = assistant;
+        const blocked = original.contextApprovalBlocked;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return true;
+        if (!blocked) return false;
+        if (!original.connected || !component.hasDraft || editor.inputMethodComposing || editor.preeditText.length) return true;
+        const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
+        const scope = { files: consentFileRevision, project: Session.project, model: original.selectedModel,
+            effort: original.selectedEffort, email: original.account.email, plan: original.account.planType };
+        // Existing VM refusal only; no pending ACK is added and no draft is consumed.
+        original.submitDraft(text);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant
+            || revision !== component.textRevision || ownerRevision !== component.draftOwnerRevision || text !== editor.text
+            || scope.files !== component.consentFileRevision || scope.project !== Session.project
+            || scope.model !== original.selectedModel || scope.effort !== original.selectedEffort
+            || scope.email !== original.account.email || scope.plan !== original.account.planType
+            || !original.contextApprovalBlocked) return true;
+        component.submissionBlocked();
+        return true;
+    }
     function submit(approvedDraft) {
         const component = composer, original = assistant;
+        if (!approvedDraft && component.explainBlockedSubmission()) return;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
         const requested = approvedDraft || component.captureConsentDraft();
         if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !requested) return;
         if (!approvedDraft) {
@@ -498,7 +521,8 @@ Rectangle {
         if (required) {
             // Approval cannot resolve a retained native/history outcome. Keep
             // the original draft and existing Clear/inspection diagnostic.
-            if (approvedDraft || original.contextApprovalBlocked) return;
+            if (approvedDraft) return;
+            if (original.contextApprovalBlocked) { component.explainBlockedSubmission(); return; }
             component.contextApprovalRequested(requested.text);
             return;
         }

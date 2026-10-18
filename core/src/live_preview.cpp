@@ -149,7 +149,12 @@ LivePreview::~LivePreview() {
 }
 
 void LivePreview::apply(const Edit& edit, bool* applied) {
+    apply(edit, applied, nullptr);
+}
+
+void LivePreview::apply(const Edit& edit, bool* applied, Edit::AppliedResult* result) {
     if (applied != nullptr) *applied = false;
+    if (result != nullptr) *result = {};
     const auto self = state_; // The edited hook may retire/delete the LivePreview owner.
     State& s = *self;
     if (!s.open) return;
@@ -158,7 +163,8 @@ void LivePreview::apply(const Edit& edit, bool* applied) {
     // An Edit refuses before it writes (edi/edit.hpp), so a refusal leaves nothing to undo: the model,
     // its publication and a calculation in flight are untouched because nothing touched them (I10).
     try {
-        edit();
+        const auto actual = edit.apply_result();
+        if (result != nullptr) *result = actual;
     } catch (...) {
         s.trace(work::EventKind::Refused, s.newest + 1);
         throw;

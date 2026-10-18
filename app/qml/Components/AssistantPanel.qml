@@ -583,6 +583,17 @@ Popup {
                             lastUserId = latest;
                         }
                     }
+                    function revealCurrentNotice() {
+                        const original = panel.assistant, notice = panel.noticeState;
+                        if (!notice || notice.owner !== original || !notice.text.length) return;
+                        let anchor = -1;
+                        for (let i = 0; i < original.messages.count; ++i)
+                            if (original.messages.text(i, "id") === notice.anchor) { anchor = i; break; }
+                        if (!Qt.isQtObject(panel) || !Qt.isQtObject(original) || original !== panel.assistant || panel.noticeState !== notice) return;
+                        cancelFlick(); followsTail = false; jumpedUserId = "";
+                        if (anchor >= 0) positionViewAtIndex(anchor, ListView.End);
+                        else positionViewAtBeginning();
+                    }
                     function positionAtTail() {
                         if (followsTail)
                             positionViewAtEnd();
@@ -648,6 +659,12 @@ Popup {
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)
                     onNextUserRequested: conversation.jumpToUser(1)
+                    onSubmissionBlocked: {
+                        const component = panel, view = conversation, original = panel.assistant;
+                        component.captureNotice();
+                        if (Qt.isQtObject(component) && Qt.isQtObject(view) && Qt.isQtObject(original)
+                            && original === component.assistant && original.contextApprovalBlocked) view.revealCurrentNotice();
+                    }
                     onSubmissionRequested: draft => {
                         const intent = panel.consentSend;
                         if (intent && draft && intent.draft.owner === draft.owner
