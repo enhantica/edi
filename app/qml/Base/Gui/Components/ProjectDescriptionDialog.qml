@@ -69,7 +69,7 @@ EaElements.Dialog {
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
                 validator: RegularExpressionValidator {
-                    regularExpression: /^[^/\\\u0000]+$/
+                    regularExpression: /^[^/\\\x00]+$/
                 }
                 placeholderText: qsTr("Enter project name here")
 
