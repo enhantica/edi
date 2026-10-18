@@ -6550,7 +6550,7 @@ struct AssistantViewModel::State {
                 branch="control.choice";
                 if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) throw std::runtime_error("The original choice was refused");
                 branch="control.text";
-                if ((step.kind == AssistantWidgetInput::Kind::FormText || step.kind == AssistantWidgetInput::Kind::Text) && target->property("text").toString() != step.text) throw std::runtime_error("The original text was refused");
+                if ((step.kind == AssistantWidgetInput::Kind::FormText || step.kind == AssistantWidgetInput::Kind::Text) && target->property(step.kind == AssistantWidgetInput::Kind::Text ? "value" : "text").toString() != step.text) throw std::runtime_error("The original text was refused");
                 branch="control.receipt";
                 if (run->control_input && (!run->control_input->consumed || !run->control_input->outcome.applied || !run->control_input->outcome.published)) throw std::runtime_error("The original model action was not confirmed");
                 branch="parameter.receipt";
