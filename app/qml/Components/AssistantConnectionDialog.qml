@@ -65,10 +65,18 @@ AppDialog {
     footer: EaElements.DialogButtonBox {
         id: connectionButtons
         visible: count > 0
-        // The box knows the live natural widths of its standard buttons.
-        // Its view must not position a renamed action using a cached row width.
+        // Measure standard buttons independently of the view's laid-out width.
+        readonly property real naturalButtonWidth: {
+            let total = 0;
+            for (let index = 0; index < count; ++index) {
+                const button = itemAt(index);
+                if (button) total += button.implicitWidth;
+            }
+            return total + Math.max(0, count - 1) * spacing;
+        }
+        contentWidth: naturalButtonWidth
         contentItem: ListView {
-            implicitWidth: connectionButtons.contentWidth
+            implicitWidth: connectionButtons.naturalButtonWidth
             model: connectionButtons.contentModel
             spacing: connectionButtons.spacing
             orientation: ListView.Horizontal
@@ -149,11 +157,12 @@ AppDialog {
             id: failureScroll
             width: connectionFailure.contentWidth
             height: connectionFailure.contentHeight
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
             clip: true
             ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
             EaElements.Label {
                 id: failureText
-                width: failureScroll.availableWidth
+                width: failureScroll.contentWidth
                 text: connectionFailure.message
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
@@ -170,10 +179,11 @@ AppDialog {
         objectName: "assistant.contextDisclosureScroll"
         width: dialog.contentWidth
         height: dialog.contentHeight
+        contentWidth: Math.max(0, width - leftPadding - rightPadding)
         clip: true
         Column {
             id: content
-            width: disclosure.availableWidth
+            width: disclosure.contentWidth
             spacing: AppSizes.unit
             EaElements.Label {
                 width: parent.width
@@ -289,6 +299,7 @@ AppDialog {
                     text: qsTr("Exact outgoing context (technical data). Read-only; you can select and copy it.")
                 }
                 ScrollView {
+                    id: technicalPreviewScroll
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     visible: technicalData.checked
                     ScrollBar.vertical: EaElements.ScrollBar {
@@ -297,10 +308,12 @@ AppDialog {
                     }
                     width: parent.width
                     height: AppSizes.unit * 20
+                    contentWidth: Math.max(0, width - leftPadding - rightPadding)
                     clip: true
                     TextArea {
                         objectName: "assistant.contextPreview"
-                        text: dialog.assistant.contextPreview
+                        width: technicalPreviewScroll.contentWidth
+                        text: dialog.disclosedContextText
                         textFormat: TextEdit.PlainText
                         readOnly: true
                         selectByMouse: true

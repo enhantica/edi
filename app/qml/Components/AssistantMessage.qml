@@ -454,14 +454,14 @@ Rectangle {
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
                 height: Math.min(technicalFields.implicitHeight, AppSizes.unit * 18)
-                contentWidth: availableWidth
+                contentWidth: Math.max(0, width - leftPadding - rightPadding)
                 contentHeight: technicalFields.implicitHeight
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
                 Column {
                     id: technicalFields
-                    width: technicalViewport.availableWidth
+                    width: technicalViewport.contentWidth
                     spacing: AppSizes.unit * 0.4
                     Column {
                         width: parent.width

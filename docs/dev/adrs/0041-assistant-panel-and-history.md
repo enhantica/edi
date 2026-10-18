@@ -1619,3 +1619,38 @@ clipboard acceptance require the normal native app vehicle.
 Prior art: original activity-header ancestor HoverHandler and native TextEdit /
 ToolButton handlers; [Qt handlerPoint parent-local position](https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/handlers/qquickhandlerpoint.cpp#L174)
 and [Qt hover delivery ancestor traversal](https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/util/qquickdeliveryagent.cpp#L1088).
+
+
+### Consent and detail bindings have one content owner
+
+The technical context TextArea displays the dialog's existing live
+`disclosedContextText` value, the same exact QString parsed by its human summary.
+It no longer invokes the callback-capable context getter a second time from its
+own text binding. The existing context notifier keeps that value live, and the
+accepted-offer path still independently verifies the current exact context and
+original owner before approval. No approval/currentness check, selection/copy or
+sharing disclosure is removed or replaced by a stale snapshot.
+
+The original native DialogButtonBox retains its real standard buttons, roles,
+labels and accepted/rejected behavior. Its natural content width is the sum of
+the actual buttons' implicit widths and native inter-button spacing, independent
+of the ListView's laid-out width or implicit content feedback. Dynamic Sign in
+and Approve labels therefore invalidate natural measurement directly. Both the
+box content width and view implicit width follow this one natural measurement;
+no fixed pixel width, enlarged hit target or delayed layout is introduced.
+
+Every vertical-only ScrollView in this dialog and the unified activity-details
+box owns an explicit content width derived solely from its already-explicit
+viewport width and padding. The wrapped child follows that content width. This
+removes the available/content/implicit-width feedback path while preserving
+native vertical scroll, wrap, full selectable exact payload, horizontal AlwaysOff
+and the original height/viewport bounds. Prior art is the shared native
+DialogButtonBox/Button natural implicit sizing and original explicit viewport
+widths; all popup/footer controls and unified details remain the same controls.
+
+The four deprecated hash pointer/length overloads use QByteArrayView with the
+identical pointer and explicit length, including the one-byte NUL separator.
+Fingerprint/settings bytes, formats, resource accounting and scientific or
+runtime policy behavior do not change. Source checks cannot certify native
+Mac layout, binding-warning absence or one-click input; those remain real-app
+qualification requirements.

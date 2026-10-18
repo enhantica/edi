@@ -602,7 +602,7 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
     std::sort(ordered.begin(),ordered.end(),[](const auto& a,const auto& b){return a.value("id").toString()<b.value("id").toString();});
     result->declarations={};for(const auto& entry:ordered)result->declarations.append(entry);
     QCryptographicHash hash(QCryptographicHash::Sha256);
-    for(const auto& file:result->files){hash.addData(file.path.toUtf8());hash.addData("\0",1);hash.addData(QCryptographicHash::hash(file.bytes,QCryptographicHash::Sha256));}
+    for(const auto& file:result->files){hash.addData(file.path.toUtf8());hash.addData(QByteArrayView("\0",1));hash.addData(QCryptographicHash::hash(file.bytes,QCryptographicHash::Sha256));}
     charge(QCryptographicHash::hashLength(QCryptographicHash::Sha256));
     result->fingerprint=hash.result();charge();return result;
 }
@@ -1319,11 +1319,11 @@ struct AssistantViewModel::State {
                 const auto size=static_cast<quint64>(value.toByteArray().size());
                 if(size>Limits::context_bytes)throw std::length_error("Skill source settings exceed capacity");
                 raw_role.emplace(reserve_disclosure(size+32));
-                QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData("present",7);hash.addData(value.toByteArray());settings_digest=hash.result();
+                QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(QByteArrayView("present",7));hash.addData(value.toByteArray());settings_digest=hash.result();
             } else {
                 raw_role.emplace(reserve_disclosure(32+sizeof(int)));
                 const auto type=value.metaType().id();
-                QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(present ? "invalid" : "absent",present ? 7 : 6);
+                QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(QByteArrayView(present ? "invalid" : "absent",present ? 7 : 6));
                 if(present)hash.addData(QByteArrayView(reinterpret_cast<const char*>(&type),sizeof(type)));
                 settings_digest=hash.result();
             }
@@ -1479,7 +1479,7 @@ struct AssistantViewModel::State {
         retain_skill_inventory(snapshot,reserved); // Complete owning admission before the settings write.
         if(!proof.input_current() || skill_source_serial!=serial || owner.canCancel())return false;
         const auto digest_role=reserve_disclosure(32);
-        QCryptographicHash settings_hash(QCryptographicHash::Sha256);settings_hash.addData("present",7);settings_hash.addData(encoded);
+        QCryptographicHash settings_hash(QCryptographicHash::Sha256);settings_hash.addData(QByteArrayView("present",7));settings_hash.addData(encoded);
         auto settings_digest=settings_hash.result();
         QSettings settings(path,QSettings::IniFormat);settings.setValue("Assistant/skillSources",encoded);settings.sync();
         if(!proof.input_current() || skill_source_serial!=serial || settings_file_path()!=path)return false;
