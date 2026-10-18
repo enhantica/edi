@@ -357,7 +357,17 @@ TestCase {
         Preferences.sideBarSide = oldSide;
         EaStyle.Colors.theme = oldTheme;
         Preferences.toolTips = oldToolTips;
+        const originalMain490 = lifetime313(window);
+        console.log("GUI490_MAIN_LIFETIME", JSON.stringify({phase: "before-original-destroy",
+            identity: identity313(originalMain490), alive: alive313(originalMain490)}));
         window.destroy();
+        try {
+            tryVerify(() => !alive313(originalMain490), 2000,
+                "GUI490: original Main QObject is actually deleted before the QML engine exits");
+        } finally {
+            console.log("GUI490_MAIN_LIFETIME", JSON.stringify({phase: "after-original-destroy-observation",
+                identity: identity313(originalMain490), alive: alive313(originalMain490)}));
+        }
     }
     function test_home_appbar_only_and_no_auto_dismiss() {
         const main = item("workflow.project.mainContent");
