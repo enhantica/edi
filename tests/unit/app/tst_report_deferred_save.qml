@@ -64,7 +64,10 @@ Item {
         }
         function draws(facts) {
             verify(!facts.error && facts.pages.length > 0, "The actual saved PDF has readable page and image objects: " + facts.error);
-            return facts.pages.reduce((all, page) => all.concat(page.image_draws), []).map(image => ({
+            return imageIdentities(facts);
+        }
+        function imageIdentities(facts) {
+            return (facts.pages ?? []).reduce((all, page) => all.concat(page.image_draws), []).map(image => ({
                         pixels: image.pixels,
                         sha256: image.sha256
                     }));
@@ -102,6 +105,21 @@ Item {
             saved.clear();
             failed.clear();
             const htmlName = "reports/" + project.name + ".html", pdfName = "reports/" + project.name + ".pdf";
+            const publications = [];
+            report.savedReportsChanged.connect(() => {
+                for (const row of report.savedReports) {
+                    if (row.state !== "current")
+                        continue;
+                    const facts = row.format === "pdf" ? SettingsProof.pdfFacts(SettingsProof.childUrl(location, "reports/" + row.name)) : null;
+                    publications.push({
+                        format: row.format,
+                        calculating: report.calculating,
+                        exists: SettingsProof.fileFacts(location, "reports/" + row.name).bytes > 0,
+                        error: facts ? facts.error : false,
+                        images: facts ? imageIdentities(facts) : []
+                    });
+                }
+            });
             const modelBefore = JSON.stringify(preview.model);
             if (data.deferred) {
                 // Keep request and navigation in one input turn, before worker delivery.
@@ -132,6 +150,9 @@ Item {
                 verify(html.structures[0].categories.some(category => category.rows && category.rows.some(row => row.text && String(row.text).includes("5.37"))), "The actual exported structure contains the independently authored finished cell length");
             }
             const actual = data.pdf ? draws(SettingsProof.pdfFacts(SettingsProof.childUrl(location, pdfName))) : [];
+            verify(publications.length > 0 && publications.every(row => !row.calculating && row.exists && !row.error), "Every current-row notification follows calculation completion and publication of a readable actual file");
+            if (data.pdf)
+                verify(publications.some(row => row.format === "pdf") && publications.filter(row => row.format === "pdf").every(row => JSON.stringify(row.images) === JSON.stringify(actual)), "The PDF is marked current only with its final figure content already present, including at every row notification");
             const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/report_evolution/reference.json"));
             compare(actual.length, data.pdf && data.figures ? 2 + reference.names.length : 0, "The saved PDF draws the included structure, pattern and every authored evolution image, and draws no excluded figure");
             if (!data.pdf)
