@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-18T15:24:02Z
+# measured_utc = 2026-10-18T19:38:08Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 13604 banked, 0 stale row(s) dropped)
-# Collected tests: 14916; with a reported duration: 8674
-# Module-scoped fixture costs recorded: 55
+# Recorded from: measured test run (5 node(s) measured once, 13610 banked, 0 stale row(s) dropped)
+# Collected tests: 14921; with a reported duration: 8675
+# Module-scoped fixture costs recorded: 56
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 14916
+# inventory_python = 14921
 # inventory_cpp = 335
-# inventory_measured = 13610
-# inventory_unmeasured = 1641
+# inventory_measured = 13614
+# inventory_unmeasured = 1642
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -231,6 +231,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::te
 UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_rowless_history_selects_the_latest_run_after_reopen[scan-sequential]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_rowless_history_selects_the_latest_run_after_reopen[single-independent]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_phase_scan_state.py::test_app_rowless_history_selects_the_latest_run_after_reopen[single-sequential]
+0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-excluded]
+0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-html]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[deferred-pdf]
+0.000	tests/integration/app/test_report_deferred_save.py::test_real_save_route_keeps_finished_content_and_completed_rows[immediate-pdf]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-cubic]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-hexagonal]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_adp_exact_zeros.py::test_isotropic_tensor_preserves_exact_zeros_and_oblique_values[change-Bani-monoclinic]
@@ -5938,6 +5942,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries
 0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[solarized]
 0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[tableau]
 0.040	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[vivid]
+0.010	tests/integration/py/test_report_pdf_image_identity.py::test_pdf_image_identity_reaches_bytes_dimensions_and_alpha
 0.010	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_19]
 0.020	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_99]
 0.020	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-iucr_19]
@@ -15297,6 +15302,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 308.708	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
+# module-cost: 28.840	tests/integration/app/test_report_deferred_save.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
