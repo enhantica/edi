@@ -641,6 +641,10 @@ Rectangle {
                 }
             }
         }
+        Item {
+            width: parent.width
+            height: Math.max(0, composerContent.y - 2 * composerContent.spacing)
+        }
         RowLayout {
             id: composerToolbar
             readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth

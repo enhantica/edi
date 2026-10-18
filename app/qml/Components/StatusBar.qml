@@ -169,11 +169,18 @@ EaElements.StatusBar {
             objectName: "assistant.stopVisibleAction"
             visible: assistantGroup.stopShown || pressed
             enabled: Session.assistant.canCancel
-            implicitWidth: Math.round(EaStyle.Sizes.fontPixelSize * 1.8)
+            implicitWidth: assistantArea.iconExtent
             implicitHeight: implicitWidth
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             fontIcon: "stop-circle"
+            background: Rectangle {
+                implicitWidth: assistantArea.iconExtent
+                implicitHeight: implicitWidth
+                radius: width / 2
+                color: visibleStop.backgroundColor()
+                border.width: 0
+            }
             contentItem: EaElements.Label {
                 text: visibleStop.fontIcon
                 font.family: EaStyle.Fonts.iconsFamily

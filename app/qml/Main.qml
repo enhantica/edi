@@ -174,23 +174,41 @@ EaComponents.ApplicationWindow {
             objectName: "assistant.toggle"
             readonly property bool assistantSelected: assistantPanel.shown || (Session.assistant.showingActions && Preferences.assistantShown)
             fontIcon: assistantSelected ? "columns" : "robot"
-            readonly property bool rotateRobot: visible && enabled && !assistantSelected
-                && Session.assistant.state === "agent_active"
-                && Object.keys(Session.assistant.pendingQuestion).length === 0
-                && Object.keys(Session.assistant.pendingPlan).length === 0
+            readonly property bool rotateRobot: Session.assistant.state === "agent_active"
                 && EaStyle.Times.translationChange > 0
-            onRotateRobotChanged: if (!rotateRobot && contentItem) contentItem.rotation = 0
-            RotationAnimation {
-                target: assistantToggle.contentItem
-                property: "rotation"
+            contentItem: Item {
+                implicitWidth: Math.max(assistantRobot.implicitWidth, assistantColumns.implicitWidth)
+                implicitHeight: Math.max(assistantRobot.implicitHeight, assistantColumns.implicitHeight)
+                EaElements.Label {
+                    id: assistantRobot
+                    anchors.centerIn: parent
+                    visible: !assistantToggle.assistantSelected
+                    text: "robot"
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: assistantToggle.font.pixelSize * 1.25
+                    color: assistantToggle.foregroundColor()
+                    Accessible.ignored: true
+                }
+                EaElements.Label {
+                    id: assistantColumns
+                    anchors.centerIn: parent
+                    visible: assistantToggle.assistantSelected
+                    text: "columns"
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: assistantToggle.font.pixelSize * 1.25
+                    color: assistantToggle.foregroundColor()
+                    Accessible.ignored: true
+                }
+            }
+            RotationAnimator {
+                target: assistantRobot
                 running: assistantToggle.rotateRobot
+                onStopped: if (!assistantToggle.rotateRobot) assistantRobot.rotation = 0
                 loops: Animation.Infinite
                 from: 0
-                to: 360 * 6
-                duration: 2000
-                easing.type: Easing.OutInElastic
-                easing.amplitude: 1
-                easing.period: 0.3
+                to: 360
+                duration: 1600
+                easing.type: Easing.Linear
             }
             enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason

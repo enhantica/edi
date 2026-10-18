@@ -11,8 +11,6 @@ EaElements.Label {
     required property AssistantViewModel assistant
     property bool presented: true
     readonly property bool working: assistant !== null && assistant.state === "agent_active"
-        && Object.keys(assistant.pendingQuestion).length === 0
-        && Object.keys(assistant.pendingPlan).length === 0
     visible: presented && working
     clip: true
     text: qsTr("AI working...")
@@ -20,15 +18,15 @@ EaElements.Label {
     color: EaStyle.Colors.themeAccent
     Accessible.name: text
     property int variant: 0
-    readonly property bool animating: visible && EaStyle.Times.translationChange > 0
-    onAnimatingChanged: if (!animating) workGlyph.rotation = 0
+    readonly property bool animating: working && EaStyle.Times.translationChange > 0
     readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
-    leftPadding: iconExtent + AppSizes.unit * 0.5
+    readonly property real rotationExtent: variant === 2 ? iconExtent * Math.SQRT2 : iconExtent
+    leftPadding: rotationExtent + AppSizes.unit * 0.5
     // Use the rendered Label baseline, including its actual padding/alignment.
     readonly property real textInkCenter: baselineOffset + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
     readonly property real naturalTextInkCenter: textMetrics.ascent + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
-    topPadding: Math.max(0, iconExtent / 2 - naturalTextInkCenter)
-    bottomPadding: Math.max(0, iconExtent / 2 - (contentHeight - naturalTextInkCenter))
+    topPadding: Math.max(0, rotationExtent / 2 - naturalTextInkCenter)
+    bottomPadding: Math.max(0, rotationExtent / 2 - (contentHeight - naturalTextInkCenter))
     FontMetrics { id: textMetrics; font: workStatus.font }
     // IconLine aligns inline symbols to capital ink, excluding descenders.
     TextMetrics {
@@ -37,12 +35,9 @@ EaElements.Label {
         renderType: workStatus.renderType
         text: "H"
     }
-    onVisibleChanged: {
-        if (visible) variant = Math.floor(Math.random() * 3);
-        else workGlyph.rotation = 0;
-    }
+    onWorkingChanged: if (working) variant = Math.floor(Math.random() * 3)
     Item {
-        width: workStatus.iconExtent
+        width: workStatus.rotationExtent
         height: width
         anchors.left: parent.left
         y: workStatus.textInkCenter - height / 2
@@ -70,12 +65,9 @@ EaElements.Label {
                 visible: workStatus.variant === 2
                 width: robotMetrics.tightBoundingRect.width
                 height: robotMetrics.tightBoundingRect.height
-                // Fit the actual rotated ink to the same slot as the logo;
-                // a permanently reserved diagonal makes the upright robot small.
-                readonly property real angle: workGlyph.rotation * Math.PI / 180
-                readonly property real rotatedWidth: Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle))
-                readonly property real rotatedHeight: Math.abs(width * Math.sin(angle)) + Math.abs(height * Math.cos(angle))
-                scale: Math.max(rotatedWidth, rotatedHeight) > 0 ? workStatus.iconExtent / Math.max(rotatedWidth, rotatedHeight) : 1
+                // Keep accepted upright ink size; reserve its safe rotation
+                // envelope outside the actual icon circle instead of shrinking it.
+                scale: Math.max(width, height) > 0 ? workStatus.iconExtent / Math.max(width, height) : 1
                 EaElements.Label {
                     id: robotGlyph
                     x: -robotMetrics.tightBoundingRect.x
@@ -90,22 +82,10 @@ EaElements.Label {
         }
     }
 
-    RotationAnimation {
+    RotationAnimator {
         target: workGlyph
-        property: "rotation"
-        running: workStatus.animating && workStatus.variant !== 0
-        loops: Animation.Infinite
-        from: 0
-        to: 360 * 6
-        duration: 2000
-        easing.type: Easing.OutInElastic
-        easing.amplitude: 1
-        easing.period: 0.3
-    }
-    RotationAnimation {
-        target: workGlyph
-        property: "rotation"
-        running: workStatus.animating && workStatus.variant === 0
+        running: workStatus.animating
+        onStopped: if (!workStatus.animating) workGlyph.rotation = 0
         loops: Animation.Infinite
         from: 0
         to: 360

@@ -1832,3 +1832,80 @@ The original Structure/data reader result and original Create/type names and pha
 A retained native outcome remains fenced until its existing explicit lifecycle resolves it. Native completion, disclosure refresh and bound dynamic-item publication retain one app-local fixed first stage, exception class, role bound and factual applied/published/retired markers before notification/cleanup. No exception text, command, JSON, file/path/account identity or scientific payload is logged or sent; a false history-retention result is reported as a refusal, not guessed to be a capacity or storage cause. Later cleanup cannot replace the first marker. Existing successful explicit discard or fresh thread clears that local marker with the original retired ledger. Diagnostics grant no admission, retry, recovery or larger budget.
 
 An explicit blocked Send uses the existing VM refusal and reveals its existing chronological selectable notice. The draft, IME, pending attachments and ACK owner are not consumed, the archive is not appended while fenced, and no approval dialog is advertised as a repair. The notice stays at its original emission anchor; revealing it does not fabricate a model message or relocate chronology. A later native case must capture the first actual stage before attributing a post-fit/import retention failure.
+
+
+### Directory enumeration uses the operating-system name contract
+
+The original result/export/report and local-skill walkers retain their existing closedir-owning unique_ptr and pointer-sized ordinary function-pointer deleter. A file-local explicit pointer type avoids importing function declaration attributes into template arguments; the result metadata charge uses that exact owning type. The operating system supplies a NUL-terminated readdir name, as already relied on by the local-skill walker; the [readdir documentation](https://man7.org/linux/man-pages/man3/readdir.3.html) explicitly warns against deriving its name domain from sizeof(d_name). Determine its length without assuming that sizeof(d_name) limits a returned record, and admit the existing result-leaf or skill-ID length before constructing a byte-array view/copy. No record parser, renamed name, larger limit, changed filesystem identity rule, warning suppression or new ownership framework is introduced. Actual compiler warning elimination is separately qualified.
+
+
+### Explicit command goals use existing typed presentation metadata
+
+Command headers prefer actual supplied purposes and structured operation captions. A single existing unknown commandAction may additionally carry a supplied goal in its exact first script line: `# Edi purpose: ` followed by bounded valid Unicode prose and an actual newline. The display reader inspects only that bounded typed command prefix, not quoted payload.command, later lines, nested wrappers or shell syntax. Invalid, missing, multi-action or unsupported declarations keep the original honest fallback. Existing native-purpose limits apply; control/bidi text, malformed Unicode and trailing backslash refuse presentation. This is PlainText supplied intent, never verified meaning, status, success or permission. Status remains independent, and the retained canonical payload, history, clipboard, row identity and disclosure remain exact. The existing developer/skill instructions require this only for newly authored hash-comment-capable shell scripts; they never rewrite argv, retained commands or unsupported programs. No runtime protocol, parser, execution route or model call is added. Provider preservation and model compliance remain separately qualified.
+
+
+## Standard action ink and wrapped details ownership
+
+The connection and failure dialogs keep their existing standard buttons, roles and native
+EasyApplication delegate. Local font-relative padding surrounds every standard action's
+content; the footer measures their resulting natural extents. A label's advance is not a
+promise that its painted ink fits an unpadded button. Sign in, Approve, Cancel and failure
+acknowledgement retain the original callbacks, fonts, rendering and offered-context fences.
+
+The message's single wrapped technical viewport decorates an explicit Flickable, following
+Qt ScrollView's existing Flickable support and the app's TextTab scroll ownership. Only that
+Flickable owns content size: its viewport width determines the fields' wrap width, and the
+fields' natural height determines vertical content extent. The ScrollView no longer writes
+content size back through its implicit-content synchronization. The original bounded height,
+vertical native scrollbar, literal/selectable details, canonical copy and pooled-row reset
+remain. Native ink, scrolling and warning-free runtime acceptance are separate qualification;
+source and grammar checks alone do not establish those outcomes.
+
+
+### Composer toolbar breathing room
+
+The existing composer Column keeps its original file/text spacing and gains only a
+natural spacer before its bottom toolbar. Together with the Column's two adjoining
+spaces, the text-to-toolbar gap matches the same Column's existing top inset. The
+composer's implicit height continues to follow its contents. No input, attachment,
+IME, Send, Stop, button sizing or keyboard behavior changes.
+
+
+### Whole-turn working motion and status Stop extent
+
+The existing agent_active state owns the working cue for the whole official turn,
+including pending question/plan presentation. Presentation visibility no longer
+chooses a new variant or resets the cue between tools. All variants and the app-bar
+robot use a constant linear full rotation through the native scene-graph
+RotationAnimator. The inline robot keeps its accepted upright ink size and optical
+center. Its reserved layout envelope is the fixed safe diagonal of the icon circle;
+no live QML angle or per-frame rescaling is needed, so GUI-thread work cannot stall
+the rotation merely by preventing an angle-binding update. The actual icon circle
+and the surrounding rotation envelope are distinct extents. The app-bar columns glyph stays stationary while the retained robot
+timeline continues behind it. Reduced motion still stops and resets rotation. Each target resets only from its own
+Animator stopped handler, after Qt has synchronized back its rendered angle, and
+only while the original current animation remains disabled. A source-property
+notification is not ordered against that synchronization.
+
+The original status Stop receiver's implicit and background circle extents equal
+the adjacent working iconExtent. Native foreground/background functions, actual
+canCancel, pressed-slot retention and the same explicit cancel handler remain.
+There is no new timer, backend state, cancellation path or promise that animation
+continues while the operating system suspends rendering. Genuine frames and native
+input remain separate qualification.
+
+
+### Native response maximum includes closed outgoing metadata
+
+The existing native result reservation keeps its raw outcome/row maximum, including
+synthetic refusal padding. The separate response-specific maximum also
+includes the exact canonical schema and longest closed error code that the actual
+Result projector may add. Both use the same schema and code declarations. Otherwise
+a read result can fit its own raw maximum but exceed the response role solely because
+projection adds metadata inside the escaped response text.
+
+The existing Qt encoding and inclusive joint reservation still own raw maximum,
+projected/encoded text, response and retained terminal roles. Added metadata backing
+is admitted before growth; no capacity ceiling, result field, schema, tool behavior,
+first-failure evidence or ownership policy changes. All existing edit, fit, inspection,
+input and save response-bound consumers use the corrected common maximum.

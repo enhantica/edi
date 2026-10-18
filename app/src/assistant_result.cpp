@@ -85,6 +85,7 @@ QString relative_name(const std::string& bytes, bool carried = false) {
     return name;
 }
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
+using DirectoryStream = std::unique_ptr<DIR, int (*)(DIR*)>;
 struct Fd {
     int n = -1;
     Fd() = default;
@@ -310,12 +311,14 @@ void enumerate(int parent, const QString& prefix, std::set<QString>& files, std:
     DIR* raw = ::fdopendir(owned.n);
     if (!raw) refuse();
     owned.n = -1;
-    std::unique_ptr<DIR, decltype(&::closedir)> stream(raw, ::closedir);
+    DirectoryStream stream(raw, ::closedir);
     for (;;) {
         errno = 0;
         auto* entry = ::readdir(raw);
         if (!entry) { if (errno) refuse(); break; }
-        const auto nameLength=::strnlen(entry->d_name,Bounds::name_bytes+1);
+        // readdir supplies a NUL-terminated name; do not mistake the declared
+        // d_name array size for the returned OS name domain. Admit before copy.
+        const auto nameLength=std::char_traits<char>::length(entry->d_name);
         if(nameLength>Bounds::name_bytes)refuse();
         const QByteArray rawName(entry->d_name,static_cast<qsizetype>(nameLength));
         if (rawName == "." || rawName == "..") continue;
@@ -1228,7 +1231,7 @@ void AssistantResultExport::prepare(const ImmutableAssistantResult& source, cons
         // Closure recursion holds ancestor component/path payloads. A foreign
         // raw leaf is rejected before alias normalization, but its decoding and
         // prefix concatenation may still reach 2*the admitted name cap+slash.
-        metadata.rows(depth,sizeof(QByteArray)+2*sizeof(QString)+sizeof(Fd)+sizeof(struct stat)+sizeof(std::unique_ptr<DIR,decltype(&::closedir)>));
+        metadata.rows(depth,sizeof(QByteArray)+2*sizeof(QString)+sizeof(Fd)+sizeof(struct stat)+sizeof(DirectoryStream));
         metadata.rows(depth,3*Bounds::name_bytes+1+(3*Bounds::name_bytes+1)*sizeof(QChar));
         metadata.rows(2,sizeof(QStringList));
         metadata.rows(depth+1,sizeof(QString)); // Full split plus nested one-component lookup.
@@ -1379,11 +1382,14 @@ std::shared_ptr<ImmutableAssistantReport> capture_assistant_report(const QString
         if (depth > Limits::json_depth) refuse();
         Fd scan(::openat(from, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC));
         DIR* raw = ::fdopendir(scan.n); if (!raw) refuse(); scan.n = -1;
-        std::unique_ptr<DIR, decltype(&::closedir)> stream(raw, ::closedir);
+        DirectoryStream stream(raw, ::closedir);
         for (;;) {
             errno = 0; auto* entry = ::readdir(raw);
             if (!entry) { if (errno) refuse(); break; }
-            const QByteArray rawName(entry->d_name); if (rawName == "." || rawName == "..") continue;
+            const auto nameLength=std::char_traits<char>::length(entry->d_name);
+            if(nameLength>Bounds::name_bytes)refuse();
+            const QByteArray rawName(entry->d_name,static_cast<qsizetype>(nameLength));
+            if (rawName == "." || rawName == "..") continue;
             if (++entries > Bounds::files) refuse();
             const auto name = QString::fromUtf8(rawName); if (name.toUtf8() != rawName) refuse(); validate_assistant_result_leaf(name);
             const auto path = prefix.isEmpty() ? name : prefix + '/' + name;

@@ -2595,6 +2595,11 @@ auto converted_save(const Project& model, bool recalculate, Finish&& finish) {
         }
     }
     }
+    // Conversion reconstructs Parameters without dependence marks. Refresh on
+    // this owned image even when no recalculation ran, so the SDK writer keeps
+    // constrained uncertainties. No live-model read follows this SDK call; its
+    // temporary graph is released before the writer's own graph is constructed.
+    (void)crysta::refresh_relations(cproject, false);
     return finish(cproject);
 }
 } // namespace

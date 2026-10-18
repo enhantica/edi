@@ -173,3 +173,22 @@ and lifetime retire original ownership on actual changes; value-role publication
 does not become a new owner. No parent.model/index inference or synthetic input
 is used. Existing draft/IME/binding/refusal/formatter/model/Undo/prearm behavior
 and all unrelated original controls remain unchanged.
+
+
+### Save conversion restores authoritative dependence marks
+
+The common converted-save boundary refreshes the SDK's relation marks on its owned
+converted project before delegating to either ordinary Save or bounded native document
+preparation. Conversion reconstructs Parameters with their values, free flags and SUs;
+copying declarations alone does not restore dependence. The SDK writer preserves a fixed
+constrained parameter's nonzero SU only when that authoritative mark is present.
+
+This refresh also runs when recalculation is disabled or no calculated bank exists.
+It uses the existing SDK refresh_relations(project, false), after the final live-model
+read and before the writer callback. Its temporary graph dies before the writer's graph
+or copied save model is constructed. Native capture has already admitted the complete
+conversion/relations construction roles; no extra retained graph or larger allowance is
+introduced. Existing malformed-relation refusal, writer rounding, saved-state adoption,
+currentness, physical publication and Undo remain their original owners. No parameter
+value or uncertainty is recomputed here, and no material-specific scientific rule,
+serializer or post-load covariance reconstruction is added.

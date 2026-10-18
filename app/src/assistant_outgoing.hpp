@@ -7,6 +7,8 @@
 #include <QJsonObject>
 #include <QStringView>
 #include <iterator>
+#include <array>
+#include <string_view>
 #include <string>
 #include <cmath>
 #include <stdexcept>
@@ -18,6 +20,23 @@ enum class Role { Context, Project, Structure, SpaceGroup, Site, Dataset, Axis,
     Observations, Region, Phase, Background, Anchor, Relations, Alias, Constraint,
     Parameter, Diagnostic, Selection, File, Skill, InputScopes, InputSource,
     NativeState, Result, Fit, ReaderFacts };
+inline constexpr std::string_view wire_schema="edi.assistant.outgoing/1";
+enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch };
+inline constexpr std::array<std::string_view,7> result_codes={
+    "refused","unavailable","cancelled","uncertain","resource_exhausted","input_changed","policy_mismatch"};
+inline constexpr std::string_view result_code(ResultCode code) {return result_codes[static_cast<std::size_t>(code)];}
+inline constexpr std::string_view maximum_result_code() {
+    std::string_view maximum;
+    for(const auto code:result_codes)if(code.size()>maximum.size())maximum=code;
+    return maximum;
+}
+// Internal bound only. Keep unprojected synthetic padding, but include every
+// field the actual closed projection can ADD before nesting it as response text.
+inline void complete_result_maximum(QJsonObject& maximum) {
+    maximum.insert("schema",QLatin1StringView(wire_schema.data(),static_cast<qsizetype>(wire_schema.size())));
+    constexpr auto code=maximum_result_code();
+    maximum.insert("code",QLatin1StringView(code.data(),static_cast<qsizetype>(code.size())));
+}
 enum class Type { Text, ActionError, ActionField, RecipeField, RecipeReason, Number, Boolean, Object, Array, TextArray };
 struct Field { const char* name; Type type; Role child=Role::Result; };
 inline const Field* fields(Role role, std::size_t& count) {
@@ -129,9 +148,8 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
         throw std::invalid_argument("Outgoing action refusal is incomplete");
     const bool top=role==Role::Context || role==Role::Result;
     if(top) {
-        constexpr auto schema="edi.assistant.outgoing/1";
-        add(size,sizeof("\"schema\":\"edi.assistant.outgoing/1\"")-1);
-        if(materialize)result.insert("schema",QLatin1StringView(schema));
+        add(size,sizeof("\"schema\":")-1+wire_schema.size()+2);
+        if(materialize)result.insert("schema",QLatin1StringView(wire_schema.data(),static_cast<qsizetype>(wire_schema.size())));
         comma=true;
     }
     std::size_t count=0;const auto* schema=fields(role,count);
@@ -148,12 +166,12 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
     }
     if(role==Role::Result) {
         const auto status=source.value("status");const char* code=nullptr;
-        if(status=="refused" || status=="unavailable" || status=="error")code=status=="refused"?"refused":"unavailable";
-        else if(status=="cancelled" || status=="interrupted" || status=="superseded")code="cancelled";
-        else if(status=="unconfirmed" || status=="applied_unconfirmed" || source.value("uncertain").toBool())code="uncertain";
-        if(source.value("code")=="resource_exhausted" || source.value("code")=="input_capacity")code="resource_exhausted";
-        else if(source.value("code")=="source_changed")code="input_changed";
-        else if(source.value("code")=="policy_mismatch")code="policy_mismatch";
+        if(status=="refused" || status=="unavailable" || status=="error")code=result_code(status=="refused"?ResultCode::Refused:ResultCode::Unavailable).data();
+        else if(status=="cancelled" || status=="interrupted" || status=="superseded")code=result_code(ResultCode::Cancelled).data();
+        else if(status=="unconfirmed" || status=="applied_unconfirmed" || source.value("uncertain").toBool())code=result_code(ResultCode::Uncertain).data();
+        if(source.value("code")=="resource_exhausted" || source.value("code")=="input_capacity")code=result_code(ResultCode::ResourceExhausted).data();
+        else if(source.value("code")=="source_changed")code=result_code(ResultCode::InputChanged).data();
+        else if(source.value("code")=="policy_mismatch")code=result_code(ResultCode::PolicyMismatch).data();
         if(code) {if(comma)add(size,1);add(size,sizeof("\"code\":")-1+std::char_traits<char>::length(code)+2);if(materialize)result.insert("code",QLatin1StringView(code));}
     }
     return materialize?QJsonValue(result):QJsonValue();

@@ -86,6 +86,10 @@ AppDialog {
     footer: EaElements.DialogButtonBox {
         id: connectionButtons
         visible: count > 0
+        delegate: EaElements.Button {
+            highlighted: true
+            padding: EaStyle.Sizes.fontPixelSize * 0.5
+        }
         // Measure standard buttons independently of the view's laid-out width.
         readonly property real naturalButtonWidth: {
             let total = 0;
@@ -183,6 +187,13 @@ AppDialog {
             - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
             - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
         standardButtons: Dialog.Ok
+        footer: EaElements.DialogButtonBox {
+            visible: count > 0
+            delegate: EaElements.Button {
+                highlighted: true
+                padding: EaStyle.Sizes.fontPixelSize * 0.5
+            }
+        }
         ScrollView {
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             id: failureScroll

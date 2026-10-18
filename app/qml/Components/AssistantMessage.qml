@@ -159,6 +159,33 @@ Rectangle {
             || command === refinement + " .agents/skills/project-assistance/SKILL.md") return guidanceReadCaption(true, true);
         return "";
     }
+    function declaredCommandPurpose(command) {
+        const marker = "# Edi purpose: ";
+        if (typeof command !== "string" || !command.startsWith(marker)) return "";
+        // Existing native-purpose bounds; never scan or copy the whole script.
+        const first = command.slice(0, marker.length + 120 + 2);
+        const newline = first.indexOf("\n");
+        if (newline < 0) return "";
+        let goal = first.slice(marker.length, newline);
+        if (goal.endsWith("\r")) goal = goal.slice(0, -1);
+        if (!goal.length || goal.length > 120 || !goal.trim().length || goal.endsWith("\\")) return "";
+        let utf8 = 0;
+        for (let i = 0; i < goal.length; ++i) {
+            const c = goal.charCodeAt(i);
+            if (c < 0x20 || c >= 0x7f && c <= 0x9f || c === 0x2028 || c === 0x2029
+                || c === 0xfeff || c === 0x061c || c === 0x200e || c === 0x200f
+                || c >= 0x202a && c <= 0x202e || c >= 0x2066 && c <= 0x2069) return "";
+            if (c >= 0xd800 && c <= 0xdbff) {
+                if (++i >= goal.length) return "";
+                const low = goal.charCodeAt(i);
+                if (low < 0xdc00 || low > 0xdfff) return "";
+                utf8 += 4;
+            } else if (c >= 0xdc00 && c <= 0xdfff) return "";
+            else utf8 += c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+            if (utf8 > 480) return "";
+        }
+        return goal; // Supplied goal only; never status, authority or verified intent.
+    }
     function activityDescription() {
         if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
@@ -172,6 +199,10 @@ Rectangle {
         // runtime has no explicit one. Never parse shell text or infer an outcome.
         const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
         if (!Array.isArray(actions) || actions.length === 0 || !actions.every(usableCommandAction)) return "";
+        if (actions.length === 1 && actions[0].type === "unknown") {
+            const declared = declaredCommandPurpose(actions[0].command);
+            if (declared.length) return declared;
+        }
         const labels = [];
         for (const action of actions) {
             if (action.type === "read") {
@@ -482,74 +513,79 @@ Rectangle {
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
                 height: Math.min(technicalFields.implicitHeight, AppSizes.unit * 18)
-                contentWidth: Math.max(0, width - leftPadding - rightPadding)
-                contentHeight: technicalFields.implicitHeight
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
-                Column {
-                    id: technicalFields
-                    width: technicalViewport.contentWidth
-                    spacing: AppSizes.unit * 0.4
+                contentItem: Flickable {
+                    id: technicalContent
+                    boundsBehavior: Flickable.StopAtBounds
+                    flickableDirection: Flickable.VerticalFlick
+                    contentWidth: width
+                    contentHeight: technicalFields.implicitHeight
                     Column {
-                        width: parent.width
-                        visible: row.commandActivity
+                        id: technicalFields
+                        width: technicalContent.width
                         spacing: AppSizes.unit * 0.4
-                        LiteralDetails {
+                        Column {
                             width: parent.width
-                            fieldName: qsTr("Retained command status")
-                            text: technicalViewport.visible && row.commandActivity ? qsTr("Status: %1").arg(row.payload.status || qsTr("unavailable"))
-                                + (typeof row.payload.exitCode === "number" && Number.isInteger(row.payload.exitCode)
-                                    ? qsTr(" · exit %1").arg(row.payload.exitCode) : "") : ""
+                            visible: row.commandActivity
+                            spacing: AppSizes.unit * 0.4
+                            LiteralDetails {
+                                width: parent.width
+                                fieldName: qsTr("Retained command status")
+                                text: technicalViewport.visible && row.commandActivity ? qsTr("Status: %1").arg(row.payload.status || qsTr("unavailable"))
+                                    + (typeof row.payload.exitCode === "number" && Number.isInteger(row.payload.exitCode)
+                                        ? qsTr(" · exit %1").arg(row.payload.exitCode) : "") : ""
+                            }
+                            EaElements.Label { text: qsTr("Command"); font.bold: true }
+                            LiteralDetails {
+                                id: commandText
+                                objectName: "assistant.command.literal"
+                                width: parent.width
+                                fieldName: qsTr("Command")
+                                text: technicalViewport.visible && row.commandActivity && typeof row.payload.command === "string" ? row.payload.command : ""
+                            }
+                            EaElements.Label { text: qsTr("Working directory"); font.bold: true }
+                            LiteralDetails {
+                                id: directoryText
+                                width: parent.width
+                                fieldName: qsTr("Working directory")
+                                text: technicalViewport.visible && row.commandActivity && typeof row.payload.cwd === "string" ? row.payload.cwd : ""
+                            }
+                            EaElements.Label {
+                                text: !row.payload || typeof row.payload.aggregatedOutput !== "string" ? qsTr("Output unavailable")
+                                      : row.payload.aggregatedOutput.length === 0 ? qsTr("Output (empty)") : qsTr("Output")
+                                font.bold: true
+                            }
+                            LiteralDetails {
+                                id: outputText
+                                objectName: "assistant.command.output"
+                                width: parent.width
+                                fieldName: qsTr("Output")
+                                text: technicalViewport.visible && row.commandActivity && typeof row.payload.aggregatedOutput === "string" ? row.payload.aggregatedOutput : ""
+                            }
                         }
-                        EaElements.Label { text: qsTr("Command"); font.bold: true }
                         LiteralDetails {
-                            id: commandText
-                            objectName: "assistant.command.literal"
+                            id: activityText
                             width: parent.width
-                            fieldName: qsTr("Command")
-                            text: technicalViewport.visible && row.commandActivity && typeof row.payload.command === "string" ? row.payload.command : ""
-                        }
-                        EaElements.Label { text: qsTr("Working directory"); font.bold: true }
-                        LiteralDetails {
-                            id: directoryText
-                            width: parent.width
-                            fieldName: qsTr("Working directory")
-                            text: technicalViewport.visible && row.commandActivity && typeof row.payload.cwd === "string" ? row.payload.cwd : ""
-                        }
-                        EaElements.Label {
-                            text: !row.payload || typeof row.payload.aggregatedOutput !== "string" ? qsTr("Output unavailable")
-                                  : row.payload.aggregatedOutput.length === 0 ? qsTr("Output (empty)") : qsTr("Output")
-                            font.bold: true
+                            visible: !row.commandActivity && !(row.payload && row.payload.type === "dynamicToolCall" && row.text === "dynamicToolCall")
+                            fieldName: qsTr("Activity")
+                            text: visible && technicalViewport.visible ? row.text : ""
                         }
                         LiteralDetails {
-                            id: outputText
-                            objectName: "assistant.command.output"
+                            id: decisionText
                             width: parent.width
-                            fieldName: qsTr("Output")
-                            text: technicalViewport.visible && row.commandActivity && typeof row.payload.aggregatedOutput === "string" ? row.payload.aggregatedOutput : ""
+                            visible: row.decisionActivity
+                            fieldName: qsTr("Decision")
+                            text: visible && technicalViewport.visible
+                                ? qsTr("Decision: %1\nAction reference: %2").arg(row.payload.decision === "decline" ? qsTr("Declined") : row.payload.decision).arg(row.payload.item_id) : ""
                         }
-                    }
-                    LiteralDetails {
-                        id: activityText
-                        width: parent.width
-                        visible: !row.commandActivity && !(row.payload && row.payload.type === "dynamicToolCall" && row.text === "dynamicToolCall")
-                        fieldName: qsTr("Activity")
-                        text: visible && technicalViewport.visible ? row.text : ""
-                    }
-                    LiteralDetails {
-                        id: decisionText
-                        width: parent.width
-                        visible: row.decisionActivity
-                        fieldName: qsTr("Decision")
-                        text: visible && technicalViewport.visible
-                            ? qsTr("Decision: %1\nAction reference: %2").arg(row.payload.decision === "decline" ? qsTr("Declined") : row.payload.decision).arg(row.payload.item_id) : ""
-                    }
-                    LiteralDetails {
-                        id: technicalText
-                        width: parent.width
-                        fieldName: qsTr("Retained item")
-                        text: technicalViewport.visible ? JSON.stringify(row.payload, null, 2) : ""
+                        LiteralDetails {
+                            id: technicalText
+                            width: parent.width
+                            fieldName: qsTr("Retained item")
+                            text: technicalViewport.visible ? JSON.stringify(row.payload, null, 2) : ""
+                        }
                     }
                 }
             }
