@@ -2241,13 +2241,13 @@ struct AssistantViewModel::State {
             try {
                 create_widget_take_child(parent, run);
                 widget_end(run);
-                if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, message);
+                if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, message, false, "child-completion");
             } catch (...) {
                 if (!receiver || !create_widget_owned(parent)) return;
                 create_widget_capture_child(parent, run);
                 native_call->may_have_written = native_call->may_have_written || parent->completed_steps > 0;
                 if (widget_owned(run)) widget_end(run);
-                if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, widget_outcome_error, true);
+                if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, widget_outcome_error, true, "child-catch");
             }
             return;
         }
@@ -2304,7 +2304,7 @@ struct AssistantViewModel::State {
             return;
         }
         if (widget) { widget_refuse(widget, message); return; }
-        if (creation) { create_widget_refuse(creation, message); return; }
+        if (creation) { create_widget_refuse(creation, message, false, "operation-superseded"); return; }
         if (!call) return; // Original publication already owns its factual reply.
         const auto original = [&] { return receiver && receiver->state_.get() == this && native_call &&
             native_call->record == call->record && native_call->receipt == call->receipt && native_call->rpc == call->rpc; };
@@ -2333,14 +2333,14 @@ struct AssistantViewModel::State {
                 create_widget_take_child(parent, run);
                 widget_end(run);
                 if (!receiver || !create_widget_owned(parent)) return;
-                if (!delivered || !actual) create_widget_refuse(parent, message.isEmpty() ? widget_outcome_error : message);
+                if (!delivered || !actual) create_widget_refuse(parent, message.isEmpty() ? widget_outcome_error : message, false, "child-delivery", int(delivered));
                 else create_widget_advance(parent);
             } catch (...) {
                 if (!receiver || !create_widget_owned(parent)) return;
                 create_widget_capture_child(parent, run);
                 native_call->may_have_written = native_call->may_have_written || parent->completed_steps > 0;
                 if (widget_owned(run)) widget_end(run);
-                if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, widget_outcome_error, true);
+                if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, widget_outcome_error, true, "child-delivery-catch");
             }
             return;
         }
@@ -5975,7 +5975,7 @@ struct AssistantViewModel::State {
             if(!receiver || !create_widget_owned(run))return;
             auto result=individual_progress(run,false);result["action_error"]=refusal.error;result["action_field"]=refusal.field;
             native_finish(false,result);if(receiver && create_widget_owned(run))create_widget_end(run);
-        } catch(...) { if(receiver && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error); }
+        } catch(...) { if(receiver && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error, false, "individual-start-catch"); }
     }
 
     bool create_widget_owned(const std::shared_ptr<NativeCreateWidget>& run) const {
@@ -6053,11 +6053,42 @@ struct AssistantViewModel::State {
             return;
         }
     }
-    void create_widget_refuse(const std::shared_ptr<NativeCreateWidget>& run, const QString& message, bool uncertain = false) noexcept {
+    void create_widget_refuse(const std::shared_ptr<NativeCreateWidget>& run, const QString& message, bool uncertain = false,
+                              const char* branch = "refuse", int delivered = -1, int target_survived = -1) noexcept {
         if (!create_widget_owned(run)) return;
         const auto receiver = run->receiver;
         if (run->call.record->answered || run->call.record->discarded || run->call.record->completed) {
             create_widget_end(run); return; // An original final fact is never replaced by cleanup uncertainty.
+        }
+        if (lcAssistantWidgetLookup().isDebugEnabled()) {
+            // Only scalar facts from this original refusal; never query a control again.
+            const auto index=run->step;
+            const int kind=index>=0 && index<run->inputs.size()?int(run->inputs.at(index).kind):-1;
+            const auto completed=run->completed_steps;
+            const auto binding=generation; const auto serial=native_serial; const auto account=usage_epoch;
+            const auto* file=run->file_input.get(); const auto* control=run->control_input.get(); const auto* parameter=run->parameter_input.get();
+            const int fileConsumed=file?int(file->consumed):-1, fileApplied=file?int(file->outcome.applied):-1,
+                filePublished=file?int(file->outcome.published):-1;
+            const int controlConsumed=control?int(control->consumed):-1, controlApplied=control?int(control->outcome.applied):-1,
+                controlPublished=control?int(control->outcome.published):-1;
+            const int parameterConsumed=parameter?int(parameter->consumed):-1, parameterApplied=parameter?int(parameter->outcome.applied):-1,
+                parameterPublished=parameter?int(parameter->outcome.published):-1;
+            const bool retiring=native_call->retiring, resolved=native_call->resolved,
+                retired=run->call.record->retired, receiptRetired=run->call.receipt->retired;
+            try {
+                qCDebug(lcAssistantWidgetLookup) << "creation refusal" << "branch" << branch << "index" << index << "kind" << kind
+                    << "completed" << completed << "delivered" << delivered << "target_survived" << target_survived
+                    << "file" << fileConsumed << fileApplied << filePublished
+                    << "control" << controlConsumed << controlApplied << controlPublished
+                    << "parameter" << parameterConsumed << parameterApplied << parameterPublished;
+            } catch (...) {} // Diagnostics cannot replace the original refusal.
+            // A synchronous message handler can retire A or admit B.
+            if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run) || run->step!=index ||
+                run->call.record->answered || run->call.record->discarded || run->call.record->completed ||
+                native_call->retiring!=retiring || native_call->resolved!=resolved ||
+                run->call.record->retired!=retired || run->call.receipt->retired!=receiptRetired ||
+                generation!=binding || native_serial!=serial || usage_epoch!=account ||
+                run->file_input.get()!=file || run->control_input.get()!=control || run->parameter_input.get()!=parameter) return;
         }
         if (native_creation && native_creation->ticket && native_creation->record == run->call.record) {
             native_cancel_creation();
@@ -6107,7 +6138,7 @@ struct AssistantViewModel::State {
         create_widget_capture_step(run);
         if (input && input->outcome.applied) native_call->may_have_written=true;
         if (!delivered || !input || !input->consumed || !input->outcome.applied || !input->outcome.published) {
-            create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message); return;
+            create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "file-completion", int(delivered)); return;
         }
         create_widget_retain(run);
         run->file_input.reset();
@@ -6118,7 +6149,7 @@ struct AssistantViewModel::State {
         QTimer::singleShot(500, &owner, [this, run] {
             if (!create_widget_current(run)) return;
             try { create_widget_next(run); }
-            catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
+            catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "file-next-catch"); }
         });
     }
     void create_widget_load_structure(const std::shared_ptr<NativeCreateWidget>& run) {
@@ -6191,18 +6222,18 @@ struct AssistantViewModel::State {
                 const bool targetReady=targetCurrent();
                 if(!receiver || receiver->state_.get()!=this)return;
                 if(!targetReady) {
-                    create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;
+                    create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message, false, "file-target", int(delivered), int(targetReady));return;
                 }
                 if(!origin->current())run->origin_unavailable=true;
                 if(run->origin_unavailable) {
-                    create_widget_refuse(run,QObject::tr("The original attached file changed or is unavailable"));return;
+                    create_widget_refuse(run,QObject::tr("The original attached file changed or is unavailable"), false, "file-origin");return;
                 }
                 if(!delivered) {
-                    create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;
+                    create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message, false, "file-cue-delivery", int(delivered));return;
                 }
                 if(!origin->content_current()) {
                     run->origin_unavailable=true;
-                    create_widget_refuse(run,QObject::tr("The original attached file changed or is unavailable"));return;
+                    create_widget_refuse(run,QObject::tr("The original attached file changed or is unavailable"), false, "file-content");return;
                 }
                 bool applied=false;
                 {
@@ -6230,7 +6261,7 @@ struct AssistantViewModel::State {
                 }
                 if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
                 create_widget_after_structure(run,applied,run->file_input->outcome.message);
-            } catch(...) { if(receiver && receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error); }
+            } catch(...) { if(receiver && receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error, false, "file-cue-catch"); }
         };
         // Native Request contains the function objects; their actual captured
         // targets and original local copies also coexist before helper transfer.
@@ -6312,7 +6343,7 @@ struct AssistantViewModel::State {
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
         QTimer::singleShot(500, &owner, [this, run] {
             if (!create_widget_current(run)) return;
-            try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
+            try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "advance-next-catch"); }
         });
     }
     void create_widget_child(const std::shared_ptr<NativeCreateWidget>& run, const NativeCreateWidget::Input& step) {
@@ -6390,14 +6421,14 @@ struct AssistantViewModel::State {
         input.completed=[this,run,original,y](bool delivered,const QString& message) {
             if (!create_widget_owned(run)) return;
             try {
-                if (!delivered || !original || original->property("contentY").toDouble()==y) { create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return; }
-                QTimer::singleShot(500,&owner,[this,run] { if (!create_widget_current(run)) return; try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error); } });
-            } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error); }
+                if (!delivered || !original || original->property("contentY").toDouble()==y) { create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message, false, "reveal-completion", int(delivered), int(bool(original)));return; }
+                QTimer::singleShot(500,&owner,[this,run] { if (!create_widget_current(run)) return; try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error, false, "reveal-next-catch"); } });
+            } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error, false, "reveal-catch"); }
         };
         widget_input->start(std::move(input));return true;
     }
     void create_widget_next(const std::shared_ptr<NativeCreateWidget>& run) {
-        if (!create_widget_current(run) || !widget_input) { create_widget_refuse(run, widget_outcome_error); return; }
+        if (!create_widget_current(run) || !widget_input) { create_widget_refuse(run, widget_outcome_error, false, "next-current"); return; }
         if (run->step >= run->inputs.size()) {
             native_finish(true, create_widget_progress(run, true, QObject::tr("Created through the original Project, Structure and Experiment controls; edits retain their ordinary Undo. No files were saved.")));
             if (create_widget_owned(run)) create_widget_end(run);
@@ -6410,7 +6441,7 @@ struct AssistantViewModel::State {
             run->calculation_wait = QObject::connect(run->project, &ProjectViewModel::recalculated, &owner, [this, run] {
                 QObject::disconnect(run->calculation_wait); run->calculation_wait = {};
                 if (!create_widget_current(run)) return;
-                try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
+                try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "calculation-next-catch"); }
             });
             return;
         }
@@ -6504,18 +6535,29 @@ struct AssistantViewModel::State {
         };
         input.completed = [this, run, step, target = QPointer<QQuickItem>(target), option](bool delivered, const QString& message) {
             if (!create_widget_owned(run)) return;
+            const char* branch="control.capture";
             try {
                 create_widget_capture_step(run);
+                branch="control.retain";
                 create_widget_retain(run);
+                branch="control.member";
                 if(!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.") &&
                     (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))throw ActionRefusal("target_unavailable","experiment");
-                if (!delivered || !target) { create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message); return; }
+                branch="control.delivery";
+                if (!delivered || !target) { create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "control-delivery", int(delivered), int(bool(target))); return; }
+                branch="control.tab";
                 if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic") && !target->property("checked").toBool()) throw std::runtime_error("The original tab was not selected");
+                branch="control.choice";
                 if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) throw std::runtime_error("The original choice was refused");
+                branch="control.text";
                 if ((step.kind == AssistantWidgetInput::Kind::FormText || step.kind == AssistantWidgetInput::Kind::Text) && target->property("text").toString() != step.text) throw std::runtime_error("The original text was refused");
+                branch="control.receipt";
                 if (run->control_input && (!run->control_input->consumed || !run->control_input->outcome.applied || !run->control_input->outcome.published)) throw std::runtime_error("The original model action was not confirmed");
+                branch="parameter.receipt";
                 if (run->parameter_input && (!run->parameter_input->consumed || !run->parameter_input->outcome.applied || !run->parameter_input->outcome.published || !run->control_parameter || run->control_parameter->value() != step.text.toDouble())) throw std::runtime_error("The original parameter action was not confirmed");
+                branch="control.cleanup";
                 run->control_input.reset(); run->parameter_input.reset(); run->control_parameter.clear();
+                branch="control.create-dialog";
                 if (step.target == "project.create") {
                     QObject* found = nullptr;
                     for (auto* object : run->window->findChildren<QObject*>()) if (object->objectName() == "createProject.dialog" && object->property("visible").toBool() && object->property("assistantIntentId").toString() == run->id) {
@@ -6523,9 +6565,11 @@ struct AssistantViewModel::State {
                     }
                     if (!found) throw std::runtime_error("The original Create dialog did not open"); run->form = found;
                 }
+                branch="control.create-owner";
                 if (step.target == "createProject.accept" && (!run->project || !result_session() || result_session()->project() != run->project)) throw std::runtime_error("The original Create did not commit its owner");
+                branch="control.advance";
                 create_widget_advance(run);
-            } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
+            } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, branch, int(delivered), int(bool(target))); }
         };
         widget_input->start(std::move(input));
     }
@@ -6654,10 +6698,10 @@ struct AssistantViewModel::State {
         } catch (const ActionRefusal& failure) {
             if(receiver && receiver->state_.get()==this && create_widget_owned(run)) {
                 if(failure.error=="input_unavailable" && failure.field=="file_id")run->origin_unavailable=true;
-                create_widget_refuse(run,run->origin_unavailable?QObject::tr("The original attached file changed or is unavailable"):widget_outcome_error);
+                create_widget_refuse(run,run->origin_unavailable?QObject::tr("The original attached file changed or is unavailable"):widget_outcome_error, false, "creation-origin");
             }
         } catch (...) {
-            if (receiver && create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error);
+            if (receiver && create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "creation-start-catch");
         }
     }
 

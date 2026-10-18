@@ -1318,3 +1318,7 @@ now accepts a separate original source identity for naming. Manual loading deleg
 the same path for both roles. The normal compound atomic worker stage/transaction is kept,
 with original-origin verification before worker admission. No second parser, recovery/import
 scheduler, OS automation or new scientific editor is introduced. Native proof is separate.
+
+### Passive visible-creation refusal observations
+
+The existing optional `edi.assistant.widget.lookup` debug category also records the original visible-creation refusal boundary. Fixed source-branch labels, plan index/input kind and scalar delivery/target-survival/consumed/applied/published facts distinguish a failed completion from a later validation or callback refusal. Completed edits remain factual applied latches, not cursor positions. No dynamic control name, value, path, packet or exception text is logged; no control predicate or QML getter is repeated. The existing terminal guard precedes observation, and the original weak receiver/run/index and retirement state are rechecked after any synchronous message-handler reentry before continuing. Default-off logging adds no control, recovery, timeout, pacing or scientific behavior.

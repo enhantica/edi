@@ -132,3 +132,16 @@ The original native/manual minimum of two API domain, schemas, parser, scientifi
 and Undo are unchanged. The compiled developer instruction and both versioned
 skills agree; the existing index bonds their exact bytes and versions. No material
 constant, capability, tool, approval, model call or strategy execution engine is added.
+
+
+### Individual and compound file-load guidance agree
+
+The existing individual-action paragraph uses the same file-load contract as
+compound creation and the registered tool descriptions: Show actions presents
+the original Load pointer/click cue without dispatching device, clicked or
+file-dialog events, then the original validated import consumes the admitted
+file ID while original source proof is current. Missing or changed originals
+refuse. Manual Load retains its system dialog; other real visible controls,
+fresh Save As, attachment and skill-source choosers keep their original roles.
+The bundled skill version and index digest change together. This corrects
+instruction consistency, adding no native operation, schema or permission.
