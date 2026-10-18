@@ -478,20 +478,20 @@ TEST_CASE("E11-T5 bounded work stamps preserve original encoding and stale sourc
     const Capture capture = static_cast<Capture>(&edi::work_stamps); // Required actual API; no absent-feature fallback.
     auto project = transition_project();
     REQUIRE_MESSAGE(project.experiment().data.has_value(), "STAMP482 SETUP original measured fixture has actual data");
-    REQUIRE_MESSAGE(!project.experiment().data->intensity_meas.values().empty(),
+    REQUIRE_MESSAGE(!project.experiment().data->intensity_meas.get().empty(),
                     "STAMP482 SETUP original fixture supplies nonempty actual measured columns");
-    REQUIRE_MESSAGE(project.aliases.size() > 0 && project.constraints.size() > 1,
+    REQUIRE_MESSAGE((project.aliases.size() > 0 && project.constraints.size() > 1),
                     "STAMP482 SETUP original fixture exercises real alias lookup and relation encoding");
     const auto maximum = std::numeric_limits<std::size_t>::max();
     const auto equal = [](const edi::WorkStamps& a, const edi::WorkStamps& b) {
-        CHECK_MESSAGE(a.experiment_inputs == b.experiment_inputs && a.structure_inputs == b.structure_inputs,
+        CHECK_MESSAGE((a.experiment_inputs == b.experiment_inputs && a.structure_inputs == b.structure_inputs),
                       "STAMP482 compatibility reference: bounded capture retains EVERY original scientific input byte");
-        CHECK_MESSAGE(a.experiments == b.experiments && a.structures == b.structures &&
-                          a.experiments_generation == b.experiments_generation && a.structures_generation == b.structures_generation,
+        CHECK_MESSAGE((a.experiments == b.experiments && a.structures == b.structures &&
+                          a.experiments_generation == b.experiments_generation && a.structures_generation == b.structures_generation),
                       "STAMP482 bounded capture preserves original collection and write identities");
-        CHECK_MESSAGE(a.edits == b.edits && a.edits_at == b.edits_at,
+        CHECK_MESSAGE((a.edits == b.edits && a.edits_at == b.edits_at),
                       "STAMP482 bounded capture preserves original live edit identity");
-        CHECK_MESSAGE(a.aliases == b.aliases && a.constraints == b.constraints && a.relations == b.relations,
+        CHECK_MESSAGE((a.aliases == b.aliases && a.constraints == b.constraints && a.relations == b.relations),
                       "STAMP482 bounded capture preserves original alias/constraint identities and exact relation bytes");
     };
     const auto original = edi::work_stamps(project);
@@ -520,11 +520,11 @@ TEST_CASE("E11-T5 bounded work stamps preserve original encoding and stale sourc
                                 "STAMP482 insufficient actual container/payload admission fails with length_error");
         CHECK_MESSAGE(!partial.has_value(), "STAMP482 refusal returns NO partial WorkStamps");
         equal(edi::work_stamps(project), original);
-        CHECK_MESSAGE(edi::unchanged_since(project, bounded) && edi::project_edi_files(project) == saved,
+        CHECK_MESSAGE((edi::unchanged_since(project, bounded) && edi::project_edi_files(project) == saved),
                       "STAMP482 insufficient capture neither writes model nor changes original source identities");
     }
 
-    auto measured = project.experiment().data->intensity_meas.values();
+    auto measured = project.experiment().data->intensity_meas.get();
     measured[0] += 1.25; // Independent literal changed observation, not a computed scientific golden.
     project.experiment().data->write_column(&edi::PdDataBase::intensity_meas, std::move(measured));
     CHECK_MESSAGE(!edi::unchanged_since(project, bounded), "STAMP482 actual measured-column change stales original bounded source");
