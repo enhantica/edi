@@ -6738,9 +6738,25 @@ TestCase {
         const eye = item("assistant.showActions");
         compare(eye.checked, false, "GUI393 SETUP: original isolated presentation starts with actions off");
         Ui.click(this, Probe, window, "assistant.showActions");
-        verify(eye.checked && eye.Accessible.checkable && eye.Accessible.checked
-            && eye.Accessible.name === "Show actions" && eye.ToolTip.text === "Show actions" && eye.fontIcon === "eye",
-            "GUI393: genuine eye toggle is checked, named, accessible and presentation-only");
+        console.log("GUI486_EYE_SNAPSHOT", JSON.stringify({
+            receiver: String(eye), controller: String(assistant), project: String(before.owner),
+            sameController: Session.assistant === assistant, sameProject: Session.project === before.owner,
+            originalOwnerAlive: alive313(before.life), controllerShowActions: assistant.showActions,
+            window: String(window), receiverWindow: String(eye.Window.window), sameWindow: eye.Window.window === window,
+            windowActive: window.active, windowVisible: window.visible,
+            receiverVisible: eye.visible, receiverEnabled: eye.enabled, receiverRect: rect(eye),
+            fields: [["checked", eye.checked], ["Accessible.checkable", eye.Accessible.checkable],
+                ["Accessible.checked", eye.Accessible.checked], ["Accessible.name", eye.Accessible.name],
+                ["ToolTip.text", eye.ToolTip.text], ["fontIcon", eye.fontIcon]].map(pair => ({
+                    property: pair[0], type: typeof pair[1], value: typeof pair[1] === "undefined" ? null : pair[1]}))
+        }));
+        capture("gui486-original-eye-before-assertions");
+        verify(eye.checked, "GUI486: original clicked eye is checked");
+        verify(eye.Accessible.checkable, "GUI486: original eye accessibility remains checkable");
+        verify(eye.Accessible.checked, "GUI486: original eye accessibility reports checked");
+        verify(eye.Accessible.name === "Show actions", "GUI486: original eye accessible name is exact");
+        verify(eye.ToolTip.text === "Show actions", "GUI486: original eye tooltip is exact");
+        verify(eye.fontIcon === "eye", "GUI486: original eye glyph is exact");
         mouseMove(window.contentItem, 0, 0); rendered();
         verify(gui392_labels(eye).some(label => label.color === EaStyle.Colors.themeAccent),
             "GUI393: original checked eye actually paints accent ink");
