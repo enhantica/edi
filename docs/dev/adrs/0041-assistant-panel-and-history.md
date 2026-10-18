@@ -1600,3 +1600,22 @@ does not export JSON, attachment bytes or an assistant response. Captured row,
 text, payload, owner and lifetime are rechecked around the native clipboard call.
 Feedback resets on replacement/reuse/text changes. Sent files remain read-only
 metadata; pending attachment removal and Clear authority are unchanged.
+
+
+### Sent-copy hover follows the native ancestor branch
+
+The sent-user hover observer belongs to the existing message row, the actual
+ancestor of the TextEdit, padding, file labels and copy control. Qt hover delivery
+selects a leaf and then its ancestors; a separate overlapping sibling observer
+cannot reliably see the text/copy branch. The passive, nonblocking row handler
+uses its parent-local point position to restrict reveal and click admission to
+bubble.x through the right copy rail and the row's vertical bounds. Unrelated
+empty space left of the bubble does not reveal Copy. There is no reparenting,
+input overlay, pointer grab or hover-dependent layout. Native selection/cursor,
+TabFocus reveal, reserved rail, compact extent and the original clipboard
+identity/lifetime/once guards remain unchanged. Actual rendered input and
+clipboard acceptance require the normal native app vehicle.
+
+Prior art: original activity-header ancestor HoverHandler and native TextEdit /
+ToolButton handlers; [Qt handlerPoint parent-local position](https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/handlers/qquickhandlerpoint.cpp#L174)
+and [Qt hover delivery ancestor traversal](https://github.com/qt/qtdeclarative/blob/v6.11.2/src/quick/util/qquickdeliveryagent.cpp#L1088).

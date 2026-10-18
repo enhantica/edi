@@ -240,16 +240,14 @@ Rectangle {
         border.width: row.highlighted ? EaStyle.Sizes.borderThickness : 0
         border.color: EaStyle.Colors.themeAccent
     }
-    Item {
-        x: bubble.x
-        width: Math.max(0, row.width - x)
-        height: row.height
-        visible: row.kind === "user"
-        HoverHandler {
-            id: userHistoryHover
-            acceptedDevices: PointerDevice.AllDevices
-            blocking: false
-        }
+    HoverHandler {
+        id: userHistoryHover
+        enabled: row.kind === "user"
+        acceptedDevices: PointerDevice.AllDevices
+        blocking: false
+        readonly property bool overHistory: hovered
+            && point.position.x >= bubble.x && point.position.x <= row.width
+            && point.position.y >= 0 && point.position.y <= row.height
     }
     EaElements.ToolButton {
         id: userCopy
@@ -259,7 +257,7 @@ Rectangle {
         implicitWidth: row.historyCopyExtent
         implicitHeight: row.historyCopyExtent
         visible: row.kind === "user" && row.status === "completed" && row.width >= row.historyCopyGutter
-        opacity: userHistoryHover.hovered || activeFocus ? 1 : 0
+        opacity: userHistoryHover.overHistory || activeFocus ? 1 : 0
         focusPolicy: Qt.TabFocus
         fontIcon: row.technicalCopied ? "check" : "copy"
         showBackground: false
@@ -276,7 +274,7 @@ Rectangle {
         }
         ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy sent message")
         Accessible.name: ToolTip.text
-        onClicked: if (userHistoryHover.hovered || activeFocus) row.copyUserText()
+        onClicked: if (userHistoryHover.overHistory || activeFocus) row.copyUserText()
     }
     component LiteralDetails: TextEdit {
         property string fieldName: ""
