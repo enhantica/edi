@@ -182,7 +182,7 @@ def unsafe_open(atoms, index):
     return not re.fullmatch(r'(?:L)?"r(?:b)?"', mode)
 
 
-def cpp_violations(source, excluded=()):
+def cpp_violations(source, excluded=(), *, sites=False):
     atoms = without_functions(cpp_tokens(source), excluded)
     aliases = dict(re.findall(r'namespace\s+(\w+)\s*=\s*([\w:]+)\s*;', source))
     safe_aliases = {name for name, target in aliases.items() if target == 'crysta::output'}
@@ -192,9 +192,9 @@ def cpp_violations(source, excluded=()):
     violations = []
     for index, atom in enumerate(atoms):
         if atom in TYPES or atom in FLAGS:
-            violations.append(atom)
+            violations.append((index, atom))
         if atom in {'out', 'app', 'trunc'} and index and atoms[index - 1] == '::':
-            violations.append(atom)
+            violations.append((index, atom))
         call = index + 1 < len(atoms) and atoms[index + 1] == '('
         prefix = ''.join(atoms[max(0, index - 5) : index])
         reference = (
@@ -216,12 +216,12 @@ def cpp_violations(source, excluded=()):
                 and diagnostic_call(atoms, index)
             ):
                 continue
-            violations.append(atom)
+            violations.append((index, atom))
         if atom == 'copy' and any(prefix.endswith(alias + '::') for alias in filesystem_aliases):
-            violations.append(atom)
+            violations.append((index, atom))
         if unsafe_open(atoms, index):
-            violations.append(atom)
-    return violations
+            violations.append((index, atom))
+    return violations if sites else [atom for _, atom in violations]
 
 
 def python_write_open(node, name, aliases, owner):
@@ -294,10 +294,8 @@ def python_violations(source):
 
 def scan(root=ROOT):
     contract = json.loads((ROOT / 'tests/fixtures/project_output/contract.json').read_text())
-    baseline = set(
-        json.loads((ROOT / 'tests/fixtures/project_output/source_inventory.json').read_text())[
-            'regression_source_inventory'
-        ]
+    operations = json.loads(
+        (ROOT / 'tests/fixtures/project_output/non_project_operations.json').read_text()
     )
     files = set(contract['project_output'])
     for folder in contract['roots']:
@@ -305,7 +303,6 @@ def scan(root=ROOT):
             str(path.relative_to(root))
             for path in (root / folder).rglob('*')
             if path.suffix in {'.cpp', '.hpp', '.h', '.py'}
-            and str(path.relative_to(root)) not in baseline
         )
     result = []
     for name in sorted(files - set(contract['helpers'])):
@@ -316,10 +313,25 @@ def scan(root=ROOT):
         excluded = (
             {'write_results', 'write_joint_results'} if name == 'src/cli/main.cpp' else set()
         )
-        violations = (
-            python_violations(path.read_text())
-            if path.suffix == '.py'
-            else cpp_violations(path.read_text(), excluded)
-        )
+        source = path.read_text()
+        permitted = [item for item in operations if item['source'] == name]
+        if path.suffix == '.py':
+            violations = python_violations(source)
+        else:
+            atoms = without_functions(cpp_tokens(source), excluded)
+            allowed = set()
+            for item in permitted:
+                context = cpp_tokens(item['context'])
+                matches = [
+                    index + item['offset']
+                    for index in range(len(atoms) - len(context) + 1)
+                    if atoms[index : index + len(context)] == context
+                ]
+                allowed.update(matches[: item['limit']])
+            violations = [
+                atom
+                for index, atom in cpp_violations(source, excluded, sites=True)
+                if index not in allowed
+            ]
         result.extend((name, problem) for problem in violations)
     return result

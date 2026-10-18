@@ -26,6 +26,7 @@ from conftest import (
 )
 from tests.fixtures.correlations.machine_record import without_pair_count
 from tests.fixtures.ncaf_free_flags import canonicalize
+from tests.fixtures.saved_spelling.reference import saved_pair, with_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
 LIB = importlib.import_module('edi')
@@ -544,12 +545,11 @@ def test_both_cli_surfaces_save_byte_equal_trees_and_conforming_records(
         'the disengaged crysta CLI must preserve the partial project record apart from schema '
         'reconciliation'
     )
-    assert (
-        project_record_without_fields(edi_record, 'created', 'last_modified', 'timestamp')
-        == crysta_record
-    ), (
-        'edi persistence must add only the three absent owned metadata fields to the carried '
-        'record, rather than accepting the current record as a new golden'
+    assert project_record_without_fields(
+        edi_record, 'created', 'last_modified', 'timestamp'
+    ) == with_default_rule(crysta_record), (
+        'edi persistence adds only its three absent owned metadata fields and the exact '
+        'default uncertainty rule to the carried record'
     )
     assert project_record_value(edi_record, 'timestamp') == b'?', (
         'edi persistence must spell the loaded empty timestamp as the STAR sentinel'
@@ -632,13 +632,15 @@ def test_edi_tied_result_uncertainty_reaches_every_free_axis(
             # a forward calculation, not replace it by performing another optimization.
             _run([str(_crysta_cli())], str(saved), 'calc')
         project = LIB.Project.load(saved)
+        if keys:
+            _, expected = saved_pair(result.values[keys[0]], expected)
     site = next(item for item in project.structure.atom_sites if item.id == 'Al1')
     for axis, prior in before.items():
         parameter = getattr(site, axis)
         assert parameter.free is prior[2], 'F1 result landing must retain declared free flags'
         if prior[2] or (mode == 'memory' and keys):
             assert parameter.uncertainty == pytest.approx(expected, rel=1e-9, abs=1e-15), (
-                f'F1 {mode} must carry the fitted uncertainty on every declared-free tied axis: '
+                f'F1 {mode} uses fitted uncertainty at written precision on each free tied axis: '
                 f'{axis}, {kinds}, expected {expected}, got {parameter.uncertainty}'
             )
         else:

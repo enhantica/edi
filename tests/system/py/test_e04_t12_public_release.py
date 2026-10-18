@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import bz2
 import gzip
+import hashlib
 import io
 import json
 import lzma
@@ -41,6 +42,8 @@ PRIVATE = re.compile(
     r'|c[r]ysta/(?:tests|docs|knowledge|core)/'
     r'|(?:~|/h[o]me/[^/\s]+)/ru[n]s/|/h[o]me/[^/\s]+/|/U[s]ers/[^/\s]+/'
 )
+# Exact npm release files and upstream members pinned in the dependency notice.
+VENDOR = json.loads((ROOT / 'tests/fixtures/report_transport/vendor.json').read_text())
 SCRIPTS = ROOT / 'tools/public-release'
 SECRET = re.compile(
     r'\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}\b'
@@ -231,6 +234,9 @@ def test_tree_has_no_personal_paths_or_private_citations():
 def process_findings(entries):
     findings = []
     for name, text in entries:
+        release = VENDOR.get(name)
+        if release and hashlib.sha256(text.encode()).hexdigest() == release['sha256']:
+            continue
         if not any(prefix in text.casefold() for prefix in ('-t', 'i-', 'org-', 're' + 'lay')):
             continue
         if not PROCESS.search(text):
@@ -1226,4 +1232,35 @@ def test_secret_prefix_filter_keeps_every_credential_shape(shape):
     text = '1.2345 6.789\n' * 1000 + candidate + '\n' + '0.1234 5.678\n' * 1000
     assert secret_findings([('numeric-member', text)]) == ['numeric-member'], (
         'the fast prefix filter must retain every credential shape inside numeric member data'
+    )
+
+
+@pytest.mark.parametrize('name', sorted(VENDOR))
+def test_vendor_process_allowance_requires_exact_declared_release_bytes(name):
+    text = (ROOT / name).read_text()
+    assert hashlib.sha256(text.encode()).hexdigest() == VENDOR[name]['sha256'], (
+        'A vendor allowance binds the declared version and upstream member to exact release bytes'
+    )
+    assert not process_findings([(name, text)]), (
+        'The declared unmodified third-party release carries no project process citation'
+    )
+    marker = '\n' + 're' + 'lay' + ' process reference\n'
+    assert process_findings([(name, text + marker)]), (
+        'Appending a process citation to a declared vendor file must invalidate its allowance'
+    )
+
+
+@pytest.mark.parametrize(
+    'name',
+    [
+        'data/report/vendor/neighbor.js',
+        'data/report/vendor/plotly-cartesian-3.7.1.min.js',
+        'archive.zip!data/report/vendor/plotly-cartesian-3.7.0.min.js',
+    ],
+    ids=['neighbor', 'another-version', 'archive-member'],
+)
+def test_vendor_allowance_does_not_cover_other_paths_or_versions(name):
+    text = (ROOT / 'data/report/vendor/plotly-cartesian-3.7.0.min.js').read_text()
+    assert process_findings([(name, text)]), (
+        'The same process-shaped vendor token remains visible outside its exact declared path'
     )
