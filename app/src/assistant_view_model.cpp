@@ -3031,10 +3031,15 @@ struct AssistantViewModel::State {
         for (auto* item : widget_items()) {
             if (item->objectName() != "background.rows" || item->window() != run->window ||
                 item->property("experiment").value<QObject*>() != run->project->currentExperiment()) continue;
-            bool current = false;
-            for (auto* parent = item->parentItem(); parent; parent = parent->parentItem())
+            bool current = false, other_tier = false;
+            for (auto* parent = item->parentItem(); parent; parent = parent->parentItem()) {
                 if (parent->objectName() == "workflow.experiment.manualSidebar") current = true;
-            if (!current) continue;
+                // Basic and Extras retain the same category content, including hidden groups.
+                // As in the original parameter/creation selectors, only Main owns this input.
+                const auto tier = parent->property("shownTier");
+                if (tier.isValid() && tier.toString() != "Basic") other_tier = true;
+            }
+            if (!current || other_tier) continue;
             if (run->background_group) { widget_refuse(run, widget_outcome_error); return; }
             run->background_group = item;
         }

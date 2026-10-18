@@ -1182,6 +1182,13 @@ Stop and replacement are checked between events. The existing private mouse
 owner balances the actual button, including right-button retirement/deferred
 cleanup; the exact parameter menu is dismissed by real Escape. No control state
 is assigned to manufacture visibility, activation or a scientific result.
+Background discovery uses the same declared Basic-tier ancestry as the original
+parameter and creation selectors. Both sidebar tiers instantiate category content,
+including a hidden Extras projection; that retained group is not a second Main
+editor. Other-tier ancestors are excluded before the existing ambiguity guard,
+without choosing the first visible group or requiring an already expanded group.
+The same selector serves standalone and compound background edits; a missing or
+ambiguous eligible group still refuses, with all original member/input proofs.
 
 
 ### Shared text draft and ordinary alias defaults
