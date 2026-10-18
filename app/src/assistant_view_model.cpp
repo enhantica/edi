@@ -974,7 +974,7 @@ struct AssistantViewModel::State {
         if(CodexAgent::policyPatch().isEmpty())return {};
         if(!value.isObject())throw std::runtime_error("Dedicated Edi policy proof is unavailable");
         const auto proof=value.toObject();
-        const std::array<QLatin1StringView,17> fields{"schema","flavour","upstreamVersion","upstreamCommit","sourcePatchSha256","threadId","turnId","isolation","toolMode","sandbox","approvalPolicy","modelNetwork","requestedTools","advertisedTools","dispatchEqualsAdvertisement","model","reasoningEffort"};
+        const std::array<QLatin1StringView,17> fields{QLatin1StringView{"schema"},QLatin1StringView{"flavour"},QLatin1StringView{"upstreamVersion"},QLatin1StringView{"upstreamCommit"},QLatin1StringView{"sourcePatchSha256"},QLatin1StringView{"threadId"},QLatin1StringView{"turnId"},QLatin1StringView{"isolation"},QLatin1StringView{"toolMode"},QLatin1StringView{"sandbox"},QLatin1StringView{"approvalPolicy"},QLatin1StringView{"modelNetwork"},QLatin1StringView{"requestedTools"},QLatin1StringView{"advertisedTools"},QLatin1StringView{"dispatchEqualsAdvertisement"},QLatin1StringView{"model"},QLatin1StringView{"reasoningEffort"}};
         if(proof.size()!=fields.size())throw std::runtime_error("Dedicated Edi policy proof is malformed");
         for(auto at=proof.constBegin();at!=proof.constEnd();++at)if(std::none_of(fields.begin(),fields.end(),[&](auto key){return at.key()==key;}))throw std::runtime_error("Dedicated Edi policy proof is malformed");
         if(proof.value("schema")!="edi.runtime-policy/1" || proof.value("flavour")!="edi-app-server/1" ||
