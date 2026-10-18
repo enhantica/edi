@@ -6557,7 +6557,8 @@ TestCase {
             "GUI398: original disclosure links are genuine native checkable controls");
         compare(human.checked, false, "GUI398: actual human Details starts collapsed");
         compare(technical.checked, false, "GUI398: raw technical data independently starts collapsed");
-        verify(!Ui.rendered(technical) && !Ui.rendered(preview),
+        verify(technical.visible === false && preview.visible === false
+            && !Ui.rendered(technical) && !Ui.rendered(preview),
             "GUI398: default short Sign in reveals neither technical toggle nor raw payload");
         function link(button, text) {
             compare(button.text, text, "GUI398: actual original native link shows exact current Show/Hide action");
@@ -6565,53 +6566,90 @@ TestCase {
             compare(labels.length, 1, "GUI398: original enabled Details link has ONE actually painted label");
             compare(labels[0].color, EaStyle.Colors.themeAccent, "GUI398: original enabled Details link paints native blue text");
         }
+        // Pin only original actual receivers/viewports, never their current geometry.
+        const originalViewports = [];
+        for (let parent = preview.parent; parent && parent !== dialog.contentItem; parent = parent.parent)
+            if (parent.clip) originalViewports.push(parent);
+        verify(originalViewports.length > 0, "GUI438 SETUP: original raw presentation has an actual owning clipped viewport");
+        const originalLives = [dialog, human, technical, preview].concat(originalViewports).map(lifetime313);
+        function current() {
+            verify(originalLives.every(alive313), "GUI438: original disclosure receivers and viewports remain alive after layout/render");
+            verify(Session.project === original.owner && Session.assistant === original.assistant
+                && dialog.assistant === original.assistant && dialog.visible && dialog.opened,
+                "GUI438: observation retains exact original open dialog, project and controller");
+            compare(gui398_owned(dialog, "assistant.contextDetailsToggle", false), human,
+                "GUI438: SAME original human control survives layout/render");
+            compare(gui398_owned(dialog, "assistant.contextTechnicalToggle", false), technical,
+                "GUI438: SAME original technical control survives layout/render");
+            compare(gui398_owned(dialog, "assistant.contextPreview", false), preview,
+                "GUI438: SAME original raw preview survives layout/render");
+            const viewports = [];
+            for (let parent = preview.parent; parent && parent !== dialog.contentItem; parent = parent.parent)
+                if (parent.clip) viewports.push(parent);
+            compare(viewports.length, originalViewports.length, "GUI438: original owning viewport chain remains complete");
+            verify(viewports.every((viewport, index) => viewport === originalViewports[index]),
+                "GUI438: preview is not replaced or reparented to another clipped viewport");
+        }
         let lastReceipt407 = null, completed407 = false;
         function input(button, beforeNativeInput) {
-            Ui.scrollIntoView(button); rendered();
+            Ui.scrollIntoView(button); rendered(); current();
             if (beforeNativeInput !== undefined) beforeNativeInput();
             if (lastReceipt407 !== null) {
                 const previous407 = lastReceipt407; lastReceipt407 = null;
                 verify(previous407.finish("details-before-next-input"), "GUI407: previous original disclosure interval retains complete passive evidence");
             }
+            current();
             lastReceipt407 = gui392_button(button, dialog, true);
+            current();
             verify(Session.project === original.owner && Session.assistant === original.assistant
                 && dialog.assistant === original.assistant,
                 "GUI398: genuine disclosure toggle preserves SAME original owner/controller/dialog");
             compare(assistant.contextPreview, original.raw, "GUI398: presentation toggles do not alter original exact outgoing payload");
         }
+        function observePreview() {
+            Ui.scrollIntoView(preview); rendered(); current();
+            verify(Ui.rendered(preview) && preview.readOnly && preview.selectByMouse,
+                "GUI398: actually exposed original raw payload is read-only/selectable, not substituted summary");
+            compare(preview.text, original.raw, "GUI398: independently observed disclosed text is byte-exact original current payload");
+            compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(original.raw)),
+                "GUI398: original dialog owns exact same structured disclosure while technical text is visible");
+        }
         try {
+            current();
             link(human, "Show details"); input(human);
             tryCompare(human, "checked", true, 2000, "GUI398: genuine original Show details exposes human-readable Details");
             link(human, "Hide details");
             input(technical, function () {
                 ux356_fullyExposed(technical); link(technical, "Show technical data");
                 compare(technical.checked, false, "GUI398: opening human Details NEVER automatically expands raw technical data");
-                verify(!Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
+                verify(preview.visible === false && !Ui.rendered(preview), "GUI398: raw payload stays hidden inside initially opened human Details");
                 capture("gui398-signin-human-details");
             });
             tryCompare(technical, "checked", true, 2000, "GUI398: genuine Show technical data exposes original exact payload");
             link(technical, "Hide technical data");
-            verify(Ui.rendered(preview) && preview.readOnly && preview.selectByMouse,
-                "GUI398: actually exposed original raw payload is read-only/selectable, not substituted summary");
-            compare(preview.text, original.raw, "GUI398: independently observed disclosed text is byte-exact original current payload");
-            compare(JSON.stringify(dialog.disclosedContext), JSON.stringify(JSON.parse(original.raw)),
-                "GUI398: original dialog owns exact same structured disclosure while technical text is visible");
+            observePreview();
             input(technical);
             tryCompare(technical, "checked", false, 2000, "GUI398: genuine Hide technical data hides original raw presentation");
-            link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: raw field really hides after its own toggle");
+            link(technical, "Show technical data"); verify(preview.visible === false && !Ui.rendered(preview), "GUI398: raw field really hides after its own toggle");
             input(technical);
             tryCompare(technical, "checked", true, 2000, "GUI398: original technical interval reopens before human-collapse reset witness");
+            observePreview();
             input(human);
             tryCompare(human, "checked", false, 2000, "GUI398: genuine Hide details collapses human presentation");
             compare(technical.checked, false, "GUI398: collapsing human Details retires original expanded technical state");
-            verify(!Ui.rendered(technical) && !Ui.rendered(preview), "GUI398: collapsed human Details exposes no raw content");
+            verify(technical.visible === false && preview.visible === false
+            && !Ui.rendered(technical) && !Ui.rendered(preview), "GUI398: collapsed human Details exposes no raw content");
             input(human);
             tryCompare(human, "checked", true, 2000, "GUI398: genuine later Show details restores human view only");
             compare(technical.checked, false, "GUI398: later human open cannot resurrect old technical expansion");
-            link(technical, "Show technical data"); verify(!Ui.rendered(preview), "GUI398: later human Details again keeps technical payload collapsed");
+            link(technical, "Show technical data"); verify(preview.visible === false && !Ui.rendered(preview), "GUI398: later human Details again keeps technical payload collapsed");
             input(human);
             tryCompare(human, "checked", false, 2000, "GUI398: original compact Sign in is restored before genuine Cancel");
             link(human, "Show details");
+            compare(technical.checked, false, "GUI438: final compact state keeps original technical expansion retired");
+            verify(technical.visible === false && preview.visible === false
+                && !Ui.rendered(technical) && !Ui.rendered(preview),
+                "GUI438: final compact Sign in semantically hides original raw controls independent of viewport position");
             ux356_fullyExposed(dialog.standardButton(Dialog.Cancel));
             completed407 = true;
         } finally {
