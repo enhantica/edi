@@ -26,9 +26,11 @@ def own_folder(folder: Path, root: Path) -> None:
     """Make ``folder``, inside ``root``, the project's own, creating it when missing.
 
     Every link from ``root`` down to it is replaced by a folder linking each entry of the folder
-    it named, relatively when that folder is inside ``root``. Raises OSError when a step is not a
-    folder.
+    it named, relatively when that folder is inside ``root``. ``root`` itself is the caller's
+    choice: made when missing, with its parents, and followed when a link. Raises OSError when a
+    step is not a folder.
     """
+    root.mkdir(parents=True, exist_ok=True)
     step = root
     for part in folder.relative_to(root).parts:
         step /= part
