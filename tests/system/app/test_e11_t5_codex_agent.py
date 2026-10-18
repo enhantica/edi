@@ -6320,7 +6320,7 @@ def test_save211_fitted_current_project_uses_native_writer_and_real_reopen(  # n
 ):
     leaf = 'Original fitted project'
     actor, trace, source = save211_owner(generic, tmp_path, [
-        [native_call('run_fit')], [native_call('save_project', name=leaf)],
+        [native_call('run_fit')], [native_call('save_project', destination='fresh', name=leaf)],
     ])
     parent = tmp_path / 'Original selected save parent'
     sentinel = save211_grant(actor, trace, parent)
@@ -6454,7 +6454,7 @@ def test_save211_refusal_preserves_current_owner_original_inputs_and_user_bytes(
              'nested-path': 'nested/child', 'absolute-path': str(outside / 'escaped')}
     requested = names.get(accident, leaf)
     actor, trace, source = save211_owner(generic, tmp_path, [
-        [native_call('save_project', name=requested)],
+        [native_call('save_project', destination='fresh', name=requested)],
     ])
     if accident != 'no-grant':
         save211_grant(actor, trace, parent)
@@ -6533,7 +6533,7 @@ def test_save211_first_native_save_clears_real_current_modified_state(
 ):
     leaf = 'Original first native save'
     actor, trace, source = save211_owner(generic, tmp_path, [
-        [native_call('save_project', name=leaf)],
+        [native_call('save_project', destination='fresh', name=leaf)],
     ])
     parent = tmp_path / 'Original first-save chosen parent'
     save211_grant(actor, trace, parent)
@@ -6608,7 +6608,7 @@ def test_save217_undeclared_single_keeps_real_fit_and_native_roundtrip(  # noqa:
 ):
     leaf = 'Original default-mode save'
     actor, trace, source = save211_owner(generic, tmp_path, [
-        [native_call('run_fit')], [native_call('save_project', name=leaf)],
+        [native_call('run_fit')], [native_call('save_project', destination='fresh', name=leaf)],
     ], declared_mode=declared_mode)
     assert actor.last['vm']['project']['mode'] == declared_mode, (
         'SAVE217 SETUP: actual Session retains the declared or genuinely omitted input mode'
@@ -10955,7 +10955,7 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
                      + [{'path': path, 'free': False} for path in profile_paths]
                      + [{'path': path, 'free': True} for path in [adp_paths[0], adp_paths[2], adp_paths[3], *nuisance_paths]]),
          native_call('run_fit'), native_call('list_parameters'), native_call('inspect_project'), native_call('diagnostics'),
-         native_call('save_project', destination='current')],
+         native_call('save_project', name='Unused proposed fresh label must not rename the current owner')],
     ]
     readonly409_configure(trace)
     native145_configure(actor, trace, turns)
@@ -11074,7 +11074,7 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
         'OUTCOME500: every actual creation/value/relation/free/fit/read/Save call completes on its original RPC')
     assert saved_result['status'] == 'succeeded' and all(saved_result[key] is True for key in (
         'committed', 'reopened', 'active', 'presentation_complete'
-    )) and Path(saved_result['destination']).resolve() == directory.resolve(), (
+    )) and Path(saved['project']['host_snapshot']['path']).resolve() == directory.resolve(), (
         'OUTCOME500: current Save genuinely commits/reopens/activates/presents EXACT original Session-owned directory')
     assert Path(saved['project']['host_snapshot']['path']).resolve() == directory.resolve() and not saved['project']['host_snapshot']['modified'] and (
         not saved['handoff']['needs_save_as']

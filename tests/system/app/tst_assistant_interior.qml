@@ -603,4 +603,92 @@ TestCase {
             verify(/activity|event/i.test(accessibleText(row)), "I16/INT1: a meaningful accessible activity identity survives human-summary captions");
         }
     }
+    // PUBLIC435 intent captions on the ORIGINAL native delegate; no shell/provider execution.
+    TextEdit { id: caption506Clipboard; visible: false }
+    function test_caption506_literal_purpose_and_original_status_copy_data() {
+        const marker = "# Edi purpose: ", body = "\nORIGINAL_BODY_506";
+        return [
+            {tag:"literal-unicode-markup", command:marker+"Inspect <b>literal</b> metadata — 測定"+body,
+                expected:"Inspect <b>literal</b> metadata — 測定", status:"failed", exitCode:9},
+            {tag:"crlf-preserves-space", command:marker+"Keep exact goal \r\nORIGINAL_BODY_506", expected:"Keep exact goal "},
+            {tag:"inclusive120", command:marker+"A".repeat(120)+body, expected:"A".repeat(120)},
+            {tag:"over120", command:marker+"A".repeat(121)+body, expected:"Run shell command"},
+            {tag:"missing-real-lf", command:marker+"Inspect metadata\\nORIGINAL_BODY_506", expected:"Run shell command"},
+            {tag:"nonzero-offset", command:" "+marker+"Inspect metadata"+body, expected:"Run shell command"},
+            {tag:"bom-prefix", command:"\uFEFF"+marker+"Inspect metadata"+body, expected:"Run shell command"},
+            {tag:"whitespace-only", command:marker+"  \t "+body, expected:"Run shell command"},
+            {tag:"continued-first-line", command:marker+"Inspect metadata\\"+body, expected:"Run shell command"},
+            {tag:"bidi-goal", command:marker+"Inspect \u202Emetadata"+body, expected:"Run shell command"},
+            {tag:"line-separator", command:marker+"Inspect\u2028metadata"+body, expected:"Run shell command"},
+            {tag:"malformed-surrogate", command:marker+"Inspect\uD800metadata"+body, expected:"Run shell command"},
+            {tag:"wrong-carrier", command:"opaque original action", outerCommand:marker+"Untrusted outer intent"+body,
+                expected:"Run shell command"},
+            {tag:"explicit-purpose-priority", command:marker+"Lower declared intent"+body,
+                purpose:"Inspect existing input metadata", description:"Lower description", argumentPurpose:"Lower argument intent",
+                expected:"Inspect existing input metadata"},
+            {tag:"structured-workflow-priority", command:marker+"Lower declared intent"+body, read:true,
+                expected:"Read assistant workflow instructions"}
+        ];
+    }
+    function test_caption506_literal_purpose_and_original_status_copy(data) {
+        const status = data.status === undefined ? "completed" : data.status;
+        const original = commandItem(status, data.exitCode === undefined ? 0 : data.exitCode);
+        original.id = "caption506-"+data.tag;
+        original.command = data.outerCommand === undefined ? data.command : data.outerCommand;
+        original.commandActions = [data.read ? {
+            type:"read", command:data.command, name:"SKILL.md", path:"/owned/.agents/skills/project-assistance/SKILL.md"
+        } : {type:"unknown", command:data.command}];
+        if (data.purpose !== undefined) original.purpose = data.purpose;
+        if (data.description !== undefined) original.description = data.description;
+        if (data.argumentPurpose !== undefined) original.arguments = {purpose:data.argumentPurpose};
+        const canonical = JSON.stringify(original, null, 2);
+        const row = createTemporaryObject(message, window.contentItem, {
+            kind:"activity", text:original.command, status:status, rowId:original.id, payload:original
+        });
+        verify(row !== null,"CAPTION506: original native production delegate owns the independent literal fixture");
+        renderedRow(row);
+        const headers = Ui.itemsWithProperty(row,"objectName").filter(item => item.objectName === "assistant.command.toggle");
+        compare(headers.length,1,"CAPTION506: SAME original command owns ONE native disclosure");
+        const header = headers[0];
+        compare(header.text,data.expected,"CAPTION506: public first-line boundary/precedence yields exact independent human intent or honest fallback");
+        const painted = Ui.itemsWithProperty(header,"textFormat").filter(item =>
+            item.font !== undefined && item.text === data.expected && item.visible && Ui.rendered(item));
+        compare(painted.length,1,"CAPTION506: exact caption belongs to ONE actually painted native text receiver");
+        compare(painted[0].textFormat,Text.PlainText,"CAPTION506: supplied markup is literal intent, never rich text");
+        compare(row.rowId,original.id,"CAPTION506: intent recognition cannot replace original row identity");
+        compare(row.status,status,"CAPTION506: declared purpose cannot invent a successful native status");
+        compareRetainedPayload(row.payload,original);
+        verify(!header.checked && header.enabled && Ui.exposed(header),"CAPTION506: original folded caption remains genuinely actionable");
+        const point = Ui.clickPoint(header);
+        verify(point !== null,"CAPTION506: original header has a real native hover point");
+        mouseMove(header,point.x,point.y);
+        renderedRow(row);
+        const copies = Ui.itemsWithProperty(row,"objectName").filter(item => item.objectName === "assistant.activity.copyTechnical");
+        compare(copies.length,1,"CAPTION506: SAME header owns ONE full canonical copy receiver");
+        const copy = copies[0];
+        verify(copy.visible && copy.enabled && Ui.exposed(copy),"CAPTION506: genuine header hover exposes original native Copy");
+        compare(copy.opacity,1,"CAPTION508: SAME original Copy is fully revealed after native hover, before its one actual click");
+        let copied = 0;
+        const observed = function(){++copied;};
+        copy.clicked.connect(observed);
+        try {
+            caption506Clipboard.text = "";
+            mouseClick(copy);
+            caption506Clipboard.paste();
+            compare(copied,1,"CAPTION506: exactly ONE native Copy click retains the original full payload");
+            compare(caption506Clipboard.text,canonical,"CAPTION506: full canonical clipboard retains exact command/output/status/exit code and unknown fields");
+        } finally {
+            copy.clicked.disconnect(observed);
+        }
+        compareRetainedPayload(row.payload,original);
+        mouseClick(header);
+        renderedRow(row);
+        verify(header.checked,"CAPTION506: ONE genuine primary unfold opens actual original details");
+        literalCommandDetails(row,original);
+        const statuses = Ui.itemsWithProperty(row,"textFormat").filter(item => item.font !== undefined
+            && item.text === "Status: "+status+" · exit "+original.exitCode && item.visible && Ui.rendered(item));
+        compare(statuses.length,1,"CAPTION506: actually painted native status remains truthful independently of accepted intent");
+        compareRetainedPayload(row.payload,original);
+        compare(row.rowId,original.id,"CAPTION506: details/copy preserve the same original row identity");
+    }
 }
