@@ -6019,6 +6019,20 @@ TestCase {
             "GUI470: original literal single-line label has a supported native horizontal alignment");
         const ink = label.mapToItem(window.contentItem,origin+metrics.x,label.baselineOffset+metrics.y,metrics.width,metrics.height);
         const inkBounds = [ink.x,ink.y,ink.width,ink.height];
+        // Original strict geometry is unchanged. Record its actual operands BEFORE a possible failure.
+        console.log("GUI499_ACTION_INK_BEFORE", JSON.stringify({role:role,
+            receiver:identity313(lives[3]), dialog:identity313(lives[4]),
+            owner:identity313(lives[0]), controller:identity313(lives[1]),
+            label:String(label), labelBounds:scene(label), baseline:label.baselineOffset,
+            padding:[label.leftPadding,label.topPadding,label.rightPadding,label.bottomPadding],
+            content:[label.contentWidth,label.contentHeight], labelAdvance:[label.advance.width,label.advance.height],
+            horizontalAlignment:label.horizontalAlignment, verticalAlignment:label.verticalAlignment,
+            font:{family:label.font.family,pixelSize:label.font.pixelSize,pointSize:label.font.pointSize,
+                bold:label.font.bold,italic:label.font.italic,hinting:label.font.hintingPreference},
+            labelRenderType:label.renderType, metricsRenderType:gui470ActionInk.renderType,
+            advanceWidth:gui470ActionInk.advanceWidth, tightBounds:[metrics.x,metrics.y,metrics.width,metrics.height],
+            actualInk:inkBounds, containers:[buttonBounds,rowBounds,footerBounds,popupBounds].map((bounds,index) => ({
+                kind:["button","row","footer","popup"][index],bounds:bounds,fits:gui470_contains(bounds,inkBounds)}))}));
         for (const bounds of [buttonBounds,rowBounds,footerBounds,popupBounds]) verify(gui470_contains(bounds,inkBounds),
             "GUI470: independently measured actual font ink fits original action/row/footer/popup");
         const point = Ui.clickPoint(button);

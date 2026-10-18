@@ -575,7 +575,8 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
     // All FOUR original closed factories; direct success is independent of the fallible observers.
     for (int factory = 0; factory != 4; ++factory) {
         for (int entrance = 0; entrance != 3; ++entrance) {
-            CAPTURE(factory, entrance);
+            CAPTURE(factory);
+            CAPTURE(entrance);
             auto live = edi::load_project(e04_t9_fixture::silicon);
             const auto original_structure = live.structures.front();
             const auto measured_source = live.experiments.front();
