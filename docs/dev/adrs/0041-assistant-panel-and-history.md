@@ -1400,3 +1400,20 @@ The same pinned registry/model/ParameterItem/native member/path is checked befor
 The original catalogue selector also serves the official runtime's initial and replacement-thread bootstrap. After the complete validated model catalogue and current account are available, the common stock/dedicated thread-start entrance resolves the existing saved, explicit or offered fallback choice before requesting its effective default effort. This internal bootstrap does not publish ready or enable busy user setters. It requires the original account/owner projection, exact current catalogue, connecting state and no live thread or other active-operation cause; these are rechecked after preference loading before selection can mutate or thread creation can continue.
 
 The original hidden/unavailable filtering and model/effort compatibility rules remain shared with ready-state selection. A valid saved choice restores as before; an unsupported or unavailable saved choice retains its saved value and warning while the ordinary offered fallback is used. Only a genuine explicit ready-state choice persists a preference. No model/effort literal, permission, catalogue validation or skill/consent/policy check is bypassed.
+
+
+### Inline working ink and transient control presentation
+
+The shared working cue extends the original IconLine/DigitText baseline and
+native tight-ink convention. Its text-ink centre aligns all three symbols;
+asymmetric label padding contains the original rotating slot above and below
+that centre. The bundled robot ink is scaled by its diagonal to the circular
+logo's maximum paint width, including during rotation. The existing symbols,
+font, animation, clipping, visibility and reduced-motion reset remain shared.
+
+Usage keeps the last valid same-account indicators while refreshing without a
+transient cached-status label. Freshness/account retirement and missing values
+still belong to the existing usage state. Composer action backgrounds use the
+original hover, pressed and keyboard visual-focus states; restoring ordinary
+pointer focus after closing the model chooser does not keep it highlighted.
+Keyboard navigation and the existing chooser ownership are unchanged.

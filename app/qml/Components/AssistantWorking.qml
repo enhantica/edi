@@ -24,8 +24,12 @@ EaElements.Label {
     onAnimatingChanged: if (!animating) workGlyph.rotation = 0
     readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
     leftPadding: iconExtent + AppSizes.unit * 0.5
-    topPadding: Math.max(0, (iconExtent - contentHeight) / 2)
-    bottomPadding: topPadding
+    // Use the same baseline/ink-centre convention as IconLine and DigitText.
+    readonly property real textInkCenter: textMetrics.ascent + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
+    topPadding: Math.max(0, iconExtent / 2 - textInkCenter)
+    bottomPadding: Math.max(0, iconExtent / 2 - (contentHeight - textInkCenter))
+    FontMetrics { id: textMetrics; font: workStatus.font }
+    TextMetrics { id: textInk; font: workStatus.font; text: workStatus.text }
     onVisibleChanged: {
         if (visible) variant = Math.floor(Math.random() * 3);
         else workGlyph.rotation = 0;
@@ -34,7 +38,7 @@ EaElements.Label {
         width: workStatus.iconExtent
         height: width
         anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
+        y: workStatus.topPadding + workStatus.textInkCenter - height / 2
         Item {
             id: workGlyph
             width: workStatus.iconExtent
@@ -59,9 +63,9 @@ EaElements.Label {
                 visible: workStatus.variant === 2
                 width: robotMetrics.tightBoundingRect.width
                 height: robotMetrics.tightBoundingRect.height
-                // Centre the actual native ink, including its font bearings,
-                // then contain its diagonal throughout the original rotation.
-                scale: Math.min(1, workStatus.iconExtent / Math.hypot(width, height))
+                // Centre actual native ink and give its rotating diagonal the
+                // same maximum paint width as the existing circular logo.
+                scale: Math.hypot(width, height) > 0 ? workStatus.iconExtent / Math.hypot(width, height) : 1
                 EaElements.Label {
                     id: robotGlyph
                     x: -robotMetrics.tightBoundingRect.x

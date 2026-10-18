@@ -46,8 +46,7 @@ Popup {
         return name.length ? name + " · " + label : label;
     }
     function usageCaption() {
-        const prefix = usageData.stale ? qsTr("Last known · ") : "";
-        if (usageWindow) return prefix + qsTr("%1 · %2% used").arg(usageWindow.label).arg(usageWindow.usedPercent);
+        if (usageWindow) return qsTr("%1 · %2% used").arg(usageWindow.label).arg(usageWindow.usedPercent);
         return qsTr("Usage unavailable");
     }
     function allowanceWindow(minutes) {
@@ -628,11 +627,6 @@ Popup {
                     id: usageContent
                     width: Math.max(0, usageDialog.contentWidth-AppSizes.unit)
                     spacing: AppSizes.unit * 1.5
-                    EaElements.Label {
-                        visible: panel.usageData.stale
-                        text: qsTr("Last known")
-                        color: EaStyle.Colors.themeForegroundMinor
-                    }
                     EaElements.Label {
                         objectName: "assistant.usageUnavailable"
                         visible: usageAllowances.count === 0

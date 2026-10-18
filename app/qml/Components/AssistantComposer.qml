@@ -638,7 +638,7 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
-                    color: addFilesButton.hovered || addFilesButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: addFilesButton.hovered || addFilesButton.pressed || addFilesButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                     radius: width * 0.5
                 }
                 enabled: composer.assistant.connected && !WebFiles.available && !composer.assistant.canCancel
@@ -675,7 +675,7 @@ Rectangle {
                 background: Rectangle {
                     implicitWidth: composer.actionSize; implicitHeight: implicitWidth
                     radius: width*0.5
-                    color: showActionsControl.hovered || showActionsControl.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: showActionsControl.hovered || showActionsControl.pressed || showActionsControl.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 enabled: composer.assistant.connected && !composer.assistant.canCancel
                 ToolTip.text: qsTr("Show actions")
@@ -698,7 +698,7 @@ Rectangle {
                 background: Rectangle {
                     implicitHeight: composer.actionSize
                     radius: height*0.5
-                    color: modelEffortButton.hovered || modelEffortButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: modelEffortButton.hovered || modelEffortButton.pressed || modelEffortButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 contentItem: Row {
                     id: modelEffortText
@@ -758,7 +758,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: previousUserButton.hovered || previousUserButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: previousUserButton.hovered || previousUserButton.pressed || previousUserButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 ToolTip.text: qsTr("Previous user message")
                 Accessible.name: ToolTip.text
@@ -783,7 +783,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: nextUserButton.hovered || nextUserButton.activeFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
+                    color: nextUserButton.hovered || nextUserButton.pressed || nextUserButton.visualFocus ? EaStyle.Colors.themeBackgroundHovered1 : composer.lightActionBackground
                 }
                 ToolTip.text: qsTr("Next user message")
                 Accessible.name: ToolTip.text
