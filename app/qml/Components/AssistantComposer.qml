@@ -863,7 +863,7 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : EaStyle.Colors.themeBackgroundDisabled
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : composer.actionBackground
                 }
                 contentItem: EaElements.Label {
                     text: sendButton.fontIcon

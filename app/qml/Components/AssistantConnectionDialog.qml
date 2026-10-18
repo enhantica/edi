@@ -112,6 +112,7 @@ AppDialog {
             acceptButton.enabled = !assistant.contextApprovalBlocked;
         }
     }
+    onAboutToShow: updateAcceptButton()
     onOpened: {
         const component = dialog, original = dialog.assistant;
         refreshDisclosedContext();

@@ -1802,3 +1802,8 @@ metadata bindings. Actual accessibility delivery requires native qualification.
 ### Explicit borderless assistant action backgrounds
 
 The composer Add files, Show actions eye, model/effort, history navigation, Stop and Send custom backgrounds, plus header Clear, Usage and avatar circle, explicitly set border.width to zero. This states the accepted borderless-action intent without relying on Rectangle's default pen validity. A default width getter alone does not prove a painted outline. Original fills, hover/focus ink, dimensions, native handlers and accessibility metadata are unchanged; composer frame, Usage tracks, tables and dialog outlines retain their own styling. Native rendering remains separately qualified.
+
+
+### Disabled Send and before-visible connection action labels
+
+Disabled Send uses the same persistent neutral actionBackground as neighboring composer controls; enabled Send retains its strong contrast and the original disabled icon color remains. The original connection dialog prepares its standard Ok action label/enabled state on aboutToShow, following the original Diagnostics dialog lifecycle. Its full Sign in with ChatGPT / Approve context labels, standard button identity and role, existing onOpened live-context refresh and all consent/acceptance/currentness handlers remain. No new authentication action, label rewrite, geometry or theme is introduced. Native transient-label rendering remains separately qualified.
