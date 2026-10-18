@@ -67,6 +67,7 @@ Popup {
     }
     readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
+    readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
     property var noticeProjection: ({})
     function captureNotice() {
@@ -314,18 +315,18 @@ Popup {
                     anchors.right: parent.right
                     anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.5
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: AppSizes.unit
+                    spacing: AppSizes.unit * 0.5
                     EaElements.ToolButton {
                         id: clearButton
                         visible: panel.assistant.connected
                         objectName: "assistant.clear"
                         fontIcon: "eraser"
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                        implicitWidth: EaStyle.Sizes.toolButtonHeight
+                        implicitWidth: panel.headerActionExtent
                         implicitHeight: EaStyle.Sizes.toolButtonHeight
                         showBackground: false
                         background: Item {
-                            implicitWidth: EaStyle.Sizes.toolButtonHeight
+                            implicitWidth: panel.headerActionExtent
                             implicitHeight: implicitWidth
                             Rectangle {
                                 anchors.centerIn: parent
@@ -348,8 +349,8 @@ Popup {
                         objectName: "assistant.usage"
                         text: !panel.usageWindow ? "–" : qsTr("%1% used").arg(panel.usageWindow.usedPercent)
                         font.bold: false
-                        leftPadding: AppSizes.unit * 0.5
-                        rightPadding: AppSizes.unit * 0.5
+                        leftPadding: AppSizes.unit * 0.75
+                        rightPadding: AppSizes.unit * 0.75
                         background: Rectangle {
                             implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
                             radius: height * 0.5
@@ -386,15 +387,15 @@ Popup {
                                 : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
                                 : panel.assistant.connected ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : connectionButton.foregroundColor()
                         }
-                        Layout.preferredWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : implicitWidth
-                        Layout.minimumWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : 0
-                        Layout.maximumWidth: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight : header.width * 0.4
+                        Layout.preferredWidth: panel.assistant.connected ? panel.headerActionExtent : implicitWidth
+                        Layout.minimumWidth: panel.assistant.connected ? panel.headerActionExtent : 0
+                        Layout.maximumWidth: panel.assistant.connected ? panel.headerActionExtent : header.width * 0.4
                         Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
                         background: Item {
                             visible: panel.assistant.connected
-                            implicitWidth: EaStyle.Sizes.toolButtonHeight
+                            implicitWidth: panel.assistant.connected ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
                             Rectangle {
                                 objectName: "assistant.avatarCircle"

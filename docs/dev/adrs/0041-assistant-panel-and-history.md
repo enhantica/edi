@@ -1728,3 +1728,19 @@ paths are accepted by this closed identity comparison. Structured read metadata
 shares the same human workflow/refinement wording. Supplied purpose remains
 preferred; every other unknown command retains the honest neutral fallback and
 the exact literal stays in expanded canonical details/copy.
+
+
+### Header gaps follow the visible composer action footprint
+
+The header uses the same accepted three-quarter tool-button action extent as the
+composer for Clear and the connected avatar's horizontal footprint, while their
+accepted visual circle size and original native vertical targets/header height
+remain unchanged. This removes the hidden side inset that previously widened
+the visible surface gaps. Header RowLayout spacing is the original composer
+half-unit spacing; each adjacent rounded background therefore has that same
+visible gap, rather than half-unit spacing plus invisible full-size margins.
+Usage left/right padding is the model pill's three-quarter unit. Signed-out
+Sign in retains its natural text sizing, and native actions, keyboard order,
+current-owner handlers, glyphs, palette, hover/checked/disabled states and circle
+extent are unchanged. No global style or geometry override is introduced.
+Native painted spacing still requires the real app; grammar is not pixel proof.
