@@ -5,13 +5,17 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.2. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.3. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
 For an authorized request to create/refine and decide the remaining details, state the bounded plan and proceed within the disclosed working copy and actual runtime permissions. Do not ask again solely because the next free group changes. Ask about missing experiment metadata, ambiguous associations, new chemical assumptions or an expanded objective. Respect actual consent, approval and Stop controls.
 
 Inspect actual native measurement counts/weighting metadata, exclusions, phase links, instrument/profile convention, independent variables and existing relations through the offered typed summaries. Raw measurement arrays and plots stay local in the dedicated runtime; never invent an inspection unavailable through the original native controls/operations. Preserve this comparison population and objective across candidates. A file extension does not establish an experiment recipe. Never improve a reported residual by changing observations, uncertainty or exclusions without a separately justified and authorized change.
+
+## Initial measured background
+
+When choosing a NEW measured line-segment background rather than following user-supplied anchors, choose at least 10 distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This is assistant strategy, not a change to the valid minimum of two native/manual anchor domain. State the starting-intensity rationale and which intensities will be refined. Use the actual measured-axis units and domain. Do not silently insert, redistribute or delete an existing/user-specified background to meet this strategy. There is no new estimator, material constant, automatic background operation or extra approval.
 
 ## Stage, compare and retain
 

@@ -115,3 +115,20 @@ with original-owner guards before exposing replacement table rows. A failed
 write stays explicitly invalid; a committed configuration remains factual if
 later presentation retires. No builtin error fallback, replacement-owner
 recapture, deferred publication dependency or additional permission is added.
+
+
+### A chosen measured background spans its actual range
+
+The existing project and refinement guidance now asks the assistant, when it chooses
+a new measured line-segment background, for at least 10 distinct finite positions
+spanning the actual measured range, with explicit justified starting intensities
+and free flags. This is strategy for a delegated new choice, not measured factory
+facts or an automatic estimator. Missing actual range/evidence calls for offered
+inspection or one focused question. User-explicit anchors/values, observations and
+exclusions remain authoritative. Existing backgrounds are not rewritten merely to
+meet the guidance.
+
+The original native/manual minimum of two API domain, schemas, parser, scientific editor
+and Undo are unchanged. The compiled developer instruction and both versioned
+skills agree; the existing index bonds their exact bytes and versions. No material
+constant, capability, tool, approval, model call or strategy execution engine is added.

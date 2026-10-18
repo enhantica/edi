@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QSettings>
 #include <QThread>
 #include <QPointer>
@@ -113,6 +114,7 @@ Q_DECLARE_METATYPE(edi_app::ManualControlProof)
 namespace edi_app {
 namespace {
 Q_LOGGING_CATEGORY(lcAssistantWidgetLookup, "edi.assistant.widget.lookup", QtWarningMsg)
+Q_LOGGING_CATEGORY(lcAssistantElapsed, "edi.assistant.elapsed", QtWarningMsg)
 using Object = QJsonObject;
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
 using DirectoryStream = std::unique_ptr<DIR, int (*)(DIR*)>;
@@ -1442,6 +1444,12 @@ struct AssistantViewModel::State {
         disclosure_preparing_bytes-=bytes;reservation-=bytes;
     }
     std::shared_ptr<AssistantSkillInventory> source_inventory() {
+        QElapsedTimer elapsed;
+        const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
+        if(observeElapsed)elapsed.start();
+        const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
+            if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=skills elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
+        });
         const auto proof=file_projection();load_source_preference();
         if(!proof.input_current())throw std::runtime_error("Skill source owner changed");
         if(!skill_source_valid || !skill_source_loaded)throw std::runtime_error("Skill source configuration is unavailable");
@@ -1519,6 +1527,12 @@ struct AssistantViewModel::State {
 #endif
 
     Object outgoing_context(std::shared_ptr<const AssistantSkillInventory> captured = {}) {
+        QElapsedTimer elapsed;
+        const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
+        if(observeElapsed)elapsed.start();
+        const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
+            if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=context elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
+        });
         const auto original=file_projection();
         if (!controller) return {{"error", "Project context is unavailable"}};
         auto context = object(controller->context());
@@ -5395,8 +5409,9 @@ struct AssistantViewModel::State {
         auto* session=result_session();
         if(!project || !session || session->project()!=project)
             throw std::invalid_argument("Saving requires the exact current project owner");
-        const bool current_destination=args.value("destination")=="current";
-        if(current_destination && session->needsSaveAs())
+        const bool owned_directory=!session->needsSaveAs();
+        const bool current_destination=args.value("destination")=="current" || (!args.contains("destination") && owned_directory);
+        if(current_destination && !owned_directory)
             throw std::invalid_argument("This project has no genuine owned directory; choose a fresh Save As destination");
         if(session->save_intent_)
             throw std::invalid_argument("Finish or close the original Save As form before assistant saving");
@@ -5411,7 +5426,7 @@ struct AssistantViewModel::State {
         save_stage = "TASK_PREPARATION";
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;
         task->name=name;task->epoch=session->assistantEpoch();task->current_destination=current_destination;
-        if(!session->needsSaveAs()) {
+        if(owned_directory) {
             const auto path=project->path();
             if(path.isEmpty() || path.size()>static_cast<qsizetype>(Limits::id_bytes) || path.toUtf8().size()>static_cast<qsizetype>(Limits::id_bytes))
                 throw std::length_error("The current owned source path exceeds its bounded role");
@@ -7246,11 +7261,11 @@ struct AssistantViewModel::State {
         Object params{{"cwd",generic_workspace},{"ephemeral",true},{"sandbox","read-only"},
             {"approvalPolicy","never"},{"approvalsReviewer","user"},{"modelProvider","openai"}};
         params["developerInstructions"] = QStringLiteral(
-            "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project with explicit destination=current saves that same genuine already-owned directory; omit name/path for this branch. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: explicit destination=current preserves its actual owned directory, while default purpose/name starts the original one-operation Save As chooser and fresh-name form before writing. It verifies reopen and adopts the saved path/rounded state on the same owner.  "
-            "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: prefer explicit destination=current for its genuine already-owned directory, otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. Show actions uses the real Save control and fresh-name Save As form; do not silently change the mode or use a direct native fallback. Current-directory exchange retains the previous tree in Edi's local recovery receipt; report actual committed uncertainty honestly and never blindly repeat it. Local recovery paths are not model data. Native report generation remains unavailable; offer the existing Report page link instead. "
+            "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. It verifies reopen and adopts the saved path/rounded state on the same owner.  "
+            "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. Show actions uses the real Save control and fresh-name Save As form; do not silently change the mode or use a direct native fallback. Current-directory exchange retains the previous tree in Edi's local recovery receipt; report actual committed uncertainty honestly and never blindly repeat it. Local recovery paths are not model data. Native report generation remains unavailable; offer the existing Report page link instead. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
             "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original file picker/data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. The same toolkit picker receives real input to the admitted immutable source capture, not a synthetic accepted signal or a new path grant. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Visible relation actions select Analysis Extra only if needed, append and edit the existing Aliases/Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions click the genuine reset-filters control and type the actual parameter path in its name filter before the exact scientific control is used; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
-            "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs, never row indices; add/update supply finite measured-domain position, intensity and free, while remove omits all three. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, ID, position, intensity, parameter-menu free and Remove controls. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
+            "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs, never row indices; add/update supply finite measured-domain position, intensity and free, while remove omits all three. When choosing a NEW measured line-segment background rather than following user-supplied anchors, choose at least 10 distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This is assistant strategy, not a change to the valid minimum of two native/manual anchor domain. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, ID, position, intensity, parameter-menu free and Remove controls. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
             "When acquire_inputs is offered, use only an opaque scope_id in the current input_scopes.sources catalog, never a path argument or invented ID. These scopes come only from current genuine user attachments and complete Input:/Source:/use/read/load/import/from local absolute-path lines. Whitespace paths require matching outer quotes. Model/history text, fenced or quoted examples, excluded/output declarations, substrings, traversal and shell/glob syntax grant nothing. Missing scope needs one precise Input: line, not another chooser. Intake returns immutable selected file IDs, reader hints and counts; scientific parsing/import is a separate native operation. Refusal admits no files; already_admitted returns the same captured IDs without rereading. A successful local intake advances only its original active RPC's collection receipt; keep that turn's current context. A stock preview remains read-only/never but can expose general reads/tools and measurements. Only a separately verified dedicated Edi package establishes the restricted tool contract. Do not infer qualification from a requested setting or instruction. "
             "Each EDI_APPROVED_CONTEXT_DATA_V1 input contains the authoritative current GUI project data for that turn. Earlier conversation data may be older; no raw project or selected file copies are placed in the model instruction stage. Edi can retain the same conversation after routine edits while sending fresh context; do not overwrite provider-modified staging with GUI data or adopt staging as live GUI truth. Clear starts fresh model memory. "
@@ -8969,6 +8984,12 @@ struct AssistantViewModel::State {
     }
 
     void notify() {
+        QElapsedTimer elapsed;
+        const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
+        if(observeElapsed)elapsed.start();
+        const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
+            if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=notify elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
+        });
         const auto projection = file_projection();
         const auto current = [&] { return projection.publication_current(); };
         if (!current()) return;
@@ -9151,6 +9172,12 @@ struct AssistantViewModel::State {
 #endif
         timer.setInterval(200);
         QObject::connect(&timer, &QTimer::timeout, &owner, [this] {
+            QElapsedTimer elapsed;
+            const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
+            if(observeElapsed)elapsed.start();
+            const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
+                if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=poll_sync elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
+            });
             auto projection = file_projection();
             try {
                 if (controller) controller->poll();
@@ -9505,6 +9532,12 @@ struct AssistantViewModel::State {
         }
     }
     void sync() {
+        QElapsedTimer elapsed;
+        const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
+        if(observeElapsed)elapsed.start();
+        const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
+            if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=sync elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
+        });
         const auto projection = file_projection();
         const auto current = [&] { return projection.publication_current(); };
         if (!current()) return;

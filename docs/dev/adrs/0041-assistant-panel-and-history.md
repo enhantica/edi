@@ -1909,3 +1909,38 @@ projected/encoded text, response and retained terminal roles. Added metadata bac
 is admitted before growth; no capacity ceiling, result field, schema, tool behavior,
 first-failure evidence or ownership policy changes. All existing edit, fit, inspection,
 input and save response-bound consumers use the corrected common maximum.
+
+
+### Omitted native Save destination follows the current owned project
+
+The original Session needsSaveAs predicate owns the destination default shared by
+normal and Show actions saving. With a genuine current owned directory, omitted
+destination chooses the existing current Save path and ignores an unused suggested
+fresh name. It preserves the actual project name/path and does not open Save As.
+Explicit fresh still uses the original one-operation destination chooser; explicit
+current without an owned directory still refuses. Without an owned directory,
+omission keeps the existing fresh-name Save As flow and its required basename.
+
+Only destination selection changes. Argument closure, original owner/currentness,
+physical source/publication proof, worker admission, cancellation, once delivery and
+factual committed/reopened/active results keep their existing implementation.
+No pathname supplied by the model becomes filesystem authority.
+
+
+### Observe owner-thread work before changing disclosure caching
+
+The existing 200ms assistant poll continues after a turn; sync and notification can
+rebuild project context and recapture enabled skill sources before unchanged-value
+comparison. Existing revision/configuration identities do not establish unchanged
+external source bytes. No new cache or slower timer is substituted for authoritative
+Send, approval or tool checks.
+
+An opt-in Qt debug logging category, edi.assistant.elapsed, observes only the original
+poll/sync/notify/context/skills boundaries with monotonic elapsed nanoseconds. Each
+stack-local observation emits a fixed stage and duration on return/unwind, holds no
+QObject/project/payload and cannot throw into the original caller. Nested observations
+include their children and are not additive CPU totals. The category is disabled by
+default; no timer, counter, profile store, runner, model operation or public API is added.
+Existing Main monotonic/native-frame observations can correlate these intervals with
+actual input/render gaps before a narrowly owned caching correction is chosen. Source
+redundancy does not itself prove the owner's elapsed lag or a responsiveness fix.
