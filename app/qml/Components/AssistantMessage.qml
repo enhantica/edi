@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import edi.app
@@ -49,9 +50,26 @@ Rectangle {
     readonly property bool summarizedActivity: decisionActivity || kind === "activity" && payload &&
         ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan", "ediOutcome"].indexOf(payload.type) >= 0
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
+    property bool technicalCopied: false
+    onPayloadChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
+    Timer { id: copyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: row.technicalCopied = false }
+    function copyTechnicalPayload() {
+        const component = row, identity = row.disclosureIdentity, original = row.payload;
+        const current = () => Qt.isQtObject(component) && component.disclosureIdentity === identity && component.payload === original;
+        try {
+            const literal = JSON.stringify(original, null, 2);
+            if (typeof literal !== "string" || !current()) return;
+            ApplicationInfo.copyText(literal);
+            if (!current()) return;
+            component.technicalCopied = true;
+            copyFeedback.restart();
+        } catch (error) { if (current()) component.technicalCopied = false; }
+    }
     signal detailsChanging()
     signal reportRequested(string sourceRowId, string link)
     function resetDetails() {
+        technicalCopied = false;
+        if (copyFeedback) copyFeedback.stop();
         if (commandDisclosure) commandDisclosure.checked = false;
         if (disclosure) disclosure.checked = false;
         if (originalDisclosure) originalDisclosure.checked = false;
@@ -111,19 +129,9 @@ Rectangle {
         return running ? qsTr("Running command") : qsTr("Ran command");
     }
     function shortActionObject(value, path) {
+        // Only the single-line presentation changes; the retained literal stays exact.
         if (typeof value !== "string") return "";
-        // A caption excerpt only: never alter the retained value or parse shell.
-        const literal = path ? value.split(/[\\/]/).pop() : value;
-        const words = literal.trim().split(/\s+/);
-        const excerpt = words.slice(0, 3).join(" ");
-        let bounded = "";
-        let count = 0;
-        for (const scalar of excerpt) {
-            if (count === 40) return bounded + "…";
-            bounded += scalar;
-            ++count;
-        }
-        return bounded + (words.length > 3 ? "…" : "");
+        return value.trim().replace(/\s+/g, " ");
     }
     function usableCommandAction(action) {
         if (!action || typeof action !== "object" || Array.isArray(action) ||
@@ -136,30 +144,70 @@ Rectangle {
         return action.type === "unknown";
     }
     function activityDescription() {
-        // Purpose is explicit action metadata, never inferred from a command,
-        // filename or tool name. The pinned runtime can omit it entirely.
         const supplied = typeof payload.purpose === "string" ? payload.purpose
-                       : typeof payload.description === "string" ? payload.description : "";
-        return shortActionObject(supplied, false);
+                       : typeof payload.description === "string" ? payload.description
+                       : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
+        if (supplied.trim().length) return shortActionObject(supplied, false);
+        if (!commandActivity) return "";
+        // Exact structured action metadata may supply a purpose when the pinned
+        // runtime has no explicit one. Never parse shell text or infer an outcome.
+        const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
+        if (!Array.isArray(actions) || actions.length === 0 || !actions.every(usableCommandAction)) return "";
+        const labels = [];
+        for (const action of actions) {
+            if (action.type === "read") labels.push(qsTr("Read %1").arg(action.name || action.path));
+            else if (action.type === "listFiles") labels.push(action.path ? qsTr("List %1").arg(action.path) : qsTr("List files"));
+            else if (action.type === "search") labels.push(action.query ? qsTr("Search for %1").arg(action.query) : qsTr("Search files"));
+        }
+        return shortActionObject(labels.join(" · "), false);
     }
     function activityCaption() {
-        if (payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string") return payload.title;
-        if (decisionActivity) {
-            if (row.status === "refused" || row.status === "declined") return qsTr("Request refused");
-            if (row.status === "interrupted") return qsTr("Request interrupted");
-            if (row.status === "failed") return qsTr("Request failed");
-            return qsTr("Request outcome");
-        }
+        if (payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string") return shortActionObject(payload.title, false);
         const description = activityDescription();
-        if (commandActivity) return commandCaption() + (description ? " · " + description : "");
-        const label = activityLabel(row.status === "in_progress");
-        if (row.status === "in_progress") return description ? label + " · " + description : label;
-        // Keep the normalized public outcome visible; do not manufacture a
-        // tool exit code or promote its retained in-progress original.
-        return label + " · " + row.status + (description ? " · " + description : "");
+        if (description.length) return description;
+        if (decisionActivity) return qsTr("Request");
+        if (commandActivity) return qsTr("Command");
+        const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
+            mcpToolCall: qsTr("Native operation"), dynamicToolCall: qsTr("Native operation"),
+            collabAgentToolCall: qsTr("Agent operation"), plan: qsTr("Plan update")};
+        return names[payload.type] || qsTr("Activity");
+    }
+    function activityState() {
+        if (commandActivity) {
+            const actual = typeof payload.status === "string" ? payload.status : "";
+            if (["completed", "failed", "declined", "interrupted"].indexOf(actual) >= 0 && row.status === actual) return actual;
+            return actual === "inProgress" && row.status === "in_progress" ? "in_progress" : "unconfirmed";
+        }
+        if (payload.nativeOutcome && ["unconfirmed", "applied_unconfirmed"].indexOf(payload.nativeOutcome.status) >= 0) return "unconfirmed";
+        return ["completed", "failed", "refused", "declined", "interrupted", "in_progress"].indexOf(row.status) >= 0 ? row.status : "unconfirmed";
+    }
+    function activityExplanation() {
+        if (commandActivity) return commandCaption();
+        const state = activityState();
+        const category = activityLabel(state === "in_progress");
+        const statuses = {completed: qsTr("completed"), failed: qsTr("failed"), refused: qsTr("refused"),
+            declined: qsTr("declined"), interrupted: qsTr("interrupted"), in_progress: qsTr("in progress")};
+        const reported = statuses[row.status] || qsTr("unknown");
+        const native = payload.nativeOutcome ? payload.nativeOutcome.status : "";
+        if (native === "applied_unconfirmed")
+            return qsTr("%1 · Activity status: %2 · Native changes applied; publication unconfirmed").arg(category).arg(reported);
+        if (native === "unconfirmed")
+            return qsTr("%1 · Activity status: %2 · Native outcome unconfirmed; inspect the actual project").arg(category).arg(reported);
+        if (state === "unconfirmed")
+            return qsTr("%1 · Activity status: %2 · Outcome unconfirmed").arg(category).arg(reported);
+        return qsTr("%1 · %2").arg(category).arg(reported);
+    }
+    function activityOutcomeKey() {
+        const state = activityState();
+        return state === "completed" ? "success" : state === "failed" ? "failed"
+             : state === "refused" || state === "declined" ? "refused" : state === "interrupted" ? "stopped" : "notConverged";
+    }
+    function activityCategoryIcon() {
+        const icons = {commandExecution:"terminal",fileChange:"file",webSearch:"search",mcpToolCall:"cog",
+            dynamicToolCall:"cog",collabAgentToolCall:"users",plan:"clipboard-list",ediOutcome:"info-circle"};
+        return icons[payload.type] || "info-circle";
     }
     TextMetrics { id: technicalCaptionMetrics; font: technicalCaptionLabel.font; text: disclosure.text }
-    TextMetrics { id: activityCaptionMetrics; font: activityCaptionLabel.font; text: commandDisclosure.text }
     TextMetrics { id: originalCaptionMetrics; font: originalCaptionLabel.font; text: originalDisclosure.text }
     color: "transparent"
     implicitHeight: content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5)
@@ -285,17 +333,51 @@ Rectangle {
             visible: row.summarizedActivity
             checkable: true
             text: row.activityCaption()
-            implicitWidth: activityGlyph.width + Math.ceil(activityCaptionMetrics.advanceWidth) + AppSizes.unit * 0.5 + leftPadding + rightPadding
-            width: Math.min(parent.width, implicitWidth)
-            contentItem: Row {
+            width: parent.width
+            contentItem: RowLayout {
                 spacing: AppSizes.unit * 0.5
-                EaElements.Label { id: activityGlyph; text: commandDisclosure.checked ? "chevron-down" : "chevron-right"; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
-                EaElements.Label { id: activityCaptionLabel; width: Math.max(0, commandDisclosure.availableWidth - activityGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: commandDisclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+                EaElements.Label {
+                    id: activityGlyph
+                    text: row.activityCategoryIcon()
+                    Layout.preferredWidth: AppSizes.unit
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                    font.family: EaStyle.Fonts.iconsFamily
+                    color: EaStyle.Colors.themeForegroundMinor
+                    Accessible.ignored: true
+                }
+                EaElements.Label {
+                    text: row.activityState() === "in_progress" ? "hourglass-half" : FitOutcomes.icon(row.activityOutcomeKey())
+                    Layout.preferredWidth: AppSizes.unit
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                    font.family: EaStyle.Fonts.iconsFamily
+                    color: row.activityState() === "in_progress" ? EaStyle.Colors.themeAccent : FitOutcomes.color(row.activityOutcomeKey())
+                    Accessible.ignored: true
+                }
+                EaElements.Label {
+                    id: activityCaptionLabel
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    text: commandDisclosure.text
+                    color: EaStyle.Colors.themeForegroundMinor
+                    textFormat: Text.PlainText
+                    wrapMode: Text.NoWrap
+                    maximumLineCount: 1
+                    elide: Text.ElideRight
+                }
             }
-            Accessible.name: text
-            Accessible.description: row.commandActivity
-                ? (checked ? qsTr("Hide the literal command and its available output") : qsTr("Show the literal command and its available output"))
-                : (checked ? qsTr("Hide activity details") : qsTr("Show activity details"))
+            ToolTip.text: row.activityExplanation() + " · " + text
+            EaElements.ToolTip {
+                text: commandDisclosure.ToolTip.text
+                visible: commandDisclosure.visible && commandDisclosure.hovered && EaGlobals.Vars.showToolTips && text !== ""
+            }
+            Accessible.name: ToolTip.text
+            Accessible.checkable: true
+            Accessible.checked: checked
+            Accessible.description: checked ? qsTr("Hide activity details") : qsTr("Show activity details")
             onPressed: row.detailsChanging()
         }
         ScrollView {
@@ -353,6 +435,7 @@ Rectangle {
             id: activityViewport
             width: parent.width
             visible: row.summarizedActivity && !row.commandActivity && commandDisclosure.checked
+                && !(row.payload.type === "dynamicToolCall" && row.text === "dynamicToolCall")
             height: visible ? Math.min(activityText.implicitHeight, AppSizes.unit * 18) : 0
             contentWidth: availableWidth
             contentHeight: activityText.implicitHeight
@@ -366,26 +449,43 @@ Rectangle {
                 text: activityViewport.visible ? row.text : ""
             }
         }
-        EaElements.Button {
-            id: disclosure
+        RowLayout {
+            id: technicalHeader
+            x: row.summarizedActivity ? AppSizes.unit * 1.5 : 0
+            width: Math.max(0, parent.width - x)
             visible: row.kind !== "assistant" && row.kind !== "user" && Object.keys(row.payload || {}).length > 0 && (!row.summarizedActivity || commandDisclosure.checked)
-            checkable: true
-            text: checked ? qsTr("Hide technical details") : qsTr("Technical details")
-            implicitWidth: technicalGlyph.width + Math.ceil(technicalCaptionMetrics.advanceWidth) + AppSizes.unit * 0.5 + leftPadding + rightPadding
-            width: Math.min(parent.width, implicitWidth)
-            contentItem: Row {
-                spacing: AppSizes.unit * 0.5
-                EaElements.Label { id: technicalGlyph; text: disclosure.checked ? "chevron-down" : "chevron-right"; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
-                EaElements.Label { id: technicalCaptionLabel; width: Math.max(0, disclosure.availableWidth - technicalGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: disclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+            spacing: AppSizes.unit * 0.25
+            EaElements.Button {
+                id: disclosure
+                checkable: true
+                text: checked ? qsTr("Hide technical details") : qsTr("Technical details")
+                implicitWidth: technicalGlyph.width + Math.ceil(technicalCaptionMetrics.advanceWidth) + AppSizes.unit * 0.5 + leftPadding + rightPadding
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.maximumWidth: implicitWidth
+                contentItem: Row {
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Label { id: technicalGlyph; text: disclosure.checked ? "chevron-down" : "chevron-right"; width: AppSizes.unit; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75; font.family: EaStyle.Fonts.iconsFamily; color: EaStyle.Colors.themeForegroundMinor }
+                    EaElements.Label { id: technicalCaptionLabel; width: Math.max(0, disclosure.availableWidth - technicalGlyph.width - parent.spacing); anchors.verticalCenter: parent.verticalCenter; verticalAlignment: Text.AlignVCenter; text: disclosure.text; color: EaStyle.Colors.themeForegroundMinor; textFormat: Text.PlainText; elide: Text.ElideRight }
+                }
+                Accessible.name: text
+                Accessible.description: qsTr("Show or hide the original retained technical payload. The explanation and actual outcome remain above.")
+                onPressed: row.detailsChanging()
             }
-            Accessible.name: text
-            Accessible.description: qsTr("Show or hide the original retained technical payload. The explanation and actual outcome remain above.")
-            onPressed: row.detailsChanging()
+            EaElements.ToolButton {
+                objectName: "assistant.activity.copyTechnical"
+                fontIcon: row.technicalCopied ? "check" : "copy"
+                showBackground: false
+                ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy technical details")
+                Accessible.name: ToolTip.text
+                onClicked: row.copyTechnicalPayload()
+            }
         }
         ScrollView {
             id: technicalViewport
-            width: parent.width
-            visible: disclosure.visible && disclosure.checked
+            x: technicalHeader.x
+            width: Math.max(0, parent.width - x)
+            visible: technicalHeader.visible && disclosure.checked
             height: visible ? Math.min(technicalFields.implicitHeight, AppSizes.unit * 18) : 0
             contentWidth: availableWidth
             contentHeight: technicalFields.implicitHeight

@@ -1417,3 +1417,32 @@ still belong to the existing usage state. Composer action backgrounds use the
 original hover, pressed and keyboard visual-focus states; restoring ordinary
 pointer focus after closing the model chooser does not keep it highlighted.
 Keyboard navigation and the existing chooser ownership are unchanged.
+
+
+### Activity purposes and local technical copy
+
+The original activity disclosure uses its full bounded retained purpose on one
+elided line across the sidebar. Existing operation and recorded-status icons
+replace the caption's category/status words and leading chevron; the whole
+native checkable button still expands the original details with keyboard and
+accessible checked state. A command's structured action metadata can supply an
+actual purpose, never guessed shell semantics. Its recorded command/public
+status agreement still controls whether completion is known. Native uncertain
+outcomes are not presented as confirmed success.
+
+The internal dynamicToolCall type is not an ordinary explanation. Its unchanged
+canonical payload stays in the indented Technical details. A standard adjacent
+Copy action uses the existing local ApplicationInfo clipboard door to copy that
+whole current payload even with technical text collapsed, then briefly shows
+the native check glyph/Copied label. Original row/payload identity is checked
+around clipboard callbacks; retirement or replacement cannot retain feedback
+for another row. No automatic copy, provider send, parser or retained science
+change is introduced. Original literal command/output and selection stay exact.
+
+The common activity explanation distinguishes public activity status from a
+native unconfirmed or applied-unconfirmed scientific outcome. Both tooltip and
+accessible name explicitly retain that uncertainty; an unknown activity status
+is not promoted to success. Command retained/public disagreement continues to
+use its original truthful explanation. The native activity Button owns the same
+styled hover tooltip as the original ToolButton, honoring the application-wide
+show-tooltips preference; attaching explanation text alone is not hover delivery.
