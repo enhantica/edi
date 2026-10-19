@@ -5508,13 +5508,15 @@ struct AssistantViewModel::State {
                 progress.outcome=native_save_result(*task,i>=1,false,i>=2,i>=3,i>=1?
                     QStringLiteral("The ordinary app Save completed in the existing directory."):
                     QStringLiteral("The ordinary app Save could not confirm its result. Inspect the project and saved files before repeating."));
-                if(i==0){progress.outcome["status"]="unconfirmed";progress.outcome["uncertain"]=true;}
+                if(i==0)progress.outcome["status"]="unconfirmed";
+                if(i<2)progress.outcome["uncertain"]=true;
             } else progress.outcome=native_save_result(*task,i>=1,i>=2,i>=3,false,i>=3?
                 QStringLiteral("Saved, verified and adopted; presentation may be incomplete."):
                 i>=1?QStringLiteral("The destination is committed; later verification or adoption may be incomplete. Do not overwrite it."):
                 QStringLiteral("Native saving was not committed."));
-            progress.response=native_response(i>=3,progress.outcome);
-            progress.row=native_row(*task->call.record,progress.outcome,i>=3);
+            const bool success=task->ordinary_current ? i>=2 : i>=3;
+            progress.response=native_response(success,progress.outcome);
+            progress.row=native_row(*task->call.record,progress.outcome,success);
             if(generic_size(progress.outcome,Limits::context_bytes)>task->call.record->outcome_bytes ||
                generic_size(progress.row,Limits::message_bytes)>task->call.record->row_bytes ||
                generic_size(progress.response,Limits::message_bytes)>generic_size(task->call.record->maximum_response,Limits::message_bytes))
