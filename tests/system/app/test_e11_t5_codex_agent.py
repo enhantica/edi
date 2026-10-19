@@ -8966,11 +8966,14 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
         collision.mkdir()
         (collision / 'Original existing child.txt').write_bytes(b'Original349 collision remains exact\n')
     selected_before = save211_files(selected)
-    call = {'tool': 'save_project', 'call_id': 'save349-' + case, 'arguments': {
+    call = {'tool': 'save_project', 'call_id': 'save349-' + case, 'arguments': ({
+        'name': 'cosio NPD refinement',
+        'purpose': 'Save and verify the completed neutron powder refinement project',
+    } if case == 'current' else {
         'purpose': 'Save original fitted displayed project through actual visible controls',
-        'destination': 'current' if case in {'current', 'current-ten-refit'} else 'fresh',
-        **({} if case in {'current', 'current-ten-refit'} else {'name': leaf}),
-    }}
+        'destination': 'current' if case == 'current-ten-refit' else 'fresh',
+        **({} if case == 'current-ten-refit' else {'name': leaf}),
+    })}
     environment = popup171_owned_environment(tmp_path)
     environment['EDI_ACCEPTANCE_REFERENCE'] = str(reference)
     config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
@@ -8978,6 +8981,8 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     config.pop('report_page_reply')
     config.update(scenario='native:script', native_turn_calls=[[call]])
     config_path.write_text(json.dumps(config))
+    if case == 'current':
+        readonly409_configure(Path(config['trace']))
     original_config = config_path.read_bytes()
     runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
     assert runner.is_file(), 'SAVE349 SETUP: actual coherent Main consumer is required'
@@ -8999,6 +9004,38 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     (tmp_path / 'save349-process.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode,
                                                             'timeout': 90, 'case': case}, indent=2))
     output = result.stdout + result.stderr
+    # Local fixed first-cause only: preserve the first stderr record, never select a later SAVE line.
+    first592 = [line for line in result.stderr.splitlines()
+                if line.startswith('Edi assistant retention first ')]
+    stages592 = {'SAVE_ENTRANCE', 'SAVE_RECEIPT_PREPARE', 'SAVE_EXPORT_PREPARE',
+                 'SAVE_PROGRESS_PREPARE', 'SAVE_VALUES_PREPARE', 'SAVE_PUBLISH',
+                 'SAVE_REOPEN', 'SAVE_ADOPT', 'SAVE_PRESENT', 'SAVE_FINISH'}
+    classes592 = {'ALLOCATION', 'CAPACITY', 'VALIDATION', 'STATE', 'EXCEPTION', 'NONSTANDARD'}
+    diagnostic592 = None
+    if first592:
+        fields592 = dict(token.split('=', 1) for token in first592[0].split()[4:] if '=' in token)
+        save592 = fields592.get('role') == 'SAVE'
+        bound_text594 = fields592.get('bound', '')
+        bound594 = None
+        if 1 <= len(bound_text594) <= 20 and all('0' <= ch <= '9' for ch in bound_text594):
+            if len(bound_text594) < 20 or bound_text594 <= '18446744073709551615':
+                bound594 = int(bound_text594)
+        diagnostic592 = {
+            'record_count': len(first592), 'save_role': save592,
+            'stage': fields592.get('stage') if fields592.get('stage') in stages592 else None,
+            'class': fields592.get('class') if fields592.get('class') in classes592 else None,
+            'bound': bound594,
+            **{key: fields592.get(key) == '1' if fields592.get(key) in {'0', '1'} else None
+               for key in ('committed', 'reopened', 'active', 'presented')},
+            'qualified_save_record': save592 and fields592.get('stage') in stages592
+                and fields592.get('class') in classes592 and bound594 is not None
+                and all(fields592.get(key) in {'0', '1'} for key in ('committed', 'reopened', 'active', 'presented')),
+            'stage_is_entered_interval_not_success': True,
+        }
+    (tmp_path / 'save592-firstcause.json').write_text(json.dumps({
+        'first_local_record': diagnostic592, 'process_returncode': result.returncode,
+        'earlier_first_cause_preserved': True, 'no_raw_exception_or_path': True,
+    }, indent=2))
     assert result.returncode == 0 and 'FAIL!' not in output and (
         'PASS   : edi_app::AssistantPopup::test_save349_visible_real_save_and_retirement(' + case + ')' in output
     ), 'SAVE349: every real control, currentness, fitted science and truthful outcome premise must execute\n' + output
@@ -9031,9 +9068,13 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
         assert returned['success'] is True and outcome['status'] == 'succeeded' and all(
             outcome.get(key) is True for key in ['committed', 'reopened', 'active', 'presentation_complete']
         ), 'SAVE349: only committed/reopened/active/fully presented actual save is success'
-        assert Path(outcome['destination']).resolve() == destination.resolve(), (
-            'SAVE349: truthful destination is exactly existing current directory or authorized fresh Unicode basename'
-        )
+        terminal592 = [json.loads(line.split('SAVE349_TERMINAL ', 1)[1]) for line in result.stdout.splitlines()
+                       if 'SAVE349_TERMINAL ' in line]
+        assert len(terminal592) == 1 and terminal592[0]['case'] == case and (
+            Path(terminal592[0]['currentPath']).resolve() == destination.resolve()
+        ), 'SAVE349: actual local Session destination is exactly the owned current directory or authorized fresh basename'
+        assert diagnostic592 is None or not diagnostic592['save_role'] or diagnostic592['qualified_save_record'], (
+            'SAVE592: a reached local Save diagnostic uses only fixed stage/class and factual Boolean latches')
         assert destination.is_dir() and not destination.is_symlink() and (destination / 'project.edi').is_file(), (
             'SAVE349: actual native files must exist; a staged receipt is not disk publication'
         )

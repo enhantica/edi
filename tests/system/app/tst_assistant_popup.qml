@@ -4495,6 +4495,29 @@ TestCase {
         compare(rows.length, 1, "UX289: exactly one actual original user bubble owns the sent attachment presentation");
         const sent = findChild(rows[0], "assistant.sentFile." + selectedId);
         verify(sent !== null && sent.visible, "UX289: exact acknowledged user bubble owns the actual original sent-chip ID");
+        if (data.tag === "unchanged-draft") {
+            const sentLife592 = lifetime313(sent), flow592 = sent.parent;
+            verify(flow592 !== null && Number.isFinite(flow592.width) && flow592.width > 0,
+                "SENT592 SETUP: original live sent snapshot has a positive actual available-width owner");
+            const flowLife592 = lifetime313(flow592), available592 = flow592.width, width592 = sent.width;
+            verify(Number.isFinite(width592) && width592 >= 0 && width592 <= available592,
+                "SENT592 SETUP: original real sent delegate respects its available width");
+            failOnWarning(/Cannot read property ['"]width['"] of null|Binding loop detected/);
+            try {
+                sent.parent = null; // Real QQuickItem visual detach, not a replacement or synthetic VM row.
+                rendered();
+                verify(alive313(sentLife592) && sent.parent === null && alive313(flowLife592),
+                    "SENT592: actual original delegate detaches while QObject and its width owner stay alive");
+                verify(Number.isFinite(sent.width) && sent.width >= 0 && sent.width <= available592,
+                    "SENT592: detaching preserves finite bounded available-width behavior without null-parent errors");
+                compare(sent.width, width592, "SENT592: an unchanged width owner keeps the SAME actual sent width");
+            } finally {
+                if (alive313(sentLife592) && alive313(flowLife592)) sent.parent = flow592;
+            }
+            rendered();
+            compare(sent.parent, flow592, "SENT592: original native sent delegate returns to its same actual Flow");
+            compare(sent.width, width592, "SENT592: restoring the same visual owner preserves width");
+        }
         verify(ux289_descendantText(rows[0]).some(value => value.indexOf("PbSO4-Wyckoff.cif") >= 0),
             "UX289: actual acknowledged user bubble displays the original sent filename");
         const draftChips = findChild(window, "assistant.file." + selectedId);
@@ -5180,9 +5203,12 @@ TestCase {
         const cell = parameters.filter(parameter => parameter.category === "cell" && parameter.name === "length_a");
         compare(cell.length, 1, "SAVE349 SETUP: independent original fit cell is unique");
         // Existing VA185 lawful fit-subset setup, never credited as visible editing/Save delivery.
-        for (const parameter of parameters) parameter.free = false;
-        cell[0].free = true;
-        project.currentExperiment.scale.free = true;
+        if (data.tag !== "current") {
+            for (const parameter of parameters) parameter.free = false;
+            cell[0].free = true;
+            project.currentExperiment.scale.free = true;
+        } else verify(parameters.filter(parameter => parameter.free).length > 2,
+            "SAVE592 SETUP: original authentic CoSiO/d20 free flags retain a genuinely fuller fit than the two-parameter control");
         project.analysis.maxIterations = 8;
         tryVerify(() => !project.calculating && Probe.computedCurrent(project.currentExperiment), 10000,
             "SAVE349 SETUP: actual complete native science is current before real fitting");
@@ -5223,11 +5249,48 @@ TestCase {
             "SAVE349 SETUP: ordinary real readback is current before Save admission");
         if (data.tag === "current-ten-refit") { save359_current_ten_refit(project); return; }
         const science = save349_science(project), owner = lifetime313(project);
+        const correlations592 = data.tag === "current" ? JSON.stringify({available: project.correlations.available,
+            labels: Array.from(project.correlations.labels), values: Array.from(project.correlations.values)}) : null;
+        if (data.tag === "current") {
+            verify(project.correlations.available > 2,
+                "SAVE592 SETUP: genuine fitted/rounded current owner retains a higher-dimensional actual correlation shape");
+            console.log("SAVE592_SHAPE", JSON.stringify({parameters: visible185_parameters(project).length,
+                free: visible185_parameters(project).filter(parameter => parameter.free).length,
+                correlationAvailable: project.correlations.available,
+                shown: project.correlations.labels.length, values: project.correlations.values.length}));
+        }
         const currentPath = project.path;
         const sourceDocuments = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
         const currentBytes = sourceDocuments.map(name => Probe.readReferenceFile("current/" + name));
         visible185_page("project");
         Ui.click(this, Probe, window, "mainArea.project.tab.description");
+        if (data.tag === "current") {
+            Ui.click(this, Probe, window, "project.title");
+            visible185_type("Original manual current Save control");
+            keyClick(Qt.Key_Return);
+            verify(project.modified && !Session.needsSaveAs,
+                "SAVE592 CONTROL: real title edit dirties the SAME owned current project before ordinary toolbar Save");
+            const manualSave592 = Ui.control(Probe, window, "appBar.button.save");
+            verify(manualSave592 !== null && manualSave592.enabled && Ui.exposed(manualSave592),
+                "SAVE592 CONTROL: genuine ordinary current toolbar Save is exposed and enabled");
+            const manualLife592 = lifetime313(manualSave592);
+            let manualClicks592 = 0;
+            function manualSaved592() { ++manualClicks592; }
+            manualSave592.clicked.connect(manualSaved592);
+            const manualUndo592 = item("appBar.button.undo").enabled;
+            try {
+                Ui.click(this, Probe, window, "appBar.button.save");
+                compare(manualClicks592, 1, "SAVE592 CONTROL: exactly ONE genuine manual toolbar Save click");
+                tryCompare(project, "modified", false, 2000,
+                    "SAVE592 CONTROL: ordinary Save actually persists the current dirty project");
+                compare(Session.project, project, "SAVE592 CONTROL: manual writer preserves exact owner");
+                compare(project.path, currentPath, "SAVE592 CONTROL: manual current Save never changes the owned directory");
+                verify(!Session.needsSaveAs, "SAVE592 CONTROL: manual current Save needs no chooser");
+                compare(save349_science(project), science, "SAVE592 CONTROL: manual Save preserves every rounded scientific fact");
+                compare(item("appBar.button.undo").enabled, manualUndo592,
+                    "SAVE592 CONTROL: ordinary Save neither consumes nor invents history");
+            } finally { disconnect313(manualLife592, manualSave592, "clicked", manualSaved592); }
+        }
         Ui.click(this, Probe, window, "project.title");
         visible185_type("Original visible Save " + data.tag);
         keyClick(Qt.Key_Return);
@@ -5256,8 +5319,12 @@ TestCase {
         } else compare(assistant.workingFolder, "", "SAVE349 SETUP: current/no-grant cases have no unrelated fresh-parent grant");
         const show = item("assistant.showActions");
         verify(show.enabled && show.visible, "SAVE349 SETUP: actual Show actions control is actionable");
-        mouseClick(show);
-        verify(assistant.showActions, "SAVE349 SETUP: real checkbox admits visible mode");
+        if (data.tag === "current") compare(assistant.showActions, false,
+            "SAVE592 SETUP: owner-equivalent ordinary current Save uses actual Show actions OFF");
+        else {
+            mouseClick(show);
+            verify(assistant.showActions, "SAVE349 SETUP: real checkbox admits visible mode");
+        }
         const account = JSON.stringify(Probe.rows(assistant.models));
         const beforeIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
         const save = Ui.control(Probe, window, "appBar.button.save");
@@ -5297,7 +5364,7 @@ TestCase {
         const observation = visible237_observationMs([{path: "", text: leaf}]);
         try {
             save.clicked.connect(savedClicked); connected370.save = true;
-            if (["fresh", "collision", "stop", "close-owner"].includes(data.tag)) {
+            if (["fresh", "collision", "stop", "close-owner", "current"].includes(data.tag)) {
                 // Passive original receiver binding, including collision. A closed
                 // form need not be rendered/exposed and no open interval is forced.
                 const forms = Probe.objectsWithProperty(window, "opened").filter(object =>
@@ -5407,7 +5474,16 @@ TestCase {
                 verify(outcome !== null && outcome.status === "succeeded" && outcome.committed === true
                     && outcome.reopened === true && outcome.active === true && outcome.presentation_complete === true,
                     "SAVE349: success requires actual commit/verified reopen/displayed adoption and complete UI presentation");
-                compare(saveClicks, 1, "SAVE349: one real ordinary Save action owns the operation");
+                compare(saveClicks, data.tag === "current" ? 0 : 1,
+                    "SAVE592: one native OFF Save or one real visible toolbar Save owns the original RPC, never both");
+                if (data.tag === "current") {
+                    compare(openedEvents, 0, "SAVE592: owned omitted-destination Save never opens a chooser");
+                    verify(alive313(dialogLife) && !originalDialog.opened,
+                        "SAVE592: the SAME actual closed Save form remains unopened");
+                    compare(JSON.stringify({available: project.correlations.available,
+                        labels: Array.from(project.correlations.labels), values: Array.from(project.correlations.values)}), correlations592,
+                        "SAVE592: ordinary current Save retains complete current rounded correlation presentation/shape");
+                }
                 compare(finalClicks, data.tag === "current" ? 0 : 1,
                     "SAVE349: fresh confirms once through real final Save; current has no invented name form");
                 if (data.tag === "fresh") {
@@ -5894,6 +5970,8 @@ TestCase {
                 visible237_observationMs([{path: "", text: "Original μ 🧪 saved project"}]),
                 "SAVE359: exact original current Save request actually returns/settles within the existing bound");
             const outcome = visible185_outcome("save349-current-ten-refit", before);
+            console.log("SAVE349_TERMINAL", JSON.stringify({case: "current-ten-refit", outcome: outcome,
+                currentPath: Session.project ? Session.project.path : null}));
             verify(outcome.status === "succeeded" && outcome.committed === true && outcome.reopened === true
                 && outcome.active === true && outcome.presentation_complete === true,
                 "SAVE359: only actual commit/verified reopen/active displayed presentation is current Save success");
