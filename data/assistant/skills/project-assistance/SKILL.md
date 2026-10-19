@@ -5,7 +5,7 @@ description: Inspect and edit the displayed native Edi project with actual param
 
 # Work with the displayed Edi project
 
-Version: 1.5.42. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
+Version: 1.5.43. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
 
 Use `inspect_project`, `list_parameters` and `diagnostics` to inspect the actual project, measurement, weighting, exclusions, phase links and independent/dependent parameters. A missing project or scientific prerequisite is not permission to invent data. Report unsupported formats/conversions honestly. Files or paths mentioned in chat do not expand selected-file or filesystem permission.
 
@@ -16,6 +16,10 @@ The current explicit user objective and earlier unchanged constraints take prior
 For each NEW shell script that supports hash comments, begin the actual script at offset zero with `# Edi purpose: <short goal>` and an actual newline before its original body. Keep the goal nonempty and within120 UTF-16 units /480 UTF-8 bytes; use no controls, bidi formatting, credentials, private paths, raw measurements or trailing backslash. This presentation declaration states supplied intent, not permission, verified semantics or success. Do not prefix executable argv, unsupported shells, encoded/nested language programs or retained commands to force a caption. Existing native tools and structured read/list/search captions remain preferred; lack of a caption never authorizes another tool or retry.
 
 Use the current `EDI_APPROVED_CONTEXT_DATA_V1` input as the authoritative GUI state for each turn. Same-project parameter, free-flag, relation, background and fit updates can keep the conversation while supplying fresh context. Earlier turns may be older; no raw project/files are staged for runtime discovery; do not overwrite provider-modified staging or treat it as an implicit live-project update. A real project, account or input-content change retires the old execution scope. A successful app-owned acquire_inputs collection admission advances only its original active request's receipt; it is not a new message or a self-retirement. Clear starts fresh model memory; it does not revive revoked input grants. App consent and scientific action authority are separate from the user's delegated objective.
+
+After an identity-changing create, append, rename, type or data operation, bind each dependent call to the actual successful returned identity (or a fresh inspection when no identity is returned), not a predicted name or a queued old ID. Keep each operation's receipts separate: text read is not import, an applied/published edit is not a completed fit, and a completed fit is not a saved project. Report only the actual outcome of that operation; a later success does not certify an earlier uncertain step.
+
+Reconcile reader diagnostics against the actual admitted source identity/range and the reported reader counts/reasons before explaining omissions. Keep nonpositive intensity, invalid uncertainty, exclusions and incomplete text coverage distinct; do not substitute one reason for another. If the evidence is incomplete or disagrees, state the discrepancy rather than invent a filtering rule or change observations.
 
 When offered, `set_parameters` changes a complete validated batch of actual independent parameter paths/values, and `set_free` sets actual independent fittable flags through the same native editor/Undo used by manual controls. Keep fixed composition, relations, uncertainty, observations, weights and exclusions authoritative. Native edits request asynchronous calculation; inspect the actual settled state before starting a fit.
 

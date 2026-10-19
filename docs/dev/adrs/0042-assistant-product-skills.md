@@ -247,3 +247,13 @@ are not relabelled. A genuinely additional scientific manual/resource remains
 an actual offered read/research, and skill text cannot add tools, access,
 permissions or override the original objective. A redundant shell-read failure
 does not establish a native Create/file/directory requirement.
+
+
+The owning project/refinement strategies distinguish immediate returned-identity
+dependencies and per-operation read/edit/fit/save receipts, and reconcile actual
+reader evidence without reinterpreting its filtering reason. Comparisons record
+the offered native baseline, preserve the observation/weight/exclusion/objective
+population and qualify degrees of freedom and cross-engine residual conventions.
+This adds no callable inventory, parser, workflow or scientific output. Existing
+FullProf 1.0.4/manual mappings stay exact; changed skill versions and body digests
+advance together in the original index.

@@ -5,13 +5,13 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.7. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.8. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
 For an authorized request to create/refine and decide the remaining details, state the bounded plan and proceed within the disclosed working copy and actual runtime permissions. Do not ask again solely because the next free group changes. Ask about missing experiment metadata, ambiguous associations, new chemical assumptions or an expanded objective. Respect actual consent, approval and Stop controls.
 
-Inspect actual native measurement counts/weighting metadata, exclusions, phase links, instrument/profile convention, independent variables and existing relations through the offered typed summaries. Raw measurement arrays and plots stay local in the dedicated runtime; never invent an inspection unavailable through the original native controls/operations. Preserve this comparison population and objective across candidates. A file extension does not establish an experiment recipe. Never improve a reported residual by changing observations, uncertainty or exclusions without a separately justified and authorized change.
+Inspect actual native measurement counts/weighting metadata, exclusions, phase links, instrument/profile convention, independent variables and existing relations through the offered typed summaries. Raw measurement arrays and plots stay local in the dedicated runtime; never invent an inspection unavailable through the original native controls/operations. Preserve this comparison population and objective across candidates. Record the actual native starting baseline and its reported fit status/metrics before comparing refinements; if no baseline is available, say so rather than invent one or substitute a number from another program. A file extension does not establish an experiment recipe. Never improve a reported residual by changing observations, uncertainty or exclusions without a separately justified and authorized change.
 
 ## Initial measured background
 
@@ -24,6 +24,8 @@ An initial route is scale and peak-position calibration (cell/zero), followed by
 Use a finite budget: a ceiling of 5–10 adaptive group passes is an owner-selected exploration budget, not a convergence criterion. Stop earlier on stable lack of useful improvement, unreliable steps, physical invalidity, cancellation or exhausted resources. Cycle correlated groups when useful, warming from the last accepted state; do not blindly repeat every group. Compare actual result status, convergence, residual, parameter movement, uncertainty and physical plausibility. MAX_ITER/NO_STEP are not convergence; failed/cancelled/unavailable/superseded fits do not authorize the next stage merely because some metrics look good.
 
 Keep separate saved project checkpoints for alternative paths and the accepted best. A fit's pre-fit Undo is not a multi-path checkpoint stack. Native checkpoint/import/save operations must actually be offered before executing this comparison; otherwise report the limitation. Restore the accepted checkpoint after a rejected candidate and verify the loaded observations, weights, exclusions and relations. Retain failed candidates only as explicitly labelled diagnostics.
+
+Reduced chi-square depends on the fitted observation population and the independent-variable degrees of freedom, not only residual size. Keep observations, weights, exclusions and objective comparable, and report available fitted-point/free-variable or degrees-of-freedom facts when interpreting a change. A different released variable set can change that denominator; a reduced chi-square value alone does not establish improvement. Across engines, establish matching model, profile, units, weighting, fitted population and residual definitions before comparing numbers; otherwise qualify the comparison, without inventing a missing reference residual or claiming numerical/scientific equivalence.
 
 Holding another group fixed makes a group's uncertainty conditional. When identifiable and supported, finish with a joint fit/covariance of the accepted independent variables. Report unresolved correlation, fixed-variable reasons and conditional uncertainties honestly; alternating groups alone does not establish independence.
 
