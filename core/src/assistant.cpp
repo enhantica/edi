@@ -117,6 +117,8 @@ std::uint64_t project_metadata_size(const Project* project) {
             if(size>Limits::context_bytes-profile_options)refuse("resource_exhausted","Profile options exceed context capacity");
             profile_options+=size;profile_comma=true;
         });
+        const auto absorption_tokens=supported_absorption_families(experiment->effective_beam_mode());
+        const auto absorption_options=encoded_rows(absorption_tokens,[](const auto& token){return encoded_text(token);});
         const auto exclusions = encoded_rows(experiment->excluded_regions, [](const auto& region) {
             return encoded_fields({{"id", encoded_text(region->id.value(), true)}, {"first", encoded_finite(region->first.get())}, {"second", encoded_finite(region->second.get())}});
         });
@@ -162,6 +164,8 @@ std::uint64_t project_metadata_size(const Project* project) {
                 {"sigma_count", payload_size(J(static_cast<double>(sigma_count)))}, {"weighting", encoded_text(weighting)}})},
             {"peak_profile",encoded_text(effective_peak_type_view(*experiment))},
             {"peak_profile_options",profile_options},
+            {"absorption_type",encoded_text(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))},
+            {"absorption_type_options",absorption_options},{"cutoff_fwhm",encoded_finite(experiment->peak.cutoff_fwhm)},
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
             {"background", encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
                 {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)}, {"anchors", anchors}})}});
@@ -235,6 +239,8 @@ J project_metadata(const Project* project) {
                     if (valid && mode_matches && observations_valid && !experiment->calculation_only && usable_su) weighting = "measured_standard_uncertainty";
                 }
             }
+            A absorption_options;
+            for(const auto& token:supported_absorption_families(experiment->effective_beam_mode()))append(absorption_options,J(token));
             A profile_options;
             visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token){append(profile_options,J(token));});
             append(datasets, O{{"id", KeyTraits<BraggPdExperiment>::canonical(experiment->name.value())},
@@ -242,7 +248,8 @@ J project_metadata(const Project* project) {
                 {"calculation_only", experiment->calculation_only}, {"data_status", data_status}, {"axis", std::move(axis)},
                 {"observations", O{{"intensity_count", static_cast<double>(intensity_count)}, {"sigma_count", static_cast<double>(sigma_count)}, {"weighting", weighting}}},
                 {"peak_profile",effective_peak_type(*experiment)},{"peak_profile_options",std::move(profile_options)},
-                {"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
+                {"absorption_type",experiment->absorption.type?J(*experiment->absorption.type):J("none")},{"absorption_type_options",std::move(absorption_options)},
+                {"cutoff_fwhm",finite(experiment->peak.cutoff_fwhm)},{"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
                 {"background", O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
                                  {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}, {"anchors", std::move(anchors)}}}});
         }

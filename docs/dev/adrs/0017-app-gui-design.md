@@ -1530,3 +1530,30 @@ This closes the source-proved center-only half-row admission class. It does not
 identify every later menu/group/relations refusal, operation deadline or apparent
 authentication failure. Original owning runtime checks remain required; source
 and grammar checks alone are not native qualification.
+
+
+### Ordinary absorption, cutoff and dataset-weight controls
+
+The FIRST ExperimentViewModel absorption-family, peak cutoff and dataset-weight
+setters join the existing CreationAction/ExperimentControlsUndo boundary used by
+profile/exclusions. Manual and assistant callers use the same original methods,
+readiness, exact input receipt and one preowned ordinary Undo per actual change.
+Equal canonical values produce no setter/cue/history. Cutoff and weight retain
+literal finite scalar semantics; nonpositive cutoff retains its original full-window
+meaning. Weight is stored in every mode but participates in the joint objective.
+
+Absorption is a narrow family edit, not a scalar replacement: its detached image
+runs the original mode/file-token/family contract before any live write. The FIRST
+peak OptionalParameter prepared-transfer design also governs absorption's three
+coefficient cells, both forward and Undo. Surviving coefficients keep identity;
+new cells and every detached-membership/retired vector exist before commit.
+History includes only that family and affected relation/result state; scalar history
+owns only its prior double and fit-result record. No whole experiment/data image,
+new history manager, or automatic graph rewrite is introduced.
+
+The genuine controls remain Experiment Extras Absorption/type and Peak/cutoff,
+and Analysis Extras Joint fit/weight. A weight row is resolved/revealed from the
+original experiments model and must still expose the same exact experiment; its
+index alone does not authorize a write. Existing whole-row reveal, selected member,
+manual draft, Stop and lifetime rules remain. No Experiment-page weight control
+or automatic cutoff implementation is invented.

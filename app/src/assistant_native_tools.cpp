@@ -74,14 +74,25 @@ QJsonArray native_tool_specs(bool include_profiles) {
             // the registry gives each extension one beam mode.
             profile_tokens.append(QString::fromUtf8(token.data(),static_cast<qsizetype>(token.size())));
         });
+    Array absorption_tokens;
+    if(include_profiles)for(const auto mode:{edi::BeamModeEnum::CONSTANT_WAVELENGTH,edi::BeamModeEnum::TIME_OF_FLIGHT})
+        for(const auto& token:edi::supported_absorption_families(mode)) {
+            if(!edi::assistant::detail::utf8(token))throw std::invalid_argument("Native absorption option is not UTF-8");
+            const auto value=QString::fromUtf8(token.data(),static_cast<qsizetype>(token.size()));
+            if(!absorption_tokens.contains(value))absorption_tokens.append(value);
+        }
     Object experiment_purpose=purpose;experiment_purpose.remove("description");
     Array experiment_branches;
-    for (const auto* operation : {"peak_profile","exclusion_append","exclusion_start","exclusion_end","exclusion_remove"}) {
+    for (const auto* operation : {"peak_profile","absorption_type","cutoff_fwhm","dataset_weight","exclusion_append","exclusion_start","exclusion_end","exclusion_remove"}) {
         Object fields{{"purpose",experiment_purpose},{"experiment",text},{"operation",Object{{"const",operation}}}};
         Array required{"purpose","experiment","operation"};
         const auto op=QLatin1StringView(operation);
         if (op==QLatin1StringView("peak_profile")) {
             fields["value"]=Object{{"type","string"},{"enum",profile_tokens}};required.append("value");
+        } else if(op==QLatin1StringView("absorption_type")) {
+            fields["value"]=Object{{"type","string"},{"enum",absorption_tokens}};required.append("value");
+        } else if(op==QLatin1StringView("cutoff_fwhm") || op==QLatin1StringView("dataset_weight")) {
+            fields["value"]=Object{{"type","number"}};required.append("value");
         } else if (op!=QLatin1StringView("exclusion_append")) {
             fields["region"]=text;required.append("region");
             if (op!=QLatin1StringView("exclusion_remove")) {fields["value"]=Object{{"type","number"}};required.append("value");}
@@ -89,7 +100,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
         experiment_branches.append(object(fields,required));
     }
     tools.append(Object{{"type","function"},{"name","edit_experiment"},
-        {"description","Change ONE exact current experiment through original peak-profile or exclusion-row app methods. Profile value must be an original option for its beam mode; changing profiles can add/drop optional settings at original defaults. Exclusion append keeps the ordinary generated ID/default bounds; use its actual returned region ID for later start/end/remove calls. Bounds are literal dataset-axis units, never automatically sorted/clamped. Equal stored profile/bound values skip setters/cues/Undo. Both modes use the same ordinary method/validation/history; Show actions adds original navigation/reveal and visual-only cues. Inspect actual IDs/settings and partial applied/published facts; do not retry uncertain writes. No parser/converter, absorption/weight/link/window setting or fit is implied."},
+        {"description","Change ONE exact experiment through original app methods. absorption_type, cutoff_fwhm and dataset_weight require the CURRENT selected experiment. Absorption uses actual absorption_type_options and original coefficient family/default rules; cutoff is literal FWHM-window setting (nonpositive retains original full-window semantics); dataset weight is stored in all modes and affects the joint objective, not single-dataset calculated curves. Absorption/cutoff controls are Experiment Extras; weight is Analysis Extras Joint fit. Other operations retain original peak-profile/exclusion routing. Profile value must be an original option for its beam mode; changing profiles can add/drop optional settings at original defaults. Exclusion append keeps the ordinary generated ID/default bounds; use its actual returned region ID for later start/end/remove calls. Bounds are literal dataset-axis units, never automatically sorted/clamped. Equal stored profile/bound values skip setters/cues/Undo. Both modes use the same ordinary method/validation/history; Show actions adds original navigation/reveal and visual-only cues. Inspect actual IDs/settings and partial applied/published facts; do not retry uncertain writes. No parser/converter, implicit noncurrent selection for the three scalars, phase-link edit, auto cutoff or fit is implied."},
         {"inputSchema",Object{{"oneOf",experiment_branches}}}});
     add("acquire_inputs", "Capture immutable local input files only from an opaque scope_id in the current genuine user input_scopes. No path, URL, glob or command argument is accepted. Returns file IDs, source ordinal, reader hints and counts; it does not claim scientific import. Use returned IDs with create_cwl_project and inspect the actual native project afterward. Already captured sources are not reread. Stale, changed, protected or oversized sources refuse without replacing the prior selection.",
         {{"scope_id",text}},{"scope_id"});
@@ -164,6 +175,15 @@ quint64 assistant_native_tool_specs_preparation_bytes() {
                 throw std::length_error("Native catalogue exceeds capacity");
             charge(2*token.size()*sizeof(QChar));charge(sizeof(QJsonValue));
         });
+    // The original pinned SDK creates its finite owning option vectors before
+    // Qt conversion; reserve every such scratch owner plus both modes' Qt enums.
+    charge(edi::absorption_options_preparation_bytes+2*sizeof(Array)+2*sizeof(Object));
+    constexpr quint64 n=2*edi::absorption_option_count_bound;
+    constexpr quint64 token=edi::absorption_option_bytes_bound;
+    charge(n*(2*sizeof(QString)+sizeof(QJsonValue)+2*token*sizeof(QChar)));
+    constexpr quint64 escaped=n*(6*token+3);
+    if(escaped>Limits::context_bytes-encoded)throw std::length_error("Native catalogue exceeds capacity");
+    encoded+=escaped;
     charge(encoded); // Actual complete catalogue payload, also held during encoding.
     return retained;
 }
@@ -229,9 +249,12 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         };
         if(!id_ok(args.value("experiment")))throw ActionRefusal("target_unavailable","experiment");
         const auto op=args.value("operation").toString();
-        if(op=="peak_profile") {
+        if(op=="peak_profile" || op=="absorption_type") {
             shape(args,{"purpose","experiment","operation","value"});
             if(!args.value("value").isString())throw ActionRefusal("unsupported_type","value");
+        } else if(op=="cutoff_fwhm" || op=="dataset_weight") {
+            shape(args,{"purpose","experiment","operation","value"});
+            if(!args.value("value").isDouble() || !std::isfinite(args.value("value").toDouble()))throw ActionRefusal("invalid_range","value");
         } else if(op=="exclusion_append")shape(args,{"purpose","experiment","operation"});
         else if(op=="exclusion_start" || op=="exclusion_end") {
             shape(args,{"purpose","experiment","operation","region","value"});

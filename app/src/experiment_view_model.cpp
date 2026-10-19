@@ -2,6 +2,7 @@
 #include "experiment_view_model.hpp"
 #include <QPointer>
 
+#include <string_view>
 #include <algorithm>
 #include <filesystem>
 #include <iterator>
@@ -198,16 +199,22 @@ void ExperimentViewModel::setPeakType(const QString& token) {
 }
 
 void ExperimentViewModel::setAbsorptionType(const QString& token) {
-    if (token == absorption_type_) {
+    if (token.toStdString() == (experiment_.absorption.type?std::string_view(*experiment_.absorption.type):std::string_view("none"))) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::absorption(experiment, token.toStdString()), true));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::absorption(experiment, token.toStdString()),true,
+        {ProjectEditor::CreationAction::Kind::AbsorptionType,&experiment,{},token});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff), false));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff),false,
+        {ProjectEditor::CreationAction::Kind::CutoffFwhm,&experiment,{},{},cutoff});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setLinkedStructureId(const QString& id) {
@@ -223,7 +230,10 @@ void ExperimentViewModel::setLinkedStructureId(const QString& id) {
 
 void ExperimentViewModel::setDatasetWeight(double weight) {
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::assign(experiment.dataset_weight, weight), false));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::assign(experiment.dataset_weight, weight),false,
+        {ProjectEditor::CreationAction::Kind::DatasetWeight,&experiment,{},{},weight});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setLastError(const QString& error) {

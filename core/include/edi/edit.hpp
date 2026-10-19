@@ -196,6 +196,8 @@ struct ExperimentControlsUndo {
     const ExperimentBase* experiment=nullptr;
     std::optional<PeakBase> peak;
     std::optional<std::vector<ExcludedRegion>> regions;
+    std::optional<AbsorptionBase> absorption;
+    std::optional<double> cutoff_fwhm, dataset_weight;
     std::optional<RelationsUndo> related;
     std::optional<FitResultRecord> fit_result;
 };
@@ -211,6 +213,21 @@ inline ExperimentControlsUndo capture_experiment_controls(Project& project,Exper
     } else {
         before.regions.emplace();
         for(const auto& row:experiment.excluded_regions)before.regions->push_back(*row);
+    }
+    return before;
+}
+
+enum class ExperimentScalarControl { Absorption, CutoffFwhm, DatasetWeight };
+inline ExperimentControlsUndo capture_experiment_scalar(Project& project,ExperimentBase& experiment,ExperimentScalarControl control) {
+    ExperimentControlsUndo before;before.experiment=&experiment;before.fit_result=project.fit_result;
+    if(control==ExperimentScalarControl::CutoffFwhm)before.cutoff_fwhm=experiment.peak.cutoff_fwhm;
+    else if(control==ExperimentScalarControl::DatasetWeight)before.dataset_weight=experiment.dataset_weight;
+    else {
+        before.absorption.emplace(experiment.absorption);before.related=capture_relations(project);
+        const auto replaced=experiment.absorption.parameters();std::set<std::string> retained;
+        for(const auto& slot:named_slots(project))
+            if(std::find(replaced.begin(),replaced.end(),slot.parameter)==replaced.end())retained.insert(slot.unique_name);
+        std::erase_if(before.related->parameters,[&](const auto& state){return !retained.contains(state.unique_name);});
     }
     return before;
 }
@@ -677,7 +694,14 @@ class Edit {
         return Edit([&experiment, token = std::move(token)] { select_peak_profile(experiment, token); });
     }
     static Edit absorption(ExperimentBase& experiment, std::string token) {
-        return Edit([&experiment, token = std::move(token)] { select_absorption(experiment, token); });
+        // Original mode/vocabulary/family rule executes on a detached narrow image.
+        // Both creation and retirement of OptionalParameter cells precede live writes.
+        return Edit([&experiment,token=std::move(token)] {
+            auto image=experiment.absorption;
+            apply_absorption_family(image,absorption_file_token(experiment.effective_beam_mode(),token));
+            detail::PreparedAbsorptionRestore prepared(experiment.absorption,std::move(image));
+            prepared.commit();
+        });
     }
     // The background model, the old type's rows and constants removed (select_background_type).
     static Edit background_type(ExperimentBase& experiment, std::string token) {
@@ -1007,20 +1031,24 @@ class Edit {
         return Edit([&project,before] {
             const auto found=std::find_if(project.experiments.begin(),project.experiments.end(),[&](const auto& member){return member.get()==before->experiment;});
             if(found==project.experiments.end())throw std::invalid_argument("undo: experiment control owner is no longer in the project");
-            if(before->peak.has_value()==before->regions.has_value() ||
-                before->peak.has_value()!=before->related.has_value() || before->peak.has_value()!=before->fit_result.has_value())
+            const int owners=int(before->peak.has_value())+int(before->regions.has_value())+int(before->absorption.has_value())+
+                int(before->cutoff_fwhm.has_value())+int(before->dataset_weight.has_value());
+            const bool family=before->peak.has_value() || before->absorption.has_value();
+            if(owners!=1 || family!=before->related.has_value() || (!before->regions.has_value())!=before->fit_result.has_value())
                 throw std::invalid_argument("undo: incomplete experiment-control footprint");
             auto& experiment=**found;
             std::unique_ptr<detail::PreparedPeakRestore> peak;
+            std::unique_ptr<detail::PreparedAbsorptionRestore> absorption;
             ItemVec<ExcludedRegion> regions;
             std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
             ItemVec<ParameterAlias> aliases;ItemVec<ParameterConstraint> constraints;
             std::optional<FitResultRecord> fit_result;
-            if(before->peak) {
-                peak=std::make_unique<detail::PreparedPeakRestore>(experiment.peak,*before->peak);
+            if(family) {
+                if(before->peak)peak=std::make_unique<detail::PreparedPeakRestore>(experiment.peak,*before->peak);
+                else absorption=std::make_unique<detail::PreparedAbsorptionRestore>(experiment.absorption,*before->absorption);
                 std::map<std::string,Parameter*> named;
                 for(const auto& slot:named_slots(project))named.emplace(slot.unique_name,slot.parameter);
-                const auto replaced=experiment.peak.parameters();
+                const auto replaced=before->peak?experiment.peak.parameters():experiment.absorption.parameters();
                 for(const auto& state:before->related->parameters) {
                     const auto at=named.find(state.unique_name);
                     if(at==named.end() || std::find(replaced.begin(),replaced.end(),at->second)!=replaced.end())
@@ -1030,15 +1058,24 @@ class Edit {
                 std::vector<ItemVec<ParameterAlias>::Ptr> a;for(const auto& row:before->related->aliases)a.push_back(std::make_shared<ParameterAlias>(row));
                 std::vector<ItemVec<ParameterConstraint>::Ptr> c;for(const auto& row:before->related->constraints)c.push_back(std::make_shared<ParameterConstraint>(row));
                 aliases=ItemVec<ParameterAlias>(std::move(a));constraints=ItemVec<ParameterConstraint>(std::move(c));fit_result=before->fit_result;
-            } else {
+            } else if(before->regions) {
                 std::vector<ItemVec<ExcludedRegion>::Ptr> rows;
                 for(const auto& row:*before->regions)rows.push_back(std::make_shared<ExcludedRegion>(row));
                 regions=ItemVec<ExcludedRegion>(std::move(rows));
             }
-            if(peak) {
-                peak->commit();project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
+            if(family) {
+                if(peak)peak->commit();else absorption->commit();
+                project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
                 for(const auto& [parameter,state]:targets){parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;}
-            } else experiment.excluded_regions=std::move(regions);
+            } else if(before->regions)experiment.excluded_regions=std::move(regions);
+            else {
+                // Own the result image before either live scalar or result changes.
+                auto restored=*before->fit_result;
+                static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+                if(before->cutoff_fwhm)experiment.peak.cutoff_fwhm=*before->cutoff_fwhm;
+                else experiment.dataset_weight=*before->dataset_weight;
+                project.fit_result=std::move(restored);
+            }
         });
     }
 

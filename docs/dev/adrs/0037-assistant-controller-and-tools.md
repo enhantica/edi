@@ -1706,3 +1706,46 @@ app advertisement and dedicated NAMES list change; their real sourcePatchSha256
 package/executable proof must be rebuilt before new dedicated advertisement is
 qualified. No old package is relabelled or guard waived. Native app actions are
 not copied into the restricted core skill capability registry.
+
+
+### Three ordinary experiment scalar actions
+
+The existing edit_experiment closed union additionally offers absorption_type,
+cutoff_fwhm and dataset_weight, each with purpose, actual experiment ID and scalar
+value. These three require the exact currently selected native member/view; the
+older profile/exclusion member-selection behavior is unchanged. Absorption choices
+are the original mode's offered file tokens, not copied skill options or all lower
+registry aliases. Cutoff/weight accept finite numbers under original manual semantics,
+with no invented positivity, normalization, automatic cutoff or fit-success promise.
+
+Both modes invoke the FIRST ordinary setter once under the original matched
+creation receipt/shared Undo. Show actions adds genuine page/tier/reveal and a
+visual-only cue; dataset weight belongs to Analysis Extras Joint fit. No-op values
+skip navigation/cue/method/history. Active/retired/consumed input, current-owner,
+Stop and factual applied/published/partial outcomes retain their original meaning.
+
+The existing closed Dataset child now reports absorption_type/options and
+cutoff_fwhm alongside existing dataset_weight in inspect/context. A scalar result
+uses datasets[0].id and its actual confirmed setting (options for absorption), never
+a requested-value echo on refusal. Original projection, exact context sizing,
+registered schema/argument/dispatch and encoded result maxima advance together.
+The source-owned maximum scalar construction role stays in the original native
+frame until result transfer; no extra retained execution state is added.
+
+The pinned SDK c6e925c tokens.cpp closed AbsorptionType table has at most three
+rows of at most16 bytes (TOF has two). Its original owning-vector scratch is admitted
+before calls: initializer-list six strings, copied Spelling-vector six, result capacity
+four, up to three same() argument temporaries, plus three vector headers. The
+numeric bound contains no duplicated vocabulary; actual choices still come only
+from the original SDK. Both catalogue modes' Qt/JSON owners and escaping are
+counted separately. This is a logical-payload proof for the pinned source/toolchain,
+not allocator RSS or an admission claim for a future SDK. The source guard refuses
+an upgraded table outside that footprint; its pinned-source proof must be renewed
+when the dependency changes. Original context/stream caps do not grow.
+
+No new native name or dedicated patch bytes are required: edit_experiment already
+belongs to the original closed catalogue/oneOf policy. Stock DEFAULT_OFF is not
+blocked by an optional package producer. Existing dedicated requested/advertised/
+dispatch schema equality and actual package/source-patch proof remain unchanged.
+Ordinary Save, reader, Create/atom Undo, explicit relation edits, deadline accounting,
+immediate text, profile and exclusions remain outside this focused scalar extension.

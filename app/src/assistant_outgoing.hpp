@@ -57,7 +57,7 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Structure: { ROWS(T("id"),O("space_group",SpaceGroup),A("sites",Site),Field{"anisotropic_site_ids",Type::TextArray}); }
     case Role::SpaceGroup: { ROWS(T("hm"),T("setting"),N("it_number")); }
     case Role::Site: { ROWS(T("id"),T("type_symbol"),T("wyckoff"),T("adp_type")); }
-    case Role::Dataset: { ROWS(T("id"),T("beam_mode"),T("probe"),B("calculation_only"),T("data_status"),T("peak_profile"),Field{"peak_profile_options",Type::TextArray},O("axis",Axis),O("observations",Observations),N("dataset_weight"),A("excluded_regions",Region),A("phases",Phase),O("background",Background)); }
+    case Role::Dataset: { ROWS(T("id"),T("beam_mode"),T("probe"),B("calculation_only"),T("data_status"),T("peak_profile"),Field{"peak_profile_options",Type::TextArray},O("axis",Axis),O("observations",Observations),T("absorption_type"),Field{"absorption_type_options",Type::TextArray},N("cutoff_fwhm"),N("dataset_weight"),A("excluded_regions",Region),A("phases",Phase),O("background",Background)); }
     case Role::Axis: { ROWS(T("kind"),T("unit"),N("count"),N("min"),N("max")); }
     case Role::Observations: { ROWS(N("intensity_count"),N("sigma_count"),T("weighting")); }
     case Role::Region: { ROWS(T("id"),N("first"),N("second")); }

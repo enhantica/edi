@@ -103,7 +103,12 @@ std::string peak_profile_label(const std::string& token) {
 
 std::vector<std::string> supported_absorption_families(BeamModeEnum mode) {
     // crysta's vocabulary table, in its order (ADR-0017): edi keeps no list of its own.
-    return absorption_file_tokens(mode);
+    auto options=absorption_file_tokens(mode);
+    // Fail closed when upgrading the pinned closed SDK table without updating
+    // the source-owned preparation proof; never substitute a copied vocabulary.
+    if(options.size()>absorption_option_count_bound)throw std::length_error("Absorption option table changed");
+    for(const auto& token:options)if(token.size()>absorption_option_bytes_bound)throw std::length_error("Absorption option table changed");
+    return options;
 }
 
 std::vector<std::string> supported_background_types() {

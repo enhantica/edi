@@ -15,6 +15,7 @@
 #include <QFileInfo>
 #include <QSettings>
 #include <QUrl>
+#include <string_view>
 #include <algorithm>
 #include <memory>
 #include <limits>
@@ -665,12 +666,13 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     const auto release=qScopeGuard([self,previous]{if(self)self->widget_input_executing_=previous;});
     if(input){input->consumed=true;widget_input_executing_=true;}
     using Kind=CreationAction::Kind;
-    const bool experiment_control=actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
+    const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
+    const bool experiment_control=scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
         actual.kind==Kind::ExclusionStart || actual.kind==Kind::ExclusionEnd || actual.kind==Kind::ExclusionRemove;
     if(experiment_control) {
         edi::ExperimentBase* experiment=nullptr;const edi::ExcludedRegion* region=nullptr;
         for(const auto& held:project_->experiments) {
-            if((actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend) && held.get()==actual.row)experiment=held.get();
+            if((scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend) && held.get()==actual.row)experiment=held.get();
             for(const auto& row:held->excluded_regions)if(row.get()==actual.row){experiment=held.get();region=row.get();}
         }
         if(!experiment) {
@@ -679,11 +681,17 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         // Cached Qt row counts/keys are not scientific membership authority.
         // Reentrant publication must refuse before even an equal-value result.
         if(const auto pending=editReadinessRefusal(false);!pending.isEmpty()){if(input)input->outcome.message=pending;return pending;}
-        const bool equal=actual.kind==Kind::PeakProfile?edi::effective_peak_type(*experiment)==actual.text.toStdString():
+        const bool equal=actual.kind==Kind::AbsorptionType?(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))==actual.text.toStdString():
+            actual.kind==Kind::CutoffFwhm?experiment->peak.cutoff_fwhm==actual.number:
+            actual.kind==Kind::DatasetWeight?experiment->dataset_weight==actual.number:
+            actual.kind==Kind::PeakProfile?edi::effective_peak_type(*experiment)==actual.text.toStdString():
             actual.kind==Kind::ExclusionStart?region && region->first.get()==actual.number:
             actual.kind==Kind::ExclusionEnd?region && region->second.get()==actual.number:false;
         if(equal)return {};
-        auto before=edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
+        auto before=scalar_control?edi::capture_experiment_scalar(*project_,*experiment,
+            actual.kind==Kind::AbsorptionType?edi::ExperimentScalarControl::Absorption:
+            actual.kind==Kind::CutoffFwhm?edi::ExperimentScalarControl::CutoffFwhm:edi::ExperimentScalarControl::DatasetWeight):
+            edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
         undo_history_.reserve(undo_history_.size()+1);undo_history_.emplace_back(std::move(before));
         EditOutcome result;
         try {result=applyEdit(change,structural);}catch(...){if(self)undo_history_.pop_back();throw;}
