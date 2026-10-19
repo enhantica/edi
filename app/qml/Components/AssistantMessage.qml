@@ -186,12 +186,39 @@ Rectangle {
         }
         return goal; // Supplied goal only; never status, authority or verified intent.
     }
+    function webSearchCaption() {
+        const action = payload.action;
+        if (action !== undefined && action !== null && (typeof action !== "object" || Array.isArray(action))) return "";
+        if (!action || action.type === "search") {
+            let query = shortActionObject(action ? action.query : "", false);
+            if (!query.length && action && action.queries !== undefined && action.queries !== null) {
+                // Retained QVariantList fields use the same JSON projection as command actions.
+                const queries = JSON.parse(JSON.stringify(action.queries));
+                if (!Array.isArray(queries) || !queries.every(value => typeof value === "string")) return "";
+                query = queries.map(value => shortActionObject(value, false)).filter(value => value.length).join(" · ");
+            }
+            if (!query.length) query = shortActionObject(payload.query, false);
+            return query.length ? qsTr("Search the web for %1").arg(query) : "";
+        }
+        if (action.type === "openPage") {
+            const url = shortActionObject(action.url, false);
+            return url.length ? qsTr("Open web page %1").arg(url) : "";
+        }
+        if (action.type === "findInPage") {
+            const url = shortActionObject(action.url, false), pattern = shortActionObject(action.pattern, false);
+            if (url.length && pattern.length) return qsTr("Find %1 on %2").arg(pattern).arg(url);
+            if (pattern.length) return qsTr("Find %1 on a web page").arg(pattern);
+            if (url.length) return qsTr("Find text on %1").arg(url);
+        }
+        return "";
+    }
     function activityDescription() {
         if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
                        : typeof payload.description === "string" ? payload.description
                        : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
         if (supplied.trim().length) return shortActionObject(supplied, false);
+        if (payload.type === "webSearch") return webSearchCaption();
         if (!commandActivity) return "";
         const guidance = knownGuidanceCommandCaption(payload.command);
         if (guidance.length) return guidance;
