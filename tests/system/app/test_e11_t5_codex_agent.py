@@ -11200,6 +11200,8 @@ def test_main504_lbco_show_actions_cue_fit_save_and_report(tmp_path):
 
     reference = tmp_path / 'reference'
     reference.mkdir()
+    assert not (reference / 'current').exists() and not (reference / 'current').is_symlink(), (
+        'CREATE574 SETUP: native user Create starts at a genuinely fresh owned chosen path')
     original = ROOT / 'tests/fixtures/assistant/reference/easydiffraction-ddlm'
     provenance = json.loads((original / 'provenance.json').read_text())
     for entry in provenance['inputs']:

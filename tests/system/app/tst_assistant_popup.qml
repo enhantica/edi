@@ -9049,8 +9049,65 @@ TestCase {
         const sourceBytes = ["lbco.cif", "hrpt.xye"].map(name => Probe.readReferenceFile(name));
         Session.closeProject();
         const path = ApplicationInfo.localPath(Probe.referenceUrl("current"));
-        verify(Session.createProject("Original Main LBCO owner", "Original Main description", path,
-            "iucr_99", "Original Main title", "Original Main author", true), "MAIN504: genuine saved empty Session owner exists");
+        // CREATE574: genuine user Create precedes every assistant/account action.
+        visible185_page("home");
+        Ui.click(test,Probe,window,"home.start");
+        compare(window.appBarCentralTabs.currentIndex,AppState.Page.Project,
+            "CREATE574: ordinary Home Start exposes the original Project workflow");
+        Ui.click(test,Probe,window,"sideBar.tab.basic");
+        Ui.click(test,Probe,window,"project.create");
+        const createDialogs574=Probe.visibleDialogs(window).filter(dialog => dialog.objectName==="createProject.dialog");
+        compare(createDialogs574.length,1,"CREATE574: ONE actual Main-owned production Create dialog opens");
+        const createDialog574=createDialogs574[0], createLife574=lifetime313(createDialog574);
+        tryCompare(createDialog574,"opened",true,2000,"CREATE574: original Create dialog opens before native input");
+        for(const [name,value] of [["name","Original Main LBCO owner"],["title","Original Main title"],
+            ["authors","Original Main author"],["description","Original Main description"],["location",path]]) {
+            const field=findChild(createDialog574,"createProject."+name);
+            verify(field!==null && field.enabled && field.visible,
+                "CREATE574: exact original named input belongs to the current production Create dialog");
+            Ui.scrollIntoView(field);rendered();ux356_fullyExposed(field);
+            const point=Ui.clickPoint(field);
+            mouseClick(field,point.x,point.y);
+            verify(field.activeFocus,"CREATE574: native pointer focuses the actual original Create field");
+            visible185_type(value);
+            compare(field.text,value,"CREATE574: original native keys retain the complete independent user operand");
+        }
+        const createButton574=createDialog574.standardButton(Dialog.Ok), createButtonLife574=lifetime313(createButton574);
+        verify(createButton574!==null && createButton574.enabled && createButton574.objectName==="createProject.accept",
+            "CREATE574: original enabled standard Create action owns the actual final native input");
+        Ui.scrollIntoView(createButton574);rendered();ux356_fullyExposed(createButton574);
+        const createReceipt574={pressed:0,released:0,clicked:0,canceled:0,accepted:0};
+        const pressed574=function(){if(createButton574.pressed)++createReceipt574.pressed;};
+        const released574=function(){++createReceipt574.released;};
+        const clicked574=function(){++createReceipt574.clicked;};
+        const canceled574=function(){++createReceipt574.canceled;};
+        const accepted574=function(){++createReceipt574.accepted;};
+        createButton574.pressedChanged.connect(pressed574);createButton574.released.connect(released574);
+        createButton574.clicked.connect(clicked574);createButton574.canceled.connect(canceled574);
+        createDialog574.accepted.connect(accepted574);
+        try {
+            const point=Ui.clickPoint(createButton574);
+            mouseClick(createButton574,point.x,point.y);
+            tryVerify(() => Session.project!==null,2000,"CREATE574: ONE genuine Create click adopts the saved empty owner");
+            compare(JSON.stringify(createReceipt574),JSON.stringify({pressed:1,released:1,clicked:1,canceled:0,accepted:1}),
+                "CREATE574: exactly ONE native press/release/click/accept creates the original owner");
+        } finally {
+            disconnect313(createButtonLife574,createButton574,"pressedChanged",pressed574);
+            disconnect313(createButtonLife574,createButton574,"released",released574);
+            disconnect313(createButtonLife574,createButton574,"clicked",clicked574);
+            disconnect313(createButtonLife574,createButton574,"canceled",canceled574);
+            disconnect313(createLife574,createDialog574,"accepted",accepted574);
+        }
+        compare(Session.project.name,"Original Main LBCO owner","CREATE574: real Create retains the independent user name");
+        compare(Session.project.title,"Original Main title","CREATE574: real Create retains the independent user title");
+        compare(Session.project.description,"Original Main description");compare(Session.project.authors,"Original Main author");
+        compare(Session.project.path,path,"CREATE574: actual chosen location becomes the original saved owner path");
+        verify(!Session.project.modified && !Session.needsSaveAs && Session.projectDirectoryExists(path),
+            "CREATE574: user Create already saved its directory before assistant population or Save");
+        const emptyDisk574=Probe.readReferenceFile("current/project.edi");
+        verify(emptyDisk574.length>0 && emptyDisk574.includes("Original Main LBCO owner")
+            && emptyDisk574.includes("Original Main title"),
+            "CREATE574: actual initial project document contains the independent user-created metadata on disk");
         const original = Session.project, ownerLife = lifetime313(original), metadata = import265_owner(original);
         compare(original.structures.count, 0); compare(original.experiments.count, 0);
         const token = assistant.beginFileSelection();
@@ -9104,7 +9161,13 @@ TestCase {
                     verify(nativeReceivers>0,"MAIN504: actual rendered original Load owns a real button/TapHandler receipt, never absent witness");
                 }
             }
-            for (const dialog of Probe.objectsWithProperty(window, "fileMode")) {
+            const chooserDialogs574=[...Probe.objectsWithProperty(window,"fileMode"),
+                ...Probe.objectsWithProperty(window,"selectedFolder"),
+                ...Probe.objectsWithProperty(window,"objectName").filter(dialog => dialog.objectName==="assistant.resultSaveAs")];
+            verify(chooserDialogs574.some(dialog => typeof dialog.selectedFolder!=="undefined")
+                && chooserDialogs574.some(dialog => dialog.objectName==="assistant.resultSaveAs"),
+                "CREATE574: actual original folder picker and fresh Save As form are present as no-chooser witnesses");
+            for (const dialog of chooserDialogs574) {
                 if (watched.has(dialog)) continue; watched.add(dialog);
                 verify(!dialog.visible, "MAIN504: no existing file dialog is already open");
                 bind(dialog,"visibleChanged",() => { if(dialog.visible) ++dialogsOpened; });
@@ -9304,6 +9367,8 @@ TestCase {
             verify(saved.status==="succeeded" && saved.committed===true && saved.reopened===true
                 && saved.active===true && saved.presentation_complete===true,"MAIN504: genuine current Save commits/reopens/presents completely");
             compare(current.path,path); verify(!current.modified && !Session.needsSaveAs);
+            compare(current.name,"Original Main LBCO owner");compare(current.title,"Original Main title");
+            compare(dialogsOpened,0,"CREATE574: filling and current Save never opens a file/folder/fresh Save As chooser");
             compare(import265_owner(current),metadata); compare(visible185_inputs(current),JSON.stringify(inputs));
             compare(fitStarts,2); compare(fitFinishes,2);
             for(const index of [7,12]) { const result=outcome(index);
@@ -9317,6 +9382,9 @@ TestCase {
             const rounded=save349_science(current); verify(Session.openProject(Probe.referenceUrl("current")),"MAIN504: original Session reader genuinely reopens committed current output");
             tryVerify(() => !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),10000);
             compare(save349_science(Session.project),rounded,"MAIN504: ordinary readback preserves current saved scientific result");
+            compare(Session.project.path,path,"CREATE574: ordinary reopen retains the exact user-created saved path");
+            compare(import265_owner(Session.project),metadata,
+                "CREATE574: normal Save/reopen retains full original user-created name/title/owner metadata");
             aliasesCurrent(Session.project);
             // One ordinary existing manual edit/Undo after readback; never an invented atomic visible-import Undo.
             elapsedPhase511="manual";console.info("GUI511_PHASE","manual",JSON.stringify(observations518));
@@ -9358,6 +9426,7 @@ TestCase {
             capture("main504-original-current-report");
         } finally {
             console.log("MAIN504_NATIVE_FACTS",JSON.stringify({observations518:observations518,filePresses:filePresses,fileReleases:fileReleases,fileClicks:fileClicks,dialogsOpened:dialogsOpened,
+                createReceipt574:createReceipt574,initialEmptyDocumentCharacters574:emptyDisk574.length,
                 cues:cues,typed:typed,freeClicks:freeClicks,fitStarts:fitStarts,fitFinishes:fitFinishes,
                 currentOwner:String(Session.project),canCancel:assistant.canCancel,lastError:assistant.lastError}));
             for(const row of bindings) disconnect313(row.life,row.object,row.signal,row.callback);
