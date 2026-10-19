@@ -55,6 +55,38 @@ EaComponents.ListView {
         modelRevision++;
     }
 
+    // Ordinary native view positioning, shared by manual selection and assistant reveal.
+    // It reveals a row without changing selection, filters or scientific state.
+    function revealRow(index: int): bool {
+        const view = table, originalModel = table.sourceModel;
+        if (originalModel === null || index < 0 || index >= view.count) return false;
+        view.forceLayout();
+        if (!Qt.isQtObject(view) || view.sourceModel !== originalModel || index >= view.count) return false;
+        view.positionViewAtIndex(index, ListView.Contain);
+        if (!Qt.isQtObject(view) || view.sourceModel !== originalModel || index >= view.count) return false;
+        view.forceLayout();
+        return Qt.isQtObject(view) && view.sourceModel === originalModel && index < view.count;
+    }
+    // A retained control can exist just outside this table's clipping viewport.
+    // Only an actual delegate owned by this view supplies its row index.
+    function revealItem(item: Item): bool {
+        for (let child = item; child && child !== table.contentItem; child = child.parent) {
+            if (child === table.headerItem) {
+                const originalModel = table.sourceModel;
+                table.forceLayout();
+                if (!Qt.isQtObject(table) || table.sourceModel !== originalModel) return false;
+                table.positionViewAtBeginning();
+                if (!Qt.isQtObject(table) || table.sourceModel !== originalModel) return false;
+                table.forceLayout();
+                return Qt.isQtObject(table) && table.sourceModel === originalModel;
+            }
+            const index = child.index;
+            if (Number.isInteger(index) && index >= 0 && index < table.count && table.itemAtIndex(index) === child)
+                return table.revealRow(index);
+        }
+        return false;
+    }
+
     // The current row, -1 for none: an accent bar at its left edge marks it, and moves to a new current row as the
     // tab bar's underline moves (edi ADR-0017 §11). Its rows are TableRows, which keep their alternating background.
     property int currentRow: -1

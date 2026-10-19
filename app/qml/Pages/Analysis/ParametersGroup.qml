@@ -199,8 +199,7 @@ EaElements.GroupBox {
             // Keep an ordinary filtered selection in view after model updates;
             // delegates are intentionally created only inside this viewport.
             function revealCurrentRow() {
-                if (currentRow >= 0 && currentRow < count)
-                    positionViewAtIndex(currentRow, ListView.Contain);
+                revealRow(currentRow);
             }
             onCurrentRowChanged: Qt.callLater(revealCurrentRow)
 

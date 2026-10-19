@@ -2654,6 +2654,25 @@ struct AssistantViewModel::State {
             };
             widget_input->start(std::move(request)); return false;
         }
+        if(viewport && viewport->property("tableRowHeight").isValid()) {
+            const auto receiver=run->receiver;
+            bool revealed=false;
+            const bool invoked=QMetaObject::invokeMethod(viewport,"revealItem",Qt::DirectConnection,
+                Q_RETURN_ARG(bool,revealed),Q_ARG(QQuickItem*,wanted.data()));
+            if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return false;
+            if(!invoked || !revealed || !viewport || !wanted || !widget_entry_current(run,entry) || ++run->reveal_steps>64) {
+                widget_refuse(run,widget_outcome_error);return false;
+            }
+            auto next=[this,run,entry] {
+                if(!widget_entry_owned(run,entry))return;
+                try{widget_resume_revealed(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
+            };
+            auto callbackRole=reserve_disclosure(2*sizeof(next));
+            run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
+            callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
+            if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return false;
+            QTimer::singleShot(500,&owner,std::move(next));return false;
+        }
         // A visible viewport receives real bounded wheel input. Read-only
         // geometry/currentness determines direction; never assign contentY,
         // checked/index, group state or any scientific property.
@@ -3018,36 +3037,23 @@ struct AssistantViewModel::State {
         const auto row=filter?filter->rowOf(run->parameter):-1;
         if(!table || !filter || filter->sourceModel()!=run->project->parameters() || row<0){widget_refuse(run,widget_outcome_error);return;}
         if(!widget_reveal_parameter(run,table))return;
-        const auto before=table->property("contentY").toDouble(),height=table->property("tableRowHeight").toDouble();
-        if(!std::isfinite(before) || !std::isfinite(height) || height<=0){widget_refuse(run,widget_outcome_error);return;}
-        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::Scroll;request.target=table;
-        request.scrollDirection=row*height<before?1:-1;
-        auto captured_current=[this,run,entry,table,filter]{return table && filter && widget_entry_current(run,entry) && filter->sourceModel()==run->project->parameters() && filter->shows(run->parameter);};
-        auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
-        auto captured_completed=[this,run,entry,table,before](bool delivered,const QString& message) {
+        const auto receiver=run->receiver;
+        bool revealed=false;
+        const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,row));
+        if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
+        if(!invoked || !revealed || !table || !filter || !widget_entry_current(run,entry) ||
+            widget_named("parameters.list")!=table || filter->sourceModel()!=run->project->parameters() || filter->rowOf(run->parameter)!=row) {
+            widget_refuse(run,widget_outcome_error);return;
+        }
+        auto next=[this,run,entry] {
             if(!widget_entry_owned(run,entry))return;
-            try {
-                if(!delivered || !table || table->property("contentY").toDouble()==before){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
-                QTimer::singleShot(500,&owner,[this,run,entry] {
-                    if(!widget_entry_owned(run,entry))return;
-                    try{widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
-                });
-            }catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
+            try{widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
         };
-        // AssistantWidgetInput::stop retains the preceding Request through its
-        // completion; the next request can coexist. Local targets plus their
-        // function-owned copies are admitted before allocation/transfer.
-        constexpr quint64 callbacks=sizeof(captured_current)+sizeof(captured_prepareCommit)+sizeof(captured_finishCommit)+sizeof(captured_completed);
-        auto callbackRole=reserve_disclosure(2*callbacks);
-        request.current=std::move(captured_current);
-        request.prepareCommit=std::move(captured_prepareCommit);
-        request.finishCommit=std::move(captured_finishCommit);
-        request.completed=std::move(captured_completed);
-        run->callback_bytes=std::max(run->callback_bytes,2*callbacks);
-        callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
-        native_charge();
-        if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
-        widget_input->start(std::move(request));
+        auto callbackRole=reserve_disclosure(2*sizeof(next));
+        run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
+        callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
+        if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
+        QTimer::singleShot(500,&owner,std::move(next));
     }
     void widget_filter_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
@@ -3315,32 +3321,32 @@ struct AssistantViewModel::State {
         return result;
     }
     void widget_background_scroll(const std::shared_ptr<NativeWidget>& run) {
-        auto* table = widget_background_target(run, "background.list");
-        if (!table) { widget_refuse(run, QObject::tr("The original background table is unavailable")); return; }
-        if (!widget_reveal_parameter(run, table)) return;
-        if (++run->reveal_steps > 64) { widget_refuse(run, QObject::tr("The actual background row could not be revealed")); return; }
-        const auto& rows = run->background_experiment->background;
-        const auto at = std::find_if(rows.begin(), rows.end(), [&](const auto& row) { return row.get() == run->background_key; });
-        if (at == rows.end()) { widget_refuse(run, widget_outcome_error); return; }
-        const auto index = std::distance(rows.begin(), at);
-        const auto y = table->property("contentY").toDouble();
-        const auto rowHeight = table->property("tableRowHeight").toDouble();
-        if (!std::isfinite(y) || !std::isfinite(rowHeight) || rowHeight <= 0) { widget_refuse(run, widget_outcome_error); return; }
-        const QPointer<QQuickItem> original(table);
-        AssistantWidgetInput::Request request; request.kind = AssistantWidgetInput::Kind::Scroll; request.target = table;
-        request.scrollDirection = index * rowHeight < y ? 1 : -1;
-        request.current = [this, run, original] { return original && widget_background_current(run); };
-        request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run, original, y](bool delivered, const QString& message) {
-            if (!widget_owned(run)) return;
-            try {
-                if (!delivered || !original || original->property("contentY").toDouble() == y) { widget_refuse(run, message); return; }
-                QTimer::singleShot(500, &owner, [this, run] {
-                    try { widget_background_next(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
-                });
-            } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+        if(!widget_background_current(run) || !widget_background_member_current(run)){widget_refuse(run,widget_outcome_error);return;}
+        const QPointer<QQuickItem> table(widget_background_target(run,"background.list"));
+        if(!table){widget_refuse(run,QObject::tr("The original background table is unavailable"));return;}
+        if(!widget_reveal_parameter(run,table))return;
+        if(++run->reveal_steps>64){widget_refuse(run,QObject::tr("The actual background row could not be revealed"));return;}
+        const auto& rows=run->background_experiment->background;
+        const auto at=std::find_if(rows.begin(),rows.end(),[&](const auto& row){return row.get()==run->background_key;});
+        if(at==rows.end()){widget_refuse(run,widget_outcome_error);return;}
+        const int index=static_cast<int>(std::distance(rows.begin(),at));
+        const auto receiver=run->receiver;
+        bool revealed=false;
+        const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,index));
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
+        if(!invoked || !revealed || !table || !widget_background_current(run) || !widget_background_member_current(run) ||
+            widget_background_target(run,"background.list")!=table ||
+            static_cast<std::size_t>(index)>=run->background_experiment->background.size() ||
+            run->background_experiment->background[index].get()!=run->background_key) {widget_refuse(run,widget_outcome_error);return;}
+        auto next=[this,run] {
+            if(!widget_owned(run))return;
+            try{widget_background_next(run);}catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
         };
-        widget_input->start(std::move(request));
+        auto callbackRole=reserve_disclosure(2*sizeof(next));
+        run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
+        callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
+        QTimer::singleShot(500,&owner,std::move(next));
     }
     void widget_background_done(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) {
         if (!widget_owned(run)) return;
@@ -3570,28 +3576,30 @@ struct AssistantViewModel::State {
             : at < static_cast<qsizetype>(model.aliases.size()) && model.aliases[at].get() == run->relation_key;
     }
     void widget_relation_scroll(const std::shared_ptr<NativeWidget>& run) {
-        auto* table = widget_relation_named(run, run->relation_constraint ? "constraints.list" : "aliases.list");
-        if (!table) { widget_refuse(run, QObject::tr("The original background table is unavailable")); return; }
-        if (!widget_reveal_parameter(run, table)) return;
-        if (++run->reveal_steps > 64) { widget_refuse(run, QObject::tr("The original relation row could not be revealed")); return; }
-        const QPointer<QQuickItem> original(table);
-        const auto before = table->property("contentY").toDouble();
-        AssistantWidgetInput::Request request;
-        request.kind = AssistantWidgetInput::Kind::Scroll; request.target = table; request.scrollDirection = -1;
-        request.current = [this, run, original] { return original && widget_relation_row_current(run); };
-        request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-        request.completed = [this, run, original, before](bool delivered, const QString& message) {
-            if (!widget_owned(run)) return;
-            try {
-                if (!delivered || !original || original->property("contentY").toDouble() == before) {
-                    widget_refuse(run, message.isEmpty() ? widget_outcome_error : message); return;
-                }
-                QTimer::singleShot(500, &owner, [this, run] {
-                    try { widget_relation_step(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
-                });
-            } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+        // Append is outside the DataTable; only an existing original row is positioned here.
+        if(!widget_relation_row_current(run) || !run->relation_field){widget_refuse(run,widget_outcome_error);return;}
+        const QPointer<QQuickItem> table(widget_relation_named(run,run->relation_constraint?"constraints.list":"aliases.list"));
+        if(!table){widget_refuse(run,QObject::tr("The original relation table is unavailable"));return;}
+        if(!widget_reveal_parameter(run,table))return;
+        if(++run->reveal_steps>64){widget_refuse(run,QObject::tr("The original relation row could not be revealed"));return;}
+        const auto at=run->relation_base+run->relation_row;
+        if(at<0 || at>=table->property("count").toLongLong()){widget_refuse(run,widget_outcome_error);return;}
+        const int index=static_cast<int>(at);const auto receiver=run->receiver;
+        bool revealed=false;
+        const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,index));
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
+        if(!invoked || !revealed || !table || !widget_relation_row_current(run) ||
+            widget_relation_named(run,run->relation_constraint?"constraints.list":"aliases.list")!=table ||
+            run->relation_base+run->relation_row!=at){widget_refuse(run,widget_outcome_error);return;}
+        auto next=[this,run] {
+            if(!widget_owned(run))return;
+            try{widget_relation_step(run);}catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
         };
-        widget_input->start(std::move(request));
+        auto callbackRole=reserve_disclosure(2*sizeof(next));
+        run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
+        callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
+        QTimer::singleShot(500,&owner,std::move(next));
     }
     void widget_relation_done(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) {
         if (!widget_owned(run)) return;
@@ -7060,12 +7068,14 @@ struct AssistantViewModel::State {
     }
     bool create_widget_missing_target(const std::shared_ptr<NativeCreateWidget>& run, const NativeCreateWidget::Input& step) {
         QString groupName, tableName; qsizetype index = -1;
+        bool indexed=false;const auto requested=step.target.section('.',-1).toLongLong(&indexed);
         if (step.target.startsWith("excludedRegion.")) {
-            groupName="group.excluded_region"; tableName="excludedRegions.list"; index=step.target.section('.',-1).toLongLong();
+            groupName="group.excluded_region"; tableName="excludedRegions.list"; index=indexed?requested:-1;
         } else if (step.target.startsWith("linkedStructure.")) {
-            groupName="group.linked_structure"; tableName="linkedStructure.list"; index=step.target.section('.',-1).toLongLong();
+            groupName="group.linked_structure"; tableName="linkedStructure.list"; index=indexed?requested:-1;
         } else if (step.target.startsWith("experiments.")) {
-            groupName="group.experiments"; tableName="experiments.list"; index=run->individual_tool.isEmpty()?0:individual_member_index(run);
+            groupName="group.experiments"; tableName="experiments.list"; index=indexed?requested:-1;
+            if(indexed && !run->individual_tool.isEmpty() && index!=individual_member_index(run))return false;
         } else if (step.target.startsWith("peak.")) groupName="group.peak";
         else if (step.target.startsWith("instrument.")) groupName="group.instrument";
         else return false;
@@ -7081,21 +7091,21 @@ struct AssistantViewModel::State {
         auto* table=tableName.isEmpty() ? nullptr : create_widget_named(run,tableName);
         if (!table || index<0 || index>=table->property("count").toLongLong() || ++run->reveal_steps>64) return false;
         if (!widget_input->usableTarget(*table)) { create_widget_reveal(run,table); return true; }
-        const double y=table->property("contentY").toDouble(), height=table->property("tableRowHeight").toDouble();
-        if (!std::isfinite(y) || !std::isfinite(height) || height<=0) return false;
-        const QPointer<QQuickItem> original(table);
-        AssistantWidgetInput::Request input; input.kind=AssistantWidgetInput::Kind::Scroll;input.target=table;
-        input.scrollDirection=index*height<y ? 1 : -1;
-        input.current=[this,run,original] { return original && create_widget_current(run); };
-        input.prepareCommit=[] { return true; };input.finishCommit=[] {};
-        input.completed=[this,run,original,y](bool delivered,const QString& message) {
-            if (!create_widget_owned(run)) return;
-            try {
-                if (!delivered || !original || original->property("contentY").toDouble()==y) { create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message, false, "reveal-completion", int(delivered), int(bool(original)));return; }
-                QTimer::singleShot(500,&owner,[this,run] { if (!create_widget_current(run)) return; try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error, false, "reveal-next-catch"); } });
-            } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run,widget_outcome_error, false, "reveal-catch"); }
-        };
-        widget_input->start(std::move(input));return true;
+        const QPointer<QQuickItem> original(table);const auto receiver=run->receiver;
+        const QPointer<QObject> source(table->property("sourceModel").value<QObject*>());
+        const int row=static_cast<int>(index);bool revealed=false;
+        const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,row));
+        if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return true;
+        if(!invoked || !revealed || !original || !source || !create_widget_current(run) ||
+            create_widget_named(run,tableName)!=original || original->property("sourceModel").value<QObject*>()!=source ||
+            index>=original->property("count").toLongLong()) {
+            create_widget_refuse(run,widget_outcome_error,false,"reveal-completion");return true;
+        }
+        // This replaces the original reveal completion timer; no new pacing or owner.
+        QTimer::singleShot(500,&owner,[this,run] {
+            if(!create_widget_current(run))return;
+            try{create_widget_next(run);}catch(...){if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"reveal-next-catch");}
+        });return true;
     }
     void create_widget_next(const std::shared_ptr<NativeCreateWidget>& run) {
         if (!create_widget_current(run) || !widget_input) { create_widget_refuse(run, widget_outcome_error, false, "next-current"); return; }
