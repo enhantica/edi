@@ -150,7 +150,7 @@ EaElements.StatusBar {
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
         implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-            + assistantArea.implicitWidth + (speedButton.visible ? gap + speedButton.implicitWidth : 0)
+            + assistantArea.implicitWidth
             + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
@@ -173,88 +173,11 @@ EaElements.StatusBar {
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
             width: Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-                - (speedButton.visible ? assistantGroup.gap + speedButton.width : 0)
                 - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
             anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
             anchors.verticalCenter: parent.verticalCenter
-        }
-        EaElements.ToolButton {
-            id: speedButton
-            objectName: "assistant.actionSpeed"
-            visible: (assistantArea.working || assistantGroup.stopShown) && Session.assistant.showActions
-            implicitWidth: assistantGroup.buttonExtent
-            implicitHeight: implicitWidth
-            padding: 0
-            anchors.right: visibleStop.visible ? visibleStop.left : parent.right
-            anchors.rightMargin: visibleStop.visible ? assistantGroup.gap : 0
-            anchors.verticalCenter: parent.verticalCenter
-            text: "x" + Session.assistant.actionSpeed
-            onClicked: speedMenu.open()
-            onVisibleChanged: if (!visible) speedMenu.close()
-            background: Rectangle {
-                implicitWidth: assistantGroup.buttonExtent
-                implicitHeight: implicitWidth
-                width: assistantGroup.buttonExtent
-                height: width
-                anchors.centerIn: parent
-                radius: width / 2
-                color: EaStyle.Colors.contentBackground
-                border.width: 0
-            }
-            contentItem: EaElements.Label {
-                text: speedButton.text
-                font.pixelSize: assistantGroup.buttonExtent * 0.55
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                color: speedButton.foregroundColor()
-            }
-            ToolTip.text: qsTr("Show actions speed: %1").arg(text)
-            Accessible.name: ToolTip.text
-            EaElements.Menu {
-                id: speedMenu
-                objectName: "assistant.actionSpeed.menu"
-                x: parent.width - width
-                y: -height - AppSizes.unit * 0.5
-                onAboutToShow: Session.assistant.setActionSpeedMenu(speedMenu, true)
-                onClosed: Session.assistant.setActionSpeedMenu(speedMenu, false)
-                EaElements.MenuItem {
-                    text: "x1"
-                    checkable: true
-                    autoExclusive: true
-                    checked: Session.assistant.actionSpeed === 1
-                    onTriggered: Session.assistant.actionSpeed = 1
-                }
-                EaElements.MenuItem {
-                    text: "x2"
-                    checkable: true
-                    autoExclusive: true
-                    checked: Session.assistant.actionSpeed === 2
-                    onTriggered: Session.assistant.actionSpeed = 2
-                }
-                EaElements.MenuItem {
-                    text: "x3"
-                    checkable: true
-                    autoExclusive: true
-                    checked: Session.assistant.actionSpeed === 3
-                    onTriggered: Session.assistant.actionSpeed = 3
-                }
-                EaElements.MenuItem {
-                    text: "x5"
-                    checkable: true
-                    autoExclusive: true
-                    checked: Session.assistant.actionSpeed === 5
-                    onTriggered: Session.assistant.actionSpeed = 5
-                }
-                EaElements.MenuItem {
-                    text: "x10"
-                    checkable: true
-                    autoExclusive: true
-                    checked: Session.assistant.actionSpeed === 10
-                    onTriggered: Session.assistant.actionSpeed = 10
-                }
-            }
         }
         EaElements.ToolButton {
             id: visibleStop
@@ -274,7 +197,9 @@ EaElements.StatusBar {
                 anchors.centerIn: parent
                 radius: width / 2
                 color: EaStyle.Colors.contentBackground
-                border.width: 0
+                border.width: EaStyle.Sizes.borderThickness
+                border.color: EaStyle.Colors.appBarBorder
+                Behavior on border.color { EaAnimations.ThemeChange {} }
             }
             contentItem: EaElements.Label {
                 text: visibleStop.fontIcon
@@ -349,32 +274,39 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            return width + (shown - 1) * spacing;
+            return width + (shown - 1) * spacing - (statusItem.shown ? statusItem.leftPadding : 0);
         }
 
-        Rectangle {
-            id: rule
-            width: EaStyle.Sizes.borderThickness
-            height: EaStyle.Sizes.fontPixelSize * 1.5
+        Row {
+            // The clickable result keeps its original hover/hit padding. Only
+            // this leading gap compensates for that padding before the icon.
+            spacing: fitArea.spacing - statusItem.leftPadding
             anchors.verticalCenter: parent.verticalCenter
-            color: EaStyle.Colors.appBarBorder
-        }
-        // The last fit's outcome, in its colour.
-        FitStatusItem {
-            id: statusItem
-            objectName: "statusBar.fit.outcome"
-            readonly property string outcome: bar.fit ? bar.fit.outcome : ""
-            shown: fitArea.summary && outcome !== ""
-            showKey: bar.keysFit
-            keyIcon: FitOutcomes.icon(outcome)
-            keyText: qsTr("Status")
-            valueText: FitOutcomes.word(outcome)
-            iconColor: FitOutcomes.color(outcome)
-            valueColor: FitOutcomes.color(outcome)
-            // The last fit's results table, also for a project opened with one.
-            clickable: bar.fit !== null && bar.fit.results.count > 0
-            ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
-            onClicked: fitResultsDialog.open()
+
+            Rectangle {
+                id: rule
+                width: EaStyle.Sizes.borderThickness
+                height: EaStyle.Sizes.fontPixelSize * 1.5
+                anchors.verticalCenter: parent.verticalCenter
+                color: EaStyle.Colors.appBarBorder
+            }
+            // The last fit's outcome, in its colour.
+            FitStatusItem {
+                id: statusItem
+                objectName: "statusBar.fit.outcome"
+                readonly property string outcome: bar.fit ? bar.fit.outcome : ""
+                shown: fitArea.summary && outcome !== ""
+                showKey: bar.keysFit
+                keyIcon: FitOutcomes.icon(outcome)
+                keyText: qsTr("Status")
+                valueText: FitOutcomes.word(outcome)
+                iconColor: FitOutcomes.color(outcome)
+                valueColor: FitOutcomes.color(outcome)
+                // The last fit's results table, also for a project opened with one.
+                clickable: bar.fit !== null && bar.fit.results.count > 0
+                ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
+                onClicked: fitResultsDialog.open()
+            }
         }
         Row {
             objectName: "statusBar.fit.values"

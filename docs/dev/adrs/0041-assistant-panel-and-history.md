@@ -2028,3 +2028,25 @@ When fit and assistant groups coexist, the assistant's reserved area starts with
 the original fit rule's border width, height and color, with fitArea.spacing on
 both sides. Existing status-width accounting includes that reservation. No fit
 values, scrolling, animation, cancellation authority or status lifecycle changes.
+
+
+### Status outline and leading result gap (2026-10-19)
+
+The Stop outline uses the original status top-rule appBarBorder binding,
+original theme borderThickness and ThemeChange, inside its unchanged circle.
+The fit's clickable outcome keeps all original padding, hover frame and hit area.
+Only the original separator/outcome pair now shares a local Row whose spacing
+subtracts the outcome's leftPadding. This makes separator-to-icon layout spacing
+equal the existing assistant icon-to-separator fitArea.spacing instead of adding
+click padding to that gap. The same single compensation is subtracted by
+widthWith while the outcome is shown; all other fit spacing, values, status
+widths, circle/glyph sizes, menus, receivers, Stop and live pacing stay unchanged.
+
+
+The owner's later immediate-text ruling removes the speed button and its menu
+from this status bar entirely. Their width reservations and bindings are removed;
+the original Working cue and Stop receiver/manual-takeover state stay. Stop keeps
+the actual sidebar-logo circle extent, small proportional square, content fill
+and the top-rule outline above. This UI unit does not yet remove the C++ speed
+API/plumbing; the separate coherent immediate-text/no-speed unit retires those
+before the next complete build. No hidden speed-control UI remains here.
