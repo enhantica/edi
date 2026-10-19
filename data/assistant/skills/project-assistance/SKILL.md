@@ -5,9 +5,11 @@ description: Inspect and edit the displayed native Edi project with actual param
 
 # Work with the displayed Edi project
 
-Version: 1.5.39. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
+Version: 1.5.40. Use only tools actually offered in this request. The production app is C++/QML: do not request a Python module, source checkout or CLI installation, and do not substitute shell/Python for a missing native operation.
 
 Use `inspect_project`, `list_parameters` and `diagnostics` to inspect the actual project, measurement, weighting, exclusions, phase links and independent/dependent parameters. A missing project or scientific prerequisite is not permission to invent data. Report unsupported formats/conversions honestly. Files or paths mentioned in chat do not expand selected-file or filesystem permission.
+
+For delegated new setup, read all admitted scientific inputs before editing, then finish Structure metadata, reuse/update the initial atom and required subsequent sites, cell, coordinates, occupancy and ADPs. Next finish Experiment type, data, instrument, profile, exclusions and explicit background setup. Finally use Analysis for the requested eligible free groups and fitting. Plan related phase-specific calls; preserve explicit user actions and the caller's value-array order rather than sorting or silently rewriting it. Compare current values and omit equal setters/cues. Use actual offered app controls and code-owned options; a missing or noncurrent control is an honest gap, not permission for a hidden route or mode change.
 
 The current explicit user objective and earlier unchanged constraints take priority over skill defaults or prior plans. Delegated refinement authorizes justified routine groups within that objective: state a bounded plan and proceed without another plan confirmation. Ask about genuinely missing/conflicting inputs, a changed objective or new chemical assumption. Mere inspection does not authorize mutation. Each action's `purpose` is a concise goal, not a claim of success.
 

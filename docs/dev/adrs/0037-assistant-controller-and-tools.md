@@ -1545,3 +1545,26 @@ callback calls the same ordinary app method and validates actual receipts/member
 state. OFF/no-op/owner/currentness/Stop/once/Undo behavior is unchanged. This closes
 a deterministic malformed cue request at the observed preparation frontier,
 not a new authorization/allowance or proof of provider sign-out causality.
+
+
+### Ordinary setup controls follow their actual workflow pages
+
+The existing parameter cursor owns the FIRST Structure cell and Instrument routes.
+It also binds the current Structure's original site coordinate/occupancy and ADP
+row roles, and the current Experiment's original profile, background intensity/term
+and linked-scale roles. Scalar and array entries use the same category routing and
+current registry/member/model checks. A table row not yet instantiated is revealed
+through its original DataTable.revealRow against the exact source and row; the
+subsequent cue still resolves the same canonical ParameterItem. No first-visible
+row, Analysis fallback, hidden setter or scientific event input is introduced.
+Original native validation and ordinary value setters/Undo remain authoritative.
+
+Free flags/groups and fits stay on Analysis. Equal entries need no navigation or
+setter. Normal value arrays retain their prevalidated atomic Edit/Undo and caller
+order; their final page follows the last changed requested member, without
+pretending an atomic array has separate visible per-entry transactions. A delegated
+setup strategy plans Structure first, Experiment second, then Analysis release/fit;
+it never sorts an explicit request or imposes phase permission. Genuine unavailable
+controls, current-member changes and stale callbacks still refuse with actual
+partial facts. This routing change does not establish the cause or cure of the
+separate owner x5 Main-sidebar refusal.

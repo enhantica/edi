@@ -18,6 +18,7 @@
 #include <QVariant>
 #include <QScopeGuard>
 #include <array>
+#include <initializer_list>
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
@@ -2038,6 +2039,47 @@ struct AssistantViewModel::State {
         }
         return found;
     }
+    static QString widget_parameter_tab(const ParameterItem& parameter, const QString& tool) {
+        if(tool=="set_free")return QStringLiteral("appBar.tab.analysis");
+        const auto category=parameter.category();
+        if(category=="cell" || category=="atom_site" || category=="atom_site_aniso")return QStringLiteral("appBar.tab.structure");
+        if(category=="instrument" || category=="peak" || category=="background" || category=="linked_structure")return QStringLiteral("appBar.tab.experiment");
+        return QStringLiteral("appBar.tab.analysis");
+    }
+    std::pair<QObject*,int> widget_parameter_editor(const QString& tab, const ParameterItem* parameter) const {
+        if(!project || !parameter)return {};
+        const auto row_member=[&](RowTableModel* rows, std::initializer_list<const char*> roles)->std::pair<QObject*,int> {
+            for(int row=0;rows && row<rows->rowCount();++row)
+                for(const auto* role:roles)
+                    if(rows->item(row,QString::fromLatin1(role))==parameter)return {rows,row};
+            return {};
+        };
+        if(tab=="appBar.tab.structure") {
+            auto* view=project->currentStructure();
+            if(!view || !project->structureModels().contains(view))return {};
+            bool owned=false;
+            for(const auto& structure:project->assistantProject()->structures)if(structure.get()==view->structure())owned=true;
+            if(!owned)return {};
+            auto* cell=view->cell();
+            if(cell && (cell->lengthA()==parameter || cell->lengthB()==parameter || cell->lengthC()==parameter ||
+                cell->angleAlpha()==parameter || cell->angleBeta()==parameter || cell->angleGamma()==parameter))return {cell,-1};
+            if(auto found=row_member(view->atomSites(),{"fractX","fractY","fractZ","occupancy"});found.first)return found;
+            return row_member(view->atomSiteAdps(),{"adpIso","ani11","ani22","ani33","ani12","ani13","ani23"});
+        }
+        if(tab=="appBar.tab.experiment") {
+            auto* view=project->currentExperiment();
+            if(!view || !project->experimentModels().contains(view))return {};
+            bool owned=false;
+            for(const auto& experiment:project->assistantProject()->experiments)if(experiment.get()==view->experiment())owned=true;
+            if(!owned)return {};
+            for(auto* fields:{view->instrument(),view->peakBackToBack(),view->peakGaussian(),view->peakLorentzian(),view->peakOther(),view->peakAsymmetry()})
+                if(auto found=row_member(fields,{"parameter"});found.first)return found;
+            if(auto found=row_member(view->background(),{"intensity"});found.first)return found;
+            if(auto found=row_member(view->backgroundTerms(),{"coef"});found.first)return found;
+            return row_member(view->linkedStructures(),{"scale"});
+        }
+        return {};
+    }
     bool widget_parameter_binding_current(const NativeWidget::ParameterEntry& entry) const {
         if (!project || !entry.registry || !entry.model || !entry.parameter || !entry.member ||
             widget_parameter_registry()!=entry.registry || entry.parameter->parent()!=entry.registry ||
@@ -2050,37 +2092,8 @@ struct AssistantViewModel::State {
                 if (table->item(row,QStringLiteral("parameter"))==entry.parameter) return true;
             return false;
         }
-        if (entry.tab=="appBar.tab.experiment") {
-            auto* view=project->currentExperiment();
-            if (!view || !project->experimentModels().contains(view)) return false;
-            bool native_owner=false;
-            for (const auto& experiment:project->assistantProject()->experiments)
-                if (experiment.get()==view->experiment()) native_owner=true;
-            const auto* fields=view->instrument();
-            if (!native_owner || !fields || entry.model!=fields) return false;
-            for (int row=0;row<fields->count();++row) {
-                if (fields->item(row,QStringLiteral("parameter"))!=entry.parameter) continue;
-                // Same semantic visibility as the FIRST ParameterGrid delegate:
-                // an explicitly free inert field still is NOT an Instrument input.
-                const auto used=fields->get(row,QStringLiteral("usedByProfile"));
-                return used.metaType().id()==QMetaType::Bool && used.toBool();
-            }
-            return false;
-        }
-        if (entry.tab=="appBar.tab.structure") {
-            auto* view=project->currentStructure();
-            if (!view || !project->structureModels().contains(view)) return false;
-            const edi::Structure* native=nullptr;
-            for (const auto& structure:project->assistantProject()->structures)
-                if (structure.get()==view->structure()) native=structure.get();
-            const auto* cell=view->cell();
-            if (!native || !cell || entry.model!=cell) return false;
-            const std::array<std::pair<ParameterItem*,const edi::Parameter*>,6> fields{{
-                {cell->lengthA(),&native->cell.length_a},{cell->lengthB(),&native->cell.length_b},
-                {cell->lengthC(),&native->cell.length_c},{cell->angleAlpha(),&native->cell.angle_alpha},
-                {cell->angleBeta(),&native->cell.angle_beta},{cell->angleGamma(),&native->cell.angle_gamma}}};
-            for (const auto& field:fields) if (field.first==entry.parameter && field.second==entry.member) return true;
-        }
+        if(entry.tab=="appBar.tab.structure" || entry.tab=="appBar.tab.experiment")
+            return widget_parameter_editor(entry.tab,entry.parameter).first==entry.model;
         return false;
     }
     bool widget_parameter_bind(NativeWidget::ParameterEntry& entry, const QString& path, const QString& tool) const {
@@ -2095,12 +2108,8 @@ struct AssistantViewModel::State {
         }
         if (!found) return false;
         entry.registry=registry;entry.parameter=found;entry.member=found->parameter();entry.path=path;
-        entry.tab=tool=="set_free"?QStringLiteral("appBar.tab.analysis"):
-            found->category()=="instrument"?QStringLiteral("appBar.tab.experiment"):
-            found->category()=="cell"?QStringLiteral("appBar.tab.structure"):QStringLiteral("appBar.tab.analysis");
-        entry.model=entry.tab=="appBar.tab.analysis"?static_cast<QObject*>(project->parameters()):
-            entry.tab=="appBar.tab.experiment" && project->currentExperiment()?static_cast<QObject*>(project->currentExperiment()->instrument()):
-            entry.tab=="appBar.tab.structure" && project->currentStructure()?static_cast<QObject*>(project->currentStructure()->cell()):nullptr;
+        entry.tab=widget_parameter_tab(*found,tool);
+        entry.model=entry.tab=="appBar.tab.analysis"?static_cast<QObject*>(project->parameters()):widget_parameter_editor(entry.tab,found).first;
         return widget_parameter_binding_current(entry);
     }
     void widget_parameter_track(const std::shared_ptr<NativeWidget>& run) {
@@ -2814,7 +2823,8 @@ struct AssistantViewModel::State {
                 const auto name = item->objectName();
                 const bool relevant = run->tool == "set_free" ? name.startsWith("parameters.free.")
                     : run->tab == "appBar.tab.analysis" ? name.startsWith("parameters.value.")
-                    : run->tab == "appBar.tab.structure" ? name.startsWith("cell.") : name.startsWith("instrument.");
+                    : run->tab == "appBar.tab.structure" ? (name.startsWith("cell.") || name.startsWith("atomSite.") || name.startsWith("atomSiteAdp."))
+                    : (name.startsWith("instrument.") || name.startsWith("peak.") || name.startsWith("background.") || name.startsWith("linkedStructure."));
                 if (!relevant) return;
                 QVariant diagnostic_property;
                 if (!original_property) {
@@ -2895,7 +2905,10 @@ struct AssistantViewModel::State {
                         }
                     }
                 } else {
-                    if (!item->objectName().startsWith("instrument.") && !item->objectName().startsWith("cell.") && !item->objectName().startsWith("parameters.value.")) continue;
+                    if (!item->objectName().startsWith("instrument.") && !item->objectName().startsWith("peak.") &&
+                        !item->objectName().startsWith("background.") && !item->objectName().startsWith("linkedStructure.") &&
+                        !item->objectName().startsWith("cell.") && !item->objectName().startsWith("atomSite.") &&
+                        !item->objectName().startsWith("atomSiteAdp.") && !item->objectName().startsWith("parameters.value.")) continue;
                     property_owner = item;
                     parameter_property = item->property("item");
                     converted_parameter = parameter_property.value<QObject*>();
@@ -2920,7 +2933,7 @@ struct AssistantViewModel::State {
             }
         }
         if (!target) {
-            if(run->tab=="appBar.tab.analysis" && run->parameter) {widget_scroll_parameter(run);return;}
+            if(run->parameter) {widget_scroll_parameter(run);return;}
             widget_refuse(run, QObject::tr("This exact native parameter/control is not exposed by the current page, selection or filters")); return;
         }
         if (run->tab != "appBar.tab.analysis" && !widget_reveal_parameter(run, target)) return;
@@ -3101,17 +3114,46 @@ struct AssistantViewModel::State {
     void widget_scroll_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if(!widget_entry_current(run,entry) || !widget_input || ++run->reveal_steps>64){widget_refuse(run,widget_outcome_error);return;}
-        const QPointer<QQuickItem> table(widget_named("parameters.list"));
-        const QPointer<ParameterFilterModel> filter(table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr);
-        const auto row=filter?filter->rowOf(run->parameter):-1;
-        if(!table || !filter || filter->sourceModel()!=run->project->parameters() || row<0){widget_refuse(run,widget_outcome_error);return;}
+        QPointer<QQuickItem> table;
+        QPointer<ParameterFilterModel> filter;
+        QPointer<QObject> source;
+        int row=-1;
+        if(run->tab=="appBar.tab.analysis") {
+            table=widget_named("parameters.list");
+            filter=table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
+            row=filter?filter->rowOf(run->parameter):-1;
+            if(!table || !filter || filter->sourceModel()!=run->project->parameters() || row<0){widget_refuse(run,widget_outcome_error);return;}
+            source=filter;
+        } else {
+            const auto editor=widget_parameter_editor(run->tab,run->parameter);
+            if(!entry || !editor.first || editor.first!=entry->model || editor.second<0){widget_refuse(run,widget_outcome_error);return;}
+            source=editor.first;row=editor.second;
+            const QString sidebar=QStringLiteral("workflow.")+run->tab.mid(11)+QStringLiteral(".manualSidebar");
+            for(auto* item:widget_items()) {
+                const auto name=item->objectName();
+                if(name!="atomSites.list" && name!="atomSiteAdps.list" && name!="background.list" && name!="background.terms" && name!="linkedStructure.list")continue;
+                if(item->window()!=run->window || item->property("sourceModel").value<QObject*>()!=source)continue;
+                bool scoped=false,other_tier=false;
+                for(auto* ancestor=item->parentItem();ancestor;ancestor=ancestor->parentItem()) {
+                    if(ancestor->objectName()==sidebar)scoped=true;
+                    const auto tier=ancestor->property("shownTier");
+                    if(tier.isValid() && tier.toString()!="Basic")other_tier=true;
+                }
+                if(!scoped || other_tier)continue;
+                if(table){widget_refuse(run,widget_outcome_error);return;}
+                table=item;
+            }
+            if(!table){widget_refuse(run,widget_outcome_error);return;}
+        }
         if(!widget_reveal_parameter(run,table))return;
         const auto receiver=run->receiver;
         bool revealed=false;
         const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,row));
         if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
-        if(!invoked || !revealed || !table || !filter || !widget_entry_current(run,entry) ||
-            widget_named("parameters.list")!=table || filter->sourceModel()!=run->project->parameters() || filter->rowOf(run->parameter)!=row) {
+        if(!invoked || !revealed || !table || !source || !widget_entry_current(run,entry) ||
+            table->property("sourceModel").value<QObject*>()!=source ||
+            (run->tab=="appBar.tab.analysis"?(!filter || filter->sourceModel()!=run->project->parameters() || filter->rowOf(run->parameter)!=row):
+                widget_parameter_editor(run->tab,run->parameter)!=std::pair<QObject*,int>{source.data(),row})) {
             widget_refuse(run,widget_outcome_error);return;
         }
         auto next=[this,run,entry] {
@@ -3945,9 +3987,7 @@ struct AssistantViewModel::State {
                 return;
             }
             run->valueText.clear();
-            run->tab = tool == "set_free" ? "appBar.tab.analysis"
-                : run->parameter->category() == "instrument" ? "appBar.tab.experiment"
-                : run->parameter->category() == "cell" ? "appBar.tab.structure" : "appBar.tab.analysis";
+            run->tab = run->scalar_entry.tab;
             }
         } else run->tab = "appBar.tab.analysis";
         if (run->parameter && run->tab == "appBar.tab.analysis") {
@@ -3986,17 +4026,24 @@ struct AssistantViewModel::State {
         else if (structure_app_action(tool) || tool=="load_structure") page = "structure";
         else if (tool=="create_experiment" || tool=="set_experiment_type" || tool=="load_data" || tool=="edit_background" || tool=="edit_experiment") page = "experiment";
         else if (tool == "set_parameters") {
-            page = "analysis";
-            const auto values = args.value("values").toArray();
-            if (values.size() == 1) {
-                const auto path = values[0].toObject().value("path").toString();
-                for (auto* parameter : project->findChildren<ParameterItem*>()) if (parameter->path() == path) {
-                    if (parameter->category() == "instrument") page = "experiment";
-                    else if (parameter->category() == "cell") page = "structure";
-                    break;
+            const auto values=args.value("values").toArray();
+            auto* registry=widget_parameter_registry();
+            if(!registry || values.isEmpty())throw std::runtime_error("The current parameter routes are unavailable");
+            // Normal mode retains its one prevalidated atomic Edit. Its final
+            // page follows the last changed requested member, without reordering writes.
+            for(const auto& value:values) {
+                const auto path=value.toObject().value("path").toString();
+                ParameterItem* found=nullptr;
+                for(auto* parameter:registry->items())if(parameter && parameter->path()==path && registry->find(parameter->parameter())==parameter) {
+                    if(found)throw std::runtime_error("The requested parameter route is ambiguous");
+                    found=parameter;
                 }
+                if(!found)throw std::runtime_error("The requested parameter route is unavailable");
+                if(found->parameter()->value.get()==value.toObject().value("value").toDouble())continue;
+                page=widget_parameter_tab(*found,tool).mid(11);
             }
         } else return true; // Inspection/saving retain the page; creation has its own adoption.
+        if(page.isEmpty())return true; // Equal values require no page navigation.
         if (widget_input && widget_input->manualDraftPresent())
             throw std::runtime_error("Finish the current manual input before assistant page navigation");
         const auto original = *native_call;
@@ -8989,6 +9036,7 @@ struct AssistantViewModel::State {
         params["developerInstructions"] = QStringLiteral(
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. Current owned saving calls the same ordinary app Save as the manual toolbar. For successful ordinary saved=true and active=true without failure or uncertainty, report 'Project saved.' Do not turn presentation_complete=false or reopened=false into unrequested UI-completion/reopen caveats, repeated saving or a calculation wait. Report genuine failure, uncertainty, owner change and explicitly requested verification truthfully. Fresh Save As retains its verified export/adoption.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations; report ordinary current-save success plainly and genuine failure, uncertainty or owner change honestly, without unrequested UI/reopen caveats. Keep explicitly requested verification and fresh Save As facts truthful; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. For current owned saving both modes call the same ordinary Session Save; Show actions gives only the existing visual pointer/click cue at Save, without a dispatched click or custom Save intent. An already-unmodified disabled Save button does not refuse that ordinary call. Fresh Save As retains the genuine Save control and original fresh-name form; do not change modes. Report actual ordinary saved/committed/current-owner facts without claiming separate reopen; never blindly repeat uncertain saving. No separate assistant export/recovery tree is created for current Save. Native report generation remains unavailable; offer [Open Report page](edi:report) for user-click navigation to the current project's existing enabled Report preview and ordinary export controls. Do not use desktop/CUA app discovery or app-name selection to locate Report controls. Offering the link does not itself open the page, generate or save a report, or select another installed application. "
+            "For a delegated new setup, read the admitted scientific inputs before edits and finish Structure metadata, sites, cell, coordinates, occupancy and ADPs before completing Experiment type/data/instrument/profile/exclusions/background, then use Analysis for requested free groups and fitting. Plan phase-specific calls and retain explicit caller order inside every array; do not interleave phases for convenience or reorder supplied actions. Numeric setup routes use the original current Structure/Experiment controls where offered, while free flags and fits use Analysis. Normal set_parameters retains one atomic Edit/Undo; a mixed-page array finishes on its last changed requested member page, without separate visual transactions. Missing/noncurrent controls and unsupported settings remain explicit, never a route fallback. "
             "When offered, create_structure invokes ordinary app Create and returns ONE actual initial atom. Reuse/update that actual first atom for the first target site, append only subsequent required atoms through edit_atom, and change only differing stored defaults. edit_structure changes one original name/symmetry setter; edit_atom changes one original row text/ADP-type operation. Use actual returned IDs, existing parameter tools for numeric/free values, and code-owned schemas/options. Interpret admitted attached text; do not synthesize a CIF, parser/converter or an importer. Equal canonical values skip cues/setters/Undo. Both modes use the same ordinary app methods; ON adds genuine original navigation/reveal and visual-only cues, not scientific keyboard writes. Unresolved symmetry/defaults are not scientific success, and uncertain writes must not be replayed. "
             "When edit_experiment is offered, use its code-owned options for one ordinary profile or exclusion-row operation on the actual experiment ID. A profile change can engage/drop optional settings; inspect actual values afterward. Append exclusions with ordinary generated IDs/default bounds, then set the requested literal bounds or explicitly remove an actual row. Both modes use the same app methods and Undo; ON adds only original navigation/reveal/visual cues. Equal canonical values skip setter/cue/history; unavailable exact targets or uncertain publication refuse honestly. No absorption, weighting, links, calibration or conversion is implied by this action. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
