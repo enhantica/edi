@@ -538,7 +538,7 @@
 +
 +pub const SCHEMA: &str = "edi.runtime-policy/1";
 +pub const FLAVOUR: &str = "edi-app-server/1";
-+const NAMES: &[&str] = &["inspect_project", "list_parameters", "diagnostics", "set_parameters", "set_free", "run_fit", "create_cwl_project", "acquire_inputs", "save_project", "add_relations", "edit_background", "load_structure", "create_experiment", "set_experiment_type", "load_data", "read_selected_file", "create_structure", "edit_structure", "edit_atom", "edit_experiment"];
++const NAMES: &[&str] = &["inspect_project", "list_parameters", "diagnostics", "set_parameters", "set_free", "run_fit", "create_cwl_project", "acquire_inputs", "save_project", "add_relations", "edit_relation", "edit_background", "load_structure", "create_experiment", "set_experiment_type", "load_data", "read_selected_file", "create_structure", "edit_structure", "edit_atom", "edit_experiment"];
 +
 +pub(crate) struct EdiTurnCeiling(pub Arc<EdiCeiling>);
 +

@@ -192,3 +192,27 @@ introduced. Existing malformed-relation refusal, writer rounding, saved-state ad
 currentness, physical publication and Undo remain their original owners. No parameter
 value or uncertainty is recomputed here, and no material-specific scientific rule,
 serializer or post-load covariance reconstruction is added.
+
+
+### Explicit existing-row app action
+
+The app-only edit_relation action addresses one actual current alias or constraint
+by ID and a closed operation. It reuses the FIRST AliasListModel/ConstraintListModel
+setText, setEnabled and remove methods, shared apply_relation_control and recorded
+Undo in both modes. Only AliasRemove/ConstraintRemove semantic metadata is added
+at the original manual remove entrances so the same matched consumed/application
+receipt owns deletion before model callbacks. No-op stored values skip the method,
+cue and history. A deleted member is never dereferenced for its result.
+
+The original io.cpp parameter_slots spelling supplies a bounded single-member
+name lookup for an explicitly requested parameter path. Lazy original spelling
+expressions skip all unrelated member formatting and the lookup retains one slot;
+ordinary full walker callers keep their order/member/spelling semantics. A common
+checked preparation bound owns the finite transient/retained logical strings. No
+second naming grammar, expression parser or independent mutation engine exists.
+
+Original SDK validation can refuse a referenced rename/removal; the app does not
+automatically disable/drop/rewrite rules. Explicit current ID is not proof that an
+arbitrary default-named row belongs to an old run. add_relations stays append-only
+and unchanged. Actual applied/published/uncertain facts and ordinary Undo survive
+publication failure or interruption; no automatic recovery/replay is implied.

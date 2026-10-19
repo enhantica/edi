@@ -137,11 +137,11 @@ void AliasListModel::duplicate(int row) {
 }
 
 void AliasListModel::remove(int row) {
-    if (keyAt(row) == nullptr) {
-        return;
-    }
+    const auto* member=keyAt(row);
+    if (member == nullptr) return;
     edi::Project& project = project_;
-    editor_.apply_relation_edit(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)));
+    editor_.apply_relation_control(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)),
+        {ProjectEditor::RelationAction::Kind::AliasRemove,member});
 }
 
 // ---- ConstraintListModel ------------------------------------------------------------------------
@@ -216,11 +216,11 @@ void ConstraintListModel::duplicate(int row) {
 }
 
 void ConstraintListModel::remove(int row) {
-    if (keyAt(row) == nullptr) {
-        return;
-    }
+    const auto* member=keyAt(row);
+    if (member == nullptr) return;
     edi::Project& project = project_;
-    editor_.apply_relation_edit(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)));
+    editor_.apply_relation_control(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)),
+        {ProjectEditor::RelationAction::Kind::ConstraintRemove,member});
 }
 
 // ---- FitStartListModel --------------------------------------------------------------------------

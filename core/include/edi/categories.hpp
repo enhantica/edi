@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -298,6 +299,10 @@ struct NamedParameter {
     const Parameter* parameter = nullptr;
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
+// One exact member, formatted only by the FIRST writer slot walk. Callers own
+// this preparation bound through the lookup and output ownership transfer.
+std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes);
+std::optional<std::string> named_parameter(const Project& project,const Parameter* member,std::size_t maximum_name_bytes);
 
 // The dependents (each parameter a relation sets), by unique name, in the slot walk's order.
 std::vector<NamedParameter> named_dependents(const Project& project);

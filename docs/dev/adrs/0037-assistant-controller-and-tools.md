@@ -1687,3 +1687,22 @@ shared request key remains retained until matching release before removal. No
 new timer/controller, deadline preference, timeout increase, retry, scientific
 write/Undo or ordinary Save workflow is introduced. Source proof does not identify
 which clock expired in the old owner run or claim a new native pass.
+
+
+### Explicit ordinary relation-row adapter
+
+Prior art is ADR0024 shared manual relation setters/removal and NativeWidget
+Analysis Extra relation navigation/reveal/cues. One finite edit_relation action
+reuses those same ordinary methods and matched PVM receipt in both modes, with
+ON adding visual-only exact-control cues. Changed-only admission precedes any
+page/cue, and deletion uses captured ID plus exact membership/absence checks, not
+a post-delete dereference or a replacement row. Existing currentness/manual draft/
+OnlyStop/once and ordinary recorded Undo remain authoritative. Returned relation_id
+is a confirmed resulting identity only; partial/uncertain effects do not certify it.
+
+Schema/names/classification/dispatch/static and full catalogue/pre-growth roles,
+closed relation result field and removal/error maxima advance together. The same
+app advertisement and dedicated NAMES list change; their real sourcePatchSha256
+package/executable proof must be rebuilt before new dedicated advertisement is
+qualified. No old package is relabelled or guard waived. Native app actions are
+not copied into the restricted core skill capability registry.

@@ -42,7 +42,7 @@ class ProjectEditor {
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.
     struct RelationAction {
-        enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled };
+        enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled, AliasRemove, ConstraintRemove };
         Kind kind = Kind::Other;
         const void* row = nullptr;
         QString text;

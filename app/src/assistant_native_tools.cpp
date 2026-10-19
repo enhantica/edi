@@ -12,6 +12,7 @@
 #include "edi/assistant_limits.hpp"
 #include "edi/assistant_files.hpp"
 #include <QSet>
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 namespace edi_app {
@@ -96,6 +97,9 @@ QJsonArray native_tool_specs(bool include_profiles) {
         {{"destination", Object{{"type","string"},{"enum",Array{"fresh","current"}},{"description","Omit to save an already-owned Session directory, ignoring any unused fresh name; without one, omission uses fresh Save As. fresh explicitly requests Save As. current requires an owned directory and forbids name/path."}}},
          {"name", Object{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(edi::assistant::SelectedFileLimits::name_bytes)},
             {"description","Suggested fresh project directory basename for the one-operation original Save As chooser; spaces and Unicode are supported within the shared 512 UTF-8-byte Save As limit. No separators, dot components, NUL, trailing dot/space or existing destination. A chat path never grants access. Required only when a fresh destination is used; ignored for omitted destination with an owned directory, and forbidden for explicit current."}}}}, {});
+    tools.append(Object{{"type","function"},{"name","edit_relation"},
+        {"description","Edit ONE explicitly identified existing alias or constraint through its original app setter/remove, using actual current IDs and offered parameter paths. Rename returns the actual resulting ID. Existing relations/composition remain authoritative; validation may refuse a rename/removal referenced by enabled constraints. No automatic repair or expression rewriting. Equal stored values skip setter/cue/Undo. Both modes use the same ordinary method and recorded Undo; Show actions adds original Analysis Extra navigation/reveal/cue only. Preserve actual applied/published/partial/currentness facts and never replay uncertain edits. Does not append or infer ownership from default names."},
+        {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"oneOf":[{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["alias_rename"]},"value":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."}},"required":["purpose","id","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["alias_target"]},"value":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."}},"required":["purpose","id","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["alias_remove"]}},"required":["purpose","id","operation"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["constraint_rename"]},"value":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."}},"required":["purpose","id","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["constraint_expression"]},"value":{"type":"string","maxLength":1048576,"description":"Literal original single-line expression; empty is admitted only if the shared validator accepts it for the current row. Existing 1 MiB context/UTF-8 and joint admission limits also apply; no parser in the app."}},"required":["purpose","id","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["constraint_enabled"]},"value":{"type":"boolean"}},"required":["purpose","id","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120,"description":"Concise goal, not success. Runtime limit: 120 UTF-16 units / 480 UTF-8 bytes; existing control restrictions."},"id":{"type":"string","minLength":1,"maxLength":256,"description":"Exact current ID or offered parameter path; strict Unicode, no NUL, at most existing 256 UTF-8 bytes."},"operation":{"type":"string","enum":["constraint_remove"]}},"required":["purpose","id","operation"],"additionalProperties":false}]})schema")).object()}});
     add("add_relations", "Append explicit affine alias/constraint declarations to the displayed project. Normal mode validates one atomic batch with one Undo; Show actions uses the existing Aliases/Constraints append, ID, parameter, expression and enable controls, each with its ordinary Undo. Visible interruption may leave actual partial edits, reported with complete/atomic/steps_completed facts. Existing relations/composition are preserved; this is not a trial or fit.",
         {{"aliases", Object{{"type", "array"}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"path", text}}, {"id", "path"})}}},
@@ -129,7 +133,7 @@ QJsonArray assistant_native_tool_names() {
     return {"inspect_project","list_parameters","diagnostics","set_parameters","set_free","run_fit",
         "create_cwl_project","load_structure","create_experiment","set_experiment_type","load_data",
         "read_selected_file","create_structure","edit_structure","edit_atom","edit_experiment",
-        "acquire_inputs","save_project","add_relations","edit_background"};
+        "acquire_inputs","save_project","add_relations","edit_relation","edit_background"};
 }
 quint64 assistant_native_tool_specs_preparation_bytes() {
     using Limits=edi::assistant::Limits;
@@ -171,7 +175,7 @@ QJsonArray assistant_native_tool_specs() {
 }
 bool assistant_native_tool(const QString& name) {
     return individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
-        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project" || name == "edit_background";
+        name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "edit_relation" || name == "save_project" || name == "edit_background";
 }
 QString assistant_native_purpose(const Object& args) {
     const auto value = args.value("purpose");
@@ -190,6 +194,33 @@ void assistant_native_arguments(const QString& name, const Object& args) {
             throw ActionRefusal("input_required","file_id");
         if((name=="load_data" || name=="set_experiment_type") && (!args.value("experiment").isString() || args.value("experiment").toString().isEmpty()))
             throw ActionRefusal("target_unavailable","experiment");
+    }
+    if(name=="edit_relation") {
+        const auto op=args.value("operation").toString();
+        const bool remove=op=="alias_remove" || op=="constraint_remove";
+        const bool enabled=op=="constraint_enabled";
+        const bool expression=op=="constraint_expression";
+        if(!remove && !enabled && !expression && op!="alias_rename" && op!="alias_target" && op!="constraint_rename")
+            throw std::invalid_argument("Unsupported native relation operation");
+        if(remove)shape(args,{"purpose","id","operation"});else shape(args,{"purpose","id","operation","value"});
+        const auto text=[](const QJsonValue& value,quint64 cap,bool empty) {
+            if(!value.isString())throw std::invalid_argument("Native relation text is unavailable");
+            const auto s=value.toString();
+            if((!empty && s.isEmpty()) || static_cast<quint64>(s.size())>cap ||
+                std::any_of(s.cbegin(),s.cend(),[](QChar c){return c.unicode()<32 || c.unicode()==127;}))
+                throw std::invalid_argument("Native relation text is unavailable");
+            quint64 encoded=0,bytes=0;
+            if(!codex_encoded_size(value,edi::assistant::Limits::request_bytes,encoded))throw std::invalid_argument("Native relation Unicode is unavailable");
+            for(qsizetype at=0;at<s.size();++at) {
+                const auto c=s[at].unicode();
+                bytes+=c<0x80?1:c<0x800?2:QChar::isHighSurrogate(c)?(++at,4):3;
+                if(bytes>cap)throw std::invalid_argument("Native relation text is unavailable");
+            }
+        };
+        text(args.value("id"),edi::assistant::Limits::id_bytes,false);
+        if(enabled) {if(!args.value("value").isBool())throw std::invalid_argument("Native relation flag must be boolean");}
+        else if(!remove)text(args.value("value"),expression?edi::assistant::Limits::context_bytes:edi::assistant::Limits::id_bytes,expression);
+        return;
     }
     if(name=="edit_experiment") {
         const auto id_ok=[](const QJsonValue& value) {
