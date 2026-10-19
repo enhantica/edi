@@ -3890,7 +3890,8 @@ struct AssistantViewModel::State {
         catch (...) { return "NONSTANDARD"; }
     }
     void native_failure(const char* stage, const char* role, quint64 bound, const char* reason,
-                        const NativeCall* call = nullptr, const Object* outcome = nullptr, int retired_fact = -1) noexcept {
+                        const NativeCall* call = nullptr, const Object* outcome = nullptr, int retired_fact = -1,
+                        const NativeSave* save = nullptr) noexcept {
         if (native_first_failure.stage) return;
         NativeFailure first;
         first.stage = stage; first.role = role; first.bound = bound; first.reason = reason;
@@ -3911,9 +3912,16 @@ struct AssistantViewModel::State {
         native_first_failure = first; // Preserve FIRST cause before notification or cleanup.
         // C stdio avoids callback-capable Qt message handlers at this failure boundary.
         // Every text operand above is an app-owned closed literal; no JSON is emitted.
-        std::fprintf(stderr, "Edi assistant retention first stage=%s class=%s role=%s bound=%llu may_have_written=%d applied=%d published=%d retired=%d outcome_ready=%d\n",
-            first.stage, first.reason, first.role, static_cast<unsigned long long>(first.bound),
-            int(first.may_have_written), first.applied, first.published, int(first.retired), int(first.outcome_ready));
+        if (save) {
+            std::fprintf(stderr, "Edi assistant retention first stage=%s class=%s role=%s bound=%llu may_have_written=%d applied=%d published=%d retired=%d outcome_ready=%d committed=%d reopened=%d active=%d presented=%d\n",
+                first.stage, first.reason, first.role, static_cast<unsigned long long>(first.bound),
+                int(first.may_have_written), first.applied, first.published, int(first.retired), int(first.outcome_ready),
+                int(save->committed), int(save->reopened), int(save->active), int(save->presented));
+        } else {
+            std::fprintf(stderr, "Edi assistant retention first stage=%s class=%s role=%s bound=%llu may_have_written=%d applied=%d published=%d retired=%d outcome_ready=%d\n",
+                first.stage, first.reason, first.role, static_cast<unsigned long long>(first.bound),
+                int(first.may_have_written), first.applied, first.published, int(first.retired), int(first.outcome_ready));
+        }
     }
     const QString native_capacity_error = QStringLiteral("The actual native outcome or complete project context is pending retention. Project state is preserved; clear the conversation before new work.");
     static QString native_key(const QString& thread, const QString& turn, const QString& call) {
@@ -5520,6 +5528,7 @@ struct AssistantViewModel::State {
             native_call->receipt==task->call.receipt && native_call->rpc==task->call.rpc;};
         const auto scope=native_settlement_scope(task->call);
         const auto release=[&]{if(receiver && receiver->state_.get()==this && native_save==task)native_save.reset();};
+        const char* save_stage="SAVE_ENTRANCE";
         try {
             if(!native_save_current(task) || !task->artifact) {
                 release();
@@ -5528,10 +5537,12 @@ struct AssistantViewModel::State {
                     QStringLiteral("Saving was cancelled or its original owner changed; no destination was published.")));
             } else {
                 {
+                    save_stage="SAVE_RECEIPT_PREPARE";
                     const auto parser_role=reserve_disclosure(AssistantResultExport::receiptPreparationBytes(task->artifact->receipt));
                     native_charge();
                     if(!receiver || receiver->state_.get()!=this)return;
                     if(!native_save_current(task))throw std::runtime_error("Save retired before export receipt preparation");
+                    save_stage="SAVE_EXPORT_PREPARE";
                     const auto export_limit=native_room();
                     quint64 export_bytes=export_limit;
                     disclosure_room(export_bytes);
@@ -5557,11 +5568,13 @@ struct AssistantViewModel::State {
                     disclosure_preparing_bytes-=export_bytes-prepared_export_bytes;
                     export_bytes=prepared_export_bytes; // Callback-free transfer; no unsafe reentrant charge lowering.
 
+                    save_stage="SAVE_PROGRESS_PREPARE";
                     task->recovery=output->recoveryDirectory();
                     native_save_prepare_progress(task);
                     native_charge();
                     if(!receiver || receiver->state_.get()!=this)return;
                     if(!native_save_current(task))throw std::runtime_error("Save retired before publication preparation");
+                    save_stage="SAVE_VALUES_PREPARE";
                     static_assert(Limits::stream_retained_bytes<=std::numeric_limits<std::size_t>::max());
                     const auto publication_limit=native_room();
                     const auto publication_role=reserve_disclosure(publication_limit);
@@ -5577,21 +5590,25 @@ struct AssistantViewModel::State {
                     }(); // The full rounded model is gone before disk publication or any UI callback.
                     task->calculation.reset();
                     if(!native_save_current(task))throw std::runtime_error("The save owner changed before publication");
+                    save_stage="SAVE_PUBLISH";
                     native_call->may_have_written=true;
                     try { output->publish([this,receiver,task]{return receiver && receiver->state_.get()==this && native_save_current(task);}); }
                     catch(...) {task->committed=output->committed();if(task->committed)native_save_latch(task,1);throw;}
                     task->committed=output->committed(); // Actual disk latch before fallible verification/publication.
                     if(task->committed)native_save_latch(task,1);
+                    save_stage="SAVE_REOPEN";
                     { auto reopened=output->reopen(); (void)reopened; } // Drop the verification model before adoption/signals.
                     task->reopened=true;native_save_latch(task,2);
                     if(!native_save_current(task))throw std::runtime_error("The save completed after its displayed owner changed");
                     // No own-edit suppression across synchronous presentation:
                     // genuine manual edits keep their normal retirement path.
+                    save_stage="SAVE_ADOPT";
                     if(!result_session()->commitAssistantCurrentSave(task->project,task->epoch,*ready))throw std::runtime_error("The saved current model could not be adopted");
                     task->active=true;native_save_latch(task,3);
                     task->call.may_have_written=true;
                     // Original task's actual state is established before observers;
                     // manual edits/replacement during presentation always win.
+                    save_stage="SAVE_PRESENT";
                     const bool session_presented=result_session()->presentAssistantCurrentSave(task->project,task->epoch);
                     if(!receiver)return;
                     if(receiver && task->project && original_call() && project==task->project &&
@@ -5599,6 +5616,7 @@ struct AssistantViewModel::State {
                         task->presented=task->project->presentNativeSaved(*ready) && session_presented;
                     if(!receiver)return;
                 } // ready/output and their parser/export/publication roles are gone before refresh.
+                save_stage="SAVE_FINISH";
                 release();
                 if(receiver && original_call())native_finish(true,native_save_outcome(*task,
                     task->presented?QStringLiteral("Saved, reopened and adopted as the active project."):
@@ -5606,6 +5624,9 @@ struct AssistantViewModel::State {
             }
         } catch(...) {
             if(!receiver)return;
+            // Original task facts before cleanup/fallback; no Qt callback or exception text.
+            // Zero is deliberately no attributed byte bound for this save phase.
+            if(original_call())native_failure(save_stage,"SAVE",0,native_failure_class(),&*native_call,nullptr,-1,task.get());
             release();
             if(receiver && original_call()) {
                 try {native_finish(task->active,native_save_outcome(*task,task->committed?
@@ -7097,7 +7118,7 @@ struct AssistantViewModel::State {
             if (create_widget_current(run)) create_widget_next(run);
         } catch (const ActionRefusal& failure) {
             if(receiver && receiver->state_.get()==this && create_widget_owned(run)) {
-                if(failure.error=="input_unavailable" && failure.field=="file_id")run->origin_unavailable=true;
+                if(std::string_view(failure.error)=="input_unavailable" && std::string_view(failure.field)=="file_id")run->origin_unavailable=true;
                 create_widget_refuse(run,run->origin_unavailable?QObject::tr("The original attached file changed or is unavailable"):widget_outcome_error, false, "creation-origin");
             }
         } catch (...) {
@@ -8677,7 +8698,7 @@ struct AssistantViewModel::State {
                     }
                     if(const auto* action=dynamic_cast<const ActionRefusal*>(&failure); action &&
                         (individual_app_action(params.value("tool").toString()) ||
-                         (params.value("tool")=="create_cwl_project" && action->error=="input_unavailable" && action->field=="file_id"))) {
+                         (params.value("tool")=="create_cwl_project" && std::string_view(action->error)=="input_unavailable" && std::string_view(action->field)=="file_id"))) {
                         outcome["action_error"]=action->error;outcome["action_field"]=action->field;
                     }
                     native_reply(id, false, outcome);

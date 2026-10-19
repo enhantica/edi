@@ -1974,3 +1974,8 @@ A still-current Load target records an unavailable original before either initia
 cue admission or later cue rejection can publish a generic control refusal. A retired
 target keeps its own retirement result. Compiled instructions describe the same
 visual-only assistant cue and original manual system dialog.
+
+
+### Sent-file delegate width lifetime
+
+The sent-file Repeater delegate measures against its named original Flow owner rather than dereferencing its transient visual parent. Removal or pooling can detach a delegate before destruction. The stable owner gives the same live width and wrapping limit throughout that transition, without adding implicit-size feedback, changing attachment history, or affecting pending-file removal. Other message widths belong to statically parented children; this change does not introduce a general layout wrapper or geometry override.

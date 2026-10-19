@@ -389,6 +389,7 @@ Rectangle {
             Accessible.name: visible ? (row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")) + ": " + row.text : ""
         }
         Flow {
+            id: sentFiles
             width: parent.width
             spacing: AppSizes.unit * 0.25
             visible: row.kind === "user" && row.status === "completed" && row.inputFiles.length > 0
@@ -397,7 +398,7 @@ Rectangle {
                 delegate: RowLayout {
                     required property var modelData
                     objectName: "assistant.sentFile." + modelData.id
-                    width: Math.min(implicitWidth, parent.width)
+                    width: Math.min(implicitWidth, sentFiles.width)
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.fillWidth: true

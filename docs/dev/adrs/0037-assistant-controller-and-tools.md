@@ -1338,3 +1338,10 @@ framework is introduced. VM receiver, owner, account, source, call and Session
 intent proofs remain independent requirements. Local transport failure is not
 provider account logout: reconnect still requires fresh disclosure and actual
 account reading, and never sets authenticated state merely to repair the UI.
+
+
+### Current-save completion first cause
+
+The existing native first-failure diagnostic also covers the original asynchronous Save completion before cleanup or fallback publication. Its closed stage identifies receipt preparation, bounded export construction, prepared progress, saved-value preparation, namespace publication, reopen, adoption, presentation or final response. The active exception is classified without its text. The same original call and receiver must still match; committed, reopened, active and presented are the task's existing factual latches, not inferred applied/published facts. The SAVE role's zero bound explicitly attributes no byte bound. Existing first-cause precedence and non-Save records remain unchanged. C stdio introduces no Qt message-handler callback, allocation, payload or path disclosure. This observation changes neither persistence nor the refusal/uncertainty outcome and does not establish a causal Save repair.
+
+Closed action-refusal labels are compared by text, including labels stored separately from their compiled literal. Pointer identity is not a semantic refusal predicate. Both original-file classification and public closed refusal projection retain their existing field/error mapping.
