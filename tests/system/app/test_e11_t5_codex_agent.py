@@ -9008,7 +9008,9 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     first592 = [line for line in result.stderr.splitlines()
                 if line.startswith('Edi assistant retention first ')]
     stages592 = {'SAVE_ENTRANCE', 'SAVE_RECEIPT_PREPARE', 'SAVE_EXPORT_PREPARE',
-                 'SAVE_PROGRESS_PREPARE', 'SAVE_VALUES_PREPARE', 'SAVE_PUBLISH',
+                 'SAVE_PROGRESS_PREPARE', 'SAVE_VALUES_PREPARE', 'SAVE_VALUES_ROOM',
+                 'SAVE_VALUES_ROLE', 'SAVE_VALUES_CHARGE', 'SAVE_VALUES_RELOAD',
+                 'SAVE_VALUES_METADATA', 'SAVE_PUBLISH',
                  'SAVE_REOPEN', 'SAVE_ADOPT', 'SAVE_PRESENT', 'SAVE_FINISH'}
     classes592 = {'ALLOCATION', 'CAPACITY', 'VALIDATION', 'STATE', 'EXCEPTION', 'NONSTANDARD'}
     diagnostic592 = None
