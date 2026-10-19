@@ -2979,6 +2979,8 @@ struct AssistantViewModel::State {
                 });
             } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         };
+        // Completed edits are counted; their receipts cannot settle a later control.
+        run->background_input.reset(); run->input.reset();
         widget_input->start(std::move(request));
     }
     void widget_background_next(const std::shared_ptr<NativeWidget>& run) {
@@ -3272,6 +3274,8 @@ struct AssistantViewModel::State {
             if (!widget_owned(run)) return;
             try { widget_relation_done(run, delivered, message); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         };
+        // A stop before prepareCommit has no receipt for this new control.
+        run->relation_input.reset();
         widget_input->start(std::move(request));
     }
     void widget_relation_begin(const std::shared_ptr<NativeWidget>& run) {

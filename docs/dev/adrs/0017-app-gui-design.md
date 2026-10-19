@@ -1333,3 +1333,17 @@ The existing optional `edi.assistant.widget.lookup` debug category also records 
 ### Declared text-control completion contracts
 
 Visible creation uses captureless local predicates in its existing entry point to derive the original three text `CreationAction` cases and match their canonical members. Both the initial no-write shortcut and final completion use the same canonical comparison; a QML value/draft cannot manufacture a no-op. Final-key preparation still occurs at its original time and uses the same expected kind/member/field/text/number contract. Completion uses the ORIGINAL input.expected and requires consumed/applied/published plus membership in the same live Session/PVM project; it never rebuilds or selects a replacement row. Canonical experiment names use non-owning UTF views and excluded-region bounds use exact equality to the already prepared number, without presentation rounding, spelling normalization, new parsing grammar or tolerance. The numeric suffix/value conversions are the existing control mapping; a string view avoids a temporary suffix allocation. `Kind::FormText` keeps genuine TextField/TextArea `text`. These fixed local predicates add no callback capture, retained state, public API or allocation. Original delivery/target survival, currentness/source proofs, typing/final-key behavior, Undo/once/refusal facts and all other control kinds remain authoritative.
+
+
+### Per-control receipt retirement in visible edit sequences
+
+The original relation and background sequences keep actual completed edits in
+`completed_steps`, with their ordinary Undo and partial outcomes. Before starting
+each subsequent real control request, they release the preceding control's
+relation/background/parameter receipt. A helper that stops before final-event
+preparation therefore has no consumed/applied receipt for that new control; it
+cannot recount the previous edit or use its publication as evidence. Preparation
+still installs the exact new action/member/value receipt immediately before the
+genuine final event. A new applied but unconfirmed edit remains factual even if
+delivery, publication or readback fails. No-op checks, currentness, actual model
+readback, input pacing, once-only completion and normal atomic edits are unchanged.
