@@ -66,7 +66,26 @@ EaComponents.ListView {
         view.positionViewAtIndex(index, ListView.Contain);
         if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
         view.forceLayout();
-        return Qt.isQtObject(view) && (!modelObject || Qt.isQtObject(originalModel)) && view.sourceModel === originalModel && index < view.count;
+        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
+        const row = view.itemAtIndex(index);
+        if (!Qt.isQtObject(row)) return false;
+        const header = view.headerItem;
+        const top = header ? Math.max(0, header.mapToItem(view, 0, 0).y + header.height) : 0;
+        let bounds = row.mapToItem(view, 0, 0, row.width, row.height);
+        if (!isFinite(bounds.y) || !isFinite(bounds.height) || bounds.height <= 0 || bounds.height > view.height - top) return false;
+        // Contain owns the ordinary positioning; an OverlayHeader is an actual
+        // occlusion within that viewport, not permission to expose half a row.
+        if (bounds.y < top) view.contentY -= top - bounds.y;
+        else if (bounds.y + bounds.height > view.height) view.contentY += bounds.y + bounds.height - view.height;
+        if (!Qt.isQtObject(view) || !Qt.isQtObject(row) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count || view.itemAtIndex(index) !== row) return false;
+        view.forceLayout();
+        if (!Qt.isQtObject(view) || !Qt.isQtObject(row) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count || view.itemAtIndex(index) !== row) return false;
+        bounds = row.mapToItem(view, 0, 0, row.width, row.height);
+        const currentHeader = view.headerItem;
+        const currentTop = currentHeader ? Math.max(0, currentHeader.mapToItem(view, 0, 0).y + currentHeader.height) : 0;
+        return isFinite(bounds.x) && isFinite(bounds.y) && isFinite(bounds.width) && isFinite(bounds.height)
+            && bounds.width > 0 && bounds.height > 0 && bounds.x >= 0 && bounds.x + bounds.width <= view.width
+            && bounds.y >= currentTop && bounds.y + bounds.height <= view.height;
     }
     // A retained control can exist just outside this table's clipping viewport.
     // Only an actual delegate owned by this view supplies its row index.

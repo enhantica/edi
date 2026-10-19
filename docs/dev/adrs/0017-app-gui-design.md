@@ -1501,3 +1501,32 @@ and deferred placement carry that identity through clear, native forceLayout and
 geometry notifications. A synchronous close/reopen of the same object cannot
 continue the old opening's positioning or focus; the fresh opening keeps its
 ordinary live placement and search focus. No second timer or controller is added.
+
+
+### Whole table row before a visible edit (2026-10-19)
+
+The original ListView deliberately shows a half row below its configured full
+rows. That remains a scroll affordance, not a sufficient admission test for an
+assistant edit: a control's center can be inside while the row is clipped. The
+original DataTable.revealRow/revealItem positions the exact live delegate with
+Contain, accounts for its actual overlay header, and verifies the whole row fits.
+A row larger than the available viewport, or an original model/delegate destroyed
+or replaced during synchronous layout/positioning, returns false rather than
+repeating reveal indefinitely. Manual selection and assistant reveal share this
+same view method; no selection, filter or scientific value is changed by reveal.
+
+Parameter/free, relation/background and creation row controls use that original
+view before input when their full row is not exposed. An outer scroll measures
+the whole row, retaining the original bounded real-scroll path and current-owner
+checks. Headers and non-row controls keep their original behavior. A parent may
+continue immediately only when actual synchronous positioning reports readiness,
+its original child cleanup leaves the same receiver/State/helper/parent/step,
+and the retained target's complete row is genuinely exposed. Otherwise the
+existing asynchronous continuation or explicit refusal remains. Layout being
+requested is never assumed to be layout completed; no timing increase, retry,
+force-focus, scientific setter, second controller or allowance is added.
+
+This closes the source-proved center-only half-row admission class. It does not
+identify every later menu/group/relations refusal, operation deadline or apparent
+authentication failure. Original owning runtime checks remain required; source
+and grammar checks alone are not native qualification.

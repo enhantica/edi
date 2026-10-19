@@ -2704,13 +2704,41 @@ struct AssistantViewModel::State {
         else if (run->tool == "add_relations") widget_relation_step(run);
         else widget_reach_parameter(run); // Preserve a live initial-parameter child too.
     }
+    static std::pair<QQuickItem*,QQuickItem*> widget_row_scope(QQuickItem* field) {
+        for(auto* table=field?field->parentItem():nullptr;table;table=table->parentItem()) {
+            if(!table->property("tableRowHeight").isValid() || !table->property("sourceModel").isValid())continue;
+            auto* content=table->property("contentItem").value<QQuickItem*>();
+            for(auto* row=field;row && row!=content;row=row->parentItem())
+                if(row->parentItem()==content) {
+                    const auto index=row->property("index");
+                    return index.metaType().id()==QMetaType::Int && index.toInt()>=0?std::pair{row,table}:std::pair<QQuickItem*,QQuickItem*>{};
+                }
+            return {};
+        }
+        return {};
+    }
+    static bool widget_full_row_visible(QQuickItem* field) {
+        const auto [row,table]=widget_row_scope(field);
+        if(!row)return true; // Headers and non-row controls keep their original checks.
+        if(!row->window() || row->width()<=0 || row->height()<=0)return false;
+        const QRectF bounds(0,0,row->width(),row->height());
+        const auto scene=row->mapRectToScene(bounds);
+        if(!std::isfinite(scene.x()) || !std::isfinite(scene.y()) || !std::isfinite(scene.width()) || !std::isfinite(scene.height()) ||
+            !QRectF(0,0,row->window()->width(),row->window()->height()).contains(scene))return false;
+        auto* header=table->property("headerItem").value<QQuickItem*>();
+        if(header && row->mapRectToItem(table,bounds).top()<header->mapRectToItem(table,QRectF(0,0,header->width(),header->height())).bottom())return false;
+        for(auto* ancestor=row;ancestor;ancestor=ancestor->parentItem())
+            if(!ancestor->isVisible() || !ancestor->isEnabled() || ancestor->opacity()<=0 ||
+                (ancestor->clip() && !ancestor->clipRect().contains(row->mapRectToItem(ancestor,bounds))))return false;
+        return true;
+    }
     bool widget_reveal_parameter(const std::shared_ptr<NativeWidget>& run, QQuickItem* field) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input || !field || field->window() != run->window ||
             !widget_page_selected(run) || widget_input->manualDraftPresent()) {
             widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
         }
-        QPointer<QQuickItem> wanted(field), group, viewport;
+        QPointer<QQuickItem> wanted(field), group, viewport, wholeRow;
         for (auto* a = field->parentItem(); a; a = a->parentItem()) {
             if (!group && a->property("collapsed").isValid() && a->objectName().startsWith("group.")) group = a;
             if (a->property("contentY").isValid() && a->property("contentHeight").isValid()) {
@@ -2732,7 +2760,32 @@ struct AssistantViewModel::State {
                 if (a->objectName().endsWith(".manualSidebar")) break;
             }
         }
-        if (widget_input->usableTarget(*wanted)) {
+        if(wanted==field && (!group || !group->property("collapsed").toBool())) {
+            const auto [row,table]=widget_row_scope(wanted);
+            wholeRow=row;
+            if(row && !widget_full_row_visible(wanted)) {
+                const auto receiver=run->receiver;
+                const QPointer<QQuickItem> originalTable(table);
+                const QPointer<QObject> source(table->property("sourceModel").value<QObject*>());
+                bool revealed=false;
+                const bool invoked=QMetaObject::invokeMethod(table,"revealItem",Qt::DirectConnection,
+                    Q_RETURN_ARG(bool,revealed),Q_ARG(QQuickItem*,wanted.data()));
+                if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return false;
+                if(!invoked || !revealed || !wanted || !wholeRow || !originalTable || !source ||
+                    originalTable->property("sourceModel").value<QObject*>()!=source || !widget_entry_current(run,entry)) {
+                    widget_refuse(run,widget_outcome_error);return false;
+                }
+                viewport.clear();
+                for(auto* ancestor=wholeRow->parentItem();ancestor;ancestor=ancestor->parentItem()) {
+                    if(ancestor->property("contentY").isValid() && ancestor->property("contentHeight").isValid()) {
+                        const auto bounds=wholeRow->mapRectToItem(ancestor,QRectF(0,0,wholeRow->width(),wholeRow->height()));
+                        if(!viewport && (bounds.top()<0 || bounds.bottom()>ancestor->height()))viewport=ancestor;
+                    }
+                    if(ancestor->objectName().endsWith(".manualSidebar"))break;
+                }
+            }
+        }
+        if (widget_input->usableTarget(*wanted) && (!wholeRow || widget_full_row_visible(wanted))) {
             if (wanted == field) return true;
             AssistantWidgetInput::Request request;
             request.kind = AssistantWidgetInput::Kind::Navigate; request.target = wanted;
@@ -2778,15 +2831,17 @@ struct AssistantViewModel::State {
         if (!viewport || !widget_input->usableTarget(*viewport) || ++run->reveal_steps > 64) {
             widget_refuse(run, QObject::tr("The current parameter viewport cannot be revealed within this action")); return false;
         }
-        const auto center = wanted->mapToItem(viewport, QPointF(wanted->width()/2, wanted->height()/2));
+        const auto* geometry=wholeRow?wholeRow.data():wanted.data();
+        const auto bounds=geometry->mapRectToItem(viewport,QRectF(0,0,geometry->width(),geometry->height()));
         const auto before = viewport->property("contentY").toDouble();
-        if (!std::isfinite(center.y()) || !std::isfinite(before) || !std::isfinite(viewport->height()) || viewport->height() <= 0 ||
-            (center.y() >= 0 && center.y() <= viewport->height())) {
+        if (!std::isfinite(bounds.top()) || !std::isfinite(bounds.bottom()) || !std::isfinite(before) ||
+            !std::isfinite(viewport->height()) || viewport->height() <= 0 || bounds.height()>viewport->height() ||
+            (bounds.top() >= 0 && bounds.bottom() <= viewport->height())) {
             widget_refuse(run, QObject::tr("The exact control is hidden or disabled outside a scrollable viewport")); return false;
         }
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Scroll; request.target = viewport;
-        request.scrollDirection = center.y() < 0 ? 1 : -1;
+        request.scrollDirection = bounds.top() < 0 ? 1 : -1;
         request.current = [this, run, entry, viewport] { return viewport && widget_entry_current(run, entry) && widget_page_selected(run); };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
         request.completed = [this, run, entry, viewport, before](bool delivered, const QString& message) noexcept {
@@ -2957,7 +3012,7 @@ struct AssistantViewModel::State {
             if(run->parameter) {widget_scroll_parameter(run);return;}
             widget_refuse(run, QObject::tr("This exact native parameter/control is not exposed by the current page, selection or filters")); return;
         }
-        if (run->tab != "appBar.tab.analysis" && !widget_reveal_parameter(run, target)) return;
+        if (!widget_reveal_parameter(run, target)) return;
         AssistantWidgetInput::Request request;
         request.kind = run->tool == "run_fit" ? AssistantWidgetInput::Kind::Fit : AssistantWidgetInput::Kind::FileLoadCue;
         request.target = target;
@@ -7128,7 +7183,7 @@ struct AssistantViewModel::State {
         stage="CURRENT";
         if(!structure_control_current(run,target))throw ActionRefusal("target_unavailable","structure");
         stage="EXPOSURE_REVEAL";
-        if(!widget_input->usableTarget(*target)) {create_widget_reveal(run,target);return;}
+        if((!widget_input->usableTarget(*target) || !widget_full_row_visible(target)) && !create_widget_reveal(run,target))return;
         stage="PREPARATION_INPUT";
         const auto receiver=run->receiver;
         AssistantWidgetInput::Request cue;cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=target;
@@ -7784,7 +7839,7 @@ struct AssistantViewModel::State {
                 (targetExperiment==run->operation_view && run->project->currentExperiment()==targetExperiment);
         };
         if(!targetCurrent())throw ActionRefusal("target_unavailable","experiment");
-        if (!widget_input->usableTarget(*load)) { create_widget_reveal(run,load);return; }
+        if ((!widget_input->usableTarget(*load) || !widget_full_row_visible(load)) && !create_widget_reveal(run,load))return;
         const auto origin=measured?run->measurement_origin:run->structure_origin;
         if (!origin || !origin->current()) { run->origin_unavailable=true;throw ActionRefusal("input_unavailable","file_id"); }
         AssistantWidgetInput::Request cue;
@@ -7965,17 +8020,27 @@ struct AssistantViewModel::State {
         if(!child->receiver || child->receiver->state_.get()!=this || !widget_current(child))return;
         widget_click_tab(child);
     }
-    void create_widget_reveal(const std::shared_ptr<NativeCreateWidget>& run, QQuickItem* target) {
+    bool create_widget_reveal(const std::shared_ptr<NativeCreateWidget>& run, QQuickItem* target) {
         if (!create_widget_current(run) || native_widget || !target || ++run->reveal_steps > 64)
             throw std::runtime_error("The original control cannot be genuinely revealed within this operation");
+        const auto receiver=run->receiver;const auto step=run->step;
+        const QPointer<AssistantWidgetInput> helper(widget_input.get());
         auto child=std::make_shared<NativeWidget>(); child->call=run->call;child->project=run->project;
         child->receiver=run->receiver;child->window=run->window;child->create_parent=run;
         child->tool="create_expose";child->tab="appBar.tab."+run->page;
         native_widget=child;
+        const QPointer<QQuickItem> original(target);
         if (widget_reveal_parameter(child,target)) {
-            widget_end(child);
-            if (create_widget_current(run)) throw std::runtime_error("The original target is already exposed but unavailable");
+            if(!receiver || receiver->state_.get()!=this || native_widget!=child || native_create_widget!=run ||
+                run->step!=step || widget_input.get()!=helper)return false;
+            widget_end(child); // Its balancing helper release can notify/reenter.
+            if(!receiver || receiver->state_.get()!=this || native_widget || native_create_widget!=run ||
+                run->step!=step || widget_input.get()!=helper || !create_widget_current(run))return false;
+            if(!original || !helper || !helper->usableTarget(*original) || !widget_full_row_visible(original))
+                throw std::runtime_error("The original control row cannot be fully exposed");
+            return true;
         }
+        return false;
     }
     bool create_widget_missing_target(const std::shared_ptr<NativeCreateWidget>& run, const NativeCreateWidget::Input& step) {
         QString groupName, tableName; qsizetype index = -1;
@@ -8003,11 +8068,11 @@ struct AssistantViewModel::State {
             if (!content) return false;
             // Existing reveal finds this content's actual owning group/header,
             // even when no table-row delegate exists inside collapsed content.
-            create_widget_reveal(run,content); return true;
+            return !create_widget_reveal(run,content);
         }
         auto* table=tableName.isEmpty() ? nullptr : create_widget_named(run,tableName);
         if (!table || index<0 || index>=table->property("count").toLongLong() || ++run->reveal_steps>64) return false;
-        if (!widget_input->usableTarget(*table)) { create_widget_reveal(run,table); return true; }
+        if (!widget_input->usableTarget(*table) && !create_widget_reveal(run,table)) return true;
         const QPointer<QQuickItem> original(table);const auto receiver=run->receiver;
         const QPointer<QObject> source(table->property("sourceModel").value<QObject*>());
         const int row=static_cast<int>(index);bool revealed=false;
@@ -8124,7 +8189,7 @@ struct AssistantViewModel::State {
             if (!action) throw std::runtime_error("The original text model action is unavailable");
             if (text_matches(*model,*action)) { create_widget_advance(run); return; }
         }
-        if (!widget_input->usableTarget(*target)) { create_widget_reveal(run, target); return; }
+        if ((!widget_input->usableTarget(*target) || !widget_full_row_visible(target)) && !create_widget_reveal(run, target)) return;
         AssistantWidgetInput::Request input; input.kind = step.kind; input.target = target; input.value = step.text; input.option = option;
         input.current = [this, run] { return create_widget_current(run); };
         input.restoreCurrent = [this, run] { return run->receiver && run->receiver->state_.get() == this && run->project && project == run->project && action_window == run->window; };
