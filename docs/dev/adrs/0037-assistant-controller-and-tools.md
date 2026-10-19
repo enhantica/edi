@@ -1583,3 +1583,21 @@ collapse, clipping and virtual-row creation; those still use original reveal.
 An unexposed later value cannot authorize an earlier array write, and equality
 does not waive initial route admission. Original routes, caller order, setters,
 Undo/once/currentness, Analysis free/fit and normal atomic edits remain unchanged.
+
+
+### Plan setup in ordinary page and row order
+
+For newly delegated setup the generated instructions finish Structure cell, then
+each actual site row (identity/type/requested WP/coordinates/occupancy) before
+appending the next; all ADPs follow together. Requested identity/symmetry
+prerequisites remain scientific prerequisites. Experiment groups follow their
+actual offered top-to-bottom order, then Analysis category batches and fit.
+Initial-site reuse and canonical changed-only operations remain authoritative.
+The existing set_free request can already express one complete eligible category;
+its original header matcher uses Free-all only for the exact uniform set, while
+subsets retain their real checkboxes. No new grouping API is needed.
+
+This is planning for generated calls, not an executor sorting explicit arrays or
+rewriting scientific intent. Caller order, dependency validation, OFF atomic Edit,
+ordinary setters/Undo, current owner, once and factual partial outcomes are exact.
+No numeric/refusal/deadline cause is claimed by this guidance correction.
