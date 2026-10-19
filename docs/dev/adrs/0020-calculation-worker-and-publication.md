@@ -334,7 +334,7 @@ PVM's existing prearmed creation/file input owns the receipt, so an Applied obse
 
 ### Native executable process defaults
 
-The original SDK executable bootstrap (crysta ADR-0063) is explicitly whole-linked
+The original SDK executable bootstrap is explicitly whole-linked
 from `crysta::process_defaults` at the native app, CLI and engine-consuming
 registered test/probe executable boundaries. The ordinary core, app/shared
 libraries, Python modules and Qt-only tools do not acquire it transitively.
