@@ -1950,3 +1950,40 @@ def test_structure634_real_main_initial_atom_and_ordinary_cues(tmp_path):
     assert [facts[0][k]for k in ['keys','clicked','activated']]==[0,0,0]
     assert not any(r.get('method')in{'turn/interrupt','account/login/start'}for r in requests)
     assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+    speeds=[json.loads(line.split('SPEED636_MAIN_RESULT ',1)[1])for line in result.stdout.splitlines()if 'SPEED636_MAIN_RESULT 'in line]
+    assert len(speeds)==1 and speeds[0]['speed']==5 and speeds[0]['pointer']==[100,20,100,100]
+    assert speeds[0]['ownerSame'] is True and speeds[0]['originalPointer'] is True
+    assert speeds[0]['menu']['completed'] is True and speeds[0]['menu']['scheduled'] is True
+    assert [speeds[0]['menu'][k]for k in ['opened','buttonPresses','buttonClicks','choicePresses','choiceClicks']]==[1,1,1,1,1]
+
+
+def test_create639_real_original_callback_consumption_and_one_undo(tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy, records
+    env=popup171_owned_environment(tmp_path)
+    config_path=Path(env['EDI_TEST_CODEX_PEER_INPUT']);config=json.loads(config_path.read_text());config.pop('report_page_reply')
+    calls=[{'tool':tool,'arguments':{'purpose':'Original independent Create639 callback/member/Undo witness'},'call_id':f'create639-main-{i}'}
+           for i,tool in enumerate(['create_structure','inspect_project','list_parameters'])]
+    config.update(scenario='native:script',native_turn_calls=[calls],readonly409=True,vm319_record_packets=True)
+    config_path.write_text(json.dumps(config));before=config_path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_create639_original_consumed_callback_and_one_undo','-o','-,txt']
+    result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'create639.stdout.log').write_text(result.stdout);(tmp_path/'create639.stderr.log').write_text(result.stderr)
+    assert result.returncode==0 and 'FAIL!'not in result.stdout and 'PASS   : edi_app::AssistantPopup::test_create639_original_consumed_callback_and_one_undo()'in result.stdout
+    assert config_path.read_bytes()==before
+    trace=Path(config['trace']);readonly409_policy(trace);requests=records(trace)
+    emitted=[json.loads(line)for line in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    replies=[json.loads(line)for line in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted)==len(replies)==len(calls) and len({item['id']for item in emitted})==len(calls)
+    assert [item['params']['tool']for item in emitted]==[item['tool']for item in calls]
+    assert len([item for item in requests if item.get('method')=='turn/start'])==1
+    for sent,reply in zip(emitted,replies,strict=True):
+        assert reply['original']==sent and reply['response']['id']==sent['id']!=sent['params']['callId'] and reply['response']['result']['success'] is True
+    facts=[json.loads(line.split('CREATE639_RESULT ',1)[1])for line in result.stdout.splitlines()if 'CREATE639_RESULT 'in line]
+    assert len(facts)==1 and facts[0]['callbacks']==facts[0]['maxDepth']==1
+    assert facts[0]['nested'] is False and facts[0]['nonown'] is False
+    assert all(facts[0][key] is True for key in ['originalMember','oneUndo','manualNoInput','ownerSame'])
+    assert facts[0]['entry']['structures']==1 and facts[0]['entry']['experiments']==0 and facts[0]['entry']['undo'] is True
+    assert type(facts[0]['receiptId']) is str and facts[0]['receiptId']==facts[0]['entry']['name']
+    assert not any(item.get('method')in{'turn/interrupt','account/login/start'}for item in requests)
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()

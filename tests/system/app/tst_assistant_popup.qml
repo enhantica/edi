@@ -10125,8 +10125,95 @@ TestCase {
             const out=[];for(let j=0;j<count;++j){const value=one("structure634-main-"+index+"-"+j,ids);verify(value!==null);out.push(value);}
             same();return out;
         }
+        // PUBLIC525/v3 presentation preference; never assign busy/science/focus.
+        const speed636={scheduled:false,opened:0,buttonPresses:0,buttonClicks:0,choicePresses:0,choiceClicks:0,completed:false};
+        const pointer636=item("assistant.actionPointer");
+        const pointerLife636=lifetime313(pointer636);
+        let changes636=0,preview636=0;
+        bind(assistant,"actionSpeedChanged",()=>{++changes636;});
+        bind(assistant,"contextPreviewChanged",()=>{++preview636;});
+        compare(assistant.actionSpeed,1,"SPEED636: fresh original owner starts at x1");
+        const beforeSpeed636={science:visible185_values(owner),modified:owner.modified,undo:owner.canUndo,
+            account:JSON.stringify(assistant.account),model:assistant.selectedModel,effort:assistant.selectedEffort,
+            state:assistant.state,cancel:assistant.canCancel,owner:Session.project};
+        for(const value of [2,3,5,10,1]) {
+            const count=changes636,preview=preview636;
+            assistant.actionSpeed=value;
+            compare(assistant.actionSpeed,value,"SPEED636: every declared integer speed is accepted");
+            compare(changes636,count+1,"SPEED636: ONE preference notification per actual change");
+            compare(preview636,preview,"SPEED636: presentation preference does not rebuild disclosed context");
+            const invalid=[value,0,-1,4,6,9,11,2147483647];
+            for(const rejected of invalid) {
+                assistant.actionSpeed=rejected;
+                compare(assistant.actionSpeed,value,"SPEED636: equal and out-of-domain integer values preserve current preference");
+                compare(changes636,count+1,"SPEED636: equal/invalid setters emit no preference notification");
+                compare(preview636,preview,"SPEED636: equal/invalid setters emit no context notification");
+            }
+        }
+        compare(visible185_values(owner),beforeSpeed636.science);compare(owner.modified,beforeSpeed636.modified);compare(owner.canUndo,beforeSpeed636.undo);
+        compare(JSON.stringify(assistant.account),beforeSpeed636.account);compare(assistant.selectedModel,beforeSpeed636.model);compare(assistant.selectedEffort,beforeSpeed636.effort);
+        compare(assistant.state,beforeSpeed636.state);compare(assistant.canCancel,beforeSpeed636.cancel);verify(Session.project===beforeSpeed636.owner);
+        compare([pointer636.moveDuration,pointer636.pressDuration,pointer636.clickRelaxation,pointer636.showHideDuration],[500,100,500,500],
+            "SPEED636: x1 retains original public pointer durations");
+        function speedMenu636() {
+            same();verify(alive313(pointerLife636) && assistant.actionWindow===window && assistant.showingActions,
+                "SPEED636: actual user menu opens during the original live ON operation");
+            const button=item("assistant.actionSpeed"),stop=item("assistant.stopVisibleAction"),working=item("statusBar.assistant.working");
+            const buttonLife=lifetime313(button),stopLife=lifetime313(stop);
+            verify(button.enabled && Ui.exposed(button) && stop.enabled && Ui.exposed(stop) && working.visible,
+                "SPEED636: original speed and Stop controls remain genuinely exposed during work");
+            compare(button.text,"x1");compare(button.Accessible.name,button.ToolTip.text);
+            compare(button.Accessible.name,qsTr("Show actions speed: %1").arg(button.text),
+                "SPEED636: actual accessible name follows translated tooltip and current speed");
+            verify(button.background!==null && stop.background!==null && button.background.width>0);
+            compare(button.background.width,button.background.height);compare(button.background.width,stop.background.width);
+            compare(button.background.width,working.iconExtent,"SPEED636: both circles retain actual original Working icon extent");
+            compare(stop.background.width,stop.background.height);compare(button.background.radius,button.background.width/2);compare(stop.background.radius,stop.background.width/2,
+                "SPEED636: both original status buttons use the SAME positive circle metric");
+            const box=rect(button),left=rect(working),right=rect(stop);
+            verify(left[0]+left[2]<=box[0] && box[0]+box[2]<=right[0],"SPEED636: speed remains between Working and Stop");
+            bind(button,"pressedChanged",()=>{if(button.pressed){same();verify(button.enabled && Ui.exposed(button));++speed636.buttonPresses;}});
+            bind(button,"clicked",()=>{++speed636.buttonClicks;});
+            const center=Ui.clickPoint(button);verify(center!==null);mouseClick(button,center.x,center.y);
+            const menus=Probe.objectsWithProperty(window,"objectName").filter(o=>o.objectName==="assistant.actionSpeed.menu");
+            compare(menus.length,1,"SPEED636: genuine button owns ONE original native menu");
+            const menu=menus[0],menuLife=lifetime313(menu);
+            tryCompare(menu,"visible",true,2000,"SPEED636: genuine click actually opens original menu");++speed636.opened;
+            compare(menu.count,5);const choices=[];
+            for(let i=0;i<menu.count;++i){const choice=menu.itemAt(i);verify(choice!==null);choices.push(choice.text);}
+            compare(choices,["x1","x2","x3","x5","x10"],"SPEED636: closed native choices have exact public labels");
+            verify(menu.contentItem!==null);const host=menu.contentItem.Window.window;
+            verify(host!==null && host.visible,"SPEED636: native menu has its actual live content-host Window");
+            const choice=menu.itemAt(3),choiceLife=lifetime313(choice);
+            verify(choice.Window.window===host && choice.enabled && Ui.exposed(choice) && gui393_under(choice,menu.contentItem),
+                "SPEED636: user choice targets an exposed descendant of the SAME menu in its real window");
+            tryVerify(()=>menu.activeFocus,2000,
+                "SPEED636: original native menu actually owns focus before preference selection");
+            const heldScience=visible185_values(owner),heldUndo=owner.canUndo;
+            verify(waitForPolish(host,2000));host.update();verify(waitForRendering(menu.contentItem));
+            compare(visible185_values(owner),heldScience,"SPEED636: genuine focused menu does not inject pending scientific input while open");compare(owner.canUndo,heldUndo);
+            const beforeChoice=changes636;
+            bind(choice,"pressedChanged",()=>{if(choice.pressed){verify(alive313(menuLife)&&alive313(choiceLife)&&menu.visible && choice.Window.window===host);++speed636.choicePresses;}});
+            bind(choice,"clicked",()=>{++speed636.choiceClicks;});
+            const point=Ui.clickPoint(choice);verify(point!==null);mouseClick(choice,point.x,point.y);
+            tryCompare(menu,"visible",false,2000,"SPEED636: native selection closes original menu without forced focus");
+            compare(assistant.actionSpeed,5);compare(changes636,beforeChoice+1);
+            compare([speed636.buttonPresses,speed636.buttonClicks,speed636.choicePresses,speed636.choiceClicks],[1,1,1,1],
+                "SPEED636: ONE genuine button and ONE genuine same-menu choice each deliver native press/click receipts");
+            verify(alive313(buttonLife)&&alive313(stopLife)&&alive313(pointerLife636));same();
+            compare(button.text,"x5");compare(button.Accessible.name,qsTr("Show actions speed: %1").arg(button.text));
+            compare([pointer636.moveDuration,pointer636.pressDuration,pointer636.clickRelaxation,pointer636.showHideDuration],[100,20,100,100],
+                "SPEED636: live x5 updates all FOUR exposed original pointer pacing channels");
+            speed636.completed=true;
+        }
         bind(assistant,"actionPointerShown",()=>{++pointerShows;scan();});
-        bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();});
+        bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();
+            if(phase===1 && !speed636.scheduled) {
+                speed636.scheduled=true;
+                // Existing event-loop seam, no timer, sleep or synthetic input.
+                Qt.callLater(speedMenu636);
+            }
+        });
         bind(assistant,"actionPointerPressed",()=>{
             ++pointerPresses;scan();same();verify(assistant.actionWindow===window && point!==null);
             verify(Ui.rendered(item("assistant.actionPointer")),"STRUCTURE634: real original native pointer is visible");
@@ -10137,13 +10224,17 @@ TestCase {
             }
         });
         try {
-            const created=send(0,3),models=Probe.rows(owner.structures);compare(models.length,1);structure=models[0].structure;structureLife=lifetime313(structure);
+            const created=send(0,3);
+            compare([pointerShows,pointerPresses],[0,0],"SPEED636: original OFF Create remains unpaced and emits no native presentation cue");
+            const models=Probe.rows(owner.structures);compare(models.length,1);structure=models[0].structure;structureLife=lifetime313(structure);
             verify(structure!==null&&alive313(structureLife));const first=rows();compare(first.length,1);
             initial=first[0].fractX;initialLife=lifetime313(initial);initialType=first[0].typeSymbol;
             verify(initial!==null&&alive313(initialLife));compare(created[0].structures[0].sites[0].id,first[0].label);
             compare(created[0].structures[0].id,structure.name,"STRUCTURE634: Create receipt names actual original member/one initial atom");
             const checkbox=item("assistant.showActions");verify(checkbox.enabled&&Ui.exposed(checkbox));mouseClick(checkbox);verify(assistant.showActions);
-            send(1,3);compare(rows().length,1);verify(alive313(initialLife)&&rows()[0].fractX===initial,
+            send(1,3);verify(speed636.completed,"SPEED636: actual ON phase MUST reach and finish real native speed selection");
+            compare([speed636.opened,speed636.buttonPresses,speed636.buttonClicks,speed636.choicePresses,speed636.choiceClicks],[1,1,1,1,1]);
+            compare(rows().length,1);verify(alive313(initialLife)&&rows()[0].fractX===initial,
                 "STRUCTURE634: FIRST existing atom is edited in place, never preserved beside a duplicate target");
             compare(structure.name,"Main634");compare(rows()[0].label,"First634");compare(rows()[0].typeSymbol,"57Fe");
             verify(cues.some(c=>c.phase===1&&c.name.startsWith("structures.name."))&&cues.some(c=>c.phase===1&&c.name.startsWith("atomSite.label."))
@@ -10164,10 +10255,82 @@ TestCase {
             Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[0].typeSymbol,initialType,
                 "STRUCTURE634: NEXT ordinary Undo is the real preceding first-site type edit, not an equal setter");
             compare([keys,clicked,activated],[0,0,0],"STRUCTURE634: ON science uses original ordinary setters after cues, no scientific key/click/menu-choice dispatch");
+            console.log("SPEED636_MAIN_RESULT",JSON.stringify({speed:assistant.actionSpeed,menu:speed636,
+                pointer:[pointer636.moveDuration,pointer636.pressDuration,pointer636.clickRelaxation,pointer636.showHideDuration],
+                ownerSame:Session.project===owner,originalPointer:alive313(pointerLife636)}));
             console.log("STRUCTURE634_MAIN_RESULT",JSON.stringify({ownerSame:Session.project===owner,firstSame:rows()[0].fractX===initial,
                 actualCreateInitialAtom:created[0].structures[0].sites[0].id,appendedId:addedId,cues:cues,keys:keys,clicked:clicked,activated:activated,
                 noops:noops,realUndo:true,path:owner.path}));
         } finally {for(const s of slots)disconnect313(s.life,s.object,s.signal,s.callback);}
+    }
+
+    function test_create639_original_consumed_callback_and_one_undo() {
+        const test=this;
+        Session.closeProject();
+        const path=ApplicationInfo.localPath(Probe.referenceUrl("create639-owner"));
+        verify(Session.createProject("Create639 owner","Independent ordinary Create callback",path,"iucr_99","Create639 title","Test",true),
+            "CREATE639 SETUP: actual original Session owns a saved empty project");
+        const owner=Session.project,ownerLife=lifetime313(owner),originalAssistant=assistant,assistantLife=lifetime313(assistant);
+        const empty={values:visible185_values(owner),undo:owner.canUndo,name:owner.name,path:owner.path};
+        compare(owner.structures.count,0);compare(owner.experiments.count,0);compare(empty.undo,false);
+        visible185_page("project");
+        verify(owner.createStructure(),"CREATE639: genuine ordinary manual/no-input Create remains accepted");
+        compare(owner.structures.count,1);compare(owner.experiments.count,0);verify(owner.canUndo);
+        const manual=Probe.rows(owner.structures)[0].structure;verify(manual!==null);compare(Probe.rows(manual.atomSites).length,1);
+        Ui.click(test,Probe,window,"appBar.button.undo");
+        compare(owner.structures.count,0);compare(owner.experiments.count,0);compare(owner.canUndo,empty.undo);
+        compare(visible185_values(owner),empty.values,"CREATE639: ONE original manual Undo restores independent empty scientific baseline");
+        toggle();gui392_signIn(false);
+        const eye=item("assistant.showActions");verify(eye.enabled && Ui.exposed(eye));mouseClick(eye);verify(assistant.showActions);
+        const ids=new Set(Probe.rows(assistant.messages).map(row=>row.id)),slots=[];
+        let armed=true,callbacks=0,depth=0,maxDepth=0,nested=null,nonown=null,atEntry=null,outerMember=null,outerMemberLife=null;
+        function same(){verify(alive313(ownerLife)&&alive313(assistantLife)&&Session.project===owner&&assistant===originalAssistant,
+            "CREATE639: original owner/controller remain alive throughout actual callback and operation");}
+        function bind(object,signal,callback){const life=lifetime313(object);object[signal].connect(callback);slots.push({object:object,life:life,signal:signal,callback:callback});}
+        function row(call){const matches=Probe.rows(assistant.messages).filter(value=>!ids.has(value.id)&&value.kind==="activity"&&value.payload&&value.payload.id===call);
+            verify(matches.length<=1,"CREATE639: exact original call owns at most ONE retained activity");return matches.length?matches[0]:null;}
+        function result(call){const value=row(call);if(value===null||value.status!=="completed")return null;
+            verify(value.payload.success===true&&value.payload.nativeOutcome,"CREATE639: actual outer native operation must succeed, never partial/refused substitute");
+            const content=JSON.parse(JSON.stringify(value.payload.contentItems));verify(content.length===1&&content[0].type==="inputText");return JSON.parse(content[0].text);}
+        bind(owner,"canUndoChanged",()=>{
+            if(!armed)return;
+            same();compare(owner.structures.count,1,"CREATE639: real history notification follows the FIRST actual insertion");verify(owner.canUndo);
+            const pending=row("create639-main-0");verify(pending!==null&&pending.status!=="completed"&&assistant.canCancel,
+                "CREATE639: synchronous original notification occurs before the outer call's completed UI receipt");
+            armed=false;++callbacks;++depth;maxDepth=Math.max(maxDepth,depth);
+            outerMember=Probe.rows(owner.structures)[0].structure;outerMemberLife=lifetime313(outerMember);
+            atEntry={structures:owner.structures.count,experiments:owner.experiments.count,values:visible185_values(owner),name:outerMember.name,
+                id:pending.id,status:pending.status,undo:owner.canUndo};
+            nested=owner.createStructure();
+            compare(nested,false,"CREATE639: consumed original input cannot authorize a second same-owner nested Create");
+            same();verify(alive313(outerMemberLife));compare(owner.structures.count,atEntry.structures);compare(owner.experiments.count,atEntry.experiments);
+            compare(visible185_values(owner),atEntry.values,"CREATE639: refused same-kind reentry has NO scientific side effect");
+            nonown=owner.createExperiment();
+            compare(nonown,false,"CREATE639: original Structure input cannot authorize another ordinary creation family");
+            same();compare(owner.structures.count,atEntry.structures);compare(owner.experiments.count,atEntry.experiments);
+            compare(visible185_values(owner),atEntry.values,"CREATE639: wrong-kind nested refusal adds no member/value");
+            --depth;
+        });
+        try {
+            assistant.send("Original Create639 actual callback and one ordinary Undo");
+            tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&result("create639-main-2")!==null,
+                visible237_observationMs([{path:"",text:""},{path:"",text:""},{path:"",text:""}]),
+                "CREATE639: original complete actual Create/inspection settles inside the owning bound");
+            same();compare(callbacks,1,"CREATE639: actual synchronous callback MUST be reached exactly once");compare(maxDepth,1);compare(depth,0);
+            compare([nested,nonown],[false,false]);verify(atEntry!==null&&outerMember!==null&&alive313(outerMemberLife));
+            const created=result("create639-main-0");verify(created!==null);compare(created.status,"completed");compare(created.applied,true);compare(created.complete,true);
+            const inspected=result("create639-main-1"),listed=result("create639-main-2");verify(inspected!==null&&listed!==null);
+            compare(owner.structures.count,1);compare(owner.experiments.count,0);verify(Probe.rows(owner.structures)[0].structure===outerMember);
+            compare(created.structures.length,1);compare(created.structures[0].id,outerMember.name);
+            compare(created.structures[0].sites.length,1);compare(created.structures[0].sites[0].id,Probe.rows(outerMember.atomSites)[0].label,
+                "CREATE639: exact completed outer receipt names its ONE real initial atom/member");
+            compare(owner.name,empty.name);compare(owner.path,empty.path);verify(owner.canUndo);
+            Ui.click(test,Probe,window,"appBar.button.undo");
+            same();compare(owner.structures.count,0);compare(owner.experiments.count,0);compare(visible185_values(owner),empty.values);
+            compare(owner.canUndo,empty.undo,"CREATE639: ONE actual original Undo removes the ONE insertion, no phantom nested history");
+            console.info("CREATE639_RESULT",JSON.stringify({callbacks:callbacks,maxDepth:maxDepth,nested:nested,nonown:nonown,entry:atEntry,
+                originalMember:true,receiptId:created.structures[0].id,oneUndo:true,manualNoInput:true,ownerSame:Session.project===owner}));
+        } finally {for(const slot of slots)disconnect313(slot.life,slot.object,slot.signal,slot.callback);}
     }
 
 }
