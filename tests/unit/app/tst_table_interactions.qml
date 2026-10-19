@@ -52,10 +52,55 @@ Item {
             inTable: true
         }
     }
+    // Independent rows exercise the first shared native delegate, not a copied handler.
+    ListModel {
+        id: inputRows557
+        ListElement { label: "alpha" }
+        ListElement { label: "beta" }
+        ListElement { label: "gamma" }
+        ListElement { label: "delta" }
+        ListElement { label: "epsilon" }
+        ListElement { label: "zeta" }
+        ListElement { label: "eta" }
+        ListElement { label: "theta" }
+    }
+    Component {
+        id: inputTable557
+        DataTable {
+            width: 700
+            maxRowCountShow: 3
+            sourceModel: inputRows557
+            multiSelection: true
+            columnWidths: [220, 120, -1]
+            header: EaComponents.ListViewHeader {
+                TextCell { value: "Text"; readOnly: true }
+                TextCell { value: "Action"; readOnly: true }
+                TextCell { value: ""; readOnly: true }
+            }
+            delegate: EaComponents.ListViewDelegate {
+                required property int index
+                required property string label
+                EaComponents.ListViewTextInput {
+                    objectName: "rowInput557.text." + index
+                    text: label
+                }
+                EaComponents.TableViewButton {
+                    objectName: "rowInput557.button." + index
+                    text: "Action"
+                    focusPolicy: Qt.StrongFocus
+                }
+                TextCell { value: label; readOnly: true }
+            }
+        }
+    }
     TestCase {
         name: "TableInteractions"
         when: windowShown
         property string savedRecentPaths
+        SignalSpy { id: pressed557; signalName: "pressed" }
+        SignalSpy { id: released557; signalName: "released" }
+        SignalSpy { id: clicked557; signalName: "clicked" }
+        SignalSpy { id: edited557; signalName: "textEdited" }
         function init() {
             failOnWarning(/.*/);
             savedRecentPaths = RecentProjects.settings.paths;
@@ -88,6 +133,97 @@ Item {
         function expanded(group) {
             verify(waitForPolish(group));
             tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01);
+        }
+        function test_shared_row_preserves_native_children_and_background_input() {
+            const table = createTemporaryObject(inputTable557, surface);
+            verify(table !== null && waitForPolish(table), "ROW557: the actual shared row table completes layout");
+            table.forceLayout();
+            tryVerify(() => table.itemAtIndex(2) !== null, 2000, "ROW557: three original visible rows are instantiated");
+            const row0 = table.itemAtIndex(0), row1 = table.itemAtIndex(1), row2 = table.itemAtIndex(2);
+            // Only this fixture's live column gap is a row-background receiver.
+            function backgroundPoint559(row) {
+                const text = Ui.find(row, "rowInput557.text." + row.index);
+                const button = Ui.find(row, "rowInput557.button." + row.index);
+                verify(text !== null && button !== null && Ui.exposed(text) && Ui.exposed(button),
+                    "ROW559: original children surrounding the background gap are exposed");
+                const left = text.mapToItem(row, text.width, 0).x;
+                const right = button.mapToItem(row, 0, 0).x;
+                verify(right > left, "ROW559: live interactive cell bounds leave a genuine gap");
+                const point = {x:(left + right) / 2, y:row.height / 2};
+                const at = row.mapToItem(table, point.x, point.y);
+                verify(at.x > 0 && at.x < table.width && at.y > 0 && at.y < table.height,
+                    "ROW559: background point lies inside the original table viewport");
+                for (let item = row; item; item = item.parent) {
+                    if (!item.clip) continue;
+                    const local = item.mapFromItem(row, point.x, point.y);
+                    verify(local.x > 0 && local.x < item.width && local.y > 0 && local.y < item.height,
+                        "ROW559: every live ancestor clip exposes the chosen original background point");
+                }
+                const bar = table.ScrollBar.vertical, header = table.headerItem;
+                verify(bar !== null && bar.visible && bar.enabled && bar.interactive && header !== null,
+                    "ROW559: original interactive scrollbar and header remain present and unchanged");
+                for (const item of [text, button, bar, header]) {
+                    const local = item.mapFromItem(row, point.x, point.y);
+                    verify(local.x < 0 || local.x >= item.width || local.y < 0 || local.y >= item.height,
+                        "ROW559: original gap excludes each cell, full scrollbar and header regardless of faded ink");
+                }
+                const frames = table.children.filter(item => item.visible && item.border !== undefined
+                    && item.width === table.width && item.height === table.height);
+                compare(frames.length, 1, "ROW559: the actual original table frame is uniquely observed");
+                const frame = frames[0], inside = frame.mapFromItem(row, point.x, point.y), width = frame.border.width;
+                verify(inside.x > width && inside.y > width && inside.x < frame.width - width && inside.y < frame.height - width,
+                    "ROW559: background point excludes the actual native frame pen");
+                return point;
+            }
+            const action = Ui.find(row0, "rowInput557.button.0");
+            const editor = Ui.find(row0, "rowInput557.text.0");
+            verify(action !== null && editor !== null && Ui.exposed(action) && Ui.exposed(editor),
+                "ROW557: original nested button and text receiver are both exposed");
+            const p0 = backgroundPoint559(row0);
+            mouseClick(row0, p0.x, p0.y, Qt.LeftButton, Qt.NoModifier, table.pressDelay + 1);
+            verify(table.isSelected(0) && !table.isSelected(1) && !table.isSelected(2),
+                "ROW557: actual row background selects exactly its own row");
+            try {
+                pressed557.target = action; released557.target = action; clicked557.target = action; edited557.target = editor;
+                pressed557.clear(); released557.clear(); clicked557.clear(); edited557.clear();
+                verify(pressed557.valid && released557.valid && clicked557.valid && edited557.valid,
+                    "ROW557: passive spies bind the four original native signals");
+                click(action);
+                compare(pressed557.count, 1, "ROW557: original nested button receives one native press");
+                compare(released557.count, 1, "ROW557: original nested button receives one native release");
+                compare(clicked557.count, 1, "ROW557: original nested button receives one native click");
+                verify(action.activeFocus, "ROW557: row background does not steal the button's declared click focus");
+                click(editor);
+                verify(editor.activeFocus && row0.editing, "ROW557: native text click retains its original keyboard owner");
+                const original = editor.text;
+                keyClick("Z");
+                compare(edited557.count, 1, "ROW557: one real key reaches the original text receiver once");
+                compare(editor.text.split("Z").join(""), original, "ROW557: typed text preserves every original character");
+                compare(editor.text.length, original.length + 1, "ROW557: exactly one independent character is inserted");
+                const p1 = backgroundPoint559(row1);
+                mouseClick(row1, p1.x, p1.y, Qt.LeftButton, Qt.NoModifier, table.pressDelay + 1);
+                verify(!editor.activeFocus && !row0.editing && table.isSelected(1)
+                    && !table.isSelected(0) && !table.isSelected(2),
+                    "ROW557: genuine other-row background ends editing and replaces selection");
+                const controlPoint = backgroundPoint559(row0);
+                mouseClick(row0, controlPoint.x, controlPoint.y, Qt.LeftButton, Qt.ControlModifier, table.pressDelay + 1);
+                verify(table.isSelected(0) && table.isSelected(1) && !table.isSelected(2),
+                    "ROW557: genuine Control background input adds the independently chosen row");
+                const shiftPoint = backgroundPoint559(row2);
+                mouseClick(row2, shiftPoint.x, shiftPoint.y, Qt.LeftButton, Qt.ShiftModifier, table.pressDelay + 1);
+                verify(table.isSelected(0) && table.isSelected(1) && table.isSelected(2),
+                    "ROW557: genuine Shift background input retains the exact contiguous range");
+                compare(clicked557.count, 1, "ROW557: row background and modifiers never replay the child action");
+                const before = table.contentY;
+                const wheelGap = backgroundPoint559(row1);
+                const wheelPoint = row1.mapToItem(table, wheelGap.x, wheelGap.y);
+                mouseWheel(table, wheelPoint.x, wheelPoint.y, 0, -120);
+                tryVerify(() => table.contentY > before, 2000, "ROW557: original native wheel still scrolls the shared row table");
+                verify(table.isSelected(0) && table.isSelected(1) && table.isSelected(2),
+                    "ROW557: native scrolling preserves the selected model rows after delegate recycling");
+            } finally {
+                pressed557.target = null; released557.target = null; clicked557.target = null; edited557.target = null;
+            }
         }
         function test_recent_open_missing_and_remove_use_real_input() {
             verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);
