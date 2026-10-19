@@ -4,6 +4,7 @@
 #include <QAnyStringView>
 #include <QtCore/qarraydata.h>
 #include <cstddef>
+#include <QtCore/qmath.h>
 #include <type_traits>
 #include "assistant_runtime_config.hpp"
 #include <QCoreApplication>
@@ -63,9 +64,33 @@ bool stringSize(QAnyStringView text,quint64 cap,quint64& size) {
         }
     });
 }
-bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 depth = 0) {
+bool stringRoles(QAnyStringView text, quint64 cap, CodexJsonEncoding& roles) {
+    quint64 escaped=0;
+    if(!stringSize(text,cap,escaped))return false;
+    const auto units=text.visit([](auto view)->quint64 {
+        if constexpr(std::is_same_v<decltype(view),QUtf8StringView>) {
+            quint64 n=0;
+            for(const auto c:view) {const auto u=static_cast<unsigned char>(c);if((u&0xc0)!=0x80)n+=u>=0xf0?2:1;}
+            return n; // stringSize already proved strict UTF-8.
+        } else return static_cast<quint64>(view.size());
+    });
+    if(!addSize(static_cast<quint64>(text.size_bytes()),edi::assistant::Limits::stream_retained_bytes,roles.owned))return false;
+    // Qt6.11.2 qjsonwriter escapedString starts max(units,16) and doubles
+    // logical size when within six bytes of its end. QByteArray Grow rounds
+    // through qNextPowerOfTwo; account its backing AND the toString owner.
+    quint64 logical=std::max<quint64>(units,16);
+    while(logical<=escaped+6) {
+        if(logical>std::numeric_limits<quint64>::max()/2)return false;
+        logical*=2;
+    }
+    const auto scratch=codex_json_capacity(logical)+2*(units+1);
+    roles.writer_scratch=std::max(roles.writer_scratch,scratch);
+    return true; // Admission callers, not this measurement, own the joint limit.
+}
+bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 depth = 0, CodexJsonEncoding* roles=nullptr) {
     using L = edi::assistant::Limits;
-    if (value.isString()) return stringSize(value.toStringView(), cap, size);
+    if(roles && !addSize(sizeof(QJsonValue),L::stream_retained_bytes,roles->owned))return false;
+    if (value.isString()) return (!roles || stringRoles(value.toStringView(),cap,*roles)) && stringSize(value.toStringView(), cap, size);
     if (value.isBool()) return addSize(value.toBool() ? 4 : 5, cap, size);
     if (value.isNull() || value.isUndefined()) return addSize(4, cap, size);
     if (value.isDouble()) {
@@ -77,16 +102,19 @@ bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 de
     if (++depth > L::json_depth || !addSize(2, cap, size)) return false;
     bool first = true;
     if (value.isObject()) {
+        if(roles && !addSize(sizeof(QJsonObject),L::stream_retained_bytes,roles->owned))return false;
         const auto object = value.toObject();
         for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
-            const auto key=it.key();
-            if ((!first && !addSize(1, cap, size)) || !stringSize(QStringView(key), cap, size) ||
-                !addSize(1, cap, size) || !encodedSize(it.value(), cap, size, depth)) return false;
+            const auto key=it.keyView();
+            if(roles && (!addSize(sizeof(QJsonValue),L::stream_retained_bytes,roles->owned) || !stringRoles(key,cap,*roles)))return false;
+            if ((!first && !addSize(1, cap, size)) || !stringSize(key, cap, size) ||
+                !addSize(1, cap, size) || !encodedSize(it.value(), cap, size, depth,roles)) return false;
             first = false;
         }
     } else {
+        if(roles && !addSize(sizeof(QJsonArray),L::stream_retained_bytes,roles->owned))return false;
         for (const auto& child : value.toArray()) {
-            if ((!first && !addSize(1, cap, size)) || !encodedSize(child, cap, size, depth)) return false;
+            if ((!first && !addSize(1, cap, size)) || !encodedSize(child, cap, size, depth,roles)) return false;
             first = false;
         }
     }
@@ -94,6 +122,19 @@ bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 de
 }
 } // namespace
 bool codex_encoded_size(const QJsonValue& value, quint64 cap, quint64& size) { return encodedSize(value, cap, size); }
+quint64 codex_json_capacity(quint64 bytes) {
+    const auto header=static_cast<quint64>(sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
+    if(bytes>std::numeric_limits<quint64>::max()/4)throw std::length_error("JSON backing exceeds capacity");
+    // Pinned qarraydata.cpp Grow rule; header/alignment/terminator remain owned.
+    return qNextPowerOfTwo(bytes+header)+header;
+}
+bool codex_json_encoding(const QJsonValue& value,quint64 cap,CodexJsonEncoding& roles) {
+    roles={};
+    if(!encodedSize(value,cap,roles.encoded,0,&roles))return false;
+    // Bounded number spelling and compact writer's original recursive shells.
+    return addSize(edi::assistant::Limits::json_depth*4+sizeof(QByteArray),
+        std::numeric_limits<quint64>::max(),roles.writer_scratch);
+}
 CodexAgent::CodexAgent(QObject* parent) : QObject(parent) {
     clock_.start(); timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
@@ -438,14 +479,17 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     // only on the deferred path. Charge them beside current VM/record/unread,
     // old holding bytes and QProcess's actual queue before serialization.
     quint64 available=0;
-    // Same Qt writer workspace as the VM response seam: aggregate growth,
-    // independent escapedString doubling and its owning string conversion.
-    const auto minimum=std::max<quint64>(16,sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
-    const auto wireCapacity=2*(encoded+minimum),lineCapacity=2*(lineSize+minimum);
+    CodexJsonEncoding encoding;
+    if(!codex_json_encoding(envelope,Limits::request_bytes,encoding) || encoding.encoded!=encoded) {
+        if(!nonfatalPreflight)fail("The official agent request cannot be admitted consistently.");return false;
+    }
+    const auto wireCapacity=codex_json_capacity(lineSize);
     const auto oldHeldCapacity=static_cast<quint64>(deferred_required_.capacity());
-    const auto nextHeldCapacity=deferred?2*(held+lineSize+minimum):0;
-    const auto writerScratch=6*(encoded+minimum);
-    const quint64 wireRole=wireCapacity+lineCapacity+lineSize+(deferred?oldHeldCapacity+nextHeldCapacity:0);
+    const auto nextHeldCapacity=deferred?codex_json_capacity(held+lineSize):0;
+    const auto writerScratch=encoding.writer_scratch;
+    // One unique wire buffer becomes the LF-appended line in place; no second
+    // full byte array coexists. QProcess's actual copy still owns lineSize.
+    const quint64 wireRole=wireCapacity+lineSize+(deferred?oldHeldCapacity+nextHeldCapacity:0);
     if(wireRole>Limits::stream_retained_bytes || writerScratch>Limits::stream_retained_bytes-wireRole ||
         !remainingOutput(output_bytes_,available) || wireRole+writerScratch>available) {
         if(!nonfatalPreflight)fail("The official agent request exceeds joint retained capacity.");return false;
@@ -455,13 +499,14 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const auto requestRole=qScopeGuard([receiver,&retainedRequest] {
         if(receiver)receiver->request_bytes_-=retainedRequest;
     });
-    const auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
+    auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
     if (static_cast<quint64>(wire.size()) != encoded || static_cast<quint64>(wire.capacity())>wireCapacity) {
         if (!nonfatalPreflight) fail("The official agent request could not be encoded consistently."); return false;
     }
     request_bytes_-=writerScratch;retainedRequest-=writerScratch; // Writer conversion/escaping locals are dead.
-    const auto line = wire + '\n';
-    if(static_cast<quint64>(line.capacity())>lineCapacity) {
+    wire.append('\n');
+    const auto& line=wire;
+    if(static_cast<quint64>(line.capacity())>wireCapacity) {
         if(!nonfatalPreflight)fail("The official agent line capacity exceeds its admitted role");return false;
     }
     auto heldWire = deferred_required_;

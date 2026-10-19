@@ -14,6 +14,11 @@
 
 namespace edi_app {
 bool codex_encoded_size(const QJsonValue&, quint64 cap, quint64& size);
+// Same borrowed Qt-input walk, not another encoder. Owned logical payload and
+// pinned Qt writer scratch are separate from encoded output/transport backing.
+struct CodexJsonEncoding { quint64 encoded=0, owned=0, writer_scratch=0; };
+bool codex_json_encoding(const QJsonValue&, quint64 cap, CodexJsonEncoding&);
+quint64 codex_json_capacity(quint64 bytes);
 // App-internal transport for the pinned runtime. It owns no account
 // or provider protocol; the VM owns admitted rows, approvals and scientific state.
 class CodexAgent final : public QObject {

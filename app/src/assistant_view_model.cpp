@@ -1797,10 +1797,11 @@ struct AssistantViewModel::State {
     // Canonical provider bytes and the app-authored result have separate owners.
     struct NativeRecord {
         QString key, thread, turn, call, tool, purpose, row;
-        Object original, canonical, outcome, response, terminal, maximum_row;
+        Object original, canonical, outcome, response, terminal;
         quint64 row_bytes = 0, outcome_bytes = 0, response_bytes = 0;
         bool reserved = true, retired = false, discarded = false, completed = false, answered = false;
         bool outcome_ready = false; // Chosen host result; independent of provider/native completion.
+        bool encoding = false; // Exclusive pending output slot is staged by native_response. Actual fallbacks remain owned.
     };
     struct NativeCall {
         QJsonValue rpc;
@@ -4201,9 +4202,14 @@ struct AssistantViewModel::State {
             records.insert(entry.get());
             const auto& r = *entry; raw(sizeof(NativeRecord));
             value(r.key); value(r.thread); value(r.turn); value(r.call); value(r.tool); value(r.purpose); value(r.row);
-            value(r.original); value(r.canonical); value(r.outcome); value(r.response); value(r.terminal);
-            value(r.maximum_row);
-            if (!r.completed) {
+            value(r.original); value(r.canonical);
+            for(const auto* payload:{&r.outcome,&r.response,&r.terminal}) {
+                CodexJsonEncoding encoding;
+                if(!codex_json_encoding(*payload,Limits::message_bytes,encoding))throw std::length_error("Native result retention exceeds capacity");
+                raw(encoding.owned); // Actual Qt payload, not its repeatedly escaped wire spelling.
+            }
+            const bool final_staged=native_call && native_call->record==entry && native_call->finishing && r.outcome_ready;
+            if (!r.completed && !final_staged) {
                 // Pre-admit actual success/result roles as well as the owning
                 // maximum templates. Replacing a small uncertainty result with
                 // the real bounded result cannot discover new retained growth
@@ -4212,9 +4218,15 @@ struct AssistantViewModel::State {
                 const auto actualResponse = generic_size(r.response, Limits::message_bytes);
                 const auto maximumResponse = r.response_bytes;
                 const auto actualOutcome = generic_size(r.outcome, Limits::context_bytes);
-                raw(r.row_bytes > actualRow ? r.row_bytes - actualRow : 0);
-                raw(maximumResponse > actualResponse ? maximumResponse - actualResponse : 0);
-                raw(r.outcome_bytes > actualOutcome ? r.outcome_bytes - actualOutcome : 0);
+                if(!r.encoding) {
+                    raw(r.row_bytes > actualRow ? r.row_bytes - actualRow : 0);
+                    raw(maximumResponse > actualResponse ? maximumResponse - actualResponse : 0);
+                }
+                // The completed reader input has transferred into its original
+                // outcome slot before scratch dies. It remains live as encoder
+                // input; only the row/response construction slots are exclusive.
+                if(!r.encoding || r.tool=="read_selected_file")
+                    raw(r.outcome_bytes > actualOutcome ? r.outcome_bytes - actualOutcome : 0);
             }
         };
         for (auto i = native_records.constBegin(); i != native_records.constEnd(); ++i) {
@@ -4423,28 +4435,44 @@ struct AssistantViewModel::State {
         native_restore_charge();
     }
     Object native_response(bool success, const Object& outcome) {
+        const auto publication=file_projection();
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto transport_generation=transport?transport->outputGeneration():0;
+        const auto record=native_call && native_call->finishing?native_call->record:nullptr;
+        const auto receipt=record?native_call->receipt:nullptr;
+        const auto rpc=record?native_call->rpc:QJsonValue();
+        const bool previous=record && record->encoding;
+        if(record)record->encoding=true;
+        auto transfer=qScopeGuard([this,publication,transport,transport_generation,record,receipt,rpc,previous] {
+            if(record)record->encoding=previous;
+            // Construction locals died first. Re-admit the original future slot
+            // for the returned local result (or unchanged fallback on throw).
+            // Never restore old-A accounting through a replacement B owner.
+            if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
+                transport->outputGeneration()!=transport_generation)return;
+            if(record && (!native_call || native_call->record!=record || native_call->receipt!=receipt || native_call->rpc!=rpc))return;
+            // Throw unwinds directly to native_finish's original first-cause
+            // catch. Do not emit a competing fence/notification from this guard.
+            native_release_charge(publication,transport,transport_generation);
+        });
+        auto staged=[&]() -> Object {
         const auto bytes=outgoing::size(outcome,outgoing::Role::Result);
-        // Projected Qt JSON string storage can be UTF-16 even where UTF-8 is
-        // one byte. It is a separate owner from the source result.
         if(bytes>Limits::stream_retained_bytes/2)throw std::length_error("Outgoing projection exceeds capacity");
         const auto projected_role=reserve_disclosure(2*bytes);
         const auto projected=outgoing::project(outcome,outgoing::Role::Result,bytes);
-        // Pinned Qt writer: aggregate QByteArray growth and escapedString's
-        // separate doubling buffer plus its owning toString conversion. The
-        // writer's minimum escape buffer is16; these are payload/capacity roles,
-        // not an RSS estimate or permission to spend a different owner's room.
-        const auto minimum=std::max<quint64>(16,sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
-        if(bytes>Limits::stream_retained_bytes/8-minimum)throw std::length_error("Outgoing encoder exceeds capacity");
-        const auto encoded_role=reserve_disclosure(2*(bytes+minimum));
+        CodexJsonEncoding encoding;
+        if(!codex_json_encoding(projected,Limits::context_bytes,encoding) || encoding.encoded!=bytes)
+            throw std::logic_error("Outgoing encoding identity changed");
+        const auto capacity=codex_json_capacity(bytes);
+        const auto encoded_role=reserve_disclosure(capacity);
         QByteArray encoded;
         {
-            const auto writer_role=reserve_disclosure(6*(bytes+minimum));
+            const auto writer_role=reserve_disclosure(encoding.writer_scratch);
             encoded=QJsonDocument(projected).toJson(QJsonDocument::Compact);
-            if(static_cast<quint64>(encoded.size())!=bytes || static_cast<quint64>(encoded.capacity())>2*(bytes+minimum))
+            if(static_cast<quint64>(encoded.size())!=bytes || static_cast<quint64>(encoded.capacity())>capacity)
                 throw std::length_error("Outgoing encoder capacity exceeds its admitted role");
-        } // Qt's conversion/escaping scratch is dead; encoded still has its own role.
+        }
         const auto units=skill_utf16_units(std::string_view(encoded.constData(),encoded.size()));
-        // The decoded array and JSON's independent string payload coexist.
         const auto text_role=reserve_disclosure(2*(units+1)*sizeof(QChar));
         auto text_buffer=std::make_unique<QChar[]>(static_cast<std::size_t>(units+1));
         QStringDecoder decoder(QStringConverter::Utf8,QStringConverter::Flag::Stateless);
@@ -4452,23 +4480,51 @@ struct AssistantViewModel::State {
         if(decoder.hasError() || static_cast<quint64>(end-text_buffer.get())!=units)
             throw std::logic_error("Outgoing Unicode identity changed");
         const auto text=QString::fromRawData(text_buffer.get(),static_cast<qsizetype>(units));
-        Object response{{"success", success}, {"contentItems", QJsonArray{Object{{"type", "inputText"},
-            {"text", text}}}}};
-        generic_size(response, Limits::message_bytes);
-        return response; // Original record/transport owns the preadmitted returned response.
+        Object response{{"success",success},{"contentItems",QJsonArray{Object{{"type","inputText"},{"text",text}}}}};
+        generic_size(response,Limits::message_bytes);
+        return response;
+        }(); // All projection/writer/decoder locals and their guards are dead.
+        if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
+            transport->outputGeneration()!=transport_generation ||
+            (record && (!native_call || native_call->record!=record || native_call->receipt!=receipt || native_call->rpc!=rpc)))
+            throw std::runtime_error("The original native response owner retired");
+        if(record)record->encoding=previous;
+        native_charge(); // The preowned destination now owns staged, not encoder scratch.
+        if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
+            transport->outputGeneration()!=transport_generation ||
+            (record && (!native_call || native_call->record!=record || native_call->receipt!=receipt || native_call->rpc!=rpc)))
+            throw std::runtime_error("The original native response owner retired");
+        transfer.dismiss();
+        return staged;
     }
     void native_reply(const QJsonValue& id, bool success, const Object& outcome) {
         const auto publication = file_projection();
-        const bool delivered = agent->answer(id, native_response(success, outcome));
-        if (!publication.input_current()) return;
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto transport_generation=transport?transport->outputGeneration():0;
+        // Direct refusals have no pending NativeRecord destination slot.
+        const auto response_role=reserve_disclosure(2*(outgoing::size(outcome,outgoing::Role::Result)+1)+
+            sizeof(Object)+sizeof(QJsonArray)+5*sizeof(QJsonValue)+sizeof("successcontentItemstypeinputTexttext")*sizeof(QChar));
+        const auto response=native_response(success,outcome);
+        if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
+            transport->outputGeneration()!=transport_generation)return;
+        const bool delivered=transport->answer(id,response);
+        if(!publication.input_current() || !transport || agent.get()!=transport.data() ||
+            transport->outputGeneration()!=transport_generation)return;
         if (!delivered) throw std::runtime_error("The native action response could not be delivered");
-        agent->activity();
+        transport->activity();
     }
     static Object native_row(const NativeRecord& record, const Object& outcome, bool success) {
         auto payload = record.canonical;
         payload["purpose"] = record.purpose; payload["nativeOutcome"] = outcome;
         return {{"id", record.row}, {"kind", "activity"}, {"text", record.purpose},
             {"status", success ? "completed" : "failed"}, {"payload", payload}};
+    }
+    quint64 native_maximum_row_bytes(const NativeRecord& record) const {
+        auto shell=native_row(record,{},false);shell["status"]="interrupted";
+        const auto bytes=generic_size(shell,Limits::message_bytes);
+        if(bytes<2 || record.outcome_bytes>Limits::message_bytes-(bytes-2))
+            throw std::length_error("Native maximum row exceeds capacity");
+        return bytes-2+record.outcome_bytes;
     }
     void native_fence() noexcept {
         native_failure("OTHER_NATIVE_BOUNDARY", "UNSPECIFIED", 0, "UNCLASSIFIED",
@@ -4669,8 +4725,11 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);
         auto call = *native_call; // Stable owner across synchronous transport failure/reentrant retirement.
         auto record = call.record;
+        const QPointer<CodexAgent> original_transport(agent.get());
+        const auto original_transport_generation=original_transport?original_transport->outputGeneration():0;
         const auto original_call = [&] {
-            return receiver && receiver->state_.get() == this && native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc;
+            return receiver && receiver->state_.get() == this && native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc &&
+                original_transport && agent.get()==original_transport.data() && original_transport->outputGeneration()==original_transport_generation;
         };
         const char* stage = "FINISH_RESPONSE";
         const char* role = "RESPONSE";
@@ -4683,6 +4742,7 @@ struct AssistantViewModel::State {
             request_retired = !authorized;
             if (!authorized) { success = false; actual["request_retired"] = true; }
             auto response = native_response(success, actual);
+            if(!original_call())return;
             stage = "FINISH_ROW"; role = "ROW"; bound = record->row_bytes;
             auto row = native_row(*record, actual, success);
             if (!authorized) row["status"] = "interrupted";
@@ -4715,11 +4775,11 @@ struct AssistantViewModel::State {
             if (!call.resolved && !record->answered) {
                 record->answered = true; // Transfer the original ID at most once, including write failure.
                 stage = "FINISH_ANSWER"; role = "RESPONSE"; bound = Limits::message_bytes;
-                if (!agent->answer(call.rpc, record->response)) throw std::runtime_error("Native response delivery is uncertain");
+                if (!original_transport->answer(call.rpc, record->response)) throw std::runtime_error("Native response delivery is uncertain");
             }
             if (!original_call()) return;
             record->completed = true;
-            if (retained) { record->maximum_row = {}; record->response_bytes = 0; }
+            if (retained) record->response_bytes = 0;
             stage = "FINISH_INSPECTION"; role = "DISCLOSURE"; bound = Limits::context_bytes;
             const auto inspection = call.inspection;
             bool advance = false;
@@ -4751,9 +4811,9 @@ struct AssistantViewModel::State {
             // a fabricated durable success. Clear can explicitly discard it.
             if (!original_call()) return;
             native_failure(stage, role, bound, native_failure_class(), &call, &outcome, int(request_retired));
-            if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
+            try { if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); } }catch(...){}
             if (!receiver || !original_call()) return;
-            if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
+            try { if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); } }catch(...){}
             if (!receiver || !original_call()) return;
             native_fence();
             if (!receiver || !original_call()) return;
@@ -4761,13 +4821,17 @@ struct AssistantViewModel::State {
                 // Even a contained preparation/publication failure chooses the
                 // already-owned honest fallback. Canonical updates must keep it.
                 record->outcome_ready = true;
-                try {
-                    if (native_visible(call)) (void)generic_present(record->terminal);
-                    if (!receiver || !original_call()) return;
-                    if (!call.resolved && !record->answered) {
-                        record->answered = true; (void)agent->answer(call.rpc, record->response);
-                    }
-                } catch (...) {}
+                // The chosen actual fallback replaces its future destinations.
+                // Admit it before optional callbacks or the original transport.
+                try {native_charge();}catch(...){return;}
+                if(!receiver || !original_call())return;
+                try { if(native_visible(call))(void)generic_present(record->terminal); }
+                catch (...) {} // Optional presentation cannot veto the owed ID.
+                if(!receiver || !original_call())return;
+                if(!call.resolved && !record->answered) {
+                    record->answered=true; // At most one attempt, including uncertain writes.
+                    try {(void)original_transport->answer(call.rpc,record->response);}catch(...){}
+                }
             }
         }
     }
@@ -4819,6 +4883,14 @@ struct AssistantViewModel::State {
         record->purpose = purpose; record->row = generic_item_rows.value(id); record->original = original; record->canonical = original;
         if (record->row.isEmpty()) throw std::runtime_error("Native original row is unavailable");
         record->outcome = {{"status", "unconfirmed"}, {"message", "Native work or publication could not be confirmed; inspect the actual project before continuing."}};
+        // This not-yet-inserted record has no future slots in native_bytes.
+        // Its constant uncertainty and canonical-row/response owners remain
+        // separately admitted until actual map insertion/charge takes ownership.
+        const auto preparing_role=reserve_disclosure(sizeof(NativeRecord)+
+            2*(generic_size(original,Limits::context_bytes)+generic_size(record->outcome,Limits::context_bytes)+
+               outgoing::size(record->outcome,outgoing::Role::Result)+
+               static_cast<quint64>(record->purpose.size()+record->row.size()))+
+            12*sizeof(QJsonValue)+4*sizeof(Object)+sizeof(QJsonArray));
         record->response = native_response(false, record->outcome);
         record->terminal = native_row(*record, record->outcome, false);
         // Complete maximum terminal and response wrappers are prepared BEFORE
@@ -4835,12 +4907,9 @@ struct AssistantViewModel::State {
         if (!read_result.isEmpty()) maximum = read_result;
         maximum["request_retired"] = true;
         record->outcome_bytes = std::max(generic_size(maximum, Limits::context_bytes), generic_size(record->outcome, Limits::context_bytes));
-        record->maximum_row = native_row(*record, maximum, false);
-        record->maximum_row["status"] = "interrupted"; // Longest public terminal status role.
-        // The valid typed maximum is retained in maximum_row. A response
-        // maximum is ONLY a byte ceiling: no caller consumes its contents.
-        // Keep that ceiling as a scalar instead of encoding a max-only second
-        // JSON document, decoded string and independent nested JSON carrier.
+        // Both maximum row and response are byte ceilings only. Canonical
+        // updates recompute the same empty-row shell plus outcome_bytes;
+        // no retained maximum payload is consumed as data or authority.
         const auto maximum_metadata_role=reserve_disclosure(2*generic_size(maximum,Limits::context_bytes)+
             sizeof(Object)+2*sizeof(QJsonValue)+2*sizeof(QString)+
             (outgoing::wire_schema.size()+outgoing::maximum_result_code().size())*sizeof(QChar));
@@ -4852,7 +4921,7 @@ struct AssistantViewModel::State {
         // string. The empty wrapper already includes the string delimiters.
         if(inner>(Limits::message_bytes-wrapper)/2)throw std::length_error("Native maximum response exceeds capacity");
         record->response_bytes=wrapper+2*inner;
-        record->row_bytes = std::max(generic_size(record->maximum_row, Limits::message_bytes), generic_size(record->terminal, Limits::message_bytes));
+        record->row_bytes=native_maximum_row_bytes(*record);
         native_records.insert(record->key, record);
         try {
             native_call.emplace(NativeCall{rpc, record, native_receipt});
@@ -4944,6 +5013,8 @@ struct AssistantViewModel::State {
                 if(owned())throw ActionRefusal("operation_superseded","file_id");
                 return;
             }
+            Object result;
+            {
             // The source may be file_bytes; only fixed scratch and this requested
             // range coexist. Decoded array and independent JSON text storage are
             // separately admitted before either is constructed.
@@ -5023,7 +5094,16 @@ struct AssistantViewModel::State {
                 {"text",decoded},{"total_bytes",static_cast<double>(total)},{"start",static_cast<double>(offset)},
                 {"end",static_cast<double>(end)},{"next_offset",static_cast<double>(end)},{"eof",end==total},{"complete",offset==0 && end==total}};
             validate_selected_text(text);
-            if(source_current())finish(true,{{"status","completed"},{"selected_text",text}});
+            result={{"status","completed"},{"selected_text",text}};
+            CodexJsonEncoding returned;
+            if(!codex_json_encoding(result,Limits::context_bytes,returned) || returned.encoded>record->outcome_bytes ||
+                returned.owned>record->outcome_bytes)
+                throw std::length_error("Selected text exceeds its original outcome slot");
+            // Exact decoded JSON transfers into the preowned outcome slot.
+            // Qt object copies share this backing through final record adoption;
+            // no scratch/decoder/range owner is donated to the encoder.
+            } // QFile/hash/scratch/range/decoder backing and their readRole are dead.
+            if(source_current())finish(true,result);
         } catch(const ActionRefusal& refusal) {
             finish(false,{{"status","refused"},{"action_error",refusal.error},{"action_field",refusal.field}});
         } catch(const std::length_error&) {
@@ -6892,10 +6972,27 @@ struct AssistantViewModel::State {
         return false;
     }
     void structure_cue(const std::shared_ptr<NativeCreateWidget>& run,const NativeCreateWidget::Input& step) {
+        // Stack-only original scope; no new retained callback/diagnostic state.
+        const auto original_receiver=run->receiver;
+        const auto original_record=run->call.record;const auto original_receipt=run->call.receipt;
+        const auto original_rpc=run->call.rpc;
+        const auto index=run->step;const int kind=int(step.kind);
+        const auto binding=generation;const auto serial=native_serial;const auto account=usage_epoch;
+        const QPointer<AssistantWidgetInput> original_helper(widget_input.get());
+        const auto original_window=run->window;const auto original_project=run->project;
+        const char* stage="LOOKUP";
+        try {
         const QPointer<QQuickItem> target(create_widget_named(run,step.target));
-        if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","structure"); }
+        if(!target) {
+            stage="EXPOSURE_REVEAL";
+            if(create_widget_missing_target(run,step))return;
+            stage="LOOKUP";throw ActionRefusal("control_unavailable","structure");
+        }
+        stage="CURRENT";
         if(!structure_control_current(run,target))throw ActionRefusal("target_unavailable","structure");
+        stage="EXPOSURE_REVEAL";
         if(!widget_input->usableTarget(*target)) {create_widget_reveal(run,target);return;}
+        stage="PREPARATION_INPUT";
         const auto receiver=run->receiver;
         AssistantWidgetInput::Request cue;cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=target;
         auto current=[this,run,target] {return run->receiver && run->receiver->state_.get()==this && target && structure_control_current(run,target);};
@@ -6915,6 +7012,37 @@ struct AssistantViewModel::State {
         callback_role.dismiss();disclosure_preparing_bytes-=growth;native_charge();
         if(!receiver || receiver->state_.get()!=this || !create_widget_current(run) || !widget_input)return;
         widget_input->start(std::move(cue));
+        } catch(...) {
+            // Observe only the original escaping local failure, before the outer
+            // normalized refusal/cleanup. No UI predicate is evaluated for logging.
+            if(lcAssistantWidgetLookup().isDebugEnabled() && original_receiver && original_receiver->state_.get()==this &&
+                create_widget_owned(run) && run->call.record==original_record && run->call.receipt==original_receipt && run->call.rpc==original_rpc &&
+                run->step==index && generation==binding && native_serial==serial && usage_epoch==account &&
+                widget_input.get()==original_helper && run->window==original_window && run->project==original_project) {
+                const auto failure=native_failure_class();
+                const auto completed=run->completed_steps;
+                const auto active_receipt=native_receipt;
+                const auto* file=run->file_input.get();const auto* control=run->control_input.get();const auto* parameter=run->parameter_input.get();
+                const bool retiring=native_call->retiring, resolved=native_call->resolved;
+                const bool retired=original_record->retired, receipt_retired=original_receipt->retired;
+                const bool answered=original_record->answered, discarded=original_record->discarded, finished=original_record->completed;
+                try {
+                    qCDebug(lcAssistantWidgetLookup) << "structure cue failure" << "stage" << stage << "class" << failure
+                        << "index" << index << "kind" << kind << "completed" << completed;
+                } catch(...) {} // Observation never replaces the original exception.
+                // Qt message handlers may synchronously retire A or admit B.
+                // No old-A continuation/cleanup may run through a changed scope.
+                if(!original_receiver || original_receiver->state_.get()!=this || !create_widget_owned(run) ||
+                    run->call.record!=original_record || run->call.receipt!=original_receipt || run->call.rpc!=original_rpc || native_receipt!=active_receipt ||
+                    run->step!=index || run->completed_steps!=completed || generation!=binding || native_serial!=serial || usage_epoch!=account ||
+                    widget_input.get()!=original_helper || run->window!=original_window || run->project!=original_project ||
+                    run->file_input.get()!=file || run->control_input.get()!=control || run->parameter_input.get()!=parameter ||
+                    native_call->retiring!=retiring || native_call->resolved!=resolved || original_record->retired!=retired ||
+                    original_receipt->retired!=receipt_retired || original_record->answered!=answered ||
+                    original_record->discarded!=discarded || original_record->completed!=finished)return;
+            }
+            throw; // Same original exception and outer refusal when scope survives.
+        }
     }
     int individual_member_index(const std::shared_ptr<NativeCreateWidget>& run) const {
         if(!run || !run->project)return -1;
@@ -9297,21 +9425,17 @@ struct AssistantViewModel::State {
             if (bytes > Limits::stream_retained_bytes - (generic_item_bytes - oldBytes)) throw std::length_error("Agent output exceeds retained limit");
             const auto nextBytes = generic_item_bytes - oldBytes + bytes;
             record = type == "dynamicToolCall" ? native_records.value(native_key(generic_thread, generic_turn, id)) : std::shared_ptr<NativeRecord>{};
-            Object previousCanonical, previousMaximum;
+            Object previousCanonical;
             quint64 previousLimit = 0;
             if (record) {
-                previousCanonical = record->canonical; previousMaximum = record->maximum_row; previousLimit = record->row_bytes;
+                previousCanonical = record->canonical; previousLimit = record->row_bytes;
             }
             try {
                 if (record) {
                     record->canonical = item;
                     if (!record->completed) {
-                        const auto maximum = record->maximum_row.value("payload").toObject().value("nativeOutcome").toObject();
-                        auto maximumRow = native_row(*record, maximum, false);
-                        maximumRow["status"] = "interrupted";
                         stage = "ITEM_MAXIMUM_ROW"; role = "ROW"; bound = Limits::message_bytes;
-                        const auto maximumBytes = generic_size(maximumRow, Limits::message_bytes);
-                        record->maximum_row = std::move(maximumRow); record->row_bytes = maximumBytes;
+                        record->row_bytes=native_maximum_row_bytes(*record);
                         stage = "ITEM_HISTORY_ADMISSION"; role = "HISTORY"; bound = Limits::ui_history_bytes;
                         if (!admit(history)) throw std::length_error("Native terminal history capacity is unavailable");
                     }
@@ -9325,7 +9449,7 @@ struct AssistantViewModel::State {
                 if (record && native_records.value(record->key) == record)
                     native_failure(stage, role, bound, native_failure_class(), native_call && native_call->record == record ? &*native_call : nullptr, record->outcome_ready ? &record->outcome : nullptr);
                 if (record) {
-                    record->canonical = std::move(previousCanonical); record->maximum_row = std::move(previousMaximum); record->row_bytes = previousLimit;
+                    record->canonical = std::move(previousCanonical); record->row_bytes = previousLimit;
                 }
                 // Registration may have changed before a map allocation failed.
                 // Restore the still-owned old state; never silently uncharge it.

@@ -1423,3 +1423,42 @@ Duplicate original keys remain independently refused with no eviction/replay.
 Existing byte/history/owner/currentness/admission limits remain unchanged. A true
 count-capacity refusal uses the already-closed resource_exhausted result code,
 without forwarding arbitrary messages or declaring the owner run's unknown cause.
+
+
+Selected-text completion and original response ownership
+
+Pending outcome/row/response slots are exclusive construction destinations, not
+independent future owners stacked over every encoder scratch allocation. The
+original finishing response temporarily stages that exact slot while all actual
+fallbacks remain charged; on return the same slot owns the bounded local result,
+and on failure it resumes the unchanged fallback. Actual final staged records
+retain their real Qt payload owners without reserving another future final copy.
+Maximum row content is no longer retained: all consumers require only its scalar
+size, computed from the original empty-outcome row shell and outcome ceiling,
+including canonical-item replacement/rollback. No maximum acts as scientific data.
+The ordinary Qt writer remains unchanged. Its borrowed input walk also counts
+actual string backing and its largest sequential escapedString/toString workspace
+from pinned Qt6.11.2 rather than treating escaped document bytes as raw characters.
+The transport appends LF in the same unique buffer; QProcess/holding copies keep
+separate roles. Actual returned capacities and all original hard limits still check.
+The one-file reader destroys file/hash/range/decoder scratch before response
+completion while retaining its independently admitted exact output. Optional
+history/archive presentation and the already-owned original fallback answer are
+contained independently; exact record/receipt/RPC/transport generation are rechecked
+before the sole answer attempt, including reentrant replacement and uncertain write.
+Ordinary current Save remains Session.save; its preowned factual variants, original
+first failure, source proofs, once/cancellation and scientific outcomes are unchanged.
+
+
+Original structure cue local refusal observation
+
+The existing opt-in edi.assistant.widget.lookup diagnostic records only the first
+escaping local structure_cue stage: LOOKUP, CURRENT, EXPOSURE_REVEAL or
+PREPARATION_INPUT, plus the original closed exception class and retained step,
+kind and completed prefix. It does not query the UI again, dump a target/model or
+change lookup, reveal, prepared input, ordinary mutation, timing or success guards.
+Qt message-handler reentry is checked against the same weak receiver, original
+record/receipt/helper/window/project/step and retained retirement/once facts before
+old cleanup can continue. Disabled logging preserves the original exception path;
+success/scheduled reveal adds no log or new observer. This is attribution of an
+unproved visible-control failure, not a scientific/focus/geometry correction.
