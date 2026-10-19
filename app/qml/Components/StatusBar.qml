@@ -148,7 +148,8 @@ EaElements.StatusBar {
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
-        implicitWidth: assistantArea.implicitWidth + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
+        implicitWidth: assistantArea.implicitWidth + (speedButton.visible ? gap + speedButton.implicitWidth : 0)
+            + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
         anchors.right: parent.right
@@ -159,10 +160,84 @@ EaElements.StatusBar {
             objectName: "statusBar.assistant.working"
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
-            width: Math.max(0, parent.width - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
+            width: Math.max(0, parent.width - (speedButton.visible ? assistantGroup.gap + speedButton.width : 0)
+                - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
+        }
+        EaElements.ToolButton {
+            id: speedButton
+            objectName: "assistant.actionSpeed"
+            visible: (assistantArea.working || assistantGroup.stopShown) && Session.assistant.showActions
+            implicitWidth: assistantArea.iconExtent
+            implicitHeight: implicitWidth
+            padding: 0
+            anchors.right: visibleStop.visible ? visibleStop.left : parent.right
+            anchors.rightMargin: visibleStop.visible ? assistantGroup.gap : 0
+            anchors.verticalCenter: parent.verticalCenter
+            text: "x" + Session.assistant.actionSpeed
+            onClicked: speedMenu.open()
+            onVisibleChanged: if (!visible) speedMenu.close()
+            background: Rectangle {
+                implicitWidth: assistantArea.iconExtent
+                implicitHeight: implicitWidth
+                radius: width / 2
+                color: speedButton.backgroundColor()
+                border.width: 0
+            }
+            contentItem: EaElements.Label {
+                text: speedButton.text
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.65
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: speedButton.foregroundColor()
+            }
+            ToolTip.text: qsTr("Show actions speed: %1").arg(text)
+            Accessible.name: ToolTip.text
+            EaElements.Menu {
+                id: speedMenu
+                objectName: "assistant.actionSpeed.menu"
+                x: parent.width - width
+                y: -height - AppSizes.unit * 0.5
+                onAboutToShow: Session.assistant.setActionSpeedMenu(speedMenu, true)
+                onClosed: Session.assistant.setActionSpeedMenu(speedMenu, false)
+                EaElements.MenuItem {
+                    text: "x1"
+                    checkable: true
+                    autoExclusive: true
+                    checked: Session.assistant.actionSpeed === 1
+                    onTriggered: Session.assistant.actionSpeed = 1
+                }
+                EaElements.MenuItem {
+                    text: "x2"
+                    checkable: true
+                    autoExclusive: true
+                    checked: Session.assistant.actionSpeed === 2
+                    onTriggered: Session.assistant.actionSpeed = 2
+                }
+                EaElements.MenuItem {
+                    text: "x3"
+                    checkable: true
+                    autoExclusive: true
+                    checked: Session.assistant.actionSpeed === 3
+                    onTriggered: Session.assistant.actionSpeed = 3
+                }
+                EaElements.MenuItem {
+                    text: "x5"
+                    checkable: true
+                    autoExclusive: true
+                    checked: Session.assistant.actionSpeed === 5
+                    onTriggered: Session.assistant.actionSpeed = 5
+                }
+                EaElements.MenuItem {
+                    text: "x10"
+                    checkable: true
+                    autoExclusive: true
+                    checked: Session.assistant.actionSpeed === 10
+                    onTriggered: Session.assistant.actionSpeed = 10
+                }
+            }
         }
         EaElements.ToolButton {
             id: visibleStop

@@ -31,6 +31,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString skillSourceRevision READ skillSourceRevision NOTIFY skillSourcesChanged)
     Q_PROPERTY(QString skillSourceError READ skillSourceError NOTIFY skillSourcesChanged)
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
+    Q_PROPERTY(int actionSpeed READ actionSpeed WRITE setActionSpeed NOTIFY actionSpeedChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
@@ -63,6 +64,9 @@ class AssistantViewModel : public QObject {
     ~AssistantViewModel() override;
     bool showActions() const;
     bool showingActions() const;
+    int actionSpeed() const;
+    void setActionSpeed(int value);
+    Q_INVOKABLE void setActionSpeedMenu(QObject* menu, bool open); // Original native speed menu lifetime only.
     QQuickWindow* actionWindow() const;
     void setShowActions(bool value);
     void setActionWindow(QQuickWindow* window);
@@ -125,6 +129,7 @@ class AssistantViewModel : public QObject {
    signals:
     void accountChanged();
     void showActionsChanged();
+    void actionSpeedChanged();
     void showingActionsChanged();
     void actionWindowChanged();
     void actionPointerShown();

@@ -200,6 +200,20 @@ AssistantWidgetInput::AssistantWidgetInput(QQuickWindow& window, QObject* parent
     // exact owned window or its actual current text-event receiver.
     application->installEventFilter(this);
 }
+void AssistantWidgetInput::pace(int milliseconds) {
+    paced_wait_ = true;
+    timer_.start((milliseconds + action_speed_ - 1) / action_speed_);
+}
+void AssistantWidgetInput::setActionSpeed(int speed) {
+    if (!supportsSpeed(speed) || speed==action_speed_) return;
+    const auto previous=action_speed_;
+    action_speed_=speed;
+    // Retain the same original step/request and only rescale time still owed.
+    // Inactive-window checks and zero-delay dispatch are not human pacing.
+    const auto remaining=timer_.remainingTime();
+    if (paced_wait_ && timer_.isActive() && remaining>0)
+        timer_.start(std::max(1,(remaining*previous+speed-1)/speed));
+}
 AssistantWidgetInput::~AssistantWidgetInput() {
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
     timer_.stop();
@@ -426,6 +440,7 @@ bool AssistantWidgetInput::selectAll() {
     return key(combination.key(), combination.keyboardModifiers());
 }
 void AssistantWidgetInput::advance() noexcept {
+    paced_wait_ = false;
     const auto id = serial_;
     const auto request = request_; // Strong original callback/target scope for this tick.
     const QPointer<AssistantWidgetInput> self(this);
@@ -435,7 +450,7 @@ void AssistantWidgetInput::advance() noexcept {
         if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (serial_ == id && request_ == request) stop(false, tr("Visible action target changed or is unavailable"), true); return; }
         // Keep the same step and original authority while another application
         // is active. Never request activation or inject into an inactive window.
-        if (!window_->isActive()) { timer_.start(character_ms); return; }
+        if (!window_->isActive() || (presentation_paused_ && !pressed_)) { timer_.start(character_ms); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
             stop(false, interrupted_, false); return;
         }
@@ -445,7 +460,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
-            step_ = Step::Press; timer_.start(move_ms); return;
+            step_ = Step::Press; pace(move_ms); return;
         case Step::Press:
             if (request->kind == Kind::FileLoadCue) {
                 // Presentation only: no device event, focus change or button handler.
@@ -454,7 +469,7 @@ void AssistantWidgetInput::advance() noexcept {
                 const bool valid = current(id);
                 if (!self || serial_ != id || request_ != request) return;
                 if (!valid) { stop(false, tr("Visible file cue ownership changed"), false); return; }
-                step_ = Step::Release; timer_.start(press_ms); return;
+                step_ = Step::Release; pace(press_ms); return;
             }
             if (request->kind == Kind::DismissMenu) {
                 choice_popup_ = request->target->property("contextMenu").value<QObject*>();
@@ -480,7 +495,7 @@ void AssistantWidgetInput::advance() noexcept {
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
             if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) stop(false, tr("The real control did not receive its press"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            step_ = Step::Release; timer_.start(press_ms); return;
+            step_ = Step::Release; pace(press_ms); return;
         case Step::Release:
             if (request->kind == Kind::FileLoadCue) { stop(true, {}, false); return; }
             if ((request->kind != Kind::Value && request->kind != Kind::Text) && request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose && request->kind != Kind::SearchChoice && request->kind != Kind::FormText) {
@@ -498,18 +513,18 @@ void AssistantWidgetInput::advance() noexcept {
                 choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
                 if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { stop(false, tr("The genuine ComboBox popup did not open"), false); return; }
                 step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChooseHome;
-                timer_.start(click_relaxation_ms); return;
+                pace(click_relaxation_ms); return;
             }
             if ((request_->kind != Kind::Value && request_->kind != Kind::Text) && request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { stop(true, {}, false); return; }
-            step_ = Step::Select; timer_.start(click_relaxation_ms); return;
+            step_ = Step::Select; pace(click_relaxation_ms); return;
         case Step::ChooseHome:
             if (!key(Qt::Key_Home)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
-            if (self && serial_ == id && request_ == request) { step_ = Step::ChooseDown; timer_.start(character_ms); }
+            if (self && serial_ == id && request_ == request) { step_ = Step::ChooseDown; pace(character_ms); }
             return;
         case Step::ChooseDown:
             if (option_step_ < request->option) {
                 if (!key(Qt::Key_Down)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
-                if (self && serial_ == id && request_ == request) { ++option_step_; timer_.start(character_ms); }
+                if (self && serial_ == id && request_ == request) { ++option_step_; pace(character_ms); }
                 return;
             }
             step_ = Step::ChooseCommit; timer_.start(0); return;
@@ -531,14 +546,14 @@ void AssistantWidgetInput::advance() noexcept {
             draft_ = (request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText;
             if (!selectAll()) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input did not acquire focus"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            step_ = Step::Delete; timer_.start(character_ms); return;
+            step_ = Step::Delete; pace(character_ms); return;
         case Step::Delete:
             // A filter's text is immediate presentation state, not a deferred
             // scientific edit. Never restore/reflow it before a manual event.
             draft_ = (request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText;
             if (!key(Qt::Key_Backspace)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input changed focus"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            step_ = Step::Type; timer_.start(character_ms); return;
+            step_ = Step::Type; pace(character_ms); return;
         case Step::Type:
             if (character_ < request_->value.size()) {
                 const auto width = request_->value.at(character_).isHighSurrogate() &&
@@ -550,7 +565,7 @@ void AssistantWidgetInput::advance() noexcept {
                 if (!self || serial_ != id || request_ != request) return;
                 emit inputProgress();
                 if (!self || serial_ != id || request_ != request) return;
-                timer_.start(character_ms); return;
+                pace(character_ms); return;
             }
             step_ = Step::Commit; timer_.start(0); return;
         case Step::Commit:
@@ -593,6 +608,7 @@ void AssistantWidgetInput::stop(bool delivered, const QString& diagnostic, bool 
     const QPointer<AssistantWidgetInput> self(this);
     const auto id = serial_;
     const auto original = request_;
+    paced_wait_ = false;
     try { timer_.stop(); } catch (...) { delivered = false; }
     if (mouse_owner_) mouse_owner_->retire(*this, mouse_stamp_);
     if (pressed_ || (mouse_owner_ && mouse_owner_->heldBy(*this, mouse_stamp_))) {

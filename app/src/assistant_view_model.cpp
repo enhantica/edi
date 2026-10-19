@@ -881,6 +881,12 @@ struct AssistantViewModel::State {
     bool archive_refused = false;
     using Limits = edi::assistant::Limits;
     bool show_actions = false, showing_actions = false;
+    int action_speed = 1;
+    QPointer<QObject> action_speed_menu;
+    QMetaObject::Connection action_speed_menu_destroyed;
+    int presentationDelay(int milliseconds=500) const noexcept {
+        return show_actions ? (milliseconds+action_speed-1)/action_speed : milliseconds;
+    }
     QPointer<QQuickWindow> action_window;
     std::unique_ptr<AssistantWidgetInput> widget_input;
     bool manual_gesture_current(const ManualControlGesture& gesture) const {
@@ -2058,7 +2064,7 @@ struct AssistantViewModel::State {
                 if(!widget_entry_current(run,entry))return;
                 widget_showing(true);
                 if (!widget_entry_owned(run, entry)) return;
-                QTimer::singleShot(500,&owner,[this,run,entry] {
+                QTimer::singleShot(presentationDelay(),&owner,[this,run,entry] {
                     if (!widget_entry_owned(run, entry)) return;
                     try { widget_click_tab(run); } catch(...) { if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error); }
                 });
@@ -2645,7 +2651,7 @@ struct AssistantViewModel::State {
                     if (!delivered || !group || group->property("collapsed").toBool()) {
                         widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine group click did not expand its controls") : message); return;
                     }
-                    QTimer::singleShot(500, &owner, [this, run, entry] {
+                    QTimer::singleShot(presentationDelay(), &owner, [this, run, entry] {
                         if (!widget_entry_owned(run, entry)) return;
                         try { widget_resume_revealed(run); }
                         catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
@@ -2671,7 +2677,7 @@ struct AssistantViewModel::State {
             run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
             callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
             if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return false;
-            QTimer::singleShot(500,&owner,std::move(next));return false;
+            QTimer::singleShot(presentationDelay(),&owner,std::move(next));return false;
         }
         // A visible viewport receives real bounded wheel input. Read-only
         // geometry/currentness determines direction; never assign contentY,
@@ -2694,7 +2700,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(500, &owner, [this, run, entry, viewport, before] {
+                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry, viewport, before] {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
                         if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
@@ -2949,7 +2955,7 @@ struct AssistantViewModel::State {
                     widget_input_finished(run,delivered,message);return;
                 }
                 if(!delivered || !widget_entry_current(run,entry)){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
-                QTimer::singleShot(500,&owner,[this,run,entry] {
+                QTimer::singleShot(presentationDelay(),&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
                     try{widget_free_group(run,true);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
                 });
@@ -3053,7 +3059,7 @@ struct AssistantViewModel::State {
         run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
         callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
         if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
-        QTimer::singleShot(500,&owner,std::move(next));
+        QTimer::singleShot(presentationDelay(),&owner,std::move(next));
     }
     void widget_filter_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
@@ -3079,7 +3085,7 @@ struct AssistantViewModel::State {
                 if(!delivered || !filter || !target || !widget_entry_current(run,entry) ||
                     filter->categories().indexOf(filter->categoryFilter())!=option ||
                     filter->categoryFilter()!=filter->categoryFor(run->parameter)) {widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
-                QTimer::singleShot(500,&owner,[this,run,entry] {
+                QTimer::singleShot(presentationDelay(),&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
                     try {widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
                 });
@@ -3124,7 +3130,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(500, &owner, [this, run, entry] {
+                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry] {
                     if (!widget_entry_owned(run, entry)) return;
                     try { widget_filter_parameter(run); }
                     catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
@@ -3172,7 +3178,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(500, &owner, [this, run, entry, target] {
+                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry, target] {
                     if (!widget_entry_owned(run, entry)) return;
                     try { widget_main_ready(run, target); }
                     catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
@@ -3346,7 +3352,7 @@ struct AssistantViewModel::State {
         run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
         callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
-        QTimer::singleShot(500,&owner,std::move(next));
+        QTimer::singleShot(presentationDelay(),&owner,std::move(next));
     }
     void widget_background_done(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) {
         if (!widget_owned(run)) return;
@@ -3375,7 +3381,7 @@ struct AssistantViewModel::State {
             run->background_step=run->background_step==4?6:run->background_step+1;
         }
         run->reveal_steps = 0;
-        QTimer::singleShot(500, &owner, [this, run] {
+        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
             try { widget_background_next(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         });
     }
@@ -3599,7 +3605,7 @@ struct AssistantViewModel::State {
         run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
         callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
-        QTimer::singleShot(500,&owner,std::move(next));
+        QTimer::singleShot(presentationDelay(),&owner,std::move(next));
     }
     void widget_relation_done(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) {
         if (!widget_owned(run)) return;
@@ -3643,7 +3649,7 @@ struct AssistantViewModel::State {
         if (run->relation_field == (run->relation_constraint ? 4 : 3)) {
             ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr;
         }
-        QTimer::singleShot(500, &owner, [this, run] {
+        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
             try { widget_relation_step(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         });
     }
@@ -3743,7 +3749,7 @@ struct AssistantViewModel::State {
             if (!widget_owned(run)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(500, &owner, [this, run, target] {
+                QTimer::singleShot(presentationDelay(), &owner, [this, run, target] {
                     try {
                         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "extras") != target || !target->property("checked").toBool()) {
                             widget_refuse(run, QObject::tr("The genuine Extra click did not select its original sidebar")); return;
@@ -3769,7 +3775,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(500, &owner, [this, run, entry, target] {
+                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry, target] {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
                         if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
@@ -3903,7 +3909,7 @@ struct AssistantViewModel::State {
         }
         widget_showing(true); // Reveals manual controls without changing the user's preference.
         if (!receiver || !widget_owned(run)) return;
-        QTimer::singleShot(500, &owner, [this, run] {
+        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
             try { widget_click_tab(run); }
             catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         });
@@ -6115,7 +6121,7 @@ struct AssistantViewModel::State {
                 if (step == 1 && field->property("text").toString()!=task->name)
                     throw std::runtime_error("The actual folder name differs from the original request");
                 ++run->save_step;
-                QTimer::singleShot(500,&owner,[this,run] {
+                QTimer::singleShot(presentationDelay(),&owner,[this,run] {
                     try { native_save_widget_next(run); }
                     catch (...) { if (widget_owned(run)) widget_refuse(run,widget_outcome_error); }
                 });
@@ -6184,7 +6190,7 @@ struct AssistantViewModel::State {
             }
             widget_showing(true);
             if (!receiver || !widget_owned(run)) return;
-            QTimer::singleShot(500,&owner,[this,run] {
+            QTimer::singleShot(presentationDelay(),&owner,[this,run] {
                 try {native_save_widget_next(run);}catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
             });
         } catch (...) {
@@ -7310,7 +7316,7 @@ struct AssistantViewModel::State {
         native_refresh(*native_call); // Only this genuinely applied original editor advances its stamps.
         if (!receiver || !create_widget_current(run)) return;
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
-        QTimer::singleShot(500, &owner, [this, run] {
+        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
             if (!create_widget_current(run)) return;
             try { create_widget_next(run); }
             catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "file-next-catch"); }
@@ -7505,7 +7511,7 @@ struct AssistantViewModel::State {
         if (run->completed_steps) { native_call->may_have_written = true; native_refresh(*native_call); }
         if (!receiver || !create_widget_current(run)) return;
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
-        QTimer::singleShot(500, &owner, [this, run] {
+        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
             if (!create_widget_current(run)) return;
             try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "advance-next-catch"); }
         });
@@ -7597,7 +7603,7 @@ struct AssistantViewModel::State {
             create_widget_refuse(run,widget_outcome_error,false,"reveal-completion");return true;
         }
         // This replaces the original reveal completion timer; no new pacing or owner.
-        QTimer::singleShot(500,&owner,[this,run] {
+        QTimer::singleShot(presentationDelay(),&owner,[this,run] {
             if(!create_widget_current(run))return;
             try{create_widget_next(run);}catch(...){if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"reveal-next-catch");}
         });return true;
@@ -11311,10 +11317,44 @@ AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencie
     : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies))) { state_->bind(nullptr); }
 #endif
 AssistantViewModel::~AssistantViewModel() {
+    QObject::disconnect(state_->action_speed_menu_destroyed);
     // Stop observation before State/helper destruction can publish Qt events.
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
 }
 bool AssistantViewModel::showActions() const { return state_->show_actions; }
+int AssistantViewModel::actionSpeed() const { return state_->action_speed; }
+void AssistantViewModel::setActionSpeed(int value) {
+    if (!AssistantWidgetInput::supportsSpeed(value) || state_->action_speed==value) return;
+    state_->action_speed=value;
+    if (state_->widget_input) state_->widget_input->setActionSpeed(value);
+    emit actionSpeedChanged(); // No general notify/context rebuild or operation retirement.
+}
+void AssistantViewModel::setActionSpeedMenu(QObject* menu, bool open) {
+    if (!menu) return;
+    if (!open) {
+        if (state_->action_speed_menu!=menu) return; // Old A cannot unpause B.
+        QObject::disconnect(state_->action_speed_menu_destroyed);
+        state_->action_speed_menu_destroyed={};state_->action_speed_menu.clear();
+        if (state_->widget_input) state_->widget_input->setPresentationPaused(false);
+        return;
+    }
+    const QPointer<AssistantViewModel> self(this);
+    const QPointer<QObject> original(menu);
+    const auto window=state_->action_window;
+    const QPointer<QQuickItem> parent(menu->property("parent").value<QQuickItem*>());
+    if (!self || !original || state_->action_window!=window || !window || !parent || parent->window()!=window ||
+        original->objectName()!=QLatin1StringView("assistant.actionSpeed.menu")) return;
+    if (state_->action_speed_menu==original) return;
+    QObject::disconnect(state_->action_speed_menu_destroyed);
+    state_->action_speed_menu=original;
+    state_->action_speed_menu_destroyed=connect(original,&QObject::destroyed,this,[this] {
+        // QPointer clears before destroyed. A different live popup remains B.
+        if (state_->action_speed_menu) return;
+        state_->action_speed_menu_destroyed={};
+        if (state_->widget_input) state_->widget_input->setPresentationPaused(false);
+    });
+    if (state_->widget_input) state_->widget_input->setPresentationPaused(true);
+}
 bool AssistantViewModel::showingActions() const { return state_->showing_actions; }
 QQuickWindow* AssistantViewModel::actionWindow() const { return state_->action_window; }
 void AssistantViewModel::setShowActions(bool value) {
@@ -11346,9 +11386,12 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
         state_->native_widget || (state_->native_call && state_->native_call->record != record)) return;
 #endif
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
+    QObject::disconnect(state_->action_speed_menu_destroyed);
+    state_->action_speed_menu_destroyed={};state_->action_speed_menu.clear();
     state_->widget_input.reset(); state_->action_window = window;
     if (window) {
         state_->widget_input = std::make_unique<AssistantWidgetInput>(*window);
+        state_->widget_input->setActionSpeed(state_->action_speed);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerShown, this, &AssistantViewModel::actionPointerShown);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerMoved, this, &AssistantViewModel::actionPointerMoved);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerPressed, this, &AssistantViewModel::actionPointerPressed);

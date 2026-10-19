@@ -40,6 +40,10 @@ class AssistantWidgetInput final : public QObject {
     ~AssistantWidgetInput() override;
     std::uint64_t start(Request request); // Not exposed to QML/provider tools.
     void cancel();
+    static bool supportsSpeed(int speed) noexcept { return speed==1 || speed==2 || speed==3 || speed==5 || speed==10; }
+    void setPresentationPaused(bool paused) noexcept { presentation_paused_ = paused; }
+    void setActionSpeed(int speed); // User presentation preference; no request/step restart.
+
     bool injecting() const noexcept { return injecting_; }
     // Genuine input at this exact paced control/popup supersedes only its operation.
     bool conflictsWith(const QQuickItem* item) const noexcept;
@@ -67,6 +71,8 @@ class AssistantWidgetInput final : public QObject {
     struct MouseOwnership;
     enum class Step { Move, Press, Release, Select, Delete, Type, Commit, ChooseHome, ChooseDown, ChooseCommit };
     void advance() noexcept;
+    void pace(int milliseconds);
+
     bool current(std::uint64_t id) const;
     bool visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter = false) const;
     bool mouse(QEvent::Type type, Qt::MouseButton button);
@@ -79,6 +85,9 @@ class AssistantWidgetInput final : public QObject {
     QPointer<MouseOwnership> mouse_owner_; // Application-owned: rejects old replays across helper/window teardown.
     quint64 mouse_stamp_ = 0;
     QTimer timer_;
+    int action_speed_ = 1;
+    bool paced_wait_ = false, presentation_paused_ = false;
+
     std::shared_ptr<Request> request_;
     std::uint64_t serial_ = 0;
     Step step_ = Step::Move;
