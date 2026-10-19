@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtCore
 import QtQuick.Controls
 import QtTest
@@ -5932,9 +5933,34 @@ TestCase {
         gui398_nativeDialog(dialog);
         return dialog;
     }
-    function gui392_button(button, dialog, retainReceipt407) {
+    function gui563_pickerExposed(control, panel, host) {
+        verify(control !== null && host !== null && host.visible && host.contentItem !== null
+            && panel.contentItem.Window.window === host && control.Window.window === host
+            && control.visible && control.width > 0 && control.height > 0,
+            "PICKER563: original picker control has positive geometry in its exact current content-host Window");
+        let inHost = false;
+        for (let parent = control.parent; parent; parent = parent.parent) {
+            inHost = inHost || parent === Ui.windowRoot(host);
+            if (parent.clip) {
+                const bounds = control.mapToItem(parent, 0, 0, control.width, control.height);
+                verify(bounds.x >= -0.5 && bounds.y >= -0.5
+                    && bounds.x + bounds.width <= parent.width + 0.5
+                    && bounds.y + bounds.height <= parent.height + 0.5,
+                    "PICKER563: complete original control fits every actual picker clipping viewport");
+            }
+        }
+        verify(inHost && Ui.rendered(control) && Ui.exposed(control),
+            "PICKER563: original receiver belongs to its genuine visible picker window");
+        const bounds = control.mapToItem(host.contentItem, 0, 0, control.width, control.height);
+        verify(bounds.x >= -0.5 && bounds.y >= -0.5
+            && bounds.x + bounds.width <= host.contentItem.width + 0.5
+            && bounds.y + bounds.height <= host.contentItem.height + 0.5,
+            "PICKER563: complete original control fits the unchanged actual picker window viewport");
+    }
+    function gui392_button(button, dialog, retainReceipt407, pickerHost563) {
         verify(button !== null && button.enabled, "GUI392: original standard action is enabled");
-        ux356_fullyExposed(button);
+        if (pickerHost563) gui563_pickerExposed(button, dialog, pickerHost563);
+        else ux356_fullyExposed(button);
         const point = Ui.clickPoint(button);
         const receipt407 = gui407_nativeReceipt(button, dialog, point);
         let returned407 = false;
@@ -6307,27 +6333,51 @@ TestCase {
             && typeof panel.standardButton === "function" && panel.standardButton(Dialog.Open) !== null);
         compare(panels.length, 1, "GUI392: same genuine FolderDialog owns exactly one current standard Open panel");
         const panel = panels[0], panelLife = lifetime313(panel);
+        const host = panel.contentItem.Window.window;
+        verify(host !== null && panel.header !== null, "PICKER563: SAME original panel exposes its actual content Window and header");
+        const hostLife = lifetime313(host), header = panel.header, headerLife = lifetime313(header);
+        const breadcrumbs = Ui.itemsWithProperty(header, "textField").filter(control => control.dialog === panel && control.textField !== null);
+        compare(breadcrumbs.length, 1, "PICKER563: original header owns exactly one breadcrumb for SAME panel");
+        const breadcrumb = breadcrumbs[0], breadcrumbLife = lifetime313(breadcrumb);
+        const originalField = breadcrumb.textField, fieldLife = lifetime313(originalField);
+        tryVerify(() => alive313(selectorLife) && alive313(panelLife) && alive313(hostLife)
+            && alive313(headerLife) && alive313(breadcrumbLife) && alive313(fieldLife)
+            && selector.visible && panel.opened && host.visible && host.active
+            && panel.contentItem.Window.window === host && header.Window.window === host
+            && breadcrumb.dialog === panel && breadcrumb.textField === originalField,
+            2000, "PICKER563: exact original picker is opened in its active content-host Window before native shortcut/action");
         let accepted = 0, rejected = 0;
         function onAccepted() { ++accepted; }
         function onRejected() { ++rejected; }
         selector.accepted.connect(onAccepted); selector.rejected.connect(onRejected);
         try {
-            if (cancel) gui392_button(panel.standardButton(Dialog.Cancel), panel);
+            if (cancel) gui392_button(panel.standardButton(Dialog.Cancel), panel, false, host);
             else {
                 keyClick(Qt.Key_L, Qt.ControlModifier);
-                const field = window.activeFocusItem;
-                verify(field !== null && field.activeFocus && Ui.rendered(field) && Ui.exposed(field),
+                const field = alive313(hostLife) ? host.activeFocusItem : null;
+                const sameHeader = field !== null && alive313(headerLife) && gui393_under(field, header);
+                console.log("PICKER563_RECEIVER", JSON.stringify({sameMainWindow:host === window,
+                    selectorAlive:alive313(selectorLife), panelAlive:alive313(panelLife), hostAlive:alive313(hostLife),
+                    headerAlive:alive313(headerLife), breadcrumbAlive:alive313(breadcrumbLife), fieldAlive:alive313(fieldLife),
+                    hostActive:alive313(hostLife) ? host.active : null, panelOpened:alive313(panelLife) ? panel.opened : null,
+                    focusedPresent:field !== null, focusedIsOriginalBreadcrumb:field === originalField,
+                    focusedInOriginalHeader:sameHeader, activeFocus:field !== null ? field.activeFocus : null,
+                    rendered:field !== null ? Ui.rendered(field) : null, exposed:field !== null ? Ui.exposed(field) : null}));
+                verify(alive313(selectorLife) && alive313(panelLife) && alive313(hostLife)
+                    && field !== null && field === originalField && alive313(fieldLife)
+                    && field.activeFocus && Ui.rendered(field) && Ui.exposed(field),
                     "GUI392: genuine Ctrl+L focuses original exposed native folder breadcrumb");
-                let owned = false;
-                for (let parent = field; parent; parent = parent.parent) owned = owned || parent === panel.contentItem;
-                verify(owned && alive313(panelLife), "GUI392: exact focused breadcrumb belongs to SAME original folder panel");
+                verify(sameHeader && alive313(panelLife) && alive313(headerLife) && alive313(breadcrumbLife)
+                    && breadcrumb.dialog === panel && breadcrumb.textField === field,
+                    "GUI392: exact focused breadcrumb belongs to SAME original folder panel header");
+                gui563_pickerExposed(field, panel, host);
                 const path = String(Probe.referenceUrl(relative)).replace(/^file:\/\//, "");
                 visible185_type(decodeURIComponent(path));
                 compare(field.text, decodeURIComponent(path), "GUI392: actual focused folder spelling equals independently owned full path");
                 keyClick(Qt.Key_Return);
                 verify(alive313(panelLife) && panel.visible && alive313(selectorLife),
                     "GUI392: directory navigation retains same live original chooser before actual Open");
-                gui392_button(panel.standardButton(Dialog.Open), panel);
+                gui392_button(panel.standardButton(Dialog.Open), panel, false, host);
             }
             tryVerify(() => !selector.visible, 2000, "GUI392: actual original chooser closes from genuine Cancel/Open");
             compare(accepted, cancel ? 0 : 1, "GUI392: exact original selector has one expected acceptance, never synthesized");

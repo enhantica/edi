@@ -96,20 +96,24 @@ Item {
     TestCase {
         name: "TableInteractions"
         when: windowShown
-        property string savedRecentPaths
+        property var savedRecentPaths
+        property string savedRecentLast
         SignalSpy { id: pressed557; signalName: "pressed" }
         SignalSpy { id: released557; signalName: "released" }
         SignalSpy { id: clicked557; signalName: "clicked" }
         SignalSpy { id: edited557; signalName: "textEdited" }
         function init() {
             failOnWarning(/.*/);
-            savedRecentPaths = RecentProjects.settings.paths;
+            savedRecentPaths = Array.from(RecentProjects.settings.recent);
+            savedRecentLast = RecentProjects.settings.last;
             Session.closeProject();
-            RecentProjects.settings.paths = "[]";
+            RecentProjects.settings.recent = [];
+            RecentProjects.settings.last = "";
         }
         function cleanup() {
             Session.closeProject();
-            RecentProjects.settings.paths = savedRecentPaths;
+            RecentProjects.settings.recent = savedRecentPaths;
+            RecentProjects.settings.last = savedRecentLast;
             RecentProjects.refresh();
         }
         function click(control, button) {
@@ -231,7 +235,7 @@ Item {
             const found = Session.projectLocation;
             const missing = found + "/missing-project";
             Session.closeProject();
-            RecentProjects.settings.paths = JSON.stringify([missing, found]);
+            RecentProjects.settings.recent = [missing, found];
             RecentProjects.refresh();
             const group = createTemporaryObject(recentComponent, surface);
             verify(group !== null);
@@ -254,7 +258,7 @@ Item {
             tryCompare(Session, "hasProject", true);
             compare(Session.projectLocation, found, "Opening the second row uses its directory");
             Session.closeProject();
-            RecentProjects.settings.paths = JSON.stringify([missing, found]);
+            RecentProjects.settings.recent = [missing, found];
             RecentProjects.refresh();
             tryCompare(table, "count", 2);
             clickNamed(group, "recentProjects.remove.1");
