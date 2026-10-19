@@ -182,8 +182,11 @@ EaElements.StatusBar {
             background: Rectangle {
                 implicitWidth: assistantArea.iconExtent
                 implicitHeight: implicitWidth
+                width: assistantArea.iconExtent
+                height: width
+                anchors.centerIn: parent
                 radius: width / 2
-                color: speedButton.backgroundColor()
+                color: EaStyle.Colors.contentBackground
                 border.width: 0
             }
             contentItem: EaElements.Label {
@@ -248,12 +251,15 @@ EaElements.StatusBar {
             implicitHeight: implicitWidth
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            fontIcon: "stop-circle"
+            fontIcon: "stop"
             background: Rectangle {
                 implicitWidth: assistantArea.iconExtent
                 implicitHeight: implicitWidth
+                width: assistantArea.iconExtent
+                height: width
+                anchors.centerIn: parent
                 radius: width / 2
-                color: visibleStop.backgroundColor()
+                color: EaStyle.Colors.contentBackground
                 border.width: 0
             }
             contentItem: EaElements.Label {

@@ -1503,3 +1503,15 @@ of changing the glyph foreground. Default light/dark foreground and disabled
 styles remain original. Disconnected Sign in retains its original foreground
 interaction style and has no avatar circle. This extends the first existing
 circle bindings, not a new control, colour constant or connection/input path.
+
+
+Status-bar action circle paint bounds
+
+The original AssistantWorking.iconExtent is the physical circle diameter shared
+by the existing status speed and Stop buttons, distinct from a robot's larger
+safe rotation envelope. Both existing backgrounds explicitly centre that square
+paint bound and use the original composer's opaque contentBackground token.
+Stop uses the original Composer solid stop glyph inside this full circle rather
+than a smaller stop-circle glyph as its apparent outline. Original button hits,
+visibility, speed choices/menu/live pacing, cancellation receiver and all working
+animation/ownership remain unchanged; this is no new control or colour constant.
