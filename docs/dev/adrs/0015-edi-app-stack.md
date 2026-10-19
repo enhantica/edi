@@ -40,7 +40,7 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `3897d339b60f5707bfe952fed59a20f73340e236` and declares its own QML modules under the upstream URIs
+   `e120d42e91939ccdf2d524a13791b48d85fe2f3e` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0029),
@@ -51,7 +51,9 @@ original could. Three facts shape the decision:
    pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.
    `tools/ci/app-build.sh` keeps the build identity of a configure that did not finish, so a rerun of the same identity
    continues in `build/app` instead of starting from nothing. The pinned commit is the head of gui-components' `edi`
-   branch, which has no release tag yet; it stays fetchable as long as that branch keeps it in its history, and the
+   branch. Its list-row input contract is owned by upstream ADR-0001: native child editors keep accepted input;
+   only unhandled row-background input selects the row. It has no release tag yet and stays fetchable while the
+   branch keeps it in its history. The
    archive and source-tree digests refuse any other content. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
    `RemoteController` (QtTest + QtMultimedia) and `Plotting.js` (used only by the charts). The base's Logic
