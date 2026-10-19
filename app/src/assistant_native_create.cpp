@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_create.hpp"
+#include "background_input.hpp"
 #include "assistant_recipe_refusal.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
 #include "edi/assistant_files.hpp"
@@ -142,7 +143,7 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
         if (!std::isfinite(position) || !std::isfinite(intensity) || position <= previous)
             throw edi::IoError("Background anchors must have finite, strictly increasing positions");
         edi::LineSegment point; point.position = position;
-        point.id = std::to_string(experiment.background.size() + 1);
+        point.id = background_append_input(experiment).id;
         edi::assign_value(point.intensity, intensity); experiment.background.push_back(std::make_shared<edi::LineSegment>(point));
         previous = position;
     }
@@ -163,6 +164,13 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
     edi::Edit::create_experiment(candidate.project, std::move(measured.experiment))();
     if (!recipe.initial_parameters.empty())
         edi::assistant::detail::prepare_parameter_edit(candidate.project, recipe.initial_parameters)();
+    // Match the original visible AutoIDs action AFTER values that name the
+    // ordinary Add IDs. The normal candidate remains one atomic transaction.
+    auto& background_owner=*candidate.project.experiments[0];
+    auto ids=edi::position_point_ids(background_owner);
+    for(const auto& id:ids)if(id.size()>Limits::id_bytes)
+        throw std::length_error("Position-derived IDs exceed their original admitted capacity");
+    edi::Edit::background_point_ids(background_owner,std::move(ids))();
     edi::complete_relations(candidate.project);
     return candidate;
 }
