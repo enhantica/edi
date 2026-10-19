@@ -5316,6 +5316,13 @@ TestCase {
                 "SAVE349 SETUP: native grant is the independently selected physical parent");
             if (assistant.contextConsentRequired) assistant.signIn();
             visible185_ready("save349-folder-disclosed");
+        } else if (data.tag === "current") {
+            compare(Session.project, project,
+                "SAVE599 SETUP: actual current owner survives account/context admission without a folder-grant API");
+            compare(project.path, currentPath,
+                "SAVE599 SETUP: current Save authority remains the SAME independently owned physical directory");
+            verify(!Session.needsSaveAs,
+                "SAVE599 SETUP: actual owned-current Save needs no fresh-parent selection or grant");
         } else compare(assistant.workingFolder, "", "SAVE349 SETUP: current/no-grant cases have no unrelated fresh-parent grant");
         const show = item("assistant.showActions");
         verify(show.enabled && show.visible, "SAVE349 SETUP: actual Show actions control is actionable");

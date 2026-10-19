@@ -9045,6 +9045,8 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     )
     trace = Path(config['trace'])
     requests = records(trace)
+    if case == 'current':
+        readonly409_policy(trace)
     inputs = [row for row in requests if row.get('method') in {'turn/start', 'turn/steer'}]
     assert len(inputs) == 1 and inputs[0]['method'] == 'turn/start' and inputs[0]['params'].get('clientUserMessageId'), (
         'SAVE349: exactly one genuinely admitted original objective, never a steer/retry substitute'
