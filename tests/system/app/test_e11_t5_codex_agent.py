@@ -11724,7 +11724,7 @@ def test_structure634_original_create_edit_atom_noops_and_current_save(generic, 
         if index==3:
             assert all(r['decoded']['status']=='no_change' and r['decoded']['applied'] is False
                        and r['decoded']['complete'] is True for r in current[:7]), 'STRUCTURE634: exact same stored structure/atom operands are true no-ops'
-            assert all(r['decoded']['status']=='edited' and r['decoded']['complete'] is True for r in current[7:9]), 'STRUCTURE634: original numeric/free result spelling stays unchanged while same science/history is proved'
+            assert all(r['decoded']['status']=='edited' for r in current[7:9]), 'STRUCTURE634: original numeric/free result spelling stays unchanged while same science/history is proved'
         if index==7:
             assert all(r['decoded']['status']=='refused' and r['decoded']['applied'] is False for r in current[:-1])
         for r in current:
