@@ -690,7 +690,7 @@ A chosen runtime root is writable by the official agent. The actual parser there
 This private foundation is not registered as a save tool. The actual native writer still requires pre-growth bounded preparation before conversion/currentness/derived work/serialization; the pinned SDK save_project alone provides no such admission. Original request/account/current project/stamps/Stop ownership, complete outcome and artifact budget reservation and worker settlement must be wired before any native save registration. No app-owned scratch output, posthoc byte check, copied model losing computed provenance, Python fallback, arbitrary root or accepted-best/trial claim closes that dependency. No runtime/platform/packaging or genuine save success is claimed by source inspection.
 
 
-### Complete current native saving integration (E11-T5)
+### Complete current native saving integration
 
 The prepared-document exporter foundation above is now consumed by the actual
 normal-mode `save_project` original-RPC operation. The native picker pins the

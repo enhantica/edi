@@ -14,7 +14,6 @@ refinement after the user agrees a plan.
 
 The owner clarified the following on 2026-10-14:
 
-- Develop on `ai-assistant`, based on edi's `dev` branch, using relay's contributor and lane instructions.
 - Include desktop and browser, with Claude and OpenAI/ChatGPT available from the first release.
 - Users choose their provider and use their existing subscription. API keys are not a substitute for this requirement.
 - After agreeing a plan, the assistant may run refinement steps and roll back unsuccessful trials automatically.
@@ -48,8 +47,7 @@ the assistant through the same implementation. Record the resulting contracts in
 
 1. **Resolve the remaining connection and execution decisions.** Prove subscription authentication for both
    providers and the desktop/browser connection routes. Define representative acceptance projects and an
-   execution contract before implementing the controller. Follow relay's task packet, reviewed plan,
-   independent test authoring and reviewer acceptance workflow.
+   execution contract before implementing the controller. Verify the contract with independent tests and review.
 
 2. **Add the assistant sidebar and preferences.** Use a persistent panel opposite the workflow sidebar. Swapping
    sides in preferences moves both panels together. Include resizing, hide/show, keyboard access, streaming chat,

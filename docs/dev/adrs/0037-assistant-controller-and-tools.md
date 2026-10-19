@@ -288,7 +288,7 @@ The ordinary Qt category `edi.assistant.widget.lookup` is debug-disabled by defa
 Only original tool/tab candidate names are diagnosed, so hidden instrument/cell controls do not consume the Analysis field trace. Each candidate conversion is emitted before its detailed exposure/ancestor trace, including failed conversion/cast/identity. The original once-scheduled lookup has a cap of 256 records with one explicit omission record. The cap is a diagnostic limit, not an acceptance bound; omissions remain visible. No new lookup entry/retry or NativeWidget size/resource admission change is added. Diagnostic-only getters/formatting run only while enabled and failures are contained; the functional lookup order, short-circuit exposure calls, identity comparison, input/timers/currentness and refusal/worker/once semantics remain. This is source diagnosis, not a visibility/replay fix or acceptance API. The independently retained host-outcome contract above is unchanged.
 
 
-## Current native saving (E11-T5)
+## Current native saving
 
 The offered catalog adds `save_project({purpose,name})` in normal mode. The name
 is a fresh ASCII single directory basename under the current genuine native
@@ -351,7 +351,7 @@ duplicate parameter-name grammar. Independent and dependent values retain the
 same exact identity, uncertainty and free-state checks before publication.
 
 
-### Closed save admission dispatch and exact document count (E11-T5 PS1/PS2)
+### Closed save admission dispatch and exact document count
 
 The primary RowSchema declares an empty fields tuple for every type. Admission
 therefore traverses actual containers before considering a row schema, and only
@@ -377,7 +377,7 @@ before copying, including stale records from a formerly larger model; today's
 row count alone never bounds that older retained payload.
 
 
-### Rounded save calculation and unsuppressed presentation (E11-T5 NS1–NS4)
+### Rounded save calculation and unsuppressed presentation
 
 The strict Edi loader restores measured/model values, never trusted computed
 arrays. The existing original Worker calculates the real native reopen after

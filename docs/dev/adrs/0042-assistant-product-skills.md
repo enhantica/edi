@@ -4,7 +4,7 @@ Status: Accepted design; initial content present, runtime loading and resource b
 
 ## Context and first prior art
 
-The assistant already serializes revision-bound project/parameter/diagnostic and selected-file context in core/src/assistant.cpp (ADR0037); native transport consumes that same consented context (ADR0038), and ADR0041 owns disclosure/rendering. Existing core CMake capability/palette embedding is the resource prior art. Product knowledge belongs in edi, while organization/developer AGENTS and Codex skills remain exclusively in relay.
+The assistant already serializes revision-bound project/parameter/diagnostic and selected-file context in core/src/assistant.cpp (ADR0037); native transport consumes that same consented context (ADR0038), and ADR0041 owns disclosure/rendering. Existing core CMake capability/palette embedding is the resource prior art. Product knowledge belongs in edi, while organization/developer AGENTS and Codex skills remain in the separate developer tooling.
 
 ## Decision
 

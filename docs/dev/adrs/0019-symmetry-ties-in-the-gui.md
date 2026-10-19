@@ -81,7 +81,7 @@ follow the fitting mode.
 | Keep the scope filter in the table's name filter (the proxy) | Rejected: the status bar and the report would count rows the table does not show. |
 
 
-## Amendment: missing classic-CIF Wyckoff letters (E11-T5)
+## Amendment: missing classic-CIF Wyckoff letters
 
 Classic CIF permits an absent `_atom_site_Wyckoff_symbol`. Previously the reader
 returned empty letters and the first project save failed in engine constraints.
