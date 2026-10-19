@@ -51,6 +51,27 @@ ABI_PACKAGES = {
 }
 
 
+BOOTSTRAP554 = 'lib/libcrysta_process_defaults.a'
+BOOTSTRAP554_DEFECTS = ('missing-record', 'wrong-type', 'malformed-digest', 'missing-bytes', 'tampered-bytes')
+
+
+def bootstrap554_damage(prefix, manifest, defect):
+    """Only independent OWN fixture bytes/metadata; never a subject predicate."""
+    recorded = manifest['tested']['sha256']
+    if defect == 'missing-record':
+        del recorded[BOOTSTRAP554]
+    elif defect == 'wrong-type':
+        recorded[BOOTSTRAP554] = True
+    elif defect == 'malformed-digest':
+        recorded[BOOTSTRAP554] = 'A' * 64
+    elif defect == 'missing-bytes':
+        (prefix / BOOTSTRAP554).unlink()
+    elif defect == 'tampered-bytes':
+        (prefix / BOOTSTRAP554).write_bytes(b'independent changed bootstrap bytes')
+    else:
+        raise AssertionError('undeclared OWN bootstrap defect')
+
+
 def consumer(  # noqa: PLR0914, PLR0915
     tmp_path,
     defect=None,
@@ -73,6 +94,7 @@ def consumer(  # noqa: PLR0914, PLR0915
     sdk = tmp_path / 'sdk'
     for path, content in {
         'lib/libcrysta_core.a': b'independent static library bytes\x00\x17',
+        'lib/libcrysta_process_defaults.a': b'independent native bootstrap archive\x00\x19',
         'bin/crysta': b'#!/bin/sh\necho git:' + SHA.encode() + b'\n',
         'include/crysta/fixture.hpp': b'#pragma once\n',
         'lib/cmake/crysta/crystaConfig.cmake': b'# fixture\n',
@@ -104,7 +126,7 @@ def consumer(  # noqa: PLR0914, PLR0915
         'tested': {
             'sha256': {
                 p: hashlib.sha256((sdk / p).read_bytes()).hexdigest()
-                for p in ('lib/libcrysta_core.a', 'bin/crysta')
+                for p in ('lib/libcrysta_core.a', 'lib/libcrysta_process_defaults.a', 'bin/crysta')
             },
             'cpp_tier': {'passed': 7, 'total': 7},
             'corpus': {'passed': 3, 'total': 3},
@@ -114,6 +136,8 @@ def consumer(  # noqa: PLR0914, PLR0915
             'job': 'checks (macOS)',
         },
     }
+    if defect in BOOTSTRAP554_DEFECTS:
+        bootstrap554_damage(sdk, manifest, defect)
     p = sdk / 'share/crysta-sdk/manifest.json'
     p.parent.mkdir(parents=True)
     p.write_text(json.dumps(manifest))
@@ -756,3 +780,40 @@ def test_sdk_download_every_route_binds_resource_operation_and_representation(
         assert result.returncode == 64, (
             ' I26 wrong resource, operation or representation cannot supply SDK bytes'
         )
+
+
+@pytest.mark.parametrize('defect', BOOTSTRAP554_DEFECTS)
+def test_native_bootstrap554_tested_record_and_bytes_at_all_original_admission_entrances(tmp_path, defect):
+    """Same original run/check/shape; explicit prefix, first fetch and marker reuse."""
+    for route in ('explicit', 'fresh', 'reused'):
+        control = tmp_path / (route + '-control'); control.mkdir()
+        good, forbidden = consumer(control, download=route != 'explicit')
+        assert good.returncode == 0 and not forbidden.exists(), ('BOOTSTRAP554: original healthy admission succeeds without compilation: ' + good.stdout + good.stderr)
+        assert 'crysta: using SDK build-' + SHA in good.stdout, 'BOOTSTRAP554: healthy control publishes exact independently pinned source'
+        bad = tmp_path / (route + '-bad'); bad.mkdir()
+        env, repo, sdk = consumer(bad, defect=None if route == 'reused' else defect,
+                                  download=route != 'explicit', prepare_only=True)
+        argv = [sys.executable, str(repo / 'tools/ci/crysta_sdk.py')]
+        argv += (['check', '--sdk', str(sdk)] if route == 'explicit' else ['fetch'])
+        argv += ['--platform', 'osx-arm64']
+        if route == 'reused':
+            healthy = subprocess.run(argv, cwd=repo, env=env, capture_output=True, text=True,
+                                     check=False, timeout=3)
+            assert healthy.returncode == 0, ('BOOTSTRAP554: original healthy fetch primes its exact reusable prefix: ' + healthy.stdout + healthy.stderr)
+            cached = repo / 'build/crysta-sdk' / (SHA + '-osx-arm64')
+            marker = (cached / '.sdk-sha256').read_bytes()
+            downloads = (bad / 'downloads').read_bytes()
+            manifest_path = cached / 'share/crysta-sdk/manifest.json'
+            manifest = json.loads(manifest_path.read_text())
+            bootstrap554_damage(cached, manifest, defect)
+            manifest_path.write_text(json.dumps(manifest))
+            assert (cached / '.sdk-sha256').read_bytes() == marker, 'BOOTSTRAP554: defect leaves exact admitted cache marker intact'
+        refused = subprocess.run(argv, cwd=repo, env=env, capture_output=True, text=True,
+                                 check=False, timeout=3)
+        assert refused.returncode != 0, 'BOOTSTRAP554: every required tested-record/byte defect refuses'
+        assert BOOTSTRAP554 in refused.stderr, ('BOOTSTRAP554: refusal names the defective archive role: ' + refused.stdout + refused.stderr)
+        assert 'crysta: using SDK' not in refused.stdout, 'invalid bootstrap cannot publish qualified provenance'
+        assert not (bad / 'commands').exists(), 'admission cannot compile or resolve another source'
+        if route == 'reused':
+            assert (bad / 'downloads').read_bytes() == downloads, 'valid cache marker still reaches original check'
+            assert (cached / '.sdk-sha256').read_bytes() == marker, 'no marker normalization hides refused content'
