@@ -1315,3 +1315,27 @@ factual accepted identity. Failed pending-row archive cleanup is a real storage
 failure, never evidence of a successful wire write or permission to discard B.
 
 The physical input leaf is opened under the original read domain, separately from result-tree naming. In particular, lawful Unix source names ending in a dot or space (including a fixed selected alias to that physical leaf) are not normalized or rejected by the writer's basename rule. The same classified descriptor, original spelling, no-follow parent walk and final object/currentness checks still govern both input entrances; result publication keeps its stricter leaf validation.
+
+
+### Human wait owns no inference time
+
+The original native Save As intent and single app question are human-input
+boundaries, rather than continued inference. Their exact outstanding server request
+and original transport generation own one pause of the existing inference clocks.
+Entry checks the original expiry without callbacks; duplicate entry cannot renew
+the pause, and a different request or retired generation cannot replace it. The
+original inference total and idle timestamps advance by exactly the human interval
+on exit, retaining their remaining budgets. Real protocol activity keeps its
+ordinary meaning. Current-directory Save has no human wait. Fresh Save resumes
+before its original destination enters preparation or the Worker.
+
+The original reply, rejection, resolution, Stop/revoke transition, failure and
+process retirement release that wait once. Actual control-acknowledgement and
+required-write deadlines, output/wire limits, process EOF and revoke limits remain
+active throughout. Waiting neither fabricates activity nor repeats a scientific
+operation, uncertain write or protocol response. The request key shares its
+existing retained owner until it is cleared before removal; no payload or timer
+framework is introduced. VM receiver, owner, account, source, call and Session
+intent proofs remain independent requirements. Local transport failure is not
+provider account logout: reconnect still requires fresh disclosure and actual
+account reading, and never sets authenticated state merely to repair the UI.

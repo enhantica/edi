@@ -79,6 +79,7 @@ CodexAgent::CodexAgent(QObject* parent) : QObject(parent) {
 }
 void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
     const QPointer<CodexAgent> receiver(this); const auto scope = generation_; auto* process = process_;
+    if (!finishHumanWait()) return;
     checkDeadline(); if (!receiver || generation_ != scope || process_ != process || failed_) return;
     const auto now = clock_.elapsed();
     // A second clock sample can cross the old deadline after checkDeadline.
@@ -127,8 +128,45 @@ bool CodexAgent::releaseOutput(quint64 bytes, quint64 originalGeneration) noexce
     output_bytes_ = bytes;
     return true;
 }
-void CodexAgent::activity() { last_activity_ = clock_.elapsed(); }
+void CodexAgent::activity() { last_activity_ = human_wait_start_ >= 0 ? human_wait_start_ : clock_.elapsed(); }
+bool CodexAgent::finishHumanWait() {
+    if (human_wait_start_ < 0) return true;
+    const auto now = clock_.elapsed();
+    if (now < human_wait_start_ || operation_start_ < 0 || operation_start_ > human_wait_start_ || last_activity_ > human_wait_start_) {
+        fail("The official agent human-wait clock is invalid."); return false;
+    }
+    const auto elapsed = now - human_wait_start_;
+    // Both timestamps are <= human_wait_start_, so each shifted value is <= now.
+    operation_start_ += elapsed; last_activity_ += elapsed;
+    human_wait_start_ = -1; human_wait_id_.clear();
+    return true;
+}
+bool CodexAgent::beginHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration) {
+    if (generation_ != originalGeneration || failed_ || !process_ || operation_start_ < 0 || !idle_ms_) return false;
+    // Success is callback-free: never let an optional-usage observer replace
+    // the caller's original request between its owner proof and this entry.
+    const auto key = idKey(originalRequestId);
+    const auto found = server_requests_.constFind(key);
+    if (key.isEmpty() || found == server_requests_.cend()) return false;
+    if (human_wait_start_ >= 0) return human_wait_id_ == found.key();
+    const auto now = clock_.elapsed();
+    if (now < operation_start_ || now < last_activity_ ||
+        (total_ms_ && static_cast<quint64>(now - operation_start_) >= total_ms_) ||
+        (idle_ms_ && static_cast<quint64>(now - last_activity_) >= idle_ms_)) {
+        fail("The official agent operation exceeded its deadline."); return false;
+    }
+    human_wait_id_ = found.key(); // Implicitly shared with its already retained request owner.
+    human_wait_start_ = now;
+    return true;
+}
+bool CodexAgent::endHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration) {
+    if (generation_ != originalGeneration || failed_ || !process_) return false;
+    const auto key = idKey(originalRequestId);
+    if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ != key)) return false;
+    return finishHumanWait();
+}
 void CodexAgent::settleOperation() {
+    human_wait_start_ = -1; human_wait_id_.clear();
     operation_start_ = -1; total_ms_ = 0; idle_ms_ = 0;
 }
 void CodexAgent::retireOptionalUsage(const QString& id) {
@@ -198,9 +236,10 @@ void CodexAgent::checkDeadline() {
         if (!receiver || generation_ != scope || process_ != process || failed_) return;
     }
     if (operation_start_ < 0) return;
-    if (now < operation_start_ || now < last_activity_ ||
-        (total_ms_ && static_cast<quint64>(now - operation_start_) >= total_ms_) ||
-        (idle_ms_ && static_cast<quint64>(now - last_activity_) >= idle_ms_))
+    const auto operationNow = human_wait_start_ >= 0 ? human_wait_start_ : clock_.elapsed();
+    if (operationNow < operation_start_ || operationNow < last_activity_ ||
+        (total_ms_ && static_cast<quint64>(operationNow - operation_start_) >= total_ms_) ||
+        (idle_ms_ && static_cast<quint64>(operationNow - last_activity_) >= idle_ms_))
         fail("The official agent operation exceeded its deadline.");
 }
 CodexAgent::~CodexAgent() { retire(); }
@@ -258,6 +297,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
     try {
         if (generation_ == std::numeric_limits<quint64>::max()) return false;
         scope = ++generation_;
+        settleOperation();
         failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
@@ -446,18 +486,22 @@ bool CodexAgent::notification(const QString& method, const QJsonObject& params) 
 }
 bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result) {
     const auto key = idKey(originalId);
-    if (key.isEmpty() || !server_requests_.contains(key)) return false;
+    if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
     // Retire before delivery: an uncertain write never permits a repeated answer.
     const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
     return write({{QStringLiteral("id"), id}, {QStringLiteral("result"), result}});
 }
 bool CodexAgent::reject(const QJsonValue& originalId) {
     const auto key = idKey(originalId);
-    if (key.isEmpty() || !server_requests_.contains(key)) return false;
+    if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
     const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
     return write({{"id", id}, {"error", QJsonObject{{"code", -32601}, {"message", "This client does not support this request."}}}});
 }
-void CodexAgent::resolved(const QJsonValue& originalId) { const auto key = idKey(originalId); server_requests_.remove(key); pending_bytes_ -= server_sizes_.take(key); }
+void CodexAgent::resolved(const QJsonValue& originalId) {
+    const auto key = idKey(originalId);
+    if (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_)) return;
+    server_requests_.remove(key); pending_bytes_ -= server_sizes_.take(key);
+}
 void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
     if (!process || process_ != process || generation_ != scope) return;
     // A nested finished notification records only this original process's EOF.
@@ -618,8 +662,9 @@ void CodexAgent::fail(const char* explanation) noexcept {
     if (failed_) return;
     const QPointer<QProcess> original(process_);
     failed_ = true; // Nonallocating revocation precedes diagnostics or observers.
+    settleOperation();
     deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
-    pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
+    pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0;
     // Publish the original cause before terminate can synchronously finish and
     // detach this process. After notification, touch only the captured process.
     try { emit failed(tr(explanation)); } catch (...) {}
@@ -628,7 +673,7 @@ void CodexAgent::fail(const char* explanation) noexcept {
 void CodexAgent::retire() {
     if (generation_ != std::numeric_limits<quint64>::max()) ++generation_;
     // Live stack owners settle their own counters even after this revocation.
-    failed_ = true; deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1; pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0; settleOperation();
+    failed_ = true; settleOperation(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1; pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0;
     const QPointer<QProcess> process(process_); process_ = nullptr;
     if (!process) return;
     retired_process_=process;

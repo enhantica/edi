@@ -167,3 +167,29 @@ admission and old/new callback ownership remain unchanged. Source identity,
 validation, ordering/fingerprint bytes, consent/currentness and publication
 fences are preserved. An input click followed by a source error alone does not
 identify which runtime exception occurred.
+
+
+### Temporary preparation failure is not malformed configuration
+
+The existing source-preference loader distinguishes strict content validation
+from temporary transport, allocation, I/O or joint-admission failure. Actual
+malformed configuration keeps its original invalid projection, cached refusal
+and synchronous disclosure publication; it never falls back to built-in skills.
+A temporary failure marks the existing load-readiness flag unavailable without
+publishing a fictitious configuration change or destroying the last known rows.
+Inventory authorization and source mutations check the loader result; pending
+native admission also requires the existing loaded/valid flags. No stale retained
+inventory becomes new authority. A later successful read validates actual settings
+again. Unchanged valid rows restore readiness without changing their configuration
+identity or discarding a good approval; changed rows follow the original
+publication and retirement path. This prevents an old failing transport frame or
+retired process buffer from permanently poisoning fresh reconnect context.
+
+An already-open Add-source chooser retains its original owner/configuration serial
+across temporary read failure, but its acceptance must fresh-load successfully
+before using retained rows. A changed configuration retires that old intent; it
+is never recaptured into the chooser. Common source commit repeats the fresh
+read and original serial/readiness check before staging any replacement, and
+rechecks readiness before persistence. Enable/remove retain their fresh-load
+entry fences. Actual malformed-store recovery remains an explicit valid edit
+from the original invalid projection; readiness does not imply validity.

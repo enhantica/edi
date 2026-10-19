@@ -1365,21 +1365,30 @@ struct AssistantViewModel::State {
             try { emit owner.contextPreviewChanged(); } catch(...) {}
         }
     }
-    void load_source_preference(bool force = false) noexcept {
+    bool load_source_preference(bool force = false) noexcept {
         const auto proof=file_projection();
         auto operation=skill_source_serial;
         const bool replacing=skill_source_loaded || approved_scope || backend_scope || bootstrap_scope || !generic_workspace.isEmpty();
         std::optional<decltype(reserve_disclosure(0))> raw_role,parse_role,replacement_role,store_role;
         QString path;QByteArray settings_digest;
+        bool invalid_configuration=false;
+        const auto invalid=[&](const char* message) -> void {
+            invalid_configuration=true;throw std::runtime_error(message);
+        };
+        const auto validated=[&](auto&& check) -> decltype(auto) {
+            try {return check();}
+            catch(const std::bad_alloc&) {throw;}
+            catch(...) {invalid_configuration=true;throw;}
+        };
         try {
-            if(!proof.input_current())return;
+            if(!proof.input_current())return false;
             path=settings_file_path();
             if(path.isEmpty()) {
-                if(!skill_source_loaded && !skill_source_valid && skill_source_store.isEmpty())return;
+                if(!skill_source_loaded && !skill_source_valid && skill_source_store.isEmpty())return true;
                 throw std::runtime_error("The application settings store is unavailable");
             }
-            if(!force && skill_source_loaded && !skill_source_valid && skill_source_store==path)return;
-            if(skill_source_serial==UINT64_MAX)throw std::length_error("Skill source identity is exhausted");
+            if(!force && skill_source_loaded && !skill_source_valid && skill_source_store==path)return true;
+            if(skill_source_serial==UINT64_MAX)invalid("Skill source identity is exhausted");
             // The settings service owns obtaining its bounded value. From that
             // boundary onward raw input, parser representation, replacement
             // and original canonical/inventory owners overlap explicitly.
@@ -1391,7 +1400,7 @@ struct AssistantViewModel::State {
             const auto value=present ? settings.value("Assistant/skillSources") : QVariant{};
             if(present && value.metaType().id()==QMetaType::QByteArray) {
                 const auto size=static_cast<quint64>(value.toByteArray().size());
-                if(size>Limits::context_bytes)throw std::length_error("Skill source settings exceed capacity");
+                if(size>Limits::context_bytes)invalid("Skill source settings exceed capacity");
                 raw_role.emplace(reserve_disclosure(size+32));
                 QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(QByteArrayView("present",7));hash.addData(value.toByteArray());settings_digest=hash.result();
             } else {
@@ -1401,30 +1410,31 @@ struct AssistantViewModel::State {
                 if(present)hash.addData(QByteArrayView(reinterpret_cast<const char*>(&type),sizeof(type)));
                 settings_digest=hash.result();
             }
-            if(!force && skill_source_loaded && skill_source_store==path && skill_source_settings_digest==settings_digest)return;
+            if(!force && skill_source_loaded && skill_source_store==path && skill_source_settings_digest==settings_digest)return true;
             if(present) {
-                if(value.metaType().id()!=QMetaType::QByteArray)throw std::runtime_error("Skill source settings are malformed");
+                if(value.metaType().id()!=QMetaType::QByteArray)invalid("Skill source settings are malformed");
                 const auto bytes=value.toByteArray(); // QSettings' existing shared value; no detached raw copy.
-                parse_role.emplace(reserve_disclosure(skill_configuration_parser_bytes(bytes)));
-                const auto parsed=edi::assistant::detail::parse(bytes.toStdString(),Limits::context_bytes);
-                edi::assistant::detail::shape(parsed,{"schema","sources"});
-                if(parsed.at("schema").string("skill text")!= "edi.assistant.skill-sources/1")throw std::runtime_error("Skill source settings are malformed");
-                const auto& sources=parsed.at("sources").array("skill sources");
-                if(sources.empty() || sources.size()>Limits::models)throw std::length_error("Skill source configuration exceeds capacity");
+                const auto parser_bytes=validated([&] {return skill_configuration_parser_bytes(bytes);});
+                parse_role.emplace(reserve_disclosure(parser_bytes));
+                const auto parsed=validated([&] {return edi::assistant::detail::parse(bytes.toStdString(),Limits::context_bytes);});
+                validated([&] {edi::assistant::detail::shape(parsed,{"schema","sources"});});
+                if(validated([&]() -> decltype(auto) {return parsed.at("schema").string("skill text");})!= "edi.assistant.skill-sources/1")invalid("Skill source settings are malformed");
+                const auto& sources=validated([&]() -> decltype(auto) {return parsed.at("sources").array("skill sources");});
+                if(sources.empty() || sources.size()>Limits::models)invalid("Skill source configuration exceeds capacity");
                 // The strict AST is still live. Admit its Qt projection's exact
                 // compact representation plus decoded UTF-16 strings before
                 // the first replacement object/string/container is built.
                 quint64 projected=2,decoded=0;
                 for(const auto& source:sources) {
-                    const auto& object=source.object("skill source");
-                    if(object.size()>8)throw std::runtime_error("Skill source settings are malformed");
+                    const auto& object=validated([&]() -> decltype(auto) {return source.object("skill source");});
+                    if(object.size()>8)invalid("Skill source settings are malformed");
                     for(const auto& [key,item]:object) {
-                        if(!std::holds_alternative<bool>(item.data) && !std::holds_alternative<std::string>(item.data))throw std::runtime_error("Skill source settings are malformed");
-                        decoded+=skill_utf16_units(key)*sizeof(QChar);
-                        if(const auto* text=std::get_if<std::string>(&item.data))decoded+=skill_utf16_units(*text)*sizeof(QChar);
+                        if(!std::holds_alternative<bool>(item.data) && !std::holds_alternative<std::string>(item.data))invalid("Skill source settings are malformed");
+                        decoded+=validated([&] {return skill_utf16_units(key);})*sizeof(QChar);
+                        if(const auto* text=std::get_if<std::string>(&item.data))decoded+=validated([&] {return skill_utf16_units(*text);})*sizeof(QChar);
                     }
-                    const auto encoded=edi::json::encoded_size(source,Limits::context_bytes);
-                    if(encoded>Limits::context_bytes-projected)throw std::length_error("Skill source configuration exceeds capacity");
+                    const auto encoded=validated([&] {return edi::json::encoded_size(source,Limits::context_bytes);});
+                    if(encoded>Limits::context_bytes-projected)invalid("Skill source configuration exceeds capacity");
                     projected+=encoded+1;
                 }
                 replacement_role.emplace(reserve_disclosure(projected+decoded));
@@ -1437,7 +1447,7 @@ struct AssistantViewModel::State {
                     }
                     rows.append(row);
                 }
-                validate_source_configuration(rows);
+                validated([&] {validate_source_configuration(rows);});
             } else {
                 // The absent-key default is explicit, not an error fallback.
                 const auto default_bytes=generic_size(skill_source_invalid_rows,Limits::context_bytes);
@@ -1445,8 +1455,10 @@ struct AssistantViewModel::State {
                 rows=skill_source_invalid_rows;
                 auto builtin=rows[0].toObject();builtin["enabled"]=true;rows[0]=builtin;
             }
-            if(!proof.input_current() || skill_source_serial!=operation || settings_file_path()!=path)return;
-            if(skill_source_loaded && skill_source_valid && skill_source_store==path && skill_source_rows==rows){skill_source_settings_digest=std::move(settings_digest);return;}
+            if(!proof.input_current() || skill_source_serial!=operation || settings_file_path()!=path)return false;
+            if(skill_source_valid && skill_source_store==path && skill_source_rows==rows){
+                skill_source_settings_digest=std::move(settings_digest);skill_source_loaded=true;return true;
+            }
             QString retired_source;
             if(skill_source_selection){retired_source=std::move(skill_source_selection->id);skill_source_selection.reset();}
             skill_source_settings_digest=std::move(settings_digest);
@@ -1454,8 +1466,13 @@ struct AssistantViewModel::State {
             skill_inventory.reset();
             approved_scope.reset();disclosure_cache.reset();
             publish_source_configuration(proof,operation,retired_source,replacing); // Terminal continuation.
+            return true; // Factual configuration commit; the caller still checks its original proof.
         } catch(...) {
-            if(!proof.input_current() || skill_source_serial!=operation)return;
+            if(!proof.input_current() || skill_source_serial!=operation)return false;
+            // Retiring transport buffers, temporary capacity or I/O failure are
+            // not malformed preferences. Refuse this read without publishing a
+            // configuration change or allowing a stale inventory as authority.
+            if(!invalid_configuration){skill_source_loaded=false;return false;}
             // These fixed invalid/error projections were preowned with State;
             // a full joint slot must not require allocating a fallback/error.
             skill_source_valid=false;skill_source_loaded=!path.isEmpty();
@@ -1465,6 +1482,7 @@ struct AssistantViewModel::State {
             QString retired_source;
             if(skill_source_selection){retired_source=std::move(skill_source_selection->id);skill_source_selection.reset();}
             publish_source_configuration(proof,operation,retired_source,replacing); // No exception through Session.
+            return true;
         }
     }
     quint64 source_disclosure_bytes() const {
@@ -1512,8 +1530,9 @@ struct AssistantViewModel::State {
         const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
             if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=skills elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
         });
-        const auto proof=file_projection();load_source_preference();
+        const auto proof=file_projection();const bool loaded=load_source_preference();
         if(!proof.input_current())throw std::runtime_error("Skill source owner changed");
+        if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
         if(!skill_source_valid || !skill_source_loaded)throw std::runtime_error("Skill source configuration is unavailable");
         const auto serial=skill_source_serial;
         // Preference reload invalidates/replaces the inventory before publication.
@@ -1542,6 +1561,10 @@ struct AssistantViewModel::State {
     }
     bool commit_source_configuration(QJsonArray rows,const FileProjection& proof,quint64 serial) {
         if(!proof.input_current() || skill_source_serial!=serial || owner.canCancel() || skill_source_serial==UINT64_MAX || native_serial==UINT64_MAX)return false;
+        const bool loaded=load_source_preference();
+        if(!proof.input_current())return false;
+        if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
+        if(!skill_source_loaded || skill_source_serial!=serial || owner.canCancel())return false;
         validate_source_configuration(rows);
         const auto path=settings_file_path();if(path.isEmpty() || path!=skill_source_store)throw std::runtime_error("The original settings store changed");
         // Validate/stage from a closed snapshot before persisting the selection.
@@ -1564,7 +1587,7 @@ struct AssistantViewModel::State {
         const auto settings_role=reserve_disclosure(bytes);
         const auto encoded=QJsonDocument(object).toJson(QJsonDocument::Compact);
         retain_skill_inventory(snapshot,reserved); // Complete owning admission before the settings write.
-        if(!proof.input_current() || skill_source_serial!=serial || owner.canCancel())return false;
+        if(!proof.input_current() || !skill_source_loaded || skill_source_serial!=serial || owner.canCancel())return false;
         const auto digest_role=reserve_disclosure(32);
         QCryptographicHash settings_hash(QCryptographicHash::Sha256);settings_hash.addData(QByteArrayView("present",7));settings_hash.addData(encoded);
         auto settings_digest=settings_hash.result();
@@ -3530,7 +3553,7 @@ struct AssistantViewModel::State {
             2*edi::assistant::SelectedFileLimits::files*(edi::assistant::SelectedFileLimits::name_bytes+Limits::id_bytes+Limits::error_bytes)+2*Limits::id_bytes;
         std::shared_ptr<ImmutableAssistantResult> artifact;
         edi::work::Ticket ticket=0;
-        quint64 epoch=0;
+        quint64 epoch=0, transport_generation=0;
         struct Progress {Object outcome,response,row;};
         std::array<Progress,4> progress;
         bool cancelled=false,committed=false,reopened=false,active=false,presented=false;
@@ -3645,7 +3668,7 @@ struct AssistantViewModel::State {
     }
     bool native_owner(const std::shared_ptr<NativeReceipt>& receipt) const {
         return receipt &&
-            receipt->disclosure && receipt->disclosure->account == usage_epoch && same_disclosure(receipt->disclosure, approved_scope) && !receipt->retired && !native_blocked && !attachment_clear_requested && !attachment_clear_draining && publishing && generic_authenticated && !generic_retiring &&
+            skill_source_loaded && skill_source_valid && receipt->disclosure && receipt->disclosure->account == usage_epoch && same_disclosure(receipt->disclosure, approved_scope) && !receipt->retired && !native_blocked && !attachment_clear_requested && !attachment_clear_draining && publishing && generic_authenticated && !generic_retiring &&
             !generic_revoke_pending && !generic_blocked && !generic_context_pending && !generic_clear_pending &&
             generic_question_id.isEmpty() && !file_selection && !file_staging &&
             receipt->generation == generation && receipt->thread == generic_thread && !receipt->turn.isEmpty() &&
@@ -5181,6 +5204,7 @@ struct AssistantViewModel::State {
             native_call && native_call->record==task->call.record && native_call->receipt==task->call.receipt &&
             native_call->rpc==task->call.rpc && native_current(task->call.receipt) &&
             result_session() && result_session()->assistantEpoch()==task->epoch &&
+            agent && agent->outputGeneration()==task->transport_generation &&
             (!task->folder || task->folder->current()) &&
             (!task->current_destination || (!result_session()->needsSaveAs() &&
                 task->project->path()==task->source_directory)) &&
@@ -5432,6 +5456,9 @@ struct AssistantViewModel::State {
             static_assert(sizeof(decltype(current)) <= 2 * sizeof(std::function<bool()>));
             static_assert(sizeof(decltype(start)) <= 2 * sizeof(std::function<bool()>));
             static_assert(sizeof(decltype(cancelled)) <= 2 * sizeof(std::function<bool()>));
+            if (!task->current_destination && !agent->beginHumanWait(task->call.rpc,task->transport_generation))
+                throw std::runtime_error("The original Save As human wait could not be retained");
+            if (!receiver || !widget_owned(run) || !native_save_current(task)) return;
             const auto token=session->armAssistantSave(run->save_intent,task->project,task->epoch,!task->current_destination,
                 QUrl(),task->name,
                 std::move(current),std::move(start),std::move(cancelled));
@@ -5516,6 +5543,8 @@ struct AssistantViewModel::State {
         const auto receiver=task->receiver;
         if(!receiver || receiver->state_.get()!=this || !native_save_current(task)) return false;
         if(!task->current_destination) {
+            if(!agent->endHumanWait(task->call.rpc,task->transport_generation))return false;
+            if(!receiver || receiver->state_.get()!=this || !native_save_current(task))return false;
             if(!parent.isLocalFile() || parent.hasQuery() || parent.hasFragment()) return false;
             validate_assistant_result_leaf(leaf);
             const auto local=parent.toLocalFile();
@@ -5558,6 +5587,9 @@ struct AssistantViewModel::State {
         auto cancelled=[this,receiver,task]{if(receiver && receiver->state_.get()==this) native_pending_save_cancelled(task);};
         native_charge();
         if(!receiver || receiver->state_.get()!=this || !native_save_current(task)) return;
+        if(!agent->beginHumanWait(task->call.rpc,task->transport_generation))
+            throw std::runtime_error("The original Save As human wait could not be retained");
+        if(!receiver || receiver->state_.get()!=this || !native_save_current(task))return;
         const auto token=session->armAssistantSave(task->intent,task->project,task->epoch,true,{},task->name,
             std::move(current),std::move(start),std::move(cancelled));
         if(!receiver || receiver->state_.get()!=this || native_save!=task || task->ticket) return;
@@ -5587,6 +5619,7 @@ struct AssistantViewModel::State {
         save_stage = "TASK_PREPARATION";
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;
         task->name=name;task->epoch=session->assistantEpoch();task->current_destination=current_destination;
+        task->transport_generation=agent->outputGeneration();
         if(owned_directory) {
             const auto path=project->path();
             if(path.isEmpty() || path.size()>static_cast<qsizetype>(Limits::id_bytes) || path.toUtf8().size()>static_cast<qsizetype>(Limits::id_bytes))
@@ -8415,9 +8448,16 @@ struct AssistantViewModel::State {
                 if (!value.value("description").isString() || value.value("description").toString().toUtf8().size() > static_cast<qsizetype>(Limits::question_option_description_bytes)) throw std::length_error("Agent option description exceeds limit");
                 options.append(Object{{"id", label}, {"label", label}, {"description", value.value("description")}});
             }
+            agent->activity(); // The actual received question, before its human interval.
+            const auto transportGeneration=agent->outputGeneration();
+            if(!agent->beginHumanWait(id,transportGeneration)) {
+                if(publication.input_current())agent->reject(id);
+                return;
+            }
+            if(!publication.input_current())return;
             generic_question_public_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
             question = {{"question_id", generic_question_public_id}, {"text", q.value("question")}, {"options", options}, {"allow_free_text", true}};
-            generic_question_rpc = id; generic_question_id = qid; generic_question_item = itemId; generic_question_thread = generic_thread; generic_question_turn = generic_turn; agent->activity(); notify();
+            generic_question_rpc = id; generic_question_id = qid; generic_question_item = itemId; generic_question_thread = generic_thread; generic_question_turn = generic_turn; notify();
         } else agent->reject(id); // No fabricated result for unsupported callbacks.
     }
     QString generic_send(const QString& text, FileProjection& projection) {
@@ -10382,7 +10422,9 @@ QString AssistantViewModel::beginSkillSourceSelection() {
     const auto proof=state_->file_projection();
     try {
         if(QThread::currentThread()!=thread() || canCancel() || state_->skill_source_selection)return {};
-        try { state_->load_source_preference(); } catch(...) { if(!proof.input_current())return {}; }
+        const bool loaded=state_->load_source_preference();
+        if(!proof.input_current())return {};
+        if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
         if(!proof.input_current() || canCancel() || state_->skill_source_selection)return {};
         const auto role=state_->reserve_disclosure(sizeof(State::SkillSourceSelection)+State::Limits::id_bytes*sizeof(QChar));
         const auto token=QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -10407,6 +10449,10 @@ bool AssistantViewModel::addSkillSource(const QString& token,const QUrl& folder)
         selection_role.emplace(state_->reserve_disclosure(sizeof(State::SkillSourceSelection)+token.size()*sizeof(QChar)));
         original.emplace(std::move(*state_->skill_source_selection));state_->skill_source_selection.reset();
         if(!proof.input_current() || serial!=state_->skill_source_serial || canCancel())return false;
+        const bool loaded=state_->load_source_preference();
+        if(!proof.input_current())return false;
+        if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
+        if(!state_->skill_source_loaded || serial!=state_->skill_source_serial || canCancel())return false;
 #if defined(Q_OS_UNIX)
         quint64 preparing=0;
         const QPointer<CodexAgent> transport(state_->agent.get());const auto transport_generation=transport?transport->outputGeneration():0;
@@ -10455,7 +10501,9 @@ bool AssistantViewModel::setSkillSourceEnabled(const QString& id,bool enabled,co
     const auto proof=state_->file_projection();quint64 serial=state_->skill_source_serial;
     try {
         if(QThread::currentThread()!=thread() || (!revision.isEmpty() && revision!=skillSourceRevision()) || canCancel() || state_->skill_source_selection)return false;
-        try{state_->load_source_preference();}catch(...){if(!proof.input_current())return false;}
+        const bool loaded=state_->load_source_preference();
+        if(!proof.input_current())return false;
+        if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
         if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;serial=state_->skill_source_serial;
         const auto copy_role=state_->reserve_disclosure(State::generic_size(state_->skill_source_rows,State::Limits::context_bytes));
         const auto bool_role=state_->reserve_disclosure(1); // true -> false JSON spelling grows by exactly one byte.
@@ -10480,7 +10528,9 @@ bool AssistantViewModel::removeSkillSource(const QString& id,const QString& revi
     const auto proof=state_->file_projection();quint64 serial=state_->skill_source_serial;
     try {
         if(QThread::currentThread()!=thread() || (!revision.isEmpty() && revision!=skillSourceRevision()) || id=="builtin" || canCancel() || state_->skill_source_selection)return false;
-        try{state_->load_source_preference();}catch(...){if(!proof.input_current())return false;}
+        const bool loaded=state_->load_source_preference();
+        if(!proof.input_current())return false;
+        if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
         if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;serial=state_->skill_source_serial;
         const auto copy_role=state_->reserve_disclosure(State::generic_size(state_->skill_source_rows,State::Limits::context_bytes));
         auto rows=state_->skill_source_rows;

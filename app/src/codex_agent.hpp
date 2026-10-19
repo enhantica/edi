@@ -39,6 +39,8 @@ public:
     void retire();
     void beginOperation(quint64 totalMs, quint64 idleMs);
     void settleOperation();
+    bool beginHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration);
+    bool endHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration);
 signals:
     void started();
     void response(const QString& id, const QString& method, const QJsonObject& envelope);
@@ -72,6 +74,9 @@ private:
     QElapsedTimer clock_;
     QTimer timer_;
     qint64 operation_start_ = -1, last_activity_ = 0;
+    qint64 human_wait_start_ = -1;
+    QString human_wait_id_; // Shares the original outstanding request key; cleared before its removal.
+    bool finishHumanWait();
     quint64 total_ms_ = 0, idle_ms_ = 0, wire_bytes_ = 0, event_count_ = 0;
     bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {}, bool nonfatalPreflight = false, bool optionalUsage = false);
     void read(QProcess* process, quint64 generation, bool finished = false);
