@@ -20,7 +20,7 @@ namespace edi_app::outgoing {
 enum class Role { Context, Project, Structure, SpaceGroup, Site, Dataset, Axis,
     Observations, Region, Phase, Background, Anchor, Relations, Alias, Constraint,
     Parameter, Diagnostic, Selection, File, Skill, InputScopes, InputSource,
-    NativeState, Result, Fit, ReaderFacts, SelectedText };
+    NativeState, Calculation, Result, Fit, ReaderFacts, SelectedText };
 inline constexpr std::string_view wire_schema="edi.assistant.outgoing/1";
 enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch };
 inline constexpr std::array<std::string_view,7> result_codes={
@@ -72,7 +72,8 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Skill: { ROWS(T("id"),T("sha256")); }
     case Role::InputScopes: { ROWS(A("sources",InputSource)); }
     case Role::InputSource: { ROWS(T("scope_id"),N("ordinal"),T("source_kind"),B("already_admitted")); }
-    case Role::NativeState: { ROWS(T("status"),B("calculating"),B("fitting"),B("show_actions")); }
+    case Role::NativeState: { ROWS(T("status"),B("calculating"),B("fitting"),B("show_actions"),A("calculations",Calculation)); }
+    case Role::Calculation: { ROWS(T("dataset_id"),B("pattern_available"),B("stale"),N("calculated_points"),B("calculated_available"),B("calculation_error_present"),T("calculation_error"),B("calculation_error_complete")); }
     case Role::Fit: { ROWS(T("status"),B("converged"),N("reduced_chi_square"),N("iterations"),B("objective_unavailable")); }
     case Role::ReaderFacts: { ROWS(N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma")); }
     case Role::SelectedText: { ROWS(T("file_id"),T("collection_id"),T("generation"),T("encoding"),T("text"),N("total_bytes"),N("start"),N("end"),N("next_offset"),B("eof"),B("complete")); }

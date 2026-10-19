@@ -37,9 +37,9 @@ QJsonArray native_tool_specs(bool include_profiles) {
         properties["purpose"] = purpose; required.append("purpose");
         tools.append(Object{{"type", "function"}, {"name", name}, {"description", description}, {"inputSchema", object(properties, required)}});
     };
-    add("inspect_project", "Inspect Edi's actual currently displayed project/context. No mutation.");
+    add("inspect_project", "Inspect Edi's actual currently displayed project/context, including native_state.calculations: exact dataset published error/stale and calculated-column count/availability. Idle or available stale points do not prove success or viewport visibility. No mutation.");
     add("list_parameters", "Read actual native parameter paths/values/free flags and dependence. No mutation.");
-    add("diagnostics", "Read actual available native physical diagnostics. No mutation.");
+    add("diagnostics", "Read actual available native physical diagnostics plus original app native_state.calculations for each exact dataset: published error/stale and calculated-column count/availability. Published old errors and idle are not current success; calculated availability is not legend/series visibility. No mutation.");
     add("set_parameters", "Set independent parameter values after complete native validation. Normal mode is one atomic edit/Undo; Show actions navigates/cues original exposed controls in order then calls their ordinary app parameter setters, with no scientific key/click input; separate Undo per change and actual applied/published receipts determine honest complete/partial/uncertain outcomes.",
         {{"values", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"value", Object{{"type", "number"}}}}, {"path", "value"})}}}}, {"values"});

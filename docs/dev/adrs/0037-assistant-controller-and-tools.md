@@ -1462,3 +1462,21 @@ record/receipt/helper/window/project/step and retained retirement/once facts bef
 old cleanup can continue. Disabled logging preserves the original exception path;
 success/scheduled reveal adds no log or new observer. This is attribution of an
 unproved visible-control failure, not a scientific/focus/geometry correction.
+
+
+Original app calculation readout
+
+The original PatternModel calculated(error)/markStale publication owns the chart
+columns and its current published refusal. App native_state.calculations projects
+those facts on each exact original dataset for context, inspect_project and
+diagnostics, alongside existing global calculating/fitting/show_actions. It adds
+no core Dataset status, calculation, cache, observer or scientific interpretation.
+The pure calculatedPointCount getter reads only the existing published column size.
+A missing exact view is pattern_available=false with other facts omitted; stale
+columns/errors remain explicitly stale. The existing bounded_error readable-text
+rule includes independent present/complete flags so omission cannot imply no error.
+No published-point availability claim establishes visible legend/series state.
+Original per-row names/text/JSON owners are admitted before growth and retained
+through context/skill work and elapsed-message-handler callbacks; prepared project
+attachment uses its own exact target, not the old current project. Existing closed
+projection, disclosure, source identity, maxima and hard limits still govern.

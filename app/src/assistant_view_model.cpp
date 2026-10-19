@@ -1273,10 +1273,62 @@ struct AssistantViewModel::State {
         const auto actual = current_disclosure();
         return original.input_current() && approved_scope == approved && same_disclosure(approved, actual);
     }
-    void append_native_context(Object& context) const {
+    void append_native_context(Object& context,ProjectViewModel* target,quint64& preparing) {
+        const auto publication=file_projection();
+        const QPointer<ProjectViewModel> original(target);
+        const auto* model=target?target->assistantProject():nullptr;
+        if(target && !model)throw std::runtime_error("The original calculation model is unavailable");
+        const auto membership=model?model->experiments.record():nullptr;
+        const auto epoch=model?model->experiments.generation():0;
+        const auto current=[&] {
+            return publication.input_current() && original==target && (!target ||
+                (target->assistantProject()==model && model->experiments.record()==membership && model->experiments.generation()==epoch));
+        };
         QJsonArray actions;
         for (const auto& name : assistant_native_tool_names()) actions.append(name);
         context["native_actions"] = actions;
+        constexpr auto state_role=sizeof(Object)+sizeof(QJsonArray)+4*sizeof(QJsonValue)+
+            sizeof("native_statecalculatingfittingshow_actionscalculations")*sizeof(QChar);
+        disclosure_room(state_role);disclosure_preparing_bytes+=state_role;preparing+=state_role;
+        QJsonArray calculations;
+        if(model)for(const auto& held:model->experiments) {
+            if(!current())throw std::runtime_error("The original calculation read owner changed");
+            ExperimentViewModel* view=nullptr;
+            for(auto* candidate:target->experimentModels())if(candidate && candidate->experiment()==held.get()) {
+                if(view)throw std::runtime_error("The original calculation view is ambiguous");
+                view=candidate;
+            }
+            const auto* pattern=view?view->pattern():nullptr;
+            const auto error=pattern?pattern->calculationError():QString{}; // Implicit shared copy of existing published text.
+            const auto units=std::min<quint64>(static_cast<quint64>(error.size()),Limits::error_bytes);
+            const auto error_bytes=std::min<quint64>(3*units,Limits::error_bytes);
+            const auto name_bytes=std::max<quint64>(held->name.value().size(),sizeof("experiment")-1);
+            constexpr auto fields=sizeof("dataset_idpattern_availablestalecalculated_pointscalculated_availablecalculation_error_presentcalculation_errorcalculation_error_complete");
+            const auto minimum=static_cast<quint64>(sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
+            // Canonical native/decoded/encoded ID; bounded UTF-8 buffer,
+            // decoded+independent JSON error, and its escaped spelling coexist.
+            const auto fixed=fields*sizeof(QChar)+sizeof(Object)+10*sizeof(QJsonValue)+
+                2*(error_bytes+minimum)+2*units*sizeof(QChar)+2*error_bytes+2;
+            if(fixed>Limits::stream_retained_bytes || name_bytes>(Limits::stream_retained_bytes-fixed)/9)throw std::length_error("Calculation readout exceeds retained capacity");
+            const auto role=fixed+9*name_bytes;
+            disclosure_room(role);disclosure_preparing_bytes+=role;preparing+=role;
+            if(!current())throw std::runtime_error("The original calculation read owner changed");
+            Object row{{"dataset_id",QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name.value()))},
+                {"pattern_available",bool(pattern)}};
+            if(pattern) {
+                const auto text=bounded_error(error);
+                const auto points=pattern->calculatedPointCount();
+                if(points>(quint64(1)<<std::numeric_limits<double>::digits))
+                    throw std::length_error("Calculation point count is not exactly representable");
+                row["stale"]=pattern->stale();row["calculated_points"]=static_cast<double>(points);
+                row["calculated_available"]=points>0;row["calculation_error_present"]=!error.isEmpty();
+                row["calculation_error"]=text;row["calculation_error_complete"]=text==error;
+            }
+            calculations.append(std::move(row));
+        }
+        if(!current())throw std::runtime_error("The original calculation read owner changed");
+        context["native_state"]=Object{{"calculating",target && target->calculating()},
+            {"fitting",target && target->fit()->nativeRunning()},{"show_actions",show_actions},{"calculations",calculations}};
         generic_size(context, Limits::context_bytes);
     }
     Object generic_native{{"status", "disconnected"}};
@@ -1622,20 +1674,28 @@ struct AssistantViewModel::State {
 #endif
 
     Object outgoing_context(std::shared_ptr<const AssistantSkillInventory> captured = {}) {
+        const auto original=file_projection();
+        const QPointer<CodexAgent> context_transport(agent.get());
+        const auto context_generation=context_transport?context_transport->outputGeneration():0;
+        quint64 native_context_bytes=0;
+        const auto native_context_role=qScopeGuard([this,original,context_transport,context_generation,&native_context_bytes] {
+            if(!original.receiver || original.receiver->state_.get()!=this)return;
+            disclosure_preparing_bytes-=native_context_bytes;
+            native_release_charge(original,context_transport,context_generation);
+        });
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
         if(observeElapsed)elapsed.start();
         const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
             if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=context elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
         });
-        const auto original=file_projection();
         if (!controller) return {{"error", "Project context is unavailable"}};
         auto context = object(controller->context());
         if (generic_mode && !context.contains("error")) {
             try {
                 const auto original_context_bytes=generic_size(context,Limits::context_bytes);
                 const auto context_role=reserve_disclosure(2*original_context_bytes);
-                append_native_context(context);
+                append_native_context(context,project,native_context_bytes);
                 const auto inventory=captured ? std::move(captured) : source_inventory();
                 if(!original.input_current())return {{"error","Skill source owner changed"}};
                 const auto declarations=generic_size(inventory->declarations,Limits::context_bytes);
@@ -5421,9 +5481,9 @@ struct AssistantViewModel::State {
         if (readonly) {
             auto context = outgoing_context();
             if(!publication.input_current())return;
-            context["native_state"] = Object{{"calculating", project && project->calculating()}, {"fitting", project && project->fit()->nativeRunning()}, {"show_actions", show_actions}};
             if (context.contains("error")) { native_reply(rpc, false, {{"status", "unavailable"}, {"message", "Complete native context is unavailable."}}); return; }
             read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
+            if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
         }
         if (inspecting) {
             if (!inspect_current()) return;
@@ -5818,10 +5878,19 @@ struct AssistantViewModel::State {
                 if (!selected.ok) throw std::runtime_error("Native selected files could not be attached");
                 attachment->selected_reply = std::move(selected.value);
                 attachment->selected_context = object(attachment->selected_reply);
+                quint64 native_context_bytes=0;
+                const auto context_publication=file_projection();
+                const QPointer<CodexAgent> context_transport(agent.get());
+                const auto context_generation=context_transport?context_transport->outputGeneration():0;
+                const auto native_context_role=qScopeGuard([this,context_publication,context_transport,context_generation,&native_context_bytes] {
+                    if(!context_publication.receiver || context_publication.receiver->state_.get()!=this)return;
+                    disclosure_preparing_bytes-=native_context_bytes;
+                    native_release_charge(context_publication,context_transport,context_generation);
+                });
                 auto context = object(attachment->prepared_controller->context());
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
                 if (context.contains("error")) throw std::length_error("Complete created-project context is unavailable");
-                append_native_context(context); // Same complete grant/data envelope as normal context.
+                append_native_context(context,target,native_context_bytes); // Same complete grant/data envelope, exact prepared owner.
                 attachment->context = QJsonDocument(context).toJson(QJsonDocument::Compact);
                 const auto attachment_scope_role = reserve_disclosure(disclosure_shell_bytes);
                 attachment->disclosure = prepare_disclosure_scope(target, context, generic_input_hashes);
@@ -8921,6 +8990,7 @@ struct AssistantViewModel::State {
             "When offered, create_structure invokes ordinary app Create and returns ONE actual initial atom. Reuse/update that actual first atom for the first target site, append only subsequent required atoms through edit_atom, and change only differing stored defaults. edit_structure changes one original name/symmetry setter; edit_atom changes one original row text/ADP-type operation. Use actual returned IDs, existing parameter tools for numeric/free values, and code-owned schemas/options. Interpret admitted attached text; do not synthesize a CIF, parser/converter or an importer. Equal canonical values skip cues/setters/Undo. Both modes use the same ordinary app methods; ON adds genuine original navigation/reveal and visual-only cues, not scientific keyboard writes. Unresolved symmetry/defaults are not scientific success, and uncertain writes must not be replayed. "
             "When edit_experiment is offered, use its code-owned options for one ordinary profile or exclusion-row operation on the actual experiment ID. A profile change can engage/drop optional settings; inspect actual values afterward. Append exclusions with ordinary generated IDs/default bounds, then set the requested literal bounds or explicitly remove an actual row. Both modes use the same app methods and Undo; ON adds only original navigation/reveal/visual cues. Equal canonical values skip setter/cue/history; unavailable exact targets or uncertain publication refuse honestly. No absorption, weighting, links, calibration or conversion is implied by this action. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
+            "inspect_project and diagnostics report native_state.calculations for each actual dataset. Pattern availability, published stale/error and last-published calculated point count are original app facts: idle is not success, an old stale error is not a new failure, and nonempty calculated points do not prove viewport/legend visibility or a current successful fit. Read calculation_error_present and bounded calculation_error (complete=false means omitted text) before proposing a scientific correction; do not silently clamp axes/change zero/wavelength or reinterpret exclusions to conceal a refusal. "
             "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission. Show actions navigates the original exposed controls in request order and gives visual pointer/click cues, then calls the same ordinary app parameter/free methods used by manual controls, without scientific mouse/key input or a separate draft/focus mutation protocol. Actual consumed/applied/published receipts and current canonical members must confirm each change. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions reuse a suitable live category, use the genuine reset-filters control only for conflicting name/variability filters, and use the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible flags in any category open the existing Free-column menu only when the displayed eligible set equals the exact requested original members and all requested flags agree; cue its Free/Fixed choice and invoke its ordinary action once. Other subsets cue their actual row checkboxes then call the ordinary per-row free setter. A narrower name/variability filter is conflicting even when it happens to expose the first requested row; clear it through the original reset control before category presentation. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs for update/remove, never row indices. Add/update supply finite measured-domain position, intensity and free, while remove omits all three. For new chosen points omit add id to retain the original app-generated ID; explicit custom IDs remain exact, and a successful point edit returns its actual background_id. Explicit name_from_positions takes only purpose, experiment and operation and invokes the original whole-table Ids from positions action once; inspect the actual resulting IDs before subsequent calls. Never infer naming from future adds or rename an explicitly supplied ID silently. When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, explicit ID, position, intensity and Remove controls; a requested free flag cues the original Analysis Background checkbox then uses the same ordinary free setter, not an Experiment parameter menu. Point intensity cues likewise use the ordinary parameter value setter. For a newly chosen default background, add the requested positions and justified starting intensities with id omitted and free=false, request name_from_positions once, inspect actual IDs, then submit the complete requested eligible free set in one set_free request through Analysis. Explicit user custom IDs, values or free=true remain honored within their own operation. Preserve every explicit value/free flag within its own call; do not defer it to a guessed future call. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
