@@ -202,3 +202,8 @@ is still two. Related aliases are requested together immediately before their
 relation/use; the existing relation sequence completes aliases before constraints.
 No orchestration layer or material-specific script is introduced. Compiled
 developer guidance and both versioned skills/index use the same defaults.
+
+
+### Selected text is an offered native read, not a new skill capability registry
+
+Bundled project/FullProf/GSAS strategies now direct actual offered read_selected_file use for readable already-admitted text, preserve exact source identity/range/completeness and remove metadata-only/paste-again assertions. Scientific units/conventions, ambiguous associations, unsupported binary/GPX and absent app-action mappings stay explicit; no format-specific parser or generated-file workaround is introduced. Actual callable schemas/options/help remain code-owned. Skill bodies/version/index digests change together, while their restricted core capability lists/dependency validation remain unchanged; native app names are not inserted there. This source change alone does not establish a full PCR reconstruction workflow or a qualified dedicated runtime.

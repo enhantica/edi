@@ -3,6 +3,7 @@
 #include "codex_agent.hpp"
 #include "assistant_recipe_refusal.hpp"
 #include "assistant_action_refusal.hpp"
+#include "assistant_selected_text.hpp"
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QStringView>
@@ -19,7 +20,7 @@ namespace edi_app::outgoing {
 enum class Role { Context, Project, Structure, SpaceGroup, Site, Dataset, Axis,
     Observations, Region, Phase, Background, Anchor, Relations, Alias, Constraint,
     Parameter, Diagnostic, Selection, File, Skill, InputScopes, InputSource,
-    NativeState, Result, Fit, ReaderFacts };
+    NativeState, Result, Fit, ReaderFacts, SelectedText };
 inline constexpr std::string_view wire_schema="edi.assistant.outgoing/1";
 enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch };
 inline constexpr std::array<std::string_view,7> result_codes={
@@ -74,7 +75,8 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::NativeState: { ROWS(T("status"),B("calculating"),B("fitting"),B("show_actions")); }
     case Role::Fit: { ROWS(T("status"),B("converged"),N("reduced_chi_square"),N("iterations"),B("objective_unavailable")); }
     case Role::ReaderFacts: { ROWS(N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma")); }
-    case Role::Result: { ROWS(T("status"),T("background_id"),Field{"action_error",Type::ActionError},Field{"action_field",Type::ActionField},Field{"refusal_field",Type::RecipeField},Field{"refusal_reason",Type::RecipeReason},N("minimum_items"),N("maximum_items"),B("applied"),B("published"),B("adopted"),B("committed"),B("reopened"),B("active"),B("complete"),B("atomic"),B("presentation_complete"),B("request_retired"),B("calculation_pending"),B("completed_existing"),B("saved"),B("converged"),B("objective_unavailable"),B("uncertain"),N("steps_completed"),N("iterations"),N("reduced_chi_square"),N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma"),N("files_count"),N("supported_count"),N("unsupported_count"),N("discovered"),N("admitted"),N("ignored"),T("scope_id"),A("files",File),A("parameters",Parameter),A("diagnostics",Diagnostic),O("fit",Fit),O("reader_facts",ReaderFacts),O("project",Project),A("structures",Structure),A("datasets",Dataset),O("relations",Relations),O("selected_files",Selection),A("skills",Skill),Field{"native_actions",Type::TextArray},O("native_state",NativeState),O("input_scopes",InputScopes)); }
+    case Role::SelectedText: { ROWS(T("file_id"),T("collection_id"),T("generation"),T("encoding"),T("text"),N("total_bytes"),N("start"),N("end"),N("next_offset"),B("eof"),B("complete")); }
+    case Role::Result: { ROWS(O("selected_text",SelectedText),T("status"),T("background_id"),Field{"action_error",Type::ActionError},Field{"action_field",Type::ActionField},Field{"refusal_field",Type::RecipeField},Field{"refusal_reason",Type::RecipeReason},N("minimum_items"),N("maximum_items"),B("applied"),B("published"),B("adopted"),B("committed"),B("reopened"),B("active"),B("complete"),B("atomic"),B("presentation_complete"),B("request_retired"),B("calculation_pending"),B("completed_existing"),B("saved"),B("converged"),B("objective_unavailable"),B("uncertain"),N("steps_completed"),N("iterations"),N("reduced_chi_square"),N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma"),N("files_count"),N("supported_count"),N("unsupported_count"),N("discovered"),N("admitted"),N("ignored"),T("scope_id"),A("files",File),A("parameters",Parameter),A("diagnostics",Diagnostic),O("fit",Fit),O("reader_facts",ReaderFacts),O("project",Project),A("structures",Structure),A("datasets",Dataset),O("relations",Relations),O("selected_files",Selection),A("skills",Skill),Field{"native_actions",Type::TextArray},O("native_state",NativeState),O("input_scopes",InputScopes)); }
     }
 #undef ROWS
 #undef T
@@ -93,10 +95,12 @@ inline quint64 scalar_size(const QJsonValue& value) {
     return size;
 }
 // Count the same closed walk before constructing even the output JSON owners.
-// Primitive Qt JSON strings are shared from the original immutable native value.
+// Size/validation borrow the immutable JSON string views. Materializing a
+// projected JSON object has its own admitted payload storage.
 inline QJsonValue walk(const QJsonValue& value, Role role, quint64& size, bool materialize);
 inline QJsonValue field_value(const QJsonValue& value,const Field& field,quint64& size,bool materialize) {
     if(value.isNull()) {
+        if(field.type==Type::Object && field.child==Role::SelectedText)throw std::invalid_argument("Selected text is unavailable");
         if(field.type==Type::RecipeField || field.type==Type::RecipeReason || field.type==Type::ActionError || field.type==Type::ActionField)throw std::invalid_argument("Outgoing recipe refusal is unavailable");
         add(size,4);return QJsonValue(QJsonValue::Null);
     }
@@ -141,7 +145,9 @@ inline QJsonValue field_value(const QJsonValue& value,const Field& field,quint64
 }
 inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool materialize) {
     if(!value.isObject())throw std::invalid_argument("Outgoing native object is unavailable");
-    const auto source=value.toObject();QJsonObject result;add(size,2);bool comma=false;
+    const auto source=value.toObject();
+    if(role==Role::SelectedText)validate_selected_text(source);
+    QJsonObject result;add(size,2);bool comma=false;
     if(role==Role::Result && source.contains("refusal_field")!=source.contains("refusal_reason"))
         throw std::invalid_argument("Outgoing recipe refusal is incomplete");
     if(role==Role::Result && source.contains("action_error")!=source.contains("action_field"))

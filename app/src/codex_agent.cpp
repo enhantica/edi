@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "codex_agent.hpp"
+#include "../../core/src/assistant_json.hpp"
+#include <QAnyStringView>
+#include <QtCore/qarraydata.h>
+#include <cstddef>
+#include <type_traits>
 #include "assistant_runtime_config.hpp"
 #include <QCoreApplication>
 #include <QFile>
@@ -21,7 +26,7 @@ bool addSize(quint64 n, quint64 cap, quint64& size) {
     if (size > cap || n > cap - size) return false;
     size += n; return true;
 }
-bool stringSize(const QString& text, quint64 cap, quint64& size) {
+bool stringSize(QStringView text, quint64 cap, quint64& size) {
     if (!addSize(2, cap, size)) return false;
     for (qsizetype i = 0; i < text.size(); ++i) {
         const auto c = text.at(i).unicode(); quint64 n;
@@ -38,9 +43,29 @@ bool stringSize(const QString& text, quint64 cap, quint64& size) {
     }
     return true;
 }
+bool stringSize(QAnyStringView text,quint64 cap,quint64& size) {
+    return text.visit([&](auto view) {
+        using View=decltype(view);
+        if constexpr (std::is_same_v<View,QStringView>)return stringSize(view,cap,size);
+        else {
+            if constexpr (!std::is_same_v<View,QLatin1StringView>) {
+                if(!edi::assistant::detail::utf8(std::string_view(reinterpret_cast<const char*>(view.data()),static_cast<std::size_t>(view.size()))))return false;
+            }
+            if(!addSize(2,cap,size))return false;
+            for(const auto c:view) {
+                unsigned char u;
+                u=static_cast<unsigned char>(c);
+                const quint64 bytes=u=='"' || u=='\\' || u==8 || u==12 || u==10 || u==13 || u==9?2:u<0x20?6:
+                    std::is_same_v<View,QLatin1StringView> && u>=0x80?2:1;
+                if(!addSize(bytes,cap,size))return false;
+            }
+            return true;
+        }
+    });
+}
 bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 depth = 0) {
     using L = edi::assistant::Limits;
-    if (value.isString()) return stringSize(value.toString(), cap, size);
+    if (value.isString()) return stringSize(value.toStringView(), cap, size);
     if (value.isBool()) return addSize(value.toBool() ? 4 : 5, cap, size);
     if (value.isNull() || value.isUndefined()) return addSize(4, cap, size);
     if (value.isDouble()) {
@@ -54,7 +79,8 @@ bool encodedSize(const QJsonValue& value, quint64 cap, quint64& size, quint64 de
     if (value.isObject()) {
         const auto object = value.toObject();
         for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
-            if ((!first && !addSize(1, cap, size)) || !stringSize(it.key(), cap, size) ||
+            const auto key=it.key();
+            if ((!first && !addSize(1, cap, size)) || !stringSize(QStringView(key), cap, size) ||
                 !addSize(1, cap, size) || !encodedSize(it.value(), cap, size, depth)) return false;
             first = false;
         }
@@ -108,7 +134,7 @@ bool CodexAgent::remainingOutput(quint64 bytes, quint64& available) const noexce
         return false;
     available = Limits::stream_retained_bytes - bytes - record_bytes_ - static_cast<quint64>(incoming_.size());
     const auto queued=process_?static_cast<quint64>(process_->bytesToWrite()):0;
-    const auto held=static_cast<quint64>(deferred_required_.size());
+    const auto held=static_cast<quint64>(deferred_required_.capacity());
     if(request_bytes_>available || read_bytes_>available-request_bytes_ ||
        queued>available-request_bytes_-read_bytes_ || held>available-request_bytes_-read_bytes_-queued)return false;
     available-=request_bytes_+read_bytes_+queued+held;
@@ -206,7 +232,8 @@ void CodexAgent::flushRequired() noexcept {
             if(receiver)receiver->request_bytes_-=heldRole;
         });
         auto line = std::move(deferred_required_); deferred_required_.clear(); deferred_deadline_ = -1;
-        request_bytes_+=lineSize;heldRole+=lineSize; // Transfer old member ownership to the local line.
+        const auto lineCapacity=static_cast<quint64>(line.capacity());
+        request_bytes_+=lineCapacity;heldRole+=lineCapacity; // Transfer the actual old member backing to the local line.
         // Transfer this exact prepared original once. Any partial write is a
         // fatal uncertain delivery; never replay or rebuild it from current UI.
         const auto written=process->write(line);
@@ -411,28 +438,46 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     // only on the deferred path. Charge them beside current VM/record/unread,
     // old holding bytes and QProcess's actual queue before serialization.
     quint64 available=0;
-    const quint64 wireRole=encoded+lineSize+(deferred?held+lineSize:lineSize);
-    if(!remainingOutput(output_bytes_,available) || wireRole>available) {
+    // Same Qt writer workspace as the VM response seam: aggregate growth,
+    // independent escapedString doubling and its owning string conversion.
+    const auto minimum=std::max<quint64>(16,sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar));
+    const auto wireCapacity=2*(encoded+minimum),lineCapacity=2*(lineSize+minimum);
+    const auto oldHeldCapacity=static_cast<quint64>(deferred_required_.capacity());
+    const auto nextHeldCapacity=deferred?2*(held+lineSize+minimum):0;
+    const auto writerScratch=6*(encoded+minimum);
+    const quint64 wireRole=wireCapacity+lineCapacity+lineSize+(deferred?oldHeldCapacity+nextHeldCapacity:0);
+    if(wireRole>Limits::stream_retained_bytes || writerScratch>Limits::stream_retained_bytes-wireRole ||
+        !remainingOutput(output_bytes_,available) || wireRole+writerScratch>available) {
         if(!nonfatalPreflight)fail("The official agent request exceeds joint retained capacity.");return false;
     }
-    request_bytes_+=wireRole;
-    quint64 retainedRequest=wireRole;
+    request_bytes_+=wireRole+writerScratch;
+    quint64 retainedRequest=wireRole+writerScratch;
     const auto requestRole=qScopeGuard([receiver,&retainedRequest] {
         if(receiver)receiver->request_bytes_-=retainedRequest;
     });
     const auto wire = QJsonDocument(envelope).toJson(QJsonDocument::Compact);
-    if (static_cast<quint64>(wire.size()) != encoded) {
+    if (static_cast<quint64>(wire.size()) != encoded || static_cast<quint64>(wire.capacity())>wireCapacity) {
         if (!nonfatalPreflight) fail("The official agent request could not be encoded consistently."); return false;
     }
+    request_bytes_-=writerScratch;retainedRequest-=writerScratch; // Writer conversion/escaping locals are dead.
     const auto line = wire + '\n';
+    if(static_cast<quint64>(line.capacity())>lineCapacity) {
+        if(!nonfatalPreflight)fail("The official agent line capacity exceeds its admitted role");return false;
+    }
     auto heldWire = deferred_required_;
-    if (deferred) heldWire.append(line); // All holding-slot allocation precedes admission/publication.
+    if (deferred) {
+        heldWire.append(line); // All holding-slot allocation precedes admission/publication.
+        if(static_cast<quint64>(heldWire.capacity())>nextHeldCapacity) {
+            if(!nonfatalPreflight)fail("The official agent holding capacity exceeds its admitted role");return false;
+        }
+    }
     const auto priorHeld = deferred_required_.size();
     if (prepare && !prepare()) return false;
     if (!receiver || failed_ || process_ != process || generation_ != epoch || priorHeld != deferred_required_.size()) return false;
     if (deferred) {
         deferred_required_.swap(heldWire); // Nonallocating ownership commit; original deadline stays armed.
-        request_bytes_-=lineSize;retainedRequest-=lineSize; // New held member owns this line; old heldWire remains local.
+        const auto transferred=static_cast<quint64>(deferred_required_.capacity());
+        request_bytes_-=transferred;retainedRequest-=transferred; // Actual new member backing transferred; old heldWire stays local.
         if (deferred_deadline_ < 0) deferred_deadline_ = clock_.elapsed() + static_cast<qint64>(Limits::http_json_ms);
         flushRequired(); return receiver && process_ == process && generation_ == epoch && !failed_;
     }

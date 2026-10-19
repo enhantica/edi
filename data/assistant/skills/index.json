@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.35",
+      "version": "1.5.36",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "5a9313188e4708f3f3b9a8cc1dc2bd2b15e8a3ce9c532d35c70639c87737404a",
+      "sha256": "d398486097d5cbb0b00e803a8d1206fb2ec1f99068637306fa649eaf2375daf2",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "title": "Inspect a FullProf project",
-      "summary": "Use native input metadata; general project conversion and raw model file inspection are unavailable.",
+      "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "5e9308772fb47496a02dda96cbbc1e96ba48ad2936435c7012a4bacf66adb3da",
+      "sha256": "db753d099a2c6f5977433e2703fe484c8bb62fb123f57c1b723ef74088fd5f0c",
       "requires": [
         "selected_files"
       ],
@@ -46,11 +46,11 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "title": "Inspect GSAS/GSAS-II material",
-      "summary": "Use native input metadata; general project conversion and raw model file inspection are unavailable.",
+      "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "2a36fc99521228196c5e6bba19dd2de8cbd5b24309802c83bd10aa7d6ac7bd0b",
+      "sha256": "dedd24842d3c0d83ef0a079e2b4a51828c7a1af8b5c739adbe79a17de2eef4d7",
       "requires": [
         "selected_files"
       ],

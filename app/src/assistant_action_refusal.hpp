@@ -4,8 +4,8 @@
 #include <QString>
 #include <stdexcept>
 namespace edi_app {
-inline constexpr std::array<const char*,11> action_errors{{"project_required","input_required","input_unavailable","unsupported_input","target_unavailable","data_already_present","type_locked","unsupported_type","reader_refused","operation_superseded","control_unavailable"}};
-inline constexpr std::array<const char*,5> action_fields{{"project","file_id","experiment","axis","token"}};
+inline constexpr std::array<const char*,12> action_errors{{"project_required","input_required","input_unavailable","unsupported_input","target_unavailable","data_already_present","type_locked","unsupported_type","reader_refused","operation_superseded","control_unavailable","invalid_range"}};
+inline constexpr std::array<const char*,7> action_fields{{"project","file_id","experiment","axis","token","offset","max_bytes"}};
 class ActionRefusal final : public std::invalid_argument {
 public:
     ActionRefusal(const char* error,const char* field):std::invalid_argument("The original app action was refused"),error(error),field(field){}

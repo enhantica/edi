@@ -54,6 +54,8 @@ QJsonArray assistant_native_tool_specs() {
         {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"oneOf":[{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"experiment":{"type":"string","minLength":1,"maxLength":256},"axis":{"const":"beamMode"},"token":{"enum":["constant wavelength","time-of-flight"]}},"required":["purpose","experiment","axis","token"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"experiment":{"type":"string","minLength":1,"maxLength":256},"axis":{"const":"radiationProbe"},"token":{"enum":["neutron","xray"]}},"required":["purpose","experiment","axis","token"],"additionalProperties":false}]})schema")).object()}});
     tools.append(Object{{"type","function"},{"name","load_data"},{"description","Load an admitted immutable measurement into the exact calculation-only experiment through original Load data/readers/Undo. Show actions gives only the original Load pointer/click cue without a file dialog; original source identity must remain current. Return actual renamed member/reader facts; do not replace measured data or implicitly change type."},
         {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"experiment":{"type":"string","minLength":1,"maxLength":256},"file_id":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","experiment","file_id"],"additionalProperties":false})schema")).object()}});
+    tools.append(Object{{"type","function"},{"name","read_selected_file"},{"description","Read exact strict UTF-8 text from ONE current admitted file_id, never a path. offset/max_bytes are byte positions, at most the existing 65536-byte read bound. Returns selected_text with original collection/generation, total_bytes, exact start/end/next_offset, eof and complete. complete means this range covers the entire source, not just a finished chunk. A final later chunk can have eof=true and complete=false. max_bytes=0 probes a valid scalar boundary; a positive range too small for the next scalar refuses. No silent truncation/normalization, raw filesystem reader, converter or scientific edit. Same read in both Show-actions modes; no project required. Use subsequent explicit ranges against the same returned identity for partial text; do not ask to paste the same readable attachment again."},
+        {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"file_id":{"type":"string","minLength":1,"maxLength":256},"offset":{"type":"integer","minimum":0,"maximum":16777216},"max_bytes":{"type":"integer","minimum":0,"maximum":65536}},"required":["purpose","file_id","offset","max_bytes"],"additionalProperties":false})schema")).object()}});
     add("acquire_inputs", "Capture immutable local input files only from an opaque scope_id in the current genuine user input_scopes. No path, URL, glob or command argument is accepted. Returns file IDs, source ordinal, reader hints and counts; it does not claim scientific import. Use returned IDs with create_cwl_project and inspect the actual native project afterward. Already captured sources are not reread. Stale, changed, protected or oversized sources refuse without replacing the prior selection.",
         {{"scope_id",text}},{"scope_id"});
     add("save_project", "Save the settled current project using the ordinary app Save method for its existing owned directory; fresh Save As retains its original verified export path. Omitted destination saves its genuine already-owned Session directory, preserving its actual name/path and ignoring an unused fresh name. If it has no owned directory, omission uses the original fresh-name human Save As choice. Explicit destination=fresh always uses that one-operation choice; explicit current requires an owned directory and no name/path. For current saving both modes call the same ordinary Session Save; Show actions gives a visual-only cue at Save without dispatching a click or opening a form. saved/committed reflect the ordinary return, active/presentation_complete reflect the actual original owner; reopened=false means no separate reopen was witnessed. Fresh Save As retains its genuine button/name form and protected export. No unrelated overwrite or model path authority.",
@@ -89,7 +91,7 @@ QJsonArray assistant_native_tool_specs() {
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
-    return individual_app_action(name) || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
+    return individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project" || name == "edit_background";
 }
 QString assistant_native_purpose(const Object& args) {
@@ -110,7 +112,17 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         if((name=="load_data" || name=="set_experiment_type") && (!args.value("experiment").isString() || args.value("experiment").toString().isEmpty()))
             throw ActionRefusal("target_unavailable","experiment");
     }
-    if(name=="load_structure") shape(args,{"purpose","file_id"});
+    if(name=="read_selected_file") {
+        shape(args,{"purpose","file_id","offset","max_bytes"});
+        if(!args.value("file_id").isString() || args.value("file_id").toString().isEmpty())throw ActionRefusal("input_required","file_id");
+        for(const auto* field:{"offset","max_bytes"}) {
+            const auto n=args.value(QLatin1StringView(field));
+            const double maximum=QLatin1StringView(field)==QLatin1StringView("offset")?edi::assistant::SelectedFileLimits::file_bytes:edi::assistant::SelectedFileLimits::read_bytes;
+            if(!n.isDouble() || !std::isfinite(n.toDouble()) || n.toDouble()<0 || std::floor(n.toDouble())!=n.toDouble() || n.toDouble()>maximum)
+                throw ActionRefusal("invalid_range",field);
+        }
+    }
+    else if(name=="load_structure") shape(args,{"purpose","file_id"});
     else if(name=="load_data") shape(args,{"purpose","experiment","file_id"});
     else if(name=="set_experiment_type") shape(args,{"purpose","experiment","axis","token"});
     else if(name=="acquire_inputs") shape(args,{"purpose","scope_id"});
