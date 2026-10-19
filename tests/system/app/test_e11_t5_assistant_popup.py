@@ -1987,3 +1987,40 @@ def test_create639_real_original_callback_consumption_and_one_undo(tmp_path):
     assert type(facts[0]['receiptId']) is str and facts[0]['receiptId']==facts[0]['entry']['name']
     assert not any(item.get('method')in{'turn/interrupt','account/login/start'}for item in requests)
     assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+
+
+def test_experiment648_real_main_manual_members_and_ordinary_cues(tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import background285_fixture, readonly409_policy, records, save211_files
+    root=background285_fixture(tmp_path,'cw')
+    experiment_file=root/'experiments/experiment.edi';source_text=experiment_file.read_text()
+    original_mask='\nloop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\nmask 21 22\n'
+    assert source_text.count(original_mask)==1, 'EXPERIMENT648 SETUP: local Main fixture has one original mask before intentional empty baseline'
+    experiment_file.write_text(source_text.replace(original_mask,'\n'))
+    original_files=save211_files(root)
+    env=popup171_owned_environment(tmp_path);config_path=Path(env['EDI_TEST_CODEX_PEER_INPUT']);config=json.loads(config_path.read_text());config.pop('report_page_reply')
+    region={'$experiment648_region':'first'}
+    def call(operation,**arguments):return {'tool':'edit_experiment','arguments':{'purpose':'Original experiment648 real ordinary controls','experiment':'experiment','operation':operation,**arguments}}
+    turns=[[call('peak_profile',value='cwl-gaussian')],
+           [call('exclusion_append'),call('exclusion_start',region=region,value=7.25),call('exclusion_end',region=region,value=2.125)],
+           [call('peak_profile',value='cwl-gaussian'),call('exclusion_start',region=region,value=7.25),call('exclusion_end',region=region,value=2.125)],
+           [call('exclusion_remove',region=region)]]
+    for i,group in enumerate(turns):
+        for j,c in enumerate(group):c['call_id']=f'experiment648-main-{i}-{j}'
+    config.update(scenario='native:script',native_turn_calls=turns,experiment648=True,readonly409=True,vm319_record_packets=True);config_path.write_text(json.dumps(config));original_config=config_path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_experiment648_original_manual_rows_and_visible_member_controls','-o','-,txt']
+    result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'experiment648.stdout.log').write_text(result.stdout);(tmp_path/'experiment648.stderr.log').write_text(result.stderr)
+    assert result.returncode==0 and 'FAIL!'not in result.stdout and 'PASS   : edi_app::AssistantPopup::test_experiment648_original_manual_rows_and_visible_member_controls()'in result.stdout
+    assert config_path.read_bytes()==original_config and save211_files(root)==original_files
+    trace=Path(config['trace']);readonly409_policy(trace);rr=records(trace)
+    emitted=[json.loads(v)for v in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()];replies=[json.loads(v)for v in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted)==len(replies)==sum(map(len,turns)) and len({v['id']for v in emitted})==len(emitted)
+    assert len([v for v in rr if v.get('method')=='turn/start'])==len(turns)
+    for sent,reply in zip(emitted,replies,strict=True):
+        assert sent==reply['original'] and reply['response']['id']==sent['id']!=sent['params']['callId'] and reply['response']['result']['success']is True
+    facts=[json.loads(v.split('EXPERIMENT648_MAIN_RESULT ',1)[1])for v in result.stdout.splitlines()if'EXPERIMENT648_MAIN_RESULT 'in v]
+    assert len(facts)==1 and facts[0]['manualRemovalCallbacks']==1 and facts[0]['nested']==[False,False,False,False]
+    assert facts[0]['ownerSame']is True and facts[0]['realUndo']is True and [facts[0][k]for k in ['keys','clicked','activated']]==[0,0,0]
+    assert all(facts[0][k]>=1 for k in ['profileCue','appendCue','startCue','endCue'])
+    assert not any(v.get('method')in{'turn/interrupt','account/login/start'}for v in rr) and not trace.with_suffix('.native-wrong-envelope.jsonl').exists()

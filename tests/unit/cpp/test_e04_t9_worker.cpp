@@ -4,6 +4,13 @@
 #include <optional>
 #include <thread>
 #include <type_traits>
+#include <limits>
+
+namespace c13_t12_fault {
+extern thread_local long remaining;
+extern thread_local unsigned calls;
+extern thread_local unsigned faults;
+}
 #include "e04_t9_support.hpp"
 
 #if __has_include("edi/worker.hpp") && __has_include("edi/live_preview.hpp")
@@ -622,7 +629,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
                 if (factory == 0) {
                     REQUIRE_MESSAGE(live.structures.size() == original_structure_count + 1,
                                     "RECEIPT491 structure factory executes exactly once");
-                    CHECK_MESSAGE((result.structure == live.structures.back().get() && result.experiment == nullptr && result.atom == nullptr),
+                    CHECK_MESSAGE((result.structure == live.structures.back().get() && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
                                   "RECEIPT491 structure pin is the actual appended member before publication");
                     CHECK_MESSAGE(live.structures.back()->name == "receipt491_appended_structure",
                                   "RECEIPT491 actual appended identity belongs to the independent literal operation");
@@ -632,7 +639,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
                     const auto actual_member = factory == 1 ? live.experiments.back() : live.experiments[target_index];
                     CHECK_MESSAGE(live.experiments[count - 1] == unrelated_tail,
                                   "RECEIPT491 replacement cannot select the unrelated later member by row position");
-                    CHECK_MESSAGE((result.structure == nullptr && result.experiment == actual_member.get() && result.atom == nullptr),
+                    CHECK_MESSAGE((result.structure == nullptr && result.experiment == actual_member.get() && result.atom == nullptr && result.exclusion == nullptr),
                                   "RECEIPT491 experiment pin is the actual current appended/replacement member");
                     CHECK_MESSAGE(actual_member->name == (factory == 1 ? "receipt491_appended_experiment" :
                                   factory == 2 ? "receipt491_target" : "receipt491_loaded_experiment"),
@@ -657,7 +664,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
                     {{}, [&](const edi::work::Event& event) {
                         if (event.kind == edi::work::EventKind::Input) {
                             ++inputs;
-                            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr),
+                            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
                                           "RECEIPT491 both caller destinations clear before the original Input trace");
                             CHECK_MESSAGE(edi::project_edi_files(live) == original_structure_text,
                                           "RECEIPT491 Input trace precedes the actual closed operation");
@@ -697,7 +704,7 @@ TEST_CASE("E11-T5 Input refusal clears applied identity before any closed edit")
         {{}, [&](const edi::work::Event& event) {
             if (event.kind != edi::work::EventKind::Input) return;
             ++inputs;
-            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr),
+            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
                           "RECEIPT491 original Input observes cleared caller-owned storage");
             throw std::runtime_error("receipt491 refused at Input");
         }});
@@ -707,7 +714,7 @@ TEST_CASE("E11-T5 Input refusal clears applied identity before any closed edit")
     bool refused = false;
     try { preview.apply(operation, &applied, &result); }
     catch (const std::runtime_error& failure) { refused = std::string(failure.what()) == "receipt491 refused at Input"; }
-    CHECK_MESSAGE((refused && inputs == 1 && !applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr),
+    CHECK_MESSAGE((refused && inputs == 1 && !applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr && result.exclusion == nullptr),
                   "RECEIPT491 actual pre-write Input refusal has no false or inherited applied identity");
     CHECK_MESSAGE(edi::project_edi_files(live) == before, "RECEIPT491 Input refusal preserves every original scientific saved byte");
 }
@@ -729,15 +736,15 @@ TEST_CASE("E11-T5 actual appended atom identity precedes fallible preview observ
         auto pin=[&]{
             REQUIRE_MESSAGE(structure->atom_sites.size()==count+1,"ATOM634 append executes exactly once");
             CHECK_MESSAGE(structure->atom_sites.front()==first,"ATOM634 original initial atom is preserved by append");
-            CHECK_MESSAGE((result.atom==structure->atom_sites.back().get()&&result.atom!=first.get()&&result.structure==nullptr&&result.experiment==nullptr),
+            CHECK_MESSAGE((result.atom==structure->atom_sites.back().get()&&result.atom!=first.get()&&result.structure==nullptr&&result.experiment==nullptr&&result.exclusion==nullptr),
                           "ATOM634 result pins EXACT inserted atom before every fallible observer, never the retained initial row");
             CHECK_MESSAGE(structure->atom_sites.back()->id=="Independent634_added","ATOM634 inserted pin owns the independently requested identity");
         };
         if(entrance==0){result=operation.apply_result();pin();continue;}
         e04_t9::OwnerQueue queue;
         edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
-            if(event.kind==edi::work::EventKind::Input){++inputs;CHECK_MESSAGE((!applied&&result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr),
-                "ATOM634 all THREE stale caller pins clear before real Input");CHECK_MESSAGE(edi::project_edi_files(live)==before,"ATOM634 Input is genuinely before append");}
+            if(event.kind==edi::work::EventKind::Input){++inputs;CHECK_MESSAGE((!applied&&result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr&&result.exclusion==nullptr),
+                "ATOM634 all FOUR stale caller pins clear before real Input");CHECK_MESSAGE(edi::project_edi_files(live)==before,"ATOM634 Input is genuinely before append");}
             if(event.kind==edi::work::EventKind::Applied){++applied_events;CHECK_MESSAGE(applied,"ATOM634 factual applied flag precedes trace");pin();
                 if(entrance==1)throw std::runtime_error("atom634 Applied observer");}
         }});
@@ -748,6 +755,135 @@ TEST_CASE("E11-T5 actual appended atom identity precedes fallible preview observ
         CHECK_MESSAGE(exact,"ATOM634 reached the original intended post-apply observer, not an earlier failure");
         CHECK_MESSAGE((inputs==1&&applied_events==1&&edited==(entrance==2?1:0)),"ATOM634 each original boundary occurs exactly once");
         pin(); // Later throw does not erase factual atom identity or apply again.
+    }
+}
+
+TEST_CASE("E11-T5 actual exclusion pin precedes fallible preview observers") {
+    using Result=edi::Edit::AppliedResult;
+    static_assert(std::is_same_v<decltype(Result{}.exclusion),const edi::ExcludedRegion*>);
+    for(int entrance=0;entrance!=3;++entrance) {
+        CAPTURE(entrance);
+        auto live=edi::load_project(e04_t9_fixture::silicon);
+        const auto experiment=live.experiments.front();
+        edi::Edit::append_excluded_region(*experiment,1.25,2.5)();
+        const auto first=experiment->excluded_regions.back();const auto count=experiment->excluded_regions.size();
+        const auto operation=edi::Edit::append_excluded_region(*experiment,3.75,9.125);
+        const auto before=edi::project_edi_files(live);
+        bool applied=true;Result result{live.structures.front().get(),experiment.get(),live.structures.front()->atom_sites.front().get(),first.get()};
+        int inputs=0,applied_events=0,edited=0;
+        auto pin=[&]{
+            REQUIRE_MESSAGE(experiment->excluded_regions.size()==count+1,"EXPERIMENT643 append executes exactly once");
+            CHECK_MESSAGE(experiment->excluded_regions[count-1]==first,"EXPERIMENT643 retained previous row is not mistaken for inserted member");
+            CHECK_MESSAGE((result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr&&result.exclusion==experiment->excluded_regions.back().get()&&result.exclusion!=first.get()),
+                "EXPERIMENT643 actual inserted exclusion is pinned BEFORE every fallible observer");
+            CHECK_MESSAGE((experiment->excluded_regions.back()->first==3.75&&experiment->excluded_regions.back()->second==9.125),
+                "EXPERIMENT643 early actual member retains independently requested literal endpoints");
+        };
+        if(entrance==0){result=operation.apply_result();pin();continue;}
+        e04_t9::OwnerQueue queue;
+        edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
+            if(event.kind==edi::work::EventKind::Input){++inputs;CHECK_MESSAGE((!applied&&result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr&&result.exclusion==nullptr),
+                "EXPERIMENT643 all FOUR stale caller pins clear BEFORE genuine Input");CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT643 actual Input is before the write");}
+            if(event.kind==edi::work::EventKind::Applied){++applied_events;CHECK_MESSAGE(applied,"EXPERIMENT643 actual applied flag precedes trace");pin();
+                if(entrance==1)throw std::runtime_error("exclusion643 Applied failure");}
+        }});
+        edi::LivePreview preview(live,worker,{[&]{++edited;pin();throw std::runtime_error("exclusion643 edited failure");},{}});
+        const std::string expected=entrance==1?"exclusion643 Applied failure":"exclusion643 edited failure";
+        bool exact=false;try{preview.apply(operation,&applied,&result);}catch(const std::runtime_error& error){exact=std::string(error.what())==expected;}
+        CHECK_MESSAGE((exact&&inputs==1&&applied_events==1&&edited==(entrance==2?1:0)),"EXPERIMENT643 exact real postwrite observer failure reached once");
+        pin();CHECK_MESSAGE(applied,"EXPERIMENT643 later failure cannot erase factual original insertion");
+    }
+}
+
+TEST_CASE("E11-T5 ordinary profile and exclusion restore preserve original scientific owners") {
+    auto live=edi::load_project(e04_t9_fixture::echidna);
+    const auto experiment=live.experiments.front();const auto structure=live.structures.front();
+    REQUIRE_MESSAGE(experiment->data.has_value(),"EXPERIMENT643 independent committed Echidna input is genuinely measured");
+    REQUIRE_MESSAGE(experiment->peak.broad_gauss_u.has_value(),"EXPERIMENT643 independent FCJ fixture has an engaged shared U cell");
+    REQUIRE_MESSAGE(experiment->peak.asym_fcj_1.has_value(),"EXPERIMENT643 independent FCJ fixture has an optional field dropped by Gaussian");
+    CHECK_MESSAGE(edi::effective_peak_type(*experiment)=="cwl-tch-pseudo-voigt-fcj","EXPERIMENT643 profile baseline comes from the committed fixture tag");
+    auto* shared=&*experiment->peak.broad_gauss_u;const auto original_data=&*experiment->data;
+    edi::Edit::value(*shared,.234567)();shared->free=true;shared->uncertainty=.012345;
+    const auto before=edi::project_edi_files(live);
+    auto undo=edi::capture_experiment_controls(live,*experiment,true);
+    edi::Edit::peak_profile(*experiment,"cwl-gaussian")();
+    CHECK_MESSAGE(edi::effective_peak_type(*experiment)=="cwl-gaussian","EXPERIMENT643 actual requested profile applied on measured target");
+    CHECK_MESSAGE((experiment->peak.broad_gauss_u.has_value()&&&*experiment->peak.broad_gauss_u==shared),"EXPERIMENT643 shared engaged original parameter handle survives changed profile");
+    CHECK_MESSAGE((shared->value.get()==.234567&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.012345}),"EXPERIMENT643 shared scalar/free/SU remain exact nontrivial operands");
+    CHECK_MESSAGE(!experiment->peak.asym_fcj_1.has_value(),"EXPERIMENT643 original selector actually drops FCJ-only field, never fakes preserved shape");
+    edi::Edit::restore_experiment_controls(live,std::move(undo))();
+    CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT643 narrow profile restore returns every saved scientific field/SU/free/optional/relationship fact");
+    CHECK_MESSAGE((live.experiments.front()==experiment&&live.structures.front()==structure&&&*experiment->data==original_data&&&*experiment->peak.broad_gauss_u==shared),
+        "EXPERIMENT643 restore retains original experiment/structure/measured data/shared parameter owners");
+    auto regions=edi::capture_experiment_controls(live,*experiment,false);
+    edi::Edit::append_excluded_region(*experiment,0,0)();
+    const auto index=experiment->excluded_regions.size()-1;
+    edi::Edit::excluded_region_bound(*experiment,index,false,7.25)();
+    edi::Edit::excluded_region_bound(*experiment,index,true,2.125)();
+    CHECK_MESSAGE((experiment->excluded_regions[index]->first==7.25&&experiment->excluded_regions[index]->second==2.125),
+        "EXPERIMENT643 ordinary finite reversed endpoints stay literal without sort/clamp");
+    edi::Edit::restore_experiment_controls(live,std::move(regions))();
+    CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT643 exact narrow exclusion restore preserves all unrelated scientific saved bytes");
+    const auto refused_before=edi::project_edi_files(live);
+    bool wrong_mode=false;try{edi::Edit::peak_profile(*experiment,"tof-jorgensen")();}catch(const std::invalid_argument&){wrong_mode=true;}
+    CHECK_MESSAGE((wrong_mode&&edi::project_edi_files(live)==refused_before),"EXPERIMENT643 actual wrong-beam profile refuses before scientific write");
+}
+
+TEST_CASE("E11-T5 original profile preparation refuses each reached allocation before live writes") {
+    for(bool restore : {false,true}) {
+        CAPTURE(restore);
+        // Existing C13-T12 allocator: count the successful original operation,
+        // then fail each actually reached allocation. No guessed sweep length.
+        auto make=[&] {
+            auto live=edi::load_project(e04_t9_fixture::echidna);
+            return live;
+        };
+        auto warm=make();auto warm_undo=edi::capture_experiment_controls(warm,warm.experiment(),true);
+        edi::Edit::peak_profile(warm.experiment(),"cwl-gaussian")();
+        edi::Edit::restore_experiment_controls(warm,std::move(warm_undo))();
+        auto measured=make();auto undo=edi::capture_experiment_controls(measured,measured.experiment(),true);
+        if(restore)edi::Edit::peak_profile(measured.experiment(),"cwl-gaussian")();
+        c13_t12_fault::calls=0;c13_t12_fault::faults=0;c13_t12_fault::remaining=std::numeric_limits<long>::max();
+        try {
+            if(restore)edi::Edit::restore_experiment_controls(measured,std::move(undo))();
+            else edi::Edit::peak_profile(measured.experiment(),"cwl-gaussian")();
+        } catch(...) {c13_t12_fault::remaining=-1;throw;}
+        c13_t12_fault::remaining=-1;
+        const auto allocations=c13_t12_fault::calls;
+        CHECK_MESSAGE(c13_t12_fault::faults==0,"EXPERIMENT648 successful allocation-counting control genuinely commits");
+        CHECK_MESSAGE(edi::effective_peak_type(measured.experiment())==(restore?"cwl-tch-pseudo-voigt-fcj":"cwl-gaussian"),
+            "EXPERIMENT648 measured original factory/operation reaches literal requested control");
+        for(unsigned allocation=0;allocation<allocations;++allocation) {
+            CAPTURE(allocation);
+            auto live=make();auto retained=edi::capture_experiment_controls(live,live.experiment(),true);
+            if(restore)edi::Edit::peak_profile(live.experiment(),"cwl-gaussian")();
+            const auto before=edi::project_edi_files(live);auto* shared=&*live.experiment().peak.broad_gauss_u;
+            bool refused=false;c13_t12_fault::calls=0;c13_t12_fault::faults=0;c13_t12_fault::remaining=allocation;
+            try {
+                if(restore)edi::Edit::restore_experiment_controls(live,std::move(retained))();
+                else edi::Edit::peak_profile(live.experiment(),"cwl-gaussian")();
+            }catch(const std::bad_alloc&){refused=true;}catch(...){c13_t12_fault::remaining=-1;throw;}
+            c13_t12_fault::remaining=-1;
+            CHECK_MESSAGE((refused&&c13_t12_fault::faults==1),"EXPERIMENT648 each measured allocation escape actually reaches first owning failure seam");
+            CHECK_MESSAGE(edi::project_edi_files(live)==before,"EXPERIMENT648 preparation failure leaves every original scientific saved byte unchanged");
+            CHECK_MESSAGE(&*live.experiment().peak.broad_gauss_u==shared,"EXPERIMENT648 original shared parameter remains the same retained owner after refusal");
+        }
+    }
+}
+
+TEST_CASE("E11-T5 original supported profile domain preserves long escaped registered tokens") {
+    REQUIRE_MESSAGE(!edi::work::Worker::any_alive(),"EXPERIMENT648 registration uses original pre-Worker public boundary");
+    const std::vector<std::string> tokens={std::string(257,'p'),std::string(260,'q')+"\\\"\t",std::string("registered648_")+std::string(130,'x')+"\xce\xbb\xf0\x9f\x99\x82"};
+    for(const auto& token:tokens)edi::register_peak_type(token,edi::BeamModeEnum::TIME_OF_FLIGHT);
+    const auto offered=edi::supported_peak_profiles(edi::BeamModeEnum::TIME_OF_FLIGHT);
+    for(const auto& token:tokens) {
+        CHECK_MESSAGE(std::find(offered.begin(),offered.end(),token)!=offered.end(),"EXPERIMENT648 original registry offers exact extension token without member-ID restriction");
+        auto live=edi::load_project(e04_t9_fixture::silicon);const auto member=live.experiments.front();
+        edi::Edit::peak_profile(*member,token)();
+        CHECK_MESSAGE(edi::effective_peak_type(*member)==token,"EXPERIMENT648 ordinary TOF selector preserves exact long/control/UTF8 token; no computed-kernel claim");
+        auto cw=edi::load_project(e04_t9_fixture::echidna);const auto before=edi::project_edi_files(cw);
+        bool refused=false;try{edi::Edit::peak_profile(cw.experiment(),token)();}catch(const std::invalid_argument&){refused=true;}
+        CHECK_MESSAGE((refused&&edi::project_edi_files(cw)==before),"EXPERIMENT648 offered TOF extension remains wrong-mode for genuine CW member");
     }
 }
 

@@ -936,6 +936,7 @@ native_disclosed_sources = []
 read625_files = []
 #634 ID-only pins from genuine successful structure/atom replies, never fixture science.
 structure634_ids = {}
+experiment648_region_ids = {}
 native_action484_datasets = []
 
 
@@ -951,6 +952,13 @@ def native_original_addresses(value):
         ]
         assert len(matches) == 1, 'CREATE SETUP: original current parameter address is unique'
         return matches[0]
+    if isinstance(value, dict) and set(value) == {'$experiment648_region'}:
+        assert config.get('experiment648') is True and config.get('scenario') == 'native:script'
+        key = value['$experiment648_region']
+        assert key in {'first','second'} and key in experiment648_region_ids
+        identifier = experiment648_region_ids[key]
+        assert type(identifier) is str and identifier
+        return identifier
     if isinstance(value, dict) and set(value) == {'$structure634'}:
         assert config.get('structure634') is True and config.get('scenario') == 'native:script'
         key = value['$structure634']
@@ -1218,6 +1226,18 @@ def native_reply(request):
                 'sources': [{'name': row['name'], 'id': row['id'], 'text_readable': row['text_readable']}
                             for row in native_disclosed_sources],
             })
+    if (config.get('experiment648') is True and result and result.get('success')
+            and original['params']['tool']=='edit_experiment'
+            and original['params']['arguments']['operation']=='exclusion_append'):
+        assert config.get('scenario')=='native:script'
+        value648=json.loads(result['contentItems'][0]['text'])
+        assert value648['status']=='completed' and value648['complete'] is True
+        target648=value648['datasets'];assert type(target648)is list and len(target648)==1
+        assert target648[0]['id']==original['params']['arguments']['experiment']
+        row648=value648['excluded_region'];identifier648=row648['id']
+        assert set(row648)=={'id','first','second'} and type(identifier648)is str and identifier648
+        assert identifier648 not in experiment648_region_ids.values() and len(experiment648_region_ids)<2
+        experiment648_region_ids['first' if not experiment648_region_ids else 'second']=identifier648
     if config.get('structure634') is True and result and result.get('success'):
         tool634 = original['params']['tool']; args634 = original['params']['arguments']
         if tool634 in {'create_structure','edit_structure','edit_atom'}:

@@ -1,0 +1,169 @@
+{
+  "name": "edit_experiment",
+  "description": "Change one actual experiment peak-profile selection or exclusion-row operation through the original app methods. Use current experiment/region IDs. Profile tokens must be offered for that exact experiment beam mode. Append keeps its ordinary generated ID/default bounds; inspect its actual returned row before bound edits. Each changed operation owns ordinary Undo; equal stored values skip setters/cues/Undo. Both modes use the same app mutation; Show actions adds only original navigation/reveal/visual cues. No automatic sorting, cropping, conversion, calibration or uncertain retry.",
+  "inputSchema": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "peak_profile"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "cwl-gaussian",
+              "cwl-lorentzian",
+              "cwl-pseudo-voigt",
+              "cwl-pseudo-voigt-berar-baldinozzi",
+              "cwl-tch-pseudo-voigt",
+              "cwl-tch-pseudo-voigt-fcj",
+              "tof-jorgensen",
+              "tof-jorgensen-von-dreele",
+              "tof-pseudo-voigt"
+            ]
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "exclusion_append"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "exclusion_start"
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "region",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "exclusion_end"
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "region",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "experiment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "exclusion_remove"
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "experiment",
+          "operation",
+          "region"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

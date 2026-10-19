@@ -56,6 +56,8 @@ ROLES = {
         "axis": "object:Axis",
         "observations": "object:Observations",
         "dataset_weight": "finite number",
+        "peak_profile": "string",
+        "peak_profile_options": "array:string",
         "excluded_regions": "array:Region",
         "phases": "array:Phase",
         "background": "object:Background"
@@ -155,7 +157,20 @@ ROLES = {
         "status": "string",
         "calculating": "boolean",
         "fitting": "boolean",
-        "show_actions": "boolean"
+        "show_actions": "boolean",
+        "calculations": "array:Calculation"
+    },
+    # PUBLIC535: original published PatternModel facts; neither curve visibility
+    # nor scientific/fit success is inferred from these fields.
+    "Calculation": {
+        "dataset_id": "string",
+        "pattern_available": "boolean",
+        "stale": "boolean",
+        "calculated_points": "finite number",
+        "calculated_available": "boolean",
+        "calculation_error_present": "boolean",
+        "calculation_error": "string",
+        "calculation_error_complete": "boolean"
     }
 }
 

@@ -2494,7 +2494,7 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'create_experiment',
         'set_experiment_type',
         'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
+    'edit_experiment', }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
         'NATIVE: registered reads use original rpc and retained purpose'
@@ -3398,6 +3398,7 @@ def test_native129_real_postfit_storage_failure_settles_then_disconnected_clear_
         [native_call('run_fit')],
         project=ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project',
     )
+    original_peer648 = live_original_peer(actor)
     actor.command(
         'send_text', text='Original native fit with actual final-publication archive refusal'
     )
@@ -3422,11 +3423,23 @@ def test_native129_real_postfit_storage_failure_settles_then_disconnected_clear_
         actor,
         lambda value: (
             not value['project']['native_observer']['fit_running'] and bool(value['last_error'])
+            and len(native_records(trace, '.native-replies.jsonl')) == 1
         ),
     )
     assert state['last_error'] and len(state['last_error'].encode()) <= 512, (
         'N4: actual final-publication failure is contained and bounded, never exception through Qt'
     )
+    replies648 = native_records(trace, '.native-replies.jsonl')
+    assert state['connected'] and original_peer_is_live(original_peer648), (
+        'FALLBACK648 SETUP: original retained postfit failure still has its healthy exact stdio peer')
+    assert len(replies648) == 1 and len(native_records(trace, '.native-emitted.jsonl')) == 1, (
+        'FALLBACK648: presentation/archive failure cannot veto or duplicate the independently owed original native settlement')
+    sent648, response648 = replies648[0]['original'], replies648[0]['response']
+    assert response648['id'] == sent648['id'] != sent648['params']['callId'] and sent648['params']['tool'] == 'run_fit'
+    result648 = response648['result']
+    assert type(result648['success']) is bool and len(result648['contentItems']) == 1 and result648['contentItems'][0]['type'] == 'inputText'
+    assert type(json.loads(result648['contentItems'][0]['text'])) is dict and not native_records(trace, '.native-wrong-envelope.jsonl'), (
+        'FALLBACK648: real partial/refusal/success facts remain the host result, never fabricated completion or an absent reply')
     actor.command('sign_out')
     settle(actor, lambda value: not value['connected'])
     actor.command('clear_history')
@@ -4910,7 +4923,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'save_project',
         'edit_background',
                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    }, (
+    'edit_experiment', }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
     recipe_schema = tools['create_cwl_project']['inputSchema']['properties']['recipe']
@@ -5372,7 +5385,7 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'save_project',
         'edit_background',
                                                                     'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
+    'edit_experiment', }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
         'BOOTSTRAP: actual automatic discovery registers every shipped resource, '
@@ -5864,7 +5877,7 @@ def signin206_shipped(state, trace):
         'save_project',
         'edit_background',
                                                                               'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-    }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
+    'edit_experiment', }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
 
 
 @pytest.mark.parametrize('loaded', [False, True], ids=['empty', 'loaded'])
@@ -9600,7 +9613,7 @@ def gui392_run(tmp_path, case):
                 'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
                 'run_fit', 'create_cwl_project', 'add_relations', 'save_project', 'edit_background',
                                                                            'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
-            }, 'GUI392: custom guidance cannot register or expand native tool authority'
+            'edit_experiment', }, 'GUI392: custom guidance cannot register or expand native tool authority'
         emitted = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         # Actual peer request/reply/client IDs, not a guessed process/row ID.
         folder167_policy(trace, None)
@@ -10334,7 +10347,7 @@ PREFS417_CASES = ('lifecycle', 'malformed', 'retirement', 'local', 'all-off', 's
 PREFS417_NATIVE_TOOLS = {'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters',
                        'set_free', 'run_fit', 'create_cwl_project', 'add_relations',
                        'save_project', 'edit_background', 'acquire_inputs',
-                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom'}
+                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom', 'edit_experiment'}
 
 
 def prefs417_inventory(skills, expected):
@@ -11774,3 +11787,280 @@ def test_structure634_original_create_edit_atom_noops_and_current_save(generic, 
     readonly409_policy(trace);assert config.read_bytes()==original_config
     assert len(started_requests(trace))==len(turns) and len(native_records(trace,'.native-emitted.jsonl'))==len(native_records(trace,'.native-replies.jsonl'))==total
     assert not any(r.get('method')in{'turn/interrupt','account/login/start','account/logout'}for r in records(trace))
+
+@pytest.mark.parametrize('kind', ['cw', 'tof'])
+def test_experiment648_original_measured_controls_and_shared_undo(generic, tmp_path, kind):
+    """Public530/531/532 on FIRST measured members; no computed-profile golden."""
+    source = background285_fixture(tmp_path, kind)
+    experiment_file = source / 'experiments/experiment.edi'
+    source_text = experiment_file.read_text()
+    original_mask = '\nloop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\nmask 21 22\n'
+    assert source_text.count(original_mask) == 1, 'EXPERIMENT648 SETUP: local original mask is explicitly present before declaring an empty baseline'
+    experiment_file.write_text(source_text.replace(original_mask, '\n'))
+    original_files = save211_files(source)
+    actor, trace = native_case(generic, [], project=source, connect_now=False,
+                               script={'scenario':'native:script', 'experiment648':True})
+    assert actor.command('native_science_enable')['reply']['enabled']
+    assert actor.command('background285_observe')['reply']['enabled']
+    if kind == 'cw':
+        assert actor.command('background285_simulation')['reply']['created'], 'EXPERIMENT648: genuine other selected bank makes measured target noncurrent'
+    before = background285_image(actor)
+    target = background285_bank(before, 'experiment')
+    assert target['exclusions']==[] and target['has_data'] and not target['calculation_only'] and target['axis'] and target['measured'] and target['sigma']
+    assert (before['banks'][before['selected_index']]['id'] != target['id']) is (kind == 'cw')
+    baseline_profile = 'cwl-tch-pseudo-voigt' if kind == 'cw' else 'tof-pseudo-voigt'
+    requested_profile = 'cwl-gaussian' if kind == 'cw' else 'tof-jorgensen-von-dreele'
+    wrong_mode = 'tof-jorgensen' if kind == 'cw' else 'cwl-gaussian'
+    first = {'$experiment648_region':'first'}
+    second = {'$experiment648_region':'second'}
+    def operation(name, **arguments):
+        return native_call('edit_experiment', experiment=target['id'], operation=name, **arguments)
+    turns = [
+        [native_call('inspect_project'), native_call('list_parameters')],
+        [operation('peak_profile', value=requested_profile), native_call('inspect_project'), native_call('list_parameters')],
+        [operation('peak_profile', value=baseline_profile), operation('peak_profile', value=wrong_mode)],
+        [operation('exclusion_append'), native_call('inspect_project')],
+        [operation('exclusion_start', region=first, value=7.25), operation('exclusion_end', region=first, value=2.125)],
+        [operation('exclusion_append'), native_call('inspect_project')],
+        [operation('exclusion_start', region=first, value=7.25), operation('exclusion_end', region=first, value=2.125), operation('exclusion_remove', region=second)],
+        [operation('exclusion_remove', region=first)],
+        [operation('exclusion_start', region='independent-absent-region', value=1.25),
+         operation('exclusion_end', region=first, value='7.25'),
+         native_call('edit_experiment', experiment='independent-absent-experiment', operation='exclusion_append'),
+         operation('peak_profile', value='independent-not-an-option')],
+    ]
+    for i,group in enumerate(turns):
+        for j,call in enumerate(group):call['call_id']=f'experiment648-{kind}-{i}-{j}'
+    readonly409_configure(trace); native145_configure(actor, trace, turns)
+    config_path=trace.parent/'peer-input.json'; original_config=config_path.read_bytes()
+    total=0; first_id=None; second_id=None; before_remove=None
+    for index,group in enumerate(turns):
+        native145_approve(actor); total+=len(group); state,replies=native_send(actor,trace,total)
+        state=native145_science_settled(actor); current=replies[-len(group):]
+        assert state['connected'] and not state['last_error'] and state['project_present']
+        image=background285_image(actor); actual=background285_bank(image,target['id'])
+        assert all(image[key]==before[key]for key in ['owner','core','mode','path'])
+        assert all(actual[key]==target[key]for key in ['identity','has_data','calculation_only','axis','measured','sigma','raw_identity','anchors','links','weight'])
+        assert [row for row in image['banks']if row['id']!=target['id']]==[row for row in before['banks']if row['id']!=target['id']]
+        assert save211_files(source)==original_files, 'EXPERIMENT648: original measured source files never rewritten by edits/Undo'
+        for entry in current:
+            if entry['original']['params']['tool']=='edit_experiment' and entry['response']['result']['success']:
+                carrier=entry['decoded']['datasets'];assert len(carrier)==1 and carrier[0]['id']==target['id'], 'EXPERIMENT648: public actual affected identity agrees with independently inspected/raw original member'
+        if index==0:
+            tool=next(t for t in next(r['params']['dynamicTools']for r in records(trace)if r.get('method')=='thread/start')if t['name']=='edit_experiment')
+            expected=json.loads((ROOT/'tests/fixtures/assistant/experiment648/request.json').read_text()); assert tool['name']==expected['name'] and tool['inputSchema']==expected['inputSchema']
+            dataset=[d for d in current[0]['decoded']['datasets']if d['id']==target['id']]
+            assert len(dataset)==1 and dataset[0]['peak_profile']==baseline_profile
+            choices=(['cwl-gaussian','cwl-lorentzian','cwl-pseudo-voigt','cwl-pseudo-voigt-berar-baldinozzi','cwl-tch-pseudo-voigt','cwl-tch-pseudo-voigt-fcj'] if kind=='cw'
+                     else ['tof-jorgensen','tof-jorgensen-von-dreele','tof-pseudo-voigt'])
+            assert dataset[0]['peak_profile_options']==choices and wrong_mode not in choices
+        elif index==1:
+            assert current[0]['response']['result']['success']is True and current[0]['decoded']['peak_profile']==requested_profile
+            assert current[0]['decoded']['status']=='completed' and current[0]['decoded']['applied']is True and current[0]['decoded']['complete']is True
+            assert [r for r in state['project']['science_observer']['calculations']if r['name']==target['id']][0]['peak_profile']==requested_profile
+            assert actor.command('native_undo')['reply']['was_available']
+            restored=native145_science_settled(actor); restored_image=background285_image(actor)
+            assert restored_image['parameters']==before['parameters'] and restored_image['can_undo']==before['can_undo']
+            assert [r for r in restored['project']['science_observer']['calculations']if r['name']==target['id']][0]['peak_profile']==baseline_profile
+        elif index==2:
+            assert current[0]['response']['result']['success']is True and current[0]['decoded']['status']=='no_change' and current[0]['decoded']['applied']is False
+            assert current[1]['response']['result']['success']is False and current[1]['decoded']['status']=='refused'
+            assert image['parameters']==before['parameters'] and image['can_undo']==before['can_undo'], 'EXPERIMENT648: equal/wrong-mode do not add Undo or reshape original cells'
+        elif index==3:
+            row=current[0]['decoded']['excluded_region']; first_id=row['id']
+            assert type(first_id)is str and first_id and row=={'id':first_id,'first':0,'second':0}
+            assert actual['exclusions']==[[0,0]]
+        elif index==4:
+            assert all(r['response']['result']['success']is True and r['decoded']['status']=='completed'for r in current)
+            assert current[0]['decoded']['excluded_region']=={'id':first_id,'first':7.25,'second':0}
+            assert current[1]['decoded']['excluded_region']=={'id':first_id,'first':7.25,'second':2.125}
+            assert actual['exclusions']==[[7.25,2.125]], 'EXPERIMENT648: finite reversed endpoints preserved without sorting/clamping'
+        elif index==5:
+            row=current[0]['decoded']['excluded_region'];second_id=row['id']
+            assert type(second_id)is str and second_id and second_id!=first_id
+            assert row=={'id':second_id,'first':2.125,'second':2.125} and actual['exclusions']==[[7.25,2.125],[2.125,2.125]]
+            before_remove=image
+        elif index==6:
+            assert all(r['response']['result']['success']is True and r['decoded']['status']=='no_change' and r['decoded']['applied']is False and r['decoded']['complete']is True for r in current[:2])
+            assert current[2]['response']['result']['success']is True and current[2]['decoded']['exclusion_id']==second_id and current[2]['decoded']['removed']is True
+            assert actual['exclusions']==[[7.25,2.125]]
+            assert actor.command('native_undo')['reply']['was_available']
+            native145_science_settled(actor); restored=background285_image(actor)
+            assert background285_bank(restored,target['id'])['exclusions']==background285_bank(before_remove,target['id'])['exclusions']
+            assert restored['parameters']==before_remove['parameters'] and restored['can_undo']==before_remove['can_undo'], 'EXPERIMENT648: ONE ordinary Undo reverses remove, skipping both no-op bounds'
+        elif index==7:
+            assert current[0]['response']['result']['success']is True and current[0]['decoded']['exclusion_id']==first_id and current[0]['decoded']['removed']is True
+            assert actual['exclusions']==[[2.125,2.125]]
+            assert actor.command('native_undo')['reply']['was_available']
+            native145_science_settled(actor); assert background285_bank(background285_image(actor),target['id'])['exclusions']==[[7.25,2.125],[2.125,2.125]]
+            before_invalid=background285_image(actor)
+        else:
+            assert all(r['response']['result']['success']is False and r['decoded']['status']=='refused' and r['decoded']['applied']is False for r in current)
+            assert image['parameters']==before_invalid['parameters'] and actual['exclusions']==background285_bank(before_invalid,target['id'])['exclusions'] and image['can_undo']==before_invalid['can_undo']
+    readonly409_policy(trace); assert config_path.read_bytes()==original_config
+    assert len(started_requests(trace))==len(turns) and len(native_records(trace,'.native-emitted.jsonl'))==len(native_records(trace,'.native-replies.jsonl'))==total
+    assert not any(r.get('method')in{'turn/interrupt','account/login/start','account/logout'}for r in records(trace))
+
+
+def test_calculation649_original_published_readout_and_read_only_recovery(generic, tmp_path):
+    """PUBLIC535 on real published errors, measured rows and ordinary Undo.
+
+    The four original observations and zero edit are independent input operands,
+    not a fitted profile/error-message golden. This does not qualify Main pixels,
+    transient stale publication, unavailable PatternModels or fit convergence.
+    """
+    reads = [native_call('inspect_project'), native_call('diagnostics')]
+    empty, empty_trace = native_case(generic, [], connect_now=False,
+                                    script={'scenario': 'native:script'})
+    assert empty.last['vm']['project_present'] is False and empty.last['vm']['project'] == {}
+    readonly409_configure(empty_trace)
+    native145_configure(empty, empty_trace, [reads])
+    empty_state, empty_replies = native_send(empty, empty_trace, 2)
+    empty_state = settle(empty, lambda value: not value['can_cancel'])
+    assert empty_state['project_present'] is False and empty_state['project'] == {}
+    empty_context = rpc83_context_inputs(started_requests(empty_trace)[0]['params'])[0]
+    assert empty_replies[0]['response']['result']['success'] is True
+    for value in [empty_replies[0]['decoded'], empty_context]:
+        facts = value['native_state']
+        assert facts['calculations'] == [], 'CALC649: available inspect/Context with no owner has an actual empty calculation array, never an invented PatternModel'
+        assert facts['calculating'] is False and facts['fitting'] is False
+        assert type(facts['show_actions']) is bool
+    for reply, expected in zip(empty_replies, reads, strict=True):
+        assert reply['original']['params']['tool'] == expected['tool'] and reply['original']['params']['arguments'] == expected['arguments']
+    assert empty_replies[1]['response']['result']['success'] is False
+    assert empty_replies[1]['decoded'] == {
+        'schema': 'edi.assistant.outgoing/1', 'status': 'unavailable', 'code': 'unavailable'
+    }, 'CALC649: original ownerless diagnostics prerequisite yields its exact closed unavailable reply, no fabricated native_state or arbitrary failure'
+    assert len(started_requests(empty_trace)) == 1
+    assert len(native_records(empty_trace, '.native-emitted.jsonl')) == len(native_records(empty_trace, '.native-replies.jsonl')) == 2
+    readonly409_policy(empty_trace)
+
+    source = background285_fixture(tmp_path)
+    experiment_file = source / 'experiments/experiment.edi'
+    text = experiment_file.read_text()
+    # Existing literal fixture grammar/SUs, only the independently supplied raw
+    # CW grid changes. No engine-derived samples or expected optimum are used.
+    old_rows = '10 41 0.5\n20 43 0.75\n30 47 1.25\n40 53 2\n'
+    new_rows = '0.0953 41 0.5\n1 43 0.75\n9 47 1.25\n20 53 2\n'
+    assert text.count(old_rows) == 1
+    experiment_file.write_text(text.replace(old_rows, new_rows))
+    source_files = save211_files(source)
+    actor, trace = native_case(generic, [], project=source, connect_now=False,
+                               script={'scenario': 'native:script'})
+    assert actor.command('native_science_enable')['reply']['enabled']
+    assert actor.command('background285_observe')['reply']['enabled']
+    original = native145_science_settled(actor)
+    initial_image = background285_image(actor)
+    target = background285_bank(initial_image)
+    assert target['axis'] == [.0953, 1, 9, 20] and target['measured'] == [41, 43, 47, 53]
+    assert target['sigma'] == [.5, .75, 1.25, 2] and target['has_data'] and not target['calculation_only']
+    path = 'experiment.instrument.calib_twotheta_offset'
+    assert native_parameter(original, path)['value'] == 0
+    owned_directory = trace.parent / 'original-owned-project'
+    owned_files = save211_files(owned_directory)
+    readonly409_configure(trace)
+    native145_configure(actor, trace, [[native_call('inspect_project'), native_call('diagnostics')] for _ in range(3)])
+    config_file = trace.parent / 'peer-input.json'
+    config_bytes = config_file.read_bytes()
+    total = 0
+    for phase in range(3):
+        if phase == 1:
+            changed = actor.command('manual_value', path=path, value=.29052)
+            assert not changed['reply']['error'], 'CALC649: genuine original ordinary edit, no injected calculation/failure state'
+        elif phase == 2:
+            assert actor.command('native_undo')['reply']['was_available'], 'CALC649: ONE ordinary Undo reverses the actual zero edit; reads must not add history'
+        before = native145_science_settled(actor)
+        before_image = background285_image(actor)
+        published = before['project']['science_observer']['pattern_errors']
+        assert len(published) == 1 and published[0]['name'] == target['id']
+        error = published[0]['calculation_error']
+        assert type(error) is str and bool(error) is (phase == 1), 'CALC649: actual settled published refusal is distinct from global idle and healthy publication'
+        assert len(error.encode('utf-8')) <= 512 and all(ord(c) >= 32 for c in error), 'CALC649 SETUP: actual ordinary engine text qualifies for unchanged public readable-error limit'
+        current = before['project']['science_observer']['calculations']
+        assert len(current) == 1 and current[0]['name'] == target['id'] and current[0]['current'] is (phase != 1)
+        assert native_parameter(before, path)['value'] == (.29052 if phase == 1 else 0)
+        native145_approve(actor)
+        total += 2
+        _, all_replies = native_send(actor, trace, total)
+        after = native145_science_settled(actor)
+        replies = all_replies[-2:]
+        assert all(r['response']['result']['success'] is True for r in replies), 'CALC649: read-only tools must still deliver both genuine answers after a calculation refusal'
+        inspection, diagnostics = [r['decoded'] for r in replies]
+        assert type(diagnostics['diagnostics']) is list
+        assert [d['id'] for d in inspection['datasets']] == [target['id']]
+        context = rpc83_context_inputs(started_requests(trace)[phase]['params'])[0]
+        rows = inspection['native_state']['calculations']
+        assert rows == diagnostics['native_state']['calculations'] == context['native_state']['calculations'], 'CALC649: inspect, diagnostics and actual current Send frame expose identical settled published facts'
+        assert len(rows) == 1
+        row = rows[0]
+        assert set(row) == {'dataset_id', 'pattern_available', 'stale', 'calculated_points', 'calculated_available', 'calculation_error_present', 'calculation_error', 'calculation_error_complete'}
+        assert row['dataset_id'] == target['id'] and row['pattern_available'] is True
+        assert row['stale'] is False, 'CALC649: a completed original publication is settled even when it publishes a refusal'
+        count = row['calculated_points']
+        assert type(count) is int and count >= 0 and type(row['calculated_available']) is bool
+        assert row['calculated_available'] is (count > 0), 'CALC649: availability describes the published column only, never scientific/viewport success'
+        if phase != 1:
+            assert count == 4, 'CALC649: healthy complete publication covers the four independently supplied original observations'
+        assert row['calculation_error'] == error and row['calculation_error_present'] is bool(error)
+        assert row['calculation_error_complete'] is True, 'CALC649: qualifying original published text is preserved exactly, not replaced by idle/success'
+        for value in [inspection, diagnostics, context]:
+            facts = value['native_state']
+            assert facts['calculating'] is False and facts['fitting'] is False and type(facts['show_actions']) is bool
+        assert after['project']['parameters'] == before['project']['parameters']
+        assert after['project']['science_observer'] == before['project']['science_observer']
+        assert background285_image(actor) == before_image, 'CALC649: reads cannot mutate owner/raw axis/measurement/SUs/geometry/anchors/profile/Undo'
+        assert save211_files(source) == source_files and save211_files(owned_directory) == owned_files
+        assert after['connected'] and not after['last_error']
+    assert background285_image(actor) == initial_image, 'CALC649: exact physical model and original Undo availability return after ONE ordinary Undo'
+    readonly409_policy(trace)
+    assert config_file.read_bytes() == config_bytes and len(started_requests(trace)) == 3
+    assert len(native_records(trace, '.native-emitted.jsonl')) == len(native_records(trace, '.native-replies.jsonl')) == 6
+    for traffic in (empty_trace, trace):
+        assert not any(r.get('method') in {'turn/interrupt', 'account/login/start', 'account/logout'} for r in records(traffic))
+
+
+def test_calls650_original_completed_calls_do_not_spend_live_request_bound(generic):
+    """PUBLIC536: 65 sequential completed calls, one original settled turn.
+
+    Small original diagnostics keep this independent of scientific edits and
+    response-size stress. No constant/byte/history allowance is raised. The
+    original duplicate-across-steer case independently owns duplicate rejection.
+    """
+    source = ROOT / 'tests/fixtures/e04_t1/editable-project'
+    source_files = save211_files(source)
+    actor, trace = native_case(generic, [], project=source, connect_now=False,
+                               script={'scenario': 'native:script'})
+    assert actor.command('native_science_enable')['reply']['enabled']
+    calls = [native_call('diagnostics') for _ in range(65)]
+    readonly409_configure(trace)
+    native145_configure(actor, trace, [calls])
+    config = trace.parent / 'peer-input.json'
+    original_config = config.read_bytes()
+    before = native145_science_settled(actor)
+    assert before['context']['native_state']['show_actions'] is False, 'CALL650 SETUP: original owning diagnostic sequence is explicitly Show actions OFF'
+    owned_directory = trace.parent / 'original-owned-project'
+    owned_files = save211_files(owned_directory)
+    original_peer = live_original_peer(actor)
+    _, replies = native_send(actor, trace, 65)
+    after = native145_science_settled(actor)
+    assert original_peer_is_live(original_peer) and after['connected'] and not after['last_error']
+    assert all(r['response']['result']['success'] is True for r in replies), 'CALL650: completed retained calls cannot spend the outstanding64-request bound; actual next valid answer must succeed'
+    assert len(replies) == len(calls) == 65
+    emitted = native_records(trace, '.native-emitted.jsonl')
+    assert len(emitted) == 65
+    assert len({r['id'] for r in emitted}) == len({r['params']['callId'] for r in emitted}) == 65
+    assert len(started_requests(trace)) == 1, 'CALL650: no hidden turn reset/eviction/steer clears the retained completed ledger'
+    assert after['context']['native_state']['show_actions'] is False
+    assert rpc83_context_inputs(started_requests(trace)[0]['params'])[0]['native_state']['show_actions'] is False, 'CALL650: actual Send retains OFF intent; no ON diagnostic/eye assumption'
+    for sent, response, expected in zip(emitted, replies, calls, strict=True):
+        assert response['original'] == sent and response['response']['id'] == sent['id'] != sent['params']['callId']
+        assert sent['params']['tool'] == expected['tool'] == 'diagnostics' and sent['params']['arguments'] == expected['arguments']
+        assert type(response['decoded']['diagnostics']) is list
+    # Existing peer event order emits the next item/tool/call only after recording
+    # this exact prior response. This asserts completion, not merely 65 emissions.
+    assert after['project'] == before['project'], 'CALL650: complete original owner/parameters/science/history/Undo stay exact across every read'
+    assert save211_files(source) == source_files and save211_files(owned_directory) == owned_files
+    assert config.read_bytes() == original_config
+    readonly409_policy(trace)
+    assert not native_records(trace, '.native-wrong-envelope.jsonl')
+    assert not any(r.get('method') in {'turn/steer', 'turn/interrupt', 'account/login/start', 'account/logout'} for r in records(trace))

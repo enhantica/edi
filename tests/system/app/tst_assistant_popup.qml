@@ -7943,14 +7943,15 @@ TestCase {
                 "GUI494: accepted small visual circle is centered and contained in original header target");
             compare(circle.border.width, 0, "GUI494: connected avatar is borderless, including real hover and both palettes");
             const fill = circle.color;
-            tryVerify(() => Qt.colorEqual(circle.color, EaStyle.Colors.isDarkPalette ? "white" : "black"), 2000,
-                "GUI494: actual avatar retains strong enabled-Send-like contrasting native fill");
+            tryVerify(() => Qt.colorEqual(circle.color,
+                avatar.hovered || avatar.down || avatar.visualFocus ? EaStyle.Colors.themeAccent
+                    : EaStyle.Colors.isDarkPalette ? "white" : "black"), 2000,
+                "GUI494: actual avatar paints the original accent background while active and contrasting native fill at rest");
             const labels = gui392_labels(avatar).filter(label => label.text === avatar.text && gui393_under(label, avatar.contentItem));
             compare(labels.length, 1, "GUI494: SAME actual avatar owns its unique painted initial label");
             tryVerify(() => Qt.colorEqual(labels[0].color,
-                avatar.hovered || avatar.down || avatar.visualFocus ? EaStyle.Colors.themeAccent
-                    : EaStyle.Colors.isDarkPalette ? "black" : "white"), 2000,
-                "GUI494: actual avatar initial retains native contrasting resting ink and real active accent");
+                EaStyle.Colors.isDarkPalette ? "black" : "white"), 2000,
+                "GUI494: actual avatar initial retains the same native contrasting ink at rest and while active");
             verify(distance(fill, EaStyle.Colors.contentBackground) * fill.a * fill.a > 0,
                 "GUI400: actual avatar fill separately contrasts native header in both palettes/real hover, without cross-distance ordering");
         }
@@ -10331,6 +10332,103 @@ TestCase {
             console.info("CREATE639_RESULT",JSON.stringify({callbacks:callbacks,maxDepth:maxDepth,nested:nested,nonown:nonown,entry:atEntry,
                 originalMember:true,receiptId:created.structures[0].id,oneUndo:true,manualNoInput:true,ownerSame:Session.project===owner}));
         } finally {for(const slot of slots)disconnect313(slot.life,slot.object,slot.signal,slot.callback);}
+    }
+
+    function test_experiment648_original_manual_rows_and_visible_member_controls() {
+        Session.closeProject();
+        const input=Probe.referenceUrl("Original declared background input");
+        verify(Session.openProject(input),"EXPERIMENT648 SETUP: original lawful measured CW fixture opens through genuine Session");
+        let owner=Session.project,experiment=owner.currentExperiment;
+        compare(experiment.peakType,"cwl-tch-pseudo-voigt");
+        const originalPeak=experiment.peakType,originalParameters=JSON.stringify(Probe.rows(owner.parameters));
+        experiment.peakType="cwl-gaussian";
+        tryCompare(experiment,"peakType","cwl-gaussian",2000);
+        verify(owner.canUndo,"EXPERIMENT648: ordinary MANUAL profile setter owns shared Undo");owner.undo();
+        tryCompare(experiment,"peakType",originalPeak,2000);
+        compare(JSON.stringify(Probe.rows(owner.parameters)),originalParameters,"EXPERIMENT648: ONE ordinary manual Undo restores complete original value/free/SU rows");
+        const model=experiment.excludedRegions,modelLife=lifetime313(model);
+        compare(model.count,0);
+        model.append();model.setEnd(0,4.5);model.append();model.setEnd(1,9.5);
+        compare(model.count,2);
+        const beforeRemove=JSON.stringify(Probe.rows(model));let callbacks=0,nested=[];
+        const onRemoving=function(){
+            if(callbacks)return;++callbacks;
+            if(!alive313(modelLife)){nested=["retired"];return;}
+            // Original cached row0 names removed A while the live surviving B
+            // has4.5/9.5; row1 has vanished. Neither stale index is authority.
+            nested=[model.setStart(0,4.5),model.setEnd(0,9.5),model.setStart(1,4.5),model.setEnd(1,9.5)];
+        };
+        model.rowsAboutToBeRemoved.connect(onRemoving);
+        try {model.remove(0);} finally {disconnect313(modelLife,model,"rowsAboutToBeRemoved",onRemoving);}
+        compare(callbacks,1,"EXPERIMENT648: actual original removal notification reaches synchronous consumer exactly once");
+        compare(JSON.stringify(nested),JSON.stringify([false,false,false,false]),"EXPERIMENT648: both wrong-member/equal and disappeared bound setters refuse before stale model reads");
+        compare(model.count,1);compare(model.get(0,"start"),4.5);compare(model.get(0,"end"),9.5);
+        verify(owner.canUndo);owner.undo();tryCompare(model,"count",2,2000);
+        compare(JSON.stringify(Probe.rows(model)),beforeRemove,"EXPERIMENT648: ONE actual ordinary Undo restores both original rows/IDs, no phantom nested write");
+        // Fresh real incarnation at the SAME independent file; no A input may
+        // become authority for the subsequent assistant-owned B operation.
+        Session.closeProject();verify(Session.openProject(input));
+        owner=Session.project;experiment=owner.currentExperiment;
+        const ownerLife=lifetime313(owner),originalAssistant=assistant,assistantLife=lifetime313(assistant);
+        const regions=experiment.excludedRegions,regionsLife=lifetime313(regions);
+        compare(regions.count,0);compare(experiment.peakType,"cwl-tch-pseudo-voigt");
+        visible185_page("project");toggle();gui392_signIn(false);
+        verify(!assistant.showActions);Ui.click(this,Probe,window,"assistant.showActions");verify(assistant.showActions);
+        const slots=[],watched=new Set();let phase=-1,cues=0,keys=0,clicked=0,activated=0;
+        let profileCue=0,appendCue=0,startCue=0,endCue=0,lastPoint=null;
+        function same(){verify(alive313(ownerLife)&&Session.project===owner&&assistant===originalAssistant&&alive313(assistantLife)&&alive313(regionsLife),"EXPERIMENT648: same original owner/assistant/member stays live");}
+        function bind(object,signal,callback){const life=lifetime313(object);object[signal].connect(callback);slots.push({object:object,life:life,signal:signal,callback:callback});}
+        function scan(){
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")) {
+                if(watched.has(control)||!(/^(peak\.type$|excludedRegion\.|excludedRegions\.)/.test(control.objectName)))continue;
+                watched.add(control);
+                if(typeof control.textEdited==="function")bind(control,"textEdited",()=>{if(assistant.showingActions)++keys;});
+                if(typeof control.clicked==="function")bind(control,"clicked",()=>{if(assistant.showingActions)++clicked;});
+                if(typeof control.activated==="function")bind(control,"activated",()=>{if(assistant.showingActions)++activated;});
+            }
+        }
+        function hit(control,point){if(!control||!Ui.exposed(control))return false;const r=rect(control);return point.x>=r[0]&&point.x<=r[0]+r[2]&&point.y>=r[1]&&point.y<=r[1]+r[3];}
+        const onMoved=function(point){same();lastPoint={x:point.x,y:point.y};scan();};
+        const onCue=function(){
+            same();verify(lastPoint!==null,"EXPERIMENT648: zero-argument press uses an actual original moved point from this live owner");
+            const point=lastPoint;
+            ++cues;scan();verify(assistant.actionWindow===window&&assistant.showingActions);
+            if(hit(Ui.control(Probe,window,"peak.type"),point)){compare(experiment.peakType,"cwl-tch-pseudo-voigt","EXPERIMENT648: original profile cue precedes the ordinary scientific setter");++profileCue;}
+            if(hit(Ui.control(Probe,window,"excludedRegions.append"),point)){compare(regions.count,0,"EXPERIMENT648: actual Add cue precedes append");++appendCue;}
+            if(hit(Ui.control(Probe,window,"excludedRegion.start.0"),point)){compare(regions.get(0,"start"),0);++startCue;}
+            if(hit(Ui.control(Probe,window,"excludedRegion.end.0"),point)){compare(regions.get(0,"end"),0);++endCue;}
+        };
+        bind(assistant,"actionPointerMoved",onMoved);bind(assistant,"actionPointerPressed",onCue);bind(regions,"countChanged",scan);
+        function one(call,ids){
+            const rows=Probe.rows(assistant.messages).filter(r=>!ids.has(r.id)&&r.kind==="activity"&&r.payload&&r.payload.id===call);
+            verify(rows.length<=1,"EXPERIMENT648: one original native row per original call");
+            if(!rows.length||rows[0].status!=="completed"||!rows[0].payload.nativeOutcome)return null;
+            verify(rows[0].payload.success===true,"EXPERIMENT648: a visual cue alone is never a successful edit");
+            const contents=JSON.parse(JSON.stringify(rows[0].payload.contentItems));compare(contents.length,1);compare(contents[0].type,"inputText");return JSON.parse(contents[0].text);
+        }
+        function send(index,count){
+            phase=index;scan();same();if(assistant.contextConsentRequired)gui392_signIn(false);
+            const ids=new Set(Probe.rows(assistant.messages).map(r=>r.id));assistant.send("Original experiment648 "+index);
+            tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&one("experiment648-main-"+index+"-"+(count-1),ids)!==null,
+                visible237_observationMs(Array.from({length:count},()=>({path:"",text:""}))),"EXPERIMENT648: SAME original completed native outcomes settle without refusal/partial/missing callback");
+            const out=[];for(let i=0;i<count;++i){const v=one("experiment648-main-"+index+"-"+i,ids);verify(v!==null);out.push(v);}same();return out;
+        }
+        try {
+            const profile=send(0,1)[0];compare(profile.peak_profile,"cwl-gaussian");compare(experiment.peakType,"cwl-gaussian");verify(profileCue>=1);
+            const edits=send(1,3);const id=edits[0].excluded_region.id;verify(typeof id==="string"&&id.length>0);
+            compare(regions.count,1);compare(regions.get(0,"id"),id);compare(regions.get(0,"start"),7.25);compare(regions.get(0,"end"),2.125);
+            verify(appendCue>=1&&startCue>=1&&endCue>=1,"EXPERIMENT648: each actual original control receives its own prewrite visible cue");
+            const beforeNoop={cues:cues,shows:assistant.showingActions,rows:JSON.stringify(Probe.rows(regions)),parameters:JSON.stringify(Probe.rows(owner.parameters)),undo:owner.canUndo};
+            const noops=send(2,3);verify(noops.every(v=>v.status==="no_change"&&v.applied===false&&v.complete===true));
+            compare(cues,beforeNoop.cues);compare(JSON.stringify(Probe.rows(regions)),beforeNoop.rows);compare(JSON.stringify(Probe.rows(owner.parameters)),beforeNoop.parameters);compare(owner.canUndo,beforeNoop.undo);
+            owner.undo();tryCompare(regions,"count",1,2000);compare(regions.get(0,"id"),id);compare(regions.get(0,"start"),7.25);compare(regions.get(0,"end"),0,
+                "EXPERIMENT648: ONE real Undo skips allthree noops and reverses preceding actual bound write");
+            const removed=send(3,1)[0];compare(removed.exclusion_id,id);compare(removed.removed,true);compare(regions.count,0);
+            owner.undo();tryCompare(regions,"count",1,2000);compare(regions.get(0,"id"),id);compare(regions.get(0,"start"),7.25);compare(regions.get(0,"end"),0);
+            compare(keys,0);compare(clicked,0);compare(activated,0);same();
+            console.info("EXPERIMENT648_MAIN_RESULT",JSON.stringify({manualRemovalCallbacks:callbacks,nested:nested,profileCue:profileCue,appendCue:appendCue,startCue:startCue,endCue:endCue,keys:keys,clicked:clicked,activated:activated,ownerSame:true,realUndo:true,id:id}));
+        } finally {for(const row of slots)disconnect313(row.life,row.object,row.signal,row.callback);}
+        assistant.signOut();tryCompare(assistant,"connected",false,2000);
     }
 
 }
