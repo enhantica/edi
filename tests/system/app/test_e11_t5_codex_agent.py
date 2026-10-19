@@ -11254,7 +11254,14 @@ def test_main504_lbco_show_actions_cue_fit_save_and_report(tmp_path):
     adps = ['structure.atom_sites[' + site + '].adp_iso' for site in ('La', 'Ba', 'Co', 'O')]
     profiles = ['experiment.peak.' + key for key in metadata['profile_parameters']]
     zero = 'experiment.instrument.calib_twotheta_offset'
-    nuisance = ['structure.cell.length_a', 'experiment.background[1].intensity', 'experiment.background[2].intensity']
+    # Original Ids-from-positions closed form: the explicit integer positions10/165 have unique integer names.
+    # Confirm these paths against the actual successful initial native list in Main; no generic result resolver.
+    assert metadata['background'] == [[10.0, 100.0], [165.0, 100.0]], (
+        'NATURAL578 SETUP: explicit independently pinned two-point recipe is preserved, not replaced by strategy default-three')
+    # NATURAL580: legal pre-naming original ordinal member; genuine unchanged100 comes from the pinned request.
+    assert metadata['background'][0][1] == 100.0
+    recipe['initial_parameters'].append({'path': 'experiment.background[1].intensity', 'value': 100.0})
+    nuisance = ['structure.cell.length_a', 'experiment.background[10].intensity', 'experiment.background[165].intensity']
     relation = native145_relation_args(adps[0], adps[1])
     groups = [
         [native_call('inspect_project'),

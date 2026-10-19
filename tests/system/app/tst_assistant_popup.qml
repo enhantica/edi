@@ -9141,6 +9141,108 @@ TestCase {
         const account = JSON.stringify(Probe.rows(assistant.models)), previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
         const bindings = [], watched = new Set(), cues = {"structures.load":0,"experiments.loadData.0":0};
         let filePresses = 0, fileReleases = 0, fileClicks = 0, dialogsOpened = 0, typed = 0, freeClicks = 0, fitStarts = 0, fitFinishes = 0;
+        // NATURAL578: actual native receipts; strategy inference/default-three is not simulated here.
+        const watched578=new Set(), natural578={namesPressed:0,namesClicked:0,headerPressed:0,headerChosen:0,
+            menuAdmitted:0,categoryKeys:[],adpValues:new Set(),adpFree:new Set(),cellFree:0,aliasesReady:false,constraintUsed:false};
+        let objective578=3, requested578={}, background578=[], cell578="", aliases578={};
+        let menuReceiver583=null, menuIdentity583=null;
+        function nativeFilter578(parameter) {
+            verify(alive313(ownerLife) && Session.project===original
+                && visible185_parameters(original).includes(parameter),"NATURAL578: native input retains SAME current owner and member");
+            const table=Ui.control(Probe,window,"parameters.list");
+            verify(table!==null && table.sourceModel!==null,"NATURAL578: actual Analysis table owns the native action");
+            const filter=table.sourceModel;
+            compare(filter.nameFilter,"","NATURAL578: native parameter action never uses a full-path/name filter per row");
+            verify(filter.shows(parameter),"NATURAL578: SAME actual requested member belongs to the offered native rows");
+            if(parameter.category==="cell") {
+                compare(filter.categoryFilter,"");compare(filter.variability,0);
+            } else {
+                verify(filter.categoryFilter.length>0 && natural578.categoryKeys.includes(filter.categoryFilter),
+                    "NATURAL578: non-cell input follows an actual offered native category activation");
+                if(parameter.name==="adp_iso") {
+                    const offered=filter.categoryGroups.filter(group => group.key==="@displacement");
+                    compare(offered.length,1);compare(filter.categoryFilter,offered[0].key);
+                }
+            }
+            verify(!(natural578.aliasesReady && !natural578.constraintUsed),
+                "NATURAL578: related aliases are followed by their constraint use before another scientific input");
+            return filter;
+        }
+        function freePress578(control) {
+            if(!assistant.showingActions || !control.pressed)return;
+            let row=control;
+            while(row && !(row.parameter && visible185_parameters(original).includes(row.parameter)))row=row.parent;
+            verify(row!==null,"NATURAL578: native checkbox owns its original live ParameterItem row");
+            const parameter=row.parameter;nativeFilter578(parameter);
+            verify(Object.prototype.hasOwnProperty.call(requested578,parameter.path)
+                && parameter.fittable && parameter.refinable && parameter.free!==requested578[parameter.path],
+                "NATURAL578: actual checkbox changes ONLY the exact requested eligible member, never dependent/read-only/noop");
+            verify(!background578.includes(parameter.path),"NATURAL578: complete requested background uses native group header, not per-row toggles");
+            if(parameter.path===cell578)++natural578.cellFree;
+            if(parameter.name==="adp_iso")natural578.adpFree.add(parameter.path);
+        }
+        function scanNatural578() {
+            const objects=Probe.objectsWithProperty(window,"objectName");
+            for(const control of objects.filter(object => object.objectName==="background.namePoints"
+                || object.objectName==="parameters.category" || object.objectName==="parameters.freeHeader.free")) {
+                if(watched578.has(control))continue;watched578.add(control);
+                if(control.objectName==="background.namePoints") {
+                    bind(control,"pressedChanged",() => {if(!assistant.showingActions || !control.pressed)return;
+                        compare(objective578,3);verify(control.enabled && Ui.exposed(control));
+                        compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => [row.position,row.intensity.value])),
+                            JSON.stringify(plan.recipe.background.map(row => [row.position,row.intensity])),
+                            "NATURAL578: all explicit requested background values/count are committed BEFORE native IDs action");
+                        ++natural578.namesPressed;});
+                    bind(control,"clicked",() => {if(assistant.showingActions){++natural578.namesClicked;
+                        compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => row.id)),JSON.stringify(["10","165"]),
+                            "NATURAL578: existing native IDs action applies independent integer-position names");
+                        compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => [row.position,row.intensity.value])),
+                            JSON.stringify(plan.recipe.background.map(row => [row.position,row.intensity])),
+                            "NATURAL578: actual naming preserves all explicit scientific values/count");}});
+                } else if(control.objectName==="parameters.category") {
+                    bind(control,"activated",index => {if(assistant.showingActions){
+                        const table=Ui.control(Probe,window,"parameters.list");verify(table!==null);
+                        natural578.categoryKeys.push(table.sourceModel.categories[index]);}});
+                } else {
+                    const menuLife583=lifetime313(control);
+                    bind(control,"pressedChanged",() => {if(!assistant.showingActions || !control.pressed)return;
+                        verify(alive313(menuLife583) && alive313(ownerLife) && Session.project===original,
+                            "NATURAL583: actual menu admission retains its original live receiver and owner");
+                        compare(objective578,10);verify(control.enabled && Ui.exposed(control));
+                        const table=Ui.control(Probe,window,"parameters.list"),filter=table.sourceModel,eligible=[];
+                        compare(filter.nameFilter,"");
+                        verify(filter.categoryFilter.length>0 && natural578.categoryKeys.includes(filter.categoryFilter),
+                            "NATURAL578: background Free header follows actual native category selection");
+                        for(let index=0;index<filter.rowCount();++index){const p=filter.parameterAt(index);if(p.fittable && p.refinable)eligible.push(p.path);}
+                        compare(JSON.stringify(eligible.sort()),JSON.stringify(background578.slice().sort()),
+                            "NATURAL578: actual header eligible set EXACTLY equals requested background, no extra row authorized");
+                        verify(eligible.every(path => requested578[path]===true),"NATURAL578: ONE header action has uniform requested final flags");
+                        compare(natural578.headerPressed,1,"NATURAL578: native header press precedes its real menu action");
+                        menuReceiver583=control;menuIdentity583=identity313(menuLife583);
+                        ++natural578.menuAdmitted;
+                    });
+                    bind(control,"clicked",() => {if(assistant.showingActions){
+                        verify(alive313(menuLife583) && alive313(ownerLife) && Session.project===original
+                            && menuReceiver583===control && menuIdentity583===identity313(menuLife583),
+                            "NATURAL583: actual clicked receiver must own its successful strict pre-effect menu admission");
+                        ++natural578.headerChosen;
+                    }});
+                }
+            }
+            const header=Ui.control(Probe,window,"parameters.freeHeader");
+            if(header && header.parent && header.parent.parent) {
+                for(const area of Probe.objectsWithProperty(header.parent.parent,"mouseX").filter(area =>
+                    area.parent===header.parent.parent && typeof area.pressed==="boolean" && typeof area.pressedChanged==="function" && typeof area.clicked==="function")) {
+                    if(watched578.has(area))continue;watched578.add(area);
+                    bind(area,"pressedChanged",() => {if(!assistant.showingActions || !area.pressed)return;
+                        const point=area.mapToItem(header,area.mouseX,area.mouseY);
+                        if(point.x>=0 && point.y>=0 && point.x<header.width && point.y<header.height) {
+                            verify(header.visible && Ui.exposed(header),"NATURAL578: actual native header input reaches its exposed current ink/hit area");
+                            ++natural578.headerPressed;
+                        }});
+                }
+            }
+        }
         let lastPoint = null;
         let elapsedPhase511="setup";
         const observations518={frames:{setup:0,active:0,settled_idle:0,manual:0},
@@ -9186,13 +9288,22 @@ TestCase {
                 c.objectName.startsWith("parameters.free.") && typeof c.clicked === "function")) {
                 if (watched.has(control)) continue; watched.add(control);
                 bind(control,"clicked",() => { ++observations518.inputReceipt["parameter-free"]; if(assistant.showingActions) ++freeClicks; });
+                bind(control,"pressedChanged",() => freePress578(control));
             }
             const field = window.activeFocusItem;
             if (field && !watched.has(field) && typeof field.textEdited === "function") {
                 let parent = field;
                 while(parent && !(parent.item && Session.project && visible185_parameters(Session.project).includes(parent.item))) parent=parent.parent;
-                if(parent) { watched.add(field); bind(field,"textEdited",() => { ++observations518.inputReceipt["parameter-text"]; if(assistant.showingActions) ++typed; }); }
+                if(parent) { watched.add(field); const receiver578=parent;
+                    bind(field,"textEdited",() => { ++observations518.inputReceipt["parameter-text"];
+                        if(assistant.showingActions) {++typed;
+                            if(receiver578.objectName.startsWith("parameters.value.")) {
+                                nativeFilter578(receiver578.item);
+                                if(receiver578.item.name==="adp_iso")natural578.adpValues.add(receiver578.item.path);
+                            }
+                        }}); }
             }
+            scanNatural578();
         }
         function cue() {
             scan(); verify(assistant.actionWindow === window && assistant.showingActions, "MAIN504: cue belongs to actual current Main action");
@@ -9222,6 +9333,17 @@ TestCase {
             return JSON.parse(items[0].text);
         }
         function objective(text, last) {
+            objective578=last;
+            if(last!==3) {
+                const declared=outcome(2).parameters;
+                const identity=path => {const rows=declared.filter(row => row.path===path);compare(rows.length,1);return rows[0].path;};
+                const scale=declared.filter(row => row.path.endsWith(".scale"));compare(scale.length,1);
+                requested578={};background578=plan.nuisance.slice(1).map(identity);cell578=identity(plan.nuisance[0]);
+                for(const path of [plan.zero,...plan.nuisance])requested578[identity(path)]=true;
+                for(const path of plan.profiles)requested578[identity(path)]=last===16;
+                if(last===10)requested578[scale[0].path]=true;
+                else for(const index of [0,2,3])requested578[identity(plan.adps[index])]=true;
+            }
             if(window.assistantManualTakeover || !popup.shown) toggle();
             const requiresApproval=assistant.contextConsentRequired;
             ++observations518.inputIssue["composer"];
@@ -9249,6 +9371,8 @@ TestCase {
             objective("Import these original LBCO and HRPT attachments using the explicit original recipe",3);
             verify(alive313(ownerLife) && Session.project===original,"MAIN504: import populates SAME original saved owner");
             compare(import265_owner(original),metadata); compare(original.structures.count,1); compare(original.experiments.count,1);
+            compare(natural578.namesPressed,1);compare(natural578.namesClicked,1,
+                "NATURAL578: compound visible recipe actually uses ONE native IDs-from-values action after its supplied values");
             compare(original.currentExperiment.name,"NPD","MAIN528: successful native Text completion retains the independently supplied experiment name in the actual stored model");
             const closed507=outcome(0).selected_files.files;
             verify(Array.isArray(closed507) && closed507.length===2,"MAIN507: genuine successful inspection exposes both closed opaque File operands");
@@ -9267,6 +9391,22 @@ TestCase {
                 aliasesExpected[id]=matches[0].unique_name;
             }
             verify(aliasesExpected.original_la_biso!==aliasesExpected.original_ba_biso);
+            aliases578=aliasesExpected;
+            const relation578=function(){
+                if(!alive313(ownerLife) || Session.project!==original)return;
+                const rows=Probe.rows(original.analysis.aliases),mapping={};for(const row of rows)mapping[row.id]=row.parameter;
+                const complete=rows.length===2 && Object.keys(aliases578).every(id => mapping[id]===aliases578[id]);
+                if(complete)natural578.aliasesReady=true;
+                const uses=Probe.rows(original.analysis.constraints).filter(row => row.id==="original_chosen_shared_biso" && row.expression==="original_ba_biso = original_la_biso" && row.enabled);
+                if(uses.length && !natural578.constraintUsed) {
+                    verify(complete && natural578.aliasesReady && objective578===10,
+                        "NATURAL578: all related actual aliases exist together BEFORE their constraint becomes enabled");
+                    natural578.constraintUsed=true;
+                }
+            };
+            compare(original.analysis.aliases.count,0);compare(original.analysis.constraints.count,0);
+            for(const model of [original.analysis.aliases,original.analysis.constraints])
+                for(const signal of ["rowsInserted","dataChanged","modelReset"])bind(model,signal,relation578);
             function aliasesCurrent(project) {
                 const rows=Probe.rows(project.analysis.aliases); compare(rows.length,2);
                 const mapping={}; for(const row of rows) mapping[row.id]=row.parameter;
@@ -9315,7 +9455,9 @@ TestCase {
             bind(fit,"runningChanged",() => { if(alive313(fitLife) && fit.running) ++fitStarts; });
             bind(fit,"finished",() => { ++fitFinishes; });
             const profileBaselines507={};
-            for(const setting of plan.recipe.initial_parameters) {
+            const profileInitial580=plan.recipe.initial_parameters.filter(setting => plan.profiles.includes(setting.path));
+            compare(profileInitial580.length,plan.profiles.length,"MAIN580: complete independently declared profile baseline excludes the separate initial background no-op");
+            for(const setting of profileInitial580) {
                 verify(!Object.prototype.hasOwnProperty.call(profileBaselines507,setting.path));
                 profileBaselines507[setting.path]=setting.value;
             }
@@ -9331,6 +9473,13 @@ TestCase {
             }
             objective("Set positive ADP starts, share La and Ba, then warm up scale cell background and zero while holding profile and ADPs",10);
             compare(Session.project,original); compare(import265_owner(original),metadata); aliasesCurrent(original);
+            verify(natural578.aliasesReady && natural578.constraintUsed,"NATURAL578: same original relation request reaches actual alias-before-use boundary");
+            compare(natural578.headerPressed,1,"NATURAL583: ONE real outer-header press is mandatory, never conditional on an optional menu callback");
+            compare(natural578.menuAdmitted,1,"NATURAL583: ONE successful same-receiver menu press executes every strict admission check");
+            compare(natural578.headerChosen,1,"NATURAL578: exact full background set uses ONE actual native Free header choice");
+            verify(natural578.cellFree>0,"NATURAL578: requested cell freedom reaches an unfiltered actual row");
+            for(const path of plan.adps){const row=outcome(2).parameters.filter(row => row.path===path);compare(row.length,1);
+                verify(natural578.adpValues.has(row[0].path),"NATURAL578: each requested ADP value reaches actual category-selected native row input");}
             for(const path of plan.nuisance) {
                 const matches=outcome(8).parameters.filter(row => row.path===path);
                 compare(matches.length,1);
@@ -9362,6 +9511,9 @@ TestCase {
             wait(5000); // Exactly one authorized event-processing idle observation; original outer90s unchanged.
             console.info("GUI511_IDLE_END","settled_idle");
             const current=Session.project, saved=outcome(16), fitted=outcome(13).parameters;
+            const independentAdps578=[0,2,3].map(index => outcome(2).parameters.find(row => row.path===plan.adps[index]).path);
+            compare(JSON.stringify(Array.from(natural578.adpFree).sort()),JSON.stringify(independentAdps578.sort()),
+                "NATURAL578: native ADP checkboxes reach EXACT requested independent members, never dependent Ba");
             for(const path of plan.nuisance) {
                 const matches=fitted.filter(row => row.path===path);
                 compare(matches.length,1);
@@ -9437,6 +9589,10 @@ TestCase {
         } finally {
             console.log("MAIN504_NATIVE_FACTS",JSON.stringify({observations518:observations518,filePresses:filePresses,fileReleases:fileReleases,fileClicks:fileClicks,dialogsOpened:dialogsOpened,
                 createReceipt574:createReceipt574,initialEmptyDocumentCharacters574:emptyDisk574.length,
+                natural578:{namesPressed:natural578.namesPressed,namesClicked:natural578.namesClicked,headerPressed:natural578.headerPressed,
+                    headerChosen:natural578.headerChosen,menuAdmitted:natural578.menuAdmitted,menuIdentity:menuIdentity583,
+                    categoryKeys:natural578.categoryKeys,adpValueCount:natural578.adpValues.size,
+                    adpFreeCount:natural578.adpFree.size,cellFree:natural578.cellFree,aliasesReady:natural578.aliasesReady,constraintUsed:natural578.constraintUsed},
                 cues:cues,typed:typed,freeClicks:freeClicks,fitStarts:fitStarts,fitFinishes:fitFinishes,
                 currentOwner:String(Session.project),canCancel:assistant.canCancel,lastError:assistant.lastError}));
             for(const row of bindings) disconnect313(row.life,row.object,row.signal,row.callback);
