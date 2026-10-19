@@ -403,6 +403,7 @@ class Edit {
     struct AppliedResult {
         const Structure* structure = nullptr;
         const ExperimentBase* experiment = nullptr;
+        const AtomSite* atom = nullptr;
     };
     // Executes this same closed operation once. The result is an identity fact,
     // not a getter or a grant to use a row after its owner has retired.
@@ -1138,7 +1139,12 @@ class Edit {
     // class names them.
     template <typename Row>
     static Edit appending(ItemVec<Row>& rows, Row row) {
-        return Edit([&rows, row = std::make_shared<Row>(std::move(row))] { rows.push_back(std::make_shared<Row>(*row)); });
+        return Edit(ResultOperation{}, [&rows, row = std::make_shared<Row>(std::move(row))] {
+            auto inserted=std::make_shared<Row>(*row);
+            rows.push_back(inserted);
+            if constexpr (std::is_same_v<Row,AtomSite>) return AppliedResult{nullptr,nullptr,inserted.get()};
+            else return AppliedResult{};
+        });
     }
     template <typename Row>
     static Edit erasing(ItemVec<Row>& rows, std::size_t index) {

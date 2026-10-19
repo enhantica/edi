@@ -46,6 +46,7 @@
 #include <QMap>
 #include <QSet>
 #include "edi/io.hpp"
+#include "edi/symmetry.hpp"
 #include <QUuid>
 #include <optional>
 #include <exception>
@@ -1069,7 +1070,7 @@ struct AssistantViewModel::State {
         // The dedicated host proves full parsed-schema equality with these
         // exact requested schemas. Independently reject extra/shadow namespaces
         // and missing/duplicate/nonfunction/deferred callable advertisements.
-        static constexpr std::array<QStringView,16> expectedNames{u"inspect_project",u"list_parameters",u"diagnostics",u"set_parameters",u"set_free",u"run_fit",u"create_cwl_project",u"acquire_inputs",u"save_project",u"add_relations",u"edit_background",u"load_structure",u"create_experiment",u"set_experiment_type",u"load_data",u"read_selected_file"};
+        static constexpr std::array<QStringView,19> expectedNames{u"inspect_project",u"list_parameters",u"diagnostics",u"set_parameters",u"set_free",u"run_fit",u"create_cwl_project",u"acquire_inputs",u"save_project",u"add_relations",u"edit_background",u"load_structure",u"create_experiment",u"set_experiment_type",u"load_data",u"read_selected_file",u"create_structure",u"edit_structure",u"edit_atom"};
         std::array<bool,expectedNames.size()> names{};
         const auto accept=[&](const Object& function) {
             if(function.value("type")!="function" || !function.value("name").isString() ||
@@ -1912,6 +1913,11 @@ struct AssistantViewModel::State {
         const edi::ExperimentBase* operation_member = nullptr;
         const edi::ExperimentBase* result_member = nullptr;
         const edi::Structure* result_structure = nullptr;
+        const edi::Structure* operation_structure = nullptr;
+        const edi::AtomSite* operation_site = nullptr;
+        const edi::AtomSite* result_site = nullptr;
+        QPointer<StructureViewModel> structure_view;
+        bool site_removed = false;
         QMetaObject::Connection calculation_wait;
         qsizetype step = 0;
         bool manual_takeover = false;
@@ -6546,6 +6552,245 @@ struct AssistantViewModel::State {
         creation_widget_frames.reserve(creation_widget_frames.size()+1);
         creation_widget_frames.push_back(run);
     }
+    int structure_member_index(const std::shared_ptr<NativeCreateWidget>& run) const {
+        if(!run || !run->project)return -1;
+        const auto* member=run->result_structure?run->result_structure:run->operation_structure;
+        const auto& rows=run->project->assistantProject()->structures;
+        for(std::size_t i=0;i<rows.size();++i)if(rows[i].get()==member)return static_cast<int>(i);
+        return -1;
+    }
+    int structure_atom_index(const std::shared_ptr<NativeCreateWidget>& run) {
+        if(structure_member_index(run)<0 || !run->operation_structure)return -1;
+        for(std::size_t i=0;i<run->operation_structure->atom_sites.size();++i)
+            if(run->operation_structure->atom_sites[i].get()==run->operation_site)return static_cast<int>(i);
+        return -1;
+    }
+    static QString structure_text(const QString& text,bool empty=false) {
+        if((!empty && text.isEmpty()) || text.contains(QChar(0)) || input_utf8_bytes(text)>Limits::id_bytes)
+            throw ActionRefusal("unsupported_input","value");
+        return text;
+    }
+    static ProjectEditor::CreationAction structure_action(const std::shared_ptr<NativeCreateWidget>& run) {
+        using Action=ProjectEditor::CreationAction;
+        if(run->individual_tool=="create_structure")return {Action::Kind::StructureAppend};
+        const auto operation=run->arguments.value("operation").toString();
+        const auto value=run->arguments.value("value").toString();
+        if(run->individual_tool=="edit_structure") {
+            if(operation=="rename")return {Action::Kind::StructureName,run->operation_structure,{},value};
+            if(operation=="space_group_name")return {Action::Kind::SpaceGroupName,run->operation_structure,{},value};
+            if(operation=="space_group_number")return {Action::Kind::SpaceGroupNumber,run->operation_structure,{},{},run->arguments.value("value").toDouble()};
+            return {Action::Kind::SpaceGroupSetting,run->operation_structure,{},value};
+        }
+        if(operation=="append")return {Action::Kind::AtomAppend,run->operation_structure};
+        if(operation=="remove")return {Action::Kind::AtomRemove,run->operation_site};
+        if(operation=="adp_type")return {Action::Kind::AtomAdpType,run->operation_site,{},value};
+        return {Action::Kind::AtomText,run->operation_site,run->arguments.value("field").toString(),value};
+    }
+    static bool structure_action_equal(const std::shared_ptr<NativeCreateWidget>& run) {
+        using Kind=ProjectEditor::CreationAction::Kind;
+        const auto action=structure_action(run);const auto* structure=run->operation_structure;
+        const auto text=action.text.toStdString();const auto* atom=run->operation_site;
+        switch(action.kind) {
+        case Kind::StructureName:return structure && structure->name.value()==text;
+        case Kind::SpaceGroupName:return structure && edi::same_space_group_name(structure->space_group.name_h_m.value(),text);
+        case Kind::SpaceGroupSetting:return structure && structure->space_group.coord_system_code.value()==text;
+        case Kind::SpaceGroupNumber:return structure && structure->space_group.it_number.value_or(0)==static_cast<int>(action.number);
+        case Kind::AtomAdpType:return atom && atom->adp_type.value()==text;
+        case Kind::AtomText:
+            if(!atom)return false;
+            return action.field=="label"?atom->id.value()==text:action.field=="typeSymbol"?atom->type_symbol.value()==text:atom->wyckoff_letter.value()==text;
+        default:return false;
+        }
+    }
+    void structure_admit_target(const std::shared_ptr<NativeCreateWidget>& run) {
+        if(run->individual_tool=="create_structure")return;
+        const auto target=generic_id(run->arguments.value("structure"));
+        for(std::size_t i=0;i<run->project->assistantProject()->structures.size();++i) {
+            const auto* item=run->project->assistantProject()->structures[i].get();
+            if(item->name.value().size()>Limits::id_bytes || QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(item->name.value()))!=target)continue;
+            if(run->operation_structure)throw ActionRefusal("target_unavailable","structure");
+            run->operation_structure=item;run->structure_view=run->project->structureModels().value(static_cast<int>(i));
+        }
+        if(!run->operation_structure || !run->structure_view || run->structure_view->structure()!=run->operation_structure)
+            throw ActionRefusal("target_unavailable","structure");
+        const auto operation=run->arguments.value("operation");
+        if(run->individual_tool=="edit_structure") {
+            if(operation=="space_group_number") {
+                const auto value=run->arguments.value("value");
+                if(!value.isDouble() || !std::isfinite(value.toDouble()) || value.toDouble()<0 || value.toDouble()>230 || std::floor(value.toDouble())!=value.toDouble())
+                    throw ActionRefusal("unsupported_input","value");
+            } else {
+                if(operation!="rename" && operation!="space_group_name" && operation!="space_group_setting")throw ActionRefusal("unsupported_input","field");
+                if(!run->arguments.value("value").isString())throw ActionRefusal("unsupported_input","value");
+                structure_text(run->arguments.value("value").toString(),operation!="rename");
+            }
+        } else {
+            if(operation!="append" && operation!="remove" && operation!="text" && operation!="adp_type")throw ActionRefusal("unsupported_input","field");
+            if(operation!="append") {
+                const auto id=generic_id(run->arguments.value("atom"));
+                for(const auto& site:run->operation_structure->atom_sites)if(site->id.value().size()<=Limits::id_bytes && QString::fromStdString(site->id.value())==id) {
+                    if(run->operation_site)throw ActionRefusal("target_unavailable","atom");run->operation_site=site.get();
+                }
+                if(!run->operation_site)throw ActionRefusal("target_unavailable","atom");
+            }
+            if(operation=="text" || operation=="adp_type") {
+                if(!run->arguments.value("value").isString())throw ActionRefusal("unsupported_input","value");
+                const auto field=run->arguments.value("field");
+                if(operation=="text" && field!="label" && field!="typeSymbol" && field!="wyckoffLetter")throw ActionRefusal("unsupported_input","field");
+                const auto text=structure_text(run->arguments.value("value").toString(),operation=="text" && field=="wyckoffLetter");
+                if(operation=="adp_type" && !run->structure_view->atomSiteAdps()->types().contains(text))throw ActionRefusal("unsupported_type","value");
+            }
+        }
+    }
+    // Bound only the affected structure's metadata, using existing native lengths;
+    // no copied scientific project or all-project result is needed.
+    quint64 structure_metadata_role(const std::shared_ptr<NativeCreateWidget>& run) const {
+        quint64 bytes=sizeof(Object)*8+sizeof(QJsonArray)*4+48*sizeof(QJsonValue)+sizeof(NativeCreateWidget::Input)*5;
+        const auto add=[&](quint64 n){if(n>Limits::stream_retained_bytes-bytes)throw std::length_error("Structure result roles exceed capacity");bytes+=n;};
+        const auto text=[&](const std::string& value){
+            if(value.size()>Limits::id_bytes || value.find('\0')!=std::string::npos)throw ActionRefusal("unsupported_input","structure");
+            add(sizeof(QString)+16*(value.size()+1));
+        };
+        // Linked setting/default-name output and the one new/renamed site have
+        // unknown spellings before their original factory/setter runs.
+        add(16*8*(Limits::id_bytes+1));
+        const auto* structure=run->operation_structure;
+        if(!structure) {add(sizeof(Object)*2+16*sizeof(QJsonValue));return bytes;}
+        if(structure->atom_sites.size()>Limits::stream_items ||
+            (run->arguments.value("operation")=="append" && structure->atom_sites.size()>=Limits::stream_items))
+            throw std::length_error("Structure rows exceed original capacity");
+        text(structure->name.value());text(structure->space_group.name_h_m.value());text(structure->space_group.coord_system_code.value());
+        for(const auto& site:structure->atom_sites) {
+            add(sizeof(Object)*2+12*sizeof(QJsonValue));text(site->id.value());text(site->type_symbol.value());text(site->wyckoff_letter.value());text(site->adp_type.value());
+        }
+        if(structure->atom_site_aniso.size()>Limits::stream_items)throw std::length_error("Structure tensor rows exceed original capacity");
+        for(const auto& site:structure->atom_site_aniso) {add(sizeof(QJsonValue));text(site->id.value());}
+        return bytes;
+    }
+    Object structure_metadata(const std::shared_ptr<NativeCreateWidget>& run,bool maximum=false) const {
+        const auto* structure=run->result_structure?run->result_structure:run->operation_structure;
+        const QString padding(static_cast<qsizetype>(maximum?Limits::id_bytes:0),QChar(0));
+        if(!structure && !maximum)return {};
+        Object group{{"hm",maximum?padding:QString::fromStdString(structure->space_group.name_h_m.value())},
+            {"setting",maximum?padding:QString::fromStdString(structure->space_group.coord_system_code.value())},
+            {"it_number",maximum?QJsonValue(QJsonValue::Null):!structure->space_group.it_number?QJsonValue(QJsonValue::Null):QJsonValue(*structure->space_group.it_number)}};
+        QJsonArray sites,aniso;
+        if(structure)for(const auto& site:structure->atom_sites) {
+            const bool changed=maximum && site.get()==run->operation_site;
+            sites.append(Object{{"id",changed?padding:QString::fromStdString(site->id.value())},
+                {"type_symbol",changed?padding:QString::fromStdString(site->type_symbol.value())},
+                {"wyckoff",changed?padding:QString::fromStdString(site->wyckoff_letter.value())},
+                {"adp_type",changed?padding:QString::fromStdString(site->adp_type.value())}});
+        }
+        if(maximum && (!structure || run->arguments.value("operation")=="append")) {
+            sites.append(Object{{"id",padding},{"type_symbol",padding},{"wyckoff",padding},{"adp_type",padding}});aniso.append(padding);
+        }
+        if(structure)for(const auto& site:structure->atom_site_aniso)aniso.append(QString::fromStdString(site->id.value()));
+        if(maximum && structure && run->arguments.value("operation")=="adp_type")aniso.append(padding);
+        return {{"id",maximum?padding:QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(structure->name.value()))},
+            {"space_group",group},{"sites",sites},{"anisotropic_site_ids",aniso}};
+    }
+    Object structure_progress(const std::shared_ptr<NativeCreateWidget>& run,bool complete) const {
+        const bool applied=run->control_input && run->control_input->outcome.applied;
+        Object result{{"status",complete?(applied?"completed":"no_change"):applied?"applied_unconfirmed":"refused"},
+            {"applied",applied},{"published",run->operation_published || (complete && !applied)},
+            {"complete",complete},{"calculation_pending",run->project && run->project->calculating()}};
+        if(!complete){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]="structure";}
+        if(!individual_member_current(run))return result;
+        if(run->result_structure || run->operation_structure)result["structures"]=QJsonArray{structure_metadata(run)};
+        const auto* atom=run->result_site?run->result_site:run->operation_site;
+        if(run->site_removed && applied){result["atom_id"]=run->arguments.value("atom");result["removed"]=true;}
+        else if(atom) {
+            const auto* structure=run->result_structure?run->result_structure:run->operation_structure;
+            for(const auto& current:structure->atom_sites)if(current.get()==atom)result["atom_id"]=QString::fromStdString(current->id.value());
+        }
+        return result;
+    }
+    bool structure_postcondition(const std::shared_ptr<NativeCreateWidget>& run,const ProjectEditor::CreationAction& action) const {
+        if(!individual_member_current(run))return false;
+        using Kind=ProjectEditor::CreationAction::Kind;
+        if(action.kind==Kind::StructureAppend)return run->result_structure!=nullptr;
+        if(action.kind==Kind::AtomAppend)return run->result_site!=nullptr;
+        if(action.kind==Kind::AtomRemove)return run->site_removed;
+        if(action.kind==Kind::SpaceGroupName || action.kind==Kind::SpaceGroupNumber || action.kind==Kind::SpaceGroupSetting)
+            return true; // Exact ordinary setter receipt; it can resolve linked stored fields.
+        return structure_action_equal(run);
+    }
+    void structure_normal(const std::shared_ptr<NativeCreateWidget>& run) {
+        if(!create_widget_current(run))throw ActionRefusal("operation_superseded","structure");
+        const auto receiver=run->receiver;
+        if(structure_action_equal(run)) {native_finish(true,structure_progress(run,true));return;}
+        const auto action=structure_action(run);
+        const auto input_role=reserve_disclosure(sizeof(ProjectViewModel::WidgetCreationInput)+2*Limits::id_bytes*sizeof(QChar));
+        run->control_input=run->project->prepareWidgetCreation(action);run->control_input->bounded_result=true;
+        const auto cleanup=qScopeGuard([this,run,receiver] {
+            if(run->project)run->project->finishWidgetCreation(run->control_input);
+            if(receiver && receiver->state_.get()==this && run->edit_scope){const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);}
+        });
+        native_charge();if(!create_widget_current(run))throw ActionRefusal("operation_superseded","structure");
+        run->edit_scope=begin_own_edit();
+        const auto op=run->arguments.value("operation");const auto value=run->arguments.value("value").toString();
+        if(run->individual_tool=="create_structure")run->project->createStructure();
+        else if(run->individual_tool=="edit_structure") {
+            if(op=="rename")run->structure_view->setName(value);
+            else if(op=="space_group_name")run->structure_view->spaceGroup()->setNameHM(value);
+            else if(op=="space_group_setting")run->structure_view->spaceGroup()->setCoordSystemCode(value);
+            else run->structure_view->spaceGroup()->setItNumber(static_cast<int>(run->arguments.value("value").toDouble()));
+        } else {
+            const auto row=structure_atom_index(run);
+            if(op=="append")run->structure_view->atomSites()->append();
+            else if(op=="remove")run->structure_view->atomSites()->remove(row);
+            else if(op=="adp_type")run->structure_view->atomSiteAdps()->setType(row,value);
+            else run->structure_view->atomSites()->setText(row,run->arguments.value("field").toString(),value);
+        }
+        if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+        create_widget_capture_step(run);
+        native_call->may_have_written=run->completed_steps>0;
+        const bool confirmed=run->control_input->consumed && run->control_input->outcome.applied && run->control_input->outcome.published &&
+            individual_member_current(run) && structure_postcondition(run,action);
+        native_finish(confirmed,structure_progress(run,confirmed));
+    }
+    bool structure_control_current(const std::shared_ptr<NativeCreateWidget>& run,QQuickItem* target) const {
+        if(!run->receiver || run->receiver->state_.get()!=this || !target || !create_widget_current(run))return false;
+        if(run->individual_tool!="create_structure" && run->project->currentStructure()!=run->structure_view)return false;
+        const QPointer<QQuickItem> original(target);
+        for(auto* item=target;item;item=item->parentItem()) {
+            const auto member=item->property("structure").value<QObject*>();
+            if(!run->receiver || run->receiver->state_.get()!=this || !original || !create_widget_current(run))return false;
+            if(member)return member==run->structure_view;
+            if(run->individual_tool=="create_structure") {
+                const auto owner=item->property("project").value<QObject*>();
+                if(!run->receiver || run->receiver->state_.get()!=this || !original || !create_widget_current(run))return false;
+                if(owner)return owner==run->project;
+            }
+        }
+        return false;
+    }
+    void structure_cue(const std::shared_ptr<NativeCreateWidget>& run,const NativeCreateWidget::Input& step) {
+        const QPointer<QQuickItem> target(create_widget_named(run,step.target));
+        if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","structure"); }
+        if(!structure_control_current(run,target))throw ActionRefusal("target_unavailable","structure");
+        if(!widget_input->usableTarget(*target)) {create_widget_reveal(run,target);return;}
+        const auto receiver=run->receiver;
+        AssistantWidgetInput::Request cue;cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=target;
+        auto current=[this,run,target] {return run->receiver && run->receiver->state_.get()==this && target && structure_control_current(run,target);};
+        auto completed=[this,run,target](bool delivered,const QString& message) {
+            if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_owned(run))return;
+            try {
+                if(!delivered || !target || !structure_control_current(run,target)) {create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message,false,"structure-cue",int(delivered),int(bool(target)));return;}
+                structure_normal(run);
+                if(run->receiver && run->receiver->state_.get()==this && create_widget_owned(run))create_widget_end(run);
+            } catch(...) {if(run->receiver && run->receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"structure-cue-catch");}
+        };
+        constexpr quint64 roles=2*(sizeof(current)+sizeof(completed));
+        const auto growth=roles>run->file_cue_roles?roles-run->file_cue_roles:0;
+        auto callback_role=reserve_disclosure(growth);
+        cue.current=std::move(current);cue.completed=std::move(completed);
+        run->file_cue_roles=std::max(run->file_cue_roles,roles);
+        callback_role.dismiss();disclosure_preparing_bytes-=growth;native_charge();
+        if(!receiver || receiver->state_.get()!=this || !create_widget_current(run) || !widget_input)return;
+        widget_input->start(std::move(cue));
+    }
     int individual_member_index(const std::shared_ptr<NativeCreateWidget>& run) const {
         if(!run || !run->project)return -1;
         const auto* member=run->result_member?run->result_member:run->operation_member;
@@ -6555,6 +6800,19 @@ struct AssistantViewModel::State {
     }
     bool individual_member_current(const std::shared_ptr<NativeCreateWidget>& run) const {
         if(!run || !run->project || project!=run->project || !policy_current() || generic_connecting)return false;
+        if(structure_app_action(run->individual_tool)) {
+            const auto index=structure_member_index(run);
+            if(run->individual_tool=="create_structure" && !run->result_structure)return true;
+            if(index<0)return false;
+            const auto* structure=run->project->assistantProject()->structures[static_cast<std::size_t>(index)].get();
+            if(!run->result_structure && (!run->structure_view || run->structure_view->structure()!=structure ||
+                run->project->structureModels().value(index)!=run->structure_view))return false;
+            const auto* atom=run->result_site?run->result_site:run->operation_site;
+            if(!atom)return true;
+            bool found=false;for(const auto& site:structure->atom_sites)if(site.get()==atom)found=true;
+            const bool removal=run->arguments.value("operation")=="remove" && run->control_input && run->control_input->outcome.applied;
+            return removal?!found:found;
+        }
         if(run->result_structure) {
             bool found=false;
             for(const auto& member:run->project->assistantProject()->structures)if(member.get()==run->result_structure)found=true;
@@ -6581,6 +6839,7 @@ struct AssistantViewModel::State {
             old->skills->fingerprint==next->skills->fingerprint;
     }
     Object individual_progress(const std::shared_ptr<NativeCreateWidget>& run,bool complete) const {
+        if(structure_app_action(run->individual_tool))return structure_progress(run,complete);
         const bool applied=run->completed_steps>0;
         Object result{{"status",complete?"completed":applied?"applied_unconfirmed":"refused"},
             {"applied",applied},{"published",run->operation_published || (complete && !applied)},{"complete",complete},
@@ -6625,6 +6884,7 @@ struct AssistantViewModel::State {
         return result;
     }
     void individual_normal(const std::shared_ptr<NativeCreateWidget>& run) {
+        if(structure_app_action(run->individual_tool)){structure_normal(run);return;}
         if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
         const auto receiver=run->receiver;
         using Action=ProjectEditor::CreationAction;
@@ -6717,6 +6977,7 @@ struct AssistantViewModel::State {
             }
         }
         bool no_change=false;
+        if(structure_app_action(name)) {structure_admit_target(run);no_change=structure_action_equal(run);}
         if(name=="set_experiment_type") {
             const auto axis=args.value("axis").toString(),token=args.value("token").toString();
             if((axis!="beamMode" && axis!="radiationProbe") ||
@@ -6771,6 +7032,7 @@ struct AssistantViewModel::State {
         phase_names([&](const std::string& value) {
             phases.append(Object{{"structure_id",QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(value))},{"enabled",false}});
         });
+        const auto structure_roles=reserve_disclosure(structure_app_action(name)?structure_metadata_role(run):0);
         const auto result_role=reserve_disclosure(fixed+18*Limits::id_bytes+6*Limits::error_bytes);
         // NUL encodes as six JSON bytes and seven inside the response JSON text;
         // each bounded UTF-8 identifier uses no more UTF-16 units than its bytes.
@@ -6785,6 +7047,11 @@ struct AssistantViewModel::State {
         Object maximum_facts;for(const auto* key:{"points","skipped","nonpositive","duplicates","reordered","derived_sigma"})maximum_facts[key]=static_cast<double>(edi::assistant::SelectedFileLimits::file_bytes);
         maximum["reader_facts"]=maximum_facts;
         maximum["diagnostics"]=QJsonArray{Object{{"code","experiment_type_settings_reinitialized"},{"severity","info"},{"path",maximum_id},{"actionable",false}}};
+        if(structure_app_action(name)) {
+            maximum.remove("datasets");maximum.remove("reader_facts");maximum.remove("diagnostics");
+            maximum["structures"]=QJsonArray{structure_metadata(run,true)};
+            maximum["atom_id"]=maximum_id;maximum["removed"]=true;maximum["action_field"]="structure";
+        }
         if(!original_current())return;
         native_prepare(rpc,id,name,purpose,original,maximum);
         if(!receiver || !publication.input_current() || !native_call || native_call->record->call!=id || native_call->receipt!=receipt)return;
@@ -6823,11 +7090,23 @@ struct AssistantViewModel::State {
                 if(receiver && create_widget_owned(run))create_widget_end(run);return;
             }
             using Kind=AssistantWidgetInput::Kind;
-            const auto page=name=="load_structure"?QStringLiteral("structure"):QStringLiteral("experiment");
+            const auto page=name=="load_structure" || structure_app_action(name)?QStringLiteral("structure"):QStringLiteral("experiment");
             run->inputs.reserve(5);run->inputs.push_back({Kind::Navigate,"appBar.tab."+page});
             run->inputs.push_back({Kind::Navigate,"sideBar.tab.basic"});
-            if(run->operation_member)run->inputs.push_back({Kind::Navigate,QString("experiments.row.%1").arg(individual_member_index(run))});
-            if(name=="load_structure")run->inputs.push_back({Kind::Navigate,"structures.load"});
+            if(structure_app_action(name)) {
+                if(run->operation_structure)run->inputs.push_back({Kind::Navigate,QString("structures.row.%1").arg(structure_member_index(run))});
+                QString target;
+                const auto op=args.value("operation");
+                if(name=="create_structure")target="structures.create";
+                else if(name=="edit_structure")target=op=="rename"?QString("structures.name.%1").arg(structure_member_index(run)):
+                    op=="space_group_name"?QStringLiteral("spaceGroup.nameHM"):op=="space_group_number"?QStringLiteral("spaceGroup.itNumber"):QStringLiteral("spaceGroup.coordSystemCode");
+                else if(op=="append")target="atomSites.append";
+                else target=QString(op=="remove"?"atomSite.remove.%1":op=="adp_type"?"atomSiteAdp.type.%1":
+                    args.value("field")=="label"?"atomSite.label.%1":args.value("field")=="typeSymbol"?"atomSite.typeSymbol.%1":"atomSite.wyckoffLetter.%1").arg(structure_atom_index(run));
+                run->inputs.push_back({Kind::FileLoadCue,target});
+            } else if(run->operation_member)run->inputs.push_back({Kind::Navigate,QString("experiments.row.%1").arg(individual_member_index(run))});
+            if(structure_app_action(name)) {} // Final original structure control cue was appended above.
+            else if(name=="load_structure")run->inputs.push_back({Kind::Navigate,"structures.load"});
             else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.loadData.%1").arg(individual_member_index(run))});
             else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
             else {
@@ -6866,7 +7145,20 @@ struct AssistantViewModel::State {
         if (applied && !run->step_counted) { ++run->completed_steps; run->step_counted=true; }
         if (run->control_input && run->control_input->outcome.applied && run->control_input->applied_result.experiment)
             run->result_member=run->control_input->applied_result.experiment;
-        if(run->control_input && run->control_input->outcome.applied)run->operation_published=run->control_input->outcome.published;
+        if(run->control_input && run->control_input->outcome.applied) {
+            run->operation_published=run->control_input->outcome.published;
+            if(run->control_input->applied_result.structure)run->result_structure=run->control_input->applied_result.structure;
+            if(run->control_input->applied_result.atom)run->result_site=run->control_input->applied_result.atom;
+            if(structure_app_action(run->individual_tool)) {
+                if(run->operation_structure)run->result_structure=run->operation_structure;
+                if(run->arguments.value("operation")=="remove" && run->project) {
+                    for(const auto& structure:run->project->assistantProject()->structures)if(structure.get()==run->operation_structure) {
+                        bool found=false;for(const auto& site:structure->atom_sites)if(site.get()==run->operation_site)found=true;
+                        run->site_removed=!found;
+                    }
+                }
+            }
+        }
         const auto input=run->file_input;
         if(input && input->outcome.applied)run->operation_published=input->outcome.published;
         if(input && input->outcome.applied) {
@@ -7260,7 +7552,13 @@ struct AssistantViewModel::State {
     bool create_widget_missing_target(const std::shared_ptr<NativeCreateWidget>& run, const NativeCreateWidget::Input& step) {
         QString groupName, tableName; qsizetype index = -1;
         bool indexed=false;const auto requested=step.target.section('.',-1).toLongLong(&indexed);
-        if (step.target.startsWith("excludedRegion.")) {
+        if(step.target.startsWith("structures.")) {
+            groupName="group.structures";tableName="structures.list";index=indexed?requested:-1;
+            if(indexed && structure_app_action(run->individual_tool) && index!=structure_member_index(run))return false;
+        } else if(step.target.startsWith("spaceGroup."))groupName="group.space_group";
+        else if(step.target.startsWith("atomSiteAdp.")) {groupName="group.atom_site_aniso";tableName="atomSiteAdps.list";index=indexed?requested:-1;}
+        else if(step.target.startsWith("atomSite.") || step.target=="atomSites.append") {groupName="group.atom_site";tableName="atomSites.list";index=indexed?requested:-1;}
+        else if (step.target.startsWith("excludedRegion.")) {
             groupName="group.excluded_region"; tableName="excludedRegions.list"; index=indexed?requested:-1;
         } else if (step.target.startsWith("linkedStructure.")) {
             groupName="group.linked_structure"; tableName="linkedStructure.list"; index=indexed?requested:-1;
@@ -7346,6 +7644,7 @@ struct AssistantViewModel::State {
         }
         const auto step = run->inputs.at(run->step);
         if (step.target.startsWith("$value.") || step.target.startsWith("$background.") || step.target=="$background_names") { create_widget_child(run, step); return; }
+        if(structure_app_action(run->individual_tool) && step.kind==AssistantWidgetInput::Kind::FileLoadCue) {structure_cue(run,step);return;}
         if (step.target.startsWith("appBar.tab.")) run->page = step.target.mid(11);
         if (step.target == "structures.load" || step.target.startsWith("experiments.loadData.")) { create_widget_load_structure(run); return; }
         const QPointer<QQuickItem> target(create_widget_named(run, step.target));
@@ -7354,6 +7653,11 @@ struct AssistantViewModel::State {
             if(target->property("experiment").value<QObject*>()!=run->operation_view || !individual_member_current(run))
                 throw ActionRefusal("target_unavailable","experiment");
             if(run->project->currentExperiment()==run->operation_view) {create_widget_advance(run);return;}
+        }
+        if(structure_app_action(run->individual_tool) && step.target.startsWith("structures.row.")) {
+            if(!target) {if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","structure");}
+            if(!individual_member_current(run) || target->property("structure").value<QObject*>()!=run->structure_view)throw ActionRefusal("target_unavailable","structure");
+            if(run->project->currentStructure()==run->structure_view) {create_widget_advance(run);return;}
         }
         if (step.target == "project.create") {
             auto* group = create_widget_named(run, "group.getStarted"); QVariant ok;
@@ -7400,6 +7704,7 @@ struct AssistantViewModel::State {
             if (!create_widget_current(run) || !target) return false;
             if (!run->individual_tool.isEmpty()) {
                 if(!individual_member_current(run))return false;
+                if(step.target.startsWith("structures.row.") && target->property("structure").value<QObject*>()!=run->structure_view)return false;
                 if(step.target.startsWith("experiments.row.") && target->property("experiment").value<QObject*>()!=run->operation_view)return false;
                 if(step.target.startsWith("experimentType.") && run->project->currentExperiment()!=run->operation_view)return false;
             }
@@ -7446,6 +7751,8 @@ struct AssistantViewModel::State {
                 branch="control.member";
                 if(!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.") &&
                     (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))throw ActionRefusal("target_unavailable","experiment");
+                if(structure_app_action(run->individual_tool) && step.target.startsWith("structures.row.") &&
+                    (!individual_member_current(run) || run->project->currentStructure()!=run->structure_view))throw ActionRefusal("target_unavailable","structure");
                 branch="control.delivery";
                 if (!delivered || !target) { create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "control-delivery", int(delivered), int(bool(target))); return; }
                 branch="control.tab";
@@ -8320,6 +8627,7 @@ struct AssistantViewModel::State {
         params["developerInstructions"] = QStringLiteral(
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. Current owned saving calls the same ordinary app Save as the manual toolbar. Report actual saved/committed/active/presentation_complete flags; reopened=false supplies no separate reopen witness. Fresh Save As retains its verified export/adoption.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. For current owned saving both modes call the same ordinary Session Save; Show actions gives only the existing visual pointer/click cue at Save, without a dispatched click or custom Save intent. An already-unmodified disabled Save button does not refuse that ordinary call. Fresh Save As retains the genuine Save control and original fresh-name form; do not change modes. Report actual ordinary saved/committed/current-owner facts without claiming separate reopen; never blindly repeat uncertain saving. No separate assistant export/recovery tree is created for current Save. Native report generation remains unavailable; offer [Open Report page](edi:report) for user-click navigation to the current project's existing enabled Report preview and ordinary export controls. Do not use desktop/CUA app discovery or app-name selection to locate Report controls. Offering the link does not itself open the page, generate or save a report, or select another installed application. "
+            "When offered, create_structure invokes ordinary app Create and returns ONE actual initial atom. Reuse/update that actual first atom for the first target site, append only subsequent required atoms through edit_atom, and change only differing stored defaults. edit_structure changes one original name/symmetry setter; edit_atom changes one original row text/ADP-type operation. Use actual returned IDs, existing parameter tools for numeric/free values, and code-owned schemas/options. Interpret admitted attached text; do not synthesize a CIF, parser/converter or an importer. Equal canonical values skip cues/setters/Undo. Both modes use the same ordinary app methods; ON adds genuine original navigation/reveal and visual-only cues, not scientific keyboard writes. Unresolved symmetry/defaults are not scientific success, and uncertain writes must not be replayed. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
             "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission. Show actions navigates the original exposed controls in request order and gives visual pointer/click cues, then calls the same ordinary app parameter/free methods used by manual controls, without scientific mouse/key input or a separate draft/focus mutation protocol. Actual consumed/applied/published receipts and current canonical members must confirm each change. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions reuse a suitable live category, use the genuine reset-filters control only for conflicting name/variability filters, and use the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible flags in any category open the existing Free-column menu only when the displayed eligible set equals the exact requested original members and all requested flags agree; cue its Free/Fixed choice and invoke its ordinary action once. Other subsets cue their actual row checkboxes then call the ordinary per-row free setter. A narrower name/variability filter is conflicting even when it happens to expose the first requested row; clear it through the original reset control before category presentation. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs for update/remove, never row indices. Add/update supply finite measured-domain position, intensity and free, while remove omits all three. For new chosen points omit add id to retain the original app-generated ID; explicit custom IDs remain exact, and a successful point edit returns its actual background_id. Explicit name_from_positions takes only purpose, experiment and operation and invokes the original whole-table Ids from positions action once; inspect the actual resulting IDs before subsequent calls. Never infer naming from future adds or rename an explicitly supplied ID silently. When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, explicit ID, position, intensity and Remove controls; a requested free flag cues the original Analysis Background checkbox then uses the same ordinary free setter, not an Experiment parameter menu. Point intensity cues likewise use the ordinary parameter value setter. For a newly chosen default background, add the requested positions and justified starting intensities with id omitted and free=false, request name_from_positions once, inspect actual IDs, then submit the complete requested eligible free set in one set_free request through Analysis. Explicit user custom IDs, values or free=true remain honored within their own operation. Preserve every explicit value/free flag within its own call; do not defer it to a guessed future call. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "

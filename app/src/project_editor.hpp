@@ -55,7 +55,7 @@ class ProjectEditor {
     // Original creation-row controls expose finite semantic metadata, just as
     // the original alias/constraint controls do. No provider callable/edit exists.
     struct CreationAction {
-        enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, ExclusionAppend, ExclusionStart, ExclusionEnd };
+        enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, ExclusionAppend, ExclusionStart, ExclusionEnd, StructureAppend, StructureName, SpaceGroupName, SpaceGroupNumber, SpaceGroupSetting, AtomAppend, AtomText, AtomRemove, AtomAdpType };
         Kind kind;
         const void* row = nullptr;
         QString field, text;

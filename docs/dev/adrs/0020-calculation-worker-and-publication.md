@@ -359,3 +359,8 @@ recorded SHA-256 and matching present bytes, alongside core, CLI and runtime.
 Both fetch (including unpacked-prefix reuse) and explicit SDK checks enter that
 same admission before reporting a qualified package. A download marker alone
 does not qualify modified extracted bytes or an absent bootstrap digest.
+
+
+### Original app structure result identity
+
+Edit::AppliedResult adds const AtomSite* atom=nullptr after structure/experiment. The original closed appending body returns the exact inserted AtomSite before LivePreview's Applied trace/edited hook, and an empty result for other row types; existing callers and apply_result() remain compatible. No post-publication last-row discovery or independent insertion path is used. Original prepared CreationAction carries finite structure/atom setter metadata. AtomAppend's actual action text reports its generated ID solely for pre-Edit result-domain admission, never as a caller-selected/default replacement ID. Create retains its existing factory and preowns original StructuresUndo before publication. The assistant keeps the original result and member/owner/currentness fences through callbacks; a refusal, applied-but-unpublished result or removal does not authorize dereferencing a retired row or retrying a write.

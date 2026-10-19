@@ -646,9 +646,16 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     const auto input = widget_creation_input_;
     if (!input) return apply(change, structural);
     const auto& expected = input->expected;
+    const bool generated_atom = actual.kind == CreationAction::Kind::AtomAppend;
     if (input->consumed || expected.kind != actual.kind || expected.row != actual.row || expected.field != actual.field ||
-        expected.text != actual.text || expected.number != actual.number)
+        (!generated_atom && expected.text != actual.text) || expected.number != actual.number)
         return tr("A different creation control cannot enter this original input");
+    if (generated_atom && input->bounded_result &&
+        (actual.text.isEmpty() || actual.text.contains(QChar(0)) || actual.text.toUtf8().size() > edi::assistant::Limits::id_bytes)) {
+        input->consumed = true; input->result_identity_refused = true;
+        input->outcome.message = tr("The generated atom identity exceeds the assistant result limit; no edit was made");
+        return input->outcome.message;
+    }
     const QPointer<ProjectViewModel> self(this);
     const bool previous = widget_input_executing_;
     const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
@@ -1116,6 +1123,10 @@ bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl&
 }
 
 bool ProjectViewModel::createStructure() {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_creation_input_;
+    if (const auto refusal = editReadinessRefusal(false); !refusal.isEmpty()) { setLastError(refusal); return false; }
     edi::Project& project = *project_;
     // The first free name of the form structure1, structure2, …
     std::string name;
@@ -1135,22 +1146,31 @@ bool ProjectViewModel::createStructure() {
                              "loop_\n_atom_site.id\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n"
                              "_atom_site.fract_z\n_atom_site.wyckoff_letter\n_atom_site.occupancy\n_atom_site.adp_type\n"
                              "_atom_site.adp_iso\nO O 0. 0. 0. a 1. Biso 0.\n";
-    edi::StructuresUndo before = edi::capture_structures(project);
+    bool reserved = false;
     QString error;
     try {
-        error = apply(edi::Edit::add_structure(project, edi::structure_from_edi_text(text)), true);
+        auto structure = edi::structure_from_edi_text(text);
+        if (input && input->bounded_result && !assistant_result_name(structure.name.value())) {
+            input->consumed = true; input->result_identity_refused = true;
+            input->outcome.message = tr("The generated structure identity exceeds the assistant result limit; no edit was made");
+            return false;
+        }
+        auto before = edi::capture_structures(project);
+        undo_history_.reserve(undo_history_.size()+1);
+        undo_history_.emplace_back(std::move(before)); reserved = true;
+        error = apply_creation_control(edi::Edit::add_structure(project, std::move(structure)), true,
+            {CreationAction::Kind::StructureAppend});
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
-        setLastError(error);
+        error = input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what());
     }
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
-    }
-    undo_history_.emplace_back(std::move(before));
+    if (!self || retired_) return input && input->outcome.applied;
+    const bool applied = input ? input->outcome.applied : error.isEmpty();
+    if (reserved && !applied) undo_history_.pop_back();
+    if (!error.isEmpty()) { setLastError(error); if (self && !retired_) emit refused(error); return applied; }
     syncUndo();
+    if (!self || retired_) return applied;
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
-    return true;
+    return applied;
 }
 
 bool ProjectViewModel::namePointsByPosition() {
@@ -2747,8 +2767,12 @@ QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
 }
 
 QString ProjectViewModel::rename_structure(edi::Structure& structure, const std::string& name) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
     BlockName record{true, {}, structure.name.value(), project_->fit_result.scan_results, {}};
-    const QString refusal = apply(edi::Edit::structure_name(structure, name), true);
+    const QString refusal = apply_creation_control(edi::Edit::structure_name(structure, name), true,
+        {CreationAction::Kind::StructureName,&structure,{},QString::fromStdString(name)});
+    if (!self || retired_) return refusal;
     if (refusal.isEmpty() && structure.name.value() != record.before) {
         record.name = structure.name.value();
         record.results_after = project_->fit_result.scan_results;

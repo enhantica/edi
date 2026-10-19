@@ -525,7 +525,7 @@
      let reason = compaction_metadata.reason();
 --- /dev/null
 +++ b/codex-rs/core/src/edi_runtime.rs
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,159 @@
 +//! Immutable ceiling for the dedicated Edi app-server build.
 +//! This module does not grant filesystem or provider access.
 +use std::collections::BTreeMap;
@@ -538,7 +538,7 @@
 +
 +pub const SCHEMA: &str = "edi.runtime-policy/1";
 +pub const FLAVOUR: &str = "edi-app-server/1";
-+const NAMES: &[&str] = &["inspect_project", "list_parameters", "diagnostics", "set_parameters", "set_free", "run_fit", "create_cwl_project", "acquire_inputs", "save_project", "add_relations", "edit_background", "load_structure", "create_experiment", "set_experiment_type", "load_data", "read_selected_file"];
++const NAMES: &[&str] = &["inspect_project", "list_parameters", "diagnostics", "set_parameters", "set_free", "run_fit", "create_cwl_project", "acquire_inputs", "save_project", "add_relations", "edit_background", "load_structure", "create_experiment", "set_experiment_type", "load_data", "read_selected_file", "create_structure", "edit_structure", "edit_atom"];
 +
 +pub(crate) struct EdiTurnCeiling(pub Arc<EdiCeiling>);
 +
@@ -554,8 +554,14 @@
 +        let mut expected = BTreeMap::new();
 +        for tool in tools {
 +            let DynamicToolSpec::Function(function) = tool else { return Err(invalid()); };
++            let closed_object = |schema: &Value| schema.get("type").and_then(Value::as_str) == Some("object") &&
++                schema.get("properties").is_some_and(Value::is_object) &&
++                schema.get("additionalProperties") == Some(&Value::Bool(false));
++            let closed_union = function.input_schema.as_object().is_some_and(|root| root.len() == 1 &&
++                root.get("oneOf").and_then(Value::as_array).is_some_and(|branches| !branches.is_empty() &&
++                    branches.iter().all(|branch| closed_object(branch) && branch.get("oneOf").is_none())));
 +            if function.defer_loading || !NAMES.contains(&function.name.as_str()) ||
-+                function.input_schema.get("additionalProperties") != Some(&Value::Bool(false)) {
++                !(closed_object(&function.input_schema) || closed_union) {
 +                return Err(invalid());
 +            }
 +            let mut parsed = codex_tools::dynamic_tool_to_responses_api_tool(function).map_err(|_| invalid())?;
