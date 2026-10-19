@@ -17,6 +17,10 @@ def popup171_owned_environment(captures):
     # bundled/default vendor runtime, including the original popup fixture.
     owned = captures / 'owned-peer'
     owned.mkdir(exist_ok=True)
+    helper_bytes570 = (ROOT / 'tests/integration/py/assistant_vm_probe/approved_context.py').read_bytes()
+    helper570 = owned / 'approved_context.py'
+    helper570.write_bytes(helper_bytes570)
+    assert helper570.read_bytes() == helper_bytes570, 'CTX570 SETUP: original copied Main peer has its exact shared dependency in the owned launch directory'
     executable = owned / 'codex'
     executable.write_text(
         f'#!{sys.executable}\n'

@@ -16,6 +16,8 @@ import time
 from pathlib import Path
 from threading import Timer
 
+from approved_context import context_inputs
+
 config = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
 trace = Path(config['trace'])
 Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).with_suffix('.peer-loaded.json').write_text(
@@ -1037,20 +1039,7 @@ def native_start(request):
     # Existing rpc83_context_inputs JSON-domain prior art; never a model path/ID.
     if config.get('input413') is True:
         assert scenario == 'fileauth' and turn_number == 1 and not native_pending
-        contexts413 = []
-        for input413 in request['params'].get('input', []):
-            if input413.get('type') != 'text' or type(input413.get('text')) is not str:
-                continue
-            text413 = input413['text']
-            for offset413, char413 in enumerate(text413):
-                if char413 != '{':
-                    continue
-                try:
-                    context413, _ = json.JSONDecoder().raw_decode(text413, offset413)
-                except ValueError:
-                    continue
-                if type(context413) is dict and context413.get('schema') == 'edi.assistant.context/1':
-                    contexts413.append(context413)
+        contexts413 = context_inputs(request['params'])
         assert len(contexts413) == 1, 'INPUT413 SETUP: exactly one actual original current context'
         sources413 = contexts413[0]['input_scopes']['sources']
         assert type(sources413) is list and len(sources413) == 1

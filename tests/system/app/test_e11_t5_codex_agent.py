@@ -22,6 +22,12 @@ import pytest
 
 from tests.fixtures.scan_lifecycle.prepare import prepare as prepare_scan134
 from tests.system.app import test_e11_t5_vm_retention as prior
+from tests.integration.py.assistant_vm_probe.approved_context import (
+    context_inputs as rpc83_context_inputs,
+    context_matches as rpc83_context_matches,
+    contains_context_data as rpc83_contains_context_data,
+    selected_files_match as rpc83_selected_files_match,
+)
 
 ROOT = prior.ROOT
 PEER = ROOT / 'tests/integration/py/assistant_vm_probe/codex_stdio_peer.py'
@@ -182,6 +188,10 @@ def generic(monkeypatch, tmp_path):
         trace = owned / 'original-client-lines.jsonl'
         config = owned / 'peer-input.json'
         config.write_text(json.dumps({'scenario': scenario, 'trace': str(trace)}))
+        helper_bytes570 = PEER.with_name('approved_context.py').read_bytes()
+        helper570 = owned / 'approved_context.py'
+        helper570.write_bytes(helper_bytes570)
+        assert helper570.read_bytes() == helper_bytes570, 'CTX570 SETUP: original copied peer has the exact shared dependency beside its owned executable'
         executable = owned / 'codex'
         executable.write_text(f'#!{sys.executable}\n' + PEER.read_text())
         executable.chmod(0o700)
@@ -1533,24 +1543,6 @@ def test_rpc83_real_hello_uses_negotiated_supported_fields_and_completes(generic
     readonly409_policy(trace)
 
 
-def rpc83_context_inputs(params):
-    found = []
-    for item in params.get('input', []):
-        if item.get('type') != 'text' or not isinstance(item.get('text'), str):
-            continue
-        text = item['text']
-        for offset, char in enumerate(text):
-            if char != '{':
-                continue
-            try:
-                value, _ = json.JSONDecoder().raw_decode(text, offset)
-            except ValueError:
-                continue
-            if isinstance(value, dict) and value.get('schema') == 'edi.assistant.context/1':
-                found.append(value)
-    return found
-
-
 @pytest.mark.parametrize('route', ['start', 'steer'])
 def test_rpc83_complete_approved_project_context_is_separate_current_user_data(generic, route):
     actor, trace = generic('rpc83:hold')
@@ -1582,11 +1574,11 @@ def test_rpc83_complete_approved_project_context_is_separate_current_user_data(g
     assert not params.get('additionalContext'), (
         'CTX1: complete project/file data cannot enter privileged or silently truncated fragments'
     )
-    assert rpc83_context_inputs(params) == [expected], (
-        'CTX1: ordinary user text carries exactly the complete current approved disclosure'
-    )
     draft = (
         'Original complete-context ' + ('initial' if route == 'start' else 'followup') + ' draft'
+    )
+    assert rpc83_context_matches(params, expected, current_text=draft, selected_files=[]), (
+        'CTX1: one separately framed closed Context preserves every permitted approved native fact'
     )
     assert sum(row.get('text') == draft for row in params['input']) == 1, (
         'CTX1: the exact user draft is a separate input once, '
@@ -1598,7 +1590,7 @@ def test_rpc83_complete_approved_project_context_is_separate_current_user_data(g
     )
     thread = next(row for row in records(trace) if row.get('method') == 'thread/start')
     assert all(
-        'edi.assistant.context/1' not in str(thread['params'].get(field, ''))
+        not rpc83_contains_context_data(thread['params'].get(field))
         for field in ('developerInstructions', 'baseInstructions')
     ), 'CTX1: project-derived context is not promoted into trusted thread instructions'
     if route == 'steer':
@@ -1782,6 +1774,8 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
     assert not actor.last['vm']['context_consent_required'], (
         'FILEAUTH: explicit current-context approval is distinct from a new login'
     )
+    approved_context409 = actor.last['vm']['context']
+    selected409 = actor.last['vm']['selected_files']
     text = 'Original fresh user input after file context change'
     actor.command('send_text', text=text)
     after = settle(
@@ -1799,8 +1793,11 @@ def test_file_selection_context_retirement_preserves_managed_authentication(  # 
         'FILEAUTH: actual new input dispatches once with one retained admitted user row'
     )
     wire = json.dumps(sent[-1]['params']['input'], ensure_ascii=False)
-    assert wire.count(text) == 1 and all(name in wire for name in expected_names), (
-        'FILEAUTH: approved actual new wire includes current selected scope and draft exactly once'
+    assert wire.count(text) == 1 and all(name not in wire for name in expected_names), (
+        'FILEAUTH: actual new wire carries the draft once without leaking local selected filenames'
+    )
+    assert rpc83_context_matches(sent[-1]['params'], approved_context409, current_text=text, selected_files=selected409), (
+        'FILEAUTH: actual closed wire selection bonds the current independently admitted local IDs/bytes/formats'
     )
     if remove_one:
         assert paths[0].name not in wire, (
@@ -7427,8 +7424,8 @@ def reuse269_send(actor, trace, text, *, native_count=None):
                 for row in value['messages'])
     ))
     sent = started_requests(trace)
-    assert len(sent) == prior + 1 and rpc83_context_inputs(sent[-1]['params']) == [context], (
-        'REUSE: one original turn carries exactly the complete CURRENT GUI context bytes'
+    assert len(sent) == prior + 1 and rpc83_context_matches(sent[-1]['params'], context, current_text=text, selected_files=before['selected_files']), (
+        'REUSE: one original turn carries every permitted CURRENT native fact in its separate closed wire role'
     )
     user_rows = [row for row in state['messages'] if row.get('kind') == 'user'
                  and row.get('text') == text and row['id'] not in prior_ids]
@@ -7879,9 +7876,10 @@ def test_reuse269_fresh_turn_rejects_actual_old_native_turn_authority(generic):
     )
     actor.command('send_text', text='Original fresh turn must not authorize old native turn')
     settle(actor, lambda _value: len(native_records(trace, '.native-emitted.jsonl')) == 2)
-    assert len(started_requests(trace)) == 2 and rpc83_context_inputs(
-        started_requests(trace)[-1]['params']
-    ) == [settled['context']], 'REUSE: stale escape starts only from an actually fresh full GUI context'
+    assert len(started_requests(trace)) == 2 and rpc83_context_matches(
+        started_requests(trace)[-1]['params'], settled['context'],
+        current_text='Original fresh turn must not authorize old native turn', selected_files=settled['selected_files']
+    ), 'REUSE: stale escape starts only from an actually fresh full GUI context'
     state = actor.command('inspect')['vm']  # Existing ordinary event delivery after real emission.
     emitted = native_records(trace, '.native-emitted.jsonl')
     assert len(emitted) == 2 and emitted[-1]['params']['turnId'] == stale['turn_id'] and (
@@ -8712,7 +8710,7 @@ def test_ux319_actual_completed_model_callback_keeps_original_authority(generic,
     assert len(starts) == 1 and sum(row.get('text') == text for row in starts[0]['params']['input']) == 1 and (
         starts[0]['params']['clientUserMessageId'] == submitted['row_id']
         and not starts[0]['params'].get('additionalContext')
-        and rpc83_context_inputs(starts[0]['params']) == [before['context']]
+        and rpc83_context_matches(starts[0]['params'], before['context'], current_text=text, selected_files=before['selected_files'])
     ), (
         'UX319: one exact original text request is actually written, never transferred or repeated for successor'
     )
@@ -8832,7 +8830,7 @@ def test_ux319_actual_final_failure_publication_preserves_factual_cause(generic)
     assert len(starts) == 1 and sum(row.get('text') == text for row in starts[0]['params']['input']) == 1 and (
         starts[0]['params']['clientUserMessageId'] == submitted['row_id']
         and not starts[0]['params'].get('additionalContext')
-        and rpc83_context_inputs(starts[0]['params']) == [before['context']]
+        and rpc83_context_matches(starts[0]['params'], before['context'], current_text=text, selected_files=before['selected_files'])
     ) and (
         [row for row in deliveries if row['request'].get('method') == 'turn/start']
         == [{'pid': original_pid, 'request': starts[0]}]
@@ -9182,12 +9180,6 @@ def test_ux356_real_send_compact_scope_short_file_presentation(case, tmp_path):
             'UX358: each actual original GUI user-row ID equals its independently received original wire clientUserMessageId'
         )
         fields358 = ('id', 'name', 'bytes', 'textReadable', 'format')
-        wire_roles358 = {'id': 'id', 'name': 'name', 'bytes': 'bytes', 'textReadable': 'text_readable', 'format': 'format'}
-        assert all(set(row) == set(wire_roles358.values()) and all(type(row[key]) is str for key in ('id', 'name', 'format'))
-                   and type(row['text_readable']) is bool and type(row['bytes']) in (int, float)
-                   and row['bytes'] >= 0 and row['bytes'] % 1 == 0 for row in selected), (
-            'UX405: BOTH actual original wire descriptors have the exact public text_readable schema and declared scalar types, without defaults'
-        )
         assert all(all(type(row[key]) is str for key in ('id', 'name', 'format'))
                    and type(row['textReadable']) is bool and type(row['bytes']) in (int, float)
                    and row['bytes'] >= 0 and row['bytes'] % 1 == 0 for row in submitted358['files']), (
@@ -9196,20 +9188,20 @@ def test_ux356_real_send_compact_scope_short_file_presentation(case, tmp_path):
         assert len(submitted358['files']) == 2 and all(set(row) == set(fields358) for row in submitted358['files']), (
             'UX358: each original GUI receipt contains exactly TWO bounded five-field admitted descriptors'
         )
-        assert submitted358['files'] == [{key: row[wire_roles358[key]] for key in fields358} for row in selected], (
-            'UX358: BOTH literal input orders disclose the corresponding actual GUI canonical IDs and every descriptor field in order'
+        assert rpc83_selected_files_match(selected, submitted358['files']), (
+            'UX358: BOTH actual GUI selections bond exact wire IDs/bytes/formats without local-name/readability invention'
         )
-        assert len(selected) == 2 and {row['name'] for row in selected} == set(facts), (
-            'UX356: original current context discloses only the TWO actual independently selected files'
+        assert len(selected) == 2 and {row['name'] for row in submitted358['files']} == set(facts), (
+            'UX356: original GUI selection names match only the TWO independent input fixtures'
         )
         assert len({row['id'] for row in selected}) == 2 and all(row['id'] for row in selected) and all(
-            row['bytes'] == facts[row['name']]['bytes'] for row in selected
-        ), 'UX356: disclosed opaque canonical identities and exact byte sizes are actual source facts'
+            row['bytes'] == facts[row['name']]['bytes'] for row in submitted358['files']
+        ), 'UX356: original local names bind opaque wire identities to exact independent source-byte sizes'
         assert sum(row.get('type') == 'text' and row.get('text') == text
                    for row in request['params']['input']) == 1, (
             'UX356: exact real user spelling remains its own current input, never a developer instruction'
         )
-        ids.append({row['name']: row['id'] for row in selected})
+        ids.append({row['name']: row['id'] for row in submitted358['files']})
     assert ids[0] == ids[1], 'UX356: ACK/presentation and unchanged-scope followup preserve actual canonical file IDs'
     events = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text().splitlines()]
     held = [row for row in events if row['kind'] == 'ux289-original-input-received']
@@ -9552,7 +9544,7 @@ def gui392_run(tmp_path, case):
         ), 'GUI393: actual original selected-file authority is independently disclosed before real Clear'
         descriptor = context[0]['selected_files']['files'][0]
         original_bytes = (reference / 'project/structures/lbco.edi').read_bytes()
-        assert descriptor['name'] == 'lbco.edi' and descriptor['bytes'] == len(original_bytes), (
+        assert descriptor['bytes'] == len(original_bytes), (
             'GUI393: disclosed canonical source descriptor equals exact independently owned input'
         )
         replies = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
@@ -9583,20 +9575,14 @@ def gui392_run(tmp_path, case):
             row.get('method') == 'turn/steer' for row in requests
         ), 'GUI404: one exact original current draft is independent actual wire text, never a newer objective/steer substitute'
         fields404 = {'id', 'name', 'bytes', 'textReadable', 'format'}
-        wire_roles405 = {'id': 'id', 'name': 'name', 'bytes': 'bytes', 'textReadable': 'text_readable', 'format': 'format'}
-        assert set(descriptor) == set(wire_roles405.values()) and all(
-            type(descriptor[key]) is str for key in ('id', 'name', 'format')
-        ) and type(descriptor['text_readable']) is bool and type(descriptor['bytes']) in (int, float) and (
-            descriptor['bytes'] >= 0 and descriptor['bytes'] % 1 == 0
-        ), 'GUI405: actual original wire descriptor requires exact public text_readable fields and scalar types, never a guessed GUI key/default'
         assert all(all(type(row[key]) is str for key in ('id', 'name', 'format'))
                    and type(row['textReadable']) is bool and type(row['bytes']) in (int, float)
                    and row['bytes'] >= 0 and row['bytes'] % 1 == 0 for row in proof404['files']), (
             'GUI405: actual original GUI descriptor preserves every declared scalar type and its separate textReadable role'
         )
-        assert len(proof404['files']) == 1 and set(proof404['files'][0]) == fields404 and proof404['files'] == [
-            {key: descriptor[wire_roles405[key]] for key in fields404}
-        ], 'GUI404: completed GUI canonical descriptor bonds all FIVE fields to independently recorded actual outgoing context'
+        assert len(proof404['files']) == 1 and set(proof404['files'][0]) == fields404 and (
+            rpc83_selected_files_match([descriptor], proof404['files'])
+        ), 'GUI404: all FIVE native GUI fields remain local, with exact shared wire identity/bytes/format bonds'
         assert proof404['files'][0]['bytes'] == len(original_bytes) and proof404['files'][0]['name'] == 'lbco.edi', (
             'GUI404: original canonical descriptor also bonds independent fixture name and whole byte length'
         )
@@ -9635,16 +9621,12 @@ def gui392_run(tmp_path, case):
             'GUI464: only the genuinely reselected current source is disclosed after prior Clear retired its grants'
         )
         descriptor464 = contexts464[0]['selected_files']['files'][0]
-        assert set(descriptor464) == set(wire_roles405.values()) and all(
-            type(descriptor464[key]) is str for key in ('id', 'name', 'format')
-        ) and type(descriptor464['text_readable']) is bool and type(descriptor464['bytes']) in (int, float) and (
-            descriptor464['bytes'] >= 0 and descriptor464['bytes'] % 1 == 0
-        ), 'GUI464: fresh wire descriptor has ALL five declared scalar roles/types, no readability default'
         assert len(proof464['files']) == 1 and set(proof464['files'][0]) == fields404 and all(
             type(proof464['files'][0][key]) is type(proof404['files'][0][key]) for key in fields404
-        ) and proof464['files'] == [{key: descriptor464[wire_roles405[key]] for key in fields404}] and (
-            descriptor464['id'] and descriptor464['name'] == 'lbco.edi' and descriptor464['bytes'] == len(original_bytes)
-        ), 'GUI464: every actual post-Clear GUI ID/descriptor bonds exact wire fields and independent name/bytes'
+        ) and rpc83_selected_files_match([descriptor464], proof464['files']) and (
+            descriptor464['id'] and proof464['files'][0]['name'] == 'lbco.edi'
+            and descriptor464['bytes'] == len(original_bytes)
+        ), 'GUI464: every fresh local GUI field retains its role while wire ID/bytes/format bond independent current source facts'
         assert sum(reply.get('id') == second['id'] and 'result' in reply for reply in replies) == 1, (
             'GUI464: actual post-Clear admission receives one independently recorded matching ACK'
         )
