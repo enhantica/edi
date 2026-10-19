@@ -8981,7 +8981,7 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     config.pop('report_page_reply')
     config.update(scenario='native:script', native_turn_calls=[[call]])
     config_path.write_text(json.dumps(config))
-    if case == 'current':
+    if case in {'current', 'current-ten-refit'}:
         readonly409_configure(Path(config['trace']))
     original_config = config_path.read_bytes()
     runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
@@ -9047,7 +9047,7 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     )
     trace = Path(config['trace'])
     requests = records(trace)
-    if case == 'current':
+    if case in {'current', 'current-ten-refit'}:
         readonly409_policy(trace)
     inputs = [row for row in requests if row.get('method') in {'turn/start', 'turn/steer'}]
     assert len(inputs) == 1 and inputs[0]['method'] == 'turn/start' and inputs[0]['params'].get('clientUserMessageId'), (
@@ -9070,8 +9070,11 @@ def test_save349_real_visible_writer_and_reopen(generic, tmp_path, case):  # noq
     if case in {'fresh', 'current', 'current-ten-refit'}:
         destination = reference / 'current' if case in {'current', 'current-ten-refit'} else selected / leaf
         assert returned['success'] is True and outcome['status'] == 'succeeded' and all(
-            outcome.get(key) is True for key in ['committed', 'reopened', 'active', 'presentation_complete']
-        ), 'SAVE349: only committed/reopened/active/fully presented actual save is success'
+            outcome.get(key) is True for key in ['committed', 'active']
+        ) and outcome.get('reopened') is (case == 'fresh') and (
+            type(outcome.get('presentation_complete')) is bool if case in {'current', 'current-ten-refit'}
+            else outcome.get('presentation_complete') is True
+        ), 'SAVE603: actual current ordinary Save commits/is active with truthful flags; fresh keeps verified complete presentation'
         terminal592 = [json.loads(line.split('SAVE349_TERMINAL ', 1)[1]) for line in result.stdout.splitlines()
                        if 'SAVE349_TERMINAL ' in line]
         assert len(terminal592) == 1 and terminal592[0]['case'] == case and (

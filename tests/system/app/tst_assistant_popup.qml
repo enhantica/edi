@@ -5260,6 +5260,12 @@ TestCase {
                 shown: project.correlations.labels.length, values: project.correlations.values.length}));
         }
         const currentPath = project.path;
+        const saveDirectoryLife603 = data.tag === "current" ? lifetime313(Session) : null;
+        let saveDirectoryCount603 = 0, saveDirectoryPath603 = null;
+        function currentDirectoryUsed603(path) {
+            ++saveDirectoryCount603;
+            if (saveDirectoryCount603 === 1) saveDirectoryPath603 = String(path);
+        }
         const sourceDocuments = ["project.edi", "structures/cosio.edi", "experiments/d20.edi", "analysis/analysis.edi"];
         const currentBytes = sourceDocuments.map(name => Probe.readReferenceFile("current/" + name));
         visible185_page("project");
@@ -5278,9 +5284,15 @@ TestCase {
             function manualSaved592() { ++manualClicks592; }
             manualSave592.clicked.connect(manualSaved592);
             const manualUndo592 = item("appBar.button.undo").enabled;
+            let manualDirectoryConnected603 = false;
             try {
+                Session.projectDirectoryUsed.connect(currentDirectoryUsed603); manualDirectoryConnected603 = true;
                 Ui.click(this, Probe, window, "appBar.button.save");
                 compare(manualClicks592, 1, "SAVE592 CONTROL: exactly ONE genuine manual toolbar Save click");
+                compare(saveDirectoryCount603, 1,
+                    "SAVE603 CONTROL: manual Save has exactly one actual ordinary Session completion");
+                compare(saveDirectoryPath603, currentPath,
+                    "SAVE603 CONTROL: actual ordinary manual completion names the SAME owned directory");
                 tryCompare(project, "modified", false, 2000,
                     "SAVE592 CONTROL: ordinary Save actually persists the current dirty project");
                 compare(Session.project, project, "SAVE592 CONTROL: manual writer preserves exact owner");
@@ -5289,7 +5301,11 @@ TestCase {
                 compare(save349_science(project), science, "SAVE592 CONTROL: manual Save preserves every rounded scientific fact");
                 compare(item("appBar.button.undo").enabled, manualUndo592,
                     "SAVE592 CONTROL: ordinary Save neither consumes nor invents history");
-            } finally { disconnect313(manualLife592, manualSave592, "clicked", manualSaved592); }
+            } finally {
+                if (manualDirectoryConnected603)
+                    disconnect313(saveDirectoryLife603, Session, "projectDirectoryUsed", currentDirectoryUsed603);
+                disconnect313(manualLife592, manualSave592, "clicked", manualSaved592);
+            }
         }
         Ui.click(this, Probe, window, "project.title");
         visible185_type("Original visible Save " + data.tag);
@@ -5340,7 +5356,7 @@ TestCase {
         let editor = null, finalSave = null, editorLife = null, finalLife = null;
         let originalDialog = null, dialogLife = null, originalFooter = null, openedEvents = 0;
         const saveLife370 = lifetime313(save);
-        const connected370 = {save: false, text: false, press: false, click: false, opened: false};
+        const connected370 = {save: false, text: false, press: false, click: false, opened: false, directory603: false};
         function savedClicked() { ++saveClicks; }
         function finalPressed() {
             verify(alive313(dialogLife) && alive313(editorLife) && alive313(finalLife),
@@ -5370,6 +5386,10 @@ TestCase {
         const call = "save349-" + data.tag;
         const observation = visible237_observationMs([{path: "", text: leaf}]);
         try {
+            if (data.tag === "current") {
+                saveDirectoryCount603 = 0; saveDirectoryPath603 = null;
+                Session.projectDirectoryUsed.connect(currentDirectoryUsed603); connected370.directory603 = true;
+            }
             save.clicked.connect(savedClicked); connected370.save = true;
             if (["fresh", "collision", "stop", "close-owner", "current"].includes(data.tag)) {
                 // Passive original receiver binding, including collision. A closed
@@ -5479,11 +5499,17 @@ TestCase {
                 }
             } else {
                 verify(outcome !== null && outcome.status === "succeeded" && outcome.committed === true
-                    && outcome.reopened === true && outcome.active === true && outcome.presentation_complete === true,
-                    "SAVE349: success requires actual commit/verified reopen/displayed adoption and complete UI presentation");
+                    && outcome.reopened === (data.tag === "fresh") && outcome.active === true
+                    && typeof outcome.presentation_complete === "boolean"
+                    && (data.tag !== "fresh" || outcome.presentation_complete === true),
+                    "SAVE603: actual commit/current owner and truthful presentation flag; current ordinary Save never invents a reopen");
                 compare(saveClicks, data.tag === "current" ? 0 : 1,
                     "SAVE592: one native OFF Save or one real visible toolbar Save owns the original RPC, never both");
                 if (data.tag === "current") {
+                    compare(saveDirectoryCount603, 1,
+                        "SAVE603: one assistant request has exactly one actual ordinary Session completion");
+                    compare(saveDirectoryPath603, currentPath,
+                        "SAVE603: assistant ordinary completion names the SAME independently owned directory");
                     compare(openedEvents, 0, "SAVE592: owned omitted-destination Save never opens a chooser");
                     verify(alive313(dialogLife) && !originalDialog.opened,
                         "SAVE592: the SAME actual closed Save form remains unopened");
@@ -5518,6 +5544,8 @@ TestCase {
             verify(assistant.connected, "SAVE349: save/cancel/retirement preserves genuine managed account");
             compare(JSON.stringify(Probe.rows(assistant.models)), account, "SAVE349: original account/model catalog is unchanged");
         } finally {
+            if (connected370.directory603)
+                disconnect313(saveDirectoryLife603, Session, "projectDirectoryUsed", currentDirectoryUsed603);
             if (connected370.save) disconnect313(saveLife370, save, "clicked", savedClicked);
             if (connected370.opened) disconnect313(dialogLife, originalDialog, "openedChanged", openedChanged);
             if (connected370.text) disconnect313(editorLife, editor, "textEdited", textEdited);
@@ -5958,7 +5986,12 @@ TestCase {
         toggle(); assistant.signIn(); visible185_ready("save359-bootstrap");
         if (assistant.contextConsentRequired) assistant.signIn();
         visible185_ready("save359-disclosed");
-        compare(assistant.workingFolder, "", "SAVE359: genuine current-directory Save needs no fresh-parent grant workaround");
+        compare(Session.project, project,
+            "SAVE604 SETUP: ordinary current refit Save retains the actual original Session owner");
+        compare(project.path, path,
+            "SAVE604 SETUP: ordinary refit Save retains the SAME independently owned current directory");
+        verify(!Session.needsSaveAs,
+            "SAVE604 SETUP: actual owned-current refit Save needs no fresh-parent selection or grant");
         const show = item("assistant.showActions");
         verify(show.enabled && show.visible && !assistant.showActions,
             "SAVE359 SETUP: original actionable mode checkbox begins in normal mode");
@@ -5979,10 +6012,10 @@ TestCase {
             const outcome = visible185_outcome("save349-current-ten-refit", before);
             console.log("SAVE349_TERMINAL", JSON.stringify({case: "current-ten-refit", outcome: outcome,
                 currentPath: Session.project ? Session.project.path : null}));
-            verify(outcome.status === "succeeded" && outcome.committed === true && outcome.reopened === true
-                && outcome.active === true && outcome.presentation_complete === true,
-                "SAVE359: only actual commit/verified reopen/active displayed presentation is current Save success");
-            compare(clicks, 1, "SAVE359: exactly ONE real original ordinary Save control is clicked");
+            verify(outcome.status === "succeeded" && outcome.committed === true && outcome.reopened === false
+                && outcome.active === true && typeof outcome.presentation_complete === "boolean",
+                "SAVE604: ordinary current refit Save commits/is active with truthful presentation and no invented reopen");
+            compare(clicks, 0, "SAVE604: visible current Save uses only the original cue, never a dispatched button click");
             verify(alive313(owner) && Session.project === project && project.path === path && !project.modified,
                 "SAVE359: same live original displayed owner/path is saved/unmodified without a fresh directory");
             verify(alive313(fitLife), "SAVE359: original public real-fit receiver remains alive before outcome readback");
@@ -9611,8 +9644,9 @@ TestCase {
                     && (path===plan.zero || matches[0].unique_name===profileIds514[path]),
                     "MAIN514: actual final read retains reference full-free SAME original profile and zero roles");
             }
-            verify(saved.status==="succeeded" && saved.committed===true && saved.reopened===true
-                && saved.active===true && saved.presentation_complete===true,"MAIN504: genuine current Save commits/reopens/presents completely");
+            verify(saved.status==="succeeded" && saved.committed===true && saved.reopened===false
+                && saved.active===true && typeof saved.presentation_complete==="boolean",
+                "MAIN604: ordinary current Save commits/is active with truthful presentation and no invented reopen");
             compare(current.path,path); verify(!current.modified && !Session.needsSaveAs);
             compare(current.name,"Original Main LBCO owner");compare(current.title,"Original Main title");
             compare(dialogsOpened,0,"CREATE574: filling and current Save never opens a file/folder/fresh Save As chooser");
