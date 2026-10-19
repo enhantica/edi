@@ -3801,6 +3801,10 @@ struct AssistantViewModel::State {
         edi::PersistenceSnapshot snapshot;
         std::optional<edi::CalculationResult> calculation;
         quint64 calculation_reservation=0, progress_reservation=0;
+        // Worker-only until its original final delivery. native_bytes keeps
+        // reading the unchanged preowned allowance while preparation runs.
+        std::size_t calculation_retained_bytes=0, reload_retained_bytes=0;
+        bool preparation_ready=false;
         // Receipt and manifest have bounded names/counts/hash fields. Reserve
         // both roles before the worker, without reading its in-flight output.
         static constexpr quint64 artifact_reservation=sizeof(ImmutableAssistantResult)+
@@ -5529,7 +5533,29 @@ struct AssistantViewModel::State {
         const auto scope=native_settlement_scope(task->call);
         const auto release=[&]{if(receiver && receiver->state_.get()==this && native_save==task)native_save.reset();};
         const char* save_stage="SAVE_ENTRANCE";
+        quint64 save_bound=0;
         try {
+            if(task->preparation_ready) {
+                // Only this terminal delivery observes the worker's result.
+                // Its documents/reopened model/temporaries have all unwound.
+                // A pre-format failure or early cancellation may STILL own S.
+                const bool complete=task->calculation.has_value();
+                if(complete!=static_cast<bool>(task->artifact) ||
+                   (complete && (task->snapshot.model || !task->calculation_retained_bytes || !task->reload_retained_bytes)) ||
+                   task->calculation_retained_bytes>task->calculation_reservation ||
+                   task->reload_retained_bytes>task->calculation_reservation-task->calculation_retained_bytes ||
+                   (!complete && (task->calculation_retained_bytes || task->reload_retained_bytes)))
+                    throw std::logic_error("Save preparation retained-role handoff is incomplete");
+                // These selectors are finished even when formatting failed.
+                // Release actual backing BEFORE retiring its snapshot role.
+                std::vector<bool>().swap(task->snapshot.geometry_current);
+                std::vector<bool>().swap(task->snapshot.computed_current);
+                if(!task->snapshot.model)task->snapshot.retained_bytes=0;
+                task->calculation_reservation=task->calculation_retained_bytes+task->reload_retained_bytes;
+                task->preparation_ready=false; // No nested/repeated transfer.
+                // A+B stays charged through reload AND the prepared landing;
+                // moving A into that landing does not release its real owners.
+            }
             if(!native_save_current(task) || !task->artifact) {
                 release();
                 if(original_call())native_finish(false,native_save_outcome(*task,task->failure_size?
@@ -5574,10 +5600,13 @@ struct AssistantViewModel::State {
                     native_charge();
                     if(!receiver || receiver->state_.get()!=this)return;
                     if(!native_save_current(task))throw std::runtime_error("Save retired before publication preparation");
-                    save_stage="SAVE_VALUES_PREPARE";
+                    save_stage="SAVE_VALUES_ROOM";
                     static_assert(Limits::stream_retained_bytes<=std::numeric_limits<std::size_t>::max());
                     const auto publication_limit=native_room();
+                    save_bound=publication_limit; // Remaining new-metadata role, not an allocation measurement.
+                    save_stage="SAVE_VALUES_ROLE";
                     const auto publication_role=reserve_disclosure(publication_limit);
+                    save_stage="SAVE_VALUES_CHARGE";
                     native_charge();
                     if(!receiver || receiver->state_.get()!=this)return;
                     if(!native_save_current(task))throw std::runtime_error("Save retired before its prepared metadata allocation");
@@ -5585,9 +5614,15 @@ struct AssistantViewModel::State {
                     // actual current arrays were calculated by the original worker.
                     if(!task->calculation)throw std::runtime_error("The rounded saved calculation is unavailable");
                     auto ready=[&] {
+                        // B was measured from these exact immutable documents
+                        // on the worker and remains preowned beside A. The
+                        // publication limit owns ONLY new metadata, never B.
+                        save_stage="SAVE_VALUES_RELOAD";
                         auto prepared_model=load_captured_assistant_result(*task->artifact);
+                        save_stage="SAVE_VALUES_METADATA";
                         return task->project->prepareNativeSaved(prepared_model,task->snapshot.stamps,std::move(*task->calculation),task->destination,static_cast<std::size_t>(publication_limit));
                     }(); // The full rounded model is gone before disk publication or any UI callback.
+                    save_bound=0;
                     task->calculation.reset();
                     if(!native_save_current(task))throw std::runtime_error("The save owner changed before publication");
                     save_stage="SAVE_PUBLISH";
@@ -5625,8 +5660,9 @@ struct AssistantViewModel::State {
         } catch(...) {
             if(!receiver)return;
             // Original task facts before cleanup/fallback; no Qt callback or exception text.
-            // Zero is deliberately no attributed byte bound for this save phase.
-            if(original_call())native_failure(save_stage,"SAVE",0,native_failure_class(),&*native_call,nullptr,-1,task.get());
+            // A nonzero VALUES bound is its available new-metadata role; the
+            // closed substage identifies the original failing call, not raw exception text.
+            if(original_call())native_failure(save_stage,"SAVE",save_bound,native_failure_class(),&*native_call,nullptr,-1,task.get());
             release();
             if(receiver && original_call()) {
                 try {native_finish(task->active,native_save_outcome(*task,task->committed?
@@ -5800,10 +5836,13 @@ struct AssistantViewModel::State {
                     if(!codex_encoded_size(artifact->files,NativeSave::artifact_reservation,roles))
                         throw std::length_error("Save artifact receipt exceeds its prepared role");
                     auto reopened=load_captured_assistant_result(*artifact);
-                    auto calculated=edi::calculate_saved_project(reopened,task->snapshot.stamps,limits,task->calculation_reservation,cancel);
+                    std::size_t result_bytes=0,reload_bytes=0;
+                    auto calculated=edi::calculate_saved_project(reopened,task->snapshot.stamps,limits,task->calculation_reservation,cancel,result_bytes,reload_bytes);
                     if(!cancel.cancelled()) {
                         task->calculation=std::move(calculated);
                         task->artifact=std::move(artifact);
+                        task->calculation_retained_bytes=result_bytes;
+                        task->reload_retained_bytes=reload_bytes;
                     }
                 }
             }catch(const std::exception& e) {
@@ -5814,6 +5853,9 @@ struct AssistantViewModel::State {
                 constexpr char failed[]="Native save preparation failed";
                 std::copy_n(failed,sizeof(failed)-1,task->failure.data());task->failure_size=sizeof(failed)-1;
             }
+            // Publish only after all preparation/catch temporaries unwind.
+            // The final delivery is the sole owner-thread reader of this flag.
+            task->preparation_ready=true;
             task.reset(); // The final delivery now owns the task; this job never reads it again.
             return std::move(completion);
         };
