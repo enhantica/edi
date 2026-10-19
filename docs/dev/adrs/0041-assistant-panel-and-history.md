@@ -1889,8 +1889,8 @@ Animator stopped handler, after Qt has synchronized back its rendered angle, and
 only while the original current animation remains disabled. A source-property
 notification is not ordered against that synchronization.
 
-The original status Stop receiver's implicit and background circle extents equal
-the adjacent working iconExtent. Native foreground/background functions, actual
+The original status Stop receiver retains a circle independent of its square ink;
+its current peer sizing with the speed control is specified below. Native foreground/background functions, actual
 canCancel, pressed-slot retention and the same explicit cancel handler remain.
 There is no new timer, backend state, cancellation path or promise that animation
 continues while the operating system suspends rendering. Genuine frames and native
@@ -1998,3 +1998,17 @@ Report navigation guidance uses the existing user-click `[Open Report page](edi:
 ### Web activity subjects from original runtime metadata
 
 Web activity headers retain explicit supplied purpose/description first, then use the pinned app-server WebSearchItem action: search query/queries, openPage URL, or findInPage pattern/URL. An absent action can use the original item query; unknown or unusable action fields keep the existing generic web caption. These are supplied action subjects, not verified results or an assertion that web access is enabled in every runtime configuration. The existing single-line normalizer, PlainText label, elision, truthful status and full literal Details/copy payload remain unchanged. No URL is opened or query executed by this presentation. This extends the original activityCaption/activityDescription projection without changing provider tools, policy, transport or history.
+
+
+### Larger status action circles with independent Stop ink
+
+The speed and Stop controls extend the original status activity sizing above. Both
+use one local circle/target extent: the larger of the actual working icon extent
+and the existing theme button height, bounded by the actual status-bar height.
+Their opaque, borderless fill remains the composer's contentBackground, and the
+original width reservation accounts for the enlarged targets. The speed label
+uses the normal theme font size for every offered multiplier. The Stop square
+keeps its existing separate theme font size; enlarging the circle does not enlarge
+that ink. The working logo/robot size, original motion, hit/action identity, native
+hover/disabled foregrounds, accessible labels, menu, live pacing and cancel receiver
+remain unchanged. Native rendering is not established by this source-only change.

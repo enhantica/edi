@@ -145,6 +145,7 @@ EaElements.StatusBar {
         parent: bar
         readonly property bool stopShown: Session.assistant.showingActions || bar.assistantManualTakeover
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
+        readonly property real buttonExtent: Math.min(bar.height, Math.max(assistantArea.iconExtent, EaStyle.Sizes.buttonHeight))
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
@@ -170,7 +171,7 @@ EaElements.StatusBar {
             id: speedButton
             objectName: "assistant.actionSpeed"
             visible: (assistantArea.working || assistantGroup.stopShown) && Session.assistant.showActions
-            implicitWidth: assistantArea.iconExtent
+            implicitWidth: assistantGroup.buttonExtent
             implicitHeight: implicitWidth
             padding: 0
             anchors.right: visibleStop.visible ? visibleStop.left : parent.right
@@ -180,9 +181,9 @@ EaElements.StatusBar {
             onClicked: speedMenu.open()
             onVisibleChanged: if (!visible) speedMenu.close()
             background: Rectangle {
-                implicitWidth: assistantArea.iconExtent
+                implicitWidth: assistantGroup.buttonExtent
                 implicitHeight: implicitWidth
-                width: assistantArea.iconExtent
+                width: assistantGroup.buttonExtent
                 height: width
                 anchors.centerIn: parent
                 radius: width / 2
@@ -191,7 +192,7 @@ EaElements.StatusBar {
             }
             contentItem: EaElements.Label {
                 text: speedButton.text
-                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.65
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: speedButton.foregroundColor()
@@ -247,15 +248,15 @@ EaElements.StatusBar {
             objectName: "assistant.stopVisibleAction"
             visible: assistantGroup.stopShown || pressed
             enabled: Session.assistant.canCancel
-            implicitWidth: assistantArea.iconExtent
+            implicitWidth: assistantGroup.buttonExtent
             implicitHeight: implicitWidth
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             fontIcon: "stop"
             background: Rectangle {
-                implicitWidth: assistantArea.iconExtent
+                implicitWidth: assistantGroup.buttonExtent
                 implicitHeight: implicitWidth
-                width: assistantArea.iconExtent
+                width: assistantGroup.buttonExtent
                 height: width
                 anchors.centerIn: parent
                 radius: width / 2
