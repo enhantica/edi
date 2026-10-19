@@ -661,15 +661,22 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
     std::sort(result->files.begin(),result->files.end(),[](const auto& a,const auto& b){return a.path<b.path;});
     quint64 declarations_bytes=0;
     if(!codex_encoded_size(result->declarations,L::context_bytes,declarations_bytes))throw std::length_error("Skill metadata exceeds capacity");
-    charge(declarations_bytes+result->declarations.size()*sizeof(QJsonObject));
-    QList<QJsonObject> ordered;
-    for(const auto& entry:result->declarations)ordered.append(entry.toObject());
-    std::sort(ordered.begin(),ordered.end(),[](const auto& a,const auto& b){return a.value("id").toString()<b.value("id").toString();});
-    result->declarations={};for(const auto& entry:ordered)result->declarations.append(entry);
+    {
+        charge(declarations_bytes+result->declarations.size()*sizeof(QJsonObject));
+        QList<QJsonObject> ordered;
+        for(const auto& entry:result->declarations)ordered.append(entry.toObject());
+        std::sort(ordered.begin(),ordered.end(),[](const auto& a,const auto& b){return a.value("id").toString()<b.value("id").toString();});
+        result->declarations={};for(const auto& entry:ordered)result->declarations.append(entry);
+    } // Release the sorting handles before admitting the hash/output roles.
+    const auto fingerprint_bytes=QCryptographicHash::hashLength(QCryptographicHash::Sha256);
+    quint64 hash_bytes=fingerprint_bytes;
+    for(const auto& file:result->files)hash_bytes=std::max(hash_bytes,input_utf8_bytes(QStringView(file.path)));
+    // Declarations persist while path encodings, file digests or the final
+    // fingerprint exist. These hashing outputs are successive, not concurrent.
+    charge(declarations_bytes+hash_bytes);
     QCryptographicHash hash(QCryptographicHash::Sha256);
     for(const auto& file:result->files){hash.addData(file.path.toUtf8());hash.addData(QByteArrayView("\0",1));hash.addData(QCryptographicHash::hash(file.bytes,QCryptographicHash::Sha256));}
-    charge(QCryptographicHash::hashLength(QCryptographicHash::Sha256));
-    result->fingerprint=hash.result();charge();return result;
+    result->fingerprint=hash.result();charge(declarations_bytes+result->fingerprint.size());return result;
 }
 #endif
 

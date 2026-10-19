@@ -145,3 +145,25 @@ refuse. Manual Load retains its system dialog; other real visible controls,
 fresh Save As, attachment and skill-source choosers keep their original roles.
 The bundled skill version and index digest change together. This corrects
 instruction consistency, adding no native operation, schema or permission.
+
+
+### Final captured inventory roles
+
+The original capture_skill_sources tail keeps the measured encoded declarations
+charged together with every live hashing/output role. Its existing sorting
+QList handles are scoped and destroyed before hashing starts; the preceding
+admission still covers their overlap with declarations. The next admission uses
+the larger of the exact existing UTF-8 path size and SHA-256 output length before
+path encoding, per-file digest or final fingerprint allocation. Those temporary
+hashing outputs are successive. The final immutable declarations and fingerprint
+remain charged together through transfer, including an empty all-disabled
+inventory. No guessed padding or capacity increase is used.
+
+Both original capture callers retain their existing high-water preparation
+reservation until actual captured owners are either registered/transferred or
+destroyed. retain_skill_inventory still checks the original retainedBytes result
+before settings persistence; weak inventory registration, joint VM/transport
+admission and old/new callback ownership remain unchanged. Source identity,
+validation, ordering/fingerprint bytes, consent/currentness and publication
+fences are preserved. An input click followed by a source error alone does not
+identify which runtime exception occurred.
