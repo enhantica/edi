@@ -199,9 +199,29 @@ EaElements.GroupBox {
             // Keep an ordinary filtered selection in view after model updates;
             // delegates are intentionally created only inside this viewport.
             function revealCurrentRow() {
-                revealRow(currentRow);
+                table.revealRow(table.currentRow);
             }
-            onCurrentRowChanged: Qt.callLater(revealCurrentRow)
+            Timer {
+                id: currentRowReveal
+                interval: 0
+                property var request: null
+                function schedule() {
+                    const pending = currentRowReveal;
+                    const next = { project: group.project, model: table.sourceModel };
+                    pending.request = next;
+                    if (Qt.isQtObject(pending) && pending.request === next) pending.restart();
+                }
+                onTriggered: {
+                    const pending = currentRowReveal, component = group, view = table, original = request;
+                    pending.request = null;
+                    if (!Qt.isQtObject(pending) || pending.request !== null || !Qt.isQtObject(component) || !Qt.isQtObject(view)
+                        || !original || component.project !== original.project || view.sourceModel !== original.model
+                        || !Qt.isQtObject(original.project) || !Qt.isQtObject(original.model)) return;
+                    view.revealCurrentRow();
+                }
+            }
+            onCurrentRowChanged: if (Qt.isQtObject(currentRowReveal)) currentRowReveal.schedule()
+            Component.onCompleted: currentRowReveal.schedule()
 
             columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
 

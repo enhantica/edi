@@ -59,30 +59,34 @@ EaComponents.ListView {
     // It reveals a row without changing selection, filters or scientific state.
     function revealRow(index: int): bool {
         const view = table, originalModel = table.sourceModel;
-        if (originalModel === null || index < 0 || index >= view.count) return false;
+        const modelObject = Qt.isQtObject(originalModel);
+        if (originalModel === null || originalModel === undefined || index < 0 || index >= view.count) return false;
         view.forceLayout();
-        if (!Qt.isQtObject(view) || view.sourceModel !== originalModel || index >= view.count) return false;
+        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
         view.positionViewAtIndex(index, ListView.Contain);
-        if (!Qt.isQtObject(view) || view.sourceModel !== originalModel || index >= view.count) return false;
+        if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel || index >= view.count) return false;
         view.forceLayout();
-        return Qt.isQtObject(view) && view.sourceModel === originalModel && index < view.count;
+        return Qt.isQtObject(view) && (!modelObject || Qt.isQtObject(originalModel)) && view.sourceModel === originalModel && index < view.count;
     }
     // A retained control can exist just outside this table's clipping viewport.
     // Only an actual delegate owned by this view supplies its row index.
     function revealItem(item: Item): bool {
-        for (let child = item; child && child !== table.contentItem; child = child.parent) {
-            if (child === table.headerItem) {
-                const originalModel = table.sourceModel;
-                table.forceLayout();
-                if (!Qt.isQtObject(table) || table.sourceModel !== originalModel) return false;
-                table.positionViewAtBeginning();
-                if (!Qt.isQtObject(table) || table.sourceModel !== originalModel) return false;
-                table.forceLayout();
-                return Qt.isQtObject(table) && table.sourceModel === originalModel;
+        const view = table;
+        for (let child = item; child && child !== view.contentItem; child = child.parent) {
+            if (child === view.headerItem) {
+                const originalModel = view.sourceModel;
+                const modelObject = Qt.isQtObject(originalModel);
+                if (originalModel === null || originalModel === undefined) return false;
+                view.forceLayout();
+                if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel) return false;
+                view.positionViewAtBeginning();
+                if (!Qt.isQtObject(view) || (modelObject && !Qt.isQtObject(originalModel)) || view.sourceModel !== originalModel) return false;
+                view.forceLayout();
+                return Qt.isQtObject(view) && (!modelObject || Qt.isQtObject(originalModel)) && view.sourceModel === originalModel;
             }
             const index = child.index;
-            if (Number.isInteger(index) && index >= 0 && index < table.count && table.itemAtIndex(index) === child)
-                return table.revealRow(index);
+            if (Number.isInteger(index) && index >= 0 && index < view.count && view.itemAtIndex(index) === child)
+                return view.revealRow(index);
         }
         return false;
     }
@@ -138,7 +142,12 @@ EaComponents.ListView {
         onFontChanged: table.remeasure()
     }
     Connections {
-        target: table.model
+        target: {
+            const view = table;
+            if (!Qt.isQtObject(view)) return null;
+            const source = view.model;
+            return Qt.isQtObject(source) ? source : null;
+        }
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
             let changed = false;

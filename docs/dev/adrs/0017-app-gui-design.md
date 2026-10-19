@@ -1467,3 +1467,37 @@ The genuine speed menu registers its original QObject/window before focus-taking
 The FIRST `ExperimentViewModel::setPeakType` and `ExcludedRegionListModel` append/start/end/remove methods now share the original creation-control receipt/history boundary. Manual and assistant calls both preown one narrow ordinary Undo per actual change; equal canonical profile/bound values skip setter, visual cue and history. Exclusion remove enters the same exact consumed-input seam; append keeps the ordinary ItemVec-generated row/default bounds. Literal equal/reversed endpoints retain the original manual/presentation semantics; no automatic sorting/clipping or conversion is added. History owns only peak state or exclusion rows and affected relation/result state, not measured data or a whole experiment.
 
 The new `edit_experiment` adapter uses existing individual-action frame/member/currentness and original Experiment page/row/group/table reveal. ON shows the genuine original control and visual-only click cue, then calls that same ordinary method; OFF calls it directly. It never dispatches a second scientific keyboard mutation or falls back silently if an exact control/owner is unavailable. Noncurrent measured targets are resolved by actual experiment/region identity and do not inherit the unrelated calculation-only Load/type restriction. Current scientific values/option validators, manual drafts, Undo, OnlyStop, once, partial publication and original Save/reader/structure/speed remain authoritative.
+
+
+### Deferred table and popup presentation belongs to its original QObject
+
+The first parameter-row reveal is ParametersGroup's deferred current-row
+positioning through DataTable.revealRow; its connected searchable filter popup
+also defers ordinary placement/positioning. Retaining an unqualified QML method
+or closure with callLater can outlive its component context. Each now uses one
+owner-local, single-shot zero-delay Timer: current-row changes coalesce, and
+QObject destruction cancels pending presentation. The row request checks its
+original project/model; the popup checks its original still-visible popup before
+and after placement. Neither may use an old request through replacement objects.
+Original native layout/reveal/current-selection methods remain; there is no
+periodic timer, retry, synthetic input, scientific action or timing allowance.
+
+DataTable Connections binds only its actual QObject model or null, including
+undefined/non-QObject teardown states. Native row/header reveals retain the
+original source identity and explicitly reject missing sources and a QObject
+source destroyed by synchronous layout callbacks. Existing non-QObject ListView
+model forms are not removed from the view/reveal contract. Selection, filters,
+width invalidation, scientific values and ordinary Undo are unchanged. This fixes
+a source lifetime/type class, not the unobserved actor of ON Create, provider
+logout or Graphs warnings. Genuine original destruction/replacement and live
+reveal/popup controls qualify it; source/grammar alone does not.
+
+
+Popup presentation also belongs to its particular opening, not merely the same
+Popup QObject or visible flag: Qt can keep that object visible during exit. Each
+original aboutToShow owns a fresh local opening identity; aboutToHide invalidates
+it and the existing pending timer request. Immediate placement, opened list/focus
+and deferred placement carry that identity through clear, native forceLayout and
+geometry notifications. A synchronous close/reopen of the same object cannot
+continue the old opening's positioning or focus; the fresh opening keeps its
+ordinary live placement and search focus. No second timer or controller is added.
