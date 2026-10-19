@@ -2012,3 +2012,19 @@ keeps its existing separate theme font size; enlarging the circle does not enlar
 that ink. The working logo/robot size, original motion, hit/action identity, native
 hover/disabled foregrounds, accessible labels, menu, live pacing and cancel receiver
 remain unchanged. Native rendering is not established by this source-only change.
+
+
+### Status circles match the actual sidebar Working logo
+
+The owner's later visual ruling supersedes the larger themed-button sizing above.
+Both status speed/Stop circle diameters now equal the shared AssistantWorking
+iconExtent: the EasyDiffraction logo SVG fills that extent in the original sidebar
+working cue. Neither the robot's diagonal reserve nor theme button height enlarges
+the circles. Speed text and the small Stop square scale independently within that
+same circle; composer contentBackground, native foregrounds, actions, accessibility
+and live pacing remain. Working motion and glyph size are unchanged.
+
+When fit and assistant groups coexist, the assistant's reserved area starts with
+the original fit rule's border width, height and color, with fitArea.spacing on
+both sides. Existing status-width accounting includes that reservation. No fit
+values, scrolling, animation, cancellation authority or status lifecycle changes.

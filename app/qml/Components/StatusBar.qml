@@ -145,26 +145,39 @@ EaElements.StatusBar {
         parent: bar
         readonly property bool stopShown: Session.assistant.showingActions || bar.assistantManualTakeover
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
-        readonly property real buttonExtent: Math.min(bar.height, Math.max(assistantArea.iconExtent, EaStyle.Sizes.buttonHeight))
+        readonly property real buttonExtent: assistantArea.iconExtent
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
-        implicitWidth: assistantArea.implicitWidth + (speedButton.visible ? gap + speedButton.implicitWidth : 0)
+        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
+            + assistantArea.implicitWidth + (speedButton.visible ? gap + speedButton.implicitWidth : 0)
             + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
         anchors.right: parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
+        Rectangle {
+            id: assistantRule
+            objectName: "statusBar.assistant.separator"
+            visible: fitViewport.visible
+            width: rule.width
+            height: rule.height
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            color: rule.color
+        }
         AssistantWorking {
             id: assistantArea
             objectName: "statusBar.assistant.working"
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
-            width: Math.max(0, parent.width - (speedButton.visible ? assistantGroup.gap + speedButton.width : 0)
+            width: Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
+                - (speedButton.visible ? assistantGroup.gap + speedButton.width : 0)
                 - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
+            anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
             anchors.verticalCenter: parent.verticalCenter
         }
         EaElements.ToolButton {
@@ -192,7 +205,7 @@ EaElements.StatusBar {
             }
             contentItem: EaElements.Label {
                 text: speedButton.text
-                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                font.pixelSize: assistantGroup.buttonExtent * 0.55
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: speedButton.foregroundColor()
@@ -266,7 +279,7 @@ EaElements.StatusBar {
             contentItem: EaElements.Label {
                 text: visibleStop.fontIcon
                 font.family: EaStyle.Fonts.iconsFamily
-                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                font.pixelSize: assistantGroup.buttonExtent * 0.5
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: visibleStop.foregroundColor()
@@ -284,10 +297,10 @@ EaElements.StatusBar {
         parent: bar
         visible: bar.fit !== null && (bar.fit.running || bar.fit.outcome !== "")
         anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize * (assistantGroup.visible ? 1.2 : 1)
+        anchors.rightMargin: assistantGroup.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(fitArea.implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize
-            - (assistantGroup.visible ? assistantGroup.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0)))
+            - (assistantGroup.visible ? assistantGroup.width + fitArea.spacing : 0)))
         height: bar.height
         contentWidth: fitArea.implicitWidth
         contentHeight: height
