@@ -1281,16 +1281,93 @@ struct AssistantViewModel::State {
         if(target && !model)throw std::runtime_error("The original calculation model is unavailable");
         const auto membership=model?model->experiments.record():nullptr;
         const auto epoch=model?model->experiments.generation():0;
+        const auto structure_membership=model?model->structures.record():nullptr;
+        const auto structure_epoch=model?model->structures.generation():0;
+        const QPointer<StructureViewModel> current_structure(target?target->currentStructure():nullptr);
+        const QPointer<ExperimentViewModel> current_experiment(target?target->currentExperiment():nullptr);
+        const auto* structure_owner=current_structure.data();const auto* experiment_owner=current_experiment.data();
         const auto current=[&] {
             return publication.input_current() && original==target && (!target ||
-                (target->assistantProject()==model && model->experiments.record()==membership && model->experiments.generation()==epoch));
+                (target->assistantProject()==model && model->experiments.record()==membership && model->experiments.generation()==epoch &&
+                 model->structures.record()==structure_membership && model->structures.generation()==structure_epoch &&
+                 (!structure_owner || current_structure) && (!experiment_owner || current_experiment) &&
+                 target->currentStructure()==structure_owner && target->currentExperiment()==experiment_owner));
         };
         QJsonArray actions;
         for (const auto& name : assistant_native_tool_names()) actions.append(name);
         context["native_actions"] = actions;
-        constexpr auto state_role=sizeof(Object)+sizeof(QJsonArray)+4*sizeof(QJsonValue)+
-            sizeof("native_statecalculatingfittingshow_actionscalculations")*sizeof(QChar);
+        constexpr auto state_role=sizeof(Object)+2*sizeof(QJsonArray)+5*sizeof(QJsonValue)+
+            sizeof("native_statecalculatingfittingshow_actionscalculationsinterface_groups")*sizeof(QChar);
         disclosure_room(state_role);disclosure_preparing_bytes+=state_role;preparing+=state_role;
+        QJsonArray interface_groups;
+        // Read the same original model/order/tiers as CategoryGroup's Repeater.
+        // Core parameter/file order is intentionally different from the sidebar.
+        const auto append_groups=[&](CategoryListModel* rows,const std::string& name,bool structure) {
+            const QPointer<CategoryListModel> categories(rows);
+            const int count=rows?rows->rowCount():0;
+            const auto owned=[&] {
+                return current() && categories && categories->rowCount()==count &&
+                    (structure?(current_structure && current_structure->categories()==categories):
+                               (current_experiment && current_experiment->categories()==categories));
+            };
+            if(!owned())throw std::runtime_error("The original interface category owner changed");
+            const auto native_bytes=std::max<quint64>(name.size(),sizeof("experiment")-1);
+            if(native_bytes>Limits::id_bytes)throw std::length_error("Interface member identity exceeds capacity");
+            if(!edi::assistant::detail::utf8(name))throw std::runtime_error("Interface member identity is not valid UTF-8");
+            // Canonical native copy and decoded Qt member ID precede JSON growth.
+            const auto minimum=sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar);
+            const auto identity_role=reserve_disclosure(native_bytes+(native_bytes+1)*sizeof(QChar)+minimum);
+            if(!owned())throw std::runtime_error("The original interface category owner changed");
+            const auto member=QString::fromStdString(structure?edi::KeyTraits<edi::Structure>::canonical(name):
+                edi::KeyTraits<edi::BraggPdExperiment>::canonical(name));
+            const auto page=structure?QStringLiteral("structure"):QStringLiteral("experiment");
+            for(const auto& tier:{QStringLiteral("Basic"),QStringLiteral("Extras")})for(int row=0;row<count;++row) {
+                if(!owned())throw std::runtime_error("The original interface category owner changed");
+                const auto index=categories->index(row,0);
+                const auto category=categories->data(index,CategoryListModel::CategoryIdRole);
+                const auto original_tier=categories->data(index,CategoryListModel::TierRole);
+                const auto extras=categories->data(index,CategoryListModel::ExtrasPartRole);
+                const auto admitted=categories->data(index,CategoryListModel::AdmittedRole);
+                if(category.metaType().id()!=QMetaType::QString || original_tier.metaType().id()!=QMetaType::QString ||
+                    extras.metaType().id()!=QMetaType::Bool || admitted.metaType().id()!=QMetaType::Bool)
+                    throw std::runtime_error("The original interface category roles are unavailable");
+                const auto category_id=category.toString();const auto category_tier=original_tier.toString(); // Borrow implicit-shared model text.
+                if(category_id.isEmpty() || (category_tier!=QStringLiteral("Basic") && category_tier!=QStringLiteral("Extras")))
+                    throw std::runtime_error("The original interface category roles are invalid");
+                if(category_tier!=tier && !(tier==QStringLiteral("Extras") && extras.toBool()))continue;
+                quint64 text_units=0,wire=sizeof("{\"page\":,\"member_id\":,\"category_id\":,\"tier\":,\"admitted\":false}")-1;
+                for(const auto text:{QStringView(page),QStringView(member),QStringView(category_id),QStringView(tier)}) {
+                    const auto bytes=skill_json_string_bytes(text);
+                    if(bytes>Limits::context_bytes-wire)throw std::length_error("Interface category row exceeds capacity");
+                    wire+=bytes;text_units+=text.size();
+                }
+                constexpr auto keys=sizeof("pagemember_idcategory_idtieradmitted")*sizeof(QChar);
+                const auto owned_row=sizeof(Object)+10*sizeof(QJsonValue)+keys+4*minimum+2*(text_units+4)*sizeof(QChar);
+                // New row/input and both old/replacement growing array owners
+                // coexist until append returns. Retain their joint role with context.
+                const auto role=2*(owned_row+wire+sizeof(QJsonValue));
+                disclosure_room(role);disclosure_preparing_bytes+=role;preparing+=role;
+                if(!owned())throw std::runtime_error("The original interface category owner changed");
+                interface_groups.append(Object{{"page",page},{"member_id",member},{"category_id",category_id},
+                    {"tier",tier},{"admitted",admitted.toBool()}});
+            }
+            if(!owned())throw std::runtime_error("The original interface category owner changed");
+        };
+        if(current_structure) {
+            if(!current() || !target->structureModels().contains(current_structure))throw std::runtime_error("The original structure interface owner changed");
+            const auto* member=current_structure->structure();
+            if(std::none_of(model->structures.begin(),model->structures.end(),[&](const auto& held){return held.get()==member;}))
+                throw std::runtime_error("The original structure interface member changed");
+            append_groups(current_structure->categories(),member->name.value(),true);
+        }
+        if(current_experiment) {
+            if(!current() || !target->experimentModels().contains(current_experiment))throw std::runtime_error("The original experiment interface owner changed");
+            const auto* member=current_experiment->experiment();
+            if(std::none_of(model->experiments.begin(),model->experiments.end(),[&](const auto& held){return held.get()==member;}))
+                throw std::runtime_error("The original experiment interface member changed");
+            append_groups(current_experiment->categories(),member->name.value(),false);
+        }
+        if(!current())throw std::runtime_error("The original interface read owner changed");
         QJsonArray calculations;
         if(model)for(const auto& held:model->experiments) {
             if(!current())throw std::runtime_error("The original calculation read owner changed");
@@ -1329,7 +1406,7 @@ struct AssistantViewModel::State {
         }
         if(!current())throw std::runtime_error("The original calculation read owner changed");
         context["native_state"]=Object{{"calculating",target && target->calculating()},
-            {"fitting",target && target->fit()->nativeRunning()},{"show_actions",show_actions},{"calculations",calculations}};
+            {"fitting",target && target->fit()->nativeRunning()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
         generic_size(context, Limits::context_bytes);
     }
     Object generic_native{{"status", "disconnected"}};
@@ -9122,7 +9199,7 @@ struct AssistantViewModel::State {
         params["developerInstructions"] = QStringLiteral(
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. Current owned saving calls the same ordinary app Save as the manual toolbar. For successful ordinary saved=true and active=true without failure or uncertainty, report 'Project saved.' Do not turn presentation_complete=false or reopened=false into unrequested UI-completion/reopen caveats, repeated saving or a calculation wait. Report genuine failure, uncertainty, owner change and explicitly requested verification truthfully. Fresh Save As retains its verified export/adoption.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations; report ordinary current-save success plainly and genuine failure, uncertainty or owner change honestly, without unrequested UI/reopen caveats. Keep explicitly requested verification and fresh Save As facts truthful; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. For current owned saving both modes call the same ordinary Session Save; Show actions gives only the existing visual pointer/click cue at Save, without a dispatched click or custom Save intent. An already-unmodified disabled Save button does not refuse that ordinary call. Fresh Save As retains the genuine Save control and original fresh-name form; do not change modes. Report actual ordinary saved/committed/current-owner facts without claiming separate reopen; never blindly repeat uncertain saving. No separate assistant export/recovery tree is created for current Save. Native report generation remains unavailable; offer [Open Report page](edi:report) for user-click navigation to the current project's existing enabled Report preview and ordinary export controls. Do not use desktop/CUA app discovery or app-name selection to locate Report controls. Offering the link does not itself open the page, generate or save a report, or select another installed application. "
-            "For delegated new setup, read the admitted scientific inputs before editing and plan the original app pages left-to-right. After requested structure identity/symmetry prerequisites, finish the cell. Reuse the actual initial atom and complete that site row identity, type, requested Wyckoff position, coordinates and occupancy before appending/completing the next site; never alternate site coordinates with ADPs. After all site rows, complete all requested ADP types and values together in the Atomic displacement group. Then finish Experiment groups top-to-bottom in their actual offered order, including requested type/data, instrument, profile, background, linked scales and exclusions, without revisiting earlier groups for convenience. Finally plan Analysis requests category by category, grouping related requested flags together. Use the existing Free header only when the request is exactly the whole eligible displayed category with one common flag; retain subsets through their actual checkboxes. Compare actual canonical values first and omit equal setters/cues/Undo. Plan this order for new delegated calls; never sort or rewrite an explicit caller array, reorder dependent edits speculatively, change scientific values or split a normal atomic Edit. Preserve actual returned IDs and current-member/once/partial/Undo facts. Missing/unavailable controls remain explicit, not a mode fallback. "
+            "For delegated new setup, read the admitted scientific inputs before editing and plan the original app pages left-to-right. After requested structure identity/symmetry prerequisites, finish the cell. Reuse the actual initial atom and complete that site row identity, type, requested Wyckoff position, coordinates and occupancy before appending/completing the next site; never alternate site coordinates with ADPs. After all site rows, complete all requested ADP types and values together in the Atomic displacement group. Read the fresh native_state.interface_groups for the actual current member and Basic/Extras tier; its array follows the original app category model, not core parameter-list order. Finish requested Experiment groups in that actual order, completing each group before the next. If a scientific prerequisite changes available type/profile options, perform and explain that prerequisite first, then inspect the refreshed group data; never silently reorder explicit dependencies. Finally plan Analysis requests category by category, grouping related requested flags together. Use the existing Free header only when the request is exactly the whole eligible displayed category with one common flag; retain subsets through their actual checkboxes. Compare actual canonical values first and omit equal setters/cues/Undo. Plan this order for new delegated calls; never sort or rewrite an explicit caller array, reorder dependent edits speculatively, change scientific values or split a normal atomic Edit. Preserve actual returned IDs and current-member/once/partial/Undo facts. Missing/unavailable controls remain explicit, not a mode fallback. "
             "When offered, create_structure invokes ordinary app Create and returns ONE actual initial atom. Reuse/update that actual first atom for the first target site, append only subsequent required atoms through edit_atom, and change only differing stored defaults. edit_structure changes one original name/symmetry setter; edit_atom changes one original row text/ADP-type operation. Use actual returned IDs, existing parameter tools for numeric/free values, and code-owned schemas/options. Interpret admitted attached text; do not synthesize a CIF, parser/converter or an importer. Equal canonical values skip cues/setters/Undo. Both modes use the same ordinary app methods; ON adds genuine original navigation/reveal and visual-only cues, not scientific keyboard writes. Unresolved symmetry/defaults are not scientific success, and uncertain writes must not be replayed. "
             "When edit_experiment is offered, use its code-owned options for one ordinary profile or exclusion-row operation on the actual experiment ID. A profile change can engage/drop optional settings; inspect actual values afterward. Append exclusions with ordinary generated IDs/default bounds, then set the requested literal bounds or explicitly remove an actual row. Both modes use the same app methods and Undo; ON adds only original navigation/reveal/visual cues. Equal canonical values skip setter/cue/history; unavailable exact targets or uncertain publication refuse honestly. No absorption, weighting, links, calibration or conversion is implied by this action. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "

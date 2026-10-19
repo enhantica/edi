@@ -1601,3 +1601,35 @@ This is planning for generated calls, not an executor sorting explicit arrays or
 rewriting scientific intent. Caller order, dependency validation, OFF atomic Edit,
 ordinary setters/Undo, current owner, once and factual partial outcomes are exact.
 No numeric/refusal/deadline cause is claimed by this guidance correction.
+
+
+### Actual app group order as fresh planning data (2026-10-19)
+
+The first ordering authority is CategoryListModel::presentation_order, consumed by
+Structure/Experiment CategoryGroup Repeaters. Its sidebar order can differ from
+core parameter/file order: use that original model, not a second illustrative
+sequence in agent prose. The existing native_state now projects interface_groups
+for the exact current native members: page/member_id/category_id/tier/admitted,
+in model order within Basic then Extras, including a category's Extras part.
+These are category groups, not a copied widget inventory; compatibility is not
+control enablement or a grant of otherwise unavailable scientific actions.
+
+The projection is fresh with approved context and inspect/diagnostics results,
+including for a continuing thread. Developer instructions and captured skills
+still belong to original thread bootstrap; data does not silently rewrite those
+instructions or reset the conversation. Generated setup plans read actual group
+data, finish a group before the next, and preserve or explain necessary scientific
+prerequisites. Explicit caller arrays stay in their original order; OFF remains
+one atomic Edit, with ordinary same-value/once/Undo/current-owner behavior. No
+within-call order flag or future-call scheduler is added. Layout data alone does
+not guarantee model compliance across calls, so that remains a runtime outcome.
+
+Current selected view, native member membership/generation and original category
+model are checked around construction. Missing or contradictory owners refuse
+the complete read rather than invent a fallback order. Native canonical ID and
+decoded text, row/JSON and growing-array roles are admitted before allocation,
+using existing disclosure limits; no new allowance or cached catalogue is added.
+Actual empty/no-current-member pages have no rows. Genuine group expansion,
+auto-collapse preference, selection, controls and all scientific methods remain
+unchanged. This repairs missing/misleading planning data, not every reported
+reopening/refusal or the separate operation-deadline issue.
