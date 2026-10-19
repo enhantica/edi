@@ -1662,3 +1662,28 @@ account or input is forwarded. All added codes fit the original longest code
 role, with the same actual sizing/projector/maximum and no limit increase.
 These facts explain the gate, not proof of this owner's missing runtime actor,
 permission to retry a write, or a new scientific/CIF/directory prerequisite.
+
+
+### Correlated native work owns idle, human presentation waits own total
+
+The original CodexAgent human-wait seam also owns one exact outstanding native
+request/process-generation slot. Active correlated app work preserves only the
+remaining inference idle interval; the original inference total stays bounded.
+Only its genuine current ON helper waiting for its retained inactive window
+additionally pauses total. App background during provider inference or a native
+CPU worker without that presentation wait is not an exemption. Original human
+question/fresh-SaveAs ownership remains separate. A single monotonic accounting
+sample applies the union of paused roles once, without renewed budgets, duplicate
+pause credit or fake activity. Original timer, control-write/ACK deadlines,
+wire/retained bounds, EOF, Stop and finite revoke remain active.
+
+Original RPC correlation gates precede native-work entry. Existing helper/window
+lifecycle signals rederive only the current matched native receipt/record and
+transport generation; stale edges cannot use captured old request data or a new
+owner's interval. End/reply/reject/resolve and native retirement/settlement release
+only the original slot. Operation-role transition/failure/process retirement
+clear both wait owners with original expiry/remaining-total semantics. The
+shared request key remains retained until matching release before removal. No
+new timer/controller, deadline preference, timeout increase, retry, scientific
+write/Undo or ordinary Save workflow is introduced. Source proof does not identify
+which clock expired in the old owner run or claim a new native pass.

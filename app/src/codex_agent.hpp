@@ -46,6 +46,11 @@ public:
     void settleOperation();
     bool beginHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration);
     bool endHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration);
+    // One exact correlated local tool owns idle-only suspension. Only its real
+    // inactive-window presentation wait additionally suspends inference total.
+    bool beginNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration);
+    bool setNativeWorkWaiting(const QJsonValue& originalRequestId, quint64 originalGeneration, bool waiting);
+    bool endNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration);
 signals:
     void started();
     void response(const QString& id, const QString& method, const QJsonObject& envelope);
@@ -82,6 +87,11 @@ private:
     qint64 human_wait_start_ = -1;
     QString human_wait_id_; // Shares the original outstanding request key; cleared before its removal.
     bool finishHumanWait();
+    QString native_work_id_; // Shares the same already-retained outstanding key.
+    bool native_work_waiting_ = false;
+    qint64 wait_accounted_at_ = -1;
+    bool accountWaits(qint64 now); // Success is callback-free, union of fixed owned roles.
+    bool operationExpired(qint64 now) const noexcept;
     quint64 total_ms_ = 0, idle_ms_ = 0, wire_bytes_ = 0, event_count_ = 0;
     bool write(const QJsonObject& envelope, const std::function<bool()>& prepare = {}, bool nonfatalPreflight = false, bool optionalUsage = false);
     void read(QProcess* process, quint64 generation, bool finished = false);

@@ -883,6 +883,7 @@ struct AssistantViewModel::State {
     using Limits = edi::assistant::Limits;
     bool show_actions = false, showing_actions = false;
     QPointer<QQuickWindow> action_window;
+    QMetaObject::Connection action_window_activity, action_window_destroyed;
     std::unique_ptr<AssistantWidgetInput> widget_input;
     bool manual_gesture_current(const ManualControlGesture& gesture) const {
         if (gesture.receiver != &owner || !gesture.control || !gesture.window ||
@@ -4909,11 +4910,30 @@ struct AssistantViewModel::State {
                 return;
             }
             auto call = std::move(*native_call); native_call.reset();
+            const QPointer<CodexAgent> transport(agent.get());const auto transport_generation=transport?transport->outputGeneration():0;
+            if(transport)(void)transport->endNativeWork(call.rpc,transport_generation);
+            if(!receiver || receiver->state_.get()!=this || generation!=binding || native_serial!=serial || usage_epoch!=account || native_call ||
+                !transport || agent.get()!=transport.data() || transport->outputGeneration()!=transport_generation)return;
             if (respond && !call.resolved && !call.record->answered) {
                 call.record->answered = true;
                 if (!agent->answer(call.rpc, call.record->response)) throw std::runtime_error("Native retirement response could not be delivered");
             }
         }
+    }
+    void native_window_wait(const QPointer<AssistantWidgetInput>& helper,const QPointer<QQuickWindow>& window) {
+        const auto publication=file_projection();
+        if(!publication.input_current() || widget_input.get()!=helper.data() || action_window!=window || !native_call || !agent)return;
+        const auto call=*native_call;
+        const auto widget=native_widget;const auto creation=native_create_widget;
+        const QPointer<CodexAgent> transport(agent.get());const auto transport_generation=transport->outputGeneration();
+        const bool input_owner=(widget && widget_owned(widget) && widget->window==window && widget->call.record==call.record && widget->call.receipt==call.receipt && widget->call.rpc==call.rpc) ||
+            (creation && create_widget_owned(creation) && creation->window==window && creation->call.record==call.record && creation->call.receipt==call.receipt && creation->call.rpc==call.rpc);
+        bool eligible=show_actions && input_owner && helper && window && helper->active() && !window->isActive() &&
+            !call.retiring && !call.resolved && !call.record->retired && !call.record->answered;
+        if(eligible)try {eligible=native_current(call.receipt);}catch(...) {eligible=false;} // A failed proof cannot extend total.
+        if(!publication.input_current() || widget_input.get()!=helper.data() || action_window!=window || native_widget!=widget || native_create_widget!=creation || !transport || agent.get()!=transport.data() ||
+            transport->outputGeneration()!=transport_generation || !native_call || native_call->rpc!=call.rpc || native_call->record!=call.record || native_call->receipt!=call.receipt)return;
+        (void)transport->setNativeWorkWaiting(call.rpc,transport_generation,eligible);
     }
     void native_acknowledge(const QString& rpc, const QString& turn) {
         auto receipt = native_pending.take(rpc);
@@ -5044,6 +5064,11 @@ struct AssistantViewModel::State {
         auto record = call.record;
         const QPointer<CodexAgent> original_transport(agent.get());
         const auto original_transport_generation=original_transport?original_transport->outputGeneration():0;
+        const auto work_scope=native_settlement_scope(call);
+        const auto work_done=qScopeGuard([original_transport,original_transport_generation,rpc=call.rpc,work_scope]() noexcept {
+            try {if(work_scope() && original_transport && original_transport->outputGeneration()==original_transport_generation)
+                (void)original_transport->endNativeWork(rpc,original_transport_generation);}catch(...){}
+        });
         const auto original_call = [&] {
             return receiver && receiver->state_.get() == this && native_call && native_call->record == record && native_call->receipt == call.receipt && native_call->rpc == call.rpc &&
                 original_transport && agent.get()==original_transport.data() && original_transport->outputGeneration()==original_transport_generation;
@@ -5690,6 +5715,22 @@ struct AssistantViewModel::State {
         if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "add_relations" && name != "create_cwl_project" && name != "edit_background" && name != "save_project") {
             native_reply(rpc, false, {{"status", "unavailable"}, {"code", "visible_unmapped"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
         }
+        const QPointer<CodexAgent> work_transport(agent.get());
+        const auto work_generation=work_transport?work_transport->outputGeneration():0;
+        if(!work_transport || !work_transport->beginNativeWork(rpc,work_generation)) {
+            if(publication.input_current() && work_transport && agent.get()==work_transport.data() && work_transport->outputGeneration()==work_generation)
+                native_reply(rpc,false,{{"status","refused"},{"code","unclassified"}});
+            return;
+        }
+        const auto work_done=qScopeGuard([this,publication,work_transport,work_generation,rpc]() noexcept {
+            try {
+                if(!publication.input_current() || !work_transport || agent.get()!=work_transport.data() || work_transport->outputGeneration()!=work_generation)return;
+                // An admitted original asynchronous call owns the interval until
+                // its real settlement. Never end a reentrant replacement B.
+                if(native_call)return;
+                (void)work_transport->endNativeWork(rpc,work_generation);
+            } catch(...) {} // Deadline cleanup cannot replace the original refusal.
+        });
         if(individual_app_action(name)){native_start_individual(rpc,id,purpose,original,args,name);return;}
         if(name=="acquire_inputs"){native_acquire_inputs(rpc,id,purpose,original,args);return;}
         if(name=="read_selected_file"){native_read_selected_file(rpc,id,purpose,original,args);return;}
@@ -11999,6 +12040,7 @@ AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencie
     : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies))) { state_->bind(nullptr); }
 #endif
 AssistantViewModel::~AssistantViewModel() {
+    QObject::disconnect(state_->action_window_activity);QObject::disconnect(state_->action_window_destroyed);
     // Stop observation before State/helper destruction can publish Qt events.
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
 }
@@ -12034,9 +12076,23 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
         state_->native_widget || (state_->native_call && state_->native_call->record != record)) return;
 #endif
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
+    QObject::disconnect(state_->action_window_activity);QObject::disconnect(state_->action_window_destroyed);
+    state_->action_window_activity={};state_->action_window_destroyed={};
     state_->widget_input.reset(); state_->action_window = window;
     if (window) {
         state_->widget_input = std::make_unique<AssistantWidgetInput>(*window);
+#ifndef __EMSCRIPTEN__
+        const QPointer<AssistantWidgetInput> helper(state_->widget_input.get());const QPointer<QQuickWindow> original(window);
+        connect(helper.data(),&AssistantWidgetInput::activeChanged,this,[this,helper,original] {
+            try {state_->native_window_wait(helper,original);}catch(...){} // No stale edge boolean is authority.
+        });
+        state_->action_window_activity=connect(window,&QQuickWindow::activeChanged,this,[this,helper,original] {
+            try {state_->native_window_wait(helper,original);}catch(...){}
+        });
+        state_->action_window_destroyed=connect(window,&QObject::destroyed,this,[this,helper] {
+            try {state_->native_window_wait(helper,{});}catch(...){}
+        });
+#endif
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerShown, this, &AssistantViewModel::actionPointerShown);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerMoved, this, &AssistantViewModel::actionPointerMoved);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerPressed, this, &AssistantViewModel::actionPointerPressed);

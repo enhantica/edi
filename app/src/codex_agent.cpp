@@ -147,6 +147,7 @@ CodexAgent::CodexAgent(QObject* parent) : QObject(parent) {
 void CodexAgent::beginOperation(quint64 totalMs, quint64 idleMs) {
     const QPointer<CodexAgent> receiver(this); const auto scope = generation_; auto* process = process_;
     if (!finishHumanWait()) return;
+    native_work_id_.clear(); native_work_waiting_=false; wait_accounted_at_=-1;
     checkDeadline(); if (!receiver || generation_ != scope || process_ != process || failed_) return;
     const auto now = clock_.elapsed();
     // A second clock sample can cross the old deadline after checkDeadline.
@@ -195,46 +196,96 @@ bool CodexAgent::releaseOutput(quint64 bytes, quint64 originalGeneration) noexce
     output_bytes_ = bytes;
     return true;
 }
-void CodexAgent::activity() { last_activity_ = human_wait_start_ >= 0 ? human_wait_start_ : clock_.elapsed(); }
-bool CodexAgent::finishHumanWait() {
-    if (human_wait_start_ < 0) return true;
-    const auto now = clock_.elapsed();
-    if (now < human_wait_start_ || operation_start_ < 0 || operation_start_ > human_wait_start_ || last_activity_ > human_wait_start_) {
+bool CodexAgent::operationExpired(qint64 now) const noexcept {
+    return operation_start_>=0 && (now<operation_start_ || now<last_activity_ ||
+        (total_ms_ && static_cast<quint64>(now-operation_start_)>=total_ms_) ||
+        (idle_ms_ && static_cast<quint64>(now-last_activity_)>=idle_ms_));
+}
+bool CodexAgent::accountWaits(qint64 now) {
+    if(wait_accounted_at_<0)return true;
+    if(now<wait_accounted_at_ || operation_start_<0 || operation_start_>wait_accounted_at_ || last_activity_>wait_accounted_at_ ||
+        (human_wait_start_<0 && native_work_id_.isEmpty()) || (native_work_waiting_ && native_work_id_.isEmpty())) {
         fail("The official agent human-wait clock is invalid."); return false;
     }
-    const auto elapsed = now - human_wait_start_;
-    // Both timestamps are <= human_wait_start_, so each shifted value is <= now.
-    operation_start_ += elapsed; last_activity_ += elapsed;
-    human_wait_start_ = -1; human_wait_id_.clear();
+    const auto elapsed=now-wait_accounted_at_;
+    // Each timestamp is <= the old accounting sample. Shifting by this interval
+    // remains <= now without overflow. Overlapping owners contribute a union.
+    if(human_wait_start_>=0 || native_work_waiting_)operation_start_+=elapsed;
+    if(human_wait_start_>=0 || !native_work_id_.isEmpty())last_activity_+=elapsed;
+    wait_accounted_at_=now;
+    return true;
+}
+void CodexAgent::activity() {
+    const auto now=clock_.elapsed();
+    if(!accountWaits(now))return;
+    last_activity_=now; // Only the existing genuine activity callers renew idle.
+}
+bool CodexAgent::finishHumanWait() {
+    const auto now=clock_.elapsed();
+    if(!accountWaits(now))return false;
+    human_wait_start_=-1;human_wait_id_.clear();
+    if(native_work_id_.isEmpty())wait_accounted_at_=-1;
     return true;
 }
 bool CodexAgent::beginHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration) {
-    if (generation_ != originalGeneration || failed_ || !process_ || operation_start_ < 0 || !idle_ms_) return false;
-    // Success is callback-free: never let an optional-usage observer replace
-    // the caller's original request between its owner proof and this entry.
-    const auto key = idKey(originalRequestId);
-    const auto found = server_requests_.constFind(key);
-    if (key.isEmpty() || found == server_requests_.cend()) return false;
-    if (human_wait_start_ >= 0) return human_wait_id_ == found.key();
-    const auto now = clock_.elapsed();
-    if (now < operation_start_ || now < last_activity_ ||
-        (total_ms_ && static_cast<quint64>(now - operation_start_) >= total_ms_) ||
-        (idle_ms_ && static_cast<quint64>(now - last_activity_) >= idle_ms_)) {
-        fail("The official agent operation exceeded its deadline."); return false;
-    }
-    human_wait_id_ = found.key(); // Implicitly shared with its already retained request owner.
-    human_wait_start_ = now;
+    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0 || !idle_ms_)return false;
+    const auto key=idKey(originalRequestId);
+    const auto found=server_requests_.constFind(key);
+    if(key.isEmpty() || found==server_requests_.cend())return false;
+    if(human_wait_start_>=0)return human_wait_id_==found.key();
+    const auto now=clock_.elapsed();
+    if(!accountWaits(now))return false;
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    human_wait_id_=found.key();human_wait_start_=now;wait_accounted_at_=now;
     return true;
 }
 bool CodexAgent::endHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration) {
-    if (generation_ != originalGeneration || failed_ || !process_) return false;
-    const auto key = idKey(originalRequestId);
-    if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ != key)) return false;
+    if(generation_!=originalGeneration || failed_ || !process_)return false;
+    const auto key=idKey(originalRequestId);
+    if(key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_>=0 && human_wait_id_!=key))return false;
     return finishHumanWait();
 }
+bool CodexAgent::beginNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration) {
+    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0 || !idle_ms_)return false;
+    const auto key=idKey(originalRequestId);
+    const auto found=server_requests_.constFind(key);
+    if(key.isEmpty() || found==server_requests_.cend())return false;
+    if(!native_work_id_.isEmpty())return native_work_id_==found.key();
+    const auto now=clock_.elapsed();
+    if(!accountWaits(now))return false;
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    native_work_id_=found.key();native_work_waiting_=false;wait_accounted_at_=now;
+    return true;
+}
+bool CodexAgent::setNativeWorkWaiting(const QJsonValue& originalRequestId, quint64 originalGeneration, bool waiting) {
+    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0 || !idle_ms_)return false;
+    const auto found=server_requests_.constFind(native_work_id_);
+    if(native_work_id_.isEmpty() || found==server_requests_.cend() || found.value()!=originalRequestId)return false;
+    if(native_work_waiting_==waiting)return true;
+    const auto now=clock_.elapsed();
+    if(!accountWaits(now))return false;
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    native_work_waiting_=waiting;wait_accounted_at_=now;
+    return true;
+}
+bool CodexAgent::endNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration) {
+    if(generation_!=originalGeneration || failed_ || !process_)return false;
+    if(native_work_id_.isEmpty()) {
+        // Idempotent matching cleanup, without allocating a new encoded key.
+        return std::any_of(server_requests_.cbegin(),server_requests_.cend(),[&](const auto& id){return id==originalRequestId;});
+    }
+    const auto found=server_requests_.constFind(native_work_id_);
+    if(found==server_requests_.cend() || found.value()!=originalRequestId)return false;
+    const auto now=clock_.elapsed();
+    if(!accountWaits(now))return false;
+    native_work_id_.clear();native_work_waiting_=false;
+    if(human_wait_start_<0)wait_accounted_at_=-1;
+    if(operationExpired(now)){fail("The official agent operation exceeded its deadline.");return false;}
+    return true;
+}
 void CodexAgent::settleOperation() {
-    human_wait_start_ = -1; human_wait_id_.clear();
-    operation_start_ = -1; total_ms_ = 0; idle_ms_ = 0;
+    human_wait_start_=-1;human_wait_id_.clear();native_work_id_.clear();native_work_waiting_=false;wait_accounted_at_=-1;
+    operation_start_=-1;total_ms_=0;idle_ms_=0;
 }
 void CodexAgent::retireOptionalUsage(const QString& id) {
     if (pending_.value(id) != "account/rateLimits/read" || !optional_usage_ids_.contains(id)) return;
@@ -304,11 +355,9 @@ void CodexAgent::checkDeadline() {
         if (!receiver || generation_ != scope || process_ != process || failed_) return;
     }
     if (operation_start_ < 0) return;
-    const auto operationNow = human_wait_start_ >= 0 ? human_wait_start_ : clock_.elapsed();
-    if (operationNow < operation_start_ || operationNow < last_activity_ ||
-        (total_ms_ && static_cast<quint64>(operationNow - operation_start_) >= total_ms_) ||
-        (idle_ms_ && static_cast<quint64>(operationNow - last_activity_) >= idle_ms_))
-        fail("The official agent operation exceeded its deadline.");
+    const auto operationNow=clock_.elapsed();
+    if(!accountWaits(operationNow))return;
+    if(operationExpired(operationNow))fail("The official agent operation exceeded its deadline.");
 }
 CodexAgent::~CodexAgent() { retire(); }
 
@@ -577,6 +626,7 @@ bool CodexAgent::notification(const QString& method, const QJsonObject& params) 
 bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result) {
     const auto key = idKey(originalId);
     if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
+    if(native_work_id_==key && !endNativeWork(originalId,generation_))return false;
     // Retire before delivery: an uncertain write never permits a repeated answer.
     const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
     return write({{QStringLiteral("id"), id}, {QStringLiteral("result"), result}});
@@ -584,12 +634,14 @@ bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result)
 bool CodexAgent::reject(const QJsonValue& originalId) {
     const auto key = idKey(originalId);
     if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
+    if(native_work_id_==key && !endNativeWork(originalId,generation_))return false;
     const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
     return write({{"id", id}, {"error", QJsonObject{{"code", -32601}, {"message", "This client does not support this request."}}}});
 }
 void CodexAgent::resolved(const QJsonValue& originalId) {
     const auto key = idKey(originalId);
     if (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_)) return;
+    if(native_work_id_==key && !endNativeWork(originalId,generation_))return;
     server_requests_.remove(key); pending_bytes_ -= server_sizes_.take(key);
 }
 void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
