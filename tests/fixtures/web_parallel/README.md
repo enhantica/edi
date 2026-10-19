@@ -31,6 +31,11 @@ is absolute, while integer uncertainty uses the mantissa's last decimal units.
 An empty uncertainty, zero uncertainty and an unbracketed fixed operand remain
 distinct. Nonfinite or malformed operands refuse. The owner's rounded numbers
 use half a hundredth.
+Browser saves follow ADR-0092's default IUCr 19 rule. Their fitted values and
+uncertainties are compared with an independent decimal rounding of the native
+capture; the observed token cannot choose a coarser comparison precision. Fixed
+values, parameters without a positive uncertainty and pattern operands keep
+the original capture bounds. The native captures and conditioning stay unchanged.
 The original input baseline is chi-square 649.33; the native capture converges
 in five iterations to chi-square 9.497535494 and Rwp 0.07694458606.
 

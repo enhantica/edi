@@ -17,10 +17,12 @@ from tests.fixtures.ci_cadence.identity_migrations import MIGRATIONS
 from tests.fixtures.ci_cadence.inventory import identity
 from tests.system.py.ci_execution_contract import (
     contexts,
+    prerequisites_ready,
     render,
     run_settings,
     value,
 )
+from tests.system.py.ci_script_execution import observe, retains_work
 from tests.system.py.ci_shipped_cadence import (
     cadence_errors,
     linux_closure_errors,
@@ -483,7 +485,21 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
 @pytest.mark.parametrize(
     'retired',
     list(MIGRATIONS),
-    ids=['desktop-linux', 'desktop-macos', 'scan-sequential', 'scan-independent', 'diagnostics'],
+    ids=[
+        'desktop-linux',
+        'desktop-macos',
+        'scan-sequential',
+        'scan-independent',
+        'diagnostics',
+        *[
+            f'nightly-{platform}-{event}'
+            for platform in ('linux', 'macos')
+            for event in ('pull_request', 'push', 'schedule')
+        ],
+        'axis-nonfirst',
+        'axis-absent-zero',
+        'axis-zero-absent',
+    ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):
     inventory = nodes()
@@ -544,20 +560,32 @@ def test_shipped_suite_paths_execute_their_cohort_and_propagate_failures(
     tmp_path, event, platform
 ):
     workflow = document(ROOT / '.github/workflows/ci.yml')
+    baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
     if BASE['repo'] == 'edi':
-        system_environments = [
-            run_settings(workflow, job, step, ctx)[1]
+        system_steps = [
+            (job, step, ctx)
             for key, job, step, ctx in suite_steps(workflow, event, platform, 'edi')
             if key[2] == 'Tests (declared group, system part)'
         ]
-        assert system_environments, 'CI policy: every platform/event keeps its system parts'
-        assert all(
-            env.get('EDI_RUN_NIGHTLY_ONLY') == ('true' if event == 'schedule' else 'false')
-            for env in system_environments
-        ), 'CI policy: both platforms include the nightly-only cohort only on the schedule'
+        assert bool(system_steps) == (event != 'pull_request'), (
+            'CI policy: system parts run on push, schedule and manual, and leave PRs fast'
+        )
+        for job, step, ctx in system_steps:
+            for core_only in (False, True):
+                env = run_settings(workflow, job, step, ctx | {'inputs.core_only': core_only})[1]
+                expected = event == 'schedule' or (event == 'workflow_dispatch' and not core_only)
+                assert env.get('EDI_RUN_NIGHTLY_ONLY') == ('true' if expected else 'false'), (
+                    'CI policy: nightly runs on the schedule and full manual runs, '
+                    'never on PR, push or a core-only manual run'
+                )
+        if event == 'workflow_dispatch':
+            # Full manual runs qualify the nightly cohort before merge.
+            for key, _, step, _ in suite_steps(baseline, event, platform, 'edi'):
+                if key[2] == 'Tests (declared group, system part)':
+                    step['env']['EDI_RUN_NIGHTLY_ONLY'] = 'true'
     assert not cadence_errors(
         tmp_path,
-        yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml']),
+        baseline,
         workflow,
         event,
         platform,
@@ -629,24 +657,24 @@ def test_shipped_nightly_has_clock_and_manual_triggers_separate_from_pr_requests
     )
 
 
-@pytest.mark.parametrize('event', ['pull_request', 'push'])
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
 def test_linux_keeps_frozen_groups_and_gate_commands(event):
     baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
     assert not linux_gate_errors(
         baseline, document(ROOT / '.github/workflows/ci.yml'), event, BASE['repo']
     ), (
         'every accepted Linux job and required non-suite command remains '
-        'executable on PR and landed head'
+        'executable in its declared event cohort'
     )
 
 
-@pytest.mark.parametrize('event', ['pull_request', 'push'])
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
 def test_linux_task_closure_cannot_reduce_the_frozen_execution(event):
     assert not linux_closure_errors(
         SHIPPED, (ROOT / 'pixi.toml').read_text(), lambda path: (ROOT / path).read_text(), event
     ), (
         'accepted Linux task dependencies and previously protected source '
-        'closures remain executable on both events'
+        'closures remain executable on every declared event'
     )
 
 
@@ -726,7 +754,281 @@ def test_linux_source_guard_reaches_task_and_script_replacement(event, damage):
         assert count == 1, 'the control drops a selected task dependency edge'
     else:
         sources['tools/ci/cpp-test.sh'] = '#!/bin/bash\ntrue\n'
+        for path, fragments in {
+            'tools/ci/crysta-source.sh': (
+                'CRYSTA_REMOTE_OUT="$(git ',
+                'CRYSTA_REMOTE_ERR="$(cat ',
+                'rm -f "$err"',
+                'case "$CRYSTA_REMOTE_ERR" in',
+                '[ "$attempt" -lt 3 ]',
+                'lines="$CRYSTA_REMOTE_OUT"',
+                '[ "${BASH_REMATCH[2]}" = "$want"',
+                '[ "$count" -gt 1 ]',
+                'text="${text//${GITHUB_TOKEN}/***}"',
+            ),
+            'tools/ci/core-build.sh': (
+                'bash tools/ci/build-crysta.sh',
+                'bash tools/ci/crysta-src.sh',
+                'cmake -S',
+                'cmake --build "$EDI_BUILD_DIR" -j',
+                '[ -z "${EDI_CORE_TARGETS:-}" ] || cmake',
+                'cp "$CRYSTA_PREFIX/.crysta-sha"',
+                "trap 'rm -f",
+                'python tools/ci/edi_native.py restore;',
+            ),
+            'tools/ci/crysta-src.sh': (
+                '. "$ROOT/tools/ci/producer-lock.sh";',
+                'crysta_remote "fetch"',
+                '[ -d "$SRC/.git" ] || git init',
+                'git -C "$SRC" checkout',
+                'git -C "$SRC" clean',
+                'printf \'%s\\n\' "$SHA"',
+            ),
+        }.items():
+            baseline = SHIPPED['execution_sources'][path]
+            assert retains_work(
+                path,
+                baseline,
+                baseline
+                if path.endswith('crysta-source.sh')
+                else '# changed comment\n' + baseline,
+            ), (
+                'Linux closure retains the frozen helper and admits comment-only edits '
+                'to observed scripts'
+            )
+            assert not retains_work(path, baseline, '#!/bin/bash\nexit 0\n'), (
+                'Linux closure rejects a successful script that performs no required work'
+            )
+            candidate = (ROOT / path).read_text()
+            assert retains_work(path, baseline, candidate), (
+                'Linux closure admits the current script only while its frozen work is retained'
+            )
+            for fragment in fragments:
+                assert fragment in candidate, (
+                    'Linux closure mutation controls reach the independently frozen operation'
+                )
+                damaged = '\n'.join(
+                    'true # removed operation' if fragment in line else line
+                    for line in candidate.splitlines()
+                )
+                assert not retains_work(path, baseline, damaged), (
+                    'Linux closure rejects removal of acquisition, configure, build, '
+                    'target, checkout, cleanup or provenance work'
+                )
+            damaged = candidate.replace('set -euo pipefail', 'set -uo pipefail')
+            assert not retains_work(path, baseline, damaged), (
+                'Linux closure rejects swallowed failures even when successful work is retained'
+            )
+
+        for path, changes in {
+            'tools/ci/build-crysta.sh': (
+                ('PLATFORM=linux-64 ;;', 'PLATFORM=osx-arm64 ;;'),
+                ('osx-arm64-app) PLATFORM=osx-arm64', 'osx-arm64-app) PLATFORM=linux-64'),
+                ('fetch --platform', 'check --platform'),
+                ('printf \'%s\\n\' "$SHA"', 'printf \'%s\\n\' "unchecked"'),
+                ('edi_producer_lock "$ROOT"', 'true'),
+            ),
+            'tools/ci/edi_native.py': (
+                ("'linux-64-app': 'linux-64'", "'linux-64-app': 'osx-arm64'"),
+                ("'osx-arm64-app': 'osx-arm64'", "'osx-arm64-app': 'linux-64'"),
+                ('    prove_import()', '    pass'),
+                ("'source_tree': git('rev-parse', 'HEAD^{tree}')", "'source_tree': 'unchecked'"),
+                ('return table.get(host) or refuse', "return 'linux-64' or refuse"),
+                ('def restore(', 'def unused_restore('),
+            ),
+        }.items():
+            baseline = SHIPPED['execution_sources'][path]
+            candidate = (ROOT / path).read_text()
+            if path.endswith('.sh'):
+                extension = baseline.replace(
+                    'osx-arm64 | macOS-ARM64', 'osx-arm64 | osx-arm64-app | macOS-ARM64'
+                )
+            else:
+                extension = baseline.replace(
+                    "'osx-arm64': 'osx-arm64'}",
+                    "'osx-arm64': 'osx-arm64', 'osx-arm64-app': 'osx-arm64'}",
+                )
+            assert extension != baseline and retains_work(path, baseline, extension), (
+                'An added macOS alias is admitted in the original mapping layout too'
+            )
+            assert 'osx-arm64-app' in candidate, (
+                'Platform extension controls reach the current macOS app alias'
+            )
+            assert retains_work(path, baseline, candidate), (
+                'The macOS app alias preserves the frozen Linux mapping and qualification source'
+            )
+            assert not retains_work(path, baseline, 'true\n'), (
+                'A macOS alias exemption cannot admit replacement of a qualification script'
+            )
+            for old, new in changes:
+                assert old in candidate, (
+                    'Platform extension controls reach the current protected operation'
+                )
+                sources[path] = candidate.replace(old, new)
+                assert linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
+                    'A macOS alias cannot hide reduced Linux mapping, acquisition, ownership, '
+                    'provenance, import qualification or artifact restore work'
+                )
+                assert not retains_work(path, baseline, sources[path]), (
+                    'The platform source comparison itself rejects each reduced operation'
+                )
+            sources[path] = candidate
+
     assert linux_closure_errors(SHIPPED, manifest, sources.__getitem__, event), (
         'preserving a workflow task name cannot conceal a replaced '
         'dependency command or protected script'
     )
+
+
+@pytest.mark.parametrize('child', ['build-crysta.sh', 'crysta-src.sh'])
+@pytest.mark.parametrize('failure', [False, True])
+@pytest.mark.parametrize(
+    'scenario',
+    [
+        'fresh',
+        'standalone-token',
+        'inherited-valid',
+        'inherited-missing-token',
+        'inherited-wrong-token',
+        'inherited-missing-owner',
+        'inherited-wrong-owner',
+        'foreign-lock',
+    ],
+)
+def test_acquisition_children_preserve_proven_ownership_and_release(child, failure, scenario):
+    path = 'tools/ci/' + child
+    source = (ROOT / path).read_text()
+    fault = 'python tools/ci/crysta_sdk.py fetch' if child == 'build-crysta.sh' else ' fetch '
+    rc, trace, outputs = observe(path, source, scenario, fault if failure else '')
+    inherited = scenario == 'inherited-valid'
+    standalone = scenario in {'fresh', 'standalone-token'}
+    assert bool(rc) == (failure or not (inherited or standalone)), (
+        'Acquisition children accept only a proven parent token or their own exclusive lock'
+    )
+    ownership = [call for call in trace if call.startswith('ownership ')]
+    expected = (
+        'ownership <1> <1> <1> <1>'
+        if inherited
+        else 'ownership <1> <1> <0> <0>'
+        if scenario == 'standalone-token'
+        else 'ownership <1> <0> <0> <0>'
+    )
+    assert ownership == ([expected] * len(ownership) if inherited or standalone else []), (
+        'Each acquisition operation observes the owner file and exported token while running'
+    )
+    assert bool(ownership) == (inherited or standalone), (
+        'An invalid inherited lock refuses before any acquisition operation executes'
+    )
+    assert dict(outputs)['producer-lock-retained'] == (not standalone), (
+        'Each child releases its own lock on success and failure and retains the parent lock'
+    )
+    assert dict(outputs)['producer-owner-retained'] == (
+        not standalone and scenario != 'inherited-missing-owner'
+    ), 'Each child retains a foreign owner file on success or refusal'
+
+
+@pytest.mark.parametrize(
+    'damage', ['handoff-removed', 'export-removed', 'owner-removed', 'wrong-token', 'wrong-owner']
+)
+def test_linux_source_guard_refuses_current_producer_handoff_damage(damage):
+    path = 'tools/ci/core-build.sh'
+    candidate = (ROOT / path).read_text()
+    line = next(
+        line
+        for line in candidate.splitlines()
+        if line.startswith('export EDI_PRODUCER_LOCK_HELD=')
+    )
+    if damage == 'handoff-removed':
+        replacement = 'true'
+    elif damage == 'export-removed':
+        replacement = line.replace('export ', '', 1)
+    elif damage == 'owner-removed':
+        replacement = line.split(';', 1)[0]
+    elif damage == 'wrong-token':
+        replacement = line + '; export EDI_PRODUCER_LOCK_HELD=wrong-token'
+    else:
+        replacement = line + '; printf wrong-owner >"$BUILD_LOCK/owner"'
+    damaged = candidate.replace(line, replacement, 1)
+    assert damaged != candidate, 'Ownership controls mutate the current producer handoff'
+    assert not retains_work(path, SHIPPED['execution_sources'][path], damaged), (
+        'The Linux execution guard rejects missing, unexported or mismatched ownership handoffs'
+    )
+
+
+MOVED_GATES = [
+    ('system', 'linux-64', None),
+    ('system', 'osx-arm64', None),
+    ('app-wasm', 'linux-64', None),
+    ('core', 'linux-64', 'The two-thread witness (ThreadSanitizer)'),
+    ('app', 'linux-64', "The app group's Python tests (tests/integration/app)"),
+    ('app', 'osx-arm64', "The app group's Python tests (tests/integration/app)"),
+]
+
+
+def moved_gate_required(workflow, event, target):
+    key, platform, title = target
+    cases = [
+        (job, ctx)
+        for name, job, ctx, actual in contexts(workflow, event, names=False)
+        if name == key and actual == platform
+    ]
+    if not cases:
+        return False
+    for job, ctx in cases:
+        if (
+            not expression(job.get('if'), ctx)
+            or not prerequisites_ready(workflow, job, ctx)
+            or expression(job.get('continue-on-error', False), ctx)
+        ):
+            return False
+        if title:
+            steps = [step for step in job.get('steps', []) if step.get('name') == title]
+            if len(steps) != 1:
+                return False
+            step = steps[0]
+            task = 'tsan-worker' if key == 'core' else 'group-app'
+            if (
+                not expression(step.get('if'), ctx)
+                or expression(step.get('continue-on-error', False), ctx)
+                or step.get('run', '').strip() != 'pixi run --skip-deps ' + task
+            ):
+                return False
+    return True
+
+
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+@pytest.mark.parametrize(
+    'target',
+    MOVED_GATES,
+    ids=['system-linux', 'system-macos', 'wasm', 'tsan', 'app-python-linux', 'app-python-macos'],
+)
+def test_moved_gates_keep_every_required_full_run_and_reject_each_escape(event, target):
+    workflow = document(ROOT / '.github/workflows/ci.yml')
+    expected = event != 'pull_request'
+    assert moved_gate_required(workflow, event, target) == expected, (
+        'Owner event policy: heavy gates leave PRs and stay required '
+        'on push, nightly and full manual'
+    )
+    if not expected:
+        return
+    for damage in ('missing', 'skipped', 'advisory', 'wrong-command'):
+        broken = copy.deepcopy(workflow)
+        job = broken['jobs'][target[0]]
+        title = target[2]
+        node = next(step for step in job['steps'] if step.get('name') == title) if title else job
+        if damage == 'missing':
+            if title:
+                job['steps'].remove(node)
+            else:
+                del broken['jobs'][target[0]]
+        elif damage == 'skipped':
+            node['if'] = 'false'
+        elif damage == 'advisory':
+            node['continue-on-error'] = True
+        elif title:
+            node['run'] = 'true'
+        else:
+            job['needs'] = ['absent-required-predecessor']
+        assert not moved_gate_required(broken, event, target), (
+            'Owner event policy: missing, skipped, advisory and empty full-run gates must refuse'
+        )

@@ -9,13 +9,14 @@
 #include <string.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include "../project_output/fault_interpose.h"
 
 static void receipt(const char* event, const char* path) {
     const char* log = getenv("EDI_REPORT_FAULT_LOG");
     if (!log) return;
     int fd = open(log, O_WRONLY | O_CREAT | O_APPEND, 0600);
     if (fd < 0) return;
-    ssize_t (*real_write)(int, const void*, size_t) = dlsym(RTLD_NEXT, "write");
+    ssize_t (*real_write)(int, const void*, size_t) = REAL(write);
     real_write(fd, event, strlen(event));
     real_write(fd, " ", 1);
     real_write(fd, path, strlen(path));
@@ -46,8 +47,8 @@ static int target(int fd, char* path, const void* buffer, size_t size) {
     if (!strcmp(kind, "pdf")) return strstr(base, ".pdf") != NULL || (size >= 4 && !memcmp(buffer, "%PDF", 4));
     return !strstr(base, "report.edi") && !strstr(base, ".pdf") && !strstr(base, ".cif");
 }
-ssize_t write(int fd, const void* buffer, size_t size) {
-    ssize_t (*real_write)(int, const void*, size_t) = dlsym(RTLD_NEXT, "write");
+ssize_t FAULT(write)(int fd, const void* buffer, size_t size) {
+    ssize_t (*real_write)(int, const void*, size_t) = REAL(write);
     char path[PATH_MAX];
     if (size && target(fd, path, buffer, size)) {
         real_write(fd, buffer, size < 64 ? size : 64);
@@ -57,11 +58,11 @@ ssize_t write(int fd, const void* buffer, size_t size) {
     }
     return real_write(fd, buffer, size);
 }
-ssize_t writev(int fd, const struct iovec* vectors, int count) {
-    ssize_t (*real_writev)(int, const struct iovec*, int) = dlsym(RTLD_NEXT, "writev");
+ssize_t FAULT(writev)(int fd, const struct iovec* vectors, int count) {
+    ssize_t (*real_writev)(int, const struct iovec*, int) = REAL(writev);
     char path[PATH_MAX];
     if (count && target(fd, path, vectors[0].iov_base, vectors[0].iov_len)) {
-        ssize_t (*real_write)(int, const void*, size_t) = dlsym(RTLD_NEXT, "write");
+        ssize_t (*real_write)(int, const void*, size_t) = REAL(write);
         real_write(fd, vectors[0].iov_base, vectors[0].iov_len < 64 ? vectors[0].iov_len : 64);
         receipt("write-after-open", path);
         errno = ENOSPC;
@@ -69,8 +70,8 @@ ssize_t writev(int fd, const struct iovec* vectors, int count) {
     }
     return real_writev(fd, vectors, count);
 }
-int close(int fd) {
-    int (*real_close)(int) = dlsym(RTLD_NEXT, "close");
+int FAULT(close)(int fd) {
+    int (*real_close)(int) = REAL(close);
     const char* kind = getenv("EDI_REPORT_FAULT_KIND");
     char path[PATH_MAX];
     if (kind && !strcmp(kind, "settings-close") && target(fd, path, "", 0)) {
@@ -82,8 +83,8 @@ int close(int fd) {
     }
     return real_close(fd);
 }
-int fclose(FILE* stream) {
-    int (*real_fclose)(FILE*) = dlsym(RTLD_NEXT, "fclose");
+int FAULT(fclose)(FILE* stream) {
+    int (*real_fclose)(FILE*) = REAL(fclose);
     const char* kind = getenv("EDI_REPORT_FAULT_KIND");
     char path[PATH_MAX];
     if (kind && !strcmp(kind, "settings-close") && target(fileno(stream), path, "", 0)) {
@@ -112,8 +113,8 @@ static int scan_temporary(const char* from, const char* to, const char* director
                     (int)(slash - directory), directory, leaf);
     return size >= 0 && size < (int)sizeof(expected) && !strcmp(from, expected);
 }
-int rename(const char* from, const char* to) {
-    int (*real_rename)(const char*, const char*) = dlsym(RTLD_NEXT, "rename");
+int FAULT(rename)(const char* from, const char* to) {
+    int (*real_rename)(const char*, const char*) = REAL(rename);
     const char* directory = getenv("EDI_REPORT_FAULT_DIR");
     const char* kind = getenv("EDI_REPORT_FAULT_KIND");
     if (directory && kind && !strcmp(kind, "settings") &&
@@ -130,3 +131,9 @@ int rename(const char* from, const char* to) {
     }
     return real_rename(from, to);
 }
+
+INTERPOSE(write)
+INTERPOSE(writev)
+INTERPOSE(close)
+INTERPOSE(fclose)
+INTERPOSE(rename)

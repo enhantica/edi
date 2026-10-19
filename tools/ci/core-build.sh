@@ -92,9 +92,10 @@ fi
 cmake -S "$SRC" -B "$EDI_BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}"
-cmake --build "$EDI_BUILD_DIR" -j
+# A bare -j would override CMAKE_BUILD_PARALLEL_LEVEL, so its value, when set, is passed to -j.
+cmake --build "$EDI_BUILD_DIR" -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
 # Further targets in this same tree, under this lock (the C++ tier's edi_tests).
-[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} -j
+[ -z "${EDI_CORE_TARGETS:-}" ] || cmake --build "$EDI_BUILD_DIR" --target ${EDI_CORE_TARGETS} -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
 # Review-7 F7: tie provenance to the edi artifact actually LINKED. The prefix stamp and source
 # record are mutable across resolves; this record names the crysta the just-built edi contains,
 # and downstream consumers select it instead of re-reading whatever a later resolve left behind.

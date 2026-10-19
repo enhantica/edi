@@ -44,13 +44,15 @@ def test_platform_cores_wait_only_for_their_own_native_build():
 def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
     public = public_profile(jobs)
-    for event in ['pull_request', 'push', 'workflow_dispatch']:
+    for event in ['pull_request', 'push', 'schedule', 'workflow_dispatch']:
         for key in ['lint', 'audit', 'notebooks', 'cli-python', 'docs', 'app', 'app-wasm']:
             assert active(
                 jobs[key],
                 event,
                 states={'changes': 'success', 'core': 'success', 'native': 'success'},
-            ), 'full CI retains every required consumer on each supported event'
+            ) == (not public or key != 'app-wasm' or event != 'pull_request'), (
+                'PRs retain fast consumers; full events also require WebAssembly'
+            )
             assert not active(
                 jobs[key],
                 event,
@@ -68,7 +70,9 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
                 event,
                 states={'changes': 'success', 'core': 'success', 'native': 'success'},
                 core_only=True,
-            ), 'core-only repair retains both platforms and pin currency'
+            ) == (not public or key != 'system' or event != 'pull_request'), (
+                'core-only repairs retain core and pin currency, with system excluded from PRs'
+            )
 
 
 def test_pages_visibility_and_webapp_default_retention_follow_the_public_profile():
@@ -140,23 +144,24 @@ def assert_core_failure_reporting(core):
     ), 'core commands must propagate failures rather than convert or skip a red result'
 
 
-@pytest.mark.parametrize('event', ['pull_request', 'push', 'workflow_dispatch'])
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
 @pytest.mark.parametrize('upstream', ['success', 'failure', 'skipped'])
 def test_later_jobs_report_after_core_and_native_results(event, upstream):
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
-    for name in ['audit', 'notebooks', 'cli-python', 'docs', 'app', 'app-wasm']:
-        states = {'changes': 'success', 'core': upstream}
+    for name in ['audit', 'notebooks', 'cli-python', 'docs', 'app', 'app-wasm', 'system']:
+        states = {'changes': 'success', 'core': upstream, 'app': upstream}
         if name == 'notebooks':
             states['native'] = upstream
-        assert active(jobs[name], event, states=states), (
-            'owner failure reporting requires every later job after a successful source resolution'
+        expected = event != 'pull_request' or name not in {'system', 'app-wasm'}
+        assert active(jobs[name], event, states=states) == expected, (
+            'every event-required later job reports despite failed or skipped core/native/app'
         )
         assert not jobs[name].get('continue-on-error'), (
             'later reporting must retain each job failure in the overall run conclusion'
         )
 
 
-@pytest.mark.parametrize('event', ['pull_request', 'push', 'workflow_dispatch'])
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
 @pytest.mark.parametrize('block', ['changes-failed', 'changes-skipped', 'cancelled', 'core-only'])
 def test_reporting_keeps_source_cancellation_and_repair_boundaries(event, block):
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']

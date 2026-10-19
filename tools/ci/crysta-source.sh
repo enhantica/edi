@@ -55,22 +55,31 @@ _crysta_granted() {  # the repositories the minted token reads, listed with curl
   fi
 }
 
-# crysta_remote <step> <git args...>: run one remote git step with the bounded auth retry. The output
-# lands in CRYSTA_REMOTE_OUT; the return code is git's last. `.extraheader` is cleared because
-# actions/checkout's persisted repo-scoped header would override the URL credential (PR54 run 3).
+# crysta_remote <step> <git args...>: run one remote git step with the bounded auth retry. git's standard
+# output lands in CRYSTA_REMOTE_OUT and its messages in CRYSTA_REMOTE_ERR, kept apart because git also writes
+# warnings on success (GitHub's redirect notice), which no answer may contain; the return code
+# is git's last. `.extraheader` is cleared because actions/checkout's persisted repo-scoped header would override
+# the URL credential (PR54 run 3).
 crysta_remote() {
-  local step="$1" attempt=1 rc
+  local step="$1" attempt=1 rc err
   shift
   while :; do
     rc=0
-    CRYSTA_REMOTE_OUT="$(git -c http.https://github.com/.extraheader= "$@" 2>&1)" || rc=$?
+    CRYSTA_REMOTE_OUT="" CRYSTA_REMOTE_ERR=""
+    if ! err="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crysta-remote.XXXXXX")"; then
+      CRYSTA_REMOTE_ERR="build-crysta: no temporary file for git's messages"
+      return 1
+    fi
+    CRYSTA_REMOTE_OUT="$(git -c http.https://github.com/.extraheader= "$@" 2>"$err")" || rc=$?
+    CRYSTA_REMOTE_ERR="$(cat "$err")"
+    rm -f "$err"
     [ "$rc" -eq 0 ] && return 0
-    case "$CRYSTA_REMOTE_OUT" in
+    case "$CRYSTA_REMOTE_ERR" in
       *"Repository not found"* | *"Authentication failed"* | *"could not read Username"* | \
         *"Invalid username or password"* | *"returned error: 401"* | *"returned error: 403"*) ;;
       *) return "$rc" ;;
     esac
-    echo "build-crysta: $step attempt $attempt/3 failed (rc=$rc): $(_crysta_redact "$CRYSTA_REMOTE_OUT")" >&2
+    echo "build-crysta: $step attempt $attempt/3 failed (rc=$rc): $(_crysta_redact "$CRYSTA_REMOTE_ERR")" >&2
     _crysta_granted
     [ "$attempt" -lt 3 ] || return "$rc"
     if [ "$attempt" -eq 1 ]; then sleep 5; else sleep 15; fi
@@ -88,7 +97,7 @@ crysta_branch_head() {
   CRYSTA_BRANCH_HEAD=""
   local want="refs/heads/$1" lines="" found="" count=0 line bad=0
   if ! crysta_remote "branch lookup" ls-remote "$(crysta_url)" "$want"; then
-    echo "crysta-resolution: the crysta branch lookup for '$1' failed: $(_crysta_redact "$CRYSTA_REMOTE_OUT") — refusing: a branch that cannot be resolved is never replaced by crysta main" >&2
+    echo "crysta-resolution: the crysta branch lookup for '$1' failed: $(_crysta_redact "$CRYSTA_REMOTE_ERR") — refusing: a branch that cannot be resolved is never replaced by crysta main" >&2
     return 1
   fi
   lines="$CRYSTA_REMOTE_OUT"
@@ -130,7 +139,7 @@ crysta_landed() {
   local clone rc=2 anc=0 tree trees ref="${2:-refs/tags/build-$1}" what="${2:-build-$1}"  # review-18 F03: only a history read in full answers 1
   clone="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crysta-currency.XXXXXX")"  # the job's temp: a cancel cannot strand it
   if ! crysta_remote "main clone" clone -q --bare --filter=tree:0 --single-branch --branch main "$(crysta_url)" "$clone/c"; then
-    echo "crysta-currency: crysta main could not be read: $(_crysta_redact "$CRYSTA_REMOTE_OUT")" >&2
+    echo "crysta-currency: crysta main could not be read: $(_crysta_redact "$CRYSTA_REMOTE_ERR")" >&2
   else
     git -C "$clone/c" merge-base --is-ancestor "$1" main 2>/dev/null || anc=$?
     if [ "$anc" -eq 0 ]; then
@@ -138,7 +147,7 @@ crysta_landed() {
     elif [ "$anc" -ne 1 ]; then  # review-20 F02: any lookup error is red (gate 9), whatever a later lookup finds
       echo "crysta-currency: the ancestry of $1 could not be read (merge-base exit $anc)" >&2
     elif ! crysta_remote "${2:+branch }${2:-build tag}" -C "$clone/c" fetch -q origin "$ref:$ref"; then
-      echo "crysta-currency: $what could not be read: $(_crysta_redact "$CRYSTA_REMOTE_OUT")" >&2
+      echo "crysta-currency: $what could not be read: $(_crysta_redact "$CRYSTA_REMOTE_ERR")" >&2
     elif ! tree="$(git -C "$clone/c" rev-parse "$1^{tree}")" || ! trees="$(git -C "$clone/c" log --format=%T main)"; then
       echo "crysta-currency: $what's tree or crysta main's history could not be read" >&2
     elif grep -qxF "$tree" <<<"$trees"; then
@@ -184,9 +193,9 @@ crysta_paired_commit() {
   ref="refs/heads/$CRYSTA_PAIRED_BRANCH"
   clone="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crysta-paired.XXXXXX")"
   if ! crysta_remote "main clone" clone -q --bare --filter=tree:0 --single-branch --branch main "$(crysta_url)" "$clone/c"; then
-    echo "crysta-paired: crysta main could not be read: $(_crysta_redact "$CRYSTA_REMOTE_OUT")" >&2
+    echo "crysta-paired: crysta main could not be read: $(_crysta_redact "$CRYSTA_REMOTE_ERR")" >&2
   elif ! crysta_remote "branch" -C "$clone/c" fetch -q origin "$ref:$ref"; then
-    echo "crysta-paired: crysta branch '$CRYSTA_PAIRED_BRANCH' could not be read: $(_crysta_redact "$CRYSTA_REMOTE_OUT")" >&2
+    echo "crysta-paired: crysta branch '$CRYSTA_PAIRED_BRANCH' could not be read: $(_crysta_redact "$CRYSTA_REMOTE_ERR")" >&2
   else
     git -C "$clone/c" merge-base --is-ancestor "$1" "$ref" 2>/dev/null || on_branch=$?
     git -C "$clone/c" merge-base --is-ancestor "$1" main 2>/dev/null || on_main=$?

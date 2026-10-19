@@ -183,11 +183,24 @@ def observed_object(sdk, build, fixture):
     native_object = build / 'observed_scan.o'
     with native_object.open('wb') as output:
         run(['llvm-ar', 'p', str(library), member[0]], stdout=output)
-    symbols = subprocess.check_output(
-        ['llvm-nm', '-g', str(native_object)], text=True
+    names = [
+        line.split()[-1]
+        for line in subprocess.check_output(
+            ['llvm-nm', '-g', str(native_object)], text=True
+        ).splitlines()
+        if line.split()
+    ]
+    # Mach-O's extra underscore is removed below; Darwin LLVM must not strip again.
+    demangled = subprocess.check_output(
+        ['llvm-cxxfilt', '--no-strip-underscore'],
+        input='\n'.join(name[1:] if name.startswith('__Z') else name for name in names) + '\n',
+        text=True,
     ).splitlines()
-    names = [line.split()[-1] for line in symbols if line.split()]
-    optimizer = [name for name in names if '11fit_project' in name]
+    optimizer = [
+        name
+        for name, readable in zip(names, demangled, strict=True)
+        if readable.partition('(')[0] == 'crysta::fit_scan_file'
+    ]
     # Obtain this toolchain's exact wrapper symbol spellings from its own object.
     wrapper_object = build / 'boundary.o'
     run([
@@ -206,7 +219,9 @@ def observed_object(sdk, build, fixture):
     ).splitlines()
     wrapper_names = [line.split()[-1] for line in wrappers if line.split()]
     driver = [
-        name for name in names if '22sequential_fit_project' in name and name in wrapper_names
+        name
+        for name, readable in zip(names, demangled, strict=True)
+        if readable.partition('(')[0] == 'crysta::sequential_fit_project' and name in wrapper_names
     ]
     if len(optimizer) != 1 or len(driver) != 1:
         raise RuntimeError('Scan execution: compiled native boundaries must resolve uniquely')

@@ -80,12 +80,12 @@ The original `baseline.json` and its protected execution-source path set stay
 unchanged. The shipped snapshot continues to capture that whole path set from
 the accepted main object, including the selected task dependency commands.
 
-| Event | Former Linux selection | Former macOS selection | Current selection on both platforms |
-| --- | --- | --- | --- |
-| Pull request | Full system tier | Exclude the three `nightly` paths | Exclude exactly the thirteen `nightly-only` paths |
-| Main push | Full system tier | Full system tier | Exclude exactly the thirteen `nightly-only` paths |
-| Schedule | Full system tier | Full system tier | Full system tier, including every `nightly-only` path |
-| Manual dispatch | Full system tier | Full system tier | Exclude exactly the thirteen `nightly-only` paths |
+| Event           | Former Linux selection | Former macOS selection            | Current selection on both platforms                   |
+| --------------- | ---------------------- | --------------------------------- | ----------------------------------------------------- |
+| Pull request    | Full system tier       | Exclude the three `nightly` paths | Exclude exactly the thirteen `nightly-only` paths     |
+| Main push       | Full system tier       | Full system tier                  | Exclude exactly the thirteen `nightly-only` paths     |
+| Schedule        | Full system tier       | Full system tier                  | Full system tier, including every `nightly-only` path |
+| Manual dispatch | Full system tier       | Full system tier                  | Exclude exactly the thirteen `nightly-only` paths     |
 
 The former driver used `EDI_SKIP_NIGHTLY_GROUP=true` for the macOS PR
 deferral. The current driver excludes `nightly-only` by default, and includes it
@@ -101,3 +101,55 @@ conductor decision narrowing the once-per-run probe work to nightly. Every
 required Linux job, non-suite command and frozen executable closure is still
 checked against that accepted policy; schedule-only system observers do not
 authorize dropping regular Linux gates.
+
+## Owner event policy of 2026-10-19
+
+Owner records `682968ba1` and `7552dbd4b`, packet items 6 and 8, supersede
+these historical PR cohorts. `event_policy.py` applies only those declared
+changes to the original Git snapshots; both generators use it. Snapshot
+inventories, assertions, task declarations and protected source closures retain
+their independent original provenance. The snapshots name this overlay explicitly.
+
+| Operation                         | Pull request | Main push      | Schedule | Full manual |
+| --------------------------------- | ------------ | -------------- | -------- | ----------- |
+| System parts, Linux and macOS     | Omitted      | Required       | Required | Required    |
+| WebAssembly job                   | Omitted      | Required       | Required | Required    |
+| ThreadSanitizer, Linux            | Omitted      | Required       | Required | Required    |
+| App Python group, Linux and macOS | Omitted      | Required       | Required | Required    |
+| Shard-time comparison             | Omitted      | Required route | Omitted  | Omitted     |
+| `nightly-only` system files       | Omitted      | Omitted        | Included | Included    |
+
+Before, artifact and timing routes required same-repo PR execution and the
+collector asserted the PR head SHA. After, artifact sharing is exercised on all
+three full-run events, and the timing route consumes the current push SHA versus
+the selected previous main push. Distinct planted push and PR SHAs prevent an
+obsolete PR operand from passing. Existing mutation identities are retained;
+the historical timing test name does not define its event policy.
+
+The retained Linux command and task-closure gates now cover all four events.
+Missing-job, skipped, advisory and wrong-command/prerequisite controls exercise
+each moved gate on each full-run event and on both declared desktop platforms.
+The actual suite-step shells still propagate injected process failures.
+No slower job or step becomes optional on push, schedule or full manual runs.
+
+## Git messages and branch answers
+
+Before, the source closure required the original remote helper byte for byte,
+and git's redirect warning joined the branch answer. After,
+`accepted-remote-streams.json` admits exactly the helper's stdout/stderr split,
+with all other code frozen. `generate-remote-streams.py` reads both sides from
+the named Git change; these are regression pins, not an independent oracle.
+The original baseline and shipped snapshots stay unchanged. The source-fetch
+observer supplies both output variables while preserving its command, failure,
+ownership and source-stamp checks.
+
+Independent planted replies exercise a valid ref and proven absence alongside
+redirect warnings. A second ref, malformed stdout and a failed lookup still
+refuse. Credentials planted in successful warnings, failure messages and
+malformed answers must never appear in public output. Removal controls protect
+the stream capture, temporary-file cleanup, retry bound, exact ref, single-answer
+check and redaction.
+
+Leading shell comments share cached command observations with the same body,
+so the comment-only control no longer repeats the same subprocess scenarios.
+Body changes and failure injections still receive their own observations.

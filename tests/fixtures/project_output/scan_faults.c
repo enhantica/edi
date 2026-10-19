@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "fault_interpose.h"
 
 static int matches(const char* path, const char* key) {
     const char* target = getenv(key);
@@ -30,8 +31,8 @@ static int read_source(int fd) {
 #endif
     return matches(path, "SCAN_FAULT_READ_PATH");
 }
-ssize_t read(int fd, void* buffer, size_t count) {
-    ssize_t (*original)(int, void*, size_t) = dlsym(RTLD_NEXT, "read");
+ssize_t FAULT(read)(int fd, void* buffer, size_t count) {
+    ssize_t (*original)(int, void*, size_t) = REAL(read);
     static int prefix = 0;
     if (read_source(fd)) {
         const char* after = getenv("SCAN_FAULT_PREFIX");
@@ -46,8 +47,8 @@ ssize_t read(int fd, void* buffer, size_t count) {
     }
     return original(fd, buffer, count);
 }
-size_t fread(void* buffer, size_t size, size_t count, FILE* stream) {
-    size_t (*original)(void*, size_t, size_t, FILE*) = dlsym(RTLD_NEXT, "fread");
+size_t FAULT(fread)(void* buffer, size_t size, size_t count, FILE* stream) {
+    size_t (*original)(void*, size_t, size_t, FILE*) = REAL(fread);
     static int prefix = 0;
     if (!size || !count) return original(buffer, size, count, stream);
     if (read_source(fileno(stream))) {
@@ -66,18 +67,24 @@ size_t fread(void* buffer, size_t size, size_t count, FILE* stream) {
     }
     return original(buffer, size, count, stream);
 }
-int unlink(const char* path) {
-    int (*original)(const char*) = dlsym(RTLD_NEXT, "unlink");
+int FAULT(unlink)(const char* path) {
+    int (*original)(const char*) = REAL(unlink);
     if (matches(path, "SCAN_FAULT_REMOVE_PATH")) { receipt("remove-refused\n"); errno = EACCES; return -1; }
     return original(path);
 }
-int remove(const char* path) {
-    int (*original)(const char*) = dlsym(RTLD_NEXT, "remove");
+int FAULT(remove)(const char* path) {
+    int (*original)(const char*) = REAL(remove);
     if (matches(path, "SCAN_FAULT_REMOVE_PATH")) { receipt("remove-refused\n"); errno = EACCES; return -1; }
     return original(path);
 }
-int rename(const char* from, const char* to) {
-    int (*original)(const char*, const char*) = dlsym(RTLD_NEXT, "rename");
+int FAULT(rename)(const char* from, const char* to) {
+    int (*original)(const char*, const char*) = REAL(rename);
     if (matches(to, "SCAN_FAULT_RENAME_PATH")) { receipt("rename-after-write-refused\n"); errno = EACCES; return -1; }
     return original(from, to);
 }
+
+INTERPOSE(read)
+INTERPOSE(fread)
+INTERPOSE(unlink)
+INTERPOSE(remove)
+INTERPOSE(rename)

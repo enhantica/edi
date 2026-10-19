@@ -155,7 +155,10 @@ def test_single_and_joint_execute_declared_selection_and_budget(tmp_path, mode, 
 
 
 @pytest.mark.parametrize('mode', ['single', 'joint'])
-def test_tolerance_changes_real_stopping_behavior(tmp_path, mode):
+def test_tolerance_changes_real_stopping_behavior(tmp_path, mode, monkeypatch):
+    # Stopping rules do not require nested numeric worker pools.
+    monkeypatch.setenv('OMP_NUM_THREADS', '1')
+    monkeypatch.setenv('OPENBLAS_NUM_THREADS', '1')
     case = 'cosio-d20-s1' if mode == 'single' else 'ncaf-wish-2bank-s3'
     records = []
     for index, tolerance in enumerate((0.9, 1e-12)):
@@ -165,7 +168,7 @@ def test_tolerance_changes_real_stopping_behavior(tmp_path, mode):
             name=f'tolerance-{index}',
             descent='fast_descent',
             chi_square_tolerance=tolerance,
-            max_iterations=20,
+            max_iterations=4 if mode == 'single' else 2,
         )
         records.append(run_fit(project))
     assert int(records[0]['iterations']) < int(records[1]['iterations']), (

@@ -41,7 +41,7 @@ if [ "$(cat "$TREE/prefix/.crysta-sha" 2>/dev/null)" != "$SHA" ]; then
         -DCRYSTA_CXX_PACKAGE=ON -DCMAKE_INSTALL_PREFIX="$TREE/prefix" \
         -DCMAKE_CXX_FLAGS="$FLAGS" -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread >"$TREE.configure.log" 2>&1 \
         || { cat "$TREE.configure.log" >&2; exit 1; }
-    cmake --build "$TREE/crysta" -j
+    cmake --build "$TREE/crysta" -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
     cmake --install "$TREE/crysta" >/dev/null
     printf '%s\n' "$SHA" >"$TREE/prefix/.crysta-sha"
 fi
@@ -50,7 +50,7 @@ fi
 cmake -S tools/ci/tsan -B "$TREE/edi" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_PREFIX_PATH="$TREE/prefix" -DEDI_ROOT="$ROOT" \
     -DCMAKE_CXX_FLAGS="$FLAGS" -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread >/dev/null
-cmake --build "$TREE/edi" -j
+cmake --build "$TREE/edi" -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
 
 export OMP_NUM_THREADS=1
 export TSAN_OPTIONS="exitcode=66 ${TSAN_OPTIONS:-}"

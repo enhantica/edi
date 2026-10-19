@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.e04_t1.project_actor import run_projects
 
 ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
@@ -45,20 +46,8 @@ def runner():
 
 
 @pytest.fixture(scope='module')
-def existing_projects_run(acceptance_reference):
-    return subprocess.run(
-        [str(runner()), '-input', str(APP_TESTS / 'tst_e04_t1_projects.qml'), '-o', '-,txt'],
-        env={
-            **os.environ,
-            'QT_QPA_PLATFORM': 'offscreen',
-            'QT_QUICK_BACKEND': 'software',
-            'EDI_ACCEPTANCE_REFERENCE': acceptance_reference,
-        },
-        capture_output=True,
-        text=True,
-        timeout=300,
-        check=False,
-    )
+def existing_projects_run(acceptance_reference, request):
+    return run_projects(request.session, str(runner()), acceptance_reference)
 
 
 def test_existing_projects_open_and_populate_pages(existing_projects_run):

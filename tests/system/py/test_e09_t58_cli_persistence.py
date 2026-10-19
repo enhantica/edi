@@ -478,10 +478,6 @@ def _assert_edi_axis_snapshot_roundtrip(tmp_path: Path, kinds: tuple[str, ...]) 
     )
 
 
-def test_edi_nonfirst_free_axis_prior_survives_saved_undo(tmp_path: Path) -> None:
-    _assert_edi_axis_snapshot_roundtrip(tmp_path, ('fixed', 'positive', 'fixed'))
-
-
 # Same independently enumerated input-contract matrix as crysta: fixed tokens have
 # absent uncertainty; tied free axes must agree on numeric seed e.s.d., with absent
 # and engaged zero both seeding zero. Every nonempty free subset is represented.
@@ -497,19 +493,11 @@ _AXIS_PRIOR_ARRANGEMENTS = [
     'kinds', _AXIS_PRIOR_ARRANGEMENTS, ids=['-'.join(kinds) for kinds in _AXIS_PRIOR_ARRANGEMENTS]
 )
 def test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo(
-    tmp_path: Path, kinds: tuple[str, ...]
+    tmp_path: Path, kinds: tuple[str, ...], monkeypatch
 ) -> None:
-    _assert_edi_axis_snapshot_roundtrip(tmp_path, kinds)
-
-
-@pytest.mark.parametrize(
-    'kinds',
-    [('absent', 'zero', 'fixed'), ('zero', 'absent', 'fixed')],
-    ids=['absent-zero-fixed', 'zero-absent-fixed'],
-)
-def test_edi_mixed_optional_axis_priors_survive_saved_undo(
-    tmp_path: Path, kinds: tuple[str, ...]
-) -> None:
+    # Persistence invariants do not require nested numeric worker pools.
+    monkeypatch.setenv('OMP_NUM_THREADS', '1')
+    monkeypatch.setenv('OPENBLAS_NUM_THREADS', '1')
     _assert_edi_axis_snapshot_roundtrip(tmp_path, kinds)
 
 

@@ -19,6 +19,7 @@ import pytest
 import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -598,8 +599,12 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
             )
             if not enabled:
                 continue
-        elif condition is False:
-            continue
+        elif re.search(r'\bgroup-app(?:\s|$)', cmd):
+            assert active(step, event) == (event != 'pull_request'), (
+                'The app group runs on push, nightly and full manual, and skips PRs'
+            )
+            if event == 'pull_request':
+                continue
         else:
             assert condition is None, (
                 'Build and ordinary app checks remain unconditional within the desktop job; '
@@ -623,7 +628,13 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
             f'CI {platform}/{event} completes its declared step {cmd}: {result.stderr}'
         )
     observed = calls(tmp_path)
-    assert_sequence(observed, CHECKS if enabled else AUTOMATIC_CHECKS)
+    expected_checks = CHECKS if enabled else AUTOMATIC_CHECKS
+    if event == 'pull_request':
+        expected_checks = tuple(check for check in expected_checks if check != 'group-app')
+    assert_sequence(observed, expected_checks)
+    assert ('check:group-app' in observed) == (event != 'pull_request'), (
+        'PRs retain build, lint and formatting; the app group executes on every full event'
+    )
     app_calls = {'check:app-test', 'check:app-ui-test'} & set(observed)
     assert app_calls == ({'check:app-test', 'check:app-ui-test'} if enabled else set()), (
         'Owner decision: both desktop tiers execute on schedule/manual, neither on PR/push; '

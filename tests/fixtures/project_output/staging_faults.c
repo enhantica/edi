@@ -6,11 +6,12 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "fault_interpose.h"
 
-int link(const char* from, const char* to) {
+int FAULT(link)(const char* from, const char* to) {
     static int injected;
-    int (*real_link)(const char*, const char*) = dlsym(RTLD_NEXT, "link");
-    int (*real_unlink)(const char*) = dlsym(RTLD_NEXT, "unlink");
+    int (*real_link)(const char*, const char*) = REAL(link);
+    int (*real_unlink)(const char*) = REAL(unlink);
     const char* selected = getenv("STAGING_LINK_SOURCE");
     if (!injected && selected && strcmp(from, selected) == 0) {
         injected = 1;
@@ -39,3 +40,5 @@ int link(const char* from, const char* to) {
     }
     return real_link(from, to);
 }
+
+INTERPOSE(link)

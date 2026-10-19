@@ -134,7 +134,7 @@ def test_only_an_actual_off_pr_group_can_exempt_a_separate_app_build(tmp_path):
 
 def workflow_control():
     return {
-        'on': {'pull_request': {}},
+        'on': {event: {} for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch')},
         'defaults': {'run': {'shell': 'bash'}},
         'jobs': {
             'app': {
@@ -176,7 +176,7 @@ def workflow_control():
                         'run': (
                             'python3 tools/ci/system_shard_time.py '
                             '--current current.json --main main.json '
-                            '--run-id 111 --head-sha cccccccccccccccccccccccccccccccccccccccc'
+                            '--run-id 111 --head-sha dddddddddddddddddddddddddddddddddddddddd'
                         )
                     },
                 ],
@@ -230,9 +230,9 @@ def test_artifact_route_oracle_rejects_each_exercised_pr_bypass(tmp_path, mutati
         }
         target = mapping[mutation]
         target['continue-on-error' if mutation.endswith('continue') else 'if'] = (
-            True if mutation.endswith('continue') else "github.event_name != 'pull_request'"
+            True if mutation.endswith('continue') else "github.event_name == 'pull_request'"
         )
-    with pytest.raises(AssertionError, match=r'PR|workflow|process|producer'):
+    with pytest.raises(AssertionError, match=r'PR|workflow|process|producer|trigger'):
         artifact_routes(broken, tmp_path / 'negative')
 
 
@@ -261,7 +261,7 @@ def test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary(tm
         step for step in job['steps'] if 'tools/ci/system_shard_time.py' in step.get('run', '')
     )
     if mutation == 'job-excludes-pr':
-        job['if'] = "github.event_name != 'pull_request'"
+        job['if'] = "github.event_name == 'pull_request'"
     elif mutation == 'step-disabled':
         step['if'] = '${{ false }}'
     elif mutation == 'missing-system-dependency':
@@ -281,7 +281,7 @@ def test_timing_route_oracle_executes_and_enforces_each_exercised_pr_boundary(tm
         step['run'] = 'if false; then ' + step['run'] + '; fi'
     else:
         (job if mutation == 'job-continue' else step)['continue-on-error'] = True
-    with pytest.raises(AssertionError, match=r'PR|workflow|process|comparator'):
+    with pytest.raises(AssertionError, match=r'Push|workflow|process|comparator'):
         timing_route(broken, tmp_path / 'negative')
 
 
@@ -309,10 +309,22 @@ def test_real_process_guard_refuses_each_app_compiler_entry_before_execution(tmp
     assert state['blocked'], 'Every named process channel must reach the pre-execution guard'
 
 
-@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule'])
+@pytest.mark.parametrize(
+    ('event', 'core_only'),
+    [
+        ('pull_request', False),
+        ('push', False),
+        ('schedule', False),
+        ('workflow_dispatch', False),
+        ('workflow_dispatch', True),
+        ('workflow_run', False),
+        ('repository_dispatch', False),
+        ('other-event', False),
+    ],
+)
 @pytest.mark.parametrize('platform', ['Linux', 'macOS'])
 def test_nightly_only_observers_are_absent_from_actual_pr_shards_and_retained_nightly(
-    tmp_path, event, platform
+    tmp_path, event, core_only, platform
 ):
     root = Path(__file__).resolve().parents[3]
     groups = json.loads((root / 'tests/test-groups.json').read_text())['groups']
@@ -328,14 +340,16 @@ def test_nightly_only_observers_are_absent_from_actual_pr_shards_and_retained_ni
     }
     assert required <= set(paths), 'Every assigned separate-build observer must be declared off PR'
     workflow = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())
-    arguments = shard_selection(root, tmp_path, event, platform, workflow)
+    arguments = shard_selection(root, tmp_path, event, platform, workflow, core_only=core_only)
     ignored = {
         argument.partition('=')[2] for argument in arguments if argument.startswith('--ignore=')
     }
-    if event == 'schedule':
+    if event == 'schedule' or (event == 'workflow_dispatch' and not core_only):
         assert not required & ignored, 'Nightly must retain every separate-build observer'
     else:
-        assert set(paths) <= ignored, 'Both platforms must exclude these hosts on PR/main'
+        assert set(paths) <= ignored, (
+            'Both platforms exclude nightly hosts on PR, push, core-only manual and other events'
+        )
 
 
 def test_observer_timeout_terminates_a_child_that_started_its_own_session(tmp_path):

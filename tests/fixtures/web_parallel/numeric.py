@@ -5,6 +5,7 @@ import json
 import math
 import re
 import shlex
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal, localcontext
 from pathlib import Path
 
 _MANTISSA = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)'
@@ -194,7 +195,32 @@ def scientific(root):
     return result
 
 
-def compare_scientific(actual, expected, relative=1e-9, absolute=1e-11, *, conditioning=None):
+def _iucr_operand(token):
+    """Apply ADR-0092's default rule to the independent native decimal capture."""
+    mantissa, suffix = _PARAMETER.fullmatch(token).groups()
+    value = Decimal(mantissa)
+    sigma = Decimal(suffix)
+    if '.' not in suffix:
+        sigma = sigma.scaleb(-len(mantissa.partition('.')[2]))
+    with localcontext() as context:
+        context.prec = max(40, len(token) * 2)
+        place = Decimal(1).scaleb(sigma.adjusted() - 1)
+        rounded_sigma = sigma.quantize(place, rounding=ROUND_CEILING)
+        if rounded_sigma / place >= 20:
+            place = place.scaleb(1)
+            rounded_sigma = sigma.quantize(place, rounding=ROUND_CEILING)
+        rounded_value = value.quantize(place, rounding=ROUND_HALF_UP)
+        if value and not rounded_value:
+            digits = len(str(int(rounded_sigma / place)))
+            rounded_value = value.quantize(
+                Decimal(1).scaleb(value.adjusted() - digits + 1), rounding=ROUND_HALF_UP
+            )
+    return float(rounded_value), float(rounded_sigma)
+
+
+def compare_scientific(
+    actual, expected, relative=1e-9, absolute=1e-11, *, conditioning=None, saved_iucr=False
+):
     bounds = uncertainty_tolerances(expected, conditioning) if conditioning is not None else {}
     if actual.keys() != expected.keys():
         raise ValueError('web fit must retain the native scientific document inventory')
@@ -214,6 +240,9 @@ def compare_scientific(actual, expected, relative=1e-9, absolute=1e-11, *, condi
                         )
                     av, au, bracketed = aa
                     bv, bu, reference_bracketed = bb
+                    bv, bu = (
+                        _iucr_operand(b) if saved_iucr and bu is not None and bu > 0 else (bv, bu)
+                    )
                     if (
                         not math.isfinite(av)
                         or not math.isfinite(bv)

@@ -39,6 +39,10 @@ jobs:
               --title "$PR_TITLE" --body-file "$RUNNER_TEMP/pr-body.txt"
           fi
           base="$PUSH_BEFORE"
+          # After a force push the old head is not in this branch's history, so check what the branch adds instead.
+          if [ -n "$base" ] && ! git merge-base --is-ancestor "$base" HEAD 2>/dev/null; then
+            base=""
+          fi
           if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ]; then
             if [ "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH" ]; then
               base=root  # the repository's first push: everything

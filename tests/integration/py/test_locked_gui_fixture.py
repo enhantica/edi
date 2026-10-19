@@ -109,6 +109,7 @@ def test_locked_consumer_stages_only_a_missing_app_gui_prerequisite(
         return subprocess.CompletedProcess(command, 0, '', '')
 
     monkeypatch.setattr(locked_configure, 'gui_source', prepare)
+    monkeypatch.setattr(locked_configure, 'macos_sdk', lambda: tmp_path / 'platform sdk')
     monkeypatch.setattr(subprocess, 'run', configure)
     extra = [] if selection == 'core' else ['-DEDI_BUILD_APP=ON']
     explicit = root / 'explicit-gui'
