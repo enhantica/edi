@@ -5970,11 +5970,7 @@ struct AssistantViewModel::State {
             if(show_actions) { native_start_visible_save(task); return; }
             if(!task->current_destination) { native_choose_save_destination(task); return; }
             save_stage = "WORKER_SUBMIT";
-            task->ticket=idle_worker->submit("assistant-native-save",native_save_job(task));
-            if(!receiver)return;
-            // Submitted trace may synchronously retire the owner before the
-            // actual ticket returns. Cancel this exact ticket, never a newer one.
-            if(task->cancelled || native_save!=task)try{idle_worker->cancel(task->ticket);}catch(...){}
+            if(!native_accept_save_destination(task,QUrl(),QString()))return;
         }catch(...) {
             if(!receiver || receiver->state_.get()!=this)return;
             throw; // The exact never-submitted task guard performs bounded cleanup.
