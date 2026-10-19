@@ -643,25 +643,83 @@ void ProjectViewModel::finishWidgetCreation(const std::shared_ptr<WidgetCreation
     if (widget_creation_input_ == input) widget_creation_input_.reset();
 }
 QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool structural, const CreationAction& actual) {
-    const auto input = widget_creation_input_;
-    if (!input) return apply(change, structural);
-    const auto& expected = input->expected;
-    const bool generated_atom = actual.kind == CreationAction::Kind::AtomAppend;
-    if (input->consumed || expected.kind != actual.kind || expected.row != actual.row || expected.field != actual.field ||
-        (!generated_atom && expected.text != actual.text) || expected.number != actual.number)
-        return tr("A different creation control cannot enter this original input");
-    if (generated_atom && input->bounded_result &&
-        (actual.text.isEmpty() || actual.text.contains(QChar(0)) || actual.text.toUtf8().size() > edi::assistant::Limits::id_bytes)) {
-        input->consumed = true; input->result_identity_refused = true;
-        input->outcome.message = tr("The generated atom identity exceeds the assistant result limit; no edit was made");
-        return input->outcome.message;
-    }
+    const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
-    const bool previous = widget_input_executing_;
-    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
-    input->consumed = true; widget_input_executing_ = true;
-    input->outcome = applyEdit(change, structural);
-    return input->outcome.applied ? QString{} : input->outcome.message;
+    const auto input = widget_creation_input_;
+    if (widget_input_ || widget_relation_input_ || widget_background_input_ || widget_file_input_)
+        return tr("A different original input is still being completed");
+    const bool generated_atom = actual.kind == CreationAction::Kind::AtomAppend;
+    if (input) {
+        const auto& expected=input->expected;
+        if (input->consumed || expected.kind!=actual.kind || expected.row!=actual.row || expected.field!=actual.field ||
+            (!generated_atom && expected.text!=actual.text) || expected.number!=actual.number)
+            return tr("A different creation control cannot enter this original input");
+        if (generated_atom && input->bounded_result &&
+            (actual.text.isEmpty() || actual.text.contains(QChar(0)) || actual.text.toUtf8().size()>edi::assistant::Limits::id_bytes)) {
+            input->consumed=true;input->result_identity_refused=true;
+            input->outcome.message=tr("The generated atom identity exceeds the assistant result limit; no edit was made");
+            return input->outcome.message;
+        }
+    }
+    const bool previous=widget_input_executing_;
+    const auto release=qScopeGuard([self,previous]{if(self)self->widget_input_executing_=previous;});
+    if(input){input->consumed=true;widget_input_executing_=true;}
+    using Kind=CreationAction::Kind;
+    const bool structure_metadata=actual.kind==Kind::SpaceGroupName || actual.kind==Kind::SpaceGroupNumber || actual.kind==Kind::SpaceGroupSetting;
+    const bool site_edit=actual.kind==Kind::AtomAppend || actual.kind==Kind::AtomText || actual.kind==Kind::AtomRemove || actual.kind==Kind::AtomAdpType;
+    if(!structure_metadata && !site_edit) {
+        if(!input)return apply(change,structural);
+        input->outcome=applyEdit(change,structural);
+        return input->outcome.applied?QString{}:input->outcome.message;
+    }
+    const edi::Structure* structure=nullptr;const edi::AtomSite* atom=nullptr;
+    for(const auto& held:project_->structures) {
+        if((structure_metadata || actual.kind==Kind::AtomAppend) && held.get()==actual.row)structure=held.get();
+        if(site_edit && actual.kind!=Kind::AtomAppend)
+            for(const auto& site:held->atom_sites)if(site.get()==actual.row){structure=held.get();atom=site.get();}
+    }
+    const auto refuse=[&](const QString& message) {
+        if(input)input->outcome.message=message;
+        else setLastError(message);
+        return message;
+    };
+    if(!structure)return refuse(tr("The original structure or atom is no longer in this project"));
+    const auto text=actual.text.toStdString();bool equal=false;
+    if(actual.kind==Kind::SpaceGroupName)equal=edi::same_space_group_name(structure->space_group.name_h_m.value(),text);
+    else if(actual.kind==Kind::SpaceGroupNumber)equal=actual.number>0?
+        structure->space_group.it_number && *structure->space_group.it_number==actual.number:!structure->space_group.it_number;
+    else if(actual.kind==Kind::SpaceGroupSetting)equal=structure->space_group.coord_system_code.value()==text;
+    else if(atom && actual.kind==Kind::AtomAdpType)equal=atom->adp_type.value()==text;
+    else if(atom && actual.kind==Kind::AtomText) {
+        if(actual.field=="label")equal=atom->id.value()==text;
+        else if(actual.field=="typeSymbol")equal=atom->type_symbol.value()==text;
+        else if(actual.field=="wyckoffLetter")equal=atom->wyckoff_letter.value()==text;
+        else if(actual.field=="adpType")equal=atom->adp_type.value()==text;
+    }
+    if(equal)return {}; // No setter/write/history or publication for stored no-op.
+    if(const auto pending=editReadinessRefusal(false);!pending.isEmpty())return refuse(pending);
+    const auto warning=tr("The structure edit was applied and Undo retained, but its presentation could not be completed");
+    auto before=edi::capture_structure_edit(*project_);
+    undo_history_.reserve(undo_history_.size()+1);
+    undo_history_.emplace_back(std::move(before)); // Same original history, BEFORE live Edit/observers.
+    EditOutcome result;
+    try {result=applyEdit(change,structural);}
+    catch(...) {if(self)undo_history_.pop_back();throw;} // applyEdit contains post-write failures.
+    if(input)input->outcome=result;
+    if(!self)return result.applied?QString{}:result.message;
+    if(!result.applied)undo_history_.pop_back();
+    if(retired_)return result.applied?QString{}:result.message;
+    const bool publishing_before=editing_;editing_=true;
+    const auto publish_release=qScopeGuard([self,publishing_before]{if(self)self->editing_=publishing_before;});
+    try {syncUndo();}
+    catch(...) {
+        if(!result.applied)throw;
+        result.published=false;result.message=warning;
+        if(input)input->outcome=result;
+        holdPublicationFailure(warning);
+    }
+    if(self && !retired_ && !result.applied)setLastError(result.message);
+    return result.applied?QString{}:result.message;
 }
 
 std::shared_ptr<ProjectViewModel::WidgetFileInput> ProjectViewModel::prepareWidgetStructureFile(

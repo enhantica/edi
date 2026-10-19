@@ -33,6 +33,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -143,6 +144,10 @@ struct StructuresUndo {
     };
     std::vector<Structure> structures;
     std::vector<ExperimentRows> experiments;
+    // Present only for ordinary structure metadata/site edits. Their linked
+    // aliases/results and still-live experiment dependents must follow Undo too.
+    std::optional<RelationsUndo> related;
+    std::optional<FitResultRecord> fit_result;
 };
 
 inline StructuresUndo capture_structures(const Project& project) {
@@ -160,6 +165,29 @@ inline StructuresUndo capture_structures(const Project& project) {
         }
         before.experiments.push_back(std::move(rows));
     }
+    return before;
+}
+
+// Same structures Undo, with the coupled scientific footprint of symmetry/site
+// edits. Structures, links and texture already own their complete parameter
+// images; retain only the other experiment values in the original relations
+// state, so restore never writes through pointers it is about to replace.
+inline StructuresUndo capture_structure_edit(Project& project) {
+    auto before = capture_structures(project);
+    before.related = capture_relations(project);
+    before.fit_result = project.fit_result;
+    std::set<const Parameter*> replaced;
+    for (const auto& structure : project.structures)
+        for (const auto* parameter : structure->parameters()) replaced.insert(parameter);
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) replaced.insert(&link->scale);
+        for (const auto& row : experiment->preferred_orientation)
+            for (const auto* parameter : row->parameters()) replaced.insert(parameter);
+    }
+    std::set<std::string> retained;
+    for (const auto& slot : named_slots(project))
+        if (!replaced.contains(slot.parameter)) retained.insert(slot.unique_name);
+    std::erase_if(before.related->parameters, [&retained](const auto& state) { return !retained.contains(state.unique_name); });
     return before;
 }
 
@@ -873,32 +901,78 @@ class Edit {
     // structure): each experiment is found by identity first, so one removed since refuses with nothing written.
     static Edit restore_structures(Project& project, StructuresUndo before) {
         return Edit([&project, before = std::make_shared<StructuresUndo>(std::move(before))] {
+            if (before->related.has_value() != before->fit_result.has_value())
+                throw std::invalid_argument("undo: the structure scientific history is incomplete");
             std::vector<ExperimentBase*> experiments;
             for (const StructuresUndo::ExperimentRows& rows : before->experiments) {
                 const auto found = std::find_if(project.experiments.begin(), project.experiments.end(),
                                                 [&rows](const auto& held) { return held.get() == rows.experiment; });
-                if (found == project.experiments.end()) {
-                    throw std::invalid_argument("undo: an experiment the structures were linked to is no longer in "
-                                                "the project");
-                }
+                if (found == project.experiments.end())
+                    throw std::invalid_argument("undo: an experiment the structures were linked to is no longer in the project");
                 experiments.push_back(found->get());
             }
             std::vector<ItemVec<Structure>::Ptr> structures;
-            for (const Structure& structure : before->structures) {
-                structures.push_back(std::make_shared<Structure>(structure));
-            }
-            project.structures.assign(std::move(structures));
-            for (std::size_t i = 0; i < experiments.size(); ++i) {
-                std::vector<ItemVec<LinkedStructure>::Ptr> links;
-                for (const LinkedStructure& link : before->experiments[i].links) {
-                    links.push_back(std::make_shared<LinkedStructure>(link));
-                }
+            for (const auto& structure : before->structures) structures.push_back(std::make_shared<Structure>(structure));
+            ItemVec<Structure> prepared_structures(std::move(structures));
+            std::vector<ItemVec<LinkedStructure>> links;
+            std::vector<ItemVec<PrefOrient>> textures;
+            links.reserve(experiments.size()); textures.reserve(experiments.size());
+            for (const auto& rows : before->experiments) {
+                std::vector<ItemVec<LinkedStructure>::Ptr> linked;
+                for (const auto& row : rows.links) linked.push_back(std::make_shared<LinkedStructure>(row));
+                links.emplace_back(std::move(linked));
                 std::vector<ItemVec<PrefOrient>::Ptr> texture;
-                for (const PrefOrient& row : before->experiments[i].texture) {
-                    texture.push_back(std::make_shared<PrefOrient>(row));
+                for (const auto& row : rows.texture) texture.push_back(std::make_shared<PrefOrient>(row));
+                textures.emplace_back(std::move(texture));
+            }
+            std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
+            ItemVec<ParameterAlias> aliases;
+            ItemVec<ParameterConstraint> constraints;
+            std::optional<FitResultRecord> fit_result;
+            if (before->related) {
+                std::map<std::string,Parameter*> named;
+                for (const auto& slot : named_slots(project)) named.emplace(slot.unique_name,slot.parameter);
+                std::set<const Parameter*> replaced;
+                for (const auto& structure : project.structures)
+                    for (const auto* parameter : structure->parameters()) replaced.insert(parameter);
+                for (const auto* experiment : experiments) {
+                    for (const auto& link : experiment->linked_structures) replaced.insert(&link->scale);
+                    for (const auto& row : experiment->preferred_orientation)
+                        for (const auto* parameter : row->parameters()) replaced.insert(parameter);
                 }
-                experiments[i]->linked_structures.assign(std::move(links));
-                experiments[i]->preferred_orientation.assign(std::move(texture));
+                std::set<const Parameter*> admitted;
+                for (auto* experiment : experiments)
+                    for (const auto* parameter : experiment->parameters())
+                        if (!replaced.contains(parameter)) admitted.insert(parameter);
+                for (const auto& state : before->related->parameters) {
+                    const auto found=named.find(state.unique_name);
+                    if (found==named.end() || replaced.contains(found->second) || !admitted.contains(found->second))
+                        throw std::invalid_argument("undo: a related experiment parameter is no longer in the project");
+                    targets.emplace_back(found->second,&state);
+                }
+                std::vector<ItemVec<ParameterAlias>::Ptr> alias_rows;
+                for (const auto& row : before->related->aliases) alias_rows.push_back(std::make_shared<ParameterAlias>(row));
+                aliases=ItemVec<ParameterAlias>(std::move(alias_rows));
+                std::vector<ItemVec<ParameterConstraint>::Ptr> constraint_rows;
+                for (const auto& row : before->related->constraints) constraint_rows.push_back(std::make_shared<ParameterConstraint>(row));
+                constraints=ItemVec<ParameterConstraint>(std::move(constraint_rows));
+                fit_result=before->fit_result;
+            }
+            // All owners, columns and target identities are prepared BEFORE the
+            // first live replacement. ItemVec moves are its original noexcept
+            // commit; remaining parameter writes are the original scalar roles.
+            static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+            project.structures=std::move(prepared_structures);
+            for (std::size_t i=0;i<experiments.size();++i) {
+                experiments[i]->linked_structures=std::move(links[i]);
+                experiments[i]->preferred_orientation=std::move(textures[i]);
+            }
+            if (before->related) {
+                project.aliases=std::move(aliases);project.constraints=std::move(constraints);
+                project.fit_result=std::move(*fit_result);
+                for (const auto& [parameter,state] : targets) {
+                    parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;
+                }
             }
         });
     }
