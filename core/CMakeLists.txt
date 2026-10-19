@@ -5,7 +5,7 @@
 # refinement boundary checks / bounds / write-back — lives in its own TUs on edi's side of the ADR-0003
 # line (core/src-private headers, the adapter_test_access.hpp shape), so the unit tier can reach it
 # without the engine; adapter.cpp keeps everything that holds a crysta type.
-find_package(crysta CONFIG REQUIRED)  # the engine, as a standalone C++ package (build-crysta.sh)
+find_package(crysta CONFIG REQUIRED GLOBAL)  # shared native consumers also use imported targets
 
 add_library(edi_core STATIC
     src/version.cpp
@@ -243,4 +243,22 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/tests/integration/py/assistant_probe/probe.cpp)
     add_executable(assistant_contract_probe ${PROJECT_SOURCE_DIR}/tests/integration/py/assistant_probe/probe.cpp)
     target_include_directories(assistant_contract_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(assistant_contract_probe PRIVATE edi::core)
+endif()
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    foreach(_edi_engine_executable IN ITEMS
+        e02_adapter_probe
+        c09_t8_locale_probe
+        c09_t7_internal_probe
+        e04_t9_latency_probe
+        e04_t10_latency_probe
+        report_format_probe
+        edi_tests
+        assistant_contract_probe)
+        if(TARGET ${_edi_engine_executable})
+            target_link_libraries(${_edi_engine_executable} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+        endif()
+    endforeach()
+    unset(_edi_engine_executable)
 endif()

@@ -378,3 +378,14 @@ if(NOT EMSCRIPTEN)
     include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
     edi_bundle_assistant_runtime()
 endif()
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    foreach(_edi_engine_executable IN ITEMS
+        edi_app
+        edi_app_chart_bench
+        edi_app_tests)
+        target_link_libraries(${_edi_engine_executable} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+    endforeach()
+    unset(_edi_engine_executable)
+endif()

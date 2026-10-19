@@ -13,3 +13,14 @@ add_executable(assistant_qt_transport_probe qt_transport_probe.cpp)
 target_link_libraries(assistant_qt_transport_probe PRIVATE edi_assistant_native Qt6::Core Qt6::Network)
 add_executable(assistant_store_contract_probe store_probe.cpp)
 target_link_libraries(assistant_store_contract_probe PRIVATE edi_assistant_native Qt6::Core Qt6::Network)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    foreach(_edi_engine_executable IN ITEMS
+        assistant_native_contract_probe
+        assistant_qt_transport_probe
+        assistant_store_contract_probe)
+        target_link_libraries(${_edi_engine_executable} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+    endforeach()
+    unset(_edi_engine_executable)
+endif()

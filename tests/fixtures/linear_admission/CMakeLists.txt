@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 project(linear_admission LANGUAGES CXX)
 find_package(crysta CONFIG REQUIRED)
 add_executable(admission_count count.cpp)
@@ -11,4 +11,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(admission_count PRIVATE -O1 -fsanitize-coverage=trace-pc-guard,trace-cmp)
 else()
     message(FATAL_ERROR "The operation gate requires compiler comparison instrumentation")
+endif()
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(admission_count PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
 endif()

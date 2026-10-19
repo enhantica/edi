@@ -330,3 +330,32 @@ new inspection receipt never changes stamps shared by an earlier operation.
 The original LivePreview apply door retains its bool receipt and gains an additive typed Edit::AppliedResult destination. The same closed named Edit executes once and returns its actual appended/replacement Structure or ExperimentBase identity. LivePreview writes that preowned result and the applied flag before note_edit, Applied tracing, edited hooks, requests or publication. Other edits return an empty identity; no public callable constructor or arbitrary scientific executor is introduced. The original apply overload and Edit call operator delegate to the same operation semantics.
 
 PVM's existing prearmed creation/file input owns the receipt, so an Applied observer, thrown publication, retirement or UI-owner deletion cannot erase the factual original identity. Post-callback use still requires original owner/input and actual membership; a pointer is not a lifetime or authorization grant. Published remains separate from applied, and the original Undo/partial facts survive. Capture never infers a later current row. Early original-control settlement records may_have_written from this real applied latch, not a guessed row or replay.
+
+
+### Native executable process defaults
+
+The original SDK executable bootstrap (crysta ADR-0063) is explicitly whole-linked
+from `crysta::process_defaults` at the native app, CLI and engine-consuming
+registered test/probe executable boundaries. The ordinary core, app/shared
+libraries, Python modules and Qt-only tools do not acquire it transitively.
+Emscripten keeps its existing serial/pool behavior and does not link the archive.
+CMake 3.24 is required for the explicit WHOLE_ARCHIVE link.
+
+No policy is copied into app main or a launcher. Caller-variable presence, even
+empty wait variables, remains caller control; a saved positive Engine threads
+preference still overrides Auto as before. The original SDK runtime detection and
+bounded libgomp re-exec remain its implementation. Native deployments require
+a qualified SDK release exporting this target and a coordinated source pin;
+current older SDK binaries are not attested by this source change. No measured
+GUI responsiveness improvement follows from this integration alone.
+
+
+The first existing package import in core uses CMake's GLOBAL promotion so the
+same imported targets are visible to sibling CLI and outer native probe
+executables after add_subdirectory. This changes visibility, not link interfaces;
+shared libraries and Python modules still do not inherit executable startup.
+The consumer's existing common SDK shape check requires the bootstrap archive's
+recorded SHA-256 and matching present bytes, alongside core, CLI and runtime.
+Both fetch (including unpacked-prefix reuse) and explicit SDK checks enter that
+same admission before reporting a qualified package. A download marker alone
+does not qualify modified extracted bytes or an absent bootstrap digest.

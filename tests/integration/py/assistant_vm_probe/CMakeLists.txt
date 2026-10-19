@@ -45,3 +45,15 @@ target_include_directories(assistant_workflow_vm_probe PRIVATE
 target_link_libraries(assistant_workflow_vm_probe PRIVATE edi_app_module edi_app_moduleplugin
     edi_assistant_native edi_gui_style edi_gui_globals edi_gui_logic edi_gui_animations
     edi_gui_maintenance edi_gui_elements edi_gui_components Qt6::Test Qt6::Network)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    foreach(_edi_engine_executable IN ITEMS
+        assistant_vm_resource_probe
+        assistant_selected_vm_probe
+        assistant_preferences_vm_probe
+        assistant_workflow_vm_probe)
+        target_link_libraries(${_edi_engine_executable} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+    endforeach()
+    unset(_edi_engine_executable)
+endif()

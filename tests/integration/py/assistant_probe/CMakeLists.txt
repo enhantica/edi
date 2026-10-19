@@ -10,6 +10,9 @@ if(NOT TARGET assistant_contract_probe)
     add_executable(assistant_contract_probe probe.cpp)
     target_include_directories(assistant_contract_probe PRIVATE "${EDI_SOURCE}/core/src")
     target_link_libraries(assistant_contract_probe PRIVATE edi::core)
+    if(NOT EMSCRIPTEN)
+        target_link_libraries(assistant_contract_probe PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+    endif()
 endif()
 
 add_executable(assistant_fit_publication_probe fit_publication_probe.cpp)
@@ -58,3 +61,20 @@ target_link_libraries(assistant_selected_files_probe PRIVATE edi::core)
 add_executable(assistant_skill_budget_probe skill_budget_probe.cpp)
 target_include_directories(assistant_skill_budget_probe PRIVATE "${EDI_SOURCE}/core/src")
 target_link_libraries(assistant_skill_budget_probe PRIVATE edi::core)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    foreach(_edi_engine_executable IN ITEMS
+        assistant_fit_publication_probe
+        assistant_terminal_retention_probe
+        assistant_interruption_probe
+        assistant_async_settlement_probe
+        assistant_recovery_boundaries_probe
+        assistant_scope_retirement_probe
+        assistant_stream_failure_latch_probe
+        assistant_selected_files_probe
+        assistant_skill_budget_probe)
+        target_link_libraries(${_edi_engine_executable} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+    endforeach()
+    unset(_edi_engine_executable)
+endif()

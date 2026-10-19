@@ -14,3 +14,8 @@ target_include_directories(assistant_consent_probe PRIVATE
 target_link_libraries(assistant_consent_probe PRIVATE edi_app_module edi_app_moduleplugin
     edi_assistant_native edi_gui_style edi_gui_globals edi_gui_logic edi_gui_animations
     edi_gui_maintenance edi_gui_elements edi_gui_components Qt6::Test Qt6::Network)
+
+# The SDK bootstrap belongs to executables, never their shared/core interfaces.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(assistant_consent_probe PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
+endif()

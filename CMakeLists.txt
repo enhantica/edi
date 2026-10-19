@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.24)
 
 # edi — one C++/CMake project builds the product core, the CLI, and (option-gated) the one
 # QML app host (ADR-0002/0009). `core` + `cli` are Qt-free and build in the default pixi env
