@@ -1126,9 +1126,28 @@ bool ProjectViewModel::createStructure() {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     const auto input = widget_creation_input_;
-    // Like createExperiment, enter an exact prepared input at apply_creation_control.
-    // Its own applyEdit readiness check runs after that one-shot match, not while
-    // our unconsumed prearmed input would refuse itself as a competing input.
+    const CreationAction actual{CreationAction::Kind::StructureAppend};
+    // Refuse a new invocation before factory/history work. A consumed receipt
+    // belongs to the earlier invocation, even if its outcome was successful.
+    if (widget_input_executing_ || widget_input_ || widget_relation_input_ || widget_background_input_ || widget_file_input_)
+        return false;
+    if (input && (input->consumed || input->expected.kind != actual.kind || input->expected.row != actual.row ||
+        input->expected.field != actual.field || input->expected.text != actual.text || input->expected.number != actual.number))
+        return false;
+    QString readiness;
+    {
+        // Only this exact unconsumed input may enter its original readiness
+        // check; restore execution before any publication or factory work.
+        const bool previous = widget_input_executing_;
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        widget_input_executing_ = bool(input);
+        readiness = editReadinessRefusal(false);
+    }
+    if (!readiness.isEmpty()) {
+        setLastError(readiness);
+        if (self && !retired_) emit refused(readiness);
+        return false;
+    }
     edi::Project& project = *project_;
     // The first free name of the form structure1, structure2, …
     std::string name;
@@ -1160,16 +1179,22 @@ bool ProjectViewModel::createStructure() {
         auto before = edi::capture_structures(project);
         undo_history_.reserve(undo_history_.size()+1);
         undo_history_.emplace_back(std::move(before)); reserved = true;
-        error = apply_creation_control(edi::Edit::add_structure(project, std::move(structure)), true,
-            {CreationAction::Kind::StructureAppend});
+        error = apply_creation_control(edi::Edit::add_structure(project, std::move(structure)), true, actual);
     } catch (const std::exception& refusal) {
         error = input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what());
     }
-    if (!self || retired_) return input && input->outcome.applied;
     const bool applied = input ? input->outcome.applied : error.isEmpty();
-    if (reserved && !applied) undo_history_.pop_back();
+    if (self && reserved && !applied) undo_history_.pop_back();
+    if (!self || retired_) return applied;
     if (!error.isEmpty()) { setLastError(error); if (self && !retired_) emit refused(error); return applied; }
-    syncUndo();
+    {
+        // History availability is part of this publication, including manual
+        // Create: a synchronous observer cannot start another edit or Undo it.
+        const bool previous = editing_;
+        const auto release = qScopeGuard([self, previous] { if (self) self->editing_ = previous; });
+        editing_ = true;
+        syncUndo();
+    }
     if (!self || retired_) return applied;
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
     return applied;
