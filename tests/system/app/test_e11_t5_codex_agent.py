@@ -11058,7 +11058,7 @@ def test_native500_lbco_staged_fit_postfit_reads_and_current_save_complete(gener
     adp_paths = ['structure.atom_sites[' + site + '].adp_iso' for site in ('La', 'Ba', 'Co', 'O')]
     profile_paths = ['experiment.peak.' + key for key in metadata['profile_parameters']]
     zero_path = 'experiment.instrument.calib_twotheta_offset'
-    nuisance_paths = ['structure.cell.length_a', 'experiment.background[1].intensity', 'experiment.background[2].intensity']
+    nuisance_paths = ['structure.cell.length_a', 'experiment.background[10].intensity', 'experiment.background[165].intensity']
     relation = native145_relation_args(adp_paths[0], adp_paths[1])
     scale = {'$original_parameter_suffix': '.scale'}  # Original existing closed selector, actual successful list only.
     turns = [
