@@ -1992,7 +1992,31 @@ for line in sys.stdin:
         if config.get('native_array451_policy') is not None:
             value.update(array451_policy_fields(params))
         if config.get('readonly409') is True:
-            assert scenario in {'complete', 'fileauth', 'native:script', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, (
+            assert scenario in {
+                'complete', 'different-cwd', 'different-provider',
+                'different-reviewer', 'fileauth', 'gn:account-apikey',
+                'gn:account-chatgpt', 'gn:account-chatgptAuthTokens', 'gn:account-null',
+                'gn:catalogue-within', 'gn:finished-commandExecution', 'gn:finished-fileChange',
+                'gn:immutable-delta', 'gn:immutable-duplicate', 'gn:immutable-type',
+                'gn:lifetime-events', 'gn:lifetime-stderr', 'gn:lifetime-wire',
+                'gn:logout-hold', 'gn:logout-late-start', 'gn:missing-delta-turn',
+                'gn:missing-item-turn', 'gn:missing-request-turn', 'gn:question-stale-answer',
+                'gn:question-wrong-resolve', 'gn:r:final-message-snapshot', 'gn:r:interruption:commandExecution:failed',
+                'gn:r:interruption:commandExecution:interrupted', 'gn:r:interruption:fileChange:failed', 'gn:r:interruption:fileChange:interrupted',
+                'gn:r:partial-message', 'gn:r:progress:command', 'gn:r:progress:plan',
+                'gn:r:progress:question', 'gn:r:progress:reasoning', 'gn:r:progress:summary',
+                'gn:r:status-:collabAgentToolCall:item:completed', 'gn:r:status-:collabAgentToolCall:item:inProgress', 'gn:r:status-:collabAgentToolCall:item:missing',
+                'gn:r:status-:collabAgentToolCall:snapshot:inProgress', 'gn:r:status-:collabAgentToolCall:snapshot:missing', 'gn:r:status-:dynamicToolCall:item:completed',
+                'gn:r:status-:dynamicToolCall:item:inProgress', 'gn:r:status-:dynamicToolCall:item:missing', 'gn:r:status-:dynamicToolCall:snapshot:inProgress',
+                'gn:r:status-:dynamicToolCall:snapshot:missing', 'gn:r:status-:mcpToolCall:item:completed', 'gn:r:status-:mcpToolCall:item:inProgress',
+                'gn:r:status-:mcpToolCall:item:missing', 'gn:r:status-:mcpToolCall:snapshot:inProgress', 'gn:r:status-:mcpToolCall:snapshot:missing',
+                'gn:r:stop-unsettled', 'gn:steer-missing', 'gn:steer-wrong',
+                'gn:unfinished-commandExecution', 'gn:unfinished-fileChange', 'gn:unknown-control',
+                'gn:workspace-change', 'gn:x:mcp-active', 'gn:x:mcp-final',
+                'gn:x:mcp-stale', 'gn:x:question-answer', 'gn:x:stop-existing',
+                'gn:x:stop-new', 'hold', 'native:script',
+                'network-enabled', 'start-pending',
+            }, (
                 'INPUT409 SETUP: explicit finite preserved fileauth/effective-policy fixture only'
             )
             if scenario == 'native:script':
@@ -2005,7 +2029,8 @@ for line in sys.stdin:
                 thread_id = '019a0290-0000-7000-8000-' + f'{count:012d}'
                 value['thread']['id'] = thread_id
             # Independent original catalogue constants, not an echo of subject policy/choices.
-            value.update(approvalPolicy='never', approvalsReviewer='user', model='gpt-6.1-sol',
+            value.update(approvalPolicy='never', approvalsReviewer='user',
+                         model='fixture-model-0' if scenario == 'gn:catalogue-within' else 'gpt-6.1-sol',
                          reasoningEffort='medium', sandbox={'type': 'readOnly', 'networkAccess': False})
         if config.get('roots207_variant'):
             roots207_response(request, value)

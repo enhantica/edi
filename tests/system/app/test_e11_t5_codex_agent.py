@@ -843,6 +843,7 @@ def configure_next_peer(actor, scenario):
 @pytest.mark.parametrize('scenario', ['hold', 'start-pending'])
 def test_gn1_oversized_new_draft_preserves_original_admitted_process(generic, scenario):
     actor, trace = generic(scenario)
+    readonly409_configure(trace)
     connect(actor)
     identity = live_original_peer(actor)
     actor.command('send_text', text='Original already admitted work')
@@ -868,6 +869,7 @@ def test_gn1_oversized_new_draft_preserves_original_admitted_process(generic, sc
 @pytest.mark.parametrize('mode', ['null', 'apikey', 'chatgpt', 'chatgptAuthTokens'])
 def test_gn2_account_change_retires_old_authority_and_pending_outcomes(generic, mode):
     actor, trace = generic('gn:account-' + mode)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original account-bound work')
     settle(
@@ -898,6 +900,7 @@ def test_gn2_account_change_retires_old_authority_and_pending_outcomes(generic, 
 @pytest.mark.parametrize('scenario', ['logout-hold', 'logout-late-start'])
 def test_gn2_signout_revokes_before_ack_and_late_start_cannot_revive(generic, scenario):
     actor, trace = generic('gn:' + scenario)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original work before Sign out')
     settle(actor, lambda _state: len(started_requests(trace)) == 1)
@@ -922,6 +925,7 @@ def test_gn2_signout_revokes_before_ack_and_late_start_cannot_revive(generic, sc
 @pytest.mark.parametrize('suffix', ['missing', 'wrong'])
 def test_gn3_steer_ack_requires_actual_expected_turn_id(generic, suffix):
     actor, trace = generic('gn:steer-' + suffix)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original bound turn')
     settle(actor, itemgetter('can_cancel'))
@@ -939,6 +943,7 @@ def test_gn3_steer_ack_requires_actual_expected_turn_id(generic, suffix):
 @pytest.mark.parametrize('suffix', ['item', 'delta'])
 def test_gn3_known_output_requires_its_actual_turn_binding(generic, suffix):
     actor, trace = generic('gn:missing-' + suffix + '-turn')
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original binding control')
     settle(
@@ -961,6 +966,7 @@ def test_gn3_known_output_requires_its_actual_turn_binding(generic, suffix):
 @pytest.mark.parametrize('suffix', ['duplicate', 'type', 'delta'])
 def test_gn3_finalized_original_cannot_be_replaced_or_extended(generic, suffix):
     actor, trace = generic('gn:immutable-' + suffix)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original immutable result control')
     state = settle(
@@ -990,6 +996,7 @@ def test_gn3_finalized_original_cannot_be_replaced_or_extended(generic, suffix):
 @pytest.mark.parametrize('kind', ['commandExecution', 'fileChange'])
 def test_gn3_enclosing_success_cannot_fabricate_missing_tool_final_item(generic, kind):
     actor, trace = generic('gn:unfinished-' + kind)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original unfinished operation')
     state = settle(actor, lambda value: authority_row(value) is not None)
@@ -1007,6 +1014,7 @@ def test_gn3_enclosing_success_cannot_fabricate_missing_tool_final_item(generic,
 
 def test_gn3_wrong_thread_resolved_cannot_consume_current_question(generic):
     actor, _trace = generic('gn:question-wrong-resolve')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original question control')
     state = settle(actor, lambda value: bool(value['pending_question']))
@@ -1022,6 +1030,7 @@ def test_gn3_wrong_thread_resolved_cannot_consume_current_question(generic):
 
 def test_gn3_stale_answer_after_reconnect_preserves_fresh_work(generic):
     actor, trace = generic('gn:question-stale-answer')
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original retiring question')
     state = settle(actor, lambda value: bool(value['pending_question']))
@@ -1045,6 +1054,7 @@ def test_gn4_individually_legal_settled_turns_have_independent_resource_lifetime
     generic, channel
 ):
     actor, trace = generic('gn:lifetime-' + channel)
+    readonly409_configure(trace)
     connect(actor)
     identity = live_original_peer(actor)
     for index in range(2):
@@ -1064,6 +1074,8 @@ def test_gn4_individually_legal_settled_turns_have_independent_resource_lifetime
 @pytest.mark.parametrize('size', ['within', 'over'])
 def test_gn4_catalogue_charges_complete_metadata_across_pages(generic, size):
     actor, trace = generic('gn:catalogue-' + size)
+    if size == 'within':
+        readonly409_configure(trace)
     actor.command('sign_in')
     state = settle(actor, lambda value: value['connected'] or bool(value['last_error']))
     # Two independent model objects carry 500000/530000 description bytes each.
@@ -1084,6 +1096,7 @@ def test_gn4_catalogue_charges_complete_metadata_across_pages(generic, size):
 
 def test_gn5_reconnect_stages_current_immutable_inputs_not_modified_recovery(generic, tmp_path):
     actor, trace = generic('gn:workspace-change')
+    readonly409_configure(trace)
     original = b'Original immutable selected input, not a scientific expected value\n'
     path = tmp_path / 'original-selected.txt'
     path.write_bytes(original)
@@ -1180,6 +1193,7 @@ def test_gn6_auto_after_explicit_effort_resets_actual_sticky_override(generic, s
 
 def test_gn3_unknown_notification_preserves_bound_active_control(generic):
     actor, trace = generic('gn:unknown-control')
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original unknown-notification control')
     settle(actor, itemgetter('can_cancel'))
@@ -1198,6 +1212,7 @@ def test_gn3_unknown_notification_preserves_bound_active_control(generic):
 
 def test_gn3_missing_turn_server_question_cannot_claim_current_authority(generic):
     actor, _trace = generic('gn:missing-request-turn')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original request-binding control')
     settle(actor, itemgetter('can_cancel'))
@@ -1210,6 +1225,7 @@ def test_gn3_missing_turn_server_question_cannot_claim_current_authority(generic
 @pytest.mark.parametrize('kind', ['commandExecution', 'fileChange'])
 def test_gn3_actual_final_tool_original_remains_a_valid_completion(generic, kind):
     actor, trace = generic('gn:finished-' + kind)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original authoritative final operation')
     state = settle(actor, lambda value: authority_row(value) is not None)
@@ -1225,6 +1241,7 @@ def test_gn3_actual_final_tool_original_remains_a_valid_completion(generic, kind
 
 def test_gn3r_partial_assistant_text_is_not_a_final_original(generic):
     actor, _trace = generic('gn:r:partial-message')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original partial assistant completion check')
     state = settle(actor, lambda value: not value['can_cancel'])
@@ -1237,6 +1254,7 @@ def test_gn3r_partial_assistant_text_is_not_a_final_original(generic):
 
 def test_gn3r_actual_final_message_snapshot_is_authoritative(generic):
     actor, _trace = generic('gn:r:final-message-snapshot')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original authoritative message snapshot check')
     state = settle(
@@ -1258,6 +1276,7 @@ def test_gn3r_actual_final_message_snapshot_is_authoritative(generic):
 @pytest.mark.parametrize('status', ['inProgress', 'missing'])
 def test_gn3r_status_bearing_tools_require_genuine_final_status(generic, kind, route, status):
     actor, _trace = generic(f'gn:r:status-:{kind}:{route}:{status}')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original status-bearing tool check')
     state = settle(actor, lambda value: not value['can_cancel'])
@@ -1271,6 +1290,7 @@ def test_gn3r_status_bearing_tools_require_genuine_final_status(generic, kind, r
 @pytest.mark.parametrize('kind', ['mcpToolCall', 'dynamicToolCall', 'collabAgentToolCall'])
 def test_gn3r_real_final_status_tool_remains_a_valid_original(generic, kind):
     actor, _trace = generic(f'gn:r:status-:{kind}:item:completed')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original valid status-bearing final tool')
     state = settle(
@@ -1289,6 +1309,7 @@ def test_gn3r_non_success_snapshot_retains_unfinished_and_already_final_evidence
     generic, kind, outcome
 ):
     actor, _trace = generic(f'gn:r:interruption:{kind}:{outcome}')
+    readonly409_configure(_trace)
     connect(actor)
     actor.command('send_text', text='Original non-success terminal with unfinished work')
     state = settle(
@@ -1325,6 +1346,7 @@ def test_gn3r_non_success_snapshot_retains_unfinished_and_already_final_evidence
 @pytest.mark.parametrize('kind', ['command', 'plan', 'summary', 'reasoning', 'question'])
 def test_gn4r_current_progress_siblings_remain_valid_and_reasoning_stays_private(generic, kind):
     actor, trace = generic('gn:r:progress:' + kind)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original current progress control')
     settle(actor, itemgetter('can_cancel'))
@@ -1345,6 +1367,7 @@ def test_gn4r_current_progress_siblings_remain_valid_and_reasoning_stays_private
 
 def test_gn4r_repeated_stop_keeps_original_owned_revoke_request_once(generic):
     actor, trace = generic('gn:r:stop-unsettled')
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original unacknowledged Stop request')
     settle(actor, itemgetter('can_cancel'))
@@ -1383,6 +1406,7 @@ def test_explicit_invalid_development_override_refuses_without_fallback(generic,
 @pytest.mark.parametrize('scenario', ['active', 'stale', 'final'])
 def test_gn4_mcp_progress_has_real_bound_original_without_rewriting_final(generic, scenario):
     actor, trace = generic('gn:x:mcp-' + scenario)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original MCP progress boundary')
     state = settle(
@@ -1427,6 +1451,7 @@ def successful_question_answers(trace):
 @pytest.mark.parametrize('stage', ['existing', 'new'])
 def test_gn4_stop_retires_question_completion_before_actual_settlement(generic, stage):
     actor, trace = generic('gn:x:stop-' + stage)
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original question authority before Stop')
     if stage == 'existing':
@@ -1452,6 +1477,7 @@ def test_gn4_stop_retires_question_completion_before_actual_settlement(generic, 
 
 def test_gn4_unrevoked_original_question_still_completes_once(generic):
     actor, trace = generic('gn:x:question-answer')
+    readonly409_configure(trace)
     connect(actor)
     actor.command('send_text', text='Original genuine question control')
     state = settle(actor, lambda value: bool(value['pending_question']))
@@ -9764,7 +9790,31 @@ def readonly409_configure(trace):
     """Opt-in public354 fixture; all original GUI/default peer behavior stays exact."""
     path = trace.parent / 'peer-input.json'
     config = json.loads(path.read_text())
-    assert config['scenario'] in {'complete', 'fileauth', 'native:script', 'different-cwd', 'network-enabled', 'different-reviewer', 'different-provider'}, 'INPUT409 SETUP: existing ordinary fileauth vehicle only'
+    assert config['scenario'] in {
+        'complete', 'different-cwd', 'different-provider',
+        'different-reviewer', 'fileauth', 'gn:account-apikey',
+        'gn:account-chatgpt', 'gn:account-chatgptAuthTokens', 'gn:account-null',
+        'gn:catalogue-within', 'gn:finished-commandExecution', 'gn:finished-fileChange',
+        'gn:immutable-delta', 'gn:immutable-duplicate', 'gn:immutable-type',
+        'gn:lifetime-events', 'gn:lifetime-stderr', 'gn:lifetime-wire',
+        'gn:logout-hold', 'gn:logout-late-start', 'gn:missing-delta-turn',
+        'gn:missing-item-turn', 'gn:missing-request-turn', 'gn:question-stale-answer',
+        'gn:question-wrong-resolve', 'gn:r:final-message-snapshot', 'gn:r:interruption:commandExecution:failed',
+        'gn:r:interruption:commandExecution:interrupted', 'gn:r:interruption:fileChange:failed', 'gn:r:interruption:fileChange:interrupted',
+        'gn:r:partial-message', 'gn:r:progress:command', 'gn:r:progress:plan',
+        'gn:r:progress:question', 'gn:r:progress:reasoning', 'gn:r:progress:summary',
+        'gn:r:status-:collabAgentToolCall:item:completed', 'gn:r:status-:collabAgentToolCall:item:inProgress', 'gn:r:status-:collabAgentToolCall:item:missing',
+        'gn:r:status-:collabAgentToolCall:snapshot:inProgress', 'gn:r:status-:collabAgentToolCall:snapshot:missing', 'gn:r:status-:dynamicToolCall:item:completed',
+        'gn:r:status-:dynamicToolCall:item:inProgress', 'gn:r:status-:dynamicToolCall:item:missing', 'gn:r:status-:dynamicToolCall:snapshot:inProgress',
+        'gn:r:status-:dynamicToolCall:snapshot:missing', 'gn:r:status-:mcpToolCall:item:completed', 'gn:r:status-:mcpToolCall:item:inProgress',
+        'gn:r:status-:mcpToolCall:item:missing', 'gn:r:status-:mcpToolCall:snapshot:inProgress', 'gn:r:status-:mcpToolCall:snapshot:missing',
+        'gn:r:stop-unsettled', 'gn:steer-missing', 'gn:steer-wrong',
+        'gn:unfinished-commandExecution', 'gn:unfinished-fileChange', 'gn:unknown-control',
+        'gn:workspace-change', 'gn:x:mcp-active', 'gn:x:mcp-final',
+        'gn:x:mcp-stale', 'gn:x:question-answer', 'gn:x:stop-existing',
+        'gn:x:stop-new', 'hold', 'native:script',
+        'network-enabled', 'start-pending',
+    }, 'INPUT409 SETUP: only explicit original fileauth/GN positive-policy fixtures'
     config.update(readonly409=True, vm319_record_packets=True)
     path.write_text(json.dumps(config))
 
