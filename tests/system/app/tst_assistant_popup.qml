@@ -6267,7 +6267,17 @@ TestCase {
     function gui392_preferences() {
         Ui.click(this, Probe, window, "appBar.button.preferences");
         const preferences = gui392_dialog("preferences");
+        const dialog = preferences, life = lifetime313(dialog), original = Session.project;
         import265_click("preferences.tab.aiAssistance");
+        tryVerify(() => {
+            if (!alive313(life) || Session.project !== original || !dialog.opened) return false;
+            const tables = Ui.itemsWithProperty(dialog.contentItem, "objectName").filter(control =>
+                control.objectName === "preferences.ai.sources" && control.sourceModel === assistant.skillSources);
+            if (tables.length !== 1 || !Ui.rendered(tables[0]) || !Ui.exposed(tables[0])) return false;
+            const r = tables[0].mapToItem(dialog.contentItem,0,0,tables[0].width,tables[0].height);
+            return r.x >= -0.5 && r.y >= -0.5 && r.x+r.width <= dialog.contentItem.width+0.5
+                && r.y+r.height <= dialog.contentItem.height+0.5;
+        }, 2000, "PREFS417: same original native tab/table settles inside actual dialog viewport before strict row input");
         verify(import265_control("preferences.ai.sources").visible,
             "GUI392: genuine Preferences tab exposes original source DataTable");
         return preferences;
@@ -7970,19 +7980,7 @@ TestCase {
         compare(new Set(skills.map(row => row.id)).size, skills.length,
             "PREFS421: exact digests cannot conceal duplicated actual captured instruction identities");
     }
-    function prefs417_preferences() {
-        const dialog = gui392_preferences(), life = lifetime313(dialog), original = Session.project;
-        tryVerify(() => {
-            if (!alive313(life) || Session.project !== original || !dialog.opened) return false;
-            const tables = Ui.itemsWithProperty(dialog.contentItem, "objectName").filter(control =>
-                control.objectName === "preferences.ai.sources" && control.sourceModel === assistant.skillSources);
-            if (tables.length !== 1 || !Ui.rendered(tables[0]) || !Ui.exposed(tables[0])) return false;
-            const r = tables[0].mapToItem(dialog.contentItem,0,0,tables[0].width,tables[0].height);
-            return r.x >= -0.5 && r.y >= -0.5 && r.x+r.width <= dialog.contentItem.width+0.5
-                && r.y+r.height <= dialog.contentItem.height+0.5;
-        }, 2000, "PREFS417: same original native tab/table settles inside actual dialog viewport before strict row input");
-        return dialog;
-    }
+    function prefs417_preferences() { return gui392_preferences(); }
     function prefs417_closePreferences(dialog) { gui392_button(dialog.standardButton(Dialog.Ok), dialog); }
     function prefs417_configure(local) {
         const preferences = prefs417_preferences();
