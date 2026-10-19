@@ -88,8 +88,10 @@ EaElements.Label {
         onStopped: if (!workStatus.animating) workGlyph.rotation = 0
         loops: Animation.Infinite
         from: 0
-        to: 360
-        duration: 1600
-        easing.type: Easing.Linear
+        to: workStatus.variant === 0 ? 360 : 360 * 6
+        duration: workStatus.variant === 0 ? 1600 : 2000
+        easing.type: workStatus.variant === 0 ? Easing.Linear : Easing.OutInElastic
+        easing.amplitude: 1
+        easing.period: 0.3
     }
 }

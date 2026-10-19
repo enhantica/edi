@@ -206,9 +206,11 @@ EaComponents.ApplicationWindow {
                 onStopped: if (!assistantToggle.rotateRobot) assistantRobot.rotation = 0
                 loops: Animation.Infinite
                 from: 0
-                to: 360
-                duration: 1600
-                easing.type: Easing.Linear
+                to: 360 * 6
+                duration: 2000
+                easing.type: Easing.OutInElastic
+                easing.amplitude: 1
+                easing.period: 0.3
             }
             enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason

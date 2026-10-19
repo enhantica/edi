@@ -1875,9 +1875,11 @@ IME, Send, Stop, button sizing or keyboard behavior changes.
 
 The existing agent_active state owns the working cue for the whole official turn,
 including pending question/plan presentation. Presentation visibility no longer
-chooses a new variant or resets the cue between tools. All variants and the app-bar
-robot use a constant linear full rotation through the native scene-graph
-RotationAnimator. The inline robot keeps its accepted upright ink size and optical
+chooses a new variant or resets the cue between tools. The circle keeps its
+1600ms linear full rotation. The robot, EDI logo and app-bar robot reuse the original
+EA SplashScreen/Edi branded motion:2160 degrees in2000ms, OutInElastic amplitude1
+and period0.3. These curves run through the existing native scene-graph
+RotationAnimator, whose easing property accepts the original curve. The inline robot keeps its accepted upright ink size and optical
 center. Its reserved layout envelope is the fixed safe diagonal of the icon circle;
 no live QML angle or per-frame rescaling is needed, so GUI-thread work cannot stall
 the rotation merely by preventing an angle-binding update. The actual icon circle
