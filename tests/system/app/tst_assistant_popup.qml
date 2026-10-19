@@ -9030,7 +9030,7 @@ TestCase {
                 ++observations518.inputIssue["approve-context"];
                 gui470_standardAction(dialog.standardButton(Dialog.Ok),dialog,"approve-context");
             }
-            tryVerify(() => outcome(last)!==null && !assistant.canCancel && !assistant.showingActions
+            tryVerify(() => !assistant.canCancel && !assistant.showingActions && outcome(last)!==null
                 && Session.project!==null && !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),
                 270000,"MAIN504: original objective completes all calls and actual current calculation within existing bounds");
             verify(!assistant.lastError,"MAIN504: no retained/context/worker error can substitute for completion");
