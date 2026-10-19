@@ -1153,10 +1153,21 @@ bool ProjectViewModel::createStructure() {
 }
 
 bool ProjectViewModel::namePointsByPosition() {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_background_input_;
+    const bool previous = widget_input_executing_;
+    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
     if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
         return false;
     }
     edi::ExperimentBase& experiment = *project_->experiments[static_cast<std::size_t>(current_experiment_)];
+    if (input) {
+        if (!input->names || input->consumed || input->experiment != &experiment || input->members.size() != experiment.background.size()) return false;
+        for (std::size_t i=0;i<input->members.size();++i)
+            if (input->members[i] != experiment.background[i].get()) return false;
+        input->consumed = true; widget_input_executing_ = true;
+    }
     PointIds record{&experiment, {}};
     for (const auto& point : experiment.background) {
         record.before.push_back(point->id.value());
@@ -1165,18 +1176,43 @@ bool ProjectViewModel::namePointsByPosition() {
     if (ids == record.before) {
         return true;
     }
-    const QString error = apply(edi::Edit::background_point_ids(experiment, std::move(ids)), true);
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
+    const auto edit = edi::Edit::background_point_ids(experiment, std::move(ids));
+    undo_history_.reserve(undo_history_.size()+1);
+    undo_history_.emplace_back(std::move(record)); // Actual Undo owner precedes the live edit.
+    EditOutcome result;
+    try { result = applyEdit(edit, true); }
+    catch (...) { if(self)undo_history_.pop_back(); throw; }
+    if (input) input->outcome=result;
+    if (!self || retired_) return result.applied;
+    if (!result.applied) undo_history_.pop_back();
+    try { syncUndo(); }
+    catch (...) {
+        if (!result.applied) throw;
+        result.published=false;result.message=tr("Background IDs and Undo were retained; presentation was incomplete");
+        if(input)input->outcome=result;
+        holdPublicationFailure(result.message);
     }
-    undo_history_.emplace_back(std::move(record));
-    syncUndo();
+    if (!result.applied) { emit refused(result.message); return false; }
     return true;
 }
 
 bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
     const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_input_;
+    const bool previous = widget_input_executing_;
+    const auto release = qScopeGuard([self, previous] { if(self)self->widget_input_executing_=previous; });
+    if (input) {
+        if(input->field!=WidgetParameterInput::Field::FreeGroup || input->consumed || input->free!=free ||
+            input->members.size()!=static_cast<std::size_t>(parameters.size()))return false;
+        for(qsizetype i=0;i<parameters.size();++i) {
+            const auto* item=parameters[i];
+            if(!registry_->items().contains(const_cast<ParameterItem*>(item)) || !item->isFittable() || !item->isRefinable() ||
+                std::count(input->members.begin(),input->members.end(),item->parameter())!=1 ||
+                std::count(parameters.begin(),parameters.end(),item)!=1)return false;
+        }
+        input->consumed=true;widget_input_executing_=true;
+    }
     std::map<const edi::Parameter*, std::string> names;
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
         names.emplace(slot.parameter, slot.unique_name);
@@ -1196,7 +1232,8 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         return true;
     }
     const EditOutcome result = applyRecordedEdit(edi::Edit::set_free(*project_, std::move(flags)), false);
-    if (retired_) return result.applied;
+    if(input)input->outcome=result;
+    if (!self || retired_) return result.applied;
     if (!result.applied) { emit refused(result.message); return false; }
     return true;
 }
@@ -2247,6 +2284,18 @@ std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepar
     widget_input_ = input;
     return input;
 }
+std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetFreeGroup(std::vector<const edi::Parameter*> members, bool free) {
+    if (const QString pending=editReadinessRefusal(false);!pending.isEmpty())throw std::runtime_error(pending.toStdString());
+    if(members.empty())throw std::invalid_argument("The original free-header set is empty");
+    for(const auto* member:members) {
+        const auto* item=registry_->find(member);
+        if(!item || !item->isFittable() || !item->isRefinable() || std::count(members.begin(),members.end(),member)!=1)
+            throw std::invalid_argument("The original free-header member changed");
+    }
+    auto input=std::make_shared<WidgetParameterInput>();input->field=WidgetParameterInput::Field::FreeGroup;
+    input->members=std::move(members);input->free=free;input->outcome.message=tr("The original free-header action did not commit");
+    widget_input_=input;return input;
+}
 void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept {
     if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
 }
@@ -2574,6 +2623,14 @@ std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepa
     input->experiment = &experiment; input->row = &point; input->rename = true; input->expected.id = id;
     input->outcome.message = tr("The original background ID control did not commit");
     widget_background_input_ = input; return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackgroundNames(edi::ExperimentBase& experiment) {
+    if(const QString pending=editReadinessRefusal(false);!pending.isEmpty())throw std::runtime_error(pending.toStdString());
+    if(!currentExperiment() || currentExperiment()->experiment()!=&experiment)throw std::invalid_argument("The original background experiment changed");
+    auto input=std::make_shared<WidgetBackgroundInput>();input->names=true;input->experiment=&experiment;
+    input->members.reserve(experiment.background.size());
+    for(const auto& point:experiment.background)input->members.push_back(point.get());
+    input->outcome.message=tr("The original position-derived IDs action did not commit");widget_background_input_=input;return input;
 }
 void ProjectViewModel::finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>& input) noexcept {
     if (widget_background_input_ == input) widget_background_input_.reset();

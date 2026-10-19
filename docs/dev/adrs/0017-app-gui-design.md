@@ -1365,3 +1365,34 @@ Missing shortcut bindings and key failures are mutually exclusive record sites.
 Input delivery, returns, focus, draft/IME/currentness, once/Undo/Stop and native
 scientific receipts are unchanged. This observation identifies a boundary; it
 does not attribute a focus failure or authorize a retry or forced focus.
+
+### Visible background naming and exact grouped Free actions
+
+Prior art is BackgroundGroup's existing Ids from positions button and Analysis
+ParametersGroup/FreeHeaderMenu, backed by ProjectViewModel.namePointsByPosition
+and setParametersFree. Compound initialization enters every requested position,
+intensity and explicit initial-parameter value before invoking that naming button
+once. Literal background parameter paths therefore resolve against their original
+ordinal-ID members within the same request, including already-equal no-ops;
+position-derived IDs are assigned only after those operands are consumed. Individual background
+edits still honor the explicit original anchor ID. Both genuine native buttons
+now accept a prepared exact-member receipt at their existing PVM entry point;
+manual actions remain those same methods. Actual applied state is pinned before
+LivePreview notification, with original Undo and publication facts retained.
+
+The Analysis category picker uses the same matches_group predicate as filtering
+and menu counts, choosing the smallest offered group; cell rows stay unfiltered.
+Rows outside the viewport are reached by actual wheel input. The original reset
+and selection behavior remains visible; no stale presentation restoration or
+full-path typing is inserted. Group Free/Fixed is restricted to requested
+line-segment intensities and only when every eligible displayed row is exactly
+one original requested member with the same desired flag. Other categories and
+subsets use their requested row checkboxes. Read-only/dependent refusal, owner,
+source, generation, input/Stop and exact native receipts remain authoritative.
+
+Prepared member vectors are admitted before allocation and counted while original
+callbacks retain their frames. New input closure targets use their actual sizeof
+roles, including predecessor/new-request overlap; no capacity change is made.
+An applied group is one ordinary Undo, while completed parameter entries and
+uncertain partial facts retain their original result meaning. No decorative
+click, direct follow-up setter, new tool/schema or general input engine is added.

@@ -120,9 +120,9 @@ recapture, deferred publication dependency or additional permission is added.
 ### A chosen measured background spans its actual range
 
 The existing project and refinement guidance now asks the assistant, when it chooses
-a new measured line-segment background, for at least 10 distinct finite positions
+a new measured line-segment background, for three distinct finite starting positions
 spanning the actual measured range, with explicit justified starting intensities
-and free flags. This is strategy for a delegated new choice, not measured factory
+and free flags. This starting model is not a scientific adequacy guarantee. It is strategy for a delegated new choice, not measured factory
 facts or an automatic estimator. Missing actual range/evidence calls for offered
 inspection or one focused question. User-explicit anchors/values, observations and
 exclusions remain authoritative. Existing backgrounds are not rewritten merely to
@@ -193,3 +193,12 @@ read and original serial/readiness check before staging any replacement, and
 rechecks readiness before persistence. Enable/remove retain their fresh-load
 entry fences. Actual malformed-store recovery remains an explicit valid edit
 from the original invalid projection; readiness does not imply validity.
+
+### Natural visible groups preserve exact scientific requests
+
+New measured background choices default to three spanning anchors. Explicit user
+points, values and recipe counts remain authoritative; the native/manual minimum
+is still two. Related aliases are requested together immediately before their
+relation/use; the existing relation sequence completes aliases before constraints.
+No orchestration layer or material-specific script is introduced. Compiled
+developer guidance and both versioned skills/index use the same defaults.

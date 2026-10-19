@@ -540,15 +540,14 @@ and pinned Qt6.11.2 public TextInput clipRect contract, not a visibility bypass.
 
 ### Genuine Analysis parameter filter input
 
-Visible singleton Analysis parameter/free actions now click the ordinary reset
-filters button, then click/select/type the exact actual ParameterItem path into
-the existing name filter using the same paced real Qt input sequencer. The
-filter text kind is app-private and bounded to256 UTF-16 units with no controls;
-Unicode scalar pairs stay intact. Its real onTextChanged handler updates only
-presentation. Cancellation leaves the actually displayed partial filter in
-place rather than changing layout underneath the original manual event; no
-filter text can later commit scientific state on focus loss. Scientific numeric
-draft ownership stays exclusive to the existing Value kind.
+Visible Analysis parameter/free actions use the ordinary reset-filters button,
+the smallest actually offered category through the existing category selector,
+and actual row scrolling. Unit-cell rows remain unfiltered. The shared category
+predicate owns both offered groups and native selection; no full parameter path
+is typed as a filter for each row. Exact original ParameterItem/native-member
+identity still owns every row action. Cancellation leaves the real presentation
+in place rather than restoring stale filters over a manual input. Scientific
+numeric draft ownership remains exclusive to the existing Value kind.
 
 Original request/receipt/project/parameter/real window and every helper event
 retain currentness checks; filter text is read back before final target lookup.

@@ -5,7 +5,7 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.3. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.4. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
@@ -15,7 +15,7 @@ Inspect actual native measurement counts/weighting metadata, exclusions, phase l
 
 ## Initial measured background
 
-When choosing a NEW measured line-segment background rather than following user-supplied anchors, choose at least 10 distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This is assistant strategy, not a change to the valid minimum of two native/manual anchor domain. State the starting-intensity rationale and which intensities will be refined. Use the actual measured-axis units and domain. Do not silently insert, redistribute or delete an existing/user-specified background to meet this strategy. There is no new estimator, material constant, automatic background operation or extra approval.
+When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. State the starting-intensity rationale and which intensities will be refined. Use the actual measured-axis units and domain. Do not silently insert, redistribute or delete an existing/user-specified background to meet this strategy. There is no new estimator, material constant, automatic background operation or extra approval.
 
 ## Stage, compare and retain
 
@@ -47,3 +47,5 @@ References (read relevant sections, not a fixed universal recipe):
 - McCusker et al., Rietveld refinement guidelines, sections 5, 7 and 9: https://journals.iucr.org/j/issues/1999/01/00/gl0561/
 - GSAS-II constraints (shared ADPs and separate occupancy-sum constraints): https://github.com/AdvancedPhotonSource/GSAS-II-tutorials/blob/main/MDhelp/docs/commontreeitems.md
 - IUCr atomic-displacement-parameter nomenclature report: https://www.iucr.org/who-we-are/commissions/commission-on-crystallographic-nomenclature/published-reports/adp
+
+Use natural groups in Show actions: create related aliases together in the same add_relations request immediately before their relation/use. The existing visible sequence finishes those aliases before constraints. Compound background initialization enters the requested positions/intensities first, then invokes the original Ids from positions button once; its recipe has no requested point IDs. Individual edit_background keeps its explicit actual anchor IDs. For background free flags, request the exact eligible set together; the original Analysis category and Free-column header can apply it as one ordinary edit only when that displayed eligible set matches exactly. Other subsets and ADP groups use the actual category and requested row checkboxes, with scrolling; cell rows stay unfiltered. Do not request full-path filter typing or broaden a requested subset to obtain a group shortcut. Preserve dependent/read-only protections, explicit user points/values/counts and actual partial/Undo facts.

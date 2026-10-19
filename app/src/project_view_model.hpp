@@ -457,8 +457,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     friend class FitViewModel;
     friend class AssistantViewModel;
     struct WidgetParameterInput {
-        enum class Field { Value, Free } field;
+        enum class Field { Value, Free, FreeGroup } field;
         const edi::Parameter* parameter = nullptr;
+        std::vector<const edi::Parameter*> members; // Original exact free-header set; no QObject ownership.
         double value = 0;
         bool free = false, consumed = false;
         EditOutcome outcome;
@@ -503,12 +504,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         edi::BackgroundPointInput expected;
         const edi::LineSegment* row = nullptr;
         const edi::LineSegment* result_row = nullptr;
-        bool rename = false, consumed = false;
+        std::vector<const edi::LineSegment*> members;
+        bool names = false, rename = false, consumed = false;
         EditOutcome outcome;
     };
     std::shared_ptr<WidgetBackgroundInput> widget_background_input_;
     std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackground(edi::ExperimentBase&, const edi::BackgroundPointInput&);
     std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundRename(edi::ExperimentBase&, edi::LineSegment&, const std::string&);
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundNames(edi::ExperimentBase&);
     void finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>&) noexcept;
     std::shared_ptr<WidgetRelationInput> widget_relation_input_;
     std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const ProjectEditor::RelationAction& action);
@@ -517,6 +520,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool widget_input_executing_ = false;
     std::shared_ptr<WidgetParameterInput> prepareWidgetValue(const edi::Parameter& parameter, double value);
     std::shared_ptr<WidgetParameterInput> prepareWidgetFree(const edi::Parameter& parameter, bool free);
+    std::shared_ptr<WidgetParameterInput> prepareWidgetFreeGroup(std::vector<const edi::Parameter*>, bool free);
     void finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept;
     void retire() noexcept;
     bool retired_ = false;
