@@ -2332,6 +2332,42 @@ struct AssistantViewModel::State {
         }
         if (!widget_owned(run)) return;
         const auto receiver = run->receiver;
+        if ((run->tool == "set_parameters" || run->tool == "set_free") && run->call.record && run->call.receipt &&
+            run->call.record->tool == run->tool && !native_call->finishing &&
+            !run->call.record->answered && !run->call.record->discarded && !run->call.record->completed &&
+            lcAssistantWidgetLookup().isDebugEnabled()) {
+            // Retained facts only, before refusal cleanup can release the input.
+            const auto original = run;
+            const auto record = run->call.record; const auto receipt = run->call.receipt;
+            const auto active_receipt = native_receipt; const auto input = run->input;
+            const auto* entry = widget_parameter_entry(run);
+            const auto index = run->parameter_at; const auto prefix = run->completed_steps;
+            const auto parameter = run->parameter;
+            const bool applied = run->parameter_applied, uncertain = run->parameter_uncertain;
+            const int consumed = input ? int(input->consumed) : -1;
+            const int input_applied = input ? int(input->outcome.applied) : -1;
+            const int published = input ? int(input->outcome.published) : -1;
+            const QPointer<AssistantWidgetInput> helper(widget_input.get()); const bool helper_present = bool(helper);
+            const auto binding = generation; const auto serial = native_serial; const auto account = usage_epoch; const auto files = file_epoch;
+            const bool retiring = native_call->retiring, resolved = native_call->resolved;
+            const bool retired = record->retired, receipt_retired = receipt->retired;
+            const char* tool = run->tool == "set_free" ? "set_free" : "set_parameters";
+            try {
+                qCDebug(lcAssistantWidgetLookup) << "parameter refusal" << "line" << caller.line() << "column" << caller.column()
+                    << "tool" << tool << "entry" << index << "completed" << prefix
+                    << "input_present" << bool(input) << "input" << consumed << input_applied << published;
+            } catch (...) {} // Observation failure never replaces the original refusal.
+            if (!receiver || receiver->state_.get() != this || run != original || !widget_owned(original) ||
+                original->call.record != record || original->call.receipt != receipt || native_receipt != active_receipt ||
+                widget_parameter_entry(original) != entry || original->parameter_at != index || original->completed_steps != prefix ||
+                original->parameter != parameter || original->input != input || original->tool != tool ||
+                original->parameter_applied != applied || original->parameter_uncertain != uncertain ||
+                (input && (int(input->consumed) != consumed || int(input->outcome.applied) != input_applied || int(input->outcome.published) != published)) ||
+                widget_input.get() != helper || bool(helper) != helper_present ||
+                record->answered || record->discarded || record->completed || record->retired != retired || receipt->retired != receipt_retired ||
+                native_call->finishing || native_call->retiring != retiring || native_call->resolved != resolved ||
+                generation != binding || native_serial != serial || usage_epoch != account || file_epoch != files) return;
+        }
         try {
             // The actual save worker retains the original result/RPC owner.
             if (run->tool == "save_project" && native_save && native_save->call.record == run->call.record &&
