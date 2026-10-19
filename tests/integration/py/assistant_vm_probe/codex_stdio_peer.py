@@ -82,7 +82,7 @@ def array451_policy_fields(params):
             'reasoningEffort':'medium','sandbox':{'type':'readOnly','networkAccess':False}}
 
 # GUI416 opt-in only; native default peer behavior remains exact after reversal.
-gui416_state = {'cursor': -1, 'choice': ('gpt-6.1-sol', None), 'threads': 0}
+gui416_state = {'cursor': -1, 'choice': ('gpt-6.1-sol', 'medium'), 'threads': 0}
 def gui416_choose(params, method):
     expected = config['gui415_policy']
     assert type(expected) is dict and set(expected) == {'case'} and scenario == 'native:script' and config['native_turn_calls'] == [[]], 'GUI416 SETUP: exact existing firstGUI owned fixture only'
@@ -95,6 +95,15 @@ def gui416_choose(params, method):
     else:
         assert case in ('chooser-retirement','account','first-eye-clear','stale','remaining25','remaining24','remaining5','remaining4','remaining100','over100','unknown','zero-missing-recovered'), 'GUI416 SETUP: closed original GUI operands'
         choices = [initial]
+    # UI Auto is distinct intent; the original literal catalogues resolve it to medium.
+    defaults564 = {'gpt-6.1-sol': 'medium', 'gpt-6-sol': 'medium'}
+    effective564 = []
+    for model, intent in choices:
+        choice = (model, defaults564[model] if intent is None else intent)
+        # Alternate Auto then explicit medium may share ONE effective interval.
+        if not effective564 or choice != effective564[-1]:
+            effective564.append(choice)
+    choices = effective564
     if method == 'thread/start':
         config416 = params.get('config')
         if config416 is None: config416 = {}

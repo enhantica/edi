@@ -10132,7 +10132,7 @@ def test_status410_genuine_native_folder_dialog_reentry(case, tmp_path):
 
 
 def gui416_choice_path(case):
-    # Independently declared UNCHANGED original Qt actions; None is native provider Auto.
+    # Independently declared UNCHANGED original Qt actions; None is UI Auto intent, not wire effort.
     initial = ('gpt-6.1-sol', None)
     if case == 'chooser-pointer':
         return [initial, ('gpt-6.1-sol', 'high'), ('gpt-6-sol', None), ('gpt-6-sol', 'medium')]
@@ -10160,7 +10160,15 @@ def gui416_requested_choice(params, method, previous):
 
 def gui415_policy(trace, expected):
     assert type(expected) is dict and set(expected) == {'case'}, 'GUI416 SETUP: exact independent case descriptor'
-    path = gui416_choice_path(expected['case'])
+    ui_path564 = gui416_choice_path(expected['case'])
+    # Original independent model/list inputs declare medium as both models' default.
+    defaults564 = {'gpt-6.1-sol': 'medium', 'gpt-6-sol': 'medium'}
+    path = []
+    for model, intent in ui_path564:
+        choice = (model, defaults564[model] if intent is None else intent)
+        # Keep actual UI Auto/explicit choices distinct without inventing a wire transition.
+        if not path or choice != path[-1]:
+            path.append(choice)
     traffic = records(trace)
     packets = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
     effective = {}
