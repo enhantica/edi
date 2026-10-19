@@ -1101,12 +1101,23 @@ def test_gn5_reconnect_stages_current_immutable_inputs_not_modified_recovery(gen
     )
     actor.command('send_text', text='Original work before process loss')
     settle(actor, lambda value: not value['connected'])
+    project575 = json.loads(json.dumps(actor.last['vm']['project']))
+    before_reconnect575 = list(records(trace))
+    account_reads575 = sum(row.get('method') == 'account/read' for row in before_reconnect575)
     changed = (first_cwd / 'inputs' / path.name).read_bytes()
     assert changed != original and path.read_bytes() == original, (
         'GN5 SETUP: only the task-owned staged copy changed before actual process loss'
     )
     configure_next_peer(actor, 'complete')
     connect(actor)
+    reconnected575 = actor.last['vm']
+    current_requests575 = records(trace)
+    assert reconnected575['connected'] and reconnected575['context'] and not reconnected575['last_error'], (
+        'RECOVERY575: ordinary reconnect rebuilds valid current context after real local EOF without Clear')
+    assert sum(row.get('method') == 'account/read' for row in current_requests575) == account_reads575 + 1, (
+        'RECOVERY575: reconnect obtains ONE actual fresh account/read, never cached authentication')
+    assert not any(row.get('method') == 'account/logout' for row in current_requests575), (
+        'RECOVERY575: a local transport failure cannot fabricate provider logout')
     current_cwd = Path(
         [row['params']['cwd'] for row in records(trace) if row.get('method') == 'thread/start'][-1]
     )
@@ -1116,6 +1127,26 @@ def test_gn5_reconnect_stages_current_immutable_inputs_not_modified_recovery(gen
     assert (first_cwd / 'inputs' / path.name).read_bytes() == changed, (
         'GN5: original changed recovery artifact is preserved rather than silently overwritten'
     )
+
+    before_turn575 = len(started_requests(trace))
+    message575 = 'Original fresh objective after local EOF without Clear'
+    preview575 = json.loads(json.dumps(actor.last['vm']['context']))
+    selected575 = json.loads(json.dumps(actor.last['vm']['selected_files']))
+    if actor.last['vm']['context_consent_required']:
+        actor.command('sign_in')
+        assert actor.last['vm']['connected'], 'RECOVERY575: genuine current consent retains real connected account'
+    actor.command('send_text', text=message575)
+    final575 = settle(actor, lambda value: not value['can_cancel'] or bool(value['last_error']))
+    turns575 = started_requests(trace)
+    assert final575['connected'] and not final575['last_error'] and len(turns575) == before_turn575 + 1, (
+        'RECOVERY575: exactly one fresh ordinary objective completes after local EOF without Clear/restart')
+    assert rpc83_context_matches(turns575[-1]['params'], preview575,
+                                current_text=message575, selected_files=selected575), (
+        'RECOVERY575: actual fresh Send owns exact current closed disclosure, selected source bytes/IDs and new scopes')
+    assert final575['project'] == project575, (
+        'RECOVERY575: transport-only reconnect and fresh ordinary objective preserve actual current model/science')
+    assert len(users(actor, message575)) == 1 and path.read_bytes() == original, (
+        'RECOVERY575: one genuine user admission preserves immutable original source bytes')
 
 
 @pytest.mark.parametrize('selection', ['auto', 'model'])
@@ -11301,3 +11332,87 @@ def test_main504_lbco_show_actions_cue_fit_save_and_report(tmp_path):
     assert len([row for row in records(trace) if row.get('method') == 'turn/start']) == 3
     assert not any(row.get('method') in {'turn/interrupt', 'turn/steer'} for row in records(trace))
     assert config_path.read_bytes() == config_bytes and all((reference / name).read_bytes() == data for name, data in inputs.items())
+
+
+@pytest.mark.parametrize('human_case', ['idle', 'total', 'answer', 'reject', 'resolved', 'revoke', 'lifetime'])
+def test_human575_original_agent_wait_preserves_budget_and_lifetime(generic, human_case):
+    import math
+
+    actor, trace = generic('transport304')
+    config_path = trace.parent / 'peer-input.json'
+    config = json.loads(config_path.read_text())
+    config['transport304_mode'] = 'human-wait'
+    config_path.write_text(json.dumps(config))
+    original_config = config_path.read_bytes()
+    assert actor.command('codex304_start', trigger='human-wait', action='destroy',
+                         human_case=human_case)['reply']['armed'], (
+        'HUMAN575 SETUP: same original native target owns the public transport caller')
+    state = actor.command('codex304_inspect')['public_transport304']
+    actual = state['human575']
+    common575 = {'original_requests_received', 'inactive_inference_refused', 'prewait_budget_still_live',
+        'unknown_request_refused', 'original_wait_entered', 'nested_request_refused',
+        'stale_generation_refused', 'duplicate_entry_idempotent', 'wrong_exit_refused', 'human_interval_excluded'}
+    tails575 = {
+        'idle': {'original_wait_resumed', 'resume_live_at_return', 'remaining_budget_not_discarded', 'remaining_budget_not_reset_or_double_excluded'},
+        'total': {'original_wait_resumed', 'resume_live_at_return', 'remaining_budget_not_discarded', 'remaining_budget_not_reset_or_double_excluded'},
+        'answer': {'original_answer_once', 'duplicate_answer_refused', 'removed_request_cannot_wait', 'settlement_live_at_return', 'settlement_live_interval', 'settlement_releases_wait_before_removal'},
+        'reject': {'original_reject_once', 'duplicate_reject_refused', 'removed_request_cannot_wait', 'settlement_live_at_return', 'settlement_live_interval', 'settlement_releases_wait_before_removal'},
+        'resolved': {'resolved_request_not_answered', 'removed_request_cannot_wait', 'settlement_live_at_return', 'settlement_live_interval', 'settlement_releases_wait_before_removal'},
+        'revoke': {'revoke_live_at_return', 'revoke_live_interval', 'revoke_budget_uses_real_time'},
+        'lifetime': {'original_process_captured', 'original_process_destroyed', 'same_facade_reused', 'replacement_process_captured', 'retired_wait_cannot_resume', 'replacement_start_returned', 'replacement_requests_received',
+            'replacement_generation_distinct', 'replacement_wait_entered', 'settled_operation_cannot_wait',
+            'new_active_operation_wait_entered', 'old_exit_cannot_resume_replacement',
+            'output_bound_query_not_suspended', 'actual_eof_requested', 'real_eof_not_suspended', 'failed_generation_cannot_wait'},
+    }
+    expected575 = common575 | tails575[human_case]
+    times575 = {'prewait_elapsed_ms', 'finished_elapsed_ms'} | ({'resume_elapsed_ms'} if human_case in {'idle', 'total'} else set())
+    assert set(actual) == expected575 | times575 | {'case'} and actual['case'] == human_case and all(
+        actual[key] is True for key in expected575), (
+        'HUMAN575: the independent COMPLETE exact boundary inventory must execute, no missing or false positive receipt')
+    assert not state.get('observer_error') and not state.get('observer_overflow'), (
+        'HUMAN575: original bounded callback observer must remain complete')
+    # Independent original public cause/receiver/time facts, not the helper's assigned success name.
+    def terminal577(event, receiver, label, cause, lower, upper):
+        elapsed = event.get('elapsed_operation_ms')
+        return (event.get('signal') == 'failed' and event.get('label') == label
+                and event.get('receiver') == receiver and event.get('original_alive_at_entry') is True
+                and event.get('explanation') == cause and type(elapsed) in (int, float)
+                and math.isfinite(elapsed) and lower <= elapsed <= upper)
+
+    failed577 = [row for row in state['events'] if row.get('signal') == 'failed']
+    assert len(failed577) == 1, 'HUMAN577: exactly one actual terminal event, never another hidden failure'
+    phases577 = state['human577_phases']
+    if human_case == 'lifetime':
+        assert terminal577(failed577[0], state['original_receiver'], 'B',
+            'The official agent process ended. Unfinished work was interrupted.',
+            phases577['eof_before'], phases577['terminal_observed']), (
+            'HUMAN577: actual B EOF cause/receiver/phase must own the paused terminal')
+        process577 = state['human577_process']
+        assert process577['A_destroyed'] == 1 and process577['A_pid'] > 0 and process577['B_pid'] > 0, (
+            'HUMAN577: actual original QProcess destruction precedes ONE same-facade replacement start')
+        peer577 = clear_control_events(trace)
+        original577 = [row for row in peer577 if row['kind'] == 'transport304-request' and row['label'] == 'B']
+        eof577 = [row for row in peer577 if row['kind'] == 'human575-real-eof']
+        assert len(original577) == len(eof577) == 1 and original577[0]['pid'] == eof577[0]['pid'] == process577['B_pid'] and (
+            peer577.index(original577[0]) < peer577.index(eof577[0])
+        ), 'HUMAN577: actual peer EOF receipt belongs to the same initialized native B process, not an inferred count'
+    else:
+        returned577 = phases577['revoke_return' if human_case == 'revoke' else 'resume_return']
+        assert phases577['live_checkpoint'] >= returned577 + (50 if human_case == 'revoke' else 200), (
+            'HUMAN577: real resumed/revoke interval must remain LIVE before claimed expiry')
+        lower577 = phases577['live_checkpoint']
+        if human_case == 'revoke':
+            lower577 = max(lower577, phases577['revoke_before'] + 100)
+        assert terminal577(failed577[0], state['original_receiver'], 'A',
+            'The official agent operation exceeded its deadline.', lower577, phases577['terminal_observed']), (
+            'HUMAN577: only actual original inference/revoke deadline cause after its live phase can prove expiry')
+    requests = records(trace)
+    assert [row.get('method') for row in requests if row.get('method')] == (
+        ['initialize', 'initialize', 'original/human575-eof'] if human_case == 'lifetime' else ['initialize']
+    ), 'HUMAN575: only the declared native public fixture requests may reach the owned peer'
+    answers = [row for row in requests if row.get('method') is None]
+    assert len(answers) == (1 if human_case in {'answer', 'reject'} else 0), (
+        'HUMAN575: original answer/reject is once-only and resolved/retired work sends no stale response')
+    if answers:
+        assert answers[0]['id'] == 'human575-A-0', 'HUMAN575: sole response retains the exact original request identity'
+    assert config_path.read_bytes() == original_config, 'HUMAN575: original finite peer declaration stays immutable'

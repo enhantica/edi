@@ -229,10 +229,132 @@ struct PublicTransport304 {
                 boundary("serverRequest",label,original,Object{{"original_id",id},{"method",method}});
             },Qt::DirectConnection));
     }
+    // HUMAN575: same original native public caller, real event processing and clock only.
+    void humanWait(const Object& input) {
+        const QString mode=input["human_case"].toString();
+        if(!QStringList{"idle","total","answer","reject","resolved","revoke","lifetime"}.contains(mode))
+            throw std::invalid_argument("finite original human-wait case required");
+        Object result{{"case",mode}};
+        Object phases;
+        const auto mark=[&](const char* phase) {
+            phases[QString::fromUtf8(phase)]=static_cast<double>(operation.elapsed());
+            facts["human577_phases"]=phases;
+        };
+        const auto require=[&](bool ok,const char* name) {
+            result[QString::fromUtf8(name)]=ok;facts["human575"]=result;
+            if(!ok)throw std::runtime_error(name);
+        };
+        const auto failures=[&] {
+            int count=0;for(const auto& value:events)if(value.toObject()["signal"]=="failed")++count;return count;
+        };
+        const auto ready=[&](const QString& label) {
+            QStringList actual;
+            for(const auto& value:events) {
+                const auto event=value.toObject();
+                if(event["label"]==label && event["signal"]=="serverRequest") {
+                    if(event["method"]!="item/tool/requestUserInput")return false;
+                    actual.push_back(event["original_id"].toString());
+                }
+            }
+            return actual==QStringList{"human575-"+label+"-0","human575-"+label+"-1","human575-"+label+"-2"};
+        };
+        // Reuse original operation clock and drain; no new clock or test setter.
+        operation.start();while(!ready("A") && operation.elapsed()<1000)drain(1);
+        require(ready("A") && failures()==0,"original_requests_received");
+        const QJsonValue request("human575-A-0"),nested("human575-A-1");
+        const auto generation=facade->outputGeneration();
+        require(!facade->beginHumanWait(request,generation),"inactive_inference_refused");
+        operation.restart();mark("operation_begin");
+        facade->beginOperation(mode=="idle"?5000:1000,mode=="idle"?1000:5000);
+        if(mode=="idle" || mode=="total")drain(650);
+        require(failures()==0,"prewait_budget_still_live");
+        result["prewait_elapsed_ms"]=static_cast<double>(operation.elapsed());
+        require(!facade->beginHumanWait(QJsonValue("unknown-human575"),generation),"unknown_request_refused");
+        require(facade->beginHumanWait(request,generation),"original_wait_entered");
+        require(!facade->beginHumanWait(nested,generation),"nested_request_refused");
+        require(!facade->beginHumanWait(request,generation+1),"stale_generation_refused");
+        drain(600);
+        require(facade->beginHumanWait(request,generation),"duplicate_entry_idempotent");
+        require(!facade->endHumanWait(nested,generation),"wrong_exit_refused");
+        drain(600);
+        require(failures()==0,"human_interval_excluded");
+        if(mode=="idle" || mode=="total") {
+            mark("resume_before");
+            require(facade->endHumanWait(request,generation),"original_wait_resumed");
+            (void)facade->endHumanWait(request,generation); // Return value is not promised; accounting must remain harmless.
+            result["resume_elapsed_ms"]=static_cast<double>(operation.elapsed());
+            mark("resume_return");require(failures()==0,"resume_live_at_return");
+            drain(200);require(failures()==0,"remaining_budget_not_discarded");mark("live_checkpoint");
+            drain(450);require(failures()==1,"remaining_budget_not_reset_or_double_excluded");mark("terminal_observed");
+        } else if(mode=="answer" || mode=="reject" || mode=="resolved") {
+            mark("resume_before");
+            if(mode=="answer") {
+                require(facade->answer(request,Object{{"human575","original answer"}}),"original_answer_once");
+                require(!facade->answer(request,Object{{"human575","duplicate"}}),"duplicate_answer_refused");
+            } else if(mode=="reject") {
+                require(facade->reject(request),"original_reject_once");
+                require(!facade->reject(request),"duplicate_reject_refused");
+            } else {
+                facade->resolved(request);facade->resolved(request);
+                require(!facade->answer(request,Object{}),"resolved_request_not_answered");
+            }
+            require(!facade->beginHumanWait(request,generation),"removed_request_cannot_wait");
+            mark("resume_return");require(failures()==0,"settlement_live_at_return");
+            drain(200);require(failures()==0,"settlement_live_interval");mark("live_checkpoint");
+            drain(1150);require(failures()==1,"settlement_releases_wait_before_removal");mark("terminal_observed");
+        } else if(mode=="revoke") {
+            // Same public transition used to arm bounded revoke; no fake VM Stop.
+            mark("revoke_before");facade->beginOperation(100,100);
+            mark("revoke_return");require(failures()==0,"revoke_live_at_return");
+            drain(50);require(failures()==0,"revoke_live_interval");mark("live_checkpoint");
+            drain(300);require(failures()==1,"revoke_budget_uses_real_time");mark("terminal_observed");
+        } else {
+            const auto children=facade->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly);
+            require(children.size()==1 && children.front()->state()==QProcess::Running,"original_process_captured");
+            QPointer<QProcess> retiring=children.front();int destroyed=0;
+            Object processFacts{{"A_pid",static_cast<double>(retiring->processId())}};
+            const auto destruction=QObject::connect(retiring.data(),&QObject::destroyed,QCoreApplication::instance(),[&]{++destroyed;});
+            const auto releaseDestruction=qScopeGuard([&]{QObject::disconnect(destruction);});
+            // Share the original1000ms replacement-readiness ceiling; never retry start.
+            operation.restart();facade->retire();
+            require(!facade->beginHumanWait(request,generation) && !facade->endHumanWait(request,generation),"retired_wait_cannot_resume");
+            while(!retiring.isNull() && operation.elapsed()<1000) {
+                drain(1);QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+            }
+            require(retiring.isNull() && destroyed==1,"original_process_destroyed");
+            processFacts["A_destroyed"]=destroyed;
+            disconnect();attach("B",false);
+            require(identity(facade.get())==facts["original_receiver"].toString(),"same_facade_reused");
+            require(facade->start(Agent::executable(),root+"/B"),"replacement_start_returned");
+            while(!ready("B") && operation.elapsed()<1000)drain(1);
+            require(ready("B"),"replacement_requests_received");
+            const auto replacement=facade->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly);
+            require(replacement.size()==1 && replacement.front()->state()==QProcess::Running,"replacement_process_captured");
+            processFacts["B_pid"]=static_cast<double>(replacement.front()->processId());facts["human577_process"]=processFacts;
+            const auto next=facade->outputGeneration();const QJsonValue current("human575-B-0");
+            require(next!=generation,"replacement_generation_distinct");
+            facade->beginOperation(1000,1000);
+            require(facade->beginHumanWait(current,next),"replacement_wait_entered");
+            facade->settleOperation();
+            require(!facade->beginHumanWait(current,next),"settled_operation_cannot_wait");
+            facade->beginOperation(1000,1000);
+            require(facade->beginHumanWait(current,next),"new_active_operation_wait_entered");
+            require(!facade->endHumanWait(request,generation),"old_exit_cannot_resume_replacement");
+            quint64 available=0;
+            require(!facade->remainingOutput(edi::assistant::Limits::stream_retained_bytes+1,available),"output_bound_query_not_suspended");
+            const auto beforeEof=failures();
+            operation.restart();mark("eof_before");
+            require(facade->notification("original/human575-eof"),"actual_eof_requested");
+            while(failures()==beforeEof && operation.elapsed()<1000)drain(1);
+            require(failures()==beforeEof+1,"real_eof_not_suspended");mark("terminal_observed");
+            require(!facade->beginHumanWait(current,next),"failed_generation_cannot_wait");
+        }
+        result["finished_elapsed_ms"]=static_cast<double>(operation.elapsed());facts["human575"]=result;
+    }
     Object start(const Object& input,const QString& temporary) {
         if(enabled)throw std::invalid_argument("one original public facade case per probe process");
         trigger=input["trigger"].toString();action=input["action"].toString();
-        if(!QStringList{"started","response","event","failed-record","failed-eof","failed-deadline","before-write"}.contains(trigger)
+        if(!QStringList{"started","response","event","failed-record","failed-eof","failed-deadline","before-write","human-wait"}.contains(trigger)
             || !QStringList{"destroy","recreate","restart"}.contains(action))
             throw std::invalid_argument("finite public transport boundary/action required");
         const auto executable=Agent::executable();
@@ -240,10 +362,11 @@ struct PublicTransport304 {
             || !QFileInfo(executable).isExecutable())throw std::invalid_argument("actual owned absolute executable required");
         root=temporary+"/public-transport304";
         if(!QDir().mkpath(root+"/A") || !QDir().mkpath(root+"/B"))throw std::runtime_error("owned original workspaces unavailable");
-        enabled=true;armed=true;attach("A",true);
+        enabled=true;armed=trigger!="human-wait";attach("A",true);
         facts={{"trigger",trigger},{"action",action},{"original_receiver",identity(facade.get())},
                {"owned_executable",executable},{"workspace_A",root+"/A"},{"workspace_B",root+"/B"}};
         facts["initial_start_returned"]=facade->start(executable,root+"/A");
+        if(trigger=="human-wait")humanWait(input);
         return {{"armed",true}};
     }
     Object snapshot() const {

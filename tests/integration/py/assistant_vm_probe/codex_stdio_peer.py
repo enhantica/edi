@@ -1636,6 +1636,13 @@ def roots207_response(request, value):
 def transport304_dispatch(request):
     """Actual owned original process; no account, inference or subject callbacks."""
     mode = config['transport304_mode']
+    if mode == 'human-wait' and request.get('method') is None:
+        assert request.get('id') == 'human575-A-0', 'HUMAN575: only the original first request may be answered/rejected'
+        clear_observation('human575-response', {'response': request})
+        return
+    if mode == 'human-wait' and request.get('method') == 'original/human575-eof':
+        clear_observation('human575-real-eof', {})
+        sys.exit(0)
     if request.get('method') != 'initialize':
         raise RuntimeError('transport304 accepts only the predeclared public initialize request')
     label = request['params']['clientInfo']['name'].removeprefix('independent-public-')
@@ -1658,7 +1665,12 @@ def transport304_dispatch(request):
             'codexHome': str(trace.parent / 'peer-unused-profile'),
             'platformFamily': 'unix', 'platformOs': 'linux'}}
         batch = [response]
-        if label == 'A':
+        if mode == 'human-wait':
+            batch.extend({'id': 'human575-' + label + '-' + str(index),
+                          'method': 'item/tool/requestUserInput',
+                          'params': {'originalCaller': label, 'questions': []}}
+                         for index in range(3))
+        elif label == 'A':
             batch.extend({'method': name, 'params': {'originalCaller': label}}
                          for name in ['original/transport304-boundary', 'original/transport304-tail'])
         wire = ''.join(json.dumps(x, separators=(',', ':')) + '\n' for x in batch).encode()

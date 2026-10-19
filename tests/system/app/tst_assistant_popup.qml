@@ -5344,6 +5344,16 @@ TestCase {
                 }, observation, "SAVE349 INTERVAL: real Save opens its unique form and genuine partial original name typing is reached");
                 console.log("SAVE349_PARTIAL", JSON.stringify({case: data.tag, saveClicks: saveClicks,
                     typed: typed, text: editor.text, finalClicks: finalClicks, currentOwner: Session.project === project}));
+                const pending575=originalDialog.intent;
+                verify(typeof pending575==="string" && pending575.length>0
+                    && originalDialog.presentedIntent===pending575 && Session.saveAsCurrent(pending575),
+                    "HUMAN575 MAIN: reached original fresh Save form owns the SAME current real Session SaveAs intent");
+                verify(Session.assistantSaveReady && Session.assistantSaveAs && Session.project===project
+                    && assistant.connected && JSON.stringify(Probe.rows(assistant.models))===account,
+                    "HUMAN575 MAIN: actual pending fresh Save retains real owner/account authority before original completion or Stop");
+                console.log("HUMAN575_MAIN_PENDING",JSON.stringify({originalIntent:true,ownerCurrent:true,
+                    connected:assistant.connected,canCancel:assistant.canCancel,dialogAlive:alive313(dialogLife),
+                    editorAlive:alive313(editorLife),finalClicks:finalClicks}));
                 if (data.tag === "stop") {
                     const stop = item("assistant.stopVisibleAction");
                     verify(stop.enabled && Ui.exposed(stop), "SAVE349 STOP: genuine original Stop is exposed in reached interval");
