@@ -40,7 +40,7 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `e120d42e91939ccdf2d524a13791b48d85fe2f3e` and declares its own QML modules under the upstream URIs
+   `fdef6d30790484f524ff657860d299427f309977` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField and TableViewParameter for parameter menu terminology and units (ADR-0029),
