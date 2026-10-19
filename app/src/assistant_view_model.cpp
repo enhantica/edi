@@ -1509,6 +1509,13 @@ struct AssistantViewModel::State {
         if(!proof.input_current())throw std::runtime_error("Skill source owner changed");
         if(!skill_source_valid || !skill_source_loaded)throw std::runtime_error("Skill source configuration is unavailable");
         const auto serial=skill_source_serial;
+        // Preference reload invalidates/replaces the inventory before publication.
+        // Compiled resources cannot change within this process; enabled local
+        // sources still require the original fresh physical/content capture.
+        if (skill_inventory && std::none_of(skill_source_rows.cbegin(), skill_source_rows.cend(), [](const auto& value) {
+            const auto source = value.toObject();
+            return source.value("enabled").toBool() && !source.value("builtin").toBool();
+        })) return skill_inventory;
         quint64 reserved=0;
         const QPointer<CodexAgent> transport(agent.get());const auto output_generation=transport?transport->outputGeneration():0;
         const auto release=qScopeGuard([this,proof,transport,output_generation,&reserved] {
