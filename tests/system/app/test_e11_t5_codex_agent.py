@@ -2493,7 +2493,7 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'load_structure',
         'create_experiment',
         'set_experiment_type',
-        'load_data', 'read_selected_file',
+        'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
     }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
@@ -4909,7 +4909,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'add_relations',
         'save_project',
         'edit_background',
-                             'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
+                             'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
     }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
@@ -5371,7 +5371,7 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'add_relations',
         'save_project',
         'edit_background',
-                                                                    'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
+                                                                    'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
     }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
@@ -5863,7 +5863,7 @@ def signin206_shipped(state, trace):
         'run_fit', 'create_cwl_project', 'add_relations',
         'save_project',
         'edit_background',
-                                                                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
+                                                                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
     }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
 
 
@@ -9599,7 +9599,7 @@ def gui392_run(tmp_path, case):
             assert {tool['name'] for tool in start['dynamicTools']} == {
                 'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
                 'run_fit', 'create_cwl_project', 'add_relations', 'save_project', 'edit_background',
-                                                                           'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
+                                                                           'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom',
             }, 'GUI392: custom guidance cannot register or expand native tool authority'
         emitted = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         # Actual peer request/reply/client IDs, not a guessed process/row ID.
@@ -10334,7 +10334,7 @@ PREFS417_CASES = ('lifecycle', 'malformed', 'retirement', 'local', 'all-off', 's
 PREFS417_NATIVE_TOOLS = {'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters',
                        'set_free', 'run_fit', 'create_cwl_project', 'add_relations',
                        'save_project', 'edit_background', 'acquire_inputs',
-                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file'}
+                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file', 'create_structure', 'edit_structure', 'edit_atom'}
 
 
 def prefs417_inventory(skills, expected):
@@ -11652,3 +11652,125 @@ def test_read625_original_selected_utf8_ranges_and_closed_results(generic, tmp_p
     assert len(started_requests(trace)) == 2 and not any(r.get('method') in {'account/login/start','account/logout','turn/interrupt'} for r in records(trace))
     assert len({r['response']['id'] for r in replies}) == len(replies)
     assert {p.name:(len(p.read_bytes()),hashlib.sha256(p.read_bytes()).hexdigest()) for p in paths} == original
+
+
+def test_structure634_original_create_edit_atom_noops_and_current_save(generic, tmp_path):
+    """Independent public522/524 operands through the original native app/peer."""
+    fixture = ROOT / 'tests/fixtures/assistant/structure634'
+    expected_schemas = json.loads((fixture / 'requests.json').read_text())
+    actor, trace = native_case(generic, [], connect_now=False,
+                               script={'scenario':'native:script','structure634':True})
+    directory = tmp_path / 'owned-structure634'
+    assert actor.command('named_empty_create',name='Structure634 owner',title='Independent structure title',
+        description='Ordinary original app methods',authors='Independent test',location=str(directory),
+        su_rule='iucr_99',report_libraries=True)['reply']['created'], 'STRUCTURE634 SETUP: real saved empty Session owner'
+    assert actor.command('native_science_enable')['reply']['enabled']
+    initial = actor.last['vm']; initial_files = save211_files(directory)
+    S={'$structure634':'structure'}; A={'$structure634':'first_atom'}; B={'$structure634':'appended_atom'}
+    def param(name): return {'$original_parameter_suffix':'.atom_sites[A634].'+name}
+    turns = [
+        [native_call('create_structure'),native_call('inspect_project'),native_call('list_parameters')],
+        [native_call('edit_structure',structure=S,operation='rename',value='Independent634'),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='label',value='A634'),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='typeSymbol',value='Fe3+'),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='wyckoffLetter',value='a'),
+         native_call('edit_atom',structure=S,operation='adp_type',atom=A,value='Biso'),
+         native_call('edit_structure',structure=S,operation='space_group_name',value='P 1'),
+         native_call('edit_structure',structure=S,operation='space_group_number',value=1),
+         native_call('edit_structure',structure=S,operation='space_group_number',value=0),
+         native_call('edit_structure',structure=S,operation='space_group_setting',value=''),
+         native_call('inspect_project'),native_call('list_parameters')],
+        [native_call('set_parameters',values=[{'path':param(name),'value':value} for name,value in
+             [('fract_x',.125),('fract_y',.25),('fract_z',.375),('occupancy',.75),('adp_iso',1.5791367041742974)]]),
+         native_call('set_free',flags=[{'path':param('fract_x'),'free':True}]),
+         native_call('edit_atom',structure=S,operation='adp_type',atom=A,value='Uiso'),
+         native_call('inspect_project'),native_call('list_parameters')],
+        [native_call('edit_structure',structure=S,operation='rename',value='Independent634'),
+         native_call('edit_structure',structure=S,operation='space_group_name',value='P 1'),
+         native_call('edit_structure',structure=S,operation='space_group_number',value=0),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='label',value='A634'),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='typeSymbol',value='Fe3+'),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='wyckoffLetter',value='a'),
+         native_call('edit_atom',structure=S,operation='adp_type',atom=A,value='Uiso'),
+         native_call('set_parameters',values=[{'path':param('fract_x'),'value':.125}]),
+         native_call('set_free',flags=[{'path':param('fract_x'),'free':True}]),native_call('inspect_project')],
+        [native_call('edit_atom',structure=S,operation='append'),native_call('inspect_project')],
+        [native_call('edit_atom',structure=S,operation='text',atom=B,field='label',value='B634'),
+         native_call('edit_atom',structure=S,operation='text',atom=B,field='typeSymbol',value='2H'),
+         native_call('edit_atom',structure=S,operation='adp_type',atom=B,value='Bani'),native_call('inspect_project')],
+        [native_call('edit_atom',structure=S,operation='remove',atom=B),native_call('inspect_project')],
+        [native_call('edit_atom',structure=S,operation='append',atom='not-an-append-field'),
+         native_call('edit_structure',structure=S,operation='rename',value=12),
+         native_call('edit_atom',structure=S,operation='text',atom=A,field='fract_x',value='0.5'),
+         native_call('edit_atom',structure=S,operation='remove',atom='independent-absent634'),native_call('inspect_project')],
+        [native_call('save_project',name='Unused current name634'),native_call('inspect_project')],
+    ]
+    for group_index,group in enumerate(turns):
+        for call_index,call in enumerate(group):call['call_id']=f'structure634-{group_index}-{call_index}'
+    readonly409_configure(trace); native145_configure(actor,trace,turns)
+    config=trace.parent/'peer-input.json'; original_config=config.read_bytes()
+    models_before=actor.last['vm']['models']
+    tools=next(r['params']['dynamicTools']for r in records(trace)if r.get('method')=='thread/start')
+    for name,schema in expected_schemas.items():assert [t['inputSchema']for t in tools if t['name']==name]==[schema], 'STRUCTURE634: closed schemas stay byte-value exact to independent public declaration, including union roots'
+    type_schema=json.loads((ROOT/'tests/fixtures/assistant/action484-schemas.json').read_text())['arguments']['set_experiment_type']
+    assert [t['inputSchema']for t in tools if t['name']=='set_experiment_type']==[type_schema], 'STRUCTURE634: original closed-union type sibling shares exact canonical registration'
+    owner=initial['project']['empty_completion_observer']; total=0
+    states=[]; outcomes=[]
+    for index,group in enumerate(turns):
+        native145_approve(actor); total+=len(group); _,replies=native_send(actor,trace,total)
+        state=native145_science_settled(actor); current=replies[-len(group):]
+        assert all(r['response']['result']['success'] is (index!=7 or j==len(group)-1)
+                   for j,r in enumerate(current)), 'STRUCTURE634: actual requested action succeeds or literal invalid request refuses, never missing reply'
+        if index==3:
+            assert all(r['decoded']['status']=='no_change' and r['decoded']['applied'] is False
+                       and r['decoded']['complete'] is True for r in current[:7]), 'STRUCTURE634: exact same stored structure/atom operands are true no-ops'
+            assert all(r['decoded']['status']=='edited' and r['decoded']['complete'] is True for r in current[7:9]), 'STRUCTURE634: original numeric/free result spelling stays unchanged while same science/history is proved'
+        if index==7:
+            assert all(r['decoded']['status']=='refused' and r['decoded']['applied'] is False for r in current[:-1])
+        for r in current:
+            if r['original']['params']['tool'] in {'create_structure','edit_structure','edit_atom'} and r['response']['result']['success']:
+                assert r['decoded']['status'] in {'completed','no_change'} and r['decoded']['complete'] is True
+                assert type(r['decoded']['applied'])is bool and type(r['decoded']['published'])is bool
+                assert len(r['decoded']['structures'])==1, 'STRUCTURE634: result names only actual affected current member'
+        now=state['project']['empty_completion_observer']
+        assert all(now[k]==owner[k]for k in ['owner_identity','core_identity','metadata','settings','path','metadata_path'])
+        assert state['connected'] and state['models']==models_before and not state['project']['science_observer']['aliases'] and not state['project']['science_observer']['constraints']
+        assert state['project']['host_snapshot']['experiments']==[], 'STRUCTURE634: no requested structure action fabricates a dataset'
+        if index<8:assert save211_files(directory)==initial_files, 'STRUCTURE634: no implicit save during ordinary edits'
+        structures=state['project']['science_observer']['structures'];assert len(structures)==1
+        sites=structures[0]['sites']
+        if index==0:
+            assert len(sites)==1, 'STRUCTURE634: ordinary Create supplies exactly ONE actual initial site'
+            assert current[0]['decoded']['structures'][0]['sites'][0]['id']==sites[0]['id'] and current[0]['decoded']['structures'][0]['id']==structures[0]['id']
+            first_original_id=sites[0]['id']; assert first_original_id!='A634'
+        elif index in {1,2,3,6,7,8}:
+            assert structures[0]['id']=='Independent634' and structures[0]['space_group']=='P 1'
+            assert len(sites)==1 and sites[0]['id']=='A634' and sites[0]['type_symbol']=='Fe3+' and sites[0]['wyckoff']=='a', 'STRUCTURE634: original initial site is updated, never left beside a duplicate target'
+        if index==1:
+            assert current[7]['decoded']['status']=='completed' and current[7]['decoded']['applied'] is True, 'STRUCTURE634: clearing explicitly supplied stored number1 is a genuine edit even while P1 display resolves to1'
+        if index in {2,3}:
+            assert sites[0]['fractional']==[.125,.25,.375] and sites[0]['occupancy']==.75 and sites[0]['adp_type']=='Uiso'
+            assert sites[0]['adp_iso']==pytest.approx(.02,rel=1e-12,abs=0), 'STRUCTURE634: nontrivial independently supplied B=8*pi^2*U conversion'
+        if index==3:
+            assert actor.command('native_undo')['reply']['was_available']
+            restored=native145_science_settled(actor)['project']['science_observer']['structures'][0]['sites'][0]
+            assert restored['adp_type']=='Biso' and restored['adp_iso']==pytest.approx(1.5791367041742974,rel=1e-12,abs=0), 'STRUCTURE634: ONE ordinary Undo skips all nine noops and undoes the preceding actual ADP conversion'
+        if index==4:
+            assert len(sites)==2 and sites[0]['id']=='A634' and current[0]['decoded']['atom_id']==sites[1]['id'] and sites[1]['id']!=first_original_id
+            appended_original_id=sites[1]['id']; assert appended_original_id!='B634'
+        if index==5:
+            assert [s['id']for s in sites]==['A634','B634'] and sites[1]['type_symbol']=='2H' and sites[1]['adp_type']=='Bani'
+            assert 'B634'in current[-1]['decoded']['structures'][0]['anisotropic_site_ids']
+        if index==6:
+            assert current[0]['decoded']['atom_id']=='B634' and current[0]['decoded']['removed'] is True
+        if index==7:
+            assert state['project']['parameters']==states[-1]['project']['parameters'] and structures==states[-1]['project']['science_observer']['structures']
+        states.append(state);outcomes.append(current)
+    saved=states[-1];outcome=outcomes[-1][0]['decoded']
+    assert outcome['status']=='succeeded' and outcome['committed'] is True and outcome['active'] is True and outcome['reopened'] is False
+    assert type(outcome['presentation_complete'])is bool and not saved['project']['host_snapshot']['modified']
+    reader,_=generic('native:original');assert reader.command('open',path=str(directory))['reply']['opened'];assert reader.command('native_science_enable')['reply']['enabled']
+    reopened=native145_science_settled(reader);save211_compare_model(saved,reopened)
+    readonly409_policy(trace);assert config.read_bytes()==original_config
+    assert len(started_requests(trace))==len(turns) and len(native_records(trace,'.native-emitted.jsonl'))==len(native_records(trace,'.native-replies.jsonl'))==total
+    assert not any(r.get('method')in{'turn/interrupt','account/login/start','account/logout'}for r in records(trace))

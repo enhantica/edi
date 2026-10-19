@@ -3914,7 +3914,8 @@ struct AssistantViewModel::State {
         QString page;
         const bool extra = tool == "add_relations";
         if (tool == "run_fit" || tool == "set_free" || extra) page = "analysis";
-        else if (tool == "edit_background") page = "experiment";
+        else if (structure_app_action(tool) || tool=="load_structure") page = "structure";
+        else if (tool=="create_experiment" || tool=="set_experiment_type" || tool=="load_data" || tool=="edit_background") page = "experiment";
         else if (tool == "set_parameters") {
             page = "analysis";
             const auto values = args.value("values").toArray();
@@ -7086,6 +7087,11 @@ struct AssistantViewModel::State {
             }
             native_charge();if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
             if(!run->visible_delivery) {
+                if(!native_follow_page(name,args)) {
+                    if(receiver && receiver->state_.get()==this && create_widget_owned(run))create_widget_end(run);
+                    return;
+                }
+                if(!receiver || receiver->state_.get()!=this || !create_widget_current(run))return;
                 individual_normal(run);
                 if(receiver && create_widget_owned(run))create_widget_end(run);return;
             }

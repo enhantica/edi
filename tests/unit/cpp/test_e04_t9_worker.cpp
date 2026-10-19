@@ -613,7 +613,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
             };
             const auto operation = make_operation();
             bool applied = true; // Each actual Input entrance must clear BOTH supplied destinations.
-            Result result{original_structure.get(), target.get()};
+            Result result{original_structure.get(), target.get(), original_structure->atom_sites.front().get()};
             int inputs = 0, applied_events = 0, edited = 0;
             auto require_identity = [&] {
                 if (entrance != 0) CHECK_MESSAGE(applied, "RECEIPT491 actual applied flag exists before every fallible observer");
@@ -622,7 +622,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
                 if (factory == 0) {
                     REQUIRE_MESSAGE(live.structures.size() == original_structure_count + 1,
                                     "RECEIPT491 structure factory executes exactly once");
-                    CHECK_MESSAGE((result.structure == live.structures.back().get() && result.experiment == nullptr),
+                    CHECK_MESSAGE((result.structure == live.structures.back().get() && result.experiment == nullptr && result.atom == nullptr),
                                   "RECEIPT491 structure pin is the actual appended member before publication");
                     CHECK_MESSAGE(live.structures.back()->name == "receipt491_appended_structure",
                                   "RECEIPT491 actual appended identity belongs to the independent literal operation");
@@ -632,7 +632,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
                     const auto actual_member = factory == 1 ? live.experiments.back() : live.experiments[target_index];
                     CHECK_MESSAGE(live.experiments[count - 1] == unrelated_tail,
                                   "RECEIPT491 replacement cannot select the unrelated later member by row position");
-                    CHECK_MESSAGE((result.structure == nullptr && result.experiment == actual_member.get()),
+                    CHECK_MESSAGE((result.structure == nullptr && result.experiment == actual_member.get() && result.atom == nullptr),
                                   "RECEIPT491 experiment pin is the actual current appended/replacement member");
                     CHECK_MESSAGE(actual_member->name == (factory == 1 ? "receipt491_appended_experiment" :
                                   factory == 2 ? "receipt491_target" : "receipt491_loaded_experiment"),
@@ -657,7 +657,7 @@ TEST_CASE("E11-T5 closed edits pin actual member before fallible preview observe
                     {{}, [&](const edi::work::Event& event) {
                         if (event.kind == edi::work::EventKind::Input) {
                             ++inputs;
-                            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr),
+                            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr),
                                           "RECEIPT491 both caller destinations clear before the original Input trace");
                             CHECK_MESSAGE(edi::project_edi_files(live) == original_structure_text,
                                           "RECEIPT491 Input trace precedes the actual closed operation");
@@ -690,14 +690,14 @@ TEST_CASE("E11-T5 Input refusal clears applied identity before any closed edit")
     auto live = edi::load_project(e04_t9_fixture::silicon);
     const auto before = edi::project_edi_files(live);
     bool applied = true;
-    edi::Edit::AppliedResult result{live.structures.front().get(), live.experiments.front().get()};
+    edi::Edit::AppliedResult result{live.structures.front().get(), live.experiments.front().get(), live.structures.front()->atom_sites.front().get()};
     int inputs = 0;
     e04_t9::OwnerQueue queue;
     edi::work::Worker worker([&](auto delivery) { queue.post(std::move(delivery)); },
         {{}, [&](const edi::work::Event& event) {
             if (event.kind != edi::work::EventKind::Input) return;
             ++inputs;
-            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr),
+            CHECK_MESSAGE((!applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr),
                           "RECEIPT491 original Input observes cleared caller-owned storage");
             throw std::runtime_error("receipt491 refused at Input");
         }});
@@ -707,9 +707,48 @@ TEST_CASE("E11-T5 Input refusal clears applied identity before any closed edit")
     bool refused = false;
     try { preview.apply(operation, &applied, &result); }
     catch (const std::runtime_error& failure) { refused = std::string(failure.what()) == "receipt491 refused at Input"; }
-    CHECK_MESSAGE((refused && inputs == 1 && !applied && result.structure == nullptr && result.experiment == nullptr),
+    CHECK_MESSAGE((refused && inputs == 1 && !applied && result.structure == nullptr && result.experiment == nullptr && result.atom == nullptr),
                   "RECEIPT491 actual pre-write Input refusal has no false or inherited applied identity");
     CHECK_MESSAGE(edi::project_edi_files(live) == before, "RECEIPT491 Input refusal preserves every original scientific saved byte");
+}
+
+TEST_CASE("E11-T5 actual appended atom identity precedes fallible preview observers") {
+    using Result=edi::Edit::AppliedResult;
+    static_assert(std::is_same_v<decltype(Result{}.atom),const edi::AtomSite*>);
+    for(int entrance=0;entrance!=3;++entrance) {
+        CAPTURE(entrance);
+        auto live=edi::load_project(e04_t9_fixture::silicon);
+        const auto structure=live.structures.front();
+        REQUIRE_MESSAGE(!structure->atom_sites.empty(),"ATOM634 SETUP original independent structure has an actual initial site");
+        const auto first=structure->atom_sites.front();const auto count=structure->atom_sites.size();
+        auto atom=*first;atom.id="Independent634_added";
+        const auto operation=edi::Edit::append(structure->atom_sites,std::move(atom));
+        const auto before=edi::project_edi_files(live);
+        bool applied=true;Result result{structure.get(),live.experiments.front().get(),first.get()};
+        int inputs=0,applied_events=0,edited=0;
+        auto pin=[&]{
+            REQUIRE_MESSAGE(structure->atom_sites.size()==count+1,"ATOM634 append executes exactly once");
+            CHECK_MESSAGE(structure->atom_sites.front()==first,"ATOM634 original initial atom is preserved by append");
+            CHECK_MESSAGE((result.atom==structure->atom_sites.back().get()&&result.atom!=first.get()&&result.structure==nullptr&&result.experiment==nullptr),
+                          "ATOM634 result pins EXACT inserted atom before every fallible observer, never the retained initial row");
+            CHECK_MESSAGE(structure->atom_sites.back()->id=="Independent634_added","ATOM634 inserted pin owns the independently requested identity");
+        };
+        if(entrance==0){result=operation.apply_result();pin();continue;}
+        e04_t9::OwnerQueue queue;
+        edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},{{},[&](const edi::work::Event& event){
+            if(event.kind==edi::work::EventKind::Input){++inputs;CHECK_MESSAGE((!applied&&result.structure==nullptr&&result.experiment==nullptr&&result.atom==nullptr),
+                "ATOM634 all THREE stale caller pins clear before real Input");CHECK_MESSAGE(edi::project_edi_files(live)==before,"ATOM634 Input is genuinely before append");}
+            if(event.kind==edi::work::EventKind::Applied){++applied_events;CHECK_MESSAGE(applied,"ATOM634 factual applied flag precedes trace");pin();
+                if(entrance==1)throw std::runtime_error("atom634 Applied observer");}
+        }});
+        edi::LivePreview preview(live,worker,{[&]{++edited;CHECK_MESSAGE(applied,"ATOM634 factual applied flag precedes edited hook");pin();
+            throw std::runtime_error("atom634 edited observer");},{}});
+        bool exact=false;
+        try{preview.apply(operation,&applied,&result);}catch(const std::runtime_error& error){exact=std::string(error.what())==(entrance==1?"atom634 Applied observer":"atom634 edited observer");}
+        CHECK_MESSAGE(exact,"ATOM634 reached the original intended post-apply observer, not an earlier failure");
+        CHECK_MESSAGE((inputs==1&&applied_events==1&&edited==(entrance==2?1:0)),"ATOM634 each original boundary occurs exactly once");
+        pin(); // Later throw does not erase factual atom identity or apply again.
+    }
 }
 
 #else

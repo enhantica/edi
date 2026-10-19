@@ -1,0 +1,355 @@
+{
+  "create_structure": {
+    "type": "object",
+    "properties": {
+      "purpose": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "required": [
+      "purpose"
+    ],
+    "additionalProperties": false
+  },
+  "edit_structure": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "rename"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "space_group_name"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "space_group_number"
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 230
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "space_group_setting"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "edit_atom": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "append"
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "remove"
+          },
+          "atom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "atom"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "text"
+          },
+          "atom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "field": {
+            "const": "label"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "atom",
+          "field",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "text"
+          },
+          "atom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "field": {
+            "const": "typeSymbol"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "atom",
+          "field",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "text"
+          },
+          "atom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "field": {
+            "const": "wyckoffLetter"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "atom",
+          "field",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "structure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "operation": {
+            "const": "adp_type"
+          },
+          "atom": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "value": {
+            "enum": [
+              "Biso",
+              "Uiso",
+              "Bani",
+              "Uani",
+              "beta"
+            ]
+          }
+        },
+        "required": [
+          "purpose",
+          "structure",
+          "operation",
+          "atom",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

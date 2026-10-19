@@ -1911,3 +1911,42 @@ def test_read625_real_main_both_modes_read_without_project(tmp_path):
         assert value['selected_text']['collection_id']==selection['collection_id']
         assert value['selected_text']['generation']==selection['generation']
     assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()
+
+
+def test_structure634_real_main_initial_atom_and_ordinary_cues(tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy, records
+    env=popup171_owned_environment(tmp_path);config_path=Path(env['EDI_TEST_CODEX_PEER_INPUT']);config=json.loads(config_path.read_text());config.pop('report_page_reply')
+    S={'$structure634':'structure'};A={'$structure634':'first_atom'};B={'$structure634':'appended_atom'}
+    def call(tool,**arguments):return {'tool':tool,'arguments':{'purpose':'Original independent structure634 action',**arguments}}
+    turns=[
+        [call('create_structure'),call('inspect_project'),call('list_parameters')],
+        [call('edit_structure',structure=S,operation='rename',value='Main634'),
+         call('edit_atom',structure=S,operation='text',atom=A,field='label',value='First634'),
+         call('edit_atom',structure=S,operation='text',atom=A,field='typeSymbol',value='57Fe')],
+        [call('edit_atom',structure=S,operation='append'),call('inspect_project')],
+        [call('edit_atom',structure=S,operation='text',atom=B,field='label',value='Second634')],
+        [call('edit_structure',structure=S,operation='rename',value='Main634'),
+         call('edit_atom',structure=S,operation='text',atom=A,field='label',value='First634'),
+         call('edit_atom',structure=S,operation='text',atom=A,field='typeSymbol',value='57Fe')],
+        [call('edit_atom',structure=S,operation='remove',atom=B)],
+    ]
+    for i,group in enumerate(turns):
+        for j,entry in enumerate(group):entry['call_id']=f'structure634-main-{i}-{j}'
+    config.update(scenario='native:script',native_turn_calls=turns,structure634=True,readonly409=True,vm319_record_packets=True)
+    config_path.write_text(json.dumps(config));before=config_path.read_bytes();env['EDI_ACCEPTANCE_REFERENCE']=str(tmp_path)
+    argv=[os.environ['EDI_APP_TEST_RUNNER'],'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+          'AssistantPopup::test_structure634_original_main_row_reuse_and_noop_before_cue','-o','-,txt']
+    result=subprocess.run(argv,cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'structure634.stdout.log').write_text(result.stdout);(tmp_path/'structure634.stderr.log').write_text(result.stderr)
+    assert result.returncode==0 and 'FAIL!'not in result.stdout and 'PASS   : edi_app::AssistantPopup::test_structure634_original_main_row_reuse_and_noop_before_cue()'in result.stdout
+    assert config_path.read_bytes()==before;trace=Path(config['trace']);readonly409_policy(trace);requests=records(trace)
+    emitted=[json.loads(s)for s in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()];replies=[json.loads(s)for s in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    assert len(emitted)==len(replies)==sum(map(len,turns)) and len({r['id']for r in emitted})==len(emitted)
+    assert len([r for r in requests if r.get('method')=='turn/start'])==len(turns)
+    for sent,reply in zip(emitted,replies,strict=True):
+        assert reply['original']==sent and reply['response']['id']==sent['id']!=sent['params']['callId'] and reply['response']['result']['success'] is True
+    facts=[json.loads(line.split('STRUCTURE634_MAIN_RESULT ',1)[1])for line in result.stdout.splitlines()if 'STRUCTURE634_MAIN_RESULT 'in line]
+    assert len(facts)==1 and all(facts[0][k] is True for k in ['ownerSame','firstSame','realUndo'])
+    assert [facts[0][k]for k in ['keys','clicked','activated']]==[0,0,0]
+    assert not any(r.get('method')in{'turn/interrupt','account/login/start'}for r in requests)
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()

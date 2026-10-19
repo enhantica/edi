@@ -10084,4 +10084,90 @@ TestCase {
         assistant.signOut();tryCompare(assistant,"connected",false,2000);
     }
 
+    function test_structure634_original_main_row_reuse_and_noop_before_cue() {
+        const test=this;
+        Session.closeProject();
+        const path=ApplicationInfo.localPath(Probe.referenceUrl("structure634-owner"));
+        verify(Session.createProject("Structure634 Main","Independent ordinary owner",path,"iucr_99","Structure634 title","Test",true),
+            "STRUCTURE634 SETUP: original Session creates a genuine saved empty owner");
+        const owner=Session.project,ownerLife=lifetime313(owner),originalAssistant=assistant,assistantLife=lifetime313(assistant);
+        compare(owner.structures.count,0);compare(owner.experiments.count,0);verify(!owner.modified);
+        visible185_page("project");toggle();gui392_signIn(false);verify(!assistant.showActions);
+        const slots=[],watched=new Set(),cues=[];let point=null,phase=-1,keys=0,clicked=0,activated=0,pointerPresses=0,pointerShows=0;
+        let initial=null,initialLife=null,added=null,addedLife=null,addedId="",initialType="",structure=null,structureLife=null;
+        function bind(object,signal,callback){const life=lifetime313(object);object[signal].connect(callback);slots.push({object:object,life:life,signal:signal,callback:callback});}
+        function scan(){
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")){
+                const name=control.objectName;
+                if(watched.has(control) || !(/^(structures\.|atomSite\.|atomSites\.|atomSiteAdp\.)/.test(name)))continue;
+                watched.add(control);
+                if(typeof control.textEdited==="function")bind(control,"textEdited",()=>{if(assistant.showingActions)++keys;});
+                if(typeof control.clicked==="function")bind(control,"clicked",()=>{if(assistant.showingActions)++clicked;});
+                if(typeof control.activated==="function")bind(control,"activated",()=>{if(assistant.showingActions)++activated;});
+            }
+        }
+        function same(){verify(alive313(ownerLife)&&Session.project===owner && assistant===originalAssistant && alive313(assistantLife),"STRUCTURE634: original owner/assistant remains live");}
+        function rows(){same();return Probe.rows(structure.atomSites);}
+        function one(call,ids){
+            const list=Probe.rows(assistant.messages).filter(r=>!ids.has(r.id)&&r.kind==="activity"&&r.payload&&r.payload.id===call);
+            verify(list.length<=1,"STRUCTURE634: one original retained activity per native call");
+            if(!list.length || list[0].status!=="completed" || !list[0].payload.nativeOutcome)return null;
+            verify(list[0].payload.success===true,"STRUCTURE634: positive original native operation actually completed");
+            const content=JSON.parse(JSON.stringify(list[0].payload.contentItems));verify(content.length===1 && content[0].type==="inputText");return JSON.parse(content[0].text);
+        }
+        function send(index,count){
+            phase=index;scan();same();
+            if(assistant.contextConsentRequired)gui392_signIn(false);
+            const ids=new Set(Probe.rows(assistant.messages).map(r=>r.id));
+            assistant.send("Original structure634 phase "+index);
+            tryVerify(()=>!assistant.canCancel&&!assistant.showingActions&&one("structure634-main-"+index+"-"+(count-1),ids)!==null,
+                visible237_observationMs(Array.from({length:count},()=>({path:"",text:""}))),"STRUCTURE634: original complete phase settles without partial/refusal or missing callback");
+            const out=[];for(let j=0;j<count;++j){const value=one("structure634-main-"+index+"-"+j,ids);verify(value!==null);out.push(value);}
+            same();return out;
+        }
+        bind(assistant,"actionPointerShown",()=>{++pointerShows;scan();});
+        bind(assistant,"actionPointerMoved",p=>{point={x:p.x,y:p.y};scan();});
+        bind(assistant,"actionPointerPressed",()=>{
+            ++pointerPresses;scan();same();verify(assistant.actionWindow===window && point!==null);
+            verify(Ui.rendered(item("assistant.actionPointer")),"STRUCTURE634: real original native pointer is visible");
+            for(const control of watched){
+                if(!Ui.exposed(control))continue;const box=rect(control);
+                if(point.x>=box[0]&&point.x<box[0]+box[2]&&point.y>=box[1]&&point.y<box[1]+box[3])
+                    cues.push({phase:phase,name:control.objectName,rect:box});
+            }
+        });
+        try {
+            const created=send(0,3),models=Probe.rows(owner.structures);compare(models.length,1);structure=models[0].structure;structureLife=lifetime313(structure);
+            verify(structure!==null&&alive313(structureLife));const first=rows();compare(first.length,1);
+            initial=first[0].fractX;initialLife=lifetime313(initial);initialType=first[0].typeSymbol;
+            verify(initial!==null&&alive313(initialLife));compare(created[0].structures[0].sites[0].id,first[0].label);
+            compare(created[0].structures[0].id,structure.name,"STRUCTURE634: Create receipt names actual original member/one initial atom");
+            const checkbox=item("assistant.showActions");verify(checkbox.enabled&&Ui.exposed(checkbox));mouseClick(checkbox);verify(assistant.showActions);
+            send(1,3);compare(rows().length,1);verify(alive313(initialLife)&&rows()[0].fractX===initial,
+                "STRUCTURE634: FIRST existing atom is edited in place, never preserved beside a duplicate target");
+            compare(structure.name,"Main634");compare(rows()[0].label,"First634");compare(rows()[0].typeSymbol,"57Fe");
+            verify(cues.some(c=>c.phase===1&&c.name.startsWith("structures.name."))&&cues.some(c=>c.phase===1&&c.name.startsWith("atomSite.label."))
+                &&cues.some(c=>c.phase===1&&c.name.startsWith("atomSite.typeSymbol.")),"STRUCTURE634: actual original name/label/type receivers receive visual cues");
+            const appended=send(2,2);compare(rows().length,2);added=rows()[1].fractX;addedLife=lifetime313(added);addedId=rows()[1].label;
+            verify(added!==initial&&alive313(addedLife));compare(appended[0].atom_id,addedId);
+            verify(cues.some(c=>c.phase===2&&c.name==="atomSites.append"),"STRUCTURE634: append uses original actual row/list control");
+            send(3,1);compare(rows()[1].label,"Second634");verify(rows()[1].fractX===added);
+            const beforePresses=pointerPresses,beforeShows=pointerShows,beforeCues=cues.length,beforePage=window.appBarCentralTabs.currentIndex,before=visible185_values(owner),beforeUndo=owner.canUndo;
+            const noops=send(4,3);for(const out of noops){compare(out.status,"no_change");compare(out.applied,false);compare(out.complete,true);}
+            compare(cues.length,beforeCues,"STRUCTURE634: equal text/ID setters stop BEFORE any navigation/cue");compare(pointerPresses,beforePresses);compare(pointerShows,beforeShows);
+            compare(window.appBarCentralTabs.currentIndex,beforePage);compare(visible185_values(owner),before);compare(owner.canUndo,beforeUndo);
+            const removed=send(5,1);compare(removed[0].removed,true);compare(removed[0].atom_id,"Second634");compare(rows().length,1);verify(rows()[0].fractX===initial);
+            verify(cues.some(c=>c.phase===5&&c.name.startsWith("atomSite.remove.")),"STRUCTURE634: explicit removal cues original exact current row");
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,2);compare(rows()[1].label,"Second634");
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[1].label,addedId,"STRUCTURE634: no-op group adds no phantom Undo between actual remove and preceding rename");
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,1);compare(rows()[0].label,"First634");verify(rows()[0].fractX===initial);
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[0].typeSymbol,initialType,
+                "STRUCTURE634: NEXT ordinary Undo is the real preceding first-site type edit, not an equal setter");
+            compare([keys,clicked,activated],[0,0,0],"STRUCTURE634: ON science uses original ordinary setters after cues, no scientific key/click/menu-choice dispatch");
+            console.log("STRUCTURE634_MAIN_RESULT",JSON.stringify({ownerSame:Session.project===owner,firstSame:rows()[0].fractX===initial,
+                actualCreateInitialAtom:created[0].structures[0].sites[0].id,appendedId:addedId,cues:cues,keys:keys,clicked:clicked,activated:activated,
+                noops:noops,realUndo:true,path:owner.path}));
+        } finally {for(const s of slots)disconnect313(s.life,s.object,s.signal,s.callback);}
+    }
+
 }

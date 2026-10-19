@@ -1126,7 +1126,9 @@ bool ProjectViewModel::createStructure() {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     const auto input = widget_creation_input_;
-    if (const auto refusal = editReadinessRefusal(false); !refusal.isEmpty()) { setLastError(refusal); return false; }
+    // Like createExperiment, enter an exact prepared input at apply_creation_control.
+    // Its own applyEdit readiness check runs after that one-shot match, not while
+    // our unconsumed prearmed input would refuse itself as a competing input.
     edi::Project& project = *project_;
     // The first free name of the form structure1, structure2, …
     std::string name;

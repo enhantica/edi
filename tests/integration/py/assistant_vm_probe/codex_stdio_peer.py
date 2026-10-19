@@ -934,6 +934,8 @@ native_disclosed_parameters = []
 native_disclosed_sources = []
 #625 exact one-current-Context-ID fixture operand, no filenames/path or general resolver.
 read625_files = []
+#634 ID-only pins from genuine successful structure/atom replies, never fixture science.
+structure634_ids = {}
 native_action484_datasets = []
 
 
@@ -949,6 +951,13 @@ def native_original_addresses(value):
         ]
         assert len(matches) == 1, 'CREATE SETUP: original current parameter address is unique'
         return matches[0]
+    if isinstance(value, dict) and set(value) == {'$structure634'}:
+        assert config.get('structure634') is True and config.get('scenario') == 'native:script'
+        key = value['$structure634']
+        assert key in {'structure','first_atom','appended_atom'} and key in structure634_ids
+        identifier = structure634_ids[key]
+        assert type(identifier) is str and identifier
+        return identifier
     if isinstance(value, dict) and set(value) == {'$read625_current_ordinal'}:
         assert config.get('read625') is True and config.get('scenario') == 'native:script'
         assert type(value['$read625_current_ordinal']) is int and value['$read625_current_ordinal'] == 0
@@ -1209,6 +1218,31 @@ def native_reply(request):
                 'sources': [{'name': row['name'], 'id': row['id'], 'text_readable': row['text_readable']}
                             for row in native_disclosed_sources],
             })
+    if config.get('structure634') is True and result and result.get('success'):
+        tool634 = original['params']['tool']; args634 = original['params']['arguments']
+        if tool634 in {'create_structure','edit_structure','edit_atom'}:
+            value634 = json.loads(result['contentItems'][0]['text'])
+            assert value634['status'] in {'completed','no_change'} and value634['complete'] is True
+            structures634 = value634['structures']
+            assert type(structures634) is list and len(structures634) == 1
+            name634 = structures634[0]['id']; assert type(name634) is str and name634
+            if tool634 == 'create_structure':
+                sites634 = structures634[0]['sites']; assert len(sites634) == 1
+                first634 = sites634[0]['id']; assert type(first634) is str and first634
+                structure634_ids.update(structure=name634,first_atom=first634)
+            else:
+                assert args634['structure'] == structure634_ids['structure']
+                structure634_ids['structure'] = name634
+                if tool634 == 'edit_atom':
+                    operation634 = args634['operation']
+                    if operation634 == 'append':
+                        atom634 = value634['atom_id']; assert type(atom634) is str and atom634
+                        structure634_ids['appended_atom'] = atom634
+                    elif operation634 == 'text' and args634['field'] == 'label':
+                        atom634 = value634['atom_id']; assert type(atom634) is str and atom634
+                        matches634 = [key for key in ('first_atom','appended_atom') if structure634_ids.get(key) == args634['atom']]
+                        assert len(matches634) == 1
+                        structure634_ids[matches634[0]] = atom634
     if (config.get('action484') is True and original['params']['tool'] == 'inspect_project'):
         native_action484_datasets.clear()
         disclosed = json.loads(result['contentItems'][0]['text']) if result and result.get('success') else {'datasets': []}
