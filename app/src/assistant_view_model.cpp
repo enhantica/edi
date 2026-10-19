@@ -2049,19 +2049,10 @@ struct AssistantViewModel::State {
             const bool unchanged = run->tool == "set_parameters" ? entry->member->value.get()==entry->value : entry->member->free.get()==entry->free;
             if (!unchanged) {
                 std::optional<decltype(reserve_disclosure(0))> editor_role;
-                // Encoded filter and one numeric JSON array/UTF-16 result
-                // coexist with the previous request and helper restoration.
-                // Each numeric spelling is bounded by the original helper's
-                // single-line limit, which is already the native frame policy.
-                editor_role.emplace(reserve_disclosure(generic_size(entry->path,Limits::context_bytes)+
-                    (256+2)+256*sizeof(QChar)));
+                editor_role.emplace(reserve_disclosure(generic_size(entry->path,Limits::context_bytes)));
                 run->input.reset(); run->edit_scope=0; run->reveal_steps=0;
                 run->parameterFilter.clear();
-                if (run->tool=="set_parameters") {
-                    const auto number=QJsonDocument(QJsonArray{entry->value}).toJson(QJsonDocument::Compact);
-                    if(number.size()<2 || number.size()-2>256)throw std::length_error("The numeric input spelling is unavailable");
-                    run->valueText=QString::fromUtf8(number.constData()+1,number.size()-2);
-                } else run->valueText.clear();
+                run->valueText.clear();
                 editor_role.reset();
                 native_charge();
                 if(!widget_entry_current(run,entry))return;
@@ -2810,22 +2801,24 @@ struct AssistantViewModel::State {
         }
         if (run->tab != "appBar.tab.analysis" && !widget_reveal_parameter(run, target)) return;
         AssistantWidgetInput::Request request;
-        request.kind = run->tool == "run_fit" ? AssistantWidgetInput::Kind::Fit : free_input ? AssistantWidgetInput::Kind::Free : AssistantWidgetInput::Kind::Value;
-        request.target = target; request.value = run->valueText;
+        request.kind = run->tool == "run_fit" ? AssistantWidgetInput::Kind::Fit : AssistantWidgetInput::Kind::FileLoadCue;
+        request.target = target;
         request.current = [this, run, entry] { return widget_entry_current(run, entry); };
         request.restoreCurrent = [this, run, entry] { return run->receiver && run->receiver->state_.get()==this && widget_parameter_entry(run)==entry && publishing && run->project && project == run->project && run->parameter && action_window == run->window; };
-        request.prepareCommit = [this, run, entry] { if(!widget_entry_current(run,entry))return false; widget_commit_ready(run); return widget_entry_owned(run, entry); };
-        request.finishCommit = [this, run, entry] {
-            if (widget_parameter_entry(run)!=entry) return;
-            if (run->project) run->project->finishWidgetInput(run->input);
-            if (run->edit_scope && run->receiver && run->receiver->state_.get()==this) { end_own_edit(run->edit_scope); run->edit_scope = 0; }
+        request.prepareCommit = [this, run, entry] {
+            if(!widget_entry_current(run,entry))return false;
+            if(run->tool=="run_fit")widget_commit_ready(run);
+            return widget_entry_owned(run,entry);
         };
+        request.finishCommit = [] {};
         request.completed = [this, run, entry](bool delivered, const QString& message) {
             if (!widget_entry_owned(run, entry)) return;
-            if(run->tool=="edit_background" && run->background_step==4) {
-                try { widget_background_done(run,delivered,message); }
-                catch (...) { if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error); }
-            } else widget_input_finished(run, delivered, message);
+            try {
+                if(delivered && run->tool!="run_fit")widget_apply_parameter(run,false);
+                if(!run->receiver || run->receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
+                if(run->tool=="edit_background" && run->background_step==4)widget_background_done(run,delivered,message);
+                else widget_input_finished(run,delivered,message);
+            } catch (...) { if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error); }
         };
         widget_input->start(std::move(request));
     }
@@ -2873,35 +2866,31 @@ struct AssistantViewModel::State {
     void widget_free_group(const std::shared_ptr<NativeWidget>& run,bool opened) {
         const auto* entry=widget_parameter_entry(run);
         if(!widget_free_group_matches(run) || !widget_input){widget_refuse(run,widget_outcome_error);return;}
-        const QPointer<QQuickItem> target(widget_named(opened?(entry->free?"parameters.freeHeader.free":"parameters.freeHeader.fixed"):"parameters.freeHeader"));
-        if(!target){widget_refuse(run,widget_outcome_error);return;}
+        const QPointer<QQuickItem> header(widget_named("parameters.freeHeader"));
+        const QPointer<QObject> menu(header?header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu")):nullptr);
+        const QPointer<QQuickItem> target(opened?widget_named(entry->free?"parameters.freeHeader.free":"parameters.freeHeader.fixed"):header.data());
+        if(!menu || !target){widget_refuse(run,widget_outcome_error);return;}
         if(!widget_reveal_parameter(run,target))return;
-        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::Navigate;request.target=target;
-        auto captured_current=[this,run,entry,target]{return target && widget_entry_current(run,entry) && widget_free_group_matches(run);};
-        auto captured_prepareCommit=[this,run,entry,opened] {
-            if(!widget_entry_current(run,entry) || !widget_free_group_matches(run))return false;
-            if(!opened)return true;
-            const auto range=widget_free_group_range(run);const auto count=range.second-range.first;
-            auto role=reserve_disclosure(count*sizeof(const edi::Parameter*));
-            if(!widget_entry_current(run,entry) || !widget_free_group_matches(run))return false;
-            std::vector<const edi::Parameter*> members;members.reserve(count);
-            for(std::size_t at=range.first;at<range.second;++at)members.push_back(run->parameter_entries[at].member);
-            run->input=run->project->prepareWidgetFreeGroup(std::move(members),entry->free);
-            run->parameter_group=true;run->parameter_uncertain=true;
-            role.dismiss();disclosure_preparing_bytes-=count*sizeof(const edi::Parameter*);
-            native_charge();
-            if(!widget_entry_current(run,entry) || !widget_free_group_matches(run))return false;
-            run->edit_scope=begin_own_edit();native_call->may_have_written=true;return true;
+        AssistantWidgetInput::Request request;
+        request.kind=opened?AssistantWidgetInput::Kind::FileLoadCue:AssistantWidgetInput::Kind::Navigate;request.target=target;
+        auto captured_current=[this,run,entry,target,menu,opened] {
+            return target && menu && widget_entry_current(run,entry) && widget_free_group_matches(run) &&
+                (!opened || menu->property("visible").toBool());
         };
-        auto captured_finishCommit=[this,run,opened] {
-            if(!opened)return;
-            if(run->project)run->project->finishWidgetInput(run->input);
-            if(run->receiver && run->receiver->state_.get()==this && run->edit_scope){end_own_edit(run->edit_scope);run->edit_scope=0;}
-        };
-        auto captured_completed=[this,run,entry,opened](bool delivered,const QString& message) {
+        auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
+        auto captured_completed=[this,run,entry,menu,opened](bool delivered,const QString& message) {
             if(!widget_entry_owned(run,entry))return;
             try {
-                if(opened){widget_input_finished(run,delivered,message);return;}
+                if(opened) {
+                    {
+                        const auto close=qScopeGuard([this,run,entry,menu] {
+                            if(menu && widget_entry_current(run,entry))QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
+                        });
+                        if(delivered)widget_apply_parameter(run,true,menu);
+                    }
+                    if(!run->receiver || run->receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
+                    widget_input_finished(run,delivered,message);return;
+                }
                 if(!delivered || !widget_entry_current(run,entry)){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
                 QTimer::singleShot(500,&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
@@ -2910,20 +2899,78 @@ struct AssistantViewModel::State {
             }catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
         };
         run->input.reset();
-        // AssistantWidgetInput::stop retains the preceding Request through its
-        // completion; the next request can coexist. Local targets plus their
-        // function-owned copies are admitted before allocation/transfer.
+        // The preceding completed Request and the next one can coexist.
         constexpr quint64 callbacks=sizeof(captured_current)+sizeof(captured_prepareCommit)+sizeof(captured_finishCommit)+sizeof(captured_completed);
         auto callbackRole=reserve_disclosure(2*callbacks);
-        request.current=std::move(captured_current);
-        request.prepareCommit=std::move(captured_prepareCommit);
-        request.finishCommit=std::move(captured_finishCommit);
-        request.completed=std::move(captured_completed);
+        request.current=std::move(captured_current);request.prepareCommit=std::move(captured_prepareCommit);
+        request.finishCommit=std::move(captured_finishCommit);request.completed=std::move(captured_completed);
         run->callback_bytes=std::max(run->callback_bytes,2*callbacks);
         callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
         native_charge();
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         widget_input->start(std::move(request));
+    }
+    void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={}) {
+        const auto* entry=widget_parameter_entry(run);
+        if(!widget_entry_current(run,entry))throw std::runtime_error("The original parameter action changed");
+        const QPointer<AssistantViewModel> receiver(run->receiver);
+        const QPointer<ProjectViewModel> target(run->project);
+        QPointer<ParameterItem> parameter(run->parameter);
+        if(run->tool=="edit_background") {
+            if(!widget_background_current(run) || !widget_background_member_current(run))
+                throw std::runtime_error("The original background action changed");
+            auto* point=widget_background_point(run);
+            auto* registry=widget_parameter_registry();
+            parameter=point && registry?registry->find(&point->intensity):nullptr;
+            if(!parameter || parameter->parameter()!=&point->intensity)
+                throw std::runtime_error("The original background parameter is unavailable");
+        }
+        if(!parameter)throw std::runtime_error("The original parameter is unavailable");
+        std::shared_ptr<ProjectViewModel::WidgetParameterInput> input;
+        quint64 scope=0;
+        const auto finished=qScopeGuard([this,receiver,target,run,&input,&scope] {
+            if(target && input)target->finishWidgetInput(input);
+            if(receiver && receiver->state_.get()==this && scope && run->edit_scope==scope) {
+                end_own_edit(scope);run->edit_scope=0;
+            }
+        });
+        if(group) {
+            if(!menu || menu->property("project").value<QObject*>()!=target ||
+               !widget_entry_current(run,entry) || !widget_free_group_matches(run))
+                throw std::runtime_error("The original free-header set changed");
+            const auto range=widget_free_group_range(run);const auto count=range.second-range.first;
+            auto members_role=reserve_disclosure(count*sizeof(const edi::Parameter*));
+            std::vector<const edi::Parameter*> members;members.reserve(count);
+            for(std::size_t at=range.first;at<range.second;++at) {
+                const auto& original=run->parameter_entries[at];
+                if(!widget_parameter_binding_current(original))throw std::runtime_error("The original free-header member changed");
+                members.push_back(original.member);
+            }
+            input=target->prepareWidgetFreeGroup(std::move(members),entry->free);run->input=input;
+            run->parameter_group=true;run->parameter_uncertain=true;
+            members_role.dismiss();disclosure_preparing_bytes-=count*sizeof(const edi::Parameter*);
+            native_charge();
+            if(!receiver || receiver->state_.get()!=this || !menu || !widget_entry_current(run,entry) || !widget_free_group_matches(run))return;
+            scope=begin_own_edit();run->edit_scope=scope;native_call->may_have_written=true;
+            // The same original menu action used by a manual choice supplies
+            // its shown members to setParametersFree and closes its own menu.
+            // The prepared receipt refuses any different set before mutation.
+            if(!QMetaObject::invokeMethod(menu,"apply",Qt::DirectConnection,Q_ARG(QVariant,QVariant(entry->free))))
+                throw std::runtime_error("The original free-header action is unavailable");
+        } else {
+            try {widget_commit_ready(run);}
+            catch(...) {input=run->input;scope=run->edit_scope;throw;}
+            input=run->input;scope=run->edit_scope;
+            if(!receiver || receiver->state_.get()!=this || !widget_entry_current(run,entry) || !parameter)return;
+            if(run->tool=="edit_background") {
+                if(!widget_background_current(run) || !widget_background_member_current(run))return;
+                if(run->background_step==4)parameter->setFree(run->background_request.free);
+                else if(run->background_step==3)parameter->setValue(run->background_request.intensity);
+                else throw std::runtime_error("No ordinary background parameter action is prepared");
+            } else if(run->tool=="set_parameters")parameter->setValue(run->value);
+            else if(run->tool=="set_free")parameter->setFree(run->free);
+            else throw std::runtime_error("No ordinary parameter action is prepared");
+        }
     }
     void widget_scroll_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
@@ -3020,8 +3067,7 @@ struct AssistantViewModel::State {
         if(!filter || filter->sourceModel()!=run->project->parameters()) {widget_refuse(run,widget_outcome_error);return;}
         // Category selection below can change its own filter. Reset only other
         // conflicting live filters; consecutive rows retain the current category.
-        if((filter->nameFilter().isEmpty() && filter->variability()==ParameterFilterModel::All) ||
-           (run->parameter->category()!=QStringLiteral("cell") && filter->shows(run->parameter))) {
+        if(filter->nameFilter().isEmpty() && filter->variability()==ParameterFilterModel::All) {
             widget_filter_parameter(run);return;
         }
         auto* target = widget_named("parameters.resetFilters");
@@ -3292,23 +3338,38 @@ struct AssistantViewModel::State {
     void widget_background_request(const std::shared_ptr<NativeWidget>& run, QQuickItem* target,
                                    AssistantWidgetInput::Kind kind, const QString& text) {
         const QPointer<QQuickItem> original(target); const auto step = run->background_step;
-        AssistantWidgetInput::Request request; request.kind = kind; request.target = target; request.value = text;
-        request.current = [this, run, original, step] {
-            return original && widget_background_current(run) && run->background_step == step && widget_background_member_current(run);
+        const bool parameter_input=kind==AssistantWidgetInput::Kind::Value || kind==AssistantWidgetInput::Kind::Free;
+        AssistantWidgetInput::Request request;request.kind=parameter_input?AssistantWidgetInput::Kind::FileLoadCue:kind;
+        request.target=target;if(!parameter_input)request.value=text;
+        auto captured_current=[this,run,original,step] {
+            return original && widget_background_current(run) && run->background_step==step && widget_background_member_current(run);
         };
-        request.restoreCurrent = [run, original] { return run->receiver && run->project && original && original->window() == run->window; };
-        request.prepareCommit = [this, run] { widget_commit_ready(run); return widget_current(run); };
-        request.finishCommit = [this, run] {
+        auto captured_prepareCommit=[this,run,parameter_input] {
+            if(!parameter_input)widget_commit_ready(run);
+            return widget_current(run);
+        };
+        auto captured_finishCommit=[this,run,parameter_input] {
+            if(parameter_input)return;
             if(run->project){run->project->finishWidgetBackground(run->background_input);run->project->finishWidgetInput(run->input);}
             if(run->edit_scope && run->receiver){end_own_edit(run->edit_scope);run->edit_scope=0;}
         };
-        request.completed = [this, run](bool delivered, const QString& message) {
+        auto captured_completed=[this,run,parameter_input](bool delivered,const QString& message) {
             if(!widget_owned(run))return;
-            try{widget_background_done(run,delivered,message);}
-            catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
+            try {
+                if(delivered && parameter_input)widget_apply_parameter(run,false);
+                if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
+                widget_background_done(run,delivered,message);
+            }catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
         };
-        // A prior receipt cannot settle this original next input.
         run->background_input.reset();run->input.reset();
+        constexpr quint64 callbacks=sizeof(captured_current)+sizeof(captured_prepareCommit)+sizeof(captured_finishCommit)+sizeof(captured_completed);
+        auto callbackRole=reserve_disclosure(2*callbacks);
+        request.current=std::move(captured_current);request.prepareCommit=std::move(captured_prepareCommit);
+        request.finishCommit=std::move(captured_finishCommit);request.completed=std::move(captured_completed);
+        run->callback_bytes=std::max(run->callback_bytes,2*callbacks);
+        callbackRole.dismiss();disclosure_preparing_bytes-=2*callbacks;
+        native_charge();
+        if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         widget_input->start(std::move(request));
     }
     void widget_background_next(const std::shared_ptr<NativeWidget>& run) {
@@ -3768,8 +3829,7 @@ struct AssistantViewModel::State {
                 native_finish(true, {{"status", "unchanged"}, {"message", "The actual parameter already has the requested value; no widget input or scientific edit was needed"}});
                 return;
             }
-            auto number = QJsonDocument(QJsonArray{run->value}).toJson(QJsonDocument::Compact);
-            run->valueText = QString::fromUtf8(number.mid(1, number.size() - 2)); // Actual JSON round-trip numeric spelling.
+            run->valueText.clear();
             run->tab = tool == "set_free" ? "appBar.tab.analysis"
                 : run->parameter->category() == "instrument" ? "appBar.tab.experiment"
                 : run->parameter->category() == "cell" ? "appBar.tab.structure" : "appBar.tab.analysis";
@@ -8022,8 +8082,8 @@ struct AssistantViewModel::State {
             "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. Current owned saving calls the same ordinary app Save as the manual toolbar. Report actual saved/committed/active/presentation_complete flags; reopened=false supplies no separate reopen witness. Fresh Save As retains its verified export/adoption.  "
             "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. For current owned saving both modes call the same ordinary Session Save; Show actions gives only the existing visual pointer/click cue at Save, without a dispatched click or custom Save intent. An already-unmodified disabled Save button does not refuse that ordinary call. Fresh Save As retains the genuine Save control and original fresh-name form; do not change modes. Report actual ordinary saved/committed/current-owner facts without claiming separate reopen; never blindly repeat uncertain saving. No separate assistant export/recovery tree is created for current Save. Native report generation remains unavailable; offer the existing Report page link instead. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
-            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions reuse a suitable live category, use the genuine reset-filters control only for conflicting name/variability filters, and use the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible flags in any category use the existing Free-column header only when the displayed eligible set equals the exact requested original members and all requested flags agree; other subsets use their row checkboxes. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
-            "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs for update/remove, never row indices. Add/update supply finite measured-domain position, intensity and free, while remove omits all three. For new chosen points omit add id to retain the original app-generated ID; explicit custom IDs remain exact, and a successful point edit returns its actual background_id. Explicit name_from_positions takes only purpose, experiment and operation and invokes the original whole-table Ids from positions action once; inspect the actual resulting IDs before subsequent calls. Never infer naming from future adds or rename an explicitly supplied ID silently. When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, explicit ID, position, intensity and Remove controls; a requested free flag uses the original Analysis Background checkbox, not an Experiment parameter menu. For a newly chosen default background, add the requested positions and justified starting intensities with id omitted and free=false, request name_from_positions once, inspect actual IDs, then submit the complete requested eligible free set in one set_free request through Analysis. Explicit user custom IDs, values or free=true remain honored within their own operation. Preserve every explicit value/free flag within its own call; do not defer it to a guessed future call. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
+            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission. Show actions navigates the original exposed controls in request order and gives visual pointer/click cues, then calls the same ordinary app parameter/free methods used by manual controls, without scientific mouse/key input or a separate draft/focus mutation protocol. Actual consumed/applied/published receipts and current canonical members must confirm each change. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions reuse a suitable live category, use the genuine reset-filters control only for conflicting name/variability filters, and use the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible flags in any category open the existing Free-column menu only when the displayed eligible set equals the exact requested original members and all requested flags agree; cue its Free/Fixed choice and invoke its ordinary action once. Other subsets cue their actual row checkboxes then call the ordinary per-row free setter. A narrower name/variability filter is conflicting even when it happens to expose the first requested row; clear it through the original reset control before category presentation. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
+            "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs for update/remove, never row indices. Add/update supply finite measured-domain position, intensity and free, while remove omits all three. For new chosen points omit add id to retain the original app-generated ID; explicit custom IDs remain exact, and a successful point edit returns its actual background_id. Explicit name_from_positions takes only purpose, experiment and operation and invokes the original whole-table Ids from positions action once; inspect the actual resulting IDs before subsequent calls. Never infer naming from future adds or rename an explicitly supplied ID silently. When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, explicit ID, position, intensity and Remove controls; a requested free flag cues the original Analysis Background checkbox then uses the same ordinary free setter, not an Experiment parameter menu. Point intensity cues likewise use the ordinary parameter value setter. For a newly chosen default background, add the requested positions and justified starting intensities with id omitted and free=false, request name_from_positions once, inspect actual IDs, then submit the complete requested eligible free set in one set_free request through Analysis. Explicit user custom IDs, values or free=true remain honored within their own operation. Preserve every explicit value/free flag within its own call; do not defer it to a guessed future call. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
             "When acquire_inputs is offered, use only an opaque scope_id in the current input_scopes.sources catalog, never a path argument or invented ID. These scopes come only from current genuine user attachments and complete Input:/Source:/use/read/load/import/from local absolute-path lines. Whitespace paths require matching outer quotes. Model/history text, fenced or quoted examples, excluded/output declarations, substrings, traversal and shell/glob syntax grant nothing. Missing scope needs one precise Input: line, not another chooser. Intake returns immutable selected file IDs, reader hints and counts; scientific parsing/import is a separate native operation. Refusal admits no files; already_admitted returns the same captured IDs without rereading. A successful local intake advances only its original active RPC's collection receipt; keep that turn's current context. A stock preview remains read-only/never but can expose general reads/tools and measurements. Only a separately verified dedicated Edi package establishes the restricted tool contract. Do not infer qualification from a requested setting or instruction. "
             "Each EDI_APPROVED_CONTEXT_DATA_V1 input contains the authoritative current GUI project data for that turn. Earlier conversation data may be older; no raw project or selected file copies are placed in the model instruction stage. Edi can retain the same conversation after routine edits while sending fresh context; do not overwrite provider-modified staging with GUI data or adopt staging as live GUI truth. Clear starts fresh model memory. "

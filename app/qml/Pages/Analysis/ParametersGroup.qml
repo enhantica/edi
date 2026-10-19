@@ -270,6 +270,7 @@ EaElements.GroupBox {
                     }
                     FreeHeaderMenu {
                         id: freeMenu
+                        objectName: "parameters.freeHeader.menu"
                         project: group.project
                         filter: filter
                     }
