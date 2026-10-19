@@ -5,6 +5,8 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QDebug>
+#include <QLoggingCategory>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPointingDevice>
@@ -17,6 +19,7 @@
 #include <stdexcept>
 
 namespace edi_app {
+Q_DECLARE_LOGGING_CATEGORY(lcAssistantWidgetLookup)
 namespace {
 // Actual matched RemotePointer/RemoteController prior art, not blocking waits.
 constexpr int move_ms = 500, press_ms = 100, click_relaxation_ms = 500, character_ms = 100;
@@ -345,36 +348,80 @@ bool AssistantWidgetInput::choiceKeyboardOwned() const {
     return false;
 }
 bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const QString& text) {
-    if (!window_ || !window_->isActive() || !request_ || !request_->target || !choiceKeyboardOwned()) return false;
-    const QPointer<AssistantWidgetInput> self(this);
-    const QPointer<QQuickWindow> window(window_);
-    const auto original = request_; const auto id = serial_;
-    const bool old = injecting_; injecting_ = true;
-    const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
-    // Accepted numeric controls deliberately drop focus. Only the prepared
-    // final Return permits that transition; ordinary typing stays focus-bound.
-    const bool terminal = (code == Qt::Key_Escape && original->kind == Kind::DismissMenu && commit_prepared_) ||
-        (code == Qt::Key_Return && commit_prepared_ &&
-        ((step_ == Step::Commit && ((original->kind == Kind::Value || original->kind == Kind::Text) || original->kind == Kind::ParameterFilter || original->kind == Kind::StagedText || original->kind == Kind::SearchChoice)) ||
-         (step_ == Step::ChooseCommit && original->kind == Kind::Choose)));
-    const QPointer<QQuickItem> target(original->target);
-    if (terminal && target->window() != window) return false;
-    QKeyEvent press(QEvent::KeyPress, code, modifiers, text);
-    QCoreApplication::sendEvent(window, &press);
-    if (!self || !window || serial_ != id || request_ != original || !request_->target) return false;
-    if (terminal) {
-        if (!target || request_->target != target || window_ != window || target->window() != window) return false;
-    } else if (!choiceKeyboardOwned()) return false;
-    QKeyEvent release_event(QEvent::KeyRelease, code, modifiers, text);
-    // Never route an accepted Return's release into a newly focused editor.
-    // The same original surviving item receives its real balancing key event.
-    QCoreApplication::sendEvent(terminal ? static_cast<QObject*>(target.data()) : static_cast<QObject*>(window.data()), &release_event);
-    return self && window && serial_ == id && request_ == original &&
-        (!terminal || (target && request_->target == target && window_ == window && target->window() == window));
+    const QPointer<AssistantWidgetInput> observed_self(this);
+    const auto observed_request = request_; const auto observed_serial = serial_;
+    const QPointer<QQuickWindow> observed_window(window_);
+    const QPointer<QQuickItem> observed_target(observed_request ? observed_request->target : QPointer<QQuickItem>{});
+    const bool observe = observed_request && observed_request->kind == Kind::Text && step_ == Step::Select;
+    int window_present = -1, window_active = -1, request_present = -1, target_present = -1;
+    int owned_before = -1, press_identity = -1, owned_after = -1, release_identity = -1, failure_line = 0;
+    // Finish the original event/injecting scope before a synchronous log handler can reenter.
+    const bool delivered = [&]() {
+        if (!(window_present = bool(window_)) || !(window_active = window_->isActive()) ||
+            !(request_present = bool(request_)) || !(target_present = bool(request_->target)) ||
+            !(owned_before = choiceKeyboardOwned())) { failure_line = __LINE__; return false; }
+        const QPointer<AssistantWidgetInput> self(this);
+        const QPointer<QQuickWindow> window(window_);
+        const auto original = request_; const auto id = serial_;
+        const bool old = injecting_; injecting_ = true;
+        const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
+        // Accepted numeric controls deliberately drop focus. Only the prepared
+        // final Return permits that transition; ordinary typing stays focus-bound.
+        const bool terminal = (code == Qt::Key_Escape && original->kind == Kind::DismissMenu && commit_prepared_) ||
+            (code == Qt::Key_Return && commit_prepared_ &&
+            ((step_ == Step::Commit && ((original->kind == Kind::Value || original->kind == Kind::Text) || original->kind == Kind::ParameterFilter || original->kind == Kind::StagedText || original->kind == Kind::SearchChoice)) ||
+             (step_ == Step::ChooseCommit && original->kind == Kind::Choose)));
+        const QPointer<QQuickItem> target(original->target);
+        if (terminal && target->window() != window) return false;
+        QKeyEvent press(QEvent::KeyPress, code, modifiers, text);
+        QCoreApplication::sendEvent(window, &press);
+        if (!(press_identity = bool(self && window && serial_ == id && request_ == original && request_->target))) {
+            failure_line = __LINE__; return false;
+        }
+        if (terminal) {
+            if (!target || request_->target != target || window_ != window || target->window() != window) return false;
+        } else if (!(owned_after = choiceKeyboardOwned())) { failure_line = __LINE__; return false; }
+        QKeyEvent release_event(QEvent::KeyRelease, code, modifiers, text);
+        // Never route an accepted Return's release into a newly focused editor.
+        // The same original surviving item receives its real balancing key event.
+        QCoreApplication::sendEvent(terminal ? static_cast<QObject*>(target.data()) : static_cast<QObject*>(window.data()), &release_event);
+        const bool retained = self && window && serial_ == id && request_ == original &&
+            (!terminal || (target && request_->target == target && window_ == window && target->window() == window));
+        release_identity = retained;
+        if (!retained) failure_line = __LINE__;
+        return retained;
+    }();
+    if (!delivered && observe && lcAssistantWidgetLookup().isDebugEnabled()) {
+        try {
+            qCDebug(lcAssistantWidgetLookup) << "text select failure" << "line" << failure_line << "binding" << 1
+                << "window" << window_present << "active" << window_active << "request" << request_present
+                << "target" << target_present << "owned_before" << owned_before << "press_identity" << press_identity
+                << "owned_after" << owned_after << "release_identity" << release_identity;
+        } catch (...) {} // Observation never replaces the original failed input.
+        if (!observed_self || observed_self->serial_ != observed_serial || observed_self->request_ != observed_request ||
+            observed_self->window_ != observed_window || observed_request->target != observed_target) return false;
+    }
+    return delivered;
 }
 bool AssistantWidgetInput::selectAll() {
+    const QPointer<AssistantWidgetInput> observed_self(this);
+    const auto observed_request = request_; const auto observed_serial = serial_;
+    const QPointer<QQuickWindow> observed_window(window_);
+    const QPointer<QQuickItem> observed_target(observed_request ? observed_request->target : QPointer<QQuickItem>{});
+    const bool observe = observed_request && observed_request->kind == Kind::Text && step_ == Step::Select;
     const auto bindings = QKeySequence::keyBindings(QKeySequence::SelectAll);
-    if (bindings.isEmpty()) return false;
+    if (bindings.isEmpty()) {
+        if (observe && lcAssistantWidgetLookup().isDebugEnabled()) {
+            try {
+                qCDebug(lcAssistantWidgetLookup) << "text select failure" << "line" << __LINE__ << "binding" << 0
+                    << "window" << -1 << "active" << -1 << "request" << -1 << "target" << -1
+                    << "owned_before" << -1 << "press_identity" << -1 << "owned_after" << -1 << "release_identity" << -1;
+            } catch (...) {}
+            if (!observed_self || observed_self->serial_ != observed_serial || observed_self->request_ != observed_request ||
+                observed_self->window_ != observed_window || observed_request->target != observed_target) return false;
+        }
+        return false;
+    }
     const auto combination = bindings.front()[0];
     return key(combination.key(), combination.keyboardModifiers());
 }

@@ -113,8 +113,8 @@ using ManualControlProof = std::shared_ptr<ManualControlGesture>;
 Q_DECLARE_METATYPE(edi_app::ManualControlProof)
 
 namespace edi_app {
-namespace {
 Q_LOGGING_CATEGORY(lcAssistantWidgetLookup, "edi.assistant.widget.lookup", QtWarningMsg)
+namespace {
 Q_LOGGING_CATEGORY(lcAssistantElapsed, "edi.assistant.elapsed", QtWarningMsg)
 using Object = QJsonObject;
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)

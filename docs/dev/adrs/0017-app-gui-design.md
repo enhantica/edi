@@ -1347,3 +1347,21 @@ still installs the exact new action/member/value receipt immediately before the
 genuine final event. A new applied but unconfirmed edit remains factual even if
 delivery, publication or readback fails. No-op checks, currentness, actual model
 readback, input pacing, once-only completion and normal atomic edits are unchanged.
+
+
+### Passive select-all failure boundary
+
+The existing default-off `edi.assistant.widget.lookup` category can record one
+failed original Text/Select input boundary. It reports only a source line and
+the already evaluated binding/window/request/target/keyboard-ownership and
+post-event identity booleans; unreached operands remain unavailable. No field,
+text, path, object/pointer, packet, exception or scientific data is logged, and
+no getter or predicate is repeated for observation. The original key event and
+injection-cleanup scope finishes before logging. Captured weak receiver and
+exact request/serial/window/target fences follow synchronous message-handler
+reentry before any old continuation; no replacement is adopted. The category
+is the same shared app-private object, with no public API or new logging knob.
+Missing shortcut bindings and key failures are mutually exclusive record sites.
+Input delivery, returns, focus, draft/IME/currentness, once/Undo/Stop and native
+scientific receipts are unchanged. This observation identifies a boundary; it
+does not attribute a focus failure or authorize a retry or forced focus.
