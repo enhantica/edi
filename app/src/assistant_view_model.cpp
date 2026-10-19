@@ -2883,8 +2883,10 @@ struct AssistantViewModel::State {
             try {
                 if(opened) {
                     {
-                        const auto close=qScopeGuard([this,run,entry,menu] {
-                            if(menu && widget_entry_current(run,entry))QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
+                        const auto close=qScopeGuard([this,run,entry,menu]() noexcept {
+                            try {
+                                if(menu && widget_entry_current(run,entry))QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
+                            } catch (...) {} // Cleanup must preserve the original failure/outcome.
                         });
                         if(delivered)widget_apply_parameter(run,true,menu);
                     }
