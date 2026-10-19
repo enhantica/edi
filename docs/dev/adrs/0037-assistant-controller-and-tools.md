@@ -1568,3 +1568,18 @@ it never sorts an explicit request or imposes phase permission. Genuine unavaila
 controls, current-member changes and stale callbacks still refuse with actual
 partial facts. This routing change does not establish the cause or cure of the
 separate owner x5 Main-sidebar refusal.
+
+
+### Initial setup binding includes manual semantic availability
+
+The shared setup editor binding owns the original ParameterGrid usedByProfile
+condition: Instrument and every offered profile-family row must carry a Boolean
+true before scalar equality or whole-array admission. Current model membership
+alone does not expose a field retained only because it is free. The same binding
+requires original parameter refinability, the row's actual isotropic/tensor ADP
+type, the active background layout's point/term family, and Boolean-enabled linked
+scales. These are ordinary semantic editor conditions, distinct from temporary
+collapse, clipping and virtual-row creation; those still use original reveal.
+An unexposed later value cannot authorize an earlier array write, and equality
+does not waive initial route admission. Original routes, caller order, setters,
+Undo/once/currentness, Analysis free/fit and normal atomic edits remain unchanged.

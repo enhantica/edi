@@ -2047,7 +2047,7 @@ struct AssistantViewModel::State {
         return QStringLiteral("appBar.tab.analysis");
     }
     std::pair<QObject*,int> widget_parameter_editor(const QString& tab, const ParameterItem* parameter) const {
-        if(!project || !parameter)return {};
+        if(!project || !parameter || !parameter->isRefinable())return {};
         const auto row_member=[&](RowTableModel* rows, std::initializer_list<const char*> roles)->std::pair<QObject*,int> {
             for(int row=0;rows && row<rows->rowCount();++row)
                 for(const auto* role:roles)
@@ -2064,7 +2064,14 @@ struct AssistantViewModel::State {
             if(cell && (cell->lengthA()==parameter || cell->lengthB()==parameter || cell->lengthC()==parameter ||
                 cell->angleAlpha()==parameter || cell->angleBeta()==parameter || cell->angleGamma()==parameter))return {cell,-1};
             if(auto found=row_member(view->atomSites(),{"fractX","fractY","fractZ","occupancy"});found.first)return found;
-            return row_member(view->atomSiteAdps(),{"adpIso","ani11","ani22","ani33","ani12","ani13","ani23"});
+            auto* adps=view->atomSiteAdps();
+            if(auto found=row_member(adps,{"adpIso","ani11","ani22","ani33","ani12","ani13","ani23"});found.first) {
+                const auto type=adps->get(found.second,QStringLiteral("adpType")).toString();
+                const bool anisotropic=type=="Bani" || type=="Uani" || type=="beta";
+                const bool isotropic=adps->item(found.second,QStringLiteral("adpIso"))==parameter;
+                if(isotropic?!anisotropic:anisotropic)return found;
+            }
+            return {};
         }
         if(tab=="appBar.tab.experiment") {
             auto* view=project->currentExperiment();
@@ -2073,10 +2080,24 @@ struct AssistantViewModel::State {
             for(const auto& experiment:project->assistantProject()->experiments)if(experiment.get()==view->experiment())owned=true;
             if(!owned)return {};
             for(auto* fields:{view->instrument(),view->peakBackToBack(),view->peakGaussian(),view->peakLorentzian(),view->peakOther(),view->peakAsymmetry()})
-                if(auto found=row_member(fields,{"parameter"});found.first)return found;
-            if(auto found=row_member(view->background(),{"intensity"});found.first)return found;
-            if(auto found=row_member(view->backgroundTerms(),{"coef"});found.first)return found;
-            return row_member(view->linkedStructures(),{"scale"});
+                if(auto found=row_member(fields,{"parameter"});found.first) {
+                    // Same semantic admission as the FIRST ParameterGrid, not
+                    // temporary collapsed/offscreen delegate exposure.
+                    const auto used=fields->get(found.second,QStringLiteral("usedByProfile"));
+                    if(used.metaType().id()==QMetaType::Bool && used.toBool())return found;
+                }
+            const auto background=view->backgroundType();
+            if(background=="line-segment") {
+                if(auto found=row_member(view->background(),{"intensity"});found.first)return found;
+            } else if(background=="polynomial" || background=="chebyshev") {
+                if(auto found=row_member(view->backgroundTerms(),{"coef"});found.first)return found;
+            }
+            auto* links=view->linkedStructures();
+            if(auto found=row_member(links,{"scale"});found.first) {
+                const auto enabled=links->get(found.second,QStringLiteral("enabled"));
+                if(enabled.metaType().id()==QMetaType::Bool && enabled.toBool())return found;
+            }
+            return {};
         }
         return {};
     }
