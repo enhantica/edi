@@ -5268,8 +5268,16 @@ struct AssistantViewModel::State {
             native_reply(rpc, false, {{"status", "refused"}, {"message", "Native call has no matching current original item."}}); return;
         }
         const auto key = native_key(generic_thread, generic_turn, id);
-        if (native_records.contains(key) || native_records.size() >= static_cast<qsizetype>(Limits::stream_calls)) {
-            native_reply(rpc, false, {{"status", "refused"}, {"message", "Native call was already admitted or its turn budget is exhausted."}}); return;
+        if (native_records.contains(key)) {
+            native_reply(rpc, false, {{"status", "refused"}, {"message", "Native call was already admitted."}}); return;
+        }
+        // Completed original calls remain here for canonical/once ownership.
+        // They consume retained-call capacity, not the outstanding stream limit.
+        qsizetype outstanding=0;
+        for(const auto& record:native_records)if(!record->completed)++outstanding;
+        if (native_records.size() >= static_cast<qsizetype>(Limits::completed_calls) ||
+            outstanding >= static_cast<qsizetype>(Limits::stream_calls)) {
+            native_reply(rpc, false, {{"status", "refused"}, {"code", "resource_exhausted"}}); return;
         }
         const auto args = params.value("arguments").toObject();
         save_stage = "ARGUMENTS";

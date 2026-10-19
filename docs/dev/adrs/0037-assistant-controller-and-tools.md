@@ -1409,3 +1409,17 @@ encoded catalogue, enum entries and overlapping decoded Qt strings under the
 existing joint disclosure role. Both beam modes are included even without a
 project; no discarded schema is built by names-only context. Existing catalogue
 schema/dedicated equality, limits and normal transport accounting remain binding.
+
+
+Original live versus retained native-call limits
+
+CodexAgent's original stream_calls limit bounds outstanding server requests and
+answer removes each settled request. The app native ledger deliberately retains
+completed canonical/results/once facts until its original turn reset, matching
+the original core completed-call cache domain. Native dispatch therefore applies
+completed_calls to that retained ledger and stream_calls only to uncompleted
+records; completed calls cannot prematurely exhaust the live-request count.
+Duplicate original keys remain independently refused with no eviction/replay.
+Existing byte/history/owner/currentness/admission limits remain unchanged. A true
+count-capacity refusal uses the already-closed resource_exhausted result code,
+without forwarding arbitrary messages or declaring the owner run's unknown cause.
