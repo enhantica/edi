@@ -340,9 +340,23 @@ def _partition_transport(groups, omitted):
     return result
 
 
+def _assert_nightly_inclusion(switch, active):
+    # Include literals from the switch so a newly named event cannot escape the check.
+    events = {'pull_request', 'push', 'schedule', 'workflow_dispatch', 'other-event'}
+    events.update(re.findall(r"['\"]([^'\"]+)['\"]", str(switch)))
+    for platform in ('Linux', 'macOS'):
+        expression = str(switch).replace('matrix.platform', repr(platform))
+        for event in sorted(events):
+            for core_only in (False, True):
+                included = active({'if': expression}, event, core_only=core_only)
+                expected = event == 'schedule' or (event == 'workflow_dispatch' and not core_only)
+                assert included is expected, (
+                    'Nightly app builders run only on schedules and full manual runs; '
+                    'PR, push, core-only manual and every other event exclude them'
+                )
+
+
 def _assert_platform_nightly_partition(groups, tasks, jobs, active):
-    # The app builders run exclusively on the nightly schedule, on both platforms.
-    # Every other event keeps the full tier with precisely the declared omissions.
     nightly_paths = [
         'tests/system/py/test_scan_app_execution.py',
         'tests/system/py/test_scan_accident_paths.py',
@@ -359,35 +373,29 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
     ]
     assert len(parts) == 1, 'every system part invokes one required production partition runner'
     switch = parts[0]['env']['EDI_RUN_NIGHTLY_ONLY']
-    for platform in ('Linux', 'macOS'):
-        for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-            expression = str(switch).replace('matrix.platform', repr(platform))
-            included = active({'if': expression}, event)
-            omitted = not included
-            assert included is (event == 'schedule'), (
-                'Only the nightly schedule includes private app-builder files on either platform'
-            )
-            result = _partition_transport(groups, omitted)
-            ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
-            assert json.loads(result.stdout) == [
-                '-m',
-                'pytest',
-                'tests/system',
-                '-q',
-                *ignores,
-                '--splits',
-                '3',
-                '--group',
-                '1',
-                '--splitting-algorithm',
-                'least_duration',
-                '--durations-path',
-                'build/test-durations-1.json',
-                '--store-durations',
-            ], (
-                'Production partitions retain the complete tier '
-                'with exactly the declared off-schedule omissions'
-            )
+    _assert_nightly_inclusion(switch, active)
+    for omitted in (False, True):
+        result = _partition_transport(groups, omitted)
+        ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
+        assert json.loads(result.stdout) == [
+            '-m',
+            'pytest',
+            'tests/system',
+            '-q',
+            *ignores,
+            '--splits',
+            '3',
+            '--group',
+            '1',
+            '--splitting-algorithm',
+            'least_duration',
+            '--durations-path',
+            'build/test-durations-1.json',
+            '--store-durations',
+        ], (
+            'Production partitions retain the complete tier '
+            'with exactly the declared nightly-selection omissions'
+        )
 
     assert tasks['nightly-only-tests']['cmd'] == [
         'python',
@@ -500,9 +508,9 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             for platform in ('linux-64', 'osx-arm64'):
                 public_build_boundary(jobs, name, platform)
             for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-                assert active(jobs[name], event, states={'changes': 'success'}), (
-                    'both CI cadences must execute every declared core and system part'
-                )
+                assert active(jobs[name], event, states={'changes': 'success'}) == (
+                    name == 'core' or event != 'pull_request'
+                ), 'PRs execute core; full events also execute every system part'
         durations = jobs['system-durations']
         assert (
             durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'

@@ -6,6 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from event_policy import apply_event_policy
 from inventory import runtime_table
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -114,4 +115,4 @@ snapshot['platform_nonexecution'] = {
     'linux-64': {},
     'osx-arm64': dict.fromkeys(sorted(allowed), 'skipped'),
 }
-TARGET.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + '\n')
+TARGET.write_text(json.dumps(apply_event_policy(snapshot), indent=2, sort_keys=True) + '\n')

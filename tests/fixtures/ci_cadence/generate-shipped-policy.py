@@ -4,6 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from event_policy import apply_event_policy
 from inventory import identity
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -35,4 +36,6 @@ snapshot = {
     'files': {p: read(p) for p in FILES},
     'execution_sources': {p: read(p) for p in BASE['execution_sources']},
 }
-Path(__file__).with_name('shipped-policy.json').write_text(json.dumps(snapshot, indent=2) + '\n')
+Path(__file__).with_name('shipped-policy.json').write_text(
+    json.dumps(apply_event_policy(snapshot), indent=2) + '\n'
+)

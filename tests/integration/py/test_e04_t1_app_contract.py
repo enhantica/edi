@@ -385,6 +385,12 @@ def assert_nightly_app_steps(job):
         'owner decision: keep the group-app command present once before Qt Quick Test; '
         f'actual group steps={groups}'
     )
+    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        assert active(groups[0], event) == (event != 'pull_request'), (
+            'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
+        )
     titles = [step.get('name') for step in job['steps']]
     assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
         'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
@@ -396,7 +402,11 @@ def assert_nightly_app_step_escape_controls():
     # Independent positive policy fixture: these values come from the workflow contract.
     job = {
         'steps': [
-            {'name': APP_GROUP_TITLE, 'run': 'pixi run --skip-deps group-app'},
+            {
+                'name': APP_GROUP_TITLE,
+                'if': "github.event_name != 'pull_request'",
+                'run': 'pixi run --skip-deps group-app',
+            },
             *[
                 {
                     'name': title,
@@ -443,6 +453,21 @@ def assert_nightly_app_step_escape_controls():
                 broken['steps'].remove(step)
             with pytest.raises(AssertionError, match='owner decision'):
                 assert_nightly_app_steps(broken)
+    for condition in (
+        None,
+        False,
+        True,
+        "github.event_name != 'push'",
+        "github.event_name != 'schedule'",
+        "github.event_name != 'workflow_dispatch'",
+    ):
+        broken = copy.deepcopy(job)
+        if condition is None:
+            broken['steps'][0].pop('if')
+        else:
+            broken['steps'][0]['if'] = condition
+        with pytest.raises(AssertionError, match='owner decision'):
+            assert_nightly_app_steps(broken)
     broken = copy.deepcopy(job)
     broken['steps'][0], broken['steps'][1] = broken['steps'][1], broken['steps'][0]
     with pytest.raises(AssertionError, match='before Qt Quick Test'):

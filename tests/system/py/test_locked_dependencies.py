@@ -64,7 +64,7 @@ def test_sdk_fingerprint_equals_configured_dependencies(configured):
     )
 
 
-def test_dependency_escape_observer_closes_paths_and_symlink_redirects(tmp_path):
+def test_dependency_escape_observer_closes_paths_and_symlink_redirects(tmp_path, monkeypatch):
     prefix, outside = tmp_path / 'prefix', tmp_path / 'system'
     prefix.mkdir()
     outside.mkdir()
@@ -88,6 +88,37 @@ def test_dependency_escape_observer_closes_paths_and_symlink_redirects(tmp_path)
     assert not escapes(observed), (
         'The dependency observer must admit an actual locked-prefix package'
     )
+    sdk = tmp_path / 'Xcode_16.4.app/SDKs/MacOSX.sdk'
+    framework = sdk / 'System/Library/Frameworks/OpenGL.framework'
+    framework.mkdir(parents=True)
+    observed['platform_sdk'] = sdk
+    names = (
+        'OPENGL_INCLUDE_DIR',
+        'OPENGL_GLU_INCLUDE_DIR',
+        'OPENGL_gl_LIBRARY',
+        'OPENGL_glu_LIBRARY',
+    )
+    observed['paths'] = [(name, framework) for name in names]
+    with monkeypatch.context() as platform:
+        platform.setattr(sys, 'platform', 'darwin')
+        assert not escapes(observed), (
+            'macOS GL and GLU may resolve to the selected SDK OpenGL framework'
+        )
+        for path in (framework.parent / 'Other.framework', framework / 'foreign', outside):
+            observed['paths'] = [(name, path) for name in names]
+            assert len(escapes(observed)) == len(names), (
+                'The macOS exception admits only the SDK OpenGL framework, not other paths'
+            )
+        observed['paths'] = [('OtherPackage_DIR', framework), ('Other_LIBRARY', framework)]
+        assert len(escapes(observed)) == 2, (
+            'Unrelated third-party cache entries cannot use the macOS OpenGL exception'
+        )
+    with monkeypatch.context() as platform:
+        platform.setattr(sys, 'platform', 'linux')
+        observed['paths'] = [(name, framework) for name in names]
+        assert len(escapes(observed)) == len(names), (
+            'Linux GL and GLU must remain inside the locked prefix'
+        )
 
 
 @pytest.mark.parametrize('form', ['package-path', 'symlink-path', 'typed-cache'])

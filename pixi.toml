@@ -13,6 +13,9 @@ platforms = [
     # glibc 2.34. Only the app feature selects it; the default environment, the core and its wheels stay on
     # linux-64's glibc 2.28 (the `core-platforms` feature).
     { name = "linux-64-app", platform = "linux-64", glibc = "2.34" },
+    # The app environment's macOS: conda-forge's Qt 6.11.2 needs moltenvk 1.4, built for macOS 14, so the app
+    # requires macOS 14 or later while the core keeps its 13.4 floor.
+    { name = "osx-arm64-app", platform = "osx-arm64", macos = "14.0" },
 ]  # win-64 returns once the bash-based tasks get platform shims
 # The org launcher pin: pixi itself refuses to run under any other launcher version, locally and
 # in CI alike. CI installs exactly this version via .github/actions/setup-pixi; the hub parity
@@ -157,9 +160,12 @@ llvm-tools = "22.*"
 # for the structure view, and the distributed app is a GPLv3 work while edi's source stays BSD-3 (ADR-0015
 # §6, ADR-0008).
 [feature.app.dependencies]
-qt6-main = "6.11.*"
-qt6-graphs = "6.11.*"
-qt6-quick3d = "6.11.*"
+# The app environment imports the extension the default environment builds, so it keeps that Python's minor.
+python = "3.14.*"
+# The same Qt as the web build's kits (EDI_WASM_QT, tools/ci/wasm-env.sh), which wasm-toolchain.sh checks.
+qt6-main = "6.11.2.*"
+qt6-graphs = "6.11.2.*"
+qt6-quick3d = "6.11.2.*"
 # The app environment builds with the default environment's compilers: left free, the solve takes
 # cxx-compiler 2 and with it a third clang (21) on macOS, which the org toolchain parity gate refuses.
 cxx-compiler = "1.11.*"
@@ -217,11 +223,11 @@ aqtinstall = "==3.3.0"
 CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
-# The app environment runs on linux-64-app (glibc 2.34, for weston) instead of linux-64.
+# The app environment runs on linux-64-app (glibc 2.34, for weston) and osx-arm64-app (macOS 14, for Qt 6.11.2).
 [feature.app]
-platforms = ["linux-64-app", "osx-arm64"]
+platforms = ["linux-64-app", "osx-arm64-app"]
 
-# The default environment keeps the workspace's own platforms, never linux-64-app.
+# The default environment keeps the workspace's own platforms, never linux-64-app or osx-arm64-app.
 [feature.core-platforms]
 platforms = ["linux-64", "osx-arm64"]
 

@@ -97,6 +97,7 @@ def test_configure_fixture_passes_the_provisioned_sdk(system, selection, tmp_pat
         sdk = tmp_path / 'explicit sdk prefix'
         monkeypatch.setenv('CRYSTA_SDK_DIR', str(sdk))
     monkeypatch.setattr(locked_configure, 'system_eigen', lambda *_args: tmp_path / 'external')
+    monkeypatch.setattr(locked_configure, 'macos_sdk', lambda: tmp_path / 'platform sdk')
     commands = []
 
     def dispatch(command, **_kwargs):

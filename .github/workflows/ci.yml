@@ -258,17 +258,19 @@ jobs:
           pixi run --skip-deps python-surface-check
           pixi run --skip-deps cli-vocabulary-check
       # The declared group runs as parallel jobs (owner, 2026-10-08): the C++ unit tests, unit and
-      # integration here, and the system tier in the three `system` jobs below. The same selection on a
-      # pull request and on main.
+      # integration here, and the system tier in the three `system` jobs below, which pull requests skip.
       - name: Tests (declared group, C++ unit, unit and integration)
         run: |
           pixi run cpp-test
           pixi run core-tests
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+          # Name every test over a second, so a slow one shows in the log.
+          PYTEST_ADDOPTS: --durations=0 --durations-min=1
+      # It takes about 8 minutes, so it runs on main pushes, the nightly and manual runs, not on pull requests.
       - name: The two-thread witness (ThreadSanitizer)
-        if: matrix.platform == 'Linux'
-        # It takes about 7 minutes; a hang must fail the step instead of holding the run.
+        if: matrix.platform == 'Linux' && github.event_name != 'pull_request'
+        # A hang must fail the step instead of holding the run.
         timeout-minutes: 20
         run: pixi run --skip-deps tsan-worker
         env:
@@ -280,7 +282,9 @@ jobs:
   # next run's split.
   system:
     name: system · ${{ matrix.platform }} · ${{ matrix.part }}/3
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false }}
+    # The system tier takes 15 to 25 minutes a part, so pull requests skip it; main pushes, the nightly and manual
+    # runs keep it.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' }}
     environment: crysta-sdk
     # The tests that drive the app run the one the app job built (edi-app-<platform>), so no system job
     # compiles the app.
@@ -347,20 +351,23 @@ jobs:
         run: pixi run core-build
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # The app job keeps each platform's app as soon as it is built. `needs.app.result` is one result for both
+      # platforms, so it is not asked whether the build passed: whenever the app job ran, each part restores its own
+      # platform's app, and a part whose app was never built fails here.
       - name: Fetch the app the app job built
-        if: needs.app.result == 'success'
+        if: needs.app.result != 'skipped'
         uses: actions/cache/restore@v4
         with:
           path: build/app/app/edi_app
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
           fail-on-cache-miss: true
       - name: Make the app executable
-        if: needs.app.result == 'success'
+        if: needs.app.result != 'skipped'
         run: chmod +x build/app/app/edi_app
       # The app loads Qt and its other libraries from the app environment, which this job does not
       # otherwise install.
       - name: Install the app's environment
-        if: needs.app.result == 'success'
+        if: needs.app.result != 'skipped'
         run: pixi install -e app
       - name: Restore the recorded test durations
         uses: actions/cache/restore@v4
@@ -372,8 +379,11 @@ jobs:
         run: pixi run system-tests-part ${{ matrix.part }} 3
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-          # Only the nightly schedule runs the nightly-only group's files (tests/test-groups.json).
-          EDI_RUN_NIGHTLY_ONLY: ${{ github.event_name == 'schedule' }}
+          # Name every test over a second, so a slow one shows in the log.
+          PYTEST_ADDOPTS: --durations=0 --durations-min=1
+          # The nightly-only group's files (tests/test-groups.json) run on the nightly schedule and on a full manual
+          # run, so a branch can show the nightly before it merges.
+          EDI_RUN_NIGHTLY_ONLY: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.core_only != true) }}
       - name: Keep the part's durations
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -382,12 +392,13 @@ jobs:
           path: build/test-durations-${{ matrix.part }}.json
           if-no-files-found: warn
 
-  # On a pull request, each system shard may take at most 1.2 times as long as the same shard in main's
-  # latest push run whose system shards all passed.
+  # On a main push, each system shard may take at most 1.2 times as long as the same shard in main's previous
+  # push run whose system shards all passed. Nightly and manual runs add the nightly-only files, so they are not
+  # compared.
   system-time:
     name: system time
     # A shard that did not finish leaves the comparison incomplete, which refuses.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'pull_request' }}
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event_name == 'push' }}
     needs: [changes, system]
     runs-on: *linux
     permissions:
@@ -431,7 +442,7 @@ jobs:
       - name: Compare the system shards with main
         run: >-
           python3 tools/ci/system_shard_time.py --current "$RUNNER_TEMP/current.json" --main "$RUNNER_TEMP/main.json"
-          --run-id "$GITHUB_RUN_ID" --head-sha '${{ github.event.pull_request.head.sha }}'
+          --run-id "$GITHUB_RUN_ID" --head-sha '${{ github.sha }}'
 
   # On main, the three parts' durations become the recorded times the next runs split by.
   system-durations:
@@ -454,7 +465,7 @@ jobs:
           path: build/test-durations.json
           key: test-durations-${{ runner.os }}-${{ github.run_id }}
           restore-keys: test-durations-${{ runner.os }}-
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           pattern: system-${{ matrix.platform }}-*
           path: build/parts
@@ -518,6 +529,8 @@ jobs:
         run: pixi run notebook-tests
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+          # Name every test over a second, so a slow one shows in the log.
+          PYTEST_ADDOPTS: --durations=0 --durations-min=1
 
   cli-python:
     name: cli-python · ${{ matrix.platform }}
@@ -637,6 +650,8 @@ jobs:
         run: pixi run notebook-exec-ci
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+          # Name every test over a second, so a slow one shows in the log.
+          PYTEST_ADDOPTS: --durations=0 --durations-min=1
       - name: Strict docs build
         run: pixi run docs-build
 
@@ -710,8 +725,13 @@ jobs:
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
         run: pixi run -e app --skip-deps app-format-check
+      # About 9 minutes on each platform, so main pushes, the nightly and manual runs only.
       - name: The app group's Python tests (tests/integration/app)
+        if: github.event_name != 'pull_request'
         run: pixi run --skip-deps group-app
+        env:
+          # Name every test over a second, so a slow one shows in the log.
+          PYTEST_ADDOPTS: --durations=0 --durations-min=1
       # The app's own tests run only at night and on a manual run.
       - name: The app's Qt Quick Test tier
         if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
@@ -740,7 +760,8 @@ jobs:
   # wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
+    # About 40 minutes, so pull requests skip it; main pushes, the nightly and manual runs keep it.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' && inputs.core_only != true }}
     environment: crysta-sdk
     # After the core tests, which take the runners first. It runs even when core fails, so one round lists
     # every failure.

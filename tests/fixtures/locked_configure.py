@@ -86,7 +86,24 @@ def configure(root, scratch, system, extra=()):
         'root': root,
         'cache': cache,
         'paths': paths,
+        'platform_sdk': macos_sdk(),
     }
+
+
+def macos_sdk():
+    if sys.platform != 'darwin':
+        return None
+    selected = Path(
+        subprocess.run(
+            ['xcrun', '--sdk', 'macosx', '--show-sdk-path'],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+    )
+    if not selected.is_absolute() or not selected.is_dir():
+        raise RuntimeError('xcrun must identify the installed macOS SDK directory')
+    return selected.resolve()
 
 
 def system_eigen(prefix, scratch, *, fleet=Path('/usr/share/eigen3/cmake')):
@@ -129,18 +146,7 @@ def escapes(observed):
     bad = []
     for name, path in observed['paths']:
         resolved = path.resolve()
-        if (
-            sys.platform == 'darwin'
-            and not name.endswith('_DIR')
-            and any(
-                resolved.is_relative_to(base)
-                for base in (
-                    '/Library/Developer/CommandLineTools/SDKs',
-                    '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs',
-                    '/System/Library/Frameworks',
-                )
-            )
-        ):
+        if platform_opengl(observed, name, resolved):
             continue
         bases = allowed
         if (name.endswith('_DIR') or name in observed.get('cache', {})) and name != 'crysta_DIR':
@@ -148,6 +154,25 @@ def escapes(observed):
         if not any(resolved.is_relative_to(base) for base in bases):
             bad.append((name, str(resolved)))
     return sorted(set(bad))
+
+
+def platform_opengl(observed, name, resolved):
+    """FindOpenGL uses Apple's GL/GLU framework on macOS.
+
+    https://cmake.org/cmake/help/latest/module/FindOpenGL.html#macos-specific
+    """
+    sdk = observed.get('platform_sdk')
+    if sys.platform != 'darwin' or sdk is None:
+        return False
+    framework = (sdk / 'System/Library/Frameworks/OpenGL.framework').resolve()
+    if name in {
+        'OPENGL_INCLUDE_DIR',
+        'OPENGL_GLU_INCLUDE_DIR',
+        'OPENGL_gl_LIBRARY',
+        'OPENGL_glu_LIBRARY',
+    }:
+        return resolved == framework
+    return name.endswith((':include', ':link')) and resolved == framework
 
 
 def eigen_version(observed):

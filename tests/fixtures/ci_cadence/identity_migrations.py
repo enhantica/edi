@@ -3,6 +3,7 @@
 BUILD = 'tests/integration/py/test_e04_t2_build_contract.py::'
 SCAN = 'tests/integration/py/test_parameter_correlations.py::'
 APP = 'tests/integration/py/test_correlation_app_contract.py::'
+ROUTES = 'tests/system/py/test_c13_t14_fast_ci_routes.py::'
 
 MIGRATIONS = {
     **{
@@ -32,4 +33,32 @@ MIGRATIONS = {
     APP + 'test_diagnostics_uses_a_button_with_a_declared_combobox_width': [
         APP + 'test_diagnostics_uses_the_preferences_shared_control_width'
     ],
+    **{
+        ROUTES
+        + 'test_nightly_only_observers_are_absent_from_actual_pr_shards_and_retained_nightly'
+        + f'[{platform}-{event}]': [
+            ROUTES
+            + 'test_nightly_only_observers_are_absent_from_actual_pr_shards_and_retained_nightly'
+            + f'[{platform}-{event}-False]'
+        ]
+        for platform in ('Linux', 'macOS')
+        for event in ('pull_request', 'push', 'schedule')
+    },
+    **{
+        'tests/system/py/test_e09_t58_cli_persistence.py::' + previous: [
+            'tests/system/py/test_e09_t58_cli_persistence.py::'
+            'test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[' + kinds + ']'
+        ]
+        for previous, kinds in (
+            ('test_edi_nonfirst_free_axis_prior_survives_saved_undo', 'fixed-positive-fixed'),
+            (
+                'test_edi_mixed_optional_axis_priors_survive_saved_undo[absent-zero-fixed]',
+                'absent-zero-fixed',
+            ),
+            (
+                'test_edi_mixed_optional_axis_priors_survive_saved_undo[zero-absent-fixed]',
+                'zero-absent-fixed',
+            ),
+        )
+    },
 }

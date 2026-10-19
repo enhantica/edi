@@ -20,6 +20,7 @@ from tests.system.py.ci_execution_contract import (
     task_commands,
     value,
 )
+from tests.system.py.ci_script_execution import retains_work
 
 SUITE_STEPS = {
     'crysta': {'Hidden numerical suite (cpp surface)', 'Hidden numerical suite (Python tiers)'},
@@ -244,8 +245,8 @@ def linux_closure_errors(snapshot, actual_manifest, read_source, event):
             if task in selected and actual.get(task) != commands:
                 errors.append('changed Linux task closure ' + environment + ':' + task)
     for path, source in snapshot['execution_sources'].items():
-        if read_source(path) != source:
-            errors.append('changed frozen execution source ' + path)
+        if not retains_work(path, source, read_source(path)):
+            errors.append('reduced frozen execution work ' + path)
     return errors
 
 

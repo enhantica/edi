@@ -540,6 +540,38 @@ def test_private_token_guards_still_refuse_forks_after_public_switch(defect):
     )
 
 
+@pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
+def test_private_token_guard_is_required_in_every_job_even_off_pr(event):
+    import copy  # noqa: PLC0415
+
+    documents = workflows()
+    assert not public_token_findings(documents), (
+        'Every actual credential site starts with its reviewed environment and fork guard'
+    )
+    sites = [
+        (filename, name, index)
+        for filename, doc in documents
+        for name, job in doc['jobs'].items()
+        for index, step in enumerate(job.get('steps', []))
+        if 'create-github-app-token' in str(step.get('uses', ''))
+    ]
+    assert sites, 'The credential control must reach the actual token-minting steps'
+    for filename, name, index in sites:
+        damaged = copy.deepcopy(documents)
+        doc = next(doc for path, doc in damaged if path == filename)
+        job = doc['jobs'][name]
+        doc['on'] = {event: {}}
+        job['steps'][index].pop('if', None)
+        for condition in ('!cancelled()', "!cancelled() && github.event_name != 'pull_request'"):
+            job['if'] = condition
+            assert f'{filename}:{name}:unguarded private token' in public_token_findings(
+                damaged
+            ), (
+                f'Every event rejects a token site stripped of its trusted guard: '
+                f'{filename}/{name}/{event}/{condition}'
+            )
+
+
 def test_public_artifacts_exclude_engine_object_code_and_runner_names():
     assert not public_artifact_findings(workflows()), (
         'public uploads must expose reviewed text/image outputs or the prescribed webapp, '

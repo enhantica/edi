@@ -455,6 +455,15 @@ llvmpipe, 8 bits per channel, the text pipeline above); the M2 column is the own
 
 So the gap was on the reference side, and the set is now captured on the Xwayland display.
 
+### 11. Supported platforms (amended 2026-10-19)
+
+The desktop app runs on Linux (x86-64) and on macOS 14 or later (Apple silicon). The web app runs in a current
+browser. The app uses one Qt release everywhere, the one the web build's kits pin (ADR-0023), and `wasm-toolchain`
+refuses a different host Qt. conda-forge's `qt6-main` 6.11.2 for macOS depends on `moltenvk` 1.4, which is built
+for macOS 14, so the app environment runs on a macOS platform of its own that declares 14.0 (`osx-arm64-app` in
+`pixi.toml`), as `linux-64-app` declares glibc 2.34. The default environment, the core, its wheels and the CLI keep
+the 13.4 deployment target their own source needs.
+
 ## Consequences
 
 - The pages bind typed members, so `qmllint` catches a missing member at build time, and one edit updates
