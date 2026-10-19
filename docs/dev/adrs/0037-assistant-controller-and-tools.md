@@ -1531,3 +1531,17 @@ own clearing and identity. The original connection and Cancel/Stop actions keep
 their geometry and behavior. This exposes the retained failure; it changes no
 authentication/provider/logout, deadlines, retention, scientific or Save semantics
 and establishes no cause for an earlier Create/disconnection failure.
+
+
+### Structure visual cues obey the original input Request contract
+
+The FIRST approved-file Load and ordinary current Save visual-only cues already
+supply the AssistantWidgetInput Request's required prepareCommit/finishCommit
+hooks. The shared individual structure/atom/experiment cue now supplies those
+same no-op hooks, with their original captured/temporary roles admitted before
+function transfer. The helper's existing required-callback guard is unchanged.
+FileLoadCue still dispatches no device event or scientific commit; its completed
+callback calls the same ordinary app method and validates actual receipts/member
+state. OFF/no-op/owner/currentness/Stop/once/Undo behavior is unchanged. This closes
+a deterministic malformed cue request at the observed preparation frontier,
+not a new authorization/allowance or proof of provider sign-out causality.

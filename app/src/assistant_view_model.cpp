@@ -7065,6 +7065,7 @@ struct AssistantViewModel::State {
         const auto receiver=run->receiver;
         AssistantWidgetInput::Request cue;cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=target;
         auto current=[this,run,target] {return run->receiver && run->receiver->state_.get()==this && target && structure_control_current(run,target);};
+        auto prepare=[] {return true;};auto finish=[] {};
         auto completed=[this,run,target](bool delivered,const QString& message) {
             if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_owned(run))return;
             try {
@@ -7073,10 +7074,11 @@ struct AssistantViewModel::State {
                 if(run->receiver && run->receiver->state_.get()==this && create_widget_owned(run))create_widget_end(run);
             } catch(...) {if(run->receiver && run->receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"structure-cue-catch");}
         };
-        constexpr quint64 roles=2*(sizeof(current)+sizeof(completed));
+        constexpr quint64 roles=2*(sizeof(current)+sizeof(prepare)+sizeof(finish)+sizeof(completed));
         const auto growth=roles>run->file_cue_roles?roles-run->file_cue_roles:0;
         auto callback_role=reserve_disclosure(growth);
-        cue.current=std::move(current);cue.completed=std::move(completed);
+        cue.current=std::move(current);cue.prepareCommit=std::move(prepare);
+        cue.finishCommit=std::move(finish);cue.completed=std::move(completed);
         run->file_cue_roles=std::max(run->file_cue_roles,roles);
         callback_role.dismiss();disclosure_preparing_bytes-=growth;native_charge();
         if(!receiver || receiver->state_.get()!=this || !create_widget_current(run) || !widget_input)return;
