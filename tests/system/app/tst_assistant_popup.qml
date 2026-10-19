@@ -7982,7 +7982,7 @@ TestCase {
     }
     function prefs417_preferences() { return gui392_preferences(); }
     function prefs417_closePreferences(dialog) { gui392_button(dialog.standardButton(Dialog.Ok), dialog); }
-    function prefs417_configure(local) {
+    function prefs417_configure(local, observeToggle553) {
         const preferences = prefs417_preferences();
         const rows = prefs417_rows();
         compare(rows.length, 1, "PREFS417 SETUP: fresh owned settings start with only builtin");
@@ -7991,8 +7991,91 @@ TestCase {
         verify(!remove.enabled, "PREFS417: protected builtin has no usable Remove action");
         compare(gui392_sourceControl("preferences.ai.source.label.builtin").text, "EasyDiffraction",
             "PREFS417: builtin presentation is product label without internal repo path");
-        import265_click("preferences.ai.source.enabled.builtin");
-        compare(prefs417_rows()[0].enabled, false, "PREFS417: original native toggle really disables builtin");
+        let install553 = null, sample553 = null, finish553 = null;
+        if (observeToggle553) {
+            const buttons553 = Ui.itemsWithProperty(preferences.contentItem, "objectName").filter(control =>
+                control.objectName === "preferences.ai.source.enabled.builtin" && control.visible);
+            compare(buttons553.length, 1, "PREFS553: observe ONE original builtin receiver");
+            const button553 = buttons553[0], controller553 = assistant, owner553 = Session.project;
+            let row553 = button553.parent;
+            while (row553 && typeof row553.sourceId !== "string") row553 = row553.parent;
+            verify(row553 !== null && row553.sourceId === "builtin", "PREFS553: original receiver has its actual builtin row");
+            const objects553 = [button553, row553, preferences, controller553, owner553, window];
+            const lives553 = objects553.map(lifetime313), identities553 = lives553.map(identity313);
+            const point553 = Ui.clickPoint(button553);
+            verify(point553 !== null, "PREFS553: original clipped input point exists before observation");
+            const receipt553 = gui407_nativeReceipt(button553, preferences, point553);
+            const bindings553 = [], counts553 = {pressed:0, pressedChanged:0, released:0, clicked:0, canceled:0, checkedChanged:0, skillSourcesChanged:0}, samples553 = {}, errors553 = {};
+            let sequence553 = 0;
+            function current553() {
+                return lives553.every(life => life === null || alive313(life)) && receipt553.current()
+                    && row553.sourceId === "builtin" && row553.original === controller553;
+            }
+            sample553 = function(stage) {
+                const current = current553();
+                const facts = {sequence: sequence553++, currentOriginal: current,
+                    alive: lives553.map(life => life === null || alive313(life))};
+                try { if (current) {
+                    const gesture = button553.gesture;
+                    facts.pressed = button553.pressed; facts.checked = button553.checked;
+                    facts.enabled = button553.enabled; facts.rowEnabled = row553.model.enabled;
+                    facts.presentation = row553.presentation; facts.canCancel = controller553.canCancel;
+                    const sourceError = controller553.skillSourceError;
+                    facts.sourceErrorPresent = typeof sourceError === "string" && sourceError.length > 0;
+                    facts.gesturePresent = gesture !== null;
+                    facts.gestureOwnerCurrent = gesture !== null && gesture.owner === controller553;
+                    facts.gestureIdCurrent = gesture !== null && gesture.id === row553.sourceId;
+                    facts.gesturePresentationCurrent = gesture !== null && gesture.presentation === row553.presentation;
+                    facts.gestureDesiredEnabled = gesture !== null ? gesture.enabled : null;
+                    facts.gestureRevisionPresent = gesture !== null && typeof gesture.revision === "string" && gesture.revision.length > 0;
+                } else errors553.originalRetiredOrReplaced = true;
+                } catch (error) { errors553.snapshot = true; facts.captureFailed = true; }
+                counts553[stage] = (counts553[stage] || 0) + 1;
+                if (!samples553[stage]) samples553[stage] = {first: facts};
+                samples553[stage].last = facts;
+                if (stage === "pressedChanged" && facts.pressed === true) counts553.pressed = (counts553.pressed || 0) + 1;
+            };
+            install553 = function() {
+                for (const signal of ["pressedChanged", "released", "clicked", "canceled", "checkedChanged"]) {
+                    const callback = function() { sample553(signal); };
+                    button553[signal].connect(callback);
+                    bindings553.push({object:button553, life:lives553[0], signal:signal, callback:callback});
+                }
+                const callback = function() { sample553("skillSourcesChanged"); };
+                controller553.skillSourcesChanged.connect(callback);
+                bindings553.push({object:controller553, life:lives553[3], signal:"skillSourcesChanged", callback:callback});
+                receipt553.sample("prefs553-before-original-click", false);
+                verify(current553(), "PREFS553: original observed receiver remains current before SAME native click");
+            };
+            finish553 = function() {
+                let receiptOK = false;
+                try { receiptOK = receipt553.finish("prefs553-after-original-click-and-assertion"); }
+                catch (error) { errors553.receiptFinish = true; }
+                for (const pair of bindings553) {
+                    try { disconnect313(pair.life, pair.object, pair.signal, pair.callback); }
+                    catch (error) { errors553.disconnect = true; }
+                }
+                try { console.log("PREFS553_TOGGLE", JSON.stringify({originalIdentities:identities553,
+                    counts:counts553, samples:samples553, errors:errors553, receiptOK:receiptOK,
+                    compositeRevisionGetterNotRead:true, setterEntryOrReturnNotObserved:true})); }
+                catch (error) { errors553.output = true; }
+                try { return receiptOK && Object.keys(errors553).length === 0 && current553(); }
+                catch (error) { return false; }
+            };
+        }
+        let originalPassed553 = false;
+        try {
+            if (install553) { install553(); sample553("before-original-click"); }
+            import265_click("preferences.ai.source.enabled.builtin");
+            if (sample553) sample553("original-helper-return");
+            compare(prefs417_rows()[0].enabled, false, "PREFS417: original native toggle really disables builtin");
+            originalPassed553 = true;
+        } finally {
+            if (finish553) {
+                const observed553 = finish553();
+                if (originalPassed553) verify(observed553, "PREFS553: successful original click retains complete passive original-receiver evidence");
+            }
+        }
         const localUrl = Probe.referenceUrl("skills/collection");
         if (local) gui392_folder("skills/collection", false);
         const current = prefs417_rows();
@@ -8093,7 +8176,7 @@ TestCase {
             console.log("PREFS417_RETIREMENT", JSON.stringify({a: a, b: b, reentries: reentries, rows: replacement}));
             return;
         }
-        const local = prefs417_configure(data.tag !== "all-off");
+        const local = prefs417_configure(data.tag !== "all-off", data.tag === "lifecycle");
         if (data.tag === "lifecycle") {
             const preferences = prefs417_preferences();
             const initial = JSON.stringify(prefs417_rows());
