@@ -665,6 +665,38 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     const auto release=qScopeGuard([self,previous]{if(self)self->widget_input_executing_=previous;});
     if(input){input->consumed=true;widget_input_executing_=true;}
     using Kind=CreationAction::Kind;
+    const bool experiment_control=actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
+        actual.kind==Kind::ExclusionStart || actual.kind==Kind::ExclusionEnd || actual.kind==Kind::ExclusionRemove;
+    if(experiment_control) {
+        edi::ExperimentBase* experiment=nullptr;const edi::ExcludedRegion* region=nullptr;
+        for(const auto& held:project_->experiments) {
+            if((actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend) && held.get()==actual.row)experiment=held.get();
+            for(const auto& row:held->excluded_regions)if(row.get()==actual.row){experiment=held.get();region=row.get();}
+        }
+        if(!experiment) {
+            const auto message=tr("The original experiment control member is unavailable");if(input)input->outcome.message=message;return message;
+        }
+        // Cached Qt row counts/keys are not scientific membership authority.
+        // Reentrant publication must refuse before even an equal-value result.
+        if(const auto pending=editReadinessRefusal(false);!pending.isEmpty()){if(input)input->outcome.message=pending;return pending;}
+        const bool equal=actual.kind==Kind::PeakProfile?edi::effective_peak_type(*experiment)==actual.text.toStdString():
+            actual.kind==Kind::ExclusionStart?region && region->first.get()==actual.number:
+            actual.kind==Kind::ExclusionEnd?region && region->second.get()==actual.number:false;
+        if(equal)return {};
+        auto before=edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
+        undo_history_.reserve(undo_history_.size()+1);undo_history_.emplace_back(std::move(before));
+        EditOutcome result;
+        try {result=applyEdit(change,structural);}catch(...){if(self)undo_history_.pop_back();throw;}
+        if(input)input->outcome=result;
+        if(!self)return result.applied?QString{}:result.message;
+        if(!result.applied)undo_history_.pop_back();
+        if(!retired_) {
+            const bool publishing_before=editing_;editing_=true;
+            const auto restore=qScopeGuard([self,publishing_before]{if(self)self->editing_=publishing_before;});
+            try {syncUndo();}catch(...){if(!result.applied)throw;result.published=false;result.message=tr("The edit was applied, but its presentation could not be completed. Undo or reopen the project before further changes.");if(input)input->outcome=result;if(self)holdPublicationFailure(result.message);}
+        }
+        return result.applied?QString{}:result.message;
+    }
     const bool structure_metadata=actual.kind==Kind::SpaceGroupName || actual.kind==Kind::SpaceGroupNumber || actual.kind==Kind::SpaceGroupSetting;
     const bool site_edit=actual.kind==Kind::AtomAppend || actual.kind==Kind::AtomText || actual.kind==Kind::AtomRemove || actual.kind==Kind::AtomAdpType;
     if(!structure_metadata && !site_edit) {
@@ -1014,6 +1046,8 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
         } else if (auto* loaded = std::get_if<LoadedData>(&record)) {
             loaded->experiment = loaded->experiment == before ? after : loaded->experiment;
+        } else if (auto* control = std::get_if<edi::ExperimentControlsUndo>(&record)) {
+            if(control->experiment==before)control->experiment=after;
         } else if (auto* structures = std::get_if<edi::StructuresUndo>(&record)) {
             for (auto& rows : structures->experiments) {
                 rows.experiment = rows.experiment == before ? after : rows.experiment;
@@ -2920,6 +2954,8 @@ void ProjectViewModel::undo() {
                                               edi::BraggPdExperiment(*record.before), true);
             undone = error.isEmpty();
         }
+    } else if (const auto* controls = std::get_if<edi::ExperimentControlsUndo>(&undo_history_.back())) {
+        undone=restore(edi::Edit::restore_experiment_controls(*project_,*controls),true);
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = restore(edi::Edit::restore_structures(*project_, *structures), true);
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {

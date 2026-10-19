@@ -187,7 +187,7 @@ void ExperimentViewModel::setRange(double start, double end, double step) {
 }
 
 void ExperimentViewModel::setPeakType(const QString& token) {
-    if (token == peak_type_) {
+    if (token.toStdString() == edi::effective_peak_type_view(experiment_)) {
         return;
     }
     const QPointer<ExperimentViewModel> self(this);

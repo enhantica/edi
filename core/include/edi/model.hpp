@@ -1203,7 +1203,9 @@ struct Parameter {
 // clearing or replacing the field keeps the old cell, detached, for as long as the field lives: a handle
 // to a removed slot keeps its last values and refuses writes, as a removed row's does, and never points
 // at storage a later value reuses. It reads like std::optional<Parameter>.
+namespace detail { struct PreparedPeakRestore; }
 class OptionalParameter {
+    friend struct detail::PreparedPeakRestore;
    public:
     using value_type = Parameter;
     OptionalParameter() = default;
@@ -3385,6 +3387,10 @@ struct PeakBase {
     OptionalParameter asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
     OptionalParameter asym_beba_limit;  // FullProf AsyLim, deg; default 180
 
+    // FIRST peak field walk, shared by public parameters and narrow Undo.
+    static constexpr std::array fixed_parameter_members{&PeakBase::rise_alpha_0,&PeakBase::rise_alpha_1,&PeakBase::decay_beta_0,&PeakBase::decay_beta_1,&PeakBase::broad_gauss_sigma_0,&PeakBase::broad_gauss_sigma_1,&PeakBase::broad_gauss_sigma_2,&PeakBase::broad_gauss_size,&PeakBase::broad_gauss_strain,&PeakBase::broad_lorentz_gamma_0,&PeakBase::broad_lorentz_gamma_1,&PeakBase::broad_lorentz_gamma_2,&PeakBase::broad_lorentz_size,&PeakBase::broad_lorentz_strain};
+    static constexpr std::array optional_parameter_members{&PeakBase::broad_gauss_u,&PeakBase::broad_gauss_v,&PeakBase::broad_gauss_w,&PeakBase::broad_lorentz_x,&PeakBase::broad_lorentz_y,&PeakBase::mixing_eta_0,&PeakBase::mixing_eta_1,&PeakBase::asym_fcj_1,&PeakBase::asym_fcj_2,&PeakBase::asym_beba_a0,&PeakBase::asym_beba_b0,&PeakBase::asym_beba_a1,&PeakBase::asym_beba_b1,&PeakBase::asym_beba_limit};
+
     PeakBase();  // attaches the parameter specs (inline below)
 
     // The block's parameters in field order, present optionals included (R18).
@@ -3396,6 +3402,50 @@ struct PeakBase {
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
 };
+
+namespace detail {
+// Narrow FIRST peak Undo transfer: no general OptionalParameter assignment policy.
+// All cells, detached memberships and retired-owner vectors precede any live write.
+struct PreparedPeakRestore {
+    PeakBase* target;
+    PeakBase image;
+    struct Retirement {
+        OptionalParameter* slot;
+        std::shared_ptr<Membership> detached;
+        std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
+    };
+    std::vector<Retirement> retirements;
+    PreparedPeakRestore(PeakBase& into,PeakBase before):target(&into),image(std::move(before)) {
+        retirements.reserve(PeakBase::optional_parameter_members.size());
+        for(auto member:PeakBase::optional_parameter_members) {
+            auto& current=into.*member;auto& incoming=image.*member;
+            if(current.live_ && !incoming.live_) {
+                auto retired=current.retired_;retired.push_back(current.live_);
+                retirements.push_back({&current,std::make_shared<Membership>(),std::move(retired)});
+            }
+        }
+    }
+    void commit() noexcept {
+        target->type.swap(image.type);target->cutoff_fwhm=image.cutoff_fwhm;
+        for(auto member:PeakBase::fixed_parameter_members)target->*member=image.*member;
+        for(auto member:PeakBase::optional_parameter_members) {
+            auto& current=target->*member;auto& incoming=image.*member;
+            if(current.live_ && incoming.live_)current.live_->parameter=incoming.live_->parameter;
+            else if(!current.live_ && incoming.live_) {
+                current.live_.swap(incoming.live_);
+                current.live_->parameter.category.point_at(target->row);
+            } else if(current.live_) {
+                // The exact live owner to retire was retained during preparation.
+                auto found=std::find_if(retirements.begin(),retirements.end(),[&](const auto& row){return row.slot==&current;});
+                auto& link=current.live_->removed;link.link(found->detached);link.unlink();
+                current.live_->parameter.category.point_at(link);
+                current.retired_.swap(found->retired);current.live_.reset();
+            }
+        }
+        target->epoch=Epoch();
+    }
+};
+} // namespace detail
 
 // The instrument category: the 4-term d<->TOF calibration (it is crysta's instrument[3] and
 // diffraction-lib's TofPdInstrument.calib_d_to_tof_reciprocal), the bank take-off angle
@@ -5499,27 +5549,13 @@ inline std::vector<Parameter*> Structure::parameters() {
 }
 inline std::vector<Parameter*> Structure::free_parameters() { return detail::free_of(parameters()); }
 inline std::vector<Parameter*> PeakBase::parameters() {
-    std::vector<Parameter*> out = {
-        &rise_alpha_0,          &rise_alpha_1,          &decay_beta_0,       &decay_beta_1,
-        &broad_gauss_sigma_0,   &broad_gauss_sigma_1,   &broad_gauss_sigma_2, &broad_gauss_size,
-        &broad_gauss_strain,    &broad_lorentz_gamma_0, &broad_lorentz_gamma_1,
-        &broad_lorentz_gamma_2, &broad_lorentz_size,    &broad_lorentz_strain};
-    detail::push_optional(out, broad_gauss_u);
-    detail::push_optional(out, broad_gauss_v);
-    detail::push_optional(out, broad_gauss_w);
-    detail::push_optional(out, broad_lorentz_x);
-    detail::push_optional(out, broad_lorentz_y);
-    detail::push_optional(out, mixing_eta_0);
-    detail::push_optional(out, mixing_eta_1);
-    detail::push_optional(out, asym_fcj_1);
-    detail::push_optional(out, asym_fcj_2);
-    detail::push_optional(out, asym_beba_a0);
-    detail::push_optional(out, asym_beba_b0);
-    detail::push_optional(out, asym_beba_a1);
-    detail::push_optional(out, asym_beba_b1);
-    detail::push_optional(out, asym_beba_limit);
+    std::vector<Parameter*> out;
+    out.reserve(fixed_parameter_members.size()+std::count_if(optional_parameter_members.begin(),optional_parameter_members.end(),[this](auto member){return bool(this->*member);}));
+    for(auto member:fixed_parameter_members)out.push_back(&(this->*member));
+    for(auto member:optional_parameter_members)detail::push_optional(out,this->*member);
     return out;
 }
+
 inline std::vector<Parameter*> InstrumentBase::parameters() {
     std::vector<Parameter*> out = {&calib_d_to_tof_offset, &calib_d_to_tof_linear,
                                    &calib_d_to_tof_quadratic, &calib_d_to_tof_reciprocal,
@@ -5595,10 +5631,12 @@ inline const LinkedStructure& ExperimentBase::linked_structure() const {
 // dropped or read as another profile's.
 // The profile an experiment's peak declares: its type, or the beam mode's default when it names none
 // (the TCH pseudo-Voigt for constant wavelength, Jorgensen for time of flight).
+inline std::string_view effective_peak_type_view(const ExperimentBase& experiment) {
+    if(experiment.peak.type)return *experiment.peak.type;
+    return experiment.effective_beam_mode()==BeamModeEnum::CONSTANT_WAVELENGTH?"cwl-tch-pseudo-voigt":"tof-jorgensen";
+}
 inline std::string effective_peak_type(const ExperimentBase& experiment) {
-    return experiment.peak.type.value_or(
-        experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt"
-                                                                              : "tof-jorgensen");
+    return std::string(effective_peak_type_view(experiment));
 }
 
 namespace detail {

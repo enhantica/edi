@@ -191,6 +191,30 @@ inline StructuresUndo capture_structure_edit(Project& project) {
     return before;
 }
 
+// Narrow original experiment-control history: no measured-data/model copy.
+struct ExperimentControlsUndo {
+    const ExperimentBase* experiment=nullptr;
+    std::optional<PeakBase> peak;
+    std::optional<std::vector<ExcludedRegion>> regions;
+    std::optional<RelationsUndo> related;
+    std::optional<FitResultRecord> fit_result;
+};
+inline ExperimentControlsUndo capture_experiment_controls(Project& project,ExperimentBase& experiment,bool profile) {
+    ExperimentControlsUndo before;before.experiment=&experiment;
+    if(profile) {
+        before.peak.emplace(experiment.peak);before.related=capture_relations(project);before.fit_result=project.fit_result;
+        const auto replaced=experiment.peak.parameters();
+        std::set<std::string> retained;
+        for(const auto& slot:named_slots(project))
+            if(std::find(replaced.begin(),replaced.end(),slot.parameter)==replaced.end())retained.insert(slot.unique_name);
+        std::erase_if(before.related->parameters,[&](const auto& state){return !retained.contains(state.unique_name);});
+    } else {
+        before.regions.emplace();
+        for(const auto& row:experiment.excluded_regions)before.regions->push_back(*row);
+    }
+    return before;
+}
+
 /// The project's report settings (ADR-0036 §7) as one value: what an edit of one of them changes, and what its Undo
 /// puts back.
 struct ReportSettingsState {
@@ -432,6 +456,7 @@ class Edit {
         const Structure* structure = nullptr;
         const ExperimentBase* experiment = nullptr;
         const AtomSite* atom = nullptr;
+        const ExcludedRegion* exclusion = nullptr;
     };
     // Executes this same closed operation once. The result is an identity fact,
     // not a getter or a grant to use a row after its owner has retired.
@@ -824,7 +849,7 @@ class Edit {
         return Edit([&region, id = std::move(id)] { region.id = id; });
     }
     static Edit append_excluded_region(ExperimentBase& experiment, double start, double end) {
-        return Edit([&experiment, start, end] { experiment.excluded_regions.push_back(ExcludedRegion(start, end)); });
+        return appending(experiment.excluded_regions, ExcludedRegion(start,end));
     }
     static Edit erase_excluded_region(ExperimentBase& experiment, std::size_t row) {
         return Edit([&experiment, row] { require_region(experiment, row); experiment.excluded_regions.erase_at(row); });
@@ -974,6 +999,46 @@ class Edit {
                     parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;
                 }
             }
+        });
+    }
+
+    static Edit restore_experiment_controls(Project& project,ExperimentControlsUndo state) {
+        auto before=std::make_shared<const ExperimentControlsUndo>(std::move(state));
+        return Edit([&project,before] {
+            const auto found=std::find_if(project.experiments.begin(),project.experiments.end(),[&](const auto& member){return member.get()==before->experiment;});
+            if(found==project.experiments.end())throw std::invalid_argument("undo: experiment control owner is no longer in the project");
+            if(before->peak.has_value()==before->regions.has_value() ||
+                before->peak.has_value()!=before->related.has_value() || before->peak.has_value()!=before->fit_result.has_value())
+                throw std::invalid_argument("undo: incomplete experiment-control footprint");
+            auto& experiment=**found;
+            std::unique_ptr<detail::PreparedPeakRestore> peak;
+            ItemVec<ExcludedRegion> regions;
+            std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
+            ItemVec<ParameterAlias> aliases;ItemVec<ParameterConstraint> constraints;
+            std::optional<FitResultRecord> fit_result;
+            if(before->peak) {
+                peak=std::make_unique<detail::PreparedPeakRestore>(experiment.peak,*before->peak);
+                std::map<std::string,Parameter*> named;
+                for(const auto& slot:named_slots(project))named.emplace(slot.unique_name,slot.parameter);
+                const auto replaced=experiment.peak.parameters();
+                for(const auto& state:before->related->parameters) {
+                    const auto at=named.find(state.unique_name);
+                    if(at==named.end() || std::find(replaced.begin(),replaced.end(),at->second)!=replaced.end())
+                        throw std::invalid_argument("undo: a related parameter is no longer in the project");
+                    targets.emplace_back(at->second,&state);
+                }
+                std::vector<ItemVec<ParameterAlias>::Ptr> a;for(const auto& row:before->related->aliases)a.push_back(std::make_shared<ParameterAlias>(row));
+                std::vector<ItemVec<ParameterConstraint>::Ptr> c;for(const auto& row:before->related->constraints)c.push_back(std::make_shared<ParameterConstraint>(row));
+                aliases=ItemVec<ParameterAlias>(std::move(a));constraints=ItemVec<ParameterConstraint>(std::move(c));fit_result=before->fit_result;
+            } else {
+                std::vector<ItemVec<ExcludedRegion>::Ptr> rows;
+                for(const auto& row:*before->regions)rows.push_back(std::make_shared<ExcludedRegion>(row));
+                regions=ItemVec<ExcludedRegion>(std::move(rows));
+            }
+            if(peak) {
+                peak->commit();project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
+                for(const auto& [parameter,state]:targets){parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;}
+            } else experiment.excluded_regions=std::move(regions);
         });
     }
 
@@ -1217,6 +1282,7 @@ class Edit {
             auto inserted=std::make_shared<Row>(*row);
             rows.push_back(inserted);
             if constexpr (std::is_same_v<Row,AtomSite>) return AppliedResult{nullptr,nullptr,inserted.get()};
+            else if constexpr (std::is_same_v<Row,ExcludedRegion>) return AppliedResult{nullptr,nullptr,nullptr,inserted.get()};
             else return AppliedResult{};
         });
     }

@@ -9,6 +9,11 @@
 #include "edi/edit.hpp"
 namespace edi_app {
 // Only these concrete implemented actions are registered with the official agent.
+// Names-only discovery never constructs registry-backed schemas.
+QJsonArray assistant_native_tool_names();
+// Callback-free preflight over borrowed registered tokens. Caller reserves this
+// simultaneous preparation role before building the full catalogue. No cache.
+quint64 assistant_native_tool_specs_preparation_bytes();
 QJsonArray assistant_native_tool_specs();
 bool assistant_native_tool(const QString& name);
 QString assistant_native_purpose(const QJsonObject& arguments);

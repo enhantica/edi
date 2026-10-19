@@ -111,6 +111,12 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"sites", sites}, {"anisotropic_site_ids", anisotropic}});
     });
     const auto datasets = encoded_rows(project->experiments, [](const auto& experiment) {
+        std::uint64_t profile_options=2;bool profile_comma=false;
+        visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token) {
+            const auto size=encoded_text(token)+(profile_comma?1:0);
+            if(size>Limits::context_bytes-profile_options)refuse("resource_exhausted","Profile options exceed context capacity");
+            profile_options+=size;profile_comma=true;
+        });
         const auto exclusions = encoded_rows(experiment->excluded_regions, [](const auto& region) {
             return encoded_fields({{"id", encoded_text(region->id.value(), true)}, {"first", encoded_finite(region->first.get())}, {"second", encoded_finite(region->second.get())}});
         });
@@ -154,6 +160,8 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"calculation_only", experiment->calculation_only ? 4 : 5}, {"data_status", encoded_text(data_status)}, {"axis", axis_size},
             {"observations", encoded_fields({{"intensity_count", payload_size(J(static_cast<double>(intensity_count)))},
                 {"sigma_count", payload_size(J(static_cast<double>(sigma_count)))}, {"weighting", encoded_text(weighting)}})},
+            {"peak_profile",encoded_text(effective_peak_type_view(*experiment))},
+            {"peak_profile_options",profile_options},
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
             {"background", encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
                 {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)}, {"anchors", anchors}})}});
@@ -227,10 +235,13 @@ J project_metadata(const Project* project) {
                     if (valid && mode_matches && observations_valid && !experiment->calculation_only && usable_su) weighting = "measured_standard_uncertainty";
                 }
             }
+            A profile_options;
+            visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token){append(profile_options,J(token));});
             append(datasets, O{{"id", KeyTraits<BraggPdExperiment>::canonical(experiment->name.value())},
                 {"beam_mode", token(experiment->effective_beam_mode())}, {"probe", token(experiment->experiment_type.effective_radiation_probe())},
                 {"calculation_only", experiment->calculation_only}, {"data_status", data_status}, {"axis", std::move(axis)},
                 {"observations", O{{"intensity_count", static_cast<double>(intensity_count)}, {"sigma_count", static_cast<double>(sigma_count)}, {"weighting", weighting}}},
+                {"peak_profile",effective_peak_type(*experiment)},{"peak_profile_options",std::move(profile_options)},
                 {"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
                 {"background", O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
                                  {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}, {"anchors", std::move(anchors)}}}});

@@ -206,15 +206,15 @@ bool ExcludedRegionListModel::setId(int row, const QString& id) {
 
 bool ExcludedRegionListModel::setStart(int row, double start) {
     edi::ExperimentBase& experiment = experiment_;
-    return row >= 0 && row < count() &&
-           editor_.apply_creation_control(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), false, start), false,
+    if(row<0 || row>=count())return false;
+    return editor_.apply_creation_control(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), false, start), false,
                {ProjectEditor::CreationAction::Kind::ExclusionStart, keyAt(row), {}, {}, start}).isEmpty();
 }
 
 bool ExcludedRegionListModel::setEnd(int row, double end) {
     edi::ExperimentBase& experiment = experiment_;
-    return row >= 0 && row < count() &&
-           editor_.apply_creation_control(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), true, end), false,
+    if(row<0 || row>=count())return false;
+    return editor_.apply_creation_control(edi::Edit::excluded_region_bound(experiment, static_cast<std::size_t>(row), true, end), false,
                {ProjectEditor::CreationAction::Kind::ExclusionEnd, keyAt(row), {}, {}, end}).isEmpty();
 }
 
@@ -228,7 +228,8 @@ void ExcludedRegionListModel::append() {
 void ExcludedRegionListModel::remove(int row) {
     edi::ExperimentBase& experiment = experiment_;
     if (row >= 0 && row < count()) {
-        editor_.apply(edi::Edit::erase_excluded_region(experiment, static_cast<std::size_t>(row)), false);
+        editor_.apply_creation_control(edi::Edit::erase_excluded_region(experiment, static_cast<std::size_t>(row)), false,
+            {ProjectEditor::CreationAction::Kind::ExclusionRemove,keyAt(row)});
     }
 }
 

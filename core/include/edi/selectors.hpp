@@ -9,6 +9,7 @@
 // parity test holds the two equal.
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -91,6 +92,8 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 // The peak profiles an experiment of this beam mode can use: the shipped ones in their `.edi` order,
 // then any registered extension for the mode.
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
+// Same original options/order, borrowed for bounded metadata sizing before copies.
+void visit_supported_peak_profiles(BeamModeEnum mode,const std::function<void(const std::string&)>&);
 // The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
 std::string default_peak_profile(BeamModeEnum mode);
 // What a profile selector shows for a token: the constant-wavelength profiles' short names

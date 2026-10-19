@@ -1383,3 +1383,29 @@ Actual projection, Qt encoder conversion/escaping scratch, encoded capacity, dec
 The app catalogue adds create_structure, edit_structure and edit_atom. Each invocation resolves exact current structure/site IDs, validates its complete closed request and resulting identity domain, and uses the original individual-action frame/receipt/disclosure transition. Create is separate from rename; symmetry edits invoke one original setter and return actual linked stored fields, including unresolved/cleared state. Atom append returns the actual early-pinned inserted identity; remove reports the original ID only after membership absence without dereferencing it. No-op compares stored canonical fields (original HM comparison, stored optional number/code, IDs/text and ADP type), before visible work or edit. Numeric scientific values are not duplicated in metadata actions. Closed outgoing atom_id/removed fields and metadata maxima remain under the original budgets.
 
 Dedicated admission owns the original set_experiment_type root union too: the existing guard accepts a closed object root, or a sole-key nonempty oneOf of closed object alternatives. It does not append additionalProperties:false to a property-less union root or add a recursive schema framework. Canonical request schemas, intended names, converter and exact requested/advertised/full-schema/dispatch equality and duplicate/shadow/deferred rejection remain intact. The actual modified patch digest is the future dedicated package input; no archive/executable identity is fabricated and stock remains default OFF. Code-owned schemas/descriptions state concrete actions/options; project skills supply strategy, and restricted core capability lists remain separate.
+
+
+### One ordinary experiment-settings adapter
+
+`edit_experiment` adds one closed code-owned union for peak_profile(value), exclusion_append, exclusion_start(region,value), exclusion_end(region,value) and exclusion_remove(region), always with purpose and actual experiment ID. Profile enum values derive from the FIRST supported_peak_profiles selectors; the target's original mode/options must admit the token. Append uses ordinary generated identity/default bounds and returns the actual early-pinned row; later bound/remove operations name that real row. No profile/format catalogue is duplicated in skills. Numeric parameter tools, current scientific constraints and canonical no-op semantics remain unchanged.
+
+App intended names, actual registration/arguments/read-write dispatch, original individual receipts, outgoing Region/profile/ID fields, context encoder/sizing and dedicated NAMES/closed-object-union requested-advertised-dispatch equality advance together. Maxima include escaped added strings/numbers and complete response nesting before write; current stream/context/file limits do not increase. The runtime patch's sourcePatchSha changes and must be bound by a genuinely rebuilt archive/executable/package proof; no old package is relabeled. Stock dedicated OFF stays OFF. This source adapter does not implement absorption/cutoff/weights/participation/phase links/calibration or establish PCR/TOF/multiphase scientific equivalence. Original current Save/Create/reader/ordinary structure Undo/live speed/general research guidance remain intact.
+
+
+Experiment controls: row publication and registered option ownership
+
+The original excluded-region Qt row cache is presentation, not membership authority.
+Bound edits enter the existing CreationAction matcher and actual-member/readiness
+boundary before equality or dereference, including synchronous removal/Undo signals.
+Profile tokens belong to the original registered selector domain, not the 256-byte
+member-ID domain. Their known requested payload and Qt/native preparation owners
+are admitted before materialization and retained for both visible and normal calls;
+terminal maxima use that actual token. A refused operation omits peak_profile unless
+the canonical value equals the admitted request, rather than copying an unbounded
+unrelated old token. Exclusion identities retain their original ID bound.
+Names-only discovery uses only fixed action names. Full stock/dedicated thread
+catalogues first walk borrowed original profile tokens, validate UTF-8 and charge
+encoded catalogue, enum entries and overlapping decoded Qt strings under the
+existing joint disclosure role. Both beam modes are included even without a
+project; no discarded schema is built by names-only context. Existing catalogue
+schema/dedicated equality, limits and normal transport accounting remain binding.

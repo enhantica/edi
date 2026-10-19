@@ -3311,11 +3311,13 @@ std::optional<BeamModeEnum> peak_type_beam_mode(const std::string& token) {
     return found->second.mode;
 }
 
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>& visitor) {
+    for(const auto& [token,row]:peak_type_rows())visitor(token,row.implemented?std::optional<BeamModeEnum>(row.mode):std::nullopt);
+}
+
 std::vector<std::string> registered_peak_types() {
     std::vector<std::string> tokens;
-    for (const auto& [token, row] : peak_type_rows()) {
-        tokens.push_back(token);
-    }
+    visit_registered_peak_types([&](const std::string& token,std::optional<BeamModeEnum>){tokens.push_back(token);});
     return tokens;
 }
 

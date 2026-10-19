@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_tools.hpp"
 #include "assistant_action_refusal.hpp"
+#include "codex_agent.hpp"
+#include "../../core/src/assistant_json.hpp"
 #include <QJsonDocument>
 #include "assistant_native_create.hpp"
 #include "background_input.hpp"
+#include "edi/selectors.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
 #include "../../core/src/assistant_relation_edits.hpp"
 #include "edi/assistant_limits.hpp"
@@ -24,7 +27,8 @@ void shape(const Object& value, const QSet<QString>& keys) {
         throw std::invalid_argument("Unsupported native action field");
 }
 }
-QJsonArray assistant_native_tool_specs() {
+namespace {
+QJsonArray native_tool_specs(bool include_profiles) {
     Array tools;
     const Object text{{"type", "string"}, {"minLength", 1}, {"maxLength", 256}};
     const Object purpose{{"type", "string"}, {"minLength", 1}, {"maxLength", 120},
@@ -62,6 +66,30 @@ QJsonArray assistant_native_tool_specs() {
         {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"oneOf":[{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"rename"},"value":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","structure","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"space_group_name"},"value":{"type":"string","maxLength":256}},"required":["purpose","structure","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"space_group_number"},"value":{"type":"integer","minimum":0,"maximum":230}},"required":["purpose","structure","operation","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"space_group_setting"},"value":{"type":"string","maxLength":256}},"required":["purpose","structure","operation","value"],"additionalProperties":false}]})schema")).object()}});
     tools.append(Object{{"type","function"},{"name","edit_atom"},{"description","Edit ONE atom in an exact current structure through original atom-row methods: append returns actual generated atom_id/defaults; text changes only label/typeSymbol/wyckoffLetter; remove explicitly targets atom_id; adp_type uses original Biso/Uiso/Bani/Uani/beta conversion. Reuse Create's initial atom before appending later required atoms. Explicit renamed IDs must be used subsequently. Coordinates/occupancy/ADP numbers/free use existing parameter tools with actual paths. Compare stored values and skip equal setter/cue/Undo; preserve ordinary validation and partial facts. Same original methods both modes, no keyboard scientific writer or generated file."},
         {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"oneOf":[{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"append"}},"required":["purpose","structure","operation"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"remove"},"atom":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","structure","operation","atom"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"text"},"atom":{"type":"string","minLength":1,"maxLength":256},"field":{"const":"label"},"value":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","structure","operation","atom","field","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"text"},"atom":{"type":"string","minLength":1,"maxLength":256},"field":{"const":"typeSymbol"},"value":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","structure","operation","atom","field","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"text"},"atom":{"type":"string","minLength":1,"maxLength":256},"field":{"const":"wyckoffLetter"},"value":{"type":"string","maxLength":256}},"required":["purpose","structure","operation","atom","field","value"],"additionalProperties":false},{"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"structure":{"type":"string","minLength":1,"maxLength":256},"operation":{"const":"adp_type"},"atom":{"type":"string","minLength":1,"maxLength":256},"value":{"enum":["Biso","Uiso","Bani","Uani","beta"]}},"required":["purpose","structure","operation","atom","value"],"additionalProperties":false}]})schema")).object()}});
+    Array profile_tokens;
+    if(include_profiles)for (const auto mode : {edi::BeamModeEnum::CONSTANT_WAVELENGTH, edi::BeamModeEnum::TIME_OF_FLIGHT})
+        edi::visit_supported_peak_profiles(mode,[&](const std::string& token) {
+            // Original mode-specific visitor emits each supported token once;
+            // the registry gives each extension one beam mode.
+            profile_tokens.append(QString::fromUtf8(token.data(),static_cast<qsizetype>(token.size())));
+        });
+    Object experiment_purpose=purpose;experiment_purpose.remove("description");
+    Array experiment_branches;
+    for (const auto* operation : {"peak_profile","exclusion_append","exclusion_start","exclusion_end","exclusion_remove"}) {
+        Object fields{{"purpose",experiment_purpose},{"experiment",text},{"operation",Object{{"const",operation}}}};
+        Array required{"purpose","experiment","operation"};
+        const auto op=QLatin1StringView(operation);
+        if (op==QLatin1StringView("peak_profile")) {
+            fields["value"]=Object{{"type","string"},{"enum",profile_tokens}};required.append("value");
+        } else if (op!=QLatin1StringView("exclusion_append")) {
+            fields["region"]=text;required.append("region");
+            if (op!=QLatin1StringView("exclusion_remove")) {fields["value"]=Object{{"type","number"}};required.append("value");}
+        }
+        experiment_branches.append(object(fields,required));
+    }
+    tools.append(Object{{"type","function"},{"name","edit_experiment"},
+        {"description","Change ONE exact current experiment through original peak-profile or exclusion-row app methods. Profile value must be an original option for its beam mode; changing profiles can add/drop optional settings at original defaults. Exclusion append keeps the ordinary generated ID/default bounds; use its actual returned region ID for later start/end/remove calls. Bounds are literal dataset-axis units, never automatically sorted/clamped. Equal stored profile/bound values skip setters/cues/Undo. Both modes use the same ordinary method/validation/history; Show actions adds original navigation/reveal and visual-only cues. Inspect actual IDs/settings and partial applied/published facts; do not retry uncertain writes. No parser/converter, absorption/weight/link/window setting or fit is implied."},
+        {"inputSchema",Object{{"oneOf",experiment_branches}}}});
     add("acquire_inputs", "Capture immutable local input files only from an opaque scope_id in the current genuine user input_scopes. No path, URL, glob or command argument is accepted. Returns file IDs, source ordinal, reader hints and counts; it does not claim scientific import. Use returned IDs with create_cwl_project and inspect the actual native project afterward. Already captured sources are not reread. Stale, changed, protected or oversized sources refuse without replacing the prior selection.",
         {{"scope_id",text}},{"scope_id"});
     add("save_project", "Save the settled current project using the ordinary app Save method for its existing owned directory; fresh Save As retains its original verified export path. Omitted destination saves its genuine already-owned Session directory, preserving its actual name/path and ignoring an unused fresh name. If it has no owned directory, omission uses the original fresh-name human Save As choice. Explicit destination=fresh always uses that one-operation choice; explicit current requires an owned directory and no name/path. For current saving both modes call the same ordinary Session Save; Show actions gives a visual-only cue at Save without dispatching a click or opening a form. saved/committed reflect the ordinary return, active/presentation_complete reflect the actual original owner; reopened=false means no separate reopen was witnessed. Fresh Save As retains its genuine button/name form and protected export. No unrelated overwrite or model path authority.",
@@ -96,6 +124,51 @@ QJsonArray assistant_native_tool_specs() {
     tool["inputSchema"]=schema;tools[tools.size()-1]=tool;
     return tools;
 }
+} // namespace
+QJsonArray assistant_native_tool_names() {
+    return {"inspect_project","list_parameters","diagnostics","set_parameters","set_free","run_fit",
+        "create_cwl_project","load_structure","create_experiment","set_experiment_type","load_data",
+        "read_selected_file","create_structure","edit_structure","edit_atom","edit_experiment",
+        "acquire_inputs","save_project","add_relations","edit_background"};
+}
+quint64 assistant_native_tool_specs_preparation_bytes() {
+    using Limits=edi::assistant::Limits;
+    // Only fixed source literals are built here. The unbounded enum is absent.
+    const auto fixed=native_tool_specs(false);
+    quint64 encoded=0;
+    if(!codex_encoded_size(fixed,Limits::context_bytes,encoded))
+        throw std::length_error("Native catalogue exceeds capacity");
+    // Finite schema's decoded strings/keys fit its encoded UTF-8 spelling.
+    quint64 retained=encoded*sizeof(QChar)+fixed.size()*sizeof(QJsonValue);
+    const auto charge=[&](quint64 bytes) {
+        if(bytes>Limits::stream_retained_bytes-retained)throw std::length_error("Native catalogue exceeds capacity");
+        retained+=bytes;
+    };
+    bool first=true;
+    for(const auto mode:{edi::BeamModeEnum::CONSTANT_WAVELENGTH,edi::BeamModeEnum::TIME_OF_FLIGHT})
+        edi::visit_supported_peak_profiles(mode,[&](const std::string& token) {
+            if(!edi::assistant::detail::utf8(token))throw std::invalid_argument("Native profile option is not UTF-8");
+            const auto bytes=edi::json::encoded_string_size(token,Limits::context_bytes);
+            const auto comma=first?0u:1u;
+            if(bytes>Limits::context_bytes-encoded || comma>Limits::context_bytes-encoded-bytes)
+                throw std::length_error("Native catalogue exceeds capacity");
+            encoded+=bytes+comma;first=false;
+            // QString conversion and the independent Qt JSON string can overlap.
+            // Valid UTF-8 has no more UTF-16 units than input bytes. Admit both
+            // before either allocation, plus its enum entry and encoded role.
+            if(token.size()>Limits::stream_retained_bytes/(2*sizeof(QChar)))
+                throw std::length_error("Native catalogue exceeds capacity");
+            charge(2*token.size()*sizeof(QChar));charge(sizeof(QJsonValue));
+        });
+    charge(encoded); // Actual complete catalogue payload, also held during encoding.
+    return retained;
+}
+QJsonArray assistant_native_tool_specs() {
+    // Every full builder entrance first checks the same existing finite limits;
+    // State additionally owns this role in the joint disclosure account.
+    (void)assistant_native_tool_specs_preparation_bytes();
+    return native_tool_specs(true);
+}
 bool assistant_native_tool(const QString& name) {
     return individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "create_cwl_project" || name == "add_relations" || name == "save_project" || name == "edit_background";
@@ -117,6 +190,27 @@ void assistant_native_arguments(const QString& name, const Object& args) {
             throw ActionRefusal("input_required","file_id");
         if((name=="load_data" || name=="set_experiment_type") && (!args.value("experiment").isString() || args.value("experiment").toString().isEmpty()))
             throw ActionRefusal("target_unavailable","experiment");
+    }
+    if(name=="edit_experiment") {
+        const auto id_ok=[](const QJsonValue& value) {
+            return value.isString() && !value.toString().isEmpty() && !value.toString().contains(QChar(0)) &&
+                value.toString().toUtf8().size()<=edi::assistant::Limits::id_bytes;
+        };
+        if(!id_ok(args.value("experiment")))throw ActionRefusal("target_unavailable","experiment");
+        const auto op=args.value("operation").toString();
+        if(op=="peak_profile") {
+            shape(args,{"purpose","experiment","operation","value"});
+            if(!args.value("value").isString())throw ActionRefusal("unsupported_type","value");
+        } else if(op=="exclusion_append")shape(args,{"purpose","experiment","operation"});
+        else if(op=="exclusion_start" || op=="exclusion_end") {
+            shape(args,{"purpose","experiment","operation","region","value"});
+            if(!id_ok(args.value("region")))throw ActionRefusal("target_unavailable","region");
+            if(!args.value("value").isDouble() || !std::isfinite(args.value("value").toDouble()))throw ActionRefusal("invalid_range","value");
+        } else if(op=="exclusion_remove") {
+            shape(args,{"purpose","experiment","operation","region"});
+            if(!id_ok(args.value("region")))throw ActionRefusal("target_unavailable","region");
+        } else throw ActionRefusal("unsupported_input","field");
+        return;
     }
     if(structure_app_action(name)) {
         if(name=="create_structure")shape(args,{"purpose"});
