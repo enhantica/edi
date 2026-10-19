@@ -12041,7 +12041,28 @@ def test_calls650_original_completed_calls_do_not_spend_live_request_bound(gener
     owned_directory = trace.parent / 'original-owned-project'
     owned_files = save211_files(owned_directory)
     original_peer = live_original_peer(actor)
-    _, replies = native_send(actor, trace, 65)
+    # One original Send/serial turn; the existing finite inspect budget belongs
+    # to each expected reply, not the entire 65-call retained conversation.
+    actor.command('send_text', text='Inspect and perform the original bounded native project task')
+    for expected_reply in range(1, len(calls) + 1):
+        settle(actor, lambda value: (
+            len(native_records(trace, '.native-replies.jsonl')) >= expected_reply
+            or bool(value['last_error']) or not value['connected']
+        ))
+        assert len(native_records(trace, '.native-replies.jsonl')) >= expected_reply, (
+            'CALL650: each expected original reply must make finite forward progress'
+        )
+    replies = native_records(trace, '.native-replies.jsonl')
+    # Retain native_send's original closed content decoding; the case below
+    # still owns exact success/envelopes/cardinality/once/science/owner checks.
+    for reply in replies:
+        result = reply['response'].get('result')
+        assert isinstance(result, dict) and type(result.get('success')) is bool
+        contents = result.get('contentItems')
+        assert isinstance(contents, list) and len(contents) == 1
+        assert contents[0]['type'] == 'inputText' and isinstance(contents[0]['text'], str)
+        reply['decoded'] = json.loads(contents[0]['text'])
+        assert reply['decoded'] is not None
     after = native145_science_settled(actor)
     assert original_peer_is_live(original_peer) and after['connected'] and not after['last_error']
     assert all(r['response']['result']['success'] is True for r in replies), 'CALL650: completed retained calls cannot spend the outstanding64-request bound; actual next valid answer must succeed'
