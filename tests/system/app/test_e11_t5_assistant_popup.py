@@ -1869,3 +1869,45 @@ def test_array451_current_original_member_and_retirement(case, tmp_path):
         ), 'ARRAY451: original literal ordered user messages have genuine matching ACKs'
         assert [row['params']['clientUserMessageId'] for row in starts] == [row['id'] for row in users], (
             'ARRAY451: every actual user ID bonds independently to corresponding original wire request')
+
+
+def test_read625_real_main_both_modes_read_without_project(tmp_path):
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy, records, rpc83_context_inputs
+    environment = popup171_owned_environment(tmp_path)
+    config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
+    config = json.loads(config_path.read_text())
+    config.pop('report_page_reply')
+    calls = [[{'tool':'read_selected_file','call_id':'read625-main-'+str(mode),
+               'arguments':{'purpose':'Read independent selected text','file_id':{'$read625_current_ordinal':0},
+                            'offset':0,'max_bytes':65536}}] for mode in range(2)]
+    config.update(scenario='native:script',native_turn_calls=calls,readonly409=True,vm319_record_packets=True,read625=True)
+    config_path.write_text(json.dumps(config)); original_config = config_path.read_bytes()
+    runner = Path(os.environ['EDI_APP_TEST_RUNNER']); assert runner.is_file()
+    argv = [str(runner),'-input',str(Path(__file__).with_name('tst_assistant_popup.qml')),
+            'AssistantPopup::test_read625_selected_text_is_same_read_in_both_modes','-o','-,txt']
+    result = subprocess.run(argv,cwd=tmp_path,env=environment,capture_output=True,text=True,timeout=90,check=False)
+    (tmp_path/'read625.stdout.log').write_text(result.stdout);(tmp_path/'read625.stderr.log').write_text(result.stderr)
+    assert result.returncode == 0 and 'FAIL!' not in result.stdout and (
+        'PASS   : edi_app::AssistantPopup::test_read625_selected_text_is_same_read_in_both_modes()' in result.stdout)
+    assert config_path.read_bytes() == original_config
+    trace = Path(config['trace']); readonly409_policy(trace)
+    requests = records(trace); starts = [r for r in requests if r.get('method')=='turn/start']
+    replies = [json.loads(s) for s in trace.with_suffix('.native-replies.jsonl').read_text().splitlines()]
+    emitted = [json.loads(s) for s in trace.with_suffix('.native-emitted.jsonl').read_text().splitlines()]
+    assert len(starts)==len(replies)==len(emitted)==2 and len({r['response']['id']for r in replies})==2
+    assert not any(r.get('method')in{'turn/interrupt','account/login/start'}for r in requests)
+    assert sum(r.get('method')=='account/logout'for r in requests)==1  # original explicit fixture teardown
+    for index,(start,reply,request) in enumerate(zip(starts,replies,emitted,strict=True)):
+        offered = rpc83_context_inputs(start['params']);assert len(offered)==1
+        selection = offered[0]['selected_files'];assert len(selection['files'])==1
+        selected = selection['files'][0]
+        assert selected['bytes']==18 and type(selected['id'])is str and selected['id']
+        expected = {'purpose':'Read independent selected text','file_id':selected['id'],'offset':0,'max_bytes':65536}
+        assert request['params']['arguments']==expected and request['item']['arguments']==expected
+        assert request['params']['callId']=='read625-main-'+str(index) and reply['original']==request
+        assert reply['response']['id']==request['id']!=request['params']['callId']
+        value = json.loads(reply['response']['result']['contentItems'][0]['text'])
+        assert reply['response']['result']['success'] is True
+        assert value['selected_text']['collection_id']==selection['collection_id']
+        assert value['selected_text']['generation']==selection['generation']
+    assert not trace.with_suffix('.native-wrong-envelope.jsonl').exists()

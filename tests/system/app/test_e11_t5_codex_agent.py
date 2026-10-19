@@ -2493,7 +2493,7 @@ def test_native125_registered_reads_use_original_rpc_and_retained_purpose(generi
         'load_structure',
         'create_experiment',
         'set_experiment_type',
-        'load_data',
+        'load_data', 'read_selected_file',
     }, 'ACTION484: original eleven capabilities plus exactly four individually wired app actions'
     initialize = next(row['params'] for row in records(trace) if row.get('method') == 'initialize')
     assert initialize['capabilities']['experimentalApi'] is True, (
@@ -4909,7 +4909,7 @@ def test_native159_advertised_profile_recipe_is_constructible_from_public_catalo
         'add_relations',
         'save_project',
         'edit_background',
-                             'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
+                             'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
     }, (
         'PROFILE159: expose the public CW catalog and construct its canonical recipe'
     )
@@ -5371,7 +5371,7 @@ def test_bootstrap149_all_shipped_skills_reach_real_context_and_managed_native_t
         'add_relations',
         'save_project',
         'edit_background',
-                                                                    'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
+                                                                    'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
     }, 'ACTION484: bootstrap declares original eleven and four individual app actions'
     actual = {entry['id']: entry for entry in state['skills']}
     assert set(actual) == set(originals), (
@@ -5863,7 +5863,7 @@ def signin206_shipped(state, trace):
         'run_fit', 'create_cwl_project', 'add_relations',
         'save_project',
         'edit_background',
-                                                                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
+                                                                              'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
     }, 'ACTION484: discovery errors cannot expand or trim the declared fifteen-tool catalogue'
 
 
@@ -9599,7 +9599,7 @@ def gui392_run(tmp_path, case):
             assert {tool['name'] for tool in start['dynamicTools']} == {
                 'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters', 'set_free',
                 'run_fit', 'create_cwl_project', 'add_relations', 'save_project', 'edit_background',
-                                                                           'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data',
+                                                                           'acquire_inputs', 'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file',
             }, 'GUI392: custom guidance cannot register or expand native tool authority'
         emitted = [row['packet'] for row in native_records(trace, '.vm319-packets.jsonl')]
         # Actual peer request/reply/client IDs, not a guessed process/row ID.
@@ -10334,7 +10334,7 @@ PREFS417_CASES = ('lifecycle', 'malformed', 'retirement', 'local', 'all-off', 's
 PREFS417_NATIVE_TOOLS = {'inspect_project', 'list_parameters', 'diagnostics', 'set_parameters',
                        'set_free', 'run_fit', 'create_cwl_project', 'add_relations',
                        'save_project', 'edit_background', 'acquire_inputs',
-                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data'}
+                       'load_structure', 'create_experiment', 'set_experiment_type', 'load_data', 'read_selected_file'}
 
 
 def prefs417_inventory(skills, expected):
@@ -11521,3 +11521,134 @@ def test_human575_original_agent_wait_preserves_budget_and_lifetime(generic, hum
     if answers:
         assert answers[0]['id'] == 'human575-A-0', 'HUMAN575: sole response retains the exact original request identity'
     assert config_path.read_bytes() == original_config, 'HUMAN575: original finite peer declaration stays immutable'
+
+
+def test_read625_original_selected_utf8_ranges_and_closed_results(generic, tmp_path):
+    """519 literal byte/range contract through original genuine Session/RPC, no project."""
+    fixture = ROOT / 'tests/fixtures/assistant/read625'
+    literal = (fixture / 'literal.txt').read_bytes()
+    assert literal == b'A\r\n\t"\\\x01' + 'λ🙂e\u0301\r\n'.encode('utf-8') and len(literal) == 18
+    content = {
+        'literal.txt': literal,
+        'empty.txt': b'',
+        'escaped.txt': b'\x01' * 65536,
+        'invalid-tail.txt': b'a' * 65536 + b'\xff',
+        'nul-tail.txt': b'a' * 65536 + b'\x00',
+        'blocked.gpx': b'<?xml version="1.0"?><gpx version="1.1"></gpx>\n',
+        'large.txt': b'a' * 65535 + '🙂'.encode('utf-8') + b'z' * (16777216 - 65539),
+        'unrelated.txt': b'UNRELATED selected data, never requested\r\n' * 300000,
+    }
+    # These exact independent lengths fit the original16MiB/file and64MiB/collection.
+    assert all(len(v) <= 16777216 for v in content.values()) and sum(map(len, content.values())) <= 67108864
+    paths = []
+    for name, data in content.items():
+        path = tmp_path / name; path.write_bytes(data); paths.append(path)
+    original = {p.name: (len(p.read_bytes()), hashlib.sha256(p.read_bytes()).hexdigest()) for p in paths}
+    actor, trace = native_case(generic, [], connect_now=False, script={'scenario': 'native:script'})
+    assert actor.last['vm']['project'] == {} and not actor.last['vm']['project_present']
+    token = actor.command('selected_begin')['reply']['request_id']
+    assert token and actor.command('selected_add', request_id=token, urls=[p.as_uri() for p in paths])['reply']['accepted']
+    selected = settle(actor, lambda v: len(v['selected_files']) == len(paths) and not v['can_cancel'])
+    ids = {row['name']: row['id'] for row in selected['selected_files']}
+    assert set(ids) == set(content) and len(set(ids.values())) == len(ids)
+    # Literal operands, scalar-boundary cuts, and whole-target failures outside the tiny requested chunk.
+    cases = [
+        ('literal.txt', 0, 65536, literal.decode(), 18, None),
+        ('literal.txt', 7, 2, 'λ', 9, None),
+        ('literal.txt', 9, 4, '🙂', 13, None),
+        ('literal.txt', 7, 5, 'λ', 9, None),
+        ('literal.txt', 0, 0, '', 0, None),
+        ('literal.txt', 18, 0, '', 18, None),
+        ('literal.txt', 18, 1, '', 18, None),
+        ('empty.txt', 0, 0, '', 0, None),
+        ('empty.txt', 0, 65536, '', 0, None),
+        ('literal.txt', 8, 4, None, None, ('invalid_range', 'offset')),
+        ('literal.txt', 15, 4, None, None, ('invalid_range', 'offset')),
+        ('literal.txt', 19, 1, None, None, ('invalid_range', 'offset')),
+        ('literal.txt', 9, 3, None, None, ('invalid_range', 'max_bytes')),
+        ('literal.txt', 14, 1, None, None, ('invalid_range', 'max_bytes')),
+        ('literal.txt', 14, 2, '\u0301', 16, None),
+        ('invalid-tail.txt', 0, 1, None, None, ('unsupported_input', 'file_id')),
+        ('nul-tail.txt', 0, 1, None, None, ('unsupported_input', 'file_id')),
+        ('blocked.gpx', 0, 1, None, None, ('unsupported_input', 'file_id')),
+        ('large.txt', 16777216, 1, '', 16777216, None),
+        ('large.txt', 65535, 4, '🙂', 65539, None),
+        ('large.txt', 0, 65536, 'a' * 65535, 65535, None),
+        ('escaped.txt', 0, 65536, '\x01' * 65536, 65536, None),
+    ]
+    calls = [native_call('read_selected_file', file_id=ids[name], offset=start, max_bytes=maximum)
+             for name, start, maximum, *_ in cases]
+    malformed = [
+        {'file_id': ids['literal.txt'], 'offset': True, 'max_bytes': 1},
+        {'file_id': ids['literal.txt'], 'offset': .5, 'max_bytes': 1},
+        {'file_id': ids['literal.txt'], 'offset': -1, 'max_bytes': 1},
+        {'file_id': ids['literal.txt'], 'offset': 16777217, 'max_bytes': 1},
+        {'file_id': ids['literal.txt'], 'offset': 0, 'max_bytes': 65537},
+        {'file_id': ids['literal.txt'], 'offset': 0, 'max_bytes': None},
+        {'file_id': ids['literal.txt'], 'offset': 0, 'max_bytes': 1, 'extra': 'not admitted'},
+        {'offset': 0, 'max_bytes': 1},
+        {'file_id': '', 'offset': 0, 'max_bytes': 1},
+        {'file_id': 'independently-absent-id', 'offset': 0, 'max_bytes': 1},
+    ]
+    calls += [native_call('read_selected_file', **arguments) for arguments in malformed]
+    for index, call in enumerate(calls): call['call_id'] = 'read625-' + str(index)
+    removed_call = native_call('read_selected_file', file_id=ids['literal.txt'], offset=0, max_bytes=18)
+    removed_call['call_id'] = 'read625-removed'
+    path = trace.parent / 'peer-input.json'; config = json.loads(path.read_text())
+    config.update(native_turn_calls=[calls, [removed_call]])
+    path.write_text(json.dumps(config)); readonly409_configure(trace)
+    expected_config = path.read_bytes(); connect(actor); native145_approve(actor)
+    tools = next(r['params']['dynamicTools'] for r in records(trace) if r.get('method') == 'thread/start')
+    assert len({t['name'] for t in tools}) == len(tools) and {t['name'] for t in tools} == PREFS417_NATIVE_TOOLS
+    spec = next((t for t in tools if t['name'] == 'read_selected_file'), None)
+    assert spec is not None, 'READ625 expected red on360: original app has no registered selected-read callable'
+    assert spec['inputSchema'] == json.loads((fixture / 'request.schema.json').read_text())
+    state, replies = native_send(actor, trace, len(calls))
+    assert state['project'] == {} and not state['project_present']
+    offered = rpc83_context_inputs(started_requests(trace)[0]['params'])
+    assert len(offered) == 1
+    selection = offered[0]['selected_files']
+    assert {r['id'] for r in selection['files']} == set(ids.values())
+    child_keys = {'file_id','collection_id','generation','encoding','text','total_bytes','start','end','next_offset','eof','complete'}
+    for index, ((name, start, maximum, text, end, error), reply) in enumerate(zip(cases, replies[:len(cases)], strict=True)):
+        assert reply['original']['params']['arguments'] == calls[index]['arguments']
+        value = reply['decoded']; success = reply['response']['result']['success']
+        if error:
+            assert success is False and value['status'] == 'refused' and 'selected_text' not in value
+            assert (value['action_error'], value['action_field']) == error
+            continue
+        assert success is True and value['schema'] == 'edi.assistant.outgoing/1' and value['status'] == 'completed'
+        assert 'complete' not in value
+        child = value['selected_text']; assert set(child) == child_keys
+        assert child == {'file_id': ids[name], 'collection_id': selection['collection_id'],
+                         'generation': selection['generation'], 'encoding': 'utf-8', 'text': text,
+                         'total_bytes': len(content[name]), 'start': start, 'end': end, 'next_offset': end,
+                         'eof': end == len(content[name]), 'complete': start == 0 and end == len(content[name])}
+        assert type(child['eof']) is bool and type(child['complete']) is bool
+        import math
+        assert all(type(child[k]) in (int,float) and math.isfinite(child[k]) and child[k] % 1 == 0
+                   for k in ['total_bytes','start','end','next_offset'])
+        assert type(child['generation']) is str and child['generation'].isascii() and child['generation'].isdigit() and len(child['generation'])<=20 and int(child['generation'])<=18446744073709551615
+        assert len(child['text'].encode('utf-8')) == end - start <= maximum
+        # native_send has parsed the actual outer peer response and its nested content text.
+        assert json.loads(reply['response']['result']['contentItems'][0]['text'])['selected_text']['text'] == text
+    for arguments, reply in zip(malformed, replies[len(cases):], strict=True):
+        assert reply['response']['result']['success'] is False and 'selected_text' not in reply['decoded']
+        assert reply['decoded']['status'] == 'refused'
+        if arguments.get('file_id') == 'independently-absent-id':
+            assert (reply['decoded']['action_error'], reply['decoded']['action_field']) == ('input_unavailable','file_id')
+        if arguments.get('file_id', None) == '':
+            assert (reply['decoded']['action_error'], reply['decoded']['action_field']) == ('input_required','file_id')
+    state = settle(actor, lambda v: not v['can_cancel'])
+    assert actor.command('selected_remove', id=ids['literal.txt'])['reply']['accepted']
+    native145_approve(actor)
+    state, replies = native_send(actor, trace, len(calls) + 1)
+    stale = replies[-1]['decoded']
+    assert replies[-1]['response']['result']['success'] is False and stale['status'] == 'refused'
+    assert (stale['action_error'], stale['action_field']) == ('input_unavailable','file_id') and 'selected_text' not in stale
+    state = settle(actor, lambda v: not v['can_cancel'])
+    assert path.read_bytes() == expected_config and state['project'] == {} and not state['project_present'] and state['connected']
+    readonly409_policy(trace)
+    assert len(started_requests(trace)) == 2 and not any(r.get('method') in {'account/login/start','account/logout','turn/interrupt'} for r in records(trace))
+    assert len({r['response']['id'] for r in replies}) == len(replies)
+    assert {p.name:(len(p.read_bytes()),hashlib.sha256(p.read_bytes()).hexdigest()) for p in paths} == original

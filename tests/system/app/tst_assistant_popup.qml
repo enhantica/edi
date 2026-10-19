@@ -10030,4 +10030,58 @@ TestCase {
             for(const row of bindings) disconnect313(row.life,row.object,row.signal,row.callback);
         }
     }
+    //519: same real Main and readonly native caller, both modes; genuine selection/no Project.
+    function test_read625_selected_text_is_same_read_in_both_modes() {
+        Session.closeProject(); compare(Session.project,null);
+        visible185_page("home"); Ui.click(this,Probe,window,"home.start");rendered();
+        compare(window.appBarCentralTabs.currentIndex,AppState.Page.Project);
+        toggle();
+        const token=assistant.beginFileSelection();
+        verify(token.length>0 && assistant.addSelectedFiles(token,[Probe.repoUrl("tests/fixtures/assistant/read625/literal.txt")]));
+        tryCompare(assistant.selectedFiles,"count",1,2000);
+        const selected=Probe.rows(assistant.selectedFiles);compare(selected.length,1);
+        assistant.signIn();visible185_ready("read625-bootstrap");
+        if(assistant.contextConsentRequired)assistant.signIn();visible185_ready("read625-disclosed");
+        verify(assistant.connected && !assistant.contextConsentRequired);
+        const originalAssistant=assistant,life=lifetime313(assistant);
+        const modes=Probe.rows(assistant.models).map(row=>row.id);
+        let cues=0;const onCue=()=>{++cues;};assistant.actionPointerPressed.connect(onCue);
+        function result625(identifier,ids) {
+            const rows=Probe.rows(assistant.messages).filter(row=>!ids.has(row.id) && row.kind==="activity"
+                && row.payload && row.payload.id===identifier);
+            compare(rows.length<=1,true);if(!rows.length || rows[0].status!=="completed")return null;
+            verify(rows[0].payload.success===true && rows[0].payload.nativeOutcome);
+            const content=JSON.parse(JSON.stringify(rows[0].payload.contentItems));
+            verify(content.length===1 && content[0].type==="inputText");return JSON.parse(content[0].text);
+        }
+        const results=[];
+        try {
+            compare(assistant.showActions,false);
+            for(let mode=0;mode<2;++mode) {
+                if(mode===1) {
+                    const checkbox=item("assistant.showActions");verify(checkbox.visible && checkbox.enabled);
+                    mouseClick(checkbox);compare(assistant.showActions,true);
+                }
+                const ids=new Set(Probe.rows(assistant.messages).map(row=>row.id));
+                const page=window.appBarCentralTabs.currentIndex;
+                assistant.send("Read the original selected text exactly, without creating a project");
+                const call="read625-main-"+mode;
+                tryVerify(()=>!assistant.canCancel && result625(call,ids)!==null,2000);
+                const value=result625(call,ids);compare(value.status,"completed");
+                compare(value.selected_text.file_id,selected[0].id);
+                compare(value.selected_text.text,"A\r\n\t\"\\\u0001λ🙂e\u0301\r\n");
+                compare(value.selected_text.total_bytes,18);compare(value.selected_text.start,0);
+                compare(value.selected_text.end,18);compare(value.selected_text.next_offset,18);
+                compare(value.selected_text.eof,true);compare(value.selected_text.complete,true);
+                compare(Session.project,null);compare(assistant,originalAssistant);verify(alive313(life));
+                compare(window.appBarCentralTabs.currentIndex,page);compare(cues,0);
+                compare(JSON.stringify(Probe.rows(assistant.models).map(row=>row.id)),JSON.stringify(modes));
+                compare(Probe.rows(assistant.selectedFiles)[0].id,selected[0].id);
+                verify(assistant.connected && !assistant.lastError);results.push(value.selected_text);
+            }
+            compare(JSON.stringify(results[0]),JSON.stringify(results[1]));
+        } finally {disconnect313(life,originalAssistant,"actionPointerPressed",onCue);}
+        assistant.signOut();tryCompare(assistant,"connected",false,2000);
+    }
+
 }

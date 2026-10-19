@@ -932,6 +932,8 @@ native_start_pending = None
 native_steers = []
 native_disclosed_parameters = []
 native_disclosed_sources = []
+#625 exact one-current-Context-ID fixture operand, no filenames/path or general resolver.
+read625_files = []
 native_action484_datasets = []
 
 
@@ -947,6 +949,11 @@ def native_original_addresses(value):
         ]
         assert len(matches) == 1, 'CREATE SETUP: original current parameter address is unique'
         return matches[0]
+    if isinstance(value, dict) and set(value) == {'$read625_current_ordinal'}:
+        assert config.get('read625') is True and config.get('scenario') == 'native:script'
+        assert type(value['$read625_current_ordinal']) is int and value['$read625_current_ordinal'] == 0
+        assert len(read625_files) == 1 and type(read625_files[0]['id']) is str and read625_files[0]['id']
+        return read625_files[0]['id']
     if isinstance(value, dict) and set(value) == {'$original_selected_name'}:
         if config.get('main507_closed_files') is True:
             assert config.get('native_import267') is True and config.get('scenario') == 'native:script', (
@@ -1035,6 +1042,23 @@ def native_emit_next():
 
 def native_start(request):
     global native_start_pending, native_index, turn_id  # noqa: PLW0603 -- original delayed RPC envelope
+    if config.get('read625') is True:
+        assert scenario == 'native:script' and config.get('readonly409') is True
+        assert not any(config.get(k) for k in ['native_import267','main507_closed_files','input413','native_delay'])
+        groups625 = config['native_turn_calls']
+        assert len(groups625) == 2 and all(len(group) == 1 for group in groups625)
+        assert all(group[0]['tool'] == 'read_selected_file' and group[0]['arguments'] == {
+            'purpose':'Read independent selected text','file_id':{'$read625_current_ordinal':0},'offset':0,'max_bytes':65536
+        } for group in groups625)
+        context625 = context_inputs(request['params'])
+        assert len(context625) == 1
+        selection625 = context625[0]['selected_files']
+        assert set(selection625) == {'collection_id','generation','files'} and len(selection625['files']) == 1
+        row625 = selection625['files'][0]
+        assert type(row625) is dict and type(row625['id']) is str and row625['id'] and row625['bytes'] == 18
+        assert type(row625['format']) is str and row625['format']
+        read625_files[:] = [row625]
+
     # Opt-in original genuine user scope, then the SAME public native RPC path.
     # Existing rpc83_context_inputs JSON-domain prior art; never a model path/ID.
     if config.get('input413') is True:
