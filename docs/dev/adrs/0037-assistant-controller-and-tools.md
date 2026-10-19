@@ -1480,3 +1480,15 @@ Original per-row names/text/JSON owners are admitted before growth and retained
 through context/skill work and elapsed-message-handler callbacks; prepared project
 attachment uses its own exact target, not the old current project. Existing closed
 projection, disclosure, source identity, maxima and hard limits still govern.
+
+
+Ordinary Save success reporting
+
+The ordinary Session.save return and original active-owner fact already own
+current-save success. Report a successful saved+active result plainly as Project
+saved; do not turn an unrequested presentation/reopen observation into a save
+failure or another save/wait/reopen operation. Real refusal, uncertainty, owner
+change, explicitly requested verification and fresh verified export/adoption
+remain factual. Tool help, both existing developer strategy paragraphs and the
+connected project skill carry the same reporting rule; actual Save/result flags,
+disk/science/Undo and native settlement are unchanged.
