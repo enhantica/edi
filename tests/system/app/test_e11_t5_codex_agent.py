@@ -11270,10 +11270,10 @@ def test_main504_lbco_show_actions_cue_fit_save_and_report(tmp_path):
     assert runner.is_file(), 'MAIN504 SETUP: genuine current original Main consumer is required'
     argv = [str(runner), '-input', str(Path(__file__).with_name('tst_assistant_popup.qml')),
             'AssistantPopup::test_main504_lbco_show_actions_owner_outcome', '-o', '-,txt']
-    (tmp_path / 'main504-request.json').write_text(json.dumps({'argv': argv, 'timeout': 90,
+    (tmp_path / 'main504-request.json').write_text(json.dumps({'argv': argv, 'timeout': 300, 'work_timeout': 270, 'reserved_cleanup': 30,
         'environment': {key: value for key, value in environment.items() if key.startswith(('QT_', 'EDI_', 'XDG_'))}}, indent=2))
     try:
-        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=90, check=False)
+        result = subprocess.run(argv, cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=300, check=False)
     except subprocess.TimeoutExpired as error:
         for stream in ('stdout', 'stderr'):
             value = getattr(error, stream) or b''

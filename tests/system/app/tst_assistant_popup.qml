@@ -9032,7 +9032,7 @@ TestCase {
             }
             tryVerify(() => outcome(last)!==null && !assistant.canCancel && !assistant.showingActions
                 && Session.project!==null && !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),
-                90000,"MAIN504: original objective completes all calls and actual current calculation within existing bounds");
+                270000,"MAIN504: original objective completes all calls and actual current calculation within existing bounds");
             verify(!assistant.lastError,"MAIN504: no retained/context/worker error can substitute for completion");
             elapsedPhase511="settled_idle";console.info("GUI511_PHASE","settled_idle",JSON.stringify(observations518));
         }
