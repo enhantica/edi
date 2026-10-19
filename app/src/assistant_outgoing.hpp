@@ -22,15 +22,19 @@ enum class Role { Context, Project, Structure, SpaceGroup, Site, Dataset, Axis,
     Parameter, Diagnostic, Selection, File, Skill, InputScopes, InputSource,
     NativeState, Calculation, InterfaceGroup, Result, Fit, ReaderFacts, SelectedText };
 inline constexpr std::string_view wire_schema="edi.assistant.outgoing/1";
-enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch };
-inline constexpr std::array<std::string_view,7> result_codes={
-    "refused","unavailable","cancelled","uncertain","resource_exhausted","input_changed","policy_mismatch"};
+enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch, RequestStale, ContextUnready, OwnerUnavailable, PendingOperation, ItemMismatch, DuplicateCall, InvalidArguments, CalculationBusy, VisibleUnmapped, ProjectRequired, Unclassified };
+inline constexpr std::array<std::string_view,18> result_codes={
+    "refused","unavailable","cancelled","uncertain","resource_exhausted","input_changed","policy_mismatch",
+    "request_stale","context_unready","owner_unavailable","pending_operation","item_mismatch","duplicate_call","invalid_arguments","calculation_busy","visible_unmapped","project_required","unclassified"};
 inline constexpr std::string_view result_code(ResultCode code) {return result_codes[static_cast<std::size_t>(code)];}
 inline constexpr std::string_view maximum_result_code() {
     std::string_view maximum;
     for(const auto code:result_codes)if(code.size()>maximum.size())maximum=code;
     return maximum;
 }
+// Known direct-refusal codes fit the original longest code role; no response
+// allowance or wire-field family grows for this diagnostic correction.
+static_assert(maximum_result_code()==result_code(ResultCode::ResourceExhausted));
 // Internal bound only. Keep unprojected synthetic padding, but include every
 // field the actual closed projection can ADD before nesting it as response text.
 inline void complete_result_maximum(QJsonObject& maximum) {
@@ -180,6 +184,12 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
         if(source.value("code")=="resource_exhausted" || source.value("code")=="input_capacity")code=result_code(ResultCode::ResourceExhausted).data();
         else if(source.value("code")=="source_changed")code=result_code(ResultCode::InputChanged).data();
         else if(source.value("code")=="policy_mismatch")code=result_code(ResultCode::PolicyMismatch).data();
+        else if(!source.value("uncertain").toBool() && (status=="refused" || status=="unavailable" || status=="busy")) {
+            // Only app-owned closed first-gate codes survive. Unknown source
+            // messages/codes keep the original generic status projection.
+            for(std::size_t i=static_cast<std::size_t>(ResultCode::RequestStale);i<result_codes.size();++i)
+                if(source.value("code")==QLatin1StringView(result_codes[i].data())) {code=result_codes[i].data();break;}
+        }
         if(code) {if(comma)add(size,1);add(size,sizeof("\"code\":")-1+std::char_traits<char>::length(code)+2);if(materialize)result.insert("code",QLatin1StringView(code));}
     }
     return materialize?QJsonValue(result):QJsonValue();

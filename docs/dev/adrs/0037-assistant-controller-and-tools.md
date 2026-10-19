@@ -1647,3 +1647,18 @@ commit; no synthetic accepted/activated or direct index assignment is added.
 Original pointer/navigation timings remain unscaled, as do scientific work,
 readiness, deadlines, Stop and Working animation. No separate text executor,
 model mutation through the helper, retry or permission/allowance is introduced.
+
+
+Known pre-admission native refusals retain an app-owned closed code through the
+original private outgoing projector. The existing native_owner/native_current
+short-circuit predicates optionally report their first fixed failed group;
+dispatch does not rerun them to guess a disjunct. Policy, original context,
+owner/lifecycle, request/scientific freshness, pending operation, original-item
+match, duplicate, capacity, argument class, busy calculation, visible mapping
+and required project remain distinct at the actual source boundary. Typed
+ActionRefusal/RecipeRefusal and source/policy/resource facts retain precedence.
+Unclassified exceptions stay unclassified; no arbitrary message, what(), path,
+account or input is forwarded. All added codes fit the original longest code
+role, with the same actual sizing/projector/maximum and no limit increase.
+These facts explain the gate, not proof of this owner's missing runtime actor,
+permission to retry a write, or a new scientific/CIF/directory prerequisite.

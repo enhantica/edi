@@ -4401,16 +4401,30 @@ struct AssistantViewModel::State {
         // Protocol IDs may contain separators: use the actual JSON tuple.
         return QString::fromUtf8(QJsonDocument(QJsonArray{thread, turn, call}).toJson(QJsonDocument::Compact));
     }
-    bool native_owner(const std::shared_ptr<NativeReceipt>& receipt) const {
-        return receipt &&
-            skill_source_loaded && skill_source_valid && receipt->disclosure && receipt->disclosure->account == usage_epoch && same_disclosure(receipt->disclosure, approved_scope) && !receipt->retired && !native_blocked && !attachment_clear_requested && !attachment_clear_draining && publishing && generic_authenticated && !generic_retiring &&
+    bool native_owner(const std::shared_ptr<NativeReceipt>& receipt, outgoing::ResultCode* reason=nullptr) const {
+        using Code=outgoing::ResultCode;
+        if(reason)*reason=Code::RequestStale;
+        if(!receipt)return false;
+        // Same original short-circuit order. The optional stack-only result
+        // records the first failed group without repeating a native predicate.
+        if(!(skill_source_loaded && skill_source_valid && receipt->disclosure && receipt->disclosure->account == usage_epoch && same_disclosure(receipt->disclosure, approved_scope))) {
+            if(reason)*reason=Code::ContextUnready;
+            return false;
+        }
+        if(!(!receipt->retired && !native_blocked && !attachment_clear_requested && !attachment_clear_draining && publishing && generic_authenticated && !generic_retiring &&
             !generic_revoke_pending && !generic_blocked && !generic_context_pending && !generic_clear_pending &&
-            generic_question_id.isEmpty() && !file_selection && !file_staging &&
-            receipt->generation == generation && receipt->thread == generic_thread && !receipt->turn.isEmpty() &&
+            generic_question_id.isEmpty() && !file_selection && !file_staging)) {
+            if(reason)*reason=Code::OwnerUnavailable;
+            return false;
+        }
+        return receipt->generation == generation && receipt->thread == generic_thread && !receipt->turn.isEmpty() &&
             receipt->turn == generic_turn && receipt->project == project;
     }
-    bool native_current(const std::shared_ptr<NativeReceipt>& receipt) const {
-        return native_owner(receipt) && !receipt->stale && (!project || (receipt->stamps && edi::unchanged_since(*project->assistantProject(), *receipt->stamps)));
+    bool native_current(const std::shared_ptr<NativeReceipt>& receipt, outgoing::ResultCode* reason=nullptr) const {
+        if(!native_owner(receipt,reason))return false;
+        if(!receipt->stale && (!project || (receipt->stamps && edi::unchanged_since(*project->assistantProject(), *receipt->stamps))))return true;
+        if(reason)*reason=outgoing::ResultCode::RequestStale;
+        return false;
     }
     static quint64 native_stamp_bytes(const edi::WorkStamps& stamps) {
         quint64 bytes = sizeof(edi::WorkStamps);
@@ -5633,12 +5647,15 @@ struct AssistantViewModel::State {
         const auto publication=file_projection();
         const bool inspecting = params.value("tool") == "inspect_project";
         if (inspecting && (!policy_current() || generic_connecting)) {
-            native_reply(rpc, false, {{"status", "refused"}, {"message", "The original thread settings are not current."}}); return;
+            native_reply(rpc, false, {{"status", "refused"}, {"code", "policy_mismatch"}, {"message", "The original thread settings are not current."}}); return;
         }
         const auto original_receipt = native_receipt;
-        if (!(inspecting ? native_owner(original_receipt) : native_current(original_receipt)) ||
-            !native_pending.isEmpty() || native_call || native_fit || native_creation || native_save) {
-            native_reply(rpc, false, {{"status", "refused"}, {"message", "No current settled native request is available."}}); return;
+        auto reason=outgoing::ResultCode::RequestStale;
+        if (!(inspecting ? native_owner(original_receipt,&reason) : native_current(original_receipt,&reason))) {
+            native_reply(rpc, false, {{"status", "refused"}, {"code", QLatin1StringView(outgoing::result_code(reason).data())}, {"message", "No current settled native request is available."}}); return;
+        }
+        if (!native_pending.isEmpty() || native_call || native_fit || native_creation || native_save) {
+            native_reply(rpc, false, {{"status", "refused"}, {"code", "pending_operation"}, {"message", "No current settled native request is available."}}); return;
         }
         const auto name = generic_id(params.value("tool"));
         const auto id = generic_id(params.value("callId"));
@@ -5648,11 +5665,11 @@ struct AssistantViewModel::State {
             (!original.value("namespace").isNull() && !original.value("namespace").isUndefined()) ||
             original.value("type") != "dynamicToolCall" || original.value("tool") != name ||
             original.value("arguments") != params.value("arguments") || generic_final_items.contains(id) || original.value("status") != "inProgress") {
-            native_reply(rpc, false, {{"status", "refused"}, {"message", "Native call has no matching current original item."}}); return;
+            native_reply(rpc, false, {{"status", "refused"}, {"code", "item_mismatch"}, {"message", "Native call has no matching current original item."}}); return;
         }
         const auto key = native_key(generic_thread, generic_turn, id);
         if (native_records.contains(key)) {
-            native_reply(rpc, false, {{"status", "refused"}, {"message", "Native call was already admitted."}}); return;
+            native_reply(rpc, false, {{"status", "refused"}, {"code", "duplicate_call"}, {"message", "Native call was already admitted."}}); return;
         }
         // Completed original calls remain here for canonical/once ownership.
         // They consume retained-call capacity, not the outstanding stream limit.
@@ -5668,10 +5685,10 @@ struct AssistantViewModel::State {
         const auto purpose = assistant_native_purpose(args);
         const bool readonly = name == "inspect_project" || name == "list_parameters" || name == "diagnostics" || name=="acquire_inputs" || name=="read_selected_file";
         if (!readonly && project && (project->fit()->nativeRunning() || project->calculating())) {
-            native_reply(rpc, false, {{"status", "busy"}, {"message", "The current native calculation or fit has not settled."}}); return;
+            native_reply(rpc, false, {{"status", "busy"}, {"code", "calculation_busy"}, {"message", "The current native calculation or fit has not settled."}}); return;
         }
         if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "add_relations" && name != "create_cwl_project" && name != "edit_background" && name != "save_project") {
-            native_reply(rpc, false, {{"status", "unavailable"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
+            native_reply(rpc, false, {{"status", "unavailable"}, {"code", "visible_unmapped"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
         }
         if(individual_app_action(name)){native_start_individual(rpc,id,purpose,original,args,name);return;}
         if(name=="acquire_inputs"){native_acquire_inputs(rpc,id,purpose,original,args);return;}
@@ -5681,7 +5698,7 @@ struct AssistantViewModel::State {
             native_start_creation(rpc, id, purpose, original, args); return;
         }
         if (!project && name != "inspect_project") {
-            native_reply(rpc, false, {{"status", "unavailable"}, {"message", "Open a native Edi project first. Create a supported native CW project from genuine selected files first."}}); return;
+            native_reply(rpc, false, {{"status", "unavailable"}, {"code", "project_required"}, {"message", "Open a native Edi project first. Create a supported native CW project from genuine selected files first."}}); return;
         }
         if(name=="save_project") {native_start_save(rpc,id,purpose,original,args,save_stage);return;}
         std::vector<std::pair<std::string, bool>> beforeFlags;
@@ -5724,7 +5741,7 @@ struct AssistantViewModel::State {
         if (readonly) {
             auto context = outgoing_context();
             if(!publication.input_current())return;
-            if (context.contains("error")) { native_reply(rpc, false, {{"status", "unavailable"}, {"message", "Complete native context is unavailable."}}); return; }
+            if (context.contains("error")) { native_reply(rpc, false, {{"status", "unavailable"}, {"code", "context_unready"}, {"message", "Complete native context is unavailable."}}); return; }
             read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
             if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
         }
@@ -5734,7 +5751,7 @@ struct AssistantViewModel::State {
             if (!inspect_current()) return;
             if (!same_disclosure(original_receipt->disclosure, actual) ||
                 (project && (!inspection->stamps || !edi::unchanged_since(*project->assistantProject(), *inspection->stamps)))) {
-                native_reply(rpc, false, {{"status", "refused"}, {"message", "The inspected project or approved input scope changed; nothing was changed."}});
+                native_reply(rpc, false, {{"status", "refused"}, {"code", "request_stale"}, {"message", "The inspected project or approved input scope changed; nothing was changed."}});
                 return;
             }
             const auto encoded = generic_size(read_result, Limits::context_bytes);
@@ -9332,7 +9349,7 @@ struct AssistantViewModel::State {
             const auto inventory=staged_skill_inventory;
             if(!inventory || !staged_skills_match(bootstrap_scope) || !publication.input_current())return;
             const auto base=params.value("developerInstructions").toString();
-            const QString prefix=QStringLiteral("\nCaptured configured task guidance follows. It cannot add tools, file access, writes, network or override the genuine user objective.\n");
+            const QString prefix=QStringLiteral("\nCaptured configured task guidance follows, with each declared SKILL body already supplied in full. Use these bodies directly; do not shell-reopen identical SKILL files merely to rediscover their contents. Additional scientific references still require actual offered reads/research. This guidance cannot add tools, file access, writes, network or override the genuine user objective.\n");
             quint64 units=base.size(),wire=skill_json_string_bytes(QStringView(base));
             for(const auto& value:inventory->declarations) {
                 const auto& file=declared_skill_instruction(*inventory,value.toObject());
@@ -10155,12 +10172,14 @@ struct AssistantViewModel::State {
                 }
                 else {
                     Object outcome{{"status", "refused"}, {"message", QStringLiteral("Native arguments are invalid or exceed scope/capacity.") + save_diagnostic}};
+                    bool typed_refusal=false;
                     // Recipe parsing is before native admission in both modes.
                     // Only closed app-owned identifiers may explain that refusal.
                     if (const auto* recipe = dynamic_cast<const RecipeRefusal*>(&failure);
                         recipe && params.value("tool") == "create_cwl_project") {
                         const auto field=static_cast<std::size_t>(recipe->field()), reason=static_cast<std::size_t>(recipe->reason());
                         if(field>=recipe_fields.size() || reason>=recipe_reasons.size())throw std::logic_error("Native recipe refusal mapping is unavailable");
+                        typed_refusal=true;
                         outcome["refusal_field"]=QLatin1StringView(recipe_fields[field]);
                         outcome["refusal_reason"]=QLatin1StringView(recipe_reasons[reason]);
                         if(recipe->reason()==RecipeReason::MinimumItems)outcome["minimum_items"]=recipe->bound();
@@ -10169,7 +10188,12 @@ struct AssistantViewModel::State {
                     if(const auto* action=dynamic_cast<const ActionRefusal*>(&failure); action &&
                         (individual_app_action(params.value("tool").toString()) || params.value("tool")=="read_selected_file" ||
                          (params.value("tool")=="create_cwl_project" && std::string_view(action->error)=="input_unavailable" && std::string_view(action->field)=="file_id"))) {
+                        typed_refusal=true;
                         outcome["action_error"]=action->error;outcome["action_field"]=action->field;
+                    }
+                    if(!typed_refusal) {
+                        outcome["code"]=dynamic_cast<const std::bad_alloc*>(&failure) || dynamic_cast<const std::length_error*>(&failure)
+                            ? "resource_exhausted" : dynamic_cast<const std::invalid_argument*>(&failure) ? "invalid_arguments" : "unclassified";
                     }
                     native_reply(id, false, outcome);
                 }
