@@ -1515,3 +1515,19 @@ Stop uses the original Composer solid stop glyph inside this full circle rather
 than a smaller stop-circle glyph as its apparent outline. Original button hits,
 visibility, speed choices/menu/live pacing, cancellation receiver and all working
 animation/ownership remain unchanged; this is no new control or colour constant.
+
+
+### Retained current failure remains visible after local disconnection
+
+The FIRST AssistantPanel EdiNotice remains a selectable plain-text projection of
+its original owner-bound noticeState. A local generic_fail already retains its
+bounded lastError, but the connected chat column hides on disconnection. The
+original signed-out area now reuses that notice above its unchanged centered
+Sign in prompt, with explicit vertical scrolling for the existing bounded text.
+Connected chronological anchors and signed-out presentation are mutually
+exclusive; no error/archive copy or diagnostic message is manufactured. Existing
+captureNotice empty/error/account/conversation/assistant replacement rules still
+own clearing and identity. The original connection and Cancel/Stop actions keep
+their geometry and behavior. This exposes the retained failure; it changes no
+authentication/provider/logout, deadlines, retention, scientific or Save semantics
+and establishes no cause for an earlier Create/disconnection failure.

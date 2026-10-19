@@ -721,7 +721,29 @@ Popup {
                 anchors.top: header.bottom
                 anchors.bottom: parent.bottom
                 color: EaStyle.Colors.contentBackground
+                Flickable {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: signInPrompt.top
+                    anchors.margins: AppSizes.unit
+                    clip: true
+                    contentWidth: width
+                    contentHeight: signedOutNotice.height
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+                    visible: signedOutNotice.noticeText.length > 0
+                    EdiNotice {
+                        id: signedOutNotice
+                        width: parent.width
+                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
+                            ? panel.noticeState.text : ""
+                    }
+                    ScrollBar.vertical: ScrollBar {}
+                }
                 EmptyStateLabel {
+                    id: signInPrompt
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
                     width: Math.max(0,parent.width-AppSizes.unit*2)
