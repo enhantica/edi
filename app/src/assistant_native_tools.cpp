@@ -66,11 +66,25 @@ QJsonArray assistant_native_tool_specs() {
          {"constraints", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"id", text}, {"expression", Object{{"type", "string"}, {"minLength", 1}, {"maxLength", static_cast<int>(edi::assistant::Limits::context_bytes)}}},
                 {"enabled", Object{{"type", "boolean"}}}}, {"id", "expression", "enabled"})}}}}, {"aliases", "constraints"});
-    add("edit_background", "Add, update or remove one explicit measured line-segment background anchor in the CURRENT selected experiment, through the shared background editor. Normal mode has one atomic Undo; Show actions has ordinary per-control Undo and factual complete/partial steps. Position uses native measured axis units (CW two-theta degrees or TOF microseconds). Add/update require position, intensity and free; remove must omit all three. Existing data, other anchors and declared relations remain unchanged. Show actions uses the original Background Add, row ID/position/intensity, parameter-menu refine and Remove controls. It does not use a setup form or atomic sequence promise.",
-        {{"experiment", text}, {"operation", Object{{"type","string"},{"enum",Array{"add","update","remove"}}}}, {"id", text},
+    add("edit_background", "Add, update or remove one explicit measured line-segment background anchor, or explicitly name all current anchors from their positions in the CURRENT selected experiment, through the shared background editor. Normal mode has one atomic Undo; Show actions has ordinary per-control Undo and factual complete/partial steps. Position uses native measured axis units (CW two-theta degrees or TOF microseconds). Add/update require position, intensity and free; remove must omit all three. For name_from_positions supply only purpose, experiment and operation: it invokes the original whole-table Ids from positions action once, with ordinary Undo. Existing add/update/remove IDs and values stay explicit; naming is never inferred from later calls. Show actions uses original Add/row controls, Analysis free checkboxes, Remove and the existing Ids button. It does not use a setup form or atomic sequence promise.",
+        {{"experiment", text}, {"operation", Object{{"type","string"},{"enum",Array{"add","update","remove","name_from_positions"}}}}, {"id", text},
          {"position", Object{{"type","number"},{"description","Required for add/update only, within the measured axis"}}},
          {"intensity", Object{{"type","number"},{"description","Required for add/update only, actual measured intensity units"}}},
-         {"free", Object{{"type","boolean"},{"description","Required for add/update only, refine this independent intensity"}}}}, {"experiment","operation","id"});
+         {"free", Object{{"type","boolean"},{"description","Required for add/update only, refine this independent intensity"}}}}, {"experiment","operation"});
+    // All three shapes are closed: whole-table naming cannot smuggle a point edit.
+    auto tool=tools.last().toObject();auto schema=tool.value("inputSchema").toObject();
+    const auto properties=schema.value("properties").toObject();
+    const auto branch=[&](Array operations,Array fields) {
+        Object selected;
+        for(const auto& field:fields)selected[field.toString()]=properties.value(field.toString());
+        selected["operation"]=Object{{"type","string"},{"enum",operations}};
+        return object(selected,fields);
+    };
+    schema["oneOf"]=Array{
+        branch(Array{"add","update"},Array{"purpose","experiment","operation","id","position","intensity","free"}),
+        branch(Array{"remove"},Array{"purpose","experiment","operation","id"}),
+        branch(Array{"name_from_positions"},Array{"purpose","experiment","operation"})};
+    tool["inputSchema"]=schema;tools[tools.size()-1]=tool;
     return tools;
 }
 bool assistant_native_tool(const QString& name) {
@@ -100,7 +114,8 @@ void assistant_native_arguments(const QString& name, const Object& args) {
     else if(name=="set_experiment_type") shape(args,{"purpose","experiment","axis","token"});
     else if(name=="acquire_inputs") shape(args,{"purpose","scope_id"});
     else if (name == "edit_background") {
-        if (args.value("operation") == "remove") shape(args,{"purpose","experiment","operation","id"});
+        if(args.value("operation")=="name_from_positions")shape(args,{"purpose","experiment","operation"});
+        else if (args.value("operation") == "remove") shape(args,{"purpose","experiment","operation","id"});
         else shape(args,{"purpose","experiment","operation","id","position","intensity","free"});
     } else if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
     else if (name == "add_relations") shape(args, {"purpose", "aliases", "constraints"});
@@ -120,18 +135,29 @@ void assistant_native_arguments(const QString& name, const Object& args) {
 }
 NativeBackgroundInput assistant_native_background(edi::Project& project, const Object& args) {
     assistant_native_arguments("edit_background", args);
-    if (!args.value("experiment").isString() || !args.value("operation").isString() || !args.value("id").isString())
+    const bool names=args.value("operation")=="name_from_positions";
+    if (!args.value("experiment").isString() || !args.value("operation").isString() || (!names && !args.value("id").isString()))
         throw std::invalid_argument("Invalid background operation text");
     const auto name = background_text(args.value("experiment").toString());
     const bool remove = args.value("operation") == "remove";
-    if (!remove && (!args.value("position").isDouble() || !args.value("intensity").isDouble() || !args.value("free").isBool()))
+    if (!remove && !names && (!args.value("position").isDouble() || !args.value("intensity").isDouble() || !args.value("free").isBool()))
         throw std::invalid_argument("Background add/update requires actual numeric values and a boolean free flag");
-    auto input = background_input(args.value("operation").toString(), args.value("id").toString(),
+    edi::BackgroundPointInput input;
+    if(!names)input = background_input(args.value("operation").toString(), args.value("id").toString(),
         remove ? 0 : args.value("position").toDouble(), remove ? 0 : args.value("intensity").toDouble(), !remove && args.value("free").toBool());
     for (const auto& experiment : project.experiments) {
         if (experiment->name.value().size() > edi::assistant::Limits::id_bytes)
             throw std::length_error("The background experiment identity exceeds its admitted capacity");
-        if (edi::KeyTraits<edi::BraggPdExperiment>::canonical(experiment->name.value()) == name) return {experiment.get(), std::move(input)};
+        if (edi::KeyTraits<edi::BraggPdExperiment>::canonical(experiment->name.value()) == name) {
+            if(names && (experiment->background_type!="line-segment" || !experiment->data || experiment->calculation_only || experiment->background.empty()))
+                throw std::invalid_argument("Position IDs require an existing measured line-segment background");
+            if(names && experiment->background.size()>edi::assistant::Limits::stream_items)
+                throw std::length_error("Background rows exceed the original admitted capacity");
+            if(names)for(const auto& point:experiment->background)
+                if(point->id.value().size()>edi::assistant::Limits::id_bytes || !std::isfinite(point->position.get()))
+                    throw std::invalid_argument("The original background member is unavailable");
+            return {experiment.get(), std::move(input),names};
+        }
     }
     throw std::invalid_argument("The original background experiment is unavailable");
 }

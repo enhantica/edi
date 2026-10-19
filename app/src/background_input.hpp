@@ -21,7 +21,12 @@ inline constexpr quint64 background_preparation_bytes() {
     constexpr quint64 numeric = 2 * sizeof(double) + 3 * sizeof(std::optional<double>) + sizeof(std::uint8_t);
     constexpr quint64 indexes = 3 * (sizeof(std::pair<const Row*, std::size_t>) + 4 * sizeof(void*));
     constexpr quint64 pointers = 8 * sizeof(std::shared_ptr<Row>);
-    constexpr quint64 strings = 4 * (sizeof(std::string) + Limits::id_bytes);
+    // position_point_ids formats fixed doubles with up to 15 decimals, then
+    // may append '-' plus a size_t ordinal. Its transient text is admitted
+    // even when the resulting ID later exceeds the unchanged ID limit.
+    constexpr quint64 position_text = std::numeric_limits<double>::max_exponent10 + 1 +
+        1 + 1 + 15 + 1 + (std::numeric_limits<std::size_t>::digits10 + 1) + 1;
+    constexpr quint64 strings = 4 * (sizeof(std::string) + std::max<quint64>(Limits::id_bytes,position_text));
     constexpr quint64 rows = sizeof(edi::detail::RowHold) + 2 * sizeof(edi::detail::Holding) + sizeof(crysta::detail::RowAnchor);
     constexpr quint64 ui = 2 * (sizeof(QVariantMap) + 3 * sizeof(QVariant) + sizeof(QString) + 2 * Limits::id_bytes);
     return sizeof(edi::BackgroundPointChange) + sizeof(Row) + 3 * Limits::id_bytes +

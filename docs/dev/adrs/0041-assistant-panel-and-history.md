@@ -1979,3 +1979,10 @@ visual-only assistant cue and original manual system dialog.
 ### Sent-file delegate width lifetime
 
 The sent-file Repeater delegate measures against its named original Flow owner rather than dereferencing its transient visual parent. Removal or pooling can detach a delegate before destruction. The stable owner gives the same live width and wrapping limit throughout that transition, without adding implicit-size feedback, changing attachment history, or affecting pending-file removal. Other message widths belong to statically parented children; this change does not introduce a general layout wrapper or geometry override.
+
+
+### Natural visible category continuation
+
+Visible parameter requests reuse the actual suitable live category and name/variability state instead of clicking Reset for every requested row. Only conflicting name or variability filters require the original Reset button; category changes use the existing offered selector, while cell rows remain unfiltered. Actual row scrolling and native checkboxes remain. The Free/Fixed header can serve any consecutive uniform requested category block only when its displayed eligible original members equal that complete requested set; the prepared receipt retains the exact members and partial/uncertain prefix. A subset, mixed flag, dependent/read-only member, replaced owner or changed filter cannot broaden that authority. Background flags use these same Analysis controls, and explicit position-derived naming reuses the original Experiment button. No new presentation restoration, context-menu workaround, input helper, scientific executor or navigation framework is introduced.
+
+A live non-cell name/variability filter that already shows the requested original member is suitable and is reused; hidden/conflicting rows use the existing Reset and offered category controls. Cell rows retain the unfiltered presentation. Explicit standalone position naming checks equality before page/focus/filter/input changes, so an unchanged table creates neither a decorative click nor Undo.

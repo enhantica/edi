@@ -1382,12 +1382,12 @@ LivePreview notification, with original Undo and publication facts retained.
 
 The Analysis category picker uses the same matches_group predicate as filtering
 and menu counts, choosing the smallest offered group; cell rows stay unfiltered.
-Rows outside the viewport are reached by actual wheel input. The original reset
-and selection behavior remains visible; no stale presentation restoration or
-full-path typing is inserted. Group Free/Fixed is restricted to requested
-line-segment intensities and only when every eligible displayed row is exactly
-one original requested member with the same desired flag. Other categories and
-subsets use their requested row checkboxes. Read-only/dependent refusal, owner,
+Rows outside the viewport are reached by actual wheel input. The original reset is used only for conflicting name or variability filters;
+a suitable category persists across consecutive requested rows, with no stale
+presentation restoration or full-path typing. Group Free/Fixed is available in
+all categories only when every eligible displayed row is exactly one original
+requested member of the same consecutive uniform category block. Subsets and
+mixed flags use their requested row checkboxes. Read-only/dependent refusal, owner,
 source, generation, input/Stop and exact native receipts remain authoritative.
 
 Prepared member vectors are admitted before allocation and counted while original
@@ -1395,4 +1395,15 @@ callbacks retain their frames. New input closure targets use their actual sizeof
 roles, including predecessor/new-request overlap; no capacity change is made.
 An applied group is one ordinary Undo, while completed parameter entries and
 uncertain partial facts retain their original result meaning. No decorative
-click, direct follow-up setter, new tool/schema or general input engine is added.
+click, direct follow-up setter or general input engine is added.
+
+
+### Explicit background naming and Analysis flag controls
+
+The existing edit_background tool also accepts explicit operation=name_from_positions with only purpose, experiment and operation. It names the whole current measured line-segment table through the original namePointsByPosition receipt/action and ordinary Undo in both modes. Point add/update/remove retain their exact existing ID/value/free contracts; no naming is inferred from future calls. An unchanged generated ID set needs neither input nor Undo. Model/member identity, source/currentness and original applied/published facts remain authoritative through callbacks. The existing tool count is unchanged; its closed input schema distinguishes the whole-table operation from point operations.
+
+A requested background free flag selects the original Analysis Background category/row checkbox after its own point/position/intensity controls. It no longer opens an Experiment parameter context menu or depends on that popup's keyboard ownership. A multi-row free request can use the existing header only for the exact displayed eligible uniformly requested set; partial/no-op prefixes and the original prepared members, consumed/applied/published receipt and per-change Undo remain factual. Native/manual input helper semantics and manual menus are unchanged. New callback/frame owners stay in the existing inclusive weak-frame accounting, including old/new delivery overlap.
+
+For chosen new backgrounds the strategy remains three points. Explicit user counts, positions, intensities, free flags and initial parameter values remain exact. Compound initial values still resolve against original IDs before its one existing names action. Standalone guidance explicitly requests naming once, inspects the actual resulting IDs, then requests the intended Analysis free set; an individual free flag is honored within its own call. Neither background scientific adequacy nor the specific observed cell/coordinate refusal actor is inferred from source checks. Existing canonical ParameterItem/native member/read-only/dependence admission is unchanged; absent or unmapped requested controls refuse rather than invent a material-prefixed path.
+
+The common background preparation role also covers the original position-ID formatter's transient spelling domain before its final unchanged ID-length refusal: fixed double integral digits/sign/decimal, up to 15 decimal places from the existing 16 rounds, and its size_t ordinal suffix/NUL. This follows position_point_ids itself; it is not extra general headroom or a larger accepted ID/point limit. A generated oversized ID refuses before mutation. Actual original IDs and both source/derived metadata stay within the original output limits.
