@@ -1492,3 +1492,14 @@ change, explicitly requested verification and fresh verified export/adoption
 remain factual. Tool help, both existing developer strategy paragraphs and the
 connected project skill carry the same reporting rule; actual Save/result flags,
 disk/science/Undo and native settlement are unchanged.
+
+
+Send and connected-avatar circle interaction colour
+
+The original AssistantComposer Send circle and AssistantPanel connected avatar
+keep their existing contrast, size, enabled rules and actions. Their existing
+enabled hover/down/visual-focus state paints the circle with themeAccent instead
+of changing the glyph foreground. Default light/dark foreground and disabled
+styles remain original. Disconnected Sign in retains its original foreground
+interaction style and has no avatar circle. This extends the first existing
+circle bindings, not a new control, colour constant or connection/input path.

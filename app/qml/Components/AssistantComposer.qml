@@ -891,14 +891,15 @@ Rectangle {
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
                     radius: width * 0.5
-                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "white" : "black") : composer.actionBackground
+                    color: !sendButton.enabled ? composer.actionBackground
+                        : sendButton.hovered || sendButton.down || sendButton.visualFocus ? EaStyle.Colors.themeAccent
+                        : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                 }
                 contentItem: EaElements.Label {
                     text: sendButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: sendButton.font.pixelSize * 1.25
-                    color: sendButton.enabled && (sendButton.hovered || sendButton.down || sendButton.visualFocus) ? EaStyle.Colors.themeAccent
-                        : sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : sendButton.foregroundColor()
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : sendButton.foregroundColor()
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }

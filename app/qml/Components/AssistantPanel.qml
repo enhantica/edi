@@ -382,8 +382,9 @@ Popup {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                                : panel.assistant.connected ? (EaStyle.Colors.isDarkPalette ? "black" : "white")
                                 : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
-                                : panel.assistant.connected ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : connectionButton.foregroundColor()
+                                : connectionButton.foregroundColor()
                         }
                         Layout.preferredWidth: panel.assistant.connected ? panel.headerActionExtent : implicitWidth
                         Layout.minimumWidth: panel.assistant.connected ? panel.headerActionExtent : 0
@@ -402,7 +403,9 @@ Popup {
                                 width: EaStyle.Sizes.toolButtonHeight * 0.75
                                 height: width
                                 radius: width * 0.5
-                                color: EaStyle.Colors.isDarkPalette ? "white" : "black"
+                                color: panel.assistant.connected && connectionButton.enabled
+                                    && (connectionButton.hovered || connectionButton.down || connectionButton.visualFocus) ? EaStyle.Colors.themeAccent
+                                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
                         ToolTip.text: panel.assistant.connected ? qsTr("Account") : text
