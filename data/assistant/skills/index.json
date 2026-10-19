@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "title": "Inspect a FullProf project",
       "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "db753d099a2c6f5977433e2703fe484c8bb62fb123f57c1b723ef74088fd5f0c",
+      "sha256": "cdc9d6b669a54619dd411902c3901505ff1b803426fdc39999c77ee9b9d324d0",
       "requires": [
         "selected_files"
       ],
@@ -41,6 +41,10 @@
         {
           "title": "FullProf official documentation",
           "url": "https://www2017.ill.eu/sites/fullprof/documentation.html"
+        },
+        {
+          "title": "FullProf July2001 manual: source conventions and mappings",
+          "url": "https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf"
         }
       ]
     },

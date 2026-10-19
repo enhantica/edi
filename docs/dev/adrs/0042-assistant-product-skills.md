@@ -224,3 +224,15 @@ No reader, parser/converter, generated file, research integration, tool catalogu
 ### Code-owned experiment choices supersede stale skill limits
 
 Project strategy no longer declares all profile/link edits absent as a combined fixed limit: the actual offered catalogue/options determine which settings are reachable. The experiment adapter's callable union/profile options remain code-owned; no API/format list is copied into skills. Its one strategy sentence/version/index digest advances together, restricted core capability entries unchanged. Missing phase-link/absorption/weight/window actions remain real gaps until actually implemented, not promises from profile/exclusion reachability or research guidance.
+
+
+FullProf intake keeps concise manual-derived scientific mappings in its owning
+strategy: conditional multiplicity normalization, actual profile/asymmetry,
+interpolated-point versus reserved background selectors, displacement units,
+zero-coordinate sign and affine shared shifts. Working official manual/docs
+links include version and physical page citations; later dialect notes still
+matter. These are interpretation rules, not a copied manual, current API list,
+new parser/converter, scientific equivalence claim or expected-output oracle.
+Read actual admitted text, preserve explicit source values, use current offered
+app options/ordinary methods and change only different canonical values. The
+owning skill version/body/index digest and published reference remain bonded.
