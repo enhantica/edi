@@ -12,8 +12,8 @@
 # measurement_source = local
 # measured_utc = 2026-10-18T21:03:47Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 13611 banked, 0 stale row(s) dropped)
-# Collected tests: 14921; with a reported duration: 8675
+# Recorded from: banked rows of both branches (merge of main; nothing measured)
+# Collected tests: 14927; with a reported duration: 8678
 # Module-scoped fixture costs recorded: 56
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 14921
+# inventory_python = 14927
 # inventory_cpp = 335
-# inventory_measured = 13615
-# inventory_unmeasured = 1641
+# inventory_measured = 13619
+# inventory_unmeasured = 1643
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -4609,6 +4609,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[wrong-identity]
 0.000	tests/integration/py/test_e05_t1_bank_identity.py::test_named_bank_oracle_refuses_field_identity_escapes[wrong-points]
 0.500	tests/integration/py/test_e05_t1_fit_result.py::test_cli_fixture_inventory
+0.000	tests/integration/py/test_e05_t1_fit_result.py::test_committed_nostep_witness_has_positive_gain_and_only_domain_rejections
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_cosio-d20_start-1]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_cosio-d20_start-4]
 0.000	tests/integration/py/test_e05_t1_fit_result.py::test_legacy_project_without_fit_result_keeps_model_state[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
@@ -4663,6 +4664,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.060	tests/integration/py/test_e05_t1_fit_result.py::test_result_descent_provenance_survives_current_setting_change[done]
 0.060	tests/integration/py/test_e05_t1_fit_result.py::test_result_descent_provenance_survives_current_setting_change[maxiter]
 0.070	tests/integration/py/test_e05_t1_fit_result.py::test_result_descent_provenance_survives_current_setting_change[nostep]
+0.150	tests/integration/py/test_e05_t1_fit_result.py::test_zero_gain_converges_and_domain_blocked_positive_gain_stalls[domain-stall]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_fit_result.py::test_zero_gain_converges_and_domain_blocked_positive_gain_stalls[zero-gain]
 0.020	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_direct_mutation_cannot_publish_unusable_state[impossible-angles-calculate]
 0.060	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_direct_mutation_cannot_publish_unusable_state[impossible-angles-fit]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_metric_admission.py::test_f13_direct_mutation_cannot_publish_unusable_state[impossible-angles-save]
@@ -11189,6 +11192,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::te
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[multiphase]
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[sequential]
 UNMEASURED:failed-in-this-run	tests/system/py/test_latest_fit_uncertainty.py::test_unchecking_free_then_fitting_clears_su_and_undo_restores_it[single]
+UNMEASURED:failed-in-this-run	tests/system/py/test_lif_fast_descent_rounding.py::test_lif_rounding_preserves_fast_descent_status_and_iteration_regression_pin[one-ulp-down]
+0.660	tests/system/py/test_lif_fast_descent_rounding.py::test_lif_rounding_preserves_fast_descent_status_and_iteration_regression_pin[one-ulp-up]
+0.700	tests/system/py/test_lif_fast_descent_rounding.py::test_lif_rounding_preserves_fast_descent_status_and_iteration_regression_pin[original]
 0.840	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy-power-two]
 0.830	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[copy-prime-buckets]
 0.540	tests/system/py/test_linear_row_admission.py::test_admission_comparison_budget_is_proportional_to_rows[default-ids-power-two]

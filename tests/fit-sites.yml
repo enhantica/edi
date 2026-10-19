@@ -69,6 +69,10 @@ sites:
   - file: tests/integration/py/test_e05_t1_metric_admission.py
     case: lif-xray-s1
 
+  # The documented LiF model extends the same corpus family with doublet absorption.
+  - file: tests/system/py/test_lif_fast_descent_rounding.py
+    case: lif-xray-s1
+
   - file: tests/system/py/test_multiphase.py
     case: multiphase-scales
 
@@ -166,3 +170,5 @@ sites:
   - file: tests/system/py/test_positional_trial_domains.py
     case: multiphase-scales
     why: Authored coordinate-dependent domains and drive-only pattern inputs exercise real single and joint fit rejection; no fitted number supplies a correctness oracle.
+  - file: tests/integration/py/test_e05_t1_fit_result.py
+    case: lbco-hrpt-s2
