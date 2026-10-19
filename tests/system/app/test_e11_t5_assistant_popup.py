@@ -180,6 +180,7 @@ VISIBLE187_CASES = [
     'dirty-valid-value', 'dirty-invalid-value', 'dirty-valid-free', 'dirty-invalid-free',
     'dirty-valid-fit', 'dirty-invalid-fit', 'real-fit', 'fit-stop', 'close-owner',
     'unsupported-values', 'unsupported-free', 'unsupported-relations', 'normal-relations',
+    'requested-cell-profile-flags',
 ]
 
 
@@ -191,6 +192,20 @@ def visible187_script(case):
 
     def call(tool, call_id, **arguments):
         return {'tool': tool, 'call_id': call_id, 'arguments': {'purpose': purpose, **arguments}}
+
+    if case == 'requested-cell-profile-flags':
+        cells609 = ['structure.cell.length_a', 'structure.cell.length_b',
+                    'structure.cell.length_c', 'experiment.instrument.calib_twotheta_offset']
+        profiles609 = ['experiment.peak.' + name for name in
+                       ('broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_y')]
+        return [
+            [call('list_parameters', 'visible609-read'),
+             call('set_free', 'visible609-baseline',
+                  flags=[{'path': path, 'free': False} for path in cells609[1:] + profiles609])],
+            [call('set_free', 'visible609-cells', flags=[{'path': path, 'free': True} for path in cells609])],
+            [call('set_free', 'visible609-profile', flags=[{'path': path, 'free': True} for path in profiles609]),
+             call('list_parameters', 'visible609-after')],
+        ]
 
     identifier = 'visible185-action-' + case
     calls = [call('list_parameters', 'visible185-read-' + case)]
@@ -233,6 +248,9 @@ def visible187_script(case):
 
 @pytest.mark.parametrize('case', VISIBLE187_CASES)
 def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: PLR0914, PLR0915 -- finite Main/peer evidence in one existing actor
+    if case == 'requested-cell-profile-flags':
+        from tests.system.app.test_e11_t5_codex_agent import save211_files
+        source609 = save211_files(ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project')
     runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
     assert runner.is_file(), 'VA SETUP: actual freshly coherent Main runner is required'
     environment = popup171_owned_environment(tmp_path)
@@ -240,7 +258,8 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     config_path = Path(environment['EDI_TEST_CODEX_PEER_INPUT'])
     config = json.loads(config_path.read_text(encoding='utf-8'))
     config.pop('report_page_reply')
-    config.update(scenario='native:script', native_turn_calls=visible187_script(case))
+    config.update(scenario='native:script', native_turn_calls=visible187_script(case),
+                  readonly409=True, vm319_record_packets=True)
     if case == 'manual-override':
         config['relation246_wait_for_usage'] = ['visible481-fresh']
         environment['EDI_ACCEPTANCE_REFERENCE'] = str(Path(config['trace']).parent.resolve())
@@ -284,7 +303,11 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     trace = Path(config['trace'])
     requests = [json.loads(line) for line in trace.read_text(encoding='utf-8').splitlines()]
     starts = [row for row in requests if row.get('method') == 'turn/start']
-    assert len(starts) == 1 and starts[0]['params']['clientUserMessageId'], (
+    from tests.system.app.test_e11_t5_codex_agent import readonly409_policy
+    readonly409_policy(trace)
+    assert len(starts) == (3 if case == 'requested-cell-profile-flags' else 1) and all(
+        row['params']['clientUserMessageId'] for row in starts
+    ), (
         'VA: one genuinely admitted original input owns native authority without replay'
     )
     interrupts480 = [row for row in requests if row.get('method') == 'turn/interrupt']
@@ -298,7 +321,8 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     )
     responses = [json.loads(line) for line in trace.with_suffix('.native-replies.jsonl')
                  .read_text().splitlines()]
-    expected_calls = config['native_turn_calls'][0]
+    expected_calls = ([call for turn in config['native_turn_calls'] for call in turn]
+                      if case == 'requested-cell-profile-flags' else config['native_turn_calls'][0])
     if case == 'fit-stop':
         originals482 = [row['original']['params'] for row in responses
                         if row['original']['params']['callId'] == 'visible185-action-fit-stop']
@@ -363,6 +387,21 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
                 decoded['status'] in {'refused', 'unavailable'}
                 and isinstance(decoded.get('message'), str) and decoded['message']
             ), 'VA: actual before-write failure is truthful, bounded and never a success'
+
+    if case == 'requested-cell-profile-flags':
+        from tests.system.app.test_e11_t5_codex_agent import save211_files
+        assert len(responses) == 5 and all(row['response']['result']['success'] is True for row in responses), (
+            'FLAGS609: actual normal setup and BOTH original ON arrays must succeed, not partial/refusal')
+        finals609 = [json.loads(row['response']['result']['contentItems'][0]['text'])
+                     for row in responses if row['original']['params']['callId'] in {'visible609-cells', 'visible609-profile'}]
+        assert len(finals609) == 2 and all(row['status'] == 'edited' and row['complete'] is True
+                                         and row['atomic'] is False and row['steps_completed'] == 4 for row in finals609), (
+            'FLAGS609: exact complete settled-prefix facts include equal a; requested b/c/V/Y cannot disappear')
+        facts609 = [json.loads(line.split('FLAGS609_RESULT ', 1)[1]) for line in result.stdout.splitlines()
+                    if 'FLAGS609_RESULT ' in line]
+        assert len(facts609) == 1 and facts609[0]['sameOwner'] is True
+        assert save211_files(ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project') == source609, (
+            'FLAGS609: actual source scientific documents remain byte-exact, no saving or source repair')
 
     if case == 'manual-override':
         events481 = [json.loads(line) for line in trace.with_suffix('.clear-events.jsonl').read_text().splitlines()]

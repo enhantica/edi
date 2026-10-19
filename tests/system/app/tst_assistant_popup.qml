@@ -1142,9 +1142,179 @@ TestCase {
         return ["default-off", "analysis-value-free", "wavelength", "manual-override",
             "dirty-valid-value", "dirty-invalid-value", "dirty-valid-free", "dirty-invalid-free",
             "dirty-valid-fit", "dirty-invalid-fit", "real-fit", "fit-stop", "close-owner",
-            "unsupported-values", "unsupported-free", "unsupported-relations", "normal-relations"].map(tag => ({tag: tag}));
+            "unsupported-values", "unsupported-free", "unsupported-relations", "normal-relations",
+            "requested-cell-profile-flags"].map(tag => ({tag: tag}));
     }
     function test_visible185_actual_native_manual_interaction(data) {
+        if (data.tag === "requested-cell-profile-flags") {
+            // One independent CoSiO row in the original Main/native vehicle.
+            const test609=this, fixture609="docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project";
+            verify(Session.openProject(Probe.repoUrl(fixture609)),"FLAGS609 SETUP: genuine original orthorhombic CoSiO/d20 opens");
+            const owner609=Session.project, life609=lifetime313(owner609);
+            tryVerify(() => !owner609.calculating && Probe.computedCurrent(owner609.currentExperiment),10000);
+            let all609=visible185_parameters(owner609);
+            const cells609=["structure.cell.length_a","structure.cell.length_b","structure.cell.length_c","experiment.instrument.calib_twotheta_offset"];
+            const profile609=["broad_gauss_u","broad_gauss_v","broad_gauss_w","broad_lorentz_y"].map(name => "experiment.peak."+name);
+            const requested609=cells609.concat(profile609), peak609=profile609.concat(["experiment.peak.broad_lorentz_x"]);
+            function member609(path) {const rows=all609.filter(p => p.path===path);compare(rows.length,1);return rows[0];}
+            compare(cells609.slice(0,3).map(path => member609(path).value),[10.3,6.0,4.8],
+                "FLAGS609 SETUP: independent original orthorhombic lengths, not cubic b/c followers");
+            verify(requested609.every(path => member609(path).free && member609(path).fittable && member609(path).refinable),
+                "FLAGS609 SETUP: genuine original requested members start free and independently editable");
+            const original609=visible185_values(owner609), inputs609=visible185_inputs(owner609),
+                declarations609=relation245_declarations(owner609), metadata609=import265_owner(owner609), originalUndo609=owner609.canUndo;
+            toggle();gui392_signIn();visible185_ready("flags609-original");
+            verify(!assistant.showActions && assistant.connected && !assistant.contextConsentRequired);
+            const account609=assistant.connectionLabel,catalog609=JSON.stringify(Probe.rows(assistant.models));
+            const prior609=new Set(Probe.rows(assistant.messages).map(row => row.id));
+            assistant.send("Original normal setup fixes only the independently declared flag members");
+            tryVerify(() => !assistant.canCancel && visible185_outcome("visible609-baseline",prior609)!==null,10000);
+            compare(visible185_outcome("visible609-baseline",prior609).status,"edited");
+            all609=visible185_parameters(owner609);
+            const changed609=requested609.slice(1); // a is an explicit already-equal prefix; U really changes.
+            verify(member609(cells609[0]).free && changed609.every(path => !member609(path).free),
+                "FLAGS609 SETUP: original normal operation establishes actual changed b/c/zero/U/V/W/Y operands");
+            const baseline609=visible185_values(owner609), baselineUndo609=owner609.canUndo;
+            const before609=new Map(all609.map(p => [p.path,[p.value,p.free,p.hasUncertainty,p.uncertainty]]));
+            const pins609=new Map(requested609.map(path => [path,{item:member609(path),life:lifetime313(member609(path))}]));
+            Ui.click(test609,Probe,window,"assistant.showActions");verify(assistant.showActions);
+            closeAssistant388();visible185_page("analysis");
+            const slots609=[], watched609=new Set(), cues609=[], writes609=[], categories609=[];
+            let point609=null, phase609="cells", keys609=0, toggles609=0, clicks609=0, resets609=0, fit609=0;
+            function current609() {
+                verify(alive313(life609) && Session.project===owner609,"FLAGS609: SAME live original owner");
+                const actual=visible185_parameters(owner609);
+                for(const [path,pin] of pins609)verify(alive313(pin.life) && actual.includes(pin.item) && pin.item.path===path,
+                    "FLAGS609: exact live member identity survives the operation");
+            }
+            function bind609(object,signal,callback) {
+                const life=lifetime313(object);object[signal].connect(callback);
+                slots609.push({object:object,life:life,signal:signal,callback:callback});
+            }
+            function parameter609(control) {
+                for(let p=control;p;p=p.parent)if(p.parameter && all609.includes(p.parameter))return p.parameter;
+                return null;
+            }
+            function scan609() {
+                current609();
+                for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")) {
+                    if(watched609.has(control))continue;
+                    const name=control.objectName;
+                    if(name==="parameters.category") {
+                        watched609.add(control);bind609(control,"activated",index => {
+                            if(assistant.showingActions)categories609.push(Ui.control(Probe,window,"parameters.list").sourceModel.categories[index]);
+                        });
+                    } else if(name==="parameters.resetFilters") {
+                        watched609.add(control);bind609(control,"clicked",() => {if(assistant.showingActions)++resets609;});
+                    } else if(name.startsWith("parameters.free.") || name==="parameters.freeHeader.free") {
+                        watched609.add(control);
+                        if(typeof control.clicked==="function")bind609(control,"clicked",() => {if(assistant.showingActions)++clicks609;});
+                        if(typeof control.toggled==="function")bind609(control,"toggled",() => {if(assistant.showingActions)++toggles609;});
+                    } else if(name.startsWith("parameters.value.") || name.startsWith("cell.") || name.startsWith("instrument.")) {
+                        if(typeof control.textEdited==="function") {
+                            watched609.add(control);bind609(control,"textEdited",() => {if(assistant.showingActions)++keys609;});
+                        }
+                    }
+                }
+            }
+            function cue609() {
+                scan609();verify(assistant.actionWindow===window && assistant.showingActions && point609!==null);
+                verify(Ui.rendered(item("assistant.actionPointer")),"FLAGS609: genuine original visible pointer, not invented activity");
+                const filter=Ui.control(Probe,window,"parameters.list").sourceModel;
+                const controls=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c => c.objectName.startsWith("parameters.free.") && Ui.exposed(c));
+                for(const control of controls) {
+                    const box=rect(control);
+                    if(point609.x<box[0] || point609.y<box[1] || point609.x>=box[0]+box[2] || point609.y>=box[1]+box[3])continue;
+                    const parameter=parameter609(control);verify(parameter!==null && pins609.has(parameter.path));
+                    verify(!parameter.free && parameter.fittable && parameter.refinable,
+                        "FLAGS609: scientific cue targets a genuinely changed requested eligible member, not equal a");
+                    compare(filter.nameFilter,"");compare(filter.variability,0);
+                    verify(filter.shows(parameter));
+                    if(parameter.category==="cell")compare(filter.categoryFilter,"","FLAGS609: cells use the original unfiltered scroll route");
+                    if(phase609==="profile") {
+                        verify(filter.categoryFilter.length>0 && categories609.includes(filter.categoryFilter),
+                            "FLAGS609: profile route chooses an actual offered category");
+                        const shown=[];for(let i=0;i<filter.rowCount();++i)shown.push(filter.parameterAt(i).path);
+                        compare(JSON.stringify(shown.slice().sort()),JSON.stringify(peak609.slice().sort()),
+                            "FLAGS609: CHANGED initially-shown U cannot retain a one-row name filter; complete five-profile category remains visible");
+                    }
+                    cues609.push({path:parameter.path,phase:phase609,category:filter.categoryFilter,rect:box,
+                        identity:identity313(lifetime313(control))});
+                }
+            }
+            function narrow609() {
+                // Genuine user setup, not a requirement that the prior tool restore All.
+                Ui.click(test609,Probe,window,"parameters.resetFilters");rendered();
+                const filter=Ui.control(Probe,window,"parameters.list").sourceModel;
+                compare(filter.categoryFilter,"");compare(filter.variability,0);compare(filter.nameFilter,"");
+                const field=Ui.control(Probe,window,"parameters.nameFilter");verify(field!==null && Ui.exposed(field));
+                Ui.click(test609,Probe,window,"parameters.nameFilter");visible185_type("broad_gauss_u");rendered();
+                compare(filter.categoryFilter,"");compare(filter.variability,0);
+                compare(filter.nameFilter,"broad_gauss_u");compare(filter.rowCount(),1);
+                verify(filter.parameterAt(0)===member609(profile609[0]),"FLAGS611 SETUP: actual All/category+variability and real narrow name show exactly changed U before the original request");
+            }
+            for(const path of changed609) {
+                const parameter=member609(path);bind609(parameter,"freeChanged",() => {
+                    current609();if(!assistant.showingActions)return;
+                    verify(parameter.free,"FLAGS609: exact requested final free=true is really applied");
+                    compare(cues609.filter(c => c.path===path).length,1,
+                        "FLAGS609: EACH actual scientific change follows exactly one exposed original row cue");
+                    writes609.push(path);
+                });
+            }
+            bind609(owner609.fit,"runningChanged",() => {if(owner609.fit.running)++fit609;});
+            bind609(assistant,"actionPointerShown",scan609);
+            bind609(assistant,"actionPointerMoved",point => {point609={x:point.x,y:point.y};scan609();});
+            bind609(assistant,"actionPointerPressed",cue609);scan609();
+            try {
+                narrow609();
+                const ids=new Set(Probe.rows(assistant.messages).map(row => row.id));
+                assistant.send("Free the independently requested original a b c and zero, with a already equal");
+                tryVerify(() => !assistant.canCancel && !assistant.showingActions && visible185_outcome("visible609-cells",ids)!==null,
+                    visible237_observationMs(cells609.map(path => ({path:path,text:""}))),"FLAGS609: original requested cell array completes, no refused/partial success");
+                const cells=visible185_outcome("visible609-cells",ids);
+                verify(cells.status==="edited" && cells.complete===true && cells.atomic===false && cells.steps_completed===4,
+                    "FLAGS609: all four original entries settle, including no-op a; zero partial/refusal allowance");
+                verify(cells609.every(path => member609(path).free));
+                phase609="profile";resets609=0;
+                // Genuine user filter after the cell objective: U is NOW shown AND still changed.
+                narrow609();verify(!member609(profile609[0]).free,"FLAGS609 SETUP: initially shown U is not a no-op escape");
+                const profileIds=new Set(Probe.rows(assistant.messages).map(row => row.id));
+                assistant.send("Free exactly U V W Y in the original peak profile, keeping X unchanged");
+                tryVerify(() => !assistant.canCancel && !assistant.showingActions && visible185_outcome("visible609-after",profileIds)!==null,
+                    visible237_observationMs(profile609.map(path => ({path:path,text:""}))),"FLAGS609: original profile request and following real native read settle");
+                const profile=visible185_outcome("visible609-profile",profileIds);
+                verify(profile!==null && profile.status==="edited" && profile.complete===true && profile.atomic===false && profile.steps_completed===4,
+                    "FLAGS609: ALL U/V/W/Y complete; attempted first U/partial1 cannot pass");
+                current609();compare(resets609<=1,true,"FLAGS609: suitable complete category is reused without a Reset per row");
+                compare(JSON.stringify(writes609),JSON.stringify(changed609),"FLAGS609: exactly requested changes in request order, no repeated or missing b/c/V/Y");
+                compare(cues609.length,changed609.length);compare([keys609,toggles609,clicks609,fit609],[0,0,0,0],
+                    "FLAGS609: ordinary app mutation follows visual-only scientific cues, no keys/checkbox/menu dispatch or fitting");
+                for(const parameter of all609) {
+                    const old=before609.get(parameter.path);
+                    compare(JSON.stringify([parameter.value,parameter.hasUncertainty,parameter.uncertainty]),JSON.stringify([old[0],old[2],old[3]]));
+                    compare(parameter.free,requested609.includes(parameter.path)?true:old[1],"FLAGS609: X and ALL unrequested flags remain exact");
+                }
+                compare(visible185_inputs(owner609),inputs609);compare(relation245_declarations(owner609),declarations609);
+                compare(import265_owner(owner609),metadata609);compare(assistant.connectionLabel,account609);
+                compare(JSON.stringify(Probe.rows(assistant.models)),catalog609);verify(assistant.connected);
+                console.log("FLAGS609_RESULT",JSON.stringify({cues:cues609,writes:writes609,keys:keys609,toggles:toggles609,
+                    clicks:clicks609,resets:resets609,categories:categories609,values:JSON.parse(visible185_values(owner609)),
+                    sameOwner:Session.project===owner609,cells:cells,profile:profile}));
+                for(let i=changed609.length-1;i>=0;--i) {
+                    verify(owner609.canUndo);Ui.click(test609,Probe,window,"appBar.button.undo");
+                    compare(member609(changed609[i]).free,false,"FLAGS609: each genuine original ordinary Undo restores its own applied flag");
+                }
+                compare(visible185_values(owner609),baseline609,"FLAGS609: Undo restores exact normal-setup science and present SUs");
+                compare(owner609.canUndo,baselineUndo609,"FLAGS609: no extra no-op/phantom assistant history");
+                verify(owner609.canUndo);Ui.click(test609,Probe,window,"appBar.button.undo");
+                compare(visible185_values(owner609),original609,"FLAGS609: NEXT ordinary Undo restores the genuine atomic normal setup, no hidden no-op history");
+                compare(owner609.canUndo,originalUndo609);
+            } finally {
+                for(const slot of slots609)disconnect313(slot.life,slot.object,slot.signal,slot.callback);
+            }
+            return;
+        }
         const fitCase = ["real-fit", "fit-stop"].includes(data.tag) || data.tag.endsWith("-fit");
         const fixture = fitCase ? "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project"
             : "tests/fixtures/e04_t1/editable-project";
@@ -1284,7 +1454,11 @@ TestCase {
             data.tag === "analysis-value-free"
                 ? [{path: la.path, text: "0.6"}, {path: la.path, text: ""}]
                 : [{path: editedParameter.path, text: data.tag === "wavelength" ? "1.49" : "0.6"}]) : 10000;
-        function valueReceipt() { writes.push(editedParameter.value); }
+        function valueReceipt() {
+            if(assistant.showingActions && !fitCase)verify(scientificCues610.some(c=>c.kind==="value" && c.path===editedParameter.path),
+                "VA610: actual ordinary value publication has a real prewrite target cue");
+            writes.push(editedParameter.value);
+        }
         function fitClickReceipt() { ++fitClicks; }
         function typedReceipt() {
             ++typed;
@@ -1377,6 +1551,34 @@ TestCase {
                 }));
             } catch (error) { console.log("VISIBLE199_TIMELINE_ERROR", sequence, event, String(error)); }
         }
+        const scientificCues610=[],freeWrites610=[];
+        let point610=null;
+        function move610(point){point610={x:point.x,y:point.y};}
+        function press610(){
+            if(!assistant.showingActions || !point610)return;
+            verify(Session.project===project && assistant.actionWindow===window && alive313(parameterLife313));
+            const all=Ui.itemsWithProperty(Ui.windowRoot(window),"objectName");
+            for(const receiver of all.filter(c => Ui.exposed(c))) {
+                let kind=null;
+                if(receiver.item===editedParameter && (receiver.objectName.startsWith("parameters.value.")
+                    || receiver.objectName.startsWith("instrument.") || receiver.objectName.startsWith("cell.")))kind="value";
+                if(receiver.objectName.startsWith("parameters.free."))
+                    for(let parent=receiver;parent;parent=parent.parent)if(parent.parameter===editedParameter)kind="free";
+                if(kind===null)continue;
+                const box=rect(receiver);if(point610.x<box[0] || point610.y<box[1] || point610.x>=box[0]+box[2] || point610.y>=box[1]+box[3])continue;
+                scientificCues610.push({kind:kind,path:editedParameter.path,before:kind==="value"?editedParameter.value:editedParameter.free,
+                    receiver:receiver,life:lifetime313(receiver),rect:box});
+            }
+        }
+        function freePublication610(){
+            if(!assistant.showingActions || data.tag==="manual-override")return;
+            verify(alive313(parameterLife313) && Session.project===project);
+            compare(scientificCues610.filter(c=>c.kind==="free" && c.path===editedParameter.path).length,1,
+                "VA610: actual ordinary flag publication follows ONE original exposed target cue");
+            freeWrites610.push(editedParameter.free);
+        }
+        assistant.actionPointerMoved.connect(move610);assistant.actionPointerPressed.connect(press610);
+        editedParameter.freeChanged.connect(freePublication610);
         const timelineSlots = timelineEnabled ? [
             [assistant.actionPointerShown, () => timeline("pointer-shown")],
             [assistant.actionPointerMoved, position => timeline("pointer-moved", {x: position.x, y: position.y})],
@@ -1444,7 +1646,7 @@ TestCase {
             if (data.tag === "analysis-value-free") {
                 // SAME existing positive tool, genuinely before its original value input/commit.
                 const activeCall479="visible185-value-"+data.tag;
-                tryVerify(() => assistant.showingActions && assistant.canCancel && typed === 0
+                tryVerify(() => assistant.showingActions && assistant.canCancel && typed === 0 && la.value===originalValue
                     && Ui.rendered(item("assistant.actionPointer")),pacedObservation,
                     "INPUT479: actual original visible tool/pointer is active BEFORE unrelated native input");
                 compare(visible185_outcome(activeCall479,requestPreviousIds),null,
@@ -1519,13 +1721,13 @@ TestCase {
                 }
             }
             if (["manual-override", "close-owner"].includes(data.tag)) {
-                tryVerify(() => assistant.showingActions && field.activeFocus && field.text !== field.editText,
-                    pacedObservation, "VA2/VA4 SETUP: genuine paced original draft is active before intervention");
+                tryVerify(() => assistant.showingActions && assistant.canCancel && la.value===originalValue
+                    && scientificCues610.some(c=>c.kind==="value" && c.path===la.path && c.before===originalValue && alive313(c.life)),
+                    pacedObservation, "VA610 SETUP: genuine original pending prewrite target cue precedes manual/owner intervention");
                 const pointer = item("assistant.actionPointer");
                 verify(Ui.rendered(pointer), "VA SETUP: actual accent pointer is rendered during real input");
                 if (data.tag === "manual-override") {
-                    // The exact original La path is now the genuine displayed filter.
-                    // Ba exposure under that filter remains explicitly unqualified.
+                    // The actual current original La row is exposed by the confirmed cue; no full-path filter is assumed.
                     verify(la.refinable && la.fittable,
                         "VA2 SETUP: original same-row manual target is independently fittable, never a derived alias");
                     const manual = visible185_free(la);
@@ -1554,7 +1756,7 @@ TestCase {
                     } finally { manual.toggled.disconnect(manualReceipt); }
                     tryCompare(assistant, "showingActions", false, 10000,
                         "VA2: original visible input retires after real manual takeover");
-                    compare(la.value, originalValue, "VA2: cancelled uncommitted agent draft cannot write scientific state");
+                    compare(la.value, originalValue, "VA610: retired prewrite app action cannot write scientific state");
                     rendered();
                     compare(visible185_values(project), JSON.stringify(manualValues),
                         "VA2: only the genuine original manual free action changes state; no late numeric/other write");
@@ -1609,7 +1811,7 @@ TestCase {
                 compare(bound481.filter(row=>row.params.callId==="visible481-later").length,0,
                     "FRESH481: exact owned peer has NOT sent the later write before genuine Usage release");
                 const manualUndo482=project.canUndo;
-                const fields481=[], spellings481=[];
+                const fields481=[], spellings481=[],freshCueStart610=scientificCues610.length;
                 function scan481(){
                     const fields=Ui.itemsWithProperty(Ui.page(window),"item").filter(candidate=>
                         candidate.objectName.startsWith("parameters.value.") && candidate.item===la
@@ -1633,7 +1835,9 @@ TestCase {
                         "FRESH481: ONLY separate later action settles normally after fresh retained inspection");
                     compare(visible185_outcome("visible481-later",requestPreviousIds).status,"edited",
                         "FRESH481: later original action genuinely succeeds; setup/early refusal is not a positive");
-                    verify(spellings481.includes("0.7"),"FRESH481: later action types exact independent 0.7 into actual current native receiver");
+                    compare(spellings481.length,0,"FRESH610: ordinary later action dispatches no scientific keys");
+                    const freshCues610=scientificCues610.slice(freshCueStart610).filter(c=>c.kind==="value" && c.path===la.path && c.before===.5);
+                    compare(freshCues610.length,1,"FRESH610: separate later .7 app edit has ONE genuine original prewrite cue");
                     compare(JSON.stringify(writes),JSON.stringify([0.7]),
                         "FRESH481: only NEW requested 0.7 writes science once; old 0.6 callback never gains fresh stamps");
                     compare(la.value,0.7,"FRESH481: separate new action commits exact independently requested value");
@@ -1772,13 +1976,18 @@ TestCase {
                     compare(outcome.status, "edited", "VA: actual ordinary native edit is committed truthfully");
                     if (data.tag === "wavelength") {
                         compare(wavelength[0].value, 1.49, "VA: actual supplied wavelength is typed exactly, no guessed intermediate");
-                        verify(typed > 0 && spellings.includes("1.49"), "VA: real field receives original numeric spelling through actual key events");
+                        compare(typed,0,"VA610: ordinary wavelength setter dispatches no scientific keys");
+                        compare(scientificCues610.filter(c=>c.kind==="value" && c.path===wavelength[0].path).length,1,
+                            "VA610: actual wavelength change follows ONE original exposed control cue");
                         compare(JSON.stringify(writes), JSON.stringify([1.49]), "VA: incomplete numeric drafts never become scientific intermediate writes");
                     } else {
                         compare(la.value, 0.6, "VA1: genuine original Analysis parameter changes through actual input");
                         if (data.tag === "analysis-value-free") {
                             compare(la.free, true, "VA1: actual visual-only free checkbox changes its own ParameterItem");
-                            verify(typed > 0 && toggled === 1, "VA1: actual typing and one real checkbox toggle accompany scientific edits");
+                            compare([typed,toggled],[0,0],"VA610: ordinary parameter methods dispatch neither scientific keys nor checkbox toggles");
+                            compare(scientificCues610.filter(c=>c.kind==="value" && c.path===la.path).length,1);
+                            compare(JSON.stringify(writes),JSON.stringify([0.6]),"VA610: one actual literal value effect, not a decorative missing callback");
+                            compare(JSON.stringify(freeWrites610),JSON.stringify([true]),"VA610: one actual literal free effect, not a decorative cue");
                         }
                     }
                     if (data.tag === "default-off") compare(activeStarts, 0, "VA: default OFF keeps normal native behavior without fake pointer activity");
@@ -1808,9 +2017,12 @@ TestCase {
             }
             if (data.tag === "analysis-value-free") visible185_capture("restored");
             console.log("VISIBLE185_RESULT", data.tag, JSON.stringify({typed: typed, toggled: toggled,
+                scientificCues610:scientificCues610.map(c=>({path:c.path,kind:c.kind,before:c.before,rect:c.rect})),freeWrites610:freeWrites610,
                 activeStarts: activeStarts, fitStarted: fitStarted, finished: finished, fitClicks: fitClicks,
                 currentOwner: Session.project === project, connected: assistant.connected}));
         } finally {
+            assistant.actionPointerMoved.disconnect(move610);assistant.actionPointerPressed.disconnect(press610);
+            disconnect313(parameterLife313,editedParameter,"freeChanged",freePublication610);
             disconnect313(fieldLife313, field, "textEdited", typedReceipt);
             disconnect313(freeLife313, free, "toggled", freeReceipt);
             disconnect313(parameterLife313, editedParameter, "valueChanged", valueReceipt);
@@ -8736,7 +8948,7 @@ TestCase {
             compare(array450_values(parameters),before,"ARRAY450 SETUP: typing has not changed science");
             draftFocus=window.activeFocusItem;draftSelection=[draftField.selectionStart,draftField.selectionEnd];
         }
-        const slots=[], input=[], writes=[], navigation=[];
+        const slots=[], input=[], writes=[], navigation=[], dispatched610=[];
         const controls=new Set();let starts=0,fitStarts=0;
         function current() {
             verify(alive313(ownerLife) && Session.project === project && lives.every(alive313),
@@ -8778,7 +8990,7 @@ TestCase {
                     const receipt={kind:kind,path:parameter ? parameter.path : null,name:name,identity:identity,
                         rect:rect(control),point:Ui.clickPoint(control),text:value || filter ? control.text : null,
                         checked:free ? control.checked : null};
-                    if (filter || reset) navigation.push(receipt);else input.push(receipt);
+                    if (filter || reset) navigation.push(receipt);else dispatched610.push(receipt);
                 }
                 if (reset) bind(control,"clicked",() => received("reset"));
                 else if (free) bind(control,"toggled",() => received("free"));
@@ -8799,7 +9011,27 @@ TestCase {
             const control=item(name);bind(control,"clicked",() => {current();navigation.push({kind:"page-click",name:name});});
         }
         bind(window.appBarCentralTabs,"currentIndexChanged",() => {navigation.push({kind:"page-change",page:window.appBarCentralTabs.currentIndex});scan();});
-        bind(assistant,"actionPointerShown",scan);bind(assistant,"actionPointerMoved",scan);bind(assistant,"actionPointerPressed",scan);
+        let point610=null;
+        function move610(point){point610={x:point.x,y:point.y};scan();}
+        function pressed610(){
+            scan();if(!assistant.showingActions || !point610)return;
+            verify(assistant.actionWindow===window);
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName")) {
+                const parameter=controlParameter(control);if(parameter===null || !Ui.exposed(control))continue;
+                const name=control.objectName;
+                const kind=name.startsWith("parameters.free.")?"free":
+                    name.startsWith("parameters.value.") || name.startsWith("instrument.") || name.startsWith("cell.")?"value":null;
+                if(kind===null)continue;
+                const box=rect(control);if(point610.x<box[0] || point610.y<box[1] || point610.x>=box[0]+box[2] || point610.y>=box[1]+box[3])continue;
+                const entry=entries.filter(e=>e.path===parameter.path);compare(entry.length,1);
+                const desired=kind==="free"?entry[0].free:entry[0].value;
+                verify(typeof desired!=="undefined" && (kind==="free"?parameter.free:parameter.value)!==desired,
+                    "ARRAY610: actual scientific cue is a changed member of THIS original request, never a settled no-op");
+                input.push({kind:kind,path:parameter.path,name:name,identity:identity313(lifetime313(control)),
+                    rect:box,point:point610,before:kind==="free"?parameter.free:parameter.value});
+            }
+        }
+        bind(assistant,"actionPointerShown",scan);bind(assistant,"actionPointerMoved",move610);bind(assistant,"actionPointerPressed",pressed610);
         bind(assistant,"showingActionsChanged",() => {if(assistant.showingActions)++starts;});
         bind(project.fit,"runningChanged",() => {if(project.fit.running)++fitStarts;});
         scan();
@@ -8819,9 +9051,8 @@ TestCase {
                         && control.objectName.startsWith("parameters.value.") && Ui.exposed(control));
                     second=found.length === 1 ? found[0] : null;
                     return assistant.showingActions && la.value === 0.6 && second !== null
-                        && second.activeFocus && second.text !== second.editText
-                        && input.some(row => row.path === ba.path && row.kind === "value");
-                },budget,"ARRAY450 SETUP: first real edit is applied and second original entry is genuinely typing before intervention");
+                        && ba.value===0.5 && input.some(row => row.path === ba.path && row.kind === "value" && row.before===0.5);
+                },budget,"ARRAY610 SETUP: first edit is applied and exact second original prewrite cue is pending before intervention");
                 compare([ba.value,co.value],[0.5,0.5],"ARRAY450 SETUP: later native scientific writes have NOT occurred");
                 if (data.tag === "stop") {
                     const stop=item("assistant.stopVisibleAction");
@@ -8853,6 +9084,8 @@ TestCase {
             compare(JSON.stringify(Probe.rows(assistant.models)),catalog,"ARRAY450: catalog is not replaced to repair native work");
             verify(assistant.connected,"ARRAY450: actual managed transport remains healthy after the original call");
             const finalInput=input.slice(),finalWrites=writes.slice(),finalNavigation=navigation.slice();
+            compare(dispatched610.filter(r=>r.kind==="value").length,0,"ARRAY610: delegated scalar mutation dispatches no scientific keys");
+            compare(dispatched610.filter(r=>r.kind==="free").length,manualToggles,"ARRAY610: only genuine test-user takeover can dispatch a checkbox toggle");
             stopObservers();
             const noOp=data.tag.startsWith("all-noop-");
             const changed=data.tag === "normal-values" || data.tag === "values" ? [la,wavelength,cell]
@@ -8872,10 +9105,9 @@ TestCase {
                     const field=call.tool === "set_free" ? "free" : "value";
                     compare(JSON.stringify(finalWrites.filter(receipt => receipt.path === parameter.path && receipt.field === field).map(receipt => receipt.value)),
                         JSON.stringify([entry[field]]),"ARRAY450: one actual changed member publishes one literal scientific edit, never intermediate numeric drafts");
-                    if (data.tag !== "normal-values") verify(finalInput.some(receipt => receipt.path === parameter.path
-                        && receipt.kind === (call.tool === "set_free" ? "free" : "value")
-                        && (call.tool === "set_free" ? receipt.checked === entry.free : typeof receipt.text === "string" && receipt.text.trim().length > 0 && Number(receipt.text) === entry.value)),
-                        "ARRAY450: every changed entry has its OWN final native typing/toggle receipt on the exact current member");
+                    if (data.tag !== "normal-values") compare(finalInput.filter(receipt => receipt.path === parameter.path
+                        && receipt.kind === (call.tool === "set_free" ? "free" : "value") && receipt.before!==entry[field]).length,1,
+                        "ARRAY610: every changed entry has ONE exposed prewrite native target cue AND its exact actual app-method effect");
                 }
                 if (data.tag !== "normal-values") verify(starts > 0,"ARRAY450: changed visible array genuinely entered original helper presentation");
                 else compare([starts,finalInput.length,finalNavigation.length],[0,0,0],
@@ -8916,7 +9148,7 @@ TestCase {
             const changedPaths=changed.map(parameter => parameter.path);
             const finalValues=array450_values(array450_physical(project));
             const users=Probe.rows(assistant.messages).filter(value => value.kind === "user").map(value => ({id:value.id,text:value.text,status:value.status}));
-            console.log("ARRAY450_RESULT",JSON.stringify({case:data.tag,input:finalInput,writes:finalWrites,navigation:finalNavigation,
+            console.log("ARRAY450_RESULT",JSON.stringify({case:data.tag,input:finalInput,writes:finalWrites,navigation:finalNavigation,dispatched610:dispatched610,
                 starts:starts,fitStarts:fitStarts,values:JSON.parse(finalValues),users:users,
                 calculationAtPublication:project.calculating,nativeOutcome:row.payload.nativeOutcome || null,
                 sameOwner:Session.project === project,manualToggles:manualToggles}));
@@ -9259,9 +9491,12 @@ TestCase {
         const account = JSON.stringify(Probe.rows(assistant.models)), previous = new Set(Probe.rows(assistant.messages).map(row => row.id));
         const bindings = [], watched = new Set(), cues = {"structures.load":0,"experiments.loadData.0":0};
         let filePresses = 0, fileReleases = 0, fileClicks = 0, dialogsOpened = 0, typed = 0, freeClicks = 0, fitStarts = 0, fitFinishes = 0;
+        let delegatedTyped612=0; const creationInputs612=[];
         // NATURAL578: actual native receipts; strategy inference/default-three is not simulated here.
         const watched578=new Set(), natural578={namesPressed:0,namesClicked:0,headerPressed:0,headerChosen:0,
-            menuAdmitted:0,categoryKeys:[],adpValues:new Set(),adpFree:new Set(),cellFree:0,aliasesReady:false,constraintUsed:false};
+            menuAdmitted:0,categoryKeys:[],adpValues:new Set(),adpFree:new Set(),cellFree:0,aliasesReady:false,constraintUsed:false,freeCues:[],valueCues:[]};
+        const watched610=new Set(),groupCues610=[],ordinaryFreeWrites610=[],ordinaryValueWrites610=[];
+        let headerOpening610=null,scientificHeaderEvents610=0;
         let objective578=3, requested578={}, background578=[], cell578="", aliases578={};
         let menuReceiver583=null, menuIdentity583=null;
         function nativeFilter578(parameter) {
@@ -9286,65 +9521,60 @@ TestCase {
                 "NATURAL578: related aliases are followed by their constraint use before another scientific input");
             return filter;
         }
-        function freePress578(control) {
-            if(!assistant.showingActions || !control.pressed)return;
+        function freeCue610(control) {
             let row=control;
             while(row && !(row.parameter && visible185_parameters(original).includes(row.parameter)))row=row.parent;
-            verify(row!==null,"NATURAL578: native checkbox owns its original live ParameterItem row");
+            verify(row!==null,"NATURAL610: actual cue owns its original live ParameterItem row");
             const parameter=row.parameter;nativeFilter578(parameter);
             verify(Object.prototype.hasOwnProperty.call(requested578,parameter.path)
                 && parameter.fittable && parameter.refinable && parameter.free!==requested578[parameter.path],
-                "NATURAL578: actual checkbox changes ONLY the exact requested eligible member, never dependent/read-only/noop");
-            verify(!background578.includes(parameter.path),"NATURAL578: complete requested background uses native group header, not per-row toggles");
-            if(parameter.path===cell578)++natural578.cellFree;
-            if(parameter.name==="adp_iso")natural578.adpFree.add(parameter.path);
+                "NATURAL610: cue targets exactly a changed requested eligible flag, never a no-op");
+            verify(!background578.includes(parameter.path),"NATURAL610: exact complete background request must use its actual header/menu route");
+            natural578.freeCues.push({path:parameter.path,objective:objective578,from:parameter.free,to:requested578[parameter.path]});
+        }
+        function eligible610() {
+            verify(alive313(ownerLife) && Session.project===original);
+            const table=Ui.control(Probe,window,"parameters.list");verify(table!==null);
+            const filter=table.sourceModel,eligible=[];
+            compare(filter.nameFilter,"");compare(filter.variability,0);
+            verify(filter.categoryFilter.length>0 && natural578.categoryKeys.includes(filter.categoryFilter));
+            for(let index=0;index<filter.rowCount();++index) {
+                const p=filter.parameterAt(index);if(p.fittable && p.refinable)eligible.push(p);
+            }
+            verify(eligible.length>0 && eligible.every(p => Object.prototype.hasOwnProperty.call(requested578,p.path)));
+            const requested=Object.keys(requested578).filter(path => {
+                const rows=visible185_parameters(original).filter(p => p.path===path);compare(rows.length,1);
+                return rows[0].fittable && rows[0].refinable && filter.shows(rows[0]);
+            });
+            compare(JSON.stringify(eligible.map(p => p.path).sort()),JSON.stringify(requested.sort()),
+                "NATURAL610: header owns the EXACT complete displayed eligible requested set, including equal prefixes");
+            const free=requested578[eligible[0].path];verify(eligible.every(p => requested578[p.path]===free));
+            return {parameters:eligible,paths:eligible.map(p => p.path).sort(),free:free};
         }
         function scanNatural578() {
             const objects=Probe.objectsWithProperty(window,"objectName");
             for(const control of objects.filter(object => object.objectName==="background.namePoints"
-                || object.objectName==="parameters.category" || object.objectName==="parameters.freeHeader.free")) {
+                || object.objectName==="parameters.category" || ["parameters.freeHeader.free","parameters.freeHeader.fixed"].includes(object.objectName))) {
                 if(watched578.has(control))continue;watched578.add(control);
                 if(control.objectName==="background.namePoints") {
                     bind(control,"pressedChanged",() => {if(!assistant.showingActions || !control.pressed)return;
                         compare(objective578,3);verify(control.enabled && Ui.exposed(control));
                         compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => [row.position,row.intensity.value])),
                             JSON.stringify(plan.recipe.background.map(row => [row.position,row.intensity])),
-                            "NATURAL578: all explicit requested background values/count are committed BEFORE native IDs action");
+                            "NATURAL578: all explicit requested values precede the ONE real original naming action");
                         ++natural578.namesPressed;});
                     bind(control,"clicked",() => {if(assistant.showingActions){++natural578.namesClicked;
-                        compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => row.id)),JSON.stringify(["10","165"]),
-                            "NATURAL578: existing native IDs action applies independent integer-position names");
+                        compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => row.id)),JSON.stringify(["10","165"]));
                         compare(JSON.stringify(Probe.rows(original.currentExperiment.background).map(row => [row.position,row.intensity.value])),
-                            JSON.stringify(plan.recipe.background.map(row => [row.position,row.intensity])),
-                            "NATURAL578: actual naming preserves all explicit scientific values/count");}});
+                            JSON.stringify(plan.recipe.background.map(row => [row.position,row.intensity])));
+                    }});
                 } else if(control.objectName==="parameters.category") {
                     bind(control,"activated",index => {if(assistant.showingActions){
                         const table=Ui.control(Probe,window,"parameters.list");verify(table!==null);
                         natural578.categoryKeys.push(table.sourceModel.categories[index]);}});
                 } else {
-                    const menuLife583=lifetime313(control);
-                    bind(control,"pressedChanged",() => {if(!assistant.showingActions || !control.pressed)return;
-                        verify(alive313(menuLife583) && alive313(ownerLife) && Session.project===original,
-                            "NATURAL583: actual menu admission retains its original live receiver and owner");
-                        compare(objective578,10);verify(control.enabled && Ui.exposed(control));
-                        const table=Ui.control(Probe,window,"parameters.list"),filter=table.sourceModel,eligible=[];
-                        compare(filter.nameFilter,"");
-                        verify(filter.categoryFilter.length>0 && natural578.categoryKeys.includes(filter.categoryFilter),
-                            "NATURAL578: background Free header follows actual native category selection");
-                        for(let index=0;index<filter.rowCount();++index){const p=filter.parameterAt(index);if(p.fittable && p.refinable)eligible.push(p.path);}
-                        compare(JSON.stringify(eligible.sort()),JSON.stringify(background578.slice().sort()),
-                            "NATURAL578: actual header eligible set EXACTLY equals requested background, no extra row authorized");
-                        verify(eligible.every(path => requested578[path]===true),"NATURAL578: ONE header action has uniform requested final flags");
-                        compare(natural578.headerPressed,1,"NATURAL578: native header press precedes its real menu action");
-                        menuReceiver583=control;menuIdentity583=identity313(menuLife583);
-                        ++natural578.menuAdmitted;
-                    });
-                    bind(control,"clicked",() => {if(assistant.showingActions){
-                        verify(alive313(menuLife583) && alive313(ownerLife) && Session.project===original
-                            && menuReceiver583===control && menuIdentity583===identity313(menuLife583),
-                            "NATURAL583: actual clicked receiver must own its successful strict pre-effect menu admission");
-                        ++natural578.headerChosen;
-                    }});
+                    bind(control,"pressedChanged",() => {if(assistant.showingActions && control.pressed)++scientificHeaderEvents610;});
+                    bind(control,"clicked",() => {if(assistant.showingActions)++scientificHeaderEvents610;});
                 }
             }
             const header=Ui.control(Probe,window,"parameters.freeHeader");
@@ -9355,9 +9585,73 @@ TestCase {
                     bind(area,"pressedChanged",() => {if(!assistant.showingActions || !area.pressed)return;
                         const point=area.mapToItem(header,area.mouseX,area.mouseY);
                         if(point.x>=0 && point.y>=0 && point.x<header.width && point.y<header.height) {
-                            verify(header.visible && Ui.exposed(header),"NATURAL578: actual native header input reaches its exposed current ink/hit area");
-                            ++natural578.headerPressed;
+                            verify(header.visible && Ui.exposed(header));const group=eligible610();
+                            const menus=Probe.objectsWithProperty(window,"objectName").filter(o=>o.objectName==="parameters.freeHeader.menu");
+                            compare(menus.length,1,"NATURAL610: ONE original public header menu belongs to this real opening");
+                            const headerLife=lifetime313(header),menuLife=lifetime313(menus[0]);
+                            headerOpening610={objective:objective578,paths:group.paths,free:group.free,header:identity313(headerLife),
+                                headerLife:headerLife,menu:menus[0],menuLife:menuLife,menuIdentity:identity313(menuLife)};
+                            if(objective578===10 && JSON.stringify(group.paths)===JSON.stringify(background578.slice().sort()))++natural578.headerPressed;
                         }});
+                }
+            }
+            for(const parameter of visible185_parameters(original)) {
+                if(watched610.has(parameter))continue;watched610.add(parameter);
+                const life=lifetime313(parameter);let previousFree=parameter.free;
+                bind(parameter,"freeChanged",() => {
+                    verify(alive313(life) && alive313(ownerLife) && Session.project===original
+                        && visible185_parameters(original).includes(parameter),"NATURAL610: actual flag publication retains its prepared current owner/member");
+                    const before=previousFree;previousFree=parameter.free;
+                    if(!assistant.showingActions || before===parameter.free || !Object.prototype.hasOwnProperty.call(requested578,parameter.path))return;
+                    compare(parameter.free,requested578[parameter.path]);
+                    const row=natural578.freeCues.filter(c => c.objective===objective578 && c.path===parameter.path);
+                    const groups=groupCues610.filter(c => c.objective===objective578 && c.paths.includes(parameter.path));
+                    compare(row.length+groups.length,1,"NATURAL610: every real flag mutation has ONE exact row or complete-group admission");
+                    for(const group of groups)verify(alive313(group.menuLife) && identity313(group.menuLife)===group.menuIdentity,
+                        "NATURAL610: actual group effects retain the SAME admitted original menu receiver");
+                    ordinaryFreeWrites610.push({path:parameter.path,value:parameter.free,objective:objective578});
+                    ++observations518.inputReceipt["parameter-free"];
+                    if(parameter.path===cell578)++natural578.cellFree;
+                    if(parameter.name==="adp_iso")natural578.adpFree.add(parameter.path);
+                    for(const group of groups)if(!group.completed && group.parameters.every(p => p.free===group.free)) {
+                        group.completed=true;
+                        if(group.objective===10 && JSON.stringify(group.paths)===JSON.stringify(background578.slice().sort()))++natural578.headerChosen;
+                    }
+                });
+                if(parameter.name==="adp_iso")bind(parameter,"valueChanged",() => {
+                    if(!assistant.showingActions || objective578!==10 || parameter.value!==.5)return;
+                    verify(alive313(life) && visible185_parameters(original).includes(parameter));
+                    compare(natural578.valueCues.filter(c => c.path===parameter.path && c.objective===objective578).length,1,
+                        "NATURAL610: actual requested ADP .5 publication follows ONE exposed native value cue");
+                    natural578.adpValues.add(parameter.path);ordinaryValueWrites610.push(parameter.path);
+                    ++observations518.inputReceipt["parameter-text"];
+                });
+            }
+        }
+        function scientificCue610() {
+            if(lastPoint===null)return;
+            for(const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c => Ui.exposed(c))) {
+                const box=rect(control);
+                if(lastPoint.x<box[0] || lastPoint.y<box[1] || lastPoint.x>=box[0]+box[2] || lastPoint.y>=box[1]+box[3])continue;
+                if(control.objectName.startsWith("parameters.free."))freeCue610(control);
+                else if(control.objectName.startsWith("parameters.value.") && control.item && plan.adps.includes(control.item.path) && objective578===10) {
+                    nativeFilter578(control.item);verify(control.item.value!==.5);
+                    natural578.valueCues.push({path:control.item.path,objective:objective578});
+                } else if(["parameters.freeHeader.free","parameters.freeHeader.fixed"].includes(control.objectName)) {
+                    const life=lifetime313(control),group=eligible610();
+                    compare(control.objectName,group.free?"parameters.freeHeader.free":"parameters.freeHeader.fixed");
+                    verify(headerOpening610!==null && headerOpening610.objective===objective578
+                        && JSON.stringify(headerOpening610.paths)===JSON.stringify(group.paths) && headerOpening610.free===group.free,
+                        "NATURAL610: SAME successful original header opening precedes exact scientific-choice cue");
+                    verify(alive313(life) && control.enabled && alive313(headerOpening610.headerLife)
+                        && alive313(headerOpening610.menuLife) && headerOpening610.menu.visible);
+                    let sameMenu=false;for(let parent=control;parent;parent=parent.parent)
+                        if(parent===headerOpening610.menu.contentItem)sameMenu=true;
+                    verify(sameMenu,"NATURAL610: visual scientific choice belongs to the SAME actually opened original menu");
+                    menuReceiver583=control;menuIdentity583=identity313(life);
+                    groupCues610.push({objective:objective578,paths:group.paths,parameters:group.parameters,free:group.free,
+                        menuLife:life,menuIdentity:identity313(life),completed:false});
+                    if(objective578===10 && JSON.stringify(group.paths)===JSON.stringify(background578.slice().sort()))++natural578.menuAdmitted;
                 }
             }
         }
@@ -9405,8 +9699,7 @@ TestCase {
             for (const control of Ui.itemsWithProperty(Ui.windowRoot(window),"objectName").filter(c =>
                 c.objectName.startsWith("parameters.free.") && typeof c.clicked === "function")) {
                 if (watched.has(control)) continue; watched.add(control);
-                bind(control,"clicked",() => { ++observations518.inputReceipt["parameter-free"]; if(assistant.showingActions) ++freeClicks; });
-                bind(control,"pressedChanged",() => freePress578(control));
+                bind(control,"clicked",() => {if(assistant.showingActions)++freeClicks;});
             }
             const field = window.activeFocusItem;
             if (field && !watched.has(field) && typeof field.textEdited === "function") {
@@ -9415,9 +9708,16 @@ TestCase {
                 if(parent) { watched.add(field); const receiver578=parent;
                     bind(field,"textEdited",() => { ++observations518.inputReceipt["parameter-text"];
                         if(assistant.showingActions) {++typed;
-                            if(receiver578.objectName.startsWith("parameters.value.")) {
-                                nativeFilter578(receiver578.item);
-                                if(receiver578.item.name==="adp_iso")natural578.adpValues.add(receiver578.item.path);
+                            const parameter=receiver578.item;
+                            const creationInstrument612=objective578===3 && alive313(ownerLife) && Session.project===original
+                                && visible185_parameters(original).includes(parameter)
+                                && ["setup_wavelength","calib_twotheta_offset"].includes(parameter.name)
+                                && receiver578.objectName==="instrument."+parameter.name;
+                            if(creationInstrument612) {
+                                creationInputs612.push({path:parameter.path,name:parameter.name,text:field.text});
+                            } else {
+                                ++delegatedTyped612;
+                                verify(false,"NATURAL610: changed ordinary-setter paths must not dispatch scientific textEdited");
                             }
                         }}); }
             }
@@ -9437,6 +9737,7 @@ TestCase {
             compare(fileClicks,0,"MAIN504: visual file-load cue never dispatches a real Load click/tap");
             compare(fileReleases,0,"MAIN504: visual file-load cue never dispatches a real Load release");
             compare(dialogsOpened,0,"MAIN504: attached-file cue never opens an ordinary file dialog");
+            scientificCue610();
         }
         function outcome(index) {
             const rows=Probe.rows(assistant.messages).filter(row => !previous.has(row.id) && row.kind==="activity"
@@ -9543,6 +9844,11 @@ TestCase {
             }
             const wavelengths=visible185_parameters(original).filter(parameter => parameter.name==="setup_wavelength");
             compare(wavelengths.length,1); compare(wavelengths[0].value,1.49);
+            compare(typed,creationInputs612.length);
+            verify(creationInputs612.some(receipt => receipt.path===wavelengths[0].path
+                && receipt.name==="setup_wavelength" && receipt.text==="1.49"),
+                "MAIN612: unchanged real creation instrument input actually types the supplied 1.49, independently read back above");
+            compare(delegatedTyped612,0,"MAIN612: compound parameter-child setters dispatch no scientific keys");
             const inputs=JSON.parse(visible185_inputs(original));
             compare(JSON.stringify(inputs.observations),JSON.stringify(triples)); compare(inputs.weight,1);
             compare(inputs.exclusions.length,0); compare(JSON.stringify(inputs.links),JSON.stringify([["lbco",true]]));
@@ -9593,8 +9899,8 @@ TestCase {
             compare(Session.project,original); compare(import265_owner(original),metadata); aliasesCurrent(original);
             verify(natural578.aliasesReady && natural578.constraintUsed,"NATURAL578: same original relation request reaches actual alias-before-use boundary");
             compare(natural578.headerPressed,1,"NATURAL583: ONE real outer-header press is mandatory, never conditional on an optional menu callback");
-            compare(natural578.menuAdmitted,1,"NATURAL583: ONE successful same-receiver menu press executes every strict admission check");
-            compare(natural578.headerChosen,1,"NATURAL578: exact full background set uses ONE actual native Free header choice");
+            compare(natural578.menuAdmitted,1,"NATURAL610: ONE successful same-receiver menu cue executes every strict admission check");
+            compare(natural578.headerChosen,1,"NATURAL610: exact full background group actually applies once after its real menu-opening and visual choice");
             verify(natural578.cellFree>0,"NATURAL578: requested cell freedom reaches an unfiltered actual row");
             for(const path of plan.adps){const row=outcome(2).parameters.filter(row => row.path===path);compare(row.length,1);
                 verify(natural578.adpValues.has(row[0].path),"NATURAL578: each requested ADP value reaches actual category-selected native row input");}
@@ -9613,7 +9919,9 @@ TestCase {
             }
             const profileAdps=["La","Ba","Co","O"].map(label => visible185_parameter(original,label,"adp_iso"));
             verify(profileAdps.every(parameter => parameter.value===.5 && !parameter.free),"MAIN504: actual first-stage ADPs remain the four fixed positive starts");
-            verify(typed>0 && freeClicks>0,"MAIN507: actual original text/free controls still execute independently of optimizer movement");
+            compare([delegatedTyped612,freeClicks,scientificHeaderEvents610],[0,0,0],"NATURAL610: no scientific keys/toggle/menu-choice input is dispatched");
+            compare(ordinaryValueWrites610.length,plan.adps.length,"NATURAL610: actual ADP app-method effects, not missing text callbacks, prove completion");
+            verify(ordinaryFreeWrites610.length>0 && groupCues610.every(group => group.completed),"NATURAL610: each admitted group has real complete scientific effects");
             const profileResults507=outcome(8).parameters;
             let profileMoved507=false;
             for(const path of [plan.zero,originalScales507[0].path]) {
@@ -9631,7 +9939,9 @@ TestCase {
             const current=Session.project, saved=outcome(16), fitted=outcome(13).parameters;
             const independentAdps578=[0,2,3].map(index => outcome(2).parameters.find(row => row.path===plan.adps[index]).path);
             compare(JSON.stringify(Array.from(natural578.adpFree).sort()),JSON.stringify(independentAdps578.sort()),
-                "NATURAL578: native ADP checkboxes reach EXACT requested independent members, never dependent Ba");
+                "NATURAL610: actual cue-backed ordinary ADP effects reach EXACT requested independent members, never dependent Ba");
+            compare([delegatedTyped612,freeClicks,scientificHeaderEvents610],[0,0,0]);
+            verify(groupCues610.every(group => group.completed),"NATURAL610: no cue-only incomplete group can pass");
             for(const path of plan.nuisance) {
                 const matches=fitted.filter(row => row.path===path);
                 compare(matches.length,1);
@@ -9712,7 +10022,10 @@ TestCase {
                     headerChosen:natural578.headerChosen,menuAdmitted:natural578.menuAdmitted,menuIdentity:menuIdentity583,
                     categoryKeys:natural578.categoryKeys,adpValueCount:natural578.adpValues.size,
                     adpFreeCount:natural578.adpFree.size,cellFree:natural578.cellFree,aliasesReady:natural578.aliasesReady,constraintUsed:natural578.constraintUsed},
-                cues:cues,typed:typed,freeClicks:freeClicks,fitStarts:fitStarts,fitFinishes:fitFinishes,
+                cues:cues,typed:typed,creationInputs612:creationInputs612,delegatedTyped612:delegatedTyped612,freeClicks:freeClicks,scientificHeaderEvents610:scientificHeaderEvents610,
+                ordinaryValueWrites610:ordinaryValueWrites610,ordinaryFreeWrites610:ordinaryFreeWrites610,
+                groupCues610:groupCues610.map(group => ({objective:group.objective,paths:group.paths,free:group.free,completed:group.completed})),
+                fitStarts:fitStarts,fitFinishes:fitFinishes,
                 currentOwner:String(Session.project),canCancel:assistant.canCancel,lastError:assistant.lastError}));
             for(const row of bindings) disconnect313(row.life,row.object,row.signal,row.callback);
         }
