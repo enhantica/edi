@@ -862,20 +862,21 @@ struct AssistantViewModel::State {
     bool attached_to(ProjectViewModel* target) const noexcept {
         return controller && controller_attached && controller_project == target && project == target;
     }
-    struct OwnEdit { std::uint64_t id, generation; QPointer<ProjectViewModel> project; };
+    struct OwnEdit { std::uint64_t id, generation; QPointer<ProjectViewModel> project; bool notification_only=false; };
     std::optional<OwnEdit> own_edit;
     std::uint64_t own_edit_serial = 0;
-    std::uint64_t begin_own_edit() {
+    std::uint64_t begin_own_edit(bool notification_only=false) {
         if (own_edit_serial == UINT64_MAX) throw std::length_error("Native edit identity is exhausted");
         const auto id = ++own_edit_serial;
-        own_edit = OwnEdit{id, generation, project};
+        own_edit = OwnEdit{id, generation, project, notification_only};
         return id;
     }
     void end_own_edit(std::uint64_t id) noexcept {
         if (own_edit && own_edit->id == id) own_edit.reset();
     }
     bool applying_own_edit() const noexcept {
-        return own_edit && own_edit->generation == generation && own_edit->project == project;
+        return own_edit && own_edit->generation == generation && own_edit->project == project &&
+            (!own_edit->notification_only || (project && project->project_edit_origin_==own_edit->id));
     }
     QString observed_native_error;
     std::uint64_t generation = 0;
@@ -3795,16 +3796,13 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> project;
         std::shared_ptr<AssistantWorkingFolder> folder;
         QString name,destination,source_directory,recovery,intent;
-        bool current_destination=false, visible_pending=false, submitting=false;
+        bool current_destination=false, visible_pending=false, submitting=false, ordinary_current=false;
+        quint64 cue_bytes=0;
         std::shared_ptr<AssistantSaveSource> source;
         quint64 source_reservation=0;
         edi::PersistenceSnapshot snapshot;
         std::optional<edi::CalculationResult> calculation;
         quint64 calculation_reservation=0, progress_reservation=0;
-        // Worker-only until its original final delivery. native_bytes keeps
-        // reading the unchanged preowned allowance while preparation runs.
-        std::size_t calculation_retained_bytes=0, reload_retained_bytes=0;
-        bool preparation_ready=false;
         // Receipt and manifest have bounded names/counts/hash fields. Reserve
         // both roles before the worker, without reading its in-flight output.
         static constexpr quint64 artifact_reservation=sizeof(ImmutableAssistantResult)+
@@ -4173,6 +4171,11 @@ struct AssistantViewModel::State {
             record(task->call.record); receipt(task->call.receipt); value(task->call.rpc);
             if (!native_call || native_call->record != task->call.record)
                 raw(Limits::context_bytes); // Original final-context scratch can outlive native_call.
+            if(task->ordinary_current) {
+                raw(static_cast<quint64>(task->destination.size()+task->source_directory.size())*sizeof(QChar));
+                raw(task->progress_reservation+task->cue_bytes);
+                return; // No snapshot/source-copy/calculation/export role exists.
+            }
             // The worker destroys snapshot.model after formatting and BEFORE it
             // creates/stages the rounded calculation. These two payloads never
             // overlap; the reservation remains constant across worker phases.
@@ -5481,10 +5484,14 @@ struct AssistantViewModel::State {
             (!task->current_destination || (!result_session()->needsSaveAs() &&
                 task->project->path()==task->source_directory)) &&
             (!task->source || (task->committed && task->current_destination) || task->source->current()) &&
-            edi::unchanged_since(*task->project->assistantProject(),task->snapshot.stamps);
+            (task->ordinary_current || edi::unchanged_since(*task->project->assistantProject(),task->snapshot.stamps));
     }
     static Object native_save_result(const NativeSave& task,bool committed,bool reopened,bool active,bool presented,
         const QString& message) {
+        if(task.ordinary_current)return {{"status",active?"succeeded":committed?"committed_unconfirmed":task.call.may_have_written?"unconfirmed":task.cancelled?"cancelled":"refused"},
+            {"saved",committed},{"committed",committed},{"reopened",false},{"active",active},
+            {"presentation_complete",presented},{"uncertain",!active && task.call.may_have_written},
+            {"destination",task.destination},{"recovery_directory",QString()},{"message",bounded_error(message)}};
         return {{"status",active?"succeeded":committed?"committed_unconfirmed":task.cancelled?"cancelled":"refused"},
             {"committed",committed},{"reopened",reopened},{"active",active},
             {"presentation_complete",presented},{"destination",task.destination},
@@ -5497,7 +5504,12 @@ struct AssistantViewModel::State {
         // Reserve factual variants without temporarily changing real disk facts.
         for(std::size_t i=0;i<task->progress.size();++i) {
             auto& progress=task->progress[i];
-            progress.outcome=native_save_result(*task,i>=1,i>=2,i>=3,false,i>=3?
+            if(task->ordinary_current) {
+                progress.outcome=native_save_result(*task,i>=1,false,i>=2,i>=3,i>=1?
+                    QStringLiteral("The ordinary app Save completed in the existing directory."):
+                    QStringLiteral("The ordinary app Save could not confirm its result. Inspect the project and saved files before repeating."));
+                if(i==0){progress.outcome["status"]="unconfirmed";progress.outcome["uncertain"]=true;}
+            } else progress.outcome=native_save_result(*task,i>=1,i>=2,i>=3,false,i>=3?
                 QStringLiteral("Saved, verified and adopted; presentation may be incomplete."):
                 i>=1?QStringLiteral("The destination is committed; later verification or adoption may be incomplete. Do not overwrite it."):
                 QStringLiteral("Native saving was not committed."));
@@ -5533,29 +5545,7 @@ struct AssistantViewModel::State {
         const auto scope=native_settlement_scope(task->call);
         const auto release=[&]{if(receiver && receiver->state_.get()==this && native_save==task)native_save.reset();};
         const char* save_stage="SAVE_ENTRANCE";
-        quint64 save_bound=0;
         try {
-            if(task->preparation_ready) {
-                // Only this terminal delivery observes the worker's result.
-                // Its documents/reopened model/temporaries have all unwound.
-                // A pre-format failure or early cancellation may STILL own S.
-                const bool complete=task->calculation.has_value();
-                if(complete!=static_cast<bool>(task->artifact) ||
-                   (complete && (task->snapshot.model || !task->calculation_retained_bytes || !task->reload_retained_bytes)) ||
-                   task->calculation_retained_bytes>task->calculation_reservation ||
-                   task->reload_retained_bytes>task->calculation_reservation-task->calculation_retained_bytes ||
-                   (!complete && (task->calculation_retained_bytes || task->reload_retained_bytes)))
-                    throw std::logic_error("Save preparation retained-role handoff is incomplete");
-                // These selectors are finished even when formatting failed.
-                // Release actual backing BEFORE retiring its snapshot role.
-                std::vector<bool>().swap(task->snapshot.geometry_current);
-                std::vector<bool>().swap(task->snapshot.computed_current);
-                if(!task->snapshot.model)task->snapshot.retained_bytes=0;
-                task->calculation_reservation=task->calculation_retained_bytes+task->reload_retained_bytes;
-                task->preparation_ready=false; // No nested/repeated transfer.
-                // A+B stays charged through reload AND the prepared landing;
-                // moving A into that landing does not release its real owners.
-            }
             if(!native_save_current(task) || !task->artifact) {
                 release();
                 if(original_call())native_finish(false,native_save_outcome(*task,task->failure_size?
@@ -5600,13 +5590,10 @@ struct AssistantViewModel::State {
                     native_charge();
                     if(!receiver || receiver->state_.get()!=this)return;
                     if(!native_save_current(task))throw std::runtime_error("Save retired before publication preparation");
-                    save_stage="SAVE_VALUES_ROOM";
+                    save_stage="SAVE_VALUES_PREPARE";
                     static_assert(Limits::stream_retained_bytes<=std::numeric_limits<std::size_t>::max());
                     const auto publication_limit=native_room();
-                    save_bound=publication_limit; // Remaining new-metadata role, not an allocation measurement.
-                    save_stage="SAVE_VALUES_ROLE";
                     const auto publication_role=reserve_disclosure(publication_limit);
-                    save_stage="SAVE_VALUES_CHARGE";
                     native_charge();
                     if(!receiver || receiver->state_.get()!=this)return;
                     if(!native_save_current(task))throw std::runtime_error("Save retired before its prepared metadata allocation");
@@ -5614,15 +5601,9 @@ struct AssistantViewModel::State {
                     // actual current arrays were calculated by the original worker.
                     if(!task->calculation)throw std::runtime_error("The rounded saved calculation is unavailable");
                     auto ready=[&] {
-                        // B was measured from these exact immutable documents
-                        // on the worker and remains preowned beside A. The
-                        // publication limit owns ONLY new metadata, never B.
-                        save_stage="SAVE_VALUES_RELOAD";
                         auto prepared_model=load_captured_assistant_result(*task->artifact);
-                        save_stage="SAVE_VALUES_METADATA";
                         return task->project->prepareNativeSaved(prepared_model,task->snapshot.stamps,std::move(*task->calculation),task->destination,static_cast<std::size_t>(publication_limit));
                     }(); // The full rounded model is gone before disk publication or any UI callback.
-                    save_bound=0;
                     task->calculation.reset();
                     if(!native_save_current(task))throw std::runtime_error("The save owner changed before publication");
                     save_stage="SAVE_PUBLISH";
@@ -5660,9 +5641,8 @@ struct AssistantViewModel::State {
         } catch(...) {
             if(!receiver)return;
             // Original task facts before cleanup/fallback; no Qt callback or exception text.
-            // A nonzero VALUES bound is its available new-metadata role; the
-            // closed substage identifies the original failing call, not raw exception text.
-            if(original_call())native_failure(save_stage,"SAVE",save_bound,native_failure_class(),&*native_call,nullptr,-1,task.get());
+            // Zero is deliberately no attributed byte bound for this save phase.
+            if(original_call())native_failure(save_stage,"SAVE",0,native_failure_class(),&*native_call,nullptr,-1,task.get());
             release();
             if(receiver && original_call()) {
                 try {native_finish(task->active,native_save_outcome(*task,task->committed?
@@ -5836,13 +5816,10 @@ struct AssistantViewModel::State {
                     if(!codex_encoded_size(artifact->files,NativeSave::artifact_reservation,roles))
                         throw std::length_error("Save artifact receipt exceeds its prepared role");
                     auto reopened=load_captured_assistant_result(*artifact);
-                    std::size_t result_bytes=0,reload_bytes=0;
-                    auto calculated=edi::calculate_saved_project(reopened,task->snapshot.stamps,limits,task->calculation_reservation,cancel,result_bytes,reload_bytes);
+                    auto calculated=edi::calculate_saved_project(reopened,task->snapshot.stamps,limits,task->calculation_reservation,cancel);
                     if(!cancel.cancelled()) {
                         task->calculation=std::move(calculated);
                         task->artifact=std::move(artifact);
-                        task->calculation_retained_bytes=result_bytes;
-                        task->reload_retained_bytes=reload_bytes;
                     }
                 }
             }catch(const std::exception& e) {
@@ -5853,9 +5830,6 @@ struct AssistantViewModel::State {
                 constexpr char failed[]="Native save preparation failed";
                 std::copy_n(failed,sizeof(failed)-1,task->failure.data());task->failure_size=sizeof(failed)-1;
             }
-            // Publish only after all preparation/catch temporaries unwind.
-            // The final delivery is the sole owner-thread reader of this flag.
-            task->preparation_ready=true;
             task.reset(); // The final delivery now owns the task; this job never reads it again.
             return std::move(completion);
         };
@@ -5918,6 +5892,89 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this || native_save!=task || task->ticket) return;
         if(token!=task->intent) {task->visible_pending=false;throw std::runtime_error("The original Save As destination intent could not be retained");}
     }
+    void native_ordinary_save(const std::shared_ptr<NativeSave>& task) {
+        const auto receiver=task->receiver;
+        if(!receiver || receiver->state_.get()!=this)return;
+        if(!native_save_current(task)){if(receiver && receiver->state_.get()==this)native_pending_save_cancelled(task);return;}
+        const QPointer<Session> session(result_session());
+        if(!session || !task->ordinary_current || session->save_intent_)throw std::runtime_error("The original ordinary Save owner is unavailable");
+        const auto replacement=session->replacement_generation_;
+        const auto own=begin_own_edit(true);
+        const auto own_scope=qScopeGuard([this,receiver,own]{if(receiver && receiver->state_.get()==this)end_own_edit(own);});
+        NativeSaveDelivery delivery{task.get(),native_save_delivery};native_save_delivery=&delivery;
+        const auto retained=qScopeGuard([this,receiver,&delivery]{if(receiver && receiver->state_.get()==this)native_save_delivery=delivery.previous;});
+        const auto original_call=[&]{return receiver && receiver->state_.get()==this && native_call &&
+            native_call->record==task->call.record && native_call->receipt==task->call.receipt && native_call->rpc==task->call.rpc;};
+        // This original synchronous operation defers Clear/revoke settlement,
+        // as an already-entered ordinary Save cannot be rolled back or replayed.
+        task->visible_pending=false;task->submitting=true;
+        task->call.may_have_written=true;native_call->may_have_written=true;
+        bool saved=false;
+        session->assistant_save_origin_=own;
+        const auto origin_scope=qScopeGuard([session,target=task->project,own] {
+            if(session && session->assistant_save_origin_==own)session->assistant_save_origin_=0;
+            if(target && target->assistant_save_origin_==own)target->assistant_save_origin_=0;
+        });
+        try {saved=session->save();} // EXACT ordinary toolbar receiver/method.
+        catch(...) {} // Original app errors remain local; no raw exception to the model.
+        task->submitting=false;
+        task->committed=saved;
+        task->reopened=false; // Ordinary Save does not report a successful reopen.
+        if(!receiver || receiver->state_.get()!=this)return;
+        end_own_edit(own); // Never suppress callbacks from result publication.
+        task->active=saved && session && task->project && result_session()==session &&
+            session->project()==task->project && session->replacement_generation_==replacement &&
+            session->assistantEpoch()==task->epoch && task->project->path()==task->source_directory &&
+            !session->needsSaveAs() && !task->project->modified();
+        task->presented=task->active && !task->project->calculating();
+        // Preserve actual flags on the original record before refresh/retirement.
+        native_save_latch(task,!saved?0:task->active?(task->presented?3:2):1);
+        if(native_save==task)native_save.reset();
+        if(original_call())native_finish(task->active,task->call.record->outcome);
+        if(!receiver || receiver->state_.get()!=this)return;
+        const auto scope=native_settlement_scope(task->call);
+        if(!scope())return;
+        try {
+            native_complete_discard();if(!receiver || !scope())return;
+            generic_settle_revoke();if(!receiver || !scope())return;
+            generic_advance_clear();
+        } catch(...) {if(receiver && scope())native_fence();}
+    }
+    void native_start_ordinary_save(const std::shared_ptr<NativeSave>& task) {
+        if(!show_actions){native_ordinary_save(task);return;}
+        const auto receiver=task->receiver;
+        if(!receiver || receiver->state_.get()!=this)return;
+        const QPointer<QQuickItem> target(widget_named("appBar.button.save"));
+        if(!receiver || receiver->state_.get()!=this)return;
+        const QPointer<QQuickWindow> window(action_window);
+        if(!target || !window || !widget_input || widget_input->active())throw std::runtime_error("The original Save cue is unavailable");
+        // An already-unmodified project's toolbar action is disabled; ordinary
+        // Session.save still owns the request and needs no fictitious click.
+        if(!target->isEnabled() && !task->project->modified()){native_ordinary_save(task);return;}
+        AssistantWidgetInput::Request request;
+        request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
+        auto current=[this,receiver,task,target,window]{return receiver && receiver->state_.get()==this && target && window &&
+            action_window==window && target->window()==window && native_save_current(task);};
+        auto prepare=[] {return true;};auto finish=[] {};
+        auto completed=[this,receiver,task](bool delivered,const QString&) {
+            if(!receiver || receiver->state_.get()!=this || native_save!=task)return;
+            task->visible_pending=false;
+            try {
+                if(!delivered || !native_save_current(task)){native_pending_save_cancelled(task);return;}
+                native_ordinary_save(task);
+            } catch(...) {if(receiver && receiver->state_.get()==this && native_save==task)native_pending_save_cancelled(task);}
+        };
+        constexpr quint64 callbacks=2*(sizeof(AssistantWidgetInput::Request)+sizeof(current)+sizeof(prepare)+sizeof(finish)+sizeof(completed));
+        auto preparing=reserve_disclosure(callbacks);
+        request.current=std::move(current);request.prepareCommit=std::move(prepare);
+        request.finishCommit=std::move(finish);request.completed=std::move(completed);
+        task->cue_bytes=callbacks;task->visible_pending=true;
+        preparing.dismiss();disclosure_preparing_bytes-=callbacks;
+        native_charge();
+        if(!receiver || receiver->state_.get()!=this || !native_save_current(task))return;
+        if(!widget_input || !target || action_window!=window){native_pending_save_cancelled(task);return;}
+        widget_input->start(std::move(request)); // Visual cue ONLY; no Save click/key/intent.
+    }
     void native_start_save(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args,const char*& save_stage) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto admission=file_projection();
@@ -5942,7 +5999,7 @@ struct AssistantViewModel::State {
         save_stage = "TASK_PREPARATION";
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;
         task->name=name;task->epoch=session->assistantEpoch();task->current_destination=current_destination;
-        task->transport_generation=agent->outputGeneration();
+        task->transport_generation=agent->outputGeneration();task->ordinary_current=current_destination;
         if(owned_directory) {
             const auto path=project->path();
             if(path.isEmpty() || path.size()>static_cast<qsizetype>(Limits::id_bytes) || path.toUtf8().size()>static_cast<qsizetype>(Limits::id_bytes))
@@ -5954,13 +6011,14 @@ struct AssistantViewModel::State {
             edi::assistant::SelectedFileLimits::file_bytes,edi::assistant::SelectedFileLimits::collection_bytes,
             edi::assistant::SelectedFileLimits::files};
         save_stage = "SNAPSHOT_ADMISSION";
-        task->snapshot=edi::snapshot_for_persistence(*project->assistantProject(),limits);
+        if(!task->ordinary_current)task->snapshot=edi::snapshot_for_persistence(*project->assistantProject(),limits);
         save_stage = "DELIVERY_PREPARATION";
         Object maximum{{"status",QStringLiteral("committed_unconfirmed")},{"committed",false},{"reopened",false},{"active",false},
             {"presentation_complete",false},
             {"destination",QString(static_cast<qsizetype>(Limits::id_bytes+edi::assistant::SelectedFileLimits::name_bytes+1),QChar(1))},
             {"recovery_directory",QString(static_cast<qsizetype>(Limits::id_bytes+64),QChar(1))},{"request_retired",true},
             {"message",QString(static_cast<qsizetype>(Limits::error_bytes),QChar(1))}};
+        if(task->ordinary_current){maximum["saved"]=false;maximum["uncertain"]=true;}
         save_stage = "RECORD_ADMISSION";
         native_prepare(rpc,id,"save_project",purpose,original,maximum);
         if(!receiver || !admission.input_current() || !native_call)return;
@@ -5979,7 +6037,7 @@ struct AssistantViewModel::State {
             const QPointer<Session> session(result_session());
             const bool retained=task->visible_pending && session && session->saveAsCurrent(task->intent);
             if(!receiver || receiver->state_.get()!=this || native_save!=task || task->ticket || task->submitting)return;
-            if(retained)return;
+            if(retained || (task->ordinary_current && task->visible_pending))return;
             if(session)try{session->cancelSaveAs(task->intent);}catch(...){}
             if(receiver && receiver->state_.get()==this)native_pending_save_cancelled(task);
         });
@@ -5994,7 +6052,7 @@ struct AssistantViewModel::State {
             native_charge();
             if(!receiver || !admission.input_current() || !native_save_current(task))return;
             native_save_prepare_progress(task); // Variants and replacement scratch are preowned before growth.
-            if(!task->source_directory.isEmpty()) {
+            if(!task->ordinary_current && !task->source_directory.isEmpty()) {
                 save_stage="SOURCE_CAPTURE";
                 task->source_reservation=native_room();
                 native_charge(); // Preown remaining joint capacity, including the original transport record.
@@ -6009,6 +6067,7 @@ struct AssistantViewModel::State {
             }
             save_stage = "CURRENTNESS";
             if(!native_save_current(task))throw std::runtime_error("Save retired before worker admission");
+            if(task->ordinary_current){native_start_ordinary_save(task);return;}
             if(show_actions) { native_start_visible_save(task); return; }
             if(!task->current_destination) { native_choose_save_destination(task); return; }
             save_stage = "WORKER_SUBMIT";
@@ -7865,8 +7924,8 @@ struct AssistantViewModel::State {
         Object params{{"cwd",generic_workspace},{"ephemeral",true},{"sandbox","read-only"},
             {"approvalPolicy","never"},{"approvalsReviewer","user"},{"modelProvider","openai"}};
         params["developerInstructions"] = QStringLiteral(
-            "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. It verifies reopen and adopts the saved path/rounded state on the same owner.  "
-            "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. Show actions uses the real Save control and fresh-name Save As form; do not silently change the mode or use a direct native fallback. Current-directory exchange retains the previous tree in Edi's local recovery receipt; report actual committed uncertainty honestly and never blindly repeat it. Local recovery paths are not model data. Native report generation remains unavailable; offer the existing Report page link instead. "
+            "You are Edi's native scientific assistant. Use only the actually registered native Edi tools for project inspection, parameter/free/affine and defined background edits and single/joint fits. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses actual selected CIF/data IDs and an explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Honor supplied scientific values; delegated starting choices must be reported as assumptions, not measured facts. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. Current owned saving calls the same ordinary app Save as the manual toolbar. Report actual saved/committed/active/presentation_complete flags; reopened=false supplies no separate reopen witness. Fresh Save As retains its verified export/adoption.  "
+            "Edi owns local input reads, scientific operations and native project persistence. The runtime has no Edi-granted writable folder; use registered operations or the existing human controls, never a model filesystem writer. When creation/refinement is requested, call save_project before the final result unless the user said not to save: omit destination for its genuine already-owned directory (ignore any unused fresh name), otherwise request a fresh basename and wait for the original one-operation Save As destination choice. Preserve existing destinations and report actual committed/reopened/active/presentation_complete facts; no duplicate permission or plan prompt. Fresh Save As uses the original native chooser once for that operation; current owned saving needs no picker or folder grant. For current owned saving both modes call the same ordinary Session Save; Show actions gives only the existing visual pointer/click cue at Save, without a dispatched click or custom Save intent. An already-unmodified disabled Save button does not refuse that ordinary call. Fresh Save As retains the genuine Save control and original fresh-name form; do not change modes. Report actual ordinary saved/committed/current-owner facts without claiming separate reopen; never blindly repeat uncertain saving. No separate assistant export/recovery tree is created for current Save. Native report generation remains unavailable; offer the existing Report page link instead. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
             "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission, then use the original exposed controls in request order. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions use the genuine reset-filters control, the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible line-segment background flags use the existing Free-column header only when the displayed eligible set equals the exact requested original members and all requested flags agree; other subsets/categories use their row checkboxes. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs, never row indices; add/update supply finite measured-domain position, intensity and free, while remove omits all three. When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, ID, position, intensity, parameter-menu free and Remove controls. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
@@ -11012,6 +11071,10 @@ AssistantViewModel::AttachmentClear AssistantViewModel::drainAttachmentClear() n
     state_->attachment_clear_requested = false;
     state_->attachment_clear_draining = false;
     return discarded ? AttachmentClear::Discarded : AttachmentClear::Failed;
+}
+bool AssistantViewModel::ordinarySaveNotification(ProjectViewModel* target) const noexcept {
+    return state_ && target && state_->project==target && state_->own_edit &&
+        state_->own_edit->notification_only && state_->applying_own_edit();
 }
 bool AssistantViewModel::resultSettledReady() const {
     if (state_->attachment_clear_requested || state_->attachment_clear_draining) return false;

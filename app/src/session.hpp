@@ -7,6 +7,7 @@
 #include <QVariantMap>
 #include "edi/calculation.hpp"
 #include <optional>
+#include <cstdint>
 #include <QString>
 #include <QTemporaryDir>
 #include <QUrl>
@@ -189,6 +190,7 @@ class Session : public QObject {
                         bool managedResult = false, std::shared_ptr<ImmutableAssistantResult> result = {},
                         std::optional<edi::WorkStamps> resultStamps = {}, bool nativePrepared = false, bool* nativeCommitted = nullptr, quint64* committedReplacement = nullptr);
     friend class AssistantViewModel;
+    std::uint64_t assistant_save_origin_=0;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool emptyAssistantOwner(quint64 epoch) const noexcept;
     void retireAssistantIntent() noexcept;

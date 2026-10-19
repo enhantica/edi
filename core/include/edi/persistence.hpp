@@ -45,15 +45,6 @@ std::vector<std::pair<std::string,std::string>> prepare_project_documents(
 // role before transfer. No file I/O or publication on the live project occurs.
 CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
     const PersistenceLimits&, std::size_t retained_limit, const work::CancelToken&);
-// The same calculation, additionally admitting the simultaneous strict-reload
-// image and result against retained_limit. Both counts come from the original
-// payload traversal, not the formatter's construction multiplier. Outputs are
-// assigned only on success; the five-argument API keeps its original contract.
-// A caller reloading the SAME immutable documents must preown reload_bytes
-// separately from new PreparedSavedValues metadata while that model is alive.
-CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
-    const PersistenceLimits&, std::size_t retained_limit, const work::CancelToken&,
-    std::size_t& result_bytes, std::size_t& reload_bytes);
 // Prepared against the actual live owner, before disk publication. This is the
 // existing save rounding contract (values/SUs and saved correlations), with all
 // row/source/path allocations moved before its nonthrowing landing.

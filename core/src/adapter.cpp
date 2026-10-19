@@ -3079,17 +3079,12 @@ std::vector<std::pair<std::string,std::string>> prepare_project_documents(const 
     return persistence_documents(source,limits,carried_record);
 }
 
-static CalculationResult calculate_saved_project_impl(Project& reopened, const WorkStamps& original,
-    const PersistenceLimits& limits, std::size_t retained_limit, const work::CancelToken& cancel,
-    std::size_t* result_bytes, std::size_t* reload_bytes) {
+CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
+    const PersistenceLimits& limits, std::size_t retained_limit, const work::CancelToken& cancel) {
     if(cancel.cancelled())throw std::invalid_argument("Saved-state calculation was cancelled");
     PersistenceAdmission construction(limits.construction_bytes);
     construction.bytes(admit_persistence(reopened, limits));
     construction.value(original.experiment_inputs); construction.value(original.structure_inputs); construction.value(original.relations);
-    // The owner-thread strict reload uses these same immutable documents and
-    // the same native loader. Keep its full payload separate from both result
-    // buffers and the subsequent prepared landing's new metadata.
-    const auto reload = reload_bytes ? admit_persistence(reopened, limits, true) : 0;
     // The copied original stamps can retain older/larger encodings. Admit their
     // actual payload, not only today's reloaded shape, before the copy below.
     PersistenceAdmission held(retained_limit, true);
@@ -3117,21 +3112,7 @@ static CalculationResult calculate_saved_project_impl(Project& reopened, const W
         held.category<CartnTransformCategory>(geometry->atom_sites_cartn_transform);
     }
     held.value(calculated.completed);
-    const auto result = held.used();
-    if (reload_bytes && reload > retained_limit - result)
-        throw std::length_error("Saved result and strict reload exceed their retained role");
-    if (result_bytes) *result_bytes = result;
-    if (reload_bytes) *reload_bytes = reload;
     return calculated;
-}
-CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
-    const PersistenceLimits& limits, std::size_t retained_limit, const work::CancelToken& cancel) {
-    return calculate_saved_project_impl(reopened, original, limits, retained_limit, cancel, nullptr, nullptr);
-}
-CalculationResult calculate_saved_project(Project& reopened, const WorkStamps& original,
-    const PersistenceLimits& limits, std::size_t retained_limit, const work::CancelToken& cancel,
-    std::size_t& result_bytes, std::size_t& reload_bytes) {
-    return calculate_saved_project_impl(reopened, original, limits, retained_limit, cancel, &result_bytes, &reload_bytes);
 }
 
 struct PreparedSavedValues::State {

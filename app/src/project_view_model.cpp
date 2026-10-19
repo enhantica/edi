@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <utility>
 #include "project_view_model.hpp"
 
 #include <QCoreApplication>
@@ -2407,7 +2408,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
         publishCalculating();
         if (!self || retired_) { result.message = applied_warning; return result; }
         edit_publication_failed_ = false;
-        emit projectEdited();
+        notifyProjectEdited();
         if (!self || retired_) { result.message = applied_warning; return result; }
         result.published = true;
         result.message.clear();
@@ -2424,7 +2425,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
             edit_publication_failed_ = true;
             result.message = applied_warning;
             try { setModified(true); } catch (...) { /* actual edit/Undo stay owned */ }
-            if (self && !retired_) try { emit projectEdited(); } catch (...) { /* fence remains authoritative */ }
+            if (self && !retired_) try { notifyProjectEdited(); } catch (...) { /* fence remains authoritative */ }
         } else {
             try { throw; }
             catch (const std::exception& error) {
@@ -2477,7 +2478,7 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool re
     try {
         preview_->apply_setting(change);
         applied = true;
-        emit projectEdited();
+        notifyProjectEdited();
         if (retired_) return {};
         if (scan_template_) edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
         setLastError({});
@@ -3031,7 +3032,15 @@ bool ProjectViewModel::presentNativeSaved(NativeSavedState& ready) {
     setLastError({});return !retired_ && edi::unchanged_since(*project_,saved_stamps);
 }
 
+void ProjectViewModel::notifyProjectEdited(std::uint64_t origin) {
+    const QPointer<ProjectViewModel> receiver(this);
+    const auto previous=project_edit_origin_;project_edit_origin_=origin;
+    const auto scope=qScopeGuard([receiver,previous]{if(receiver)receiver->project_edit_origin_=previous;});
+    emit projectEdited();
+}
+
 QString ProjectViewModel::saveTo(const QString& directory) {
+    const auto save_origin=std::exchange(assistant_save_origin_,0);
     const PublicationScope publication(*this);
     if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
@@ -3043,8 +3052,9 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
     // Saving may round/adopt values or partially advance files even if later readback refuses.
-    // Retire assistant authority before crossing that existing persistence boundary.
-    emit projectEdited();
+    // Retire manual authority as before; only this original Save's exact
+    // one-shot notification may be recognized as its own assistant effect.
+    notifyProjectEdited(save_origin);
     if (retired_) return tr("The save was retired before writing because the project owner changed");
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.

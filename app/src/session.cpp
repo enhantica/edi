@@ -278,6 +278,7 @@ bool Session::needsSaveAs() const {
 }
 
 bool Session::save() {
+    const auto save_origin=std::exchange(assistant_save_origin_,0);
     if (save_intent_ && save_intent_->native) {
         auto intent = std::move(save_intent_); // Consume before the real button action can reenter.
         const bool matches = !intent->fresh;
@@ -292,7 +293,10 @@ bool Session::save() {
     const auto replacement = replacement_generation_;
     const auto current = [&] { return receiver && original && project_ == original && replacement_generation_ == replacement; };
     QString error;
-    try { error = original->saveTo(original->path()); }
+    try {
+        original->assistant_save_origin_=save_origin;
+        error = original->saveTo(original->path());
+    }
     catch (...) { error = tr("Saving could not confirm its full result. Inspect the saved directory before repeating."); }
     const bool saved = error.isEmpty();
     if (!current()) return saved;
@@ -601,6 +605,9 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if (!current() || project_ != target) return false;
     if (project_ != nullptr) {
         connect(project_, &ProjectViewModel::projectEdited, this, [this] {
+            auto* original=qobject_cast<ProjectViewModel*>(sender());
+            if(original!=project_)return; // An old signal cannot retire a replacement owner.
+            if(assistant_->ordinarySaveNotification(original))return;
             if (fresh_result_) result_edited_ = true;
             retireAssistantIntent();
         });

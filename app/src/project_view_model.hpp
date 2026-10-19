@@ -456,6 +456,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     friend class Session;
     friend class FitViewModel;
     friend class AssistantViewModel;
+    // One-shot ordinary Save entry origin and stack-local emitted origin.
+    // Manual edits/Save carry zero, including nested and early-error callbacks.
+    std::uint64_t assistant_save_origin_=0, project_edit_origin_=0;
+    void notifyProjectEdited(std::uint64_t origin=0);
     struct WidgetParameterInput {
         enum class Field { Value, Free, FreeGroup } field;
         const edi::Parameter* parameter = nullptr;
