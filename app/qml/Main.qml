@@ -395,11 +395,10 @@ EaComponents.ApplicationWindow {
     EaElements.RemotePointer {
         id: assistantPointer
         objectName: "assistant.actionPointer"
-        readonly property int presentationSpeed: Session.assistant.showActions ? Session.assistant.actionSpeed : 1
-        moveDuration: Math.ceil(500 / presentationSpeed)
-        pressDuration: Math.ceil(100 / presentationSpeed)
-        clickRelaxation: Math.ceil(500 / presentationSpeed)
-        showHideDuration: Math.ceil(500 / presentationSpeed)
+        moveDuration: 500
+        pressDuration: 100
+        clickRelaxation: 500
+        showHideDuration: 500
         parent: Overlay.overlay.parent
         z: Overlay.overlay.z + 1
         enabled: false

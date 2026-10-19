@@ -1633,3 +1633,17 @@ Actual empty/no-current-member pages have no rows. Genuine group expansion,
 auto-collapse preference, selection, controls and all scientific methods remain
 unchanged. This repairs missing/misleading planning data, not every reported
 reopening/refusal or the separate operation-deadline issue.
+
+
+Owner supersession: text entry is immediate and the action-speed preference is
+removed. The original parameter/structure cue plus ordinary setter seam also
+owns alias/constraint declarations, background IDs/positions and compound
+experiment/exclusion/numeric fields. Existing prepared input, canonical member,
+consumed/applied/published result and ordinary Undo remain authoritative; equal
+values do not acquire a draft, cue or history record. The input helper edits
+only the actual form/staged/filter or searchable-popup draft as one bounded
+text replacement. The genuine offered-choice Return remains its selection
+commit; no synthetic accepted/activated or direct index assignment is added.
+Original pointer/navigation timings remain unscaled, as do scientific work,
+readiness, deadlines, Stop and Working animation. No separate text executor,
+model mutation through the helper, retry or permission/allowance is introduced.

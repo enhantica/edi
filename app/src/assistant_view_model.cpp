@@ -882,12 +882,6 @@ struct AssistantViewModel::State {
     bool archive_refused = false;
     using Limits = edi::assistant::Limits;
     bool show_actions = false, showing_actions = false;
-    int action_speed = 1;
-    QPointer<QObject> action_speed_menu;
-    QMetaObject::Connection action_speed_menu_destroyed;
-    int presentationDelay(int milliseconds=500) const noexcept {
-        return show_actions ? (milliseconds+action_speed-1)/action_speed : milliseconds;
-    }
     QPointer<QQuickWindow> action_window;
     std::unique_ptr<AssistantWidgetInput> widget_input;
     bool manual_gesture_current(const ManualControlGesture& gesture) const {
@@ -2234,7 +2228,7 @@ struct AssistantViewModel::State {
                 if(!widget_entry_current(run,entry))return;
                 widget_showing(true);
                 if (!widget_entry_owned(run, entry)) return;
-                QTimer::singleShot(presentationDelay(),&owner,[this,run,entry] {
+                QTimer::singleShot(500,&owner,[this,run,entry] {
                     if (!widget_entry_owned(run, entry)) return;
                     try { widget_click_tab(run); } catch(...) { if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error); }
                 });
@@ -2874,7 +2868,7 @@ struct AssistantViewModel::State {
                     if (!delivered || !group || group->property("collapsed").toBool()) {
                         widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine group click did not expand its controls") : message); return;
                     }
-                    QTimer::singleShot(presentationDelay(), &owner, [this, run, entry] {
+                    QTimer::singleShot(500, &owner, [this, run, entry] {
                         if (!widget_entry_owned(run, entry)) return;
                         try { widget_resume_revealed(run); }
                         catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
@@ -2900,7 +2894,7 @@ struct AssistantViewModel::State {
             run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
             callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
             if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return false;
-            QTimer::singleShot(presentationDelay(),&owner,std::move(next));return false;
+            QTimer::singleShot(500,&owner,std::move(next));return false;
         }
         // A visible viewport receives real bounded wheel input. Read-only
         // geometry/currentness determines direction; never assign contentY,
@@ -2925,7 +2919,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry, viewport, before] {
+                QTimer::singleShot(500, &owner, [this, run, entry, viewport, before] {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
                         if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
@@ -3184,7 +3178,7 @@ struct AssistantViewModel::State {
                     widget_input_finished(run,delivered,message);return;
                 }
                 if(!delivered || !widget_entry_current(run,entry)){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
-                QTimer::singleShot(presentationDelay(),&owner,[this,run,entry] {
+                QTimer::singleShot(500,&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
                     try{widget_free_group(run,true);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
                 });
@@ -3317,7 +3311,7 @@ struct AssistantViewModel::State {
         run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
         callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
         if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
-        QTimer::singleShot(presentationDelay(),&owner,std::move(next));
+        QTimer::singleShot(500,&owner,std::move(next));
     }
     void widget_filter_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
@@ -3343,7 +3337,7 @@ struct AssistantViewModel::State {
                 if(!delivered || !filter || !target || !widget_entry_current(run,entry) ||
                     filter->categories().indexOf(filter->categoryFilter())!=option ||
                     filter->categoryFilter()!=filter->categoryFor(run->parameter)) {widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
-                QTimer::singleShot(presentationDelay(),&owner,[this,run,entry] {
+                QTimer::singleShot(500,&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
                     try {widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
                 });
@@ -3388,7 +3382,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry] {
+                QTimer::singleShot(500, &owner, [this, run, entry] {
                     if (!widget_entry_owned(run, entry)) return;
                     try { widget_filter_parameter(run); }
                     catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
@@ -3436,7 +3430,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry, target] {
+                QTimer::singleShot(500, &owner, [this, run, entry, target] {
                     if (!widget_entry_owned(run, entry)) return;
                     try { widget_main_ready(run, target); }
                     catch (...) { if (widget_entry_owned(run, entry)) widget_refuse(run, widget_outcome_error); }
@@ -3610,7 +3604,7 @@ struct AssistantViewModel::State {
         run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
         callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
-        QTimer::singleShot(presentationDelay(),&owner,std::move(next));
+        QTimer::singleShot(500,&owner,std::move(next));
     }
     void widget_background_done(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) {
         if (!widget_owned(run)) return;
@@ -3639,7 +3633,7 @@ struct AssistantViewModel::State {
             run->background_step=run->background_step==4?6:run->background_step+1;
         }
         run->reveal_steps = 0;
-        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
+        QTimer::singleShot(500, &owner, [this, run] {
             try { widget_background_next(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         });
     }
@@ -3647,24 +3641,45 @@ struct AssistantViewModel::State {
                                    AssistantWidgetInput::Kind kind, const QString& text) {
         const QPointer<QQuickItem> original(target); const auto step = run->background_step;
         const bool parameter_input=kind==AssistantWidgetInput::Kind::Value || kind==AssistantWidgetInput::Kind::Free;
-        AssistantWidgetInput::Request request;request.kind=parameter_input?AssistantWidgetInput::Kind::FileLoadCue:kind;
-        request.target=target;if(!parameter_input)request.value=text;
+        const bool row_text=kind==AssistantWidgetInput::Kind::Text;
+        const bool ordinary_input=parameter_input || row_text;
+        AssistantWidgetInput::Request request;request.kind=ordinary_input?AssistantWidgetInput::Kind::FileLoadCue:kind;
+        request.target=target;if(!ordinary_input)request.value=text;
         auto captured_current=[this,run,original,step] {
             return original && widget_background_current(run) && run->background_step==step && widget_background_member_current(run);
         };
-        auto captured_prepareCommit=[this,run,parameter_input] {
-            if(!parameter_input)widget_commit_ready(run);
+        auto captured_prepareCommit=[this,run,ordinary_input] {
+            if(!ordinary_input)widget_commit_ready(run);
             return widget_current(run);
         };
-        auto captured_finishCommit=[this,run,parameter_input] {
-            if(parameter_input)return;
+        auto captured_finishCommit=[this,run,ordinary_input] {
+            if(ordinary_input)return;
             if(run->project){run->project->finishWidgetBackground(run->background_input);run->project->finishWidgetInput(run->input);}
             if(run->edit_scope && run->receiver){end_own_edit(run->edit_scope);run->edit_scope=0;}
         };
-        auto captured_completed=[this,run,parameter_input](bool delivered,const QString& message) {
+        auto captured_completed=[this,run,parameter_input,row_text,original,step](bool delivered,const QString& message) {
             if(!widget_owned(run))return;
             try {
                 if(delivered && parameter_input)widget_apply_parameter(run,false);
+                else if(delivered && row_text) {
+                    if(!original || !widget_background_current(run) || run->background_step!=step || !widget_background_member_current(run)) {widget_refuse(run,widget_outcome_error);return;}
+                    const auto receiver=run->receiver;
+                    const auto cleanup=qScopeGuard([this,run,receiver] {
+                        if(run->project)run->project->finishWidgetBackground(run->background_input);
+                        if(receiver && receiver->state_.get()==this && run->edit_scope){const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);}
+                    });
+                    widget_commit_ready(run);
+                    if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !original || !widget_background_current(run) || !widget_background_member_current(run))return;
+                    const auto* point=widget_background_point(run);
+                    const auto& rows=run->background_experiment->background;
+                    const auto at=std::find_if(rows.begin(),rows.end(),[&](const auto& row){return row.get()==point;});
+                    const QPointer<ExperimentViewModel> view(run->project->currentExperiment());
+                    if(!point || at==rows.end() || !view || view->experiment()!=run->background_experiment)throw std::runtime_error("The original background row retired");
+                    const auto index=static_cast<int>(std::distance(rows.begin(),at));
+                    if(step==1)view->background()->setId(index,QString::fromStdString(run->background_request.id));
+                    else if(step==2)view->background()->setPosition(index,run->background_request.position);
+                    else throw std::runtime_error("No original background text action is prepared");
+                }
                 if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
                 widget_background_done(run,delivered,message);
             }catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
@@ -3863,7 +3878,7 @@ struct AssistantViewModel::State {
         run->callback_bytes=std::max<quint64>(run->callback_bytes,2*sizeof(next));
         callbackRole.dismiss();disclosure_preparing_bytes-=2*sizeof(next);native_charge();
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
-        QTimer::singleShot(presentationDelay(),&owner,std::move(next));
+        QTimer::singleShot(500,&owner,std::move(next));
     }
     void widget_relation_done(const std::shared_ptr<NativeWidget>& run, bool delivered, const QString& message) {
         if (!widget_owned(run)) return;
@@ -3907,7 +3922,7 @@ struct AssistantViewModel::State {
         if (run->relation_field == (run->relation_constraint ? 4 : 3)) {
             ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr;
         }
-        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
+        QTimer::singleShot(500, &owner, [this, run] {
             try { widget_relation_step(run); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         });
     }
@@ -3949,9 +3964,6 @@ struct AssistantViewModel::State {
             name = QString("constraint.enabled.%1").arg(at);
             action.kind = Action::Kind::ConstraintEnabled; action.row = run->relation_key; action.enabled = row.value("enabled").toBool();
         }
-        auto* target = widget_relation_named(run, name);
-        if (!target && run->relation_field != 0) { widget_relation_scroll(run); return; }
-        if (!target || !widget_reveal_parameter(run, target)) return;
         const auto& core = *run->project->assistantProject();
         const bool unchanged = run->relation_field == 1 ? (run->relation_constraint ? core.constraints[at]->id.value() : core.aliases[at]->id.value()) == value.toStdString()
             : run->relation_field == 2 ? (run->relation_constraint ? core.constraints[at]->expression.value() : core.aliases[at]->parameter_unique_name.value()) == value.toStdString()
@@ -3961,6 +3973,9 @@ struct AssistantViewModel::State {
             if (run->relation_field == (run->relation_constraint ? 4 : 3)) { ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr; }
             widget_relation_step(run); return;
         }
+        auto* target = widget_relation_named(run, name);
+        if (!target && run->relation_field != 0) { widget_relation_scroll(run); return; }
+        if (!target || !widget_reveal_parameter(run, target)) return;
         if (!run->relation_constraint && run->relation_field == 2) {
             const auto options = target->property("model").toStringList();
             const int option = options.indexOf(value);
@@ -3971,18 +3986,46 @@ struct AssistantViewModel::State {
         run->relation_action = action;
         const QPointer<QQuickItem> original(target);
         AssistantWidgetInput::Request request;
-        request.kind = kind; request.target = target; request.value = value; request.option = run->relation_option;
-        request.current = [this, run, original] { return original && widget_relation_row_current(run); };
-        request.restoreCurrent = [run, original] { return run->receiver && run->project && original && original->window() == run->window; };
-        request.prepareCommit = [this, run] { widget_commit_ready(run); return widget_owned(run); };
-        request.finishCommit = [this, run] {
+        const bool ordinary_text=kind==AssistantWidgetInput::Kind::Text;
+        request.kind = ordinary_text?AssistantWidgetInput::Kind::FileLoadCue:kind; request.target = target; request.value = value; request.option = run->relation_option;
+        auto captured_current = [this, run, original] { return original && widget_relation_row_current(run); };
+        auto captured_restoreCurrent = [run, original] { return run->receiver && run->project && original && original->window() == run->window; };
+        auto captured_prepareCommit = [this, run, ordinary_text] { if(!ordinary_text)widget_commit_ready(run); return widget_owned(run); };
+        auto captured_finishCommit = [this, run, ordinary_text] {
+            if(ordinary_text)return;
             if (run->project) run->project->finishWidgetRelations(run->relation_input);
             if (run->edit_scope && run->receiver) { end_own_edit(run->edit_scope); run->edit_scope = 0; }
         };
-        request.completed = [this, run](bool delivered, const QString& message) {
+        auto captured_completed = [this, run, original, ordinary_text](bool delivered, const QString& message) {
             if (!widget_owned(run)) return;
-            try { widget_relation_done(run, delivered, message); } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
+            try {
+                if(delivered && ordinary_text) {
+                    if(!original || !widget_relation_row_current(run)){widget_refuse(run,widget_outcome_error);return;}
+                    const auto receiver=run->receiver;
+                    const auto cleanup=qScopeGuard([this,run,receiver] {
+                        if(run->project)run->project->finishWidgetRelations(run->relation_input);
+                        if(receiver && receiver->state_.get()==this && run->edit_scope){const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);}
+                    });
+                    widget_commit_ready(run);
+                    if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !original || !widget_relation_row_current(run))return;
+                    const auto at=run->relation_base+run->relation_row;
+                    if(at<0 || at>std::numeric_limits<int>::max())throw std::runtime_error("The original relation row is unavailable");
+                    const auto index=static_cast<int>(at);
+                    const auto prepared=run->relation_input;
+                    const auto& action=prepared->expected;
+                    if(run->relation_constraint)run->project->analysis()->constraints()->setText(index,run->relation_field==1?QStringLiteral("id"):QStringLiteral("expression"),action.text);
+                    else run->project->analysis()->aliases()->setText(index,QStringLiteral("id"),action.text);
+                }
+                if(run->receiver && run->receiver->state_.get()==this && widget_owned(run))widget_relation_done(run,delivered,message);
+            } catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         };
+        constexpr quint64 callbacks=sizeof(captured_current)+sizeof(captured_restoreCurrent)+sizeof(captured_prepareCommit)+sizeof(captured_finishCommit)+sizeof(captured_completed);
+        auto callback_role=reserve_disclosure(2*callbacks);
+        request.current=std::move(captured_current);request.restoreCurrent=std::move(captured_restoreCurrent);
+        request.prepareCommit=std::move(captured_prepareCommit);request.finishCommit=std::move(captured_finishCommit);request.completed=std::move(captured_completed);
+        run->callback_bytes=std::max(run->callback_bytes,2*callbacks);
+        callback_role.dismiss();disclosure_preparing_bytes-=2*callbacks;native_charge();
+        if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         // A stop before prepareCommit has no receipt for this new control.
         run->relation_input.reset();
         widget_input->start(std::move(request));
@@ -4007,7 +4050,7 @@ struct AssistantViewModel::State {
             if (!widget_owned(run)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(presentationDelay(), &owner, [this, run, target] {
+                QTimer::singleShot(500, &owner, [this, run, target] {
                     try {
                         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "extras") != target || !target->property("checked").toBool()) {
                             widget_refuse(run, QObject::tr("The genuine Extra click did not select its original sidebar")); return;
@@ -4033,7 +4076,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_owned(run, entry)) return;
             try {
                 if (!delivered) { widget_refuse(run, message); return; }
-                QTimer::singleShot(presentationDelay(), &owner, [this, run, entry, target] {
+                QTimer::singleShot(500, &owner, [this, run, entry, target] {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
                         if (!widget_entry_current(run, entry)) { widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
@@ -4165,7 +4208,7 @@ struct AssistantViewModel::State {
         }
         widget_showing(true); // Reveals manual controls without changing the user's preference.
         if (!receiver || !widget_owned(run)) return;
-        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
+        QTimer::singleShot(500, &owner, [this, run] {
             try { widget_click_tab(run); }
             catch (...) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); }
         });
@@ -4529,13 +4572,13 @@ struct AssistantViewModel::State {
                 quint64 longest = Limits::id_bytes;
                 for (const auto& value : widget->relation_args.value("constraints").toArray())
                     longest = std::max(longest, static_cast<quint64>(value.toObject().value("expression").toString().size()));
-                // Only one real editor is paced: its growing text and restoration roles coexist.
+                // The immediate draft and original current declaration roles coexist.
                 raw(2 * longest * sizeof(QChar) + 4 * Limits::id_bytes * sizeof(QChar) + 2 * Limits::error_bytes * sizeof(QChar));
             }
             if (widget->tool == "save_project") {
                 raw(Session::assistantSaveIntentBytes() + 5 * sizeof(edi::work::Job));
                 value(widget->save_intent);
-                // Original suggested name, helper restoration, actual typed draft,
+                // Original suggested name, helper restoration, actual complete draft,
                 // QML field and captured-parent URL spellings coexist while visible.
                 raw(4 * static_cast<quint64>(widget->valueText.size()) * sizeof(QChar));
                 raw(32 * (Limits::id_bytes + edi::assistant::SelectedFileLimits::name_bytes + 64) * sizeof(QChar));
@@ -6461,6 +6504,10 @@ struct AssistantViewModel::State {
             }
         }
         if (!target) throw std::runtime_error("The original genuine Save control is unavailable");
+        if(run->save_step==1 && target->property("text").toString()==task->name) {
+            if(!widget_current(run) || !native_save_current(task))return;
+            ++run->save_step;native_save_widget_next(run);return;
+        }
         AssistantWidgetInput::Request input;
         input.kind = run->save_step == 1 ? AssistantWidgetInput::Kind::StagedText : AssistantWidgetInput::Kind::Navigate;
         input.target = target; input.value = run->save_step == 1 ? task->name : QString();
@@ -6481,7 +6528,7 @@ struct AssistantViewModel::State {
                 if (step == 1 && field->property("text").toString()!=task->name)
                     throw std::runtime_error("The actual folder name differs from the original request");
                 ++run->save_step;
-                QTimer::singleShot(presentationDelay(),&owner,[this,run] {
+                QTimer::singleShot(500,&owner,[this,run] {
                     try { native_save_widget_next(run); }
                     catch (...) { if (widget_owned(run)) widget_refuse(run,widget_outcome_error); }
                 });
@@ -6550,7 +6597,7 @@ struct AssistantViewModel::State {
             }
             widget_showing(true);
             if (!receiver || !widget_owned(run)) return;
-            QTimer::singleShot(presentationDelay(),&owner,[this,run] {
+            QTimer::singleShot(500,&owner,[this,run] {
                 try {native_save_widget_next(run);}catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
             });
         } catch (...) {
@@ -7864,7 +7911,7 @@ struct AssistantViewModel::State {
         native_refresh(*native_call); // Only this genuinely applied original editor advances its stamps.
         if (!receiver || !create_widget_current(run)) return;
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
-        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
+        QTimer::singleShot(500, &owner, [this, run] {
             if (!create_widget_current(run)) return;
             try { create_widget_next(run); }
             catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "file-next-catch"); }
@@ -8059,7 +8106,7 @@ struct AssistantViewModel::State {
         if (run->completed_steps) { native_call->may_have_written = true; native_refresh(*native_call); }
         if (!receiver || !create_widget_current(run)) return;
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
-        QTimer::singleShot(presentationDelay(), &owner, [this, run] {
+        QTimer::singleShot(500, &owner, [this, run] {
             if (!create_widget_current(run)) return;
             try { create_widget_next(run); } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, "advance-next-catch"); }
         });
@@ -8161,28 +8208,70 @@ struct AssistantViewModel::State {
             create_widget_refuse(run,widget_outcome_error,false,"reveal-completion");return true;
         }
         // This replaces the original reveal completion timer; no new pacing or owner.
-        QTimer::singleShot(presentationDelay(),&owner,[this,run] {
+        QTimer::singleShot(500,&owner,[this,run] {
             if(!create_widget_current(run))return;
             try{create_widget_next(run);}catch(...){if(create_widget_owned(run))create_widget_refuse(run,widget_outcome_error,false,"reveal-next-catch");}
         });return true;
     }
+    static auto create_text_action(const edi::ExperimentBase* experiment, const NativeCreateWidget::Input& step)
+            ->std::optional<ProjectEditor::CreationAction> {
+        using Action=ProjectEditor::CreationAction;
+        if (!experiment) return std::nullopt;
+        if (step.target.startsWith(QLatin1StringView("experiments.name.")))
+            return Action{Action::Kind::ExperimentName,experiment,{},step.text};
+        if (step.target.startsWith(QLatin1StringView("excludedRegion.start.")) || step.target.startsWith(QLatin1StringView("excludedRegion.end."))) {
+            const auto index=QStringView(step.target).sliced(step.target.lastIndexOf('.')+1).toUInt();
+            if (index>=experiment->excluded_regions.size()) return std::nullopt;
+            return Action{step.target.startsWith(QLatin1StringView("excludedRegion.start."))?Action::Kind::ExclusionStart:Action::Kind::ExclusionEnd,
+                experiment->excluded_regions[index].get(),{},{},step.text.toDouble()};
+        }
+        return std::nullopt;
+    }
+    bool create_widget_prepare_control(const std::shared_ptr<NativeCreateWidget>& run,
+        const NativeCreateWidget::Input& step, const QPointer<QQuickItem>& target) {
+        if (!create_widget_current(run) || !target) return false;
+        if (!run->individual_tool.isEmpty()) {
+            if(!individual_member_current(run))return false;
+            if(step.target.startsWith("structures.row.") && target->property("structure").value<QObject*>()!=run->structure_view)return false;
+            if(step.target.startsWith("experiments.row.") && target->property("experiment").value<QObject*>()!=run->operation_view)return false;
+            if(step.target.startsWith("experimentType.") && run->project->currentExperiment()!=run->operation_view)return false;
+        }
+        if (step.target == "createProject.accept") { run->creating_project = true; return true; }
+        if (!run->project) return true;
+        auto* experiment = !run->individual_tool.isEmpty() ? run->operation_member : run->project->assistantProject()->experiments.empty() ? nullptr : run->project->assistantProject()->experiments[0].get();
+        std::optional<ProjectEditor::CreationAction> action;
+        using Action = ProjectEditor::CreationAction;
+        if (step.kind == AssistantWidgetInput::Kind::Text) {
+            action=create_text_action(experiment,step);
+            if (!action) return false;
+        }
+        else if (step.target == "experiments.create") action = Action{Action::Kind::ExperimentAppend};
+        else if (step.target == "experimentType.beamMode") action = Action{Action::Kind::ExperimentType, experiment, "beamMode", run->individual_tool.isEmpty()?QStringLiteral("constant wavelength"):run->arguments.value("token").toString()};
+        else if (step.target == "experimentType.radiationProbe") action = Action{Action::Kind::ExperimentType, experiment, "radiationProbe", run->individual_tool.isEmpty()?QStringLiteral("neutron"):run->arguments.value("token").toString()};
+        else if (step.target == "peak.type") action = Action{Action::Kind::PeakProfile, experiment, {}, step.text};
+        else if (step.target == "excludedRegions.append") action = Action{Action::Kind::ExclusionAppend, experiment};
+        if (action) {
+            const auto role=reserve_disclosure(sizeof(ProjectViewModel::WidgetCreationInput) + generic_size(action->field,Limits::context_bytes) + generic_size(action->text,Limits::context_bytes));
+            run->control_input = run->project->prepareWidgetCreation(*action);
+            run->control_input->bounded_result = !run->individual_tool.isEmpty();
+        }
+        else if (step.kind == AssistantWidgetInput::Kind::Value) {
+            run->control_parameter = qobject_cast<ParameterItem*>(target->property("item").value<QObject*>());
+            if (!run->control_parameter) return false;
+            run->parameter_input = run->project->prepareWidgetValue(*run->control_parameter->parameter(), step.text.toDouble());
+        } else return true;
+        native_charge();
+        if (!create_widget_current(run)) return false;
+        run->edit_scope = begin_own_edit(); native_call->may_have_written = true; return true;
+    }
+    void create_widget_finish_control(const std::shared_ptr<NativeCreateWidget>& run) {
+        if (run->project) { run->project->finishWidgetCreation(run->control_input); run->project->finishWidgetInput(run->parameter_input); }
+        run->creating_project = false;
+        if (run->edit_scope) { const auto scope = run->edit_scope; run->edit_scope = 0; if (run->receiver && run->receiver->state_.get() == this) end_own_edit(scope); }
+    }
     void create_widget_next(const std::shared_ptr<NativeCreateWidget>& run) {
         if (!create_widget_current(run) || !widget_input) { create_widget_refuse(run, widget_outcome_error, false, "next-current"); return; }
         // These captureless local predicates add no per-request callback owner.
-        static constexpr auto text_action=[](const edi::ExperimentBase* experiment, const NativeCreateWidget::Input& step)
-                ->std::optional<ProjectEditor::CreationAction> {
-            using Action=ProjectEditor::CreationAction;
-            if (!experiment) return std::nullopt;
-            if (step.target.startsWith(QLatin1StringView("experiments.name.")))
-                return Action{Action::Kind::ExperimentName,experiment,{},step.text};
-            if (step.target.startsWith(QLatin1StringView("excludedRegion.start.")) || step.target.startsWith(QLatin1StringView("excludedRegion.end."))) {
-                const auto index=QStringView(step.target).sliced(step.target.lastIndexOf('.')+1).toUInt();
-                if (index>=experiment->excluded_regions.size()) return std::nullopt;
-                return Action{step.target.startsWith(QLatin1StringView("excludedRegion.start."))?Action::Kind::ExclusionStart:Action::Kind::ExclusionEnd,
-                    experiment->excluded_regions[index].get(),{},{},step.text.toDouble()};
-            }
-            return std::nullopt;
-        };
         static constexpr auto text_matches=[](const edi::Project& model, const ProjectEditor::CreationAction& action) {
             using Action=ProjectEditor::CreationAction;
             // Compare membership before dereferencing a possibly retired original member.
@@ -8254,6 +8343,7 @@ struct AssistantViewModel::State {
             if (target->property("currentIndex").toInt() == option) { create_widget_advance(run); return; }
         }
         if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() == option) { create_widget_advance(run); return; }
+        if(step.kind==AssistantWidgetInput::Kind::FormText && target->property("text").toString()==step.text) {create_widget_advance(run);return;}
         if (step.kind == AssistantWidgetInput::Kind::Value) {
             auto* parameter = qobject_cast<ParameterItem*>(target->property("item").value<QObject*>());
             if (parameter && parameter->value() == step.text.toDouble()) { create_widget_advance(run); return; }
@@ -8262,59 +8352,59 @@ struct AssistantViewModel::State {
             if (!create_widget_current(run) || !run->project) throw std::runtime_error("The original text owner is unavailable");
             const auto* model=run->project->assistantProject();
             const auto* experiment=!run->individual_tool.isEmpty()?run->operation_member:model->experiments.empty()?nullptr:model->experiments[0].get();
-            const auto action=text_action(experiment,step);
+            const auto action=create_text_action(experiment,step);
             if (!action) throw std::runtime_error("The original text model action is unavailable");
             if (text_matches(*model,*action)) { create_widget_advance(run); return; }
         }
         if ((!widget_input->usableTarget(*target) || !widget_full_row_visible(target)) && !create_widget_reveal(run, target)) return;
-        AssistantWidgetInput::Request input; input.kind = step.kind; input.target = target; input.value = step.text; input.option = option;
-        input.current = [this, run] { return create_widget_current(run); };
-        input.restoreCurrent = [this, run] { return run->receiver && run->receiver->state_.get() == this && run->project && project == run->project && action_window == run->window; };
-        input.prepareCommit = [this, run, step, target = QPointer<QQuickItem>(target)] {
-            if (!create_widget_current(run) || !target) return false;
-            if (!run->individual_tool.isEmpty()) {
-                if(!individual_member_current(run))return false;
-                if(step.target.startsWith("structures.row.") && target->property("structure").value<QObject*>()!=run->structure_view)return false;
-                if(step.target.startsWith("experiments.row.") && target->property("experiment").value<QObject*>()!=run->operation_view)return false;
-                if(step.target.startsWith("experimentType.") && run->project->currentExperiment()!=run->operation_view)return false;
-            }
-            if (step.target == "createProject.accept") { run->creating_project = true; return true; }
-            if (!run->project) return true;
-            auto* experiment = !run->individual_tool.isEmpty() ? run->operation_member : run->project->assistantProject()->experiments.empty() ? nullptr : run->project->assistantProject()->experiments[0].get();
-            std::optional<ProjectEditor::CreationAction> action;
-            using Action = ProjectEditor::CreationAction;
-            if (step.kind == AssistantWidgetInput::Kind::Text) {
-                action=text_action(experiment,step);
-                if (!action) return false;
-            }
-            else if (step.target == "experiments.create") action = Action{Action::Kind::ExperimentAppend};
-            else if (step.target == "experimentType.beamMode") action = Action{Action::Kind::ExperimentType, experiment, "beamMode", run->individual_tool.isEmpty()?QStringLiteral("constant wavelength"):run->arguments.value("token").toString()};
-            else if (step.target == "experimentType.radiationProbe") action = Action{Action::Kind::ExperimentType, experiment, "radiationProbe", run->individual_tool.isEmpty()?QStringLiteral("neutron"):run->arguments.value("token").toString()};
-            else if (step.target == "peak.type") action = Action{Action::Kind::PeakProfile, experiment, {}, step.text};
-            else if (step.target == "excludedRegions.append") action = Action{Action::Kind::ExclusionAppend, experiment};
-            if (action) {
-                const auto role=reserve_disclosure(sizeof(ProjectViewModel::WidgetCreationInput) + generic_size(action->field,Limits::context_bytes) + generic_size(action->text,Limits::context_bytes));
-                run->control_input = run->project->prepareWidgetCreation(*action);
-                run->control_input->bounded_result = !run->individual_tool.isEmpty();
-            }
-            else if (step.kind == AssistantWidgetInput::Kind::Value) {
-                run->control_parameter = qobject_cast<ParameterItem*>(target->property("item").value<QObject*>());
-                if (!run->control_parameter) return false;
-                run->parameter_input = run->project->prepareWidgetValue(*run->control_parameter->parameter(), step.text.toDouble());
-            } else return true;
-            native_charge();
-            if (!create_widget_current(run)) return false;
-            run->edit_scope = begin_own_edit(); native_call->may_have_written = true; return true;
+        AssistantWidgetInput::Request input;
+        input.kind = step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value ? AssistantWidgetInput::Kind::FileLoadCue : step.kind;
+        input.target = target; input.value = step.text; input.option = option;
+        auto captured_current = [this, run] { return create_widget_current(run); };
+        auto captured_restoreCurrent = [this, run] { return run->receiver && run->receiver->state_.get() == this && run->project && project == run->project && action_window == run->window; };
+        auto captured_prepareCommit = [this,run,step,target] {
+            if(step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value)return true;
+            return create_widget_prepare_control(run,step,target);
         };
-        input.finishCommit = [this, run] {
-            if (run->project) { run->project->finishWidgetCreation(run->control_input); run->project->finishWidgetInput(run->parameter_input); }
-            run->creating_project = false;
-            if (run->edit_scope) { const auto scope = run->edit_scope; run->edit_scope = 0; if (run->receiver && run->receiver->state_.get() == this) end_own_edit(scope); }
+        auto captured_finishCommit = [this,run,step] {
+            if(step.kind!=AssistantWidgetInput::Kind::Text && step.kind!=AssistantWidgetInput::Kind::Value)create_widget_finish_control(run);
         };
-        input.completed = [this, run, step, target = QPointer<QQuickItem>(target), option](bool delivered, const QString& message) {
+        auto captured_completed = [this, run, step, target = QPointer<QQuickItem>(target), option](bool delivered, const QString& message) {
             if (!create_widget_owned(run)) return;
             const char* branch="control.capture";
             try {
+                if(delivered && (step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value)) {
+                    const auto receiver=run->receiver;
+                    const auto cleanup=qScopeGuard([this,run,receiver] {
+                        if(receiver && receiver->state_.get()==this)create_widget_finish_control(run);
+                    });
+                    if(!target || !create_widget_prepare_control(run,step,target))throw std::runtime_error("The original text action was not prepared");
+                    if(!receiver || receiver->state_.get()!=this || !target || !create_widget_current(run))return;
+                    if(step.kind==AssistantWidgetInput::Kind::Value) {
+                        if(!run->control_parameter)throw std::runtime_error("The original parameter retired");
+                        run->control_parameter->setValue(step.text.toDouble());
+                    } else {
+                        const auto prepared=run->control_input;
+                        const auto& action=prepared->expected;
+                        const QPointer<ExperimentViewModel> view(run->project->currentExperiment());
+                        if(!view)throw std::runtime_error("The original experiment retired");
+                        const auto* experiment=view->experiment();
+                        using Action=ProjectEditor::CreationAction;
+                        if(action.kind==Action::Kind::ExperimentName) {
+                            if(experiment!=action.row)throw std::runtime_error("The original experiment selection changed");
+                            view->setName(action.text);
+                        } else {
+                            const auto& rows=experiment->excluded_regions;
+                            const auto at=std::find_if(rows.begin(),rows.end(),[&](const auto& row){return row.get()==action.row;});
+                            if(at==rows.end())throw std::runtime_error("The original exclusion row retired");
+                            const auto index=static_cast<int>(std::distance(rows.begin(),at));
+                            if(action.kind==Action::Kind::ExclusionStart)view->excludedRegions()->setStart(index,action.number);
+                            else if(action.kind==Action::Kind::ExclusionEnd)view->excludedRegions()->setEnd(index,action.number);
+                            else throw std::runtime_error("No original text action is prepared");
+                        }
+                    }
+                    if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+                }
                 create_widget_capture_step(run);
                 branch="control.retain";
                 create_widget_retain(run);
@@ -8359,6 +8449,14 @@ struct AssistantViewModel::State {
                 create_widget_advance(run);
             } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, branch, int(delivered), int(bool(target))); }
         };
+        constexpr quint64 callbacks=2*(sizeof(captured_current)+sizeof(captured_restoreCurrent)+sizeof(captured_prepareCommit)+sizeof(captured_finishCommit)+sizeof(captured_completed));
+        const auto growth=callbacks>run->file_cue_roles?callbacks-run->file_cue_roles:0;
+        auto callback_role=reserve_disclosure(growth);
+        input.current=std::move(captured_current);input.restoreCurrent=std::move(captured_restoreCurrent);
+        input.prepareCommit=std::move(captured_prepareCommit);input.finishCommit=std::move(captured_finishCommit);input.completed=std::move(captured_completed);
+        run->file_cue_roles=std::max(run->file_cue_roles,callbacks);
+        callback_role.dismiss();disclosure_preparing_bytes-=growth;native_charge();
+        if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_current(run) || !widget_input)return;
         widget_input->start(std::move(input));
     }
     void native_start_visible_creation(const QJsonValue& rpc, const QString& id, const QString& purpose, const Object& original, const Object& args) {
@@ -9204,7 +9302,7 @@ struct AssistantViewModel::State {
             "When edit_experiment is offered, use its code-owned options for one ordinary profile or exclusion-row operation on the actual experiment ID. A profile change can engage/drop optional settings; inspect actual values afterward. Append exclusions with ordinary generated IDs/default bounds, then set the requested literal bounds or explicitly remove an actual row. Both modes use the same app methods and Undo; ON adds only original navigation/reveal/visual cues. Equal canonical values skip setter/cue/history; unavailable exact targets or uncertain publication refuse honestly. No absorption, weighting, links, calibration or conversion is implied by this action. "
             "For an existing partial project, use individual load_structure, create_experiment, set_experiment_type only for a needed enabled axis, and load_data with already admitted file IDs and actual current datasets IDs. Inspect first, preserve existing structures/metadata/composition and explicit scientific values, create only the missing member, and use the returned replaced/renamed member ID for subsequent calls. load_data refuses already measured targets. Each action retains its normal Undo; never retry uncertain writes, recreate a partial project or ask to resend already admitted data. Fixed action_error/action_field values identify actual missing/unsupported information; ask a focused question rather than invent a path or type. These same logical actions use original controls in Show actions. "
             "inspect_project and diagnostics report native_state.calculations for each actual dataset. Pattern availability, published stale/error and last-published calculated point count are original app facts: idle is not success, an old stale error is not a new failure, and nonempty calculated points do not prove viewport/legend visibility or a current successful fit. Read calculation_error_present and bounded calculation_error (complete=false means omitted text) before proposing a scientific correction; do not silently clamp axes/change zero/wavelength or reinterpret exclusions to conceal a refusal. "
-            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission. Show actions navigates the original exposed controls in request order and gives visual pointer/click cues, then calls the same ordinary app parameter/free methods used by manual controls, without scientific mouse/key input or a separate draft/focus mutation protocol. Actual consumed/applied/published receipts and current canonical members must confirm each change. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions reuse a suitable live category, use the genuine reset-filters control only for conflicting name/variability filters, and use the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible flags in any category open the existing Free-column menu only when the displayed eligible set equals the exact requested original members and all requested flags agree; cue its Free/Fixed choice and invoke its ordinary action once. Other subsets cue their actual row checkboxes then call the ordinary per-row free setter. A narrower name/variability filter is conflicting even when it happens to expose the first requested row; clear it through the original reset control before category presentation. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
+            "inspect_project reports native_state.show_actions. When true, exposed parameter/free arrays, add_relations through the existing Analysis Extra alias/constraint rows, and an available single/joint fit use real visible widget actions. The required visible creation workflow is Project Create/Open, Structure load/create/edit, Experiment create/load/edit and Analysis groups. create_cwl_project uses these original controls: Create only when there is no project, the original Structure Load, Experiment Create/type before data, original data/instrument/profile/phase/background/exclusion controls, then Analysis Main. An existing scientifically empty project keeps its original owner, path and metadata. The duplicate import window is removed. Assistant file loading uses the visual-only Load cue and the validated admitted original input; manual Load retains its system dialog. No assistant picker input, synthetic accepted signal or new path grant is used. Parameter/free arrays first receive the complete native validation and initial route admission. Show actions navigates the original exposed controls in request order and gives visual pointer/click cues, then calls the same ordinary app parameter/free methods used by manual controls, without scientific mouse/key input or a separate draft/focus mutation protocol. Actual consumed/applied/published receipts and current canonical members must confirm each change. Each already-equal entry settles before navigation, filter input or Undo. For multi-entry visible calls, steps_completed is the settled requested-entry prefix including no-ops, not an Undo count; atomic is false. An applied but unconfirmed current entry does not advance that prefix. Unmapped controls refuse before the first scientific input; later genuine refusal, Stop or a conflicting manual action preserves the actual partial edits. Only the AI Stop requests interruption of the official turn; ordinary input or app switching does not. A stale operation refuses with its actual partial facts. After a manual scientific edit, inspect_project must return fresh state before another write; never retry an uncertain write automatically. Never retry an uncertain entry or silently change mode. Normal mode follows the existing editor page and Main sidebar for current parameter/free/fit actions, without pointer/typing delays. Create related aliases together in one add_relations request immediately before their relation/use. Visible relation actions select Analysis Extra only if needed, finish all requested Aliases before the Constraints rows and activate each intended constraint with its real toggle. Text declarations cue their exact controls and use the same ordinary app setters once; form and searchable-choice drafts appear immediately, with the original offered-choice commit. Text entry is immediate; pointer and navigation cues retain their ordinary pace. Each scientific control has its normal Undo; interruption can leave a partial sequence. Inspect the actual partial outcome before continuing, and never call the visible sequence atomic or claim one Undo for it. Visible creation reports actual per-control complete/partial outcomes with separate ordinary Undo; it never claims an atomic GUI batch, fit or save. Structure and measurement file loads use already admitted original file IDs: Show actions moves the existing pointer and shows a click cue at Load without dispatching a mouse/key/clicked/file-dialog event, then uses the original validated native import and ordinary Undo. The original URL/physical/content proof must still match; missing or changed originals refuse without a temporary-file fallback. Measurement parsing retains only an internal approved-byte SDK reader stage; it is never selected or presented as a replacement original file. Manual Load retains its system dialog. Inspect any actual partial state before continuing. Other visible parameter/free/fit actions select the actual Main tab; Analysis parameter actions reuse a suitable live category, use the genuine reset-filters control only for conflicting name/variability filters, and use the actual offered category selector and scrolling to the exact requested row (unit-cell rows stay unfiltered), never typing each full path. Requested eligible flags in any category open the existing Free-column menu only when the displayed eligible set equals the exact requested original members and all requested flags agree; cue its Free/Fixed choice and invoke its ordinary action once. Other subsets cue their actual row checkboxes then call the ordinary per-row free setter. A narrower name/variability filter is conflicting even when it happens to expose the first requested row; clear it through the original reset control before category presentation. Original manual filters/selection and stale-operation fences remain authoritative; the manual sidebar stays exposed across the complete running request instead of bouncing after each tool, and genuine manual takeover leaves it exposed. Assistant-origin fits retain actual results without opening a results modal automatically; use the existing Report page link or actual status results controls. "
             "When edit_background is offered, inspect the actual selected dataset and its complete background.anchors descriptors first. Use actual anchor IDs for update/remove, never row indices. Add/update supply finite measured-domain position, intensity and free, while remove omits all three. For new chosen points omit add id to retain the original app-generated ID; explicit custom IDs remain exact, and a successful point edit returns its actual background_id. Explicit name_from_positions takes only purpose, experiment and operation and invokes the original whole-table Ids from positions action once; inspect the actual resulting IDs before subsequent calls. Never infer naming from future adds or rename an explicitly supplied ID silently. When choosing a NEW measured line-segment background rather than following user-supplied anchors, start with three distinct finite anchor positions spanning the actual measured range, with explicit justified starting intensities and free flags. Preserve explicit user anchors/values, supplied observations and exclusions. Obtain the actual range/basis from available approved evidence or ask one focused missing-input question; never invent a measured value or describe factory defaults as measurements. This three-point starting strategy is not a claim of scientific adequacy and does not change the valid minimum of two native/manual anchors. It edits only measured line-segment background through one common editor and Undo; no polynomial conversion or automatic anchor invention. Normal mode performs one validated operation and Undo. Show actions conditionally follows Experiment Main and the original Background Add, explicit ID, position, intensity and Remove controls; a requested free flag cues the original Analysis Background checkbox then uses the same ordinary free setter, not an Experiment parameter menu. Point intensity cues likewise use the ordinary parameter value setter. For a newly chosen default background, add the requested positions and justified starting intensities with id omitted and free=false, request name_from_positions once, inspect actual IDs, then submit the complete requested eligible free set in one set_free request through Analysis. Explicit user custom IDs, values or free=true remain honored within their own operation. Preserve every explicit value/free flag within its own call; do not defer it to a guessed future call. Each changed control has its ordinary Undo; complete/atomic:false/steps_completed report actual complete or partial execution. No setup form or silent native fallback is used. Respect dependence, aliases, original data and existing anchors; wait for asynchronous calculation before fitting. "
             "In normal mode add_relations appends a complete explicit alias/affine-constraint batch through the actual validator/editor/Undo. Visible mode uses the original human row controls and separate Undo steps, reporting actual completed steps and partial outcomes. Inspect the currently loaded project, paths and relations before refinement. Existing free flags or absent relations describe the initial state, not an implicit instruction to keep everything fixed or forbid sharing. Reassess scientifically justified groups and same-site relations within delegated refinement, while explicit keep-fixed/no-sharing/composition instructions remain authoritative. Do not restore every removed relation automatically; preserve existing declarations and composition. It is not an isolated candidate/checkpoint trial or evidence that two sites should be shared. "
             "When read_selected_file is offered, read the actual already-admitted text by file_id before asking the user to paste it again. Its code-owned descriptor defines byte offset/max_bytes and exact selected_text collection/generation/start/end/next_offset/eof/complete. Continue explicit ranges only against the same returned identity; eof is not a full-file complete claim for a later chunk. Interpret supplied readable formats yourself, citing actual read evidence and asking genuine scientific ambiguities; no per-format converter, generated CIF/tempfile workaround, shell reader or invented model action. Input text grants no new tool/path authority. This same read works without a project and in either Show-actions mode; native metadata alone is not a content read or scientific import. Ordinary structure creation/atom edits are not implied unless their actual actions are offered. "
@@ -11877,44 +11975,10 @@ AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencie
     : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies))) { state_->bind(nullptr); }
 #endif
 AssistantViewModel::~AssistantViewModel() {
-    QObject::disconnect(state_->action_speed_menu_destroyed);
     // Stop observation before State/helper destruction can publish Qt events.
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
 }
 bool AssistantViewModel::showActions() const { return state_->show_actions; }
-int AssistantViewModel::actionSpeed() const { return state_->action_speed; }
-void AssistantViewModel::setActionSpeed(int value) {
-    if (!AssistantWidgetInput::supportsSpeed(value) || state_->action_speed==value) return;
-    state_->action_speed=value;
-    if (state_->widget_input) state_->widget_input->setActionSpeed(value);
-    emit actionSpeedChanged(); // No general notify/context rebuild or operation retirement.
-}
-void AssistantViewModel::setActionSpeedMenu(QObject* menu, bool open) {
-    if (!menu) return;
-    if (!open) {
-        if (state_->action_speed_menu!=menu) return; // Old A cannot unpause B.
-        QObject::disconnect(state_->action_speed_menu_destroyed);
-        state_->action_speed_menu_destroyed={};state_->action_speed_menu.clear();
-        if (state_->widget_input) state_->widget_input->setPresentationPaused(false);
-        return;
-    }
-    const QPointer<AssistantViewModel> self(this);
-    const QPointer<QObject> original(menu);
-    const auto window=state_->action_window;
-    const QPointer<QQuickItem> parent(menu->property("parent").value<QQuickItem*>());
-    if (!self || !original || state_->action_window!=window || !window || !parent || parent->window()!=window ||
-        original->objectName()!=QLatin1StringView("assistant.actionSpeed.menu")) return;
-    if (state_->action_speed_menu==original) return;
-    QObject::disconnect(state_->action_speed_menu_destroyed);
-    state_->action_speed_menu=original;
-    state_->action_speed_menu_destroyed=connect(original,&QObject::destroyed,this,[this] {
-        // QPointer clears before destroyed. A different live popup remains B.
-        if (state_->action_speed_menu) return;
-        state_->action_speed_menu_destroyed={};
-        if (state_->widget_input) state_->widget_input->setPresentationPaused(false);
-    });
-    if (state_->widget_input) state_->widget_input->setPresentationPaused(true);
-}
 bool AssistantViewModel::showingActions() const { return state_->showing_actions; }
 QQuickWindow* AssistantViewModel::actionWindow() const { return state_->action_window; }
 void AssistantViewModel::setShowActions(bool value) {
@@ -11946,12 +12010,9 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
         state_->native_widget || (state_->native_call && state_->native_call->record != record)) return;
 #endif
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
-    QObject::disconnect(state_->action_speed_menu_destroyed);
-    state_->action_speed_menu_destroyed={};state_->action_speed_menu.clear();
     state_->widget_input.reset(); state_->action_window = window;
     if (window) {
         state_->widget_input = std::make_unique<AssistantWidgetInput>(*window);
-        state_->widget_input->setActionSpeed(state_->action_speed);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerShown, this, &AssistantViewModel::actionPointerShown);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerMoved, this, &AssistantViewModel::actionPointerMoved);
         connect(state_->widget_input.get(), &AssistantWidgetInput::pointerPressed, this, &AssistantViewModel::actionPointerPressed);

@@ -2050,3 +2050,12 @@ the actual sidebar-logo circle extent, small proportional square, content fill
 and the top-rule outline above. This UI unit does not yet remove the C++ speed
 API/plumbing; the separate coherent immediate-text/no-speed unit retires those
 before the next complete build. No hidden speed-control UI remains here.
+
+
+The immediate-text successor now removes the remaining action-speed property,
+signal, menu ownership/pause hook, input-helper multiplier and RemotePointer
+scaling as well. No hidden speed state remains behind the removed selector.
+Pointer/click/navigation retain their original fixed presentation durations;
+form/search drafts appear in one replacement and scientific text uses the
+ordinary setter after its control cue. This completes the earlier UI-only
+removal without changing Working animation, Stop, scientific timing or deadlines.

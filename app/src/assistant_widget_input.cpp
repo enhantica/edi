@@ -4,9 +4,6 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QKeyEvent>
-#include <QKeySequence>
-#include <QDebug>
-#include <QLoggingCategory>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPointingDevice>
@@ -19,10 +16,9 @@
 #include <stdexcept>
 
 namespace edi_app {
-Q_DECLARE_LOGGING_CATEGORY(lcAssistantWidgetLookup)
 namespace {
 // Actual matched RemotePointer/RemoteController prior art, not blocking waits.
-constexpr int move_ms = 500, press_ms = 100, click_relaxation_ms = 500, character_ms = 100;
+constexpr int move_ms = 500, press_ms = 100, click_relaxation_ms = 500, navigation_ms = 100;
 }
 // One exact device/filter for the application lifetime, including old-window clones.
 // Qt's delayed press clone retains device()/timestamp(); no event pointer map,
@@ -201,18 +197,7 @@ AssistantWidgetInput::AssistantWidgetInput(QQuickWindow& window, QObject* parent
     application->installEventFilter(this);
 }
 void AssistantWidgetInput::pace(int milliseconds) {
-    paced_wait_ = true;
-    timer_.start((milliseconds + action_speed_ - 1) / action_speed_);
-}
-void AssistantWidgetInput::setActionSpeed(int speed) {
-    if (!supportsSpeed(speed) || speed==action_speed_) return;
-    const auto previous=action_speed_;
-    action_speed_=speed;
-    // Retain the same original step/request and only rescale time still owed.
-    // Inactive-window checks and zero-delay dispatch are not human pacing.
-    const auto remaining=timer_.remainingTime();
-    if (paced_wait_ && timer_.isActive() && remaining>0)
-        timer_.start(std::max(1,(remaining*previous+speed-1)/speed));
+    timer_.start(milliseconds); // Original pointer/choice pacing; text has no character clock.
 }
 AssistantWidgetInput::~AssistantWidgetInput() {
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
@@ -273,9 +258,11 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (!admitted || !request.target || !visibleCenter(*request.target, center, request.kind == Kind::Scroll))
         throw std::runtime_error("The genuine input control is not visible and current");
     if(!self || serial_!=originalSerial || request_)return 0;
-    const qsizetype text_limit = (request.kind == Kind::StagedText || request.kind == Kind::Text || request.kind == Kind::FormText)
+    if (request.kind == Kind::Value || request.kind == Kind::Text)
+        throw std::invalid_argument("Scientific text uses its ordinary app setter, not draft input");
+    const qsizetype text_limit = (request.kind == Kind::StagedText || request.kind == Kind::FormText)
         ? static_cast<qsizetype>(edi::assistant::Limits::context_bytes) : 256;
-    if (((request.kind == Kind::Value || request.kind == Kind::Text) || request.kind == Kind::ParameterFilter || request.kind == Kind::StagedText || request.kind == Kind::FormText) &&
+    if ((request.kind == Kind::ParameterFilter || request.kind == Kind::StagedText || request.kind == Kind::FormText) &&
         ((request.value.isEmpty() && request.kind != Kind::FormText) || request.value.size() > text_limit))
         throw std::runtime_error("The numeric input spelling is unavailable");
     if (request.kind == Kind::FormText &&
@@ -287,7 +274,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (manualDraftPresent()) throw std::runtime_error("Finish the current manual input first");
     if (request.kind == Kind::Scroll && request.scrollDirection != 1 && request.scrollDirection != -1)
         throw std::runtime_error("The bounded viewport scroll is unavailable");
-    original_text_ = ((request.kind == Kind::Value || request.kind == Kind::Text) || request.kind == Kind::StagedText) ? request.target->property("editText").toString() : QString{};
+    original_text_ = request.kind == Kind::StagedText ? request.target->property("editText").toString() : QString{};
     if (original_text_.size() > text_limit) throw std::runtime_error("The original numeric draft exceeds the visible input bound");
     if ((request.kind == Kind::Choose || request.kind == Kind::SearchChoice) && (request.option < 0 || request.option >= request.target->property("count").toInt() ||
         (request.kind == Kind::Choose && request.target->property("count").toInt() > static_cast<int>(edi::assistant::Limits::stream_items)) ||
@@ -300,7 +287,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     const auto original = request_;
     const auto id = ++serial_;
     choice_popup_.clear(); choice_content_.clear(); option_step_ = 0;
-    center_ = center; step_ = Step::Move; character_ = 0; draft_ = false; commit_prepared_ = false;
+    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false;
     emit activeChanged(true);
     if (!self) return id;
     const bool ready = self->current(id);
@@ -362,85 +349,38 @@ bool AssistantWidgetInput::choiceKeyboardOwned() const {
     return false;
 }
 bool AssistantWidgetInput::key(int code, Qt::KeyboardModifiers modifiers, const QString& text) {
-    const QPointer<AssistantWidgetInput> observed_self(this);
-    const auto observed_request = request_; const auto observed_serial = serial_;
-    const QPointer<QQuickWindow> observed_window(window_);
-    const QPointer<QQuickItem> observed_target(observed_request ? observed_request->target : QPointer<QQuickItem>{});
-    const bool observe = observed_request && observed_request->kind == Kind::Text && step_ == Step::Select;
-    int window_present = -1, window_active = -1, request_present = -1, target_present = -1;
-    int owned_before = -1, press_identity = -1, owned_after = -1, release_identity = -1, failure_line = 0;
-    // Finish the original event/injecting scope before a synchronous log handler can reenter.
     const bool delivered = [&]() {
-        if (!(window_present = bool(window_)) || !(window_active = window_->isActive()) ||
-            !(request_present = bool(request_)) || !(target_present = bool(request_->target)) ||
-            !(owned_before = choiceKeyboardOwned())) { failure_line = __LINE__; return false; }
+        if (!window_ || !window_->isActive() || !request_ || !request_->target || !choiceKeyboardOwned()) return false;
         const QPointer<AssistantWidgetInput> self(this);
         const QPointer<QQuickWindow> window(window_);
         const auto original = request_; const auto id = serial_;
         const bool old = injecting_; injecting_ = true;
         const auto release = qScopeGuard([self, old] { if (self) self->injecting_ = old; });
-        // Accepted numeric controls deliberately drop focus. Only the prepared
-        // final Return permits that transition; ordinary typing stays focus-bound.
+        // Only a prepared original menu/filter/choice commit may drop focus.
+        // Its balancing release stays on the original surviving control.
         const bool terminal = (code == Qt::Key_Escape && original->kind == Kind::DismissMenu && commit_prepared_) ||
             (code == Qt::Key_Return && commit_prepared_ &&
-            ((step_ == Step::Commit && ((original->kind == Kind::Value || original->kind == Kind::Text) || original->kind == Kind::ParameterFilter || original->kind == Kind::StagedText || original->kind == Kind::SearchChoice)) ||
+            ((step_ == Step::Commit && (original->kind == Kind::ParameterFilter || original->kind == Kind::SearchChoice)) ||
              (step_ == Step::ChooseCommit && original->kind == Kind::Choose)));
         const QPointer<QQuickItem> target(original->target);
         if (terminal && target->window() != window) return false;
         QKeyEvent press(QEvent::KeyPress, code, modifiers, text);
         QCoreApplication::sendEvent(window, &press);
-        if (!(press_identity = bool(self && window && serial_ == id && request_ == original && request_->target))) {
-            failure_line = __LINE__; return false;
-        }
+        if (!self || !window || serial_ != id || request_ != original || !request_->target) return false;
         if (terminal) {
             if (!target || request_->target != target || window_ != window || target->window() != window) return false;
-        } else if (!(owned_after = choiceKeyboardOwned())) { failure_line = __LINE__; return false; }
+        } else if (!choiceKeyboardOwned()) return false;
         QKeyEvent release_event(QEvent::KeyRelease, code, modifiers, text);
         // Never route an accepted Return's release into a newly focused editor.
         // The same original surviving item receives its real balancing key event.
         QCoreApplication::sendEvent(terminal ? static_cast<QObject*>(target.data()) : static_cast<QObject*>(window.data()), &release_event);
         const bool retained = self && window && serial_ == id && request_ == original &&
             (!terminal || (target && request_->target == target && window_ == window && target->window() == window));
-        release_identity = retained;
-        if (!retained) failure_line = __LINE__;
         return retained;
     }();
-    if (!delivered && observe && lcAssistantWidgetLookup().isDebugEnabled()) {
-        try {
-            qCDebug(lcAssistantWidgetLookup) << "text select failure" << "line" << failure_line << "binding" << 1
-                << "window" << window_present << "active" << window_active << "request" << request_present
-                << "target" << target_present << "owned_before" << owned_before << "press_identity" << press_identity
-                << "owned_after" << owned_after << "release_identity" << release_identity;
-        } catch (...) {} // Observation never replaces the original failed input.
-        if (!observed_self || observed_self->serial_ != observed_serial || observed_self->request_ != observed_request ||
-            observed_self->window_ != observed_window || observed_request->target != observed_target) return false;
-    }
     return delivered;
 }
-bool AssistantWidgetInput::selectAll() {
-    const QPointer<AssistantWidgetInput> observed_self(this);
-    const auto observed_request = request_; const auto observed_serial = serial_;
-    const QPointer<QQuickWindow> observed_window(window_);
-    const QPointer<QQuickItem> observed_target(observed_request ? observed_request->target : QPointer<QQuickItem>{});
-    const bool observe = observed_request && observed_request->kind == Kind::Text && step_ == Step::Select;
-    const auto bindings = QKeySequence::keyBindings(QKeySequence::SelectAll);
-    if (bindings.isEmpty()) {
-        if (observe && lcAssistantWidgetLookup().isDebugEnabled()) {
-            try {
-                qCDebug(lcAssistantWidgetLookup) << "text select failure" << "line" << __LINE__ << "binding" << 0
-                    << "window" << -1 << "active" << -1 << "request" << -1 << "target" << -1
-                    << "owned_before" << -1 << "press_identity" << -1 << "owned_after" << -1 << "release_identity" << -1;
-            } catch (...) {}
-            if (!observed_self || observed_self->serial_ != observed_serial || observed_self->request_ != observed_request ||
-                observed_self->window_ != observed_window || observed_request->target != observed_target) return false;
-        }
-        return false;
-    }
-    const auto combination = bindings.front()[0];
-    return key(combination.key(), combination.keyboardModifiers());
-}
 void AssistantWidgetInput::advance() noexcept {
-    paced_wait_ = false;
     const auto id = serial_;
     const auto request = request_; // Strong original callback/target scope for this tick.
     const QPointer<AssistantWidgetInput> self(this);
@@ -450,7 +390,7 @@ void AssistantWidgetInput::advance() noexcept {
         if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (serial_ == id && request_ == request) stop(false, tr("Visible action target changed or is unavailable"), true); return; }
         // Keep the same step and original authority while another application
         // is active. Never request activation or inject into an inactive window.
-        if (!window_->isActive() || (presentation_paused_ && !pressed_)) { timer_.start(character_ms); return; }
+        if (!window_->isActive()) { timer_.start(navigation_ms); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
             stop(false, interrupted_, false); return;
         }
@@ -498,7 +438,7 @@ void AssistantWidgetInput::advance() noexcept {
             step_ = Step::Release; pace(press_ms); return;
         case Step::Release:
             if (request->kind == Kind::FileLoadCue) { stop(true, {}, false); return; }
-            if ((request->kind != Kind::Value && request->kind != Kind::Text) && request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose && request->kind != Kind::SearchChoice && request->kind != Kind::FormText) {
+            if (request->kind != Kind::ParameterFilter && request->kind != Kind::StagedText && request->kind != Kind::Choose && request->kind != Kind::SearchChoice && request->kind != Kind::FormText) {
                 commit_prepared_ = true; // Exact finish is owed even if preparation reenters/cancels.
                 if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The native input could not be prepared"), false); return; }
                 if (!self) return;
@@ -515,16 +455,16 @@ void AssistantWidgetInput::advance() noexcept {
                 step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChooseHome;
                 pace(click_relaxation_ms); return;
             }
-            if ((request_->kind != Kind::Value && request_->kind != Kind::Text) && request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { stop(true, {}, false); return; }
+            if (request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { stop(true, {}, false); return; }
             step_ = Step::Select; pace(click_relaxation_ms); return;
         case Step::ChooseHome:
             if (!key(Qt::Key_Home)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
-            if (self && serial_ == id && request_ == request) { step_ = Step::ChooseDown; pace(character_ms); }
+            if (self && serial_ == id && request_ == request) { step_ = Step::ChooseDown; pace(navigation_ms); }
             return;
         case Step::ChooseDown:
             if (option_step_ < request->option) {
                 if (!key(Qt::Key_Down)) { if (self && serial_ == id && request_ == request) stop(false, tr("The original ComboBox lost keyboard ownership"), false); return; }
-                if (self && serial_ == id && request_ == request) { ++option_step_; pace(character_ms); }
+                if (self && serial_ == id && request_ == request) { ++option_step_; pace(navigation_ms); }
                 return;
             }
             step_ = Step::ChooseCommit; timer_.start(0); return;
@@ -537,49 +477,51 @@ void AssistantWidgetInput::advance() noexcept {
                 stop(request->kind == Kind::DismissMenu ? choice_popup_ && !choice_popup_->property("visible").toBool()
                     : request->target && request->target->property("currentIndex").toInt() == request->option, {}, false);
             return;
-        case Step::Select:
-            if (((request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The numeric control has no safe draft owner"), true); return; }
-            if (!self || serial_ != id || request_ != request) return;
-            if (request->kind == Kind::Text && (!request->target || !request->target->property("assistantEditing").toBool())) {
-                stop(false, tr("The original text draft did not admit assistant input"), false); return;
-            }
-            draft_ = (request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText;
-            if (!selectAll()) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input did not acquire focus"), true); return; }
-            if (!self || serial_ != id || request_ != request) return;
-            step_ = Step::Delete; pace(character_ms); return;
-        case Step::Delete:
-            // A filter's text is immediate presentation state, not a deferred
-            // scientific edit. Never restore/reflow it before a manual event.
-            draft_ = (request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText;
-            if (!key(Qt::Key_Backspace)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input changed focus"), true); return; }
-            if (!self || serial_ != id || request_ != request) return;
-            step_ = Step::Type; pace(character_ms); return;
-        case Step::Type:
-            if (character_ < request_->value.size()) {
-                const auto width = request_->value.at(character_).isHighSurrogate() &&
-                    character_ + 1 < request_->value.size() && request_->value.at(character_ + 1).isLowSurrogate() ? 2 : 1;
-                const QString character = request_->value.mid(character_, width); character_ += width;
-                const int code = (request->kind == Kind::StagedText || request->kind == Kind::FormText) && character == QStringLiteral("\n") ? Qt::Key_Return :
-                    (request->kind == Kind::StagedText || request->kind == Kind::FormText) && character == QStringLiteral("\t") ? Qt::Key_Tab : 0;
-                if (!key(code, Qt::NoModifier, character)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input changed focus"), true); return; }
+        case Step::Select: {
+            if (request->kind == Kind::StagedText) {
+                if (!QMetaObject::invokeMethod(request->target, "beginAssistantEdit", Qt::DirectConnection)) { stop(false, tr("The original staged draft has no safe owner"), false); return; }
                 if (!self || serial_ != id || request_ != request) return;
-                emit inputProgress();
-                if (!self || serial_ != id || request_ != request) return;
-                pace(character_ms); return;
+                if (!request->target || !request->target->property("assistantEditing").toBool()) { stop(false, tr("The original staged draft was not admitted"), false); return; }
+                draft_ = true;
             }
+            // Only genuine form/filter/staged drafts are edited here. Scientific
+            // declarations use the adapter's original ordinary model methods.
+            // Search stays on the actual popup editor; its Return handler below
+            // still validates and activates the offered choice exactly once.
+            const QPointer<QQuickItem> editor(request->kind == Kind::SearchChoice ? window_->activeFocusItem() : request->target.data());
+            if (!editor || (!editor->inherits("QQuickTextInput") && !editor->inherits("QQuickTextEdit")) ||
+                !choiceKeyboardOwned() || editor->property("inputMethodComposing").toBool()) { stop(false, tr("The original draft lost keyboard ownership"), true); return; }
+            if (!self || serial_ != id || request_ != request || !editor) return;
+            const auto old = injecting_; injecting_ = true;
+            {
+                const auto release = qScopeGuard([self,old] { if (self) self->injecting_ = old; });
+                if (editor->property("text").toString() != request->value && !editor->setProperty("text", request->value)) {
+                    if (self && serial_ == id && request_ == request) stop(false, tr("The original draft refused its text"), true);
+                    return;
+                }
+            }
+            if (!self || serial_ != id || request_ != request) return;
+            const bool valid = current(id);
+            if (!self || serial_ != id || request_ != request) return;
+            if (!valid || !editor || !choiceKeyboardOwned() ||
+                (request->kind == Kind::SearchChoice && window_->activeFocusItem() != editor) ||
+                editor->property("text").toString() != request->value) {
+                stop(false, tr("The original draft owner or text changed"), true); return;
+            }
+            emit inputProgress();
+            if (!self || serial_ != id || request_ != request) return;
             step_ = Step::Commit; timer_.start(0); return;
+        }
         case Step::Commit:
             commit_prepared_ = true;
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) stop(false, tr("The recorded native input could not be prepared"), true); return; }
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
               if (!valid) { if (serial_ == id && request_ == request) stop(false, tr("Visible action ownership changed"), true); return; } }
-            if (((request->kind == Kind::Value || request->kind == Kind::Text) || request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
+            if ((request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { stop(false, tr("The numeric control could not admit its final key"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
-            // Staged fields publish presentation text on each real key. They
-            // have no scientific blur/Return commit; an extra Return would
-            // append a newline to a genuine multiline expression. Only Apply
-            // below owns the prearmed scientific batch.
+            // Staged/form drafts have no scientific blur/Return commit. Their
+            // original Apply/Create/Save action remains the sole final commit.
             if (request->kind != Kind::StagedText && request->kind != Kind::FormText && !key(Qt::Key_Return)) { if (self && serial_ == id && request_ == request) stop(false, tr("The numeric input commit was not confirmed"), true); return; }
             if (self && serial_ == id && request_ == request) {
                 draft_ = false;
@@ -608,7 +550,6 @@ void AssistantWidgetInput::stop(bool delivered, const QString& diagnostic, bool 
     const QPointer<AssistantWidgetInput> self(this);
     const auto id = serial_;
     const auto original = request_;
-    paced_wait_ = false;
     try { timer_.stop(); } catch (...) { delivered = false; }
     if (mouse_owner_) mouse_owner_->retire(*this, mouse_stamp_);
     if (pressed_ || (mouse_owner_ && mouse_owner_->heldBy(*this, mouse_stamp_))) {
