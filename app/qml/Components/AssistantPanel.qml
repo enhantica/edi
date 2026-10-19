@@ -456,6 +456,7 @@ Popup {
                     footer: Column {
                         width: conversation.width
                         spacing: chatBody.spacing
+                        onPositioningComplete: conversation.followOutput()
                         AssistantPlan {
                             width: parent.width
                             assistant: panel.assistant
@@ -498,6 +499,7 @@ Popup {
                         readonly property string status: model.status
                         width: conversation.width
                         spacing: chatBody.spacing
+                        onPositioningComplete: conversation.followOutput()
                         ListView.onPooled: messageItem.resetDetails()
                         ListView.onReused: messageItem.resetDetails()
                         AssistantMessage {
@@ -595,7 +597,12 @@ Popup {
                         else positionViewAtBeginning();
                     }
                     function positionAtTail() {
-                        if (followsTail)
+                        if (!followsTail || moving || historyScrollBar.pressed || height <= 0)
+                            return;
+                        // Columns report after their child geometry settles;
+                        // resolve the view's pending layout before using its end.
+                        forceLayout();
+                        if (followsTail && !moving && !historyScrollBar.pressed)
                             positionViewAtEnd();
                     }
                     function followOutput() {
@@ -607,6 +614,7 @@ Popup {
                         followOutput();
                     }
                     onContentHeightChanged: followOutput()
+                    onHeightChanged: followOutput()
                     onContentYChanged: {
                         if (moving || historyScrollBar.pressed) {
                             jumpedUserId = "";
