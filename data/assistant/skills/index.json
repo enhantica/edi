@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.47",
+      "version": "1.5.48",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "2e2ef634773e6ab8d07e997fafa720a21c616b4fff6907fe8e2444f4ea8f0069",
+      "sha256": "77ad381956f0275b9f9be621b147257be3c58b3bb9285d28d1c2ed013a51109a",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.2.10",
+      "version": "1.2.11",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "2c88e737515b700db689e2fca22347617e4075d4eebb9fb32e79a1445ecd13aa",
+      "sha256": "66f9f67e52805edd1d170961e6ee9c3edccb9170e568687771db46afebc5c9d8",
       "requires": [],
       "capabilities": [
         "inspect_project",

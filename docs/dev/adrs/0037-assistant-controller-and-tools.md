@@ -1995,3 +1995,23 @@ with the existing unit gap; both remain scrollable above the prompt when space
 is limited. Connected avatar paint, non-connecting Stop behavior,
 notice ownership, connection offers and cancellation callbacks are unchanged.
 This is presentation only; it changes no authentication or operation lifetime.
+
+
+### Analysis group, fit and assessment loop
+
+The FIRST native FitReport exposes actual status/adoption/convergence, while
+ordinary FitViewModel/ProjectViewModel history restores a recorded fit separately
+from an unadopted refusal. Delegated refinement instructions therefore finish all
+Structure then all Experiment setup before Analysis, and release one justified
+group, fit and inspect the actual outcome before selecting the next group. Keep
+good stages; restore an adopted undesired fit only through an actually offered
+ordinary operation still targeting it, then inspect state/free flags. Never undo
+earlier science for a no-adoption refusal or replay an uncertain operation.
+
+The present native catalogue does not expose Undo. Guidance cannot create that
+capability: absent suitable restore, report the recovery limit without claiming
+rollback or continuing from a rejected state. Existing manual Undo remains the
+original app operation. No new optimizer, checkpoint controller, schema, physics,
+flag override or runtime stage guard is added. Fill-only scope, explicit caller
+arrays/constraints, anchors, currentness and ordinary history stay authoritative;
+instruction repair is not guaranteed model compliance or fit quality.
