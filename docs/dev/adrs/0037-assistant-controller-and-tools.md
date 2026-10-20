@@ -1906,3 +1906,29 @@ FullProf only cross-refers to that generic strategy, preserving scientific sourc
 mappings. Schemas/options, ordinary setters/Undo and identifiability guards stay
 authoritative. No local exception text, new fit-reason code or scientific control
 change is part of this guidance.
+
+
+### Closed actual-origin fit reason
+
+The first native fit completion may add only
+`fit_reason: "unanchored_cw_dilation"` from its original typed FitReport ERROR
+with no optimizer result/adoption/convergence. Unknown causes remain omitted.
+The existing closed Result walk requires the exact token and explicit
+error/adopted=false/converged=false facts before projection; status-derived code
+precedence is unchanged. No arbitrary refusal message, model name, path or
+exception text becomes model-facing. The existing run_fit description owns the
+conditional sample/calibration/joint anchor help; skills do not duplicate an
+error catalogue and no flags or retries change automatically.
+
+The original pre-work numeric envelope includes this field's fixed JSON cost
+and key/value owners from the existing Qt encoding measurement. Outcome,
+response/nested text, row and history ceilings retain their existing limits and
+simultaneous ownership. The original projection reservation also admits the
+positive difference between the fixed key/value owners and twice their JSON
+spelling before growth. No maximum-only string/object is allocated for the new
+field. The actual completion/encoder and original currentness/once/Stop fences
+remain authoritative. If fallible construction cannot retain the typed
+outcome, the existing honest uncertain fallback may omit the reason; a retained
+typed outcome is not erased after later presentation/storage failure. No extra
+reply or fabricated success is introduced. SDK/public-source/package proofs
+must advance genuinely; no future package identity is implied by this source.

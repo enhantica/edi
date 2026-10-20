@@ -44,6 +44,7 @@ struct Outcome {
     std::shared_ptr<Project> fitted;
     std::optional<FitResultBase> result;
     std::string refusal;
+    FitFailureReason reason = FitFailureReason::None;
     bool scan = false;
 };
 
@@ -132,7 +133,7 @@ struct FitJob::State {
         }
         self->ticket = 0;
         static_assert(std::is_nothrow_move_constructible_v<FitReport>);
-        FitReport report{FitStatus::ERROR, std::move(outcome.refusal), std::move(outcome.result)};
+        FitReport report{FitStatus::ERROR, std::move(outcome.refusal), std::move(outcome.result), outcome.reason};
         try {
         if (!report.result.has_value()) {
             report.status = FitStatus::ERROR;
@@ -325,6 +326,10 @@ bool FitJob::start(const Project* scan_template) {
                 outcome->result = fit_by_mode(snapshot->project, on_iteration, on_start, should_cancel, on_scan_start,
                                               on_file_complete, on_file_fitted);
                 outcome->fitted = std::shared_ptr<Project>(snapshot, &snapshot->project);
+            } catch (const UnanchoredCellDilationError& refusal) {
+                // Capture the allocation-free fact before best-effort local text.
+                outcome->reason = FitFailureReason::UnanchoredCwDilation;
+                try { outcome->refusal = refusal.what(); } catch (...) { outcome->refusal.clear(); }
             } catch (const std::exception& refusal) {
                 outcome->refusal = refusal.what();
             } catch (...) {

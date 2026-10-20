@@ -382,3 +382,19 @@ Ordinary profile Undo needs a prepared transfer at the FIRST inline peak/Optiona
 `capture_experiment_controls(Project&, ExperimentBase&, bool)` and original `Edit::restore_experiment_controls(Project&, ExperimentControlsUndo)` own only the requested peak or exclusion footprint. Restores prove original experiment membership and all non-replaced related parameter targets and build replacement rows/aliases/constraints/fit facts before the first commit. Peak parameter storage being replaced is excluded from unrelated scalar targets. Original app Undo receiver/replace-data identity retargeting and applied-before-publication failure handling remain; no assistant-only snapshot, broad model copy, allowance or second history manager is introduced.
 
 The same prepared transfer also owns FIRST forward `select_peak_profile`: validate its original token/mode, conform a narrow peak image, preown retirement cells and only then commit. Previously it assigned type before optional-slot engagement/reset could allocate. Forward and Undo now share this finite transfer; `conform_peak_slots` and general optional assignment APIs retain their original signatures/semantics.
+
+
+### Actual typed fit refusal survives its original completion
+
+The first single/joint adapter entries translate the SDK's actual
+`UnanchoredCellDilationError` into Edi's own invalid_argument subtype, preserving
+the local message and the public engine boundary (ADR-0003). The original
+FitJob catches only that type around its actual fit call and latches the scalar
+`FitFailureReason::UnanchoredCwDilation` before best-effort local text. Every
+Outcome and trailing FitReport reason defaults to None; an unknown failure is
+not classified from text, status or a previous completed borrow. The actual
+owned completion carries the scalar without another callback or engine path.
+Status, optimizer result/adoption, cancellation, supersession, manual error
+presentation, ordinary Undo and original report lifetime remain unchanged.
+This additive public API needs a genuine coordinated SDK package and consumer
+rebuild; old SDK bytes do not acquire the new type through a copied header.

@@ -5384,6 +5384,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
                                              experiment().instrument.setup_twotheta_bank.value, experiment().peak.cutoff_fwhm,
                                              std::move(free));
         return finish(provider);
+    } catch (const crysta::UnanchoredCellDilationError& error) {
+        throw UnanchoredCellDilationError(error.what());
     } catch (const std::invalid_argument&) {
         throw;  // already a clean, structured ValueError — surface as-is.
     } catch (const ValidationError&) {
@@ -6147,6 +6149,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             throw;
         }
         return finish(*joint);
+    } catch (const crysta::UnanchoredCellDilationError& error) {
+        throw UnanchoredCellDilationError(error.what());
     } catch (const std::invalid_argument&) {
         throw;  // already a clean, structured ValueError — surface as-is.
     } catch (const ValidationError&) {

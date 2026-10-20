@@ -4993,7 +4993,13 @@ struct AssistantViewModel::State {
         auto staged=[&]() -> Object {
         const auto bytes=outgoing::size(outcome,outgoing::Role::Result);
         if(bytes>Limits::stream_retained_bytes/2)throw std::length_error("Outgoing projection exceeds capacity");
-        const auto projected_role=reserve_disclosure(2*bytes);
+        // The exact new field's Qt owners can exceed twice its JSON spelling.
+        // Its shape has already passed size/validation; admit the difference
+        // before constructing the independent projected owner.
+        const auto fit_projection_extra=outcome.contains(QLatin1StringView("fit_reason")) &&
+            outgoing::fit_reason_owned_bytes>2*outgoing::fit_reason_json_bytes?
+            outgoing::fit_reason_owned_bytes-2*outgoing::fit_reason_json_bytes:0;
+        const auto projected_role=reserve_disclosure(2*bytes+fit_projection_extra);
         const auto projected=outgoing::project(outcome,outgoing::Role::Result,bytes);
         CodexJsonEncoding encoding;
         if(!codex_json_encoding(projected,Limits::context_bytes,encoding) || encoding.encoded!=bytes)
@@ -5421,6 +5427,9 @@ struct AssistantViewModel::State {
                 else result["objective_unavailable"] = true;
                 result["iterations"] = report.result->iterations;
             }
+            if (report.reason == edi::FitFailureReason::UnanchoredCwDilation && report.status == edi::FitStatus::ERROR &&
+                !report.result && !report.adopted())
+                result["fit_reason"] = QLatin1StringView(outgoing::unanchored_cw_dilation.data(),static_cast<qsizetype>(outgoing::unanchored_cw_dilation.size()));
             if (!report.refusal.empty()) result["message"] = bounded_error(QString::fromStdString(report.refusal));
             native_finish(presented && report.adopted() && report.status != edi::FitStatus::CANCELLED, result);
         } catch (...) {
@@ -5468,12 +5477,17 @@ struct AssistantViewModel::State {
         // bytes. False is the longest boolean; the fixed object covers every
         // extra result field/status, including already present common fields.
         const quint64 relation_extra=name=="edit_relation"?2*Limits::id_bytes+sizeof(R"({"relation_id":"","applied":false,"published":false,"removed":false,"uncertain":false,"steps_completed":1,"complete":false,"atomic":false,"action_error":"operation_superseded","action_field":"relation","status":"applied_unconfirmed"})")-1:0;
+        // This fixed field has no synthetic maximum owner. Bound both its JSON
+        // spelling and the key/value owners counted by codex_json_encoding;
+        // the latter counts one QJsonValue for each key and each value.
+        const quint64 fit_extra=name=="run_fit"?std::max(outgoing::fit_reason_json_bytes,outgoing::fit_reason_owned_bytes):0;
+        const auto result_extra=relation_extra+fit_extra;
         if(name=="edit_background")maximum["background_id"]=QString(static_cast<qsizetype>(Limits::id_bytes),QChar(1));
         if (!read_result.isEmpty()) maximum = read_result;
         maximum["request_retired"] = true;
         const auto maximum_bytes=generic_size(maximum,Limits::context_bytes);
-        if(relation_extra>Limits::context_bytes-maximum_bytes)throw std::length_error("Native relation maximum exceeds capacity");
-        record->outcome_bytes = std::max(maximum_bytes+relation_extra, generic_size(record->outcome, Limits::context_bytes));
+        if(result_extra>Limits::context_bytes-maximum_bytes)throw std::length_error("Native relation maximum exceeds capacity");
+        record->outcome_bytes = std::max(maximum_bytes+result_extra, generic_size(record->outcome, Limits::context_bytes));
         // Both maximum row and response are byte ceilings only. Canonical
         // updates recompute the same empty-row shell plus outcome_bytes;
         // no retained maximum payload is consumed as data or authority.
@@ -5483,8 +5497,8 @@ struct AssistantViewModel::State {
         auto responseMaximum=maximum;
         outgoing::complete_result_maximum(responseMaximum);
         const auto maximum_inner=generic_size(responseMaximum,Limits::context_bytes);
-        if(relation_extra>Limits::context_bytes-maximum_inner)throw std::length_error("Native relation maximum exceeds capacity");
-        const auto inner=maximum_inner+relation_extra;
+        if(result_extra>Limits::context_bytes-maximum_inner)throw std::length_error("Native relation maximum exceeds capacity");
+        const auto inner=maximum_inner+result_extra;
         const auto wrapper=generic_size(Object{{"success",false},{"contentItems",QJsonArray{Object{{"type","inputText"},{"text",""}}}}},Limits::message_bytes);
         // Every UTF-8 JSON byte needs at most two bytes inside another JSON
         // string. The empty wrapper already includes the string delimiters.

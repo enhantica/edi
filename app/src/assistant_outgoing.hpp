@@ -22,6 +22,12 @@ enum class Role { Context, Project, Structure, SpaceGroup, Site, Dataset, Axis,
     Parameter, Diagnostic, Selection, File, Skill, InputScopes, InputSource,
     NativeState, Calculation, InterfaceGroup, Result, Fit, ReaderFacts, SelectedText };
 inline constexpr std::string_view wire_schema="edi.assistant.outgoing/1";
+inline constexpr std::string_view unanchored_cw_dilation="unanchored_cw_dilation";
+// One fixed field: JSON punctuation/token and the existing encoding walk's
+// two QJsonValue owners plus UTF-16 key/value storage; no synthetic payload.
+inline constexpr quint64 fit_reason_json_bytes=sizeof(R"(,"fit_reason":"")")-1+unanchored_cw_dilation.size();
+inline constexpr quint64 fit_reason_owned_bytes=2*sizeof(QJsonValue)+
+    (sizeof("fit_reason")-1+unanchored_cw_dilation.size())*sizeof(QChar);
 enum class ResultCode { Refused, Unavailable, Cancelled, Uncertain, ResourceExhausted, InputChanged, PolicyMismatch, RequestStale, ContextUnready, OwnerUnavailable, PendingOperation, ItemMismatch, DuplicateCall, InvalidArguments, CalculationBusy, VisibleUnmapped, ProjectRequired, Unclassified };
 inline constexpr std::array<std::string_view,18> result_codes={
     "refused","unavailable","cancelled","uncertain","resource_exhausted","input_changed","policy_mismatch",
@@ -42,7 +48,7 @@ inline void complete_result_maximum(QJsonObject& maximum) {
     constexpr auto code=maximum_result_code();
     maximum.insert("code",QLatin1StringView(code.data(),static_cast<qsizetype>(code.size())));
 }
-enum class Type { Text, ActionError, ActionField, RecipeField, RecipeReason, Number, Boolean, Object, Array, TextArray };
+enum class Type { Text, FitReason, ActionError, ActionField, RecipeField, RecipeReason, Number, Boolean, Object, Array, TextArray };
 struct Field { const char* name; Type type; Role child=Role::Result; };
 inline const Field* fields(Role role, std::size_t& count) {
 #define ROWS(...) static constexpr Field rows[]={__VA_ARGS__}; count=std::size(rows); return rows
@@ -82,7 +88,7 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Fit: { ROWS(T("status"),B("converged"),N("reduced_chi_square"),N("iterations"),B("objective_unavailable")); }
     case Role::ReaderFacts: { ROWS(N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma")); }
     case Role::SelectedText: { ROWS(T("file_id"),T("collection_id"),T("generation"),T("encoding"),T("text"),N("total_bytes"),N("start"),N("end"),N("next_offset"),B("eof"),B("complete")); }
-    case Role::Result: { ROWS(T("phase_id"),T("relation_id"),T("peak_profile"),T("exclusion_id"),O("excluded_region",Region),T("atom_id"),B("removed"),O("selected_text",SelectedText),T("status"),T("background_id"),Field{"action_error",Type::ActionError},Field{"action_field",Type::ActionField},Field{"refusal_field",Type::RecipeField},Field{"refusal_reason",Type::RecipeReason},N("minimum_items"),N("maximum_items"),B("applied"),B("published"),B("adopted"),B("committed"),B("reopened"),B("active"),B("complete"),B("atomic"),B("presentation_complete"),B("request_retired"),B("calculation_pending"),B("completed_existing"),B("saved"),B("converged"),B("objective_unavailable"),B("uncertain"),N("steps_completed"),N("iterations"),N("reduced_chi_square"),N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma"),N("files_count"),N("supported_count"),N("unsupported_count"),N("discovered"),N("admitted"),N("ignored"),T("scope_id"),A("files",File),A("parameters",Parameter),A("diagnostics",Diagnostic),O("fit",Fit),O("reader_facts",ReaderFacts),O("project",Project),A("structures",Structure),A("datasets",Dataset),O("relations",Relations),O("selected_files",Selection),A("skills",Skill),Field{"native_actions",Type::TextArray},O("native_state",NativeState),O("input_scopes",InputScopes)); }
+    case Role::Result: { ROWS(T("phase_id"),T("relation_id"),T("peak_profile"),T("exclusion_id"),O("excluded_region",Region),T("atom_id"),B("removed"),O("selected_text",SelectedText),T("status"),Field{"fit_reason",Type::FitReason},T("background_id"),Field{"action_error",Type::ActionError},Field{"action_field",Type::ActionField},Field{"refusal_field",Type::RecipeField},Field{"refusal_reason",Type::RecipeReason},N("minimum_items"),N("maximum_items"),B("applied"),B("published"),B("adopted"),B("committed"),B("reopened"),B("active"),B("complete"),B("atomic"),B("presentation_complete"),B("request_retired"),B("calculation_pending"),B("completed_existing"),B("saved"),B("converged"),B("objective_unavailable"),B("uncertain"),N("steps_completed"),N("iterations"),N("reduced_chi_square"),N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma"),N("files_count"),N("supported_count"),N("unsupported_count"),N("discovered"),N("admitted"),N("ignored"),T("scope_id"),A("files",File),A("parameters",Parameter),A("diagnostics",Diagnostic),O("fit",Fit),O("reader_facts",ReaderFacts),O("project",Project),A("structures",Structure),A("datasets",Dataset),O("relations",Relations),O("selected_files",Selection),A("skills",Skill),Field{"native_actions",Type::TextArray},O("native_state",NativeState),O("input_scopes",InputScopes)); }
     }
 #undef ROWS
 #undef T
@@ -107,10 +113,15 @@ inline QJsonValue walk(const QJsonValue& value, Role role, quint64& size, bool m
 inline QJsonValue field_value(const QJsonValue& value,const Field& field,quint64& size,bool materialize) {
     if(value.isNull()) {
         if(field.type==Type::Object && field.child==Role::SelectedText)throw std::invalid_argument("Selected text is unavailable");
-        if(field.type==Type::RecipeField || field.type==Type::RecipeReason || field.type==Type::ActionError || field.type==Type::ActionField)throw std::invalid_argument("Outgoing recipe refusal is unavailable");
+        if(field.type==Type::FitReason || field.type==Type::RecipeField || field.type==Type::RecipeReason || field.type==Type::ActionError || field.type==Type::ActionField)throw std::invalid_argument("Outgoing recipe refusal is unavailable");
         add(size,4);return QJsonValue(QJsonValue::Null);
     }
     switch(field.type) {
+    case Type::FitReason: {
+        if(!value.isString() || value.toStringView()!=QLatin1StringView(unanchored_cw_dilation.data(),static_cast<qsizetype>(unanchored_cw_dilation.size())))
+            throw std::invalid_argument("Outgoing fit reason is not app-owned");
+        add(size,scalar_size(value));return materialize?value:QJsonValue();
+    }
     case Type::ActionError:case Type::ActionField: {
         if(!value.isString())throw std::invalid_argument("Outgoing action refusal has an invalid type");
         bool known=false;
@@ -158,6 +169,11 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
         throw std::invalid_argument("Outgoing recipe refusal is incomplete");
     if(role==Role::Result && source.contains("action_error")!=source.contains("action_field"))
         throw std::invalid_argument("Outgoing action refusal is incomplete");
+    if(role==Role::Result && source.contains("fit_reason")) {
+        const auto adopted=source.value("adopted"),converged=source.value("converged");
+        if(source.value("status")!="error" || !adopted.isBool() || adopted.toBool() || !converged.isBool() || converged.toBool())
+            throw std::invalid_argument("Outgoing fit reason contradicts the actual outcome");
+    }
     const bool top=role==Role::Context || role==Role::Result;
     if(top) {
         add(size,sizeof("\"schema\":")-1+wire_schema.size()+2);

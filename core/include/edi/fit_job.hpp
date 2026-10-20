@@ -26,6 +26,10 @@
 
 namespace edi {
 
+// Only an actual typed refusal from this job establishes a specific cause.
+// None also covers unknown failures; it is not an identifiability assertion.
+enum class FitFailureReason : std::uint8_t { None, UnanchoredCwDilation };
+
 // How a fit ended, on the owner thread.
 struct FitReport {
     // DONE, MAX_ITER, NO_STEP or CANCELLED: the live project holds the fit's result, a cancelled fit's
@@ -36,6 +40,8 @@ struct FitReport {
     std::string refusal;
     // What the fit returned; absent when it was refused.
     std::optional<FitResultBase> result;
+    // Trailing/default-none preserves existing aggregate leading meanings.
+    FitFailureReason reason = FitFailureReason::None;
     bool adopted() const noexcept {
         return status == FitStatus::DONE || status == FitStatus::MAX_ITER || status == FitStatus::NO_STEP ||
                status == FitStatus::CANCELLED;

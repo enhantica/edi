@@ -4053,6 +4053,13 @@ struct IterationRecord {
     std::optional<double> objective_value;
 };
 
+// ADR-0003: the adapter translates only the SDK's actual CW dilation guard.
+// No engine exception type or scientific classification crosses this boundary.
+class UnanchoredCellDilationError final : public std::invalid_argument {
+   public:
+    using std::invalid_argument::invalid_argument;
+};
+
 // Why a refinement stopped — deliberately NOT collapsed into `converged`, so a fit that exhausted
 // its iteration budget is distinguishable from one that could not take a step. Mirrors the engine's
 // REACHABLE set; diverged/singular are reserved there and never emitted, because nothing detects
