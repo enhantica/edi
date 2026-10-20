@@ -1161,7 +1161,7 @@ TestCase {
     function test_visible185_actual_native_manual_interaction_data() {
         return ["default-off", "analysis-value-free", "wavelength", "manual-override",
             "dirty-valid-value", "dirty-invalid-value", "dirty-valid-free", "dirty-invalid-free",
-            "dirty-valid-fit", "dirty-invalid-fit", "real-fit", "fit-stop", "close-owner",
+            "dirty-valid-fit", "dirty-invalid-fit", "real-fit", "fit-stop", "unanchored-off-fit", "unanchored-on-fit", "close-owner",
             "unsupported-values", "unsupported-free", "unsupported-relations", "normal-relations",
             "requested-cell-profile-flags"].map(tag => ({tag: tag}));
     }
@@ -1335,6 +1335,7 @@ TestCase {
             }
             return;
         }
+        const fitReason745=["unanchored-off-fit","unanchored-on-fit"].includes(data.tag);
         const fitCase = ["real-fit", "fit-stop"].includes(data.tag) || data.tag.endsWith("-fit");
         const fixture = fitCase ? "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project"
             : "tests/fixtures/e04_t1/editable-project";
@@ -1350,6 +1351,16 @@ TestCase {
             cell[0].free = true;
             project.currentExperiment.scale.free = true;
             project.analysis.maxIterations = 8; // Existing bounded real-fit prior art; no optimum oracle.
+            if(fitReason745){
+                const lengths=parameters.filter(parameter=>parameter.category==="cell" && ["length_a","length_b","length_c"].includes(parameter.name));
+                compare(lengths.length,3,"FIT745: independent orthorhombic fixture supplies the complete uniform cell-scale direction");
+                for(const parameter of lengths){verify(parameter.refinable && parameter.fittable);parameter.free=true;}
+                const waves=parameters.filter(parameter=>parameter.path==="experiment.instrument.setup_wavelength");
+                compare(waves.length,1);verify(waves[0].refinable && waves[0].fittable);waves[0].free=true;
+                const expected=lengths.concat([project.currentExperiment.scale,waves[0]]);
+                for(const parameter of parameters)compare(parameter.free,expected.includes(parameter),
+                    "FIT745: actual original independent free set has exactly all three lengths, wavelength and phase scale; no invented anchor");
+            }
         } else {
             // The independent editable fixture deliberately supplies only La in a complete-replacement
             // custom table. Restore the public built-in-table mode before this nonfit setup calculates.
@@ -1396,6 +1407,32 @@ TestCase {
         const originalWavelength = wavelength[0].value;
         const declarationRows = [Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)];
         const originalDeclarations = JSON.stringify(declarationRows);
+        const science745=fitReason745?RelationUndoObserver.state(project):null;
+        let manualRefusal745=null;const beforeRefusalUndo745=project.canUndo,beforeRefusalFitUndo745=project.fit.canUndo;
+        if(fitReason745){
+            visible185_page("analysis");Ui.click(this,Probe,window,"sideBar.tab.basic");Ui.expandGroup(this,Probe,window,"group.fitting");
+            const receiver=project.fit,receiverLife=lifetime313(receiver),projectLife=lifetime313(project);
+            let refusals=0,starts=0;
+            function manualRefused(message){++refusals;manualRefusal745=message;}
+            function manualStarted(){if(receiver.running)++starts;}
+            receiver.refused.connect(manualRefused);receiver.runningChanged.connect(manualStarted);
+            try{
+                Ui.click(this,Probe,window,"fitting.start");
+                tryVerify(()=>alive313(projectLife)&&Session.project===project&&alive313(receiverLife)&&!receiver.running&&refusals===1,10000,
+                    "FIT745: actual ordinary manual fit reaches one completed scientific refusal before assistant admission");
+                verify(starts>0 && receiver.outcome==="failed" && typeof manualRefusal745==="string"
+                    && manualRefusal745.includes("uniform lambda/cell dilation"),
+                    "FIT745: real manual Worker guard retains its original local scientific explanation");
+                compare(visible185_values(project),originalValues);compare(visible185_inputs(project),inputs);
+                compare(RelationUndoObserver.state(project),science745,"FIT747: failed manual fit preserves ALL native parameter values/free/PRESENT-SUs/dependence, including non-Analysis rows");
+                compare(JSON.stringify([Probe.rows(project.analysis.aliases),Probe.rows(project.analysis.constraints)]),originalDeclarations);
+                compare(project.canUndo,beforeRefusalUndo745);compare(receiver.canUndo,beforeRefusalFitUndo745);
+                const error=item("fit.error");tryCompare(error,"opened",true,2000);
+                compare(error.message,manualRefusal745,"FIT745: unchanged original manual dialog presents the actual local reason");
+                const ok=error.standardButton(Dialog.Ok);verify(ok!==null&&ok.enabled&&Ui.exposed(ok));mouseClick(ok);
+                tryCompare(error,"visible",false,2000);
+            }finally{disconnect313(receiverLife,receiver,"refused",manualRefused);disconnect313(receiverLife,receiver,"runningChanged",manualStarted);}
+        }
         compare(typeof assistant.showActions, "boolean", "VA SETUP: real production mode property is available");
         compare(assistant.showActions, false, "VA: every actual new Session mode starts OFF, not fabricated enabled");
         toggle();
@@ -1405,7 +1442,7 @@ TestCase {
         visible185_ready("disclosed");
         verify(!assistant.contextConsentRequired, "VA SETUP: genuine current disclosed context is approved");
         const accountRows = Probe.rows(assistant.models).map(row => row.id);
-        if (!["default-off", "normal-relations"].includes(data.tag)) {
+        if (!["default-off", "normal-relations", "unanchored-off-fit"].includes(data.tag)) {
             const checkbox = item("assistant.showActions");
             verify(checkbox.visible && checkbox.enabled, "VA SETUP: actual Show actions control is actionable");
             mouseClick(checkbox);
@@ -1491,6 +1528,8 @@ TestCase {
         function freeReceipt() { ++toggled; }
         function activeReceipt() { if (assistant.showingActions) ++activeStarts; }
         function fitReceipt() { if (alive313(fitLife313) && fitOwner313.running) ++fitStarted; }
+        let nativeRefusals745=0,nativeRefusal745=null;
+        function refusal745(message){if(fitReason745){++nativeRefusals745;nativeRefusal745=message;}}
         function finishedReceipt() {
             ++finished;
             console.log("VISIBLE185_FINISHED", data.tag, JSON.stringify({finished: finished,
@@ -1508,6 +1547,7 @@ TestCase {
         assistant.showingActionsChanged.connect(activeReceipt);
         project.fit.runningChanged.connect(fitReceipt);
         project.fit.finished.connect(finishedReceipt);
+        if(fitReason745)project.fit.refused.connect(refusal745);
         let draftField = null, draft = "", draftFocus = null, draftSelection = null, draftPage = -1;
         const call = "visible185-action-" + data.tag;
         const requestPreviousIds = new Set(Probe.rows(assistant.messages).map(row => row.id));
@@ -1973,6 +2013,28 @@ TestCase {
                     compare(JSON.stringify([Probe.rows(project.analysis.aliases), Probe.rows(project.analysis.constraints)]),
                         originalDeclarations, "VA: complete normal Undo restores original declarations");
                     compare(visible185_values(project), originalValues, "VA: complete relation Undo restores all original values/free/SU");
+                } else if(fitReason745){
+                    verify(fitStarted>0 && !project.fit.running && nativeRefusals745===1 && finished===0,
+                        "FIT745: ERROR is one real refused completion, not the success-only finished signal or idle inference");
+                    compare(project.fit.outcome,"failed");compare(nativeRefusal745,manualRefusal745,
+                        "FIT745: native delivery preserves the same ordinary local explanation without using text as a cause classifier");
+                    compare(outcome.status,"error");compare(outcome.adopted,false);compare(outcome.converged,false);
+                    compare(outcome.fit_reason,"unanchored_cw_dilation",
+                        "FIT745: normal real typed ERROR completion MUST retain its closed cause in both modes");
+                    compare(assistant.showActions,data.tag==="unanchored-on-fit");
+                    if(data.tag==="unanchored-on-fit")verify(activeStarts>0,"FIT745: ON uses the original real Main presentation path");
+                    else compare(activeStarts,0,"FIT745: OFF does not fabricate a presentation interval");
+                    compare(visible185_values(project),originalValues);compare(visible185_inputs(project),inputs);
+                    compare(RelationUndoObserver.state(project),science745,"FIT747: native typed ERROR adopts no native parameter or dependent metadata, not merely no Analysis-row change");
+                    compare(JSON.stringify([Probe.rows(project.analysis.aliases),Probe.rows(project.analysis.constraints)]),originalDeclarations);
+                    compare(project.canUndo,beforeRefusalUndo745);compare(project.fit.canUndo,beforeRefusalFitUndo745);
+                    const error=item("fit.error");
+                    if(error.visible){const ok=error.standardButton(Dialog.Ok);verify(ok!==null&&ok.enabled&&Ui.exposed(ok));mouseClick(ok);tryCompare(error,"visible",false,2000);}
+                    // Last lawful setup write was wavelength free=true. Two failed fits add NO history.
+                    Ui.click(this,Probe,window,"appBar.button.undo");
+                    compare(wavelength[0].free,false,"FIT745: next actual Undo is the original free-flag setup, not a phantom failed fit");
+                    const undone=JSON.parse(originalValues).map(row=>row[0]===wavelength[0].path?[row[0],row[1],false,row[3],row[4]]:row);
+                    compare(visible185_values(project),JSON.stringify(undone),"FIT745: ordinary Undo restores ONLY the original last setup flag; all scientific values/free/SUs stay exact");
                 } else if (fitCase) {
                     verify(fitStarted > 0 && finished === 1, "VA FIT: genuine worker admission and one actual completion precede result");
                     verify(!project.fit.running && project.fit.outcome.length > 0 && fitClicks > 0,
@@ -2051,6 +2113,7 @@ TestCase {
             if (alive313(fitLife313)) {
                 fitOwner313.runningChanged.disconnect(fitReceipt);
                 fitOwner313.finished.disconnect(finishedReceipt);
+                if(fitReason745)fitOwner313.refused.disconnect(refusal745);
                 if (Session.project === project && fitOwner313.running) fitOwner313.cancel();
             }
             if (assistant.canCancel) assistant.cancel();
@@ -10931,6 +10994,68 @@ TestCase {
             compare(maximum.code,"resource_exhausted","OUTGOING679: original longest code role is unchanged");
             verify(code.length<="resource_exhausted".length);
         }
+        // Reviewed691: a closed projection fact is not an engine-origin proof.
+        const plain745={status:"error",adopted:false,converged:false,
+            parameters:[{path:'structure.atom_sites[He"λ].adp_iso',value:4.123,free:false,uncertainty:.012}]};
+        const typed745=Object.assign({},plain745,{fit_reason:"unanchored_cw_dilation",message:privateText,
+            what:privateText,help:privateText,credential:privateText});
+        const base745=Outgoing679.encode(plain745),receipt745=Outgoing679.encode(typed745);
+        verify(typeof receipt745.wire==="string" && typeof base745.wire==="string",
+            "FIT747: actual first serializer admits the strict known typed ERROR shape");
+        const value745=JSON.parse(receipt745.wire),maximum745=JSON.parse(receipt745.maximum_wire);
+        compare(Object.keys(value745).sort().join(","),"adopted,code,converged,fit_reason,parameters,schema,status");
+        compare(value745.status,"error");compare(value745.code,"unavailable");
+        compare(value745.adopted,false);compare(value745.converged,false);compare(value745.fit_reason,"unanchored_cw_dilation");
+        compare(value745.parameters[0].path,plain745.parameters[0].path,"FIT747: actual escaping preserves the independently supplied public text, not private message fields");
+        verify(!receipt745.wire.includes("PRIVATE679") && !receipt745.maximum_wire.includes("PRIVATE679"));
+        verify(!Object.prototype.hasOwnProperty.call(JSON.parse(base745.wire),"fit_reason"),
+            "FIT747: unknown generic error omits the optional field rather than inventing a reason/null");
+        const literalCost745=',"fit_reason":"unanchored_cw_dilation"';
+        compare(receipt745.bytes-base745.bytes,literalCost745.length,"FIT747: fixed cause adds exact ASCII wire cost, no spare margin or cap donation");
+        compare(receipt745.bytes,receipt745.admitted);compare(receipt745.maximum_bytes,receipt745.maximum_admitted);
+        compare(maximum745.fit_reason,"unanchored_cw_dilation");compare(maximum745.code,"resource_exhausted");
+        verify(receipt745.bytes<=receipt745.maximum_bytes,"FIT747: actual original maximum accounts for the fixed field before nested response growth");
+        const response745=JSON.stringify({success:false,contentItems:[{type:"inputText",text:receipt745.wire}]}),
+            baseResponse745=JSON.stringify({success:false,contentItems:[{type:"inputText",text:base745.wire}]}),
+            maxResponse745=JSON.stringify({success:false,contentItems:[{type:"inputText",text:receipt745.maximum_wire}]});
+        compare(response745.length-baseResponse745.length,JSON.stringify(literalCost745).length-2,
+            "FIT747: original nested Result string accounts for every added quote escape and punctuation");
+        verify(response745.length<=maxResponse745.length,"FIT747: actual nested maximum dominates the real encoded known-cause reply");
+        for(const bad of [null,0,true,[],{},"unknown","UNANCHORED_CW_DILATION"]){
+            const refused=Outgoing679.encode(Object.assign({},plain745,{fit_reason:bad}));
+            compare(JSON.stringify(refused),JSON.stringify({kind:"invalid"}),"FIT747: malformed/null/unknown causes are exact validation refusals, never omission or arbitrary exception credit");
+        }
+        for(const status of ["done","max_iterations","no_step","completed","edited","no_change","refused","unavailable","cancelled","interrupted","superseded","unconfirmed","applied_unconfirmed"])
+            compare(JSON.stringify(Outgoing679.encode(Object.assign({},typed745,{status:status}))),JSON.stringify({kind:"invalid"}),
+                "FIT747: typed reason cannot attach to successful/cancelled/superseded/uncertain status");
+        for(const facts of [{adopted:true},{converged:true},{adopted:null},{converged:0}])
+            compare(JSON.stringify(Outgoing679.encode(Object.assign({},typed745,facts))),JSON.stringify({kind:"invalid"}),
+                "FIT747: known cause requires consistent explicit false adoption/convergence facts");
+        const missingAdopted745=Object.assign({},typed745),missingConverged745=Object.assign({},typed745);
+        delete missingAdopted745.adopted;delete missingConverged745.converged;
+        for(const source of [missingAdopted745,missingConverged745])
+            compare(JSON.stringify(Outgoing679.encode(source)),JSON.stringify({kind:"invalid"}),"FIT747: missing required consistency facts cannot create an app-owned diagnosis");
+        for(const status of ["done","cancelled","superseded","error"]){
+            const unknown=Outgoing679.encode({status:status,message:"uniform lambda/cell dilation",what:privateText});
+            verify(typeof unknown.wire==="string");
+            verify(!Object.prototype.hasOwnProperty.call(JSON.parse(unknown.wire),"fit_reason"),"FIT747: status or matching local words alone never fabricate a typed cause");
+        }
+        for(const row of [{code:"input_capacity",expected:"resource_exhausted"},{code:"source_changed",expected:"input_changed"},{code:"policy_mismatch",expected:"policy_mismatch"}]){
+            const mixed=Outgoing679.encode(Object.assign({},typed745,{code:row.code}));verify(typeof mixed.wire==="string");
+            const value=JSON.parse(mixed.wire);compare(value.code,row.expected);compare(value.fit_reason,"unanchored_cw_dilation");
+            compare(value.status,"error");compare(value.adopted,false);compare(value.converged,false);
+        }
+        // Original Limits::context_bytes is 1048576; the role and every other cap remain unchanged.
+        // ASCII padding generates INPUT only; the oracle is exact actual admitted/serialized size at that original boundary.
+        const cap745=1048576,padding745=cap745-receipt745.maximum_bytes;
+        verify(Number.isSafeInteger(padding745)&&padding745>0);
+        const atCap745=Object.assign({},typed745,{parameters:[Object.assign({},plain745.parameters[0],{path:plain745.parameters[0].path+"x".repeat(padding745)})]});
+        const capReceipt745=Outgoing679.encode(atCap745);
+        verify(typeof capReceipt745.wire==="string");compare(capReceipt745.maximum_bytes,cap745);compare(capReceipt745.maximum_admitted,cap745);
+        verify(capReceipt745.bytes<=cap745,"FIT747: literal fixed field fits the exact unchanged role, with no truncation or extra allowance");
+        const above745=Object.assign({},atCap745,{parameters:[Object.assign({},atCap745.parameters[0],{path:atCap745.parameters[0].path+"x"})]});
+        compare(JSON.stringify(Outgoing679.encode(above745)),JSON.stringify({kind:"capacity"}),
+            "FIT747: one additional byte crosses the original actual size/max boundary, distinct from validation/unexpected failures");
         // PUBLIC584: length classification is independent of model/provider and
         // applies at the original shared validator/argument boundary.
         const acceptedPurposes719=["x".repeat(120),"é".repeat(120),"🙂".repeat(60)];

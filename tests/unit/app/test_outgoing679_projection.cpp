@@ -26,6 +26,7 @@ public:
         catch(...) {return {{"kind","unexpected"}};}
     }
     Q_INVOKABLE QJsonObject encode(const QJsonObject& source) const {
+        try {
         namespace outgoing=edi_app::outgoing;
         const auto admitted=outgoing::size(source,outgoing::Role::Result);
         const auto projected=outgoing::project(source,outgoing::Role::Result,admitted);
@@ -40,6 +41,9 @@ public:
             {"bytes",static_cast<double>(wire.size())},{"maximum_wire",QString::fromUtf8(maximumWire)},
             {"maximum_admitted",static_cast<double>(maximumAdmitted)},
             {"maximum_bytes",static_cast<double>(maximumWire.size())}};
+        } catch(const std::invalid_argument&) {return {{"kind","invalid"}};}
+        catch(const std::length_error&) {return {{"kind","capacity"}};}
+        catch(...) {return {{"kind","unexpected"}};}
     }
 };
 static void registerOutgoing679Projection() {

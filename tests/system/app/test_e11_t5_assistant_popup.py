@@ -178,7 +178,7 @@ def test_report171_real_retained_anchor_navigates_current_main_report(tmp_path):
 VISIBLE187_CASES = [
     'default-off', 'analysis-value-free', 'wavelength', 'manual-override',
     'dirty-valid-value', 'dirty-invalid-value', 'dirty-valid-free', 'dirty-invalid-free',
-    'dirty-valid-fit', 'dirty-invalid-fit', 'real-fit', 'fit-stop', 'close-owner',
+    'dirty-valid-fit', 'dirty-invalid-fit', 'real-fit', 'fit-stop', 'unanchored-off-fit', 'unanchored-on-fit', 'close-owner',
     'unsupported-values', 'unsupported-free', 'unsupported-relations', 'normal-relations',
     'requested-cell-profile-flags',
 ]
@@ -251,6 +251,9 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
     if case == 'requested-cell-profile-flags':
         from tests.system.app.test_e11_t5_codex_agent import save211_files
         source609 = save211_files(ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project')
+    if case in {'unanchored-off-fit', 'unanchored-on-fit'}:
+        from tests.system.app.test_e11_t5_codex_agent import save211_files
+        source745 = save211_files(ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project')
     runner = Path(os.environ['EDI_APP_TEST_RUNNER'])
     assert runner.is_file(), 'VA SETUP: actual freshly coherent Main runner is required'
     environment = popup171_owned_environment(tmp_path)
@@ -380,6 +383,25 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
             'VA: actual host outcome uses the pinned typed original response channel'
         )
         decoded = json.loads(content[0]['text'])
+        if case in {'unanchored-off-fit', 'unanchored-on-fit'} and original['tool'] == 'run_fit':
+            assert response['response']['result']['success'] is False and decoded['schema'] == 'edi.assistant.outgoing/1', (
+                'FIT745: exact real fit RPC settles once with false success and the original closed Result schema')
+            assert decoded['status'] == 'error' and decoded['adopted'] is False and decoded['converged'] is False, (
+                'FIT745: actual scientific guard is ERROR/no adoption/no convergence, never setup or transport refusal')
+            assert decoded.get('fit_reason') == 'unanchored_cw_dilation', (
+                'FIT745: decisive normal completed typed guard reply MUST carry its approved closed cause in OFF and ON')
+            assert decoded['code'] == 'unavailable' and decoded['presentation_complete'] is True, (
+                'FIT745: original generic status-code/presentation facts survive normal typed completion')
+            assert set(decoded) == {'schema', 'status', 'code', 'adopted', 'converged', 'presentation_complete', 'fit_reason'}, (
+                'FIT745: no raw local message/help/exception/path/model fields enter the actual error wire')
+            offered745 = [tool for frame in requests if frame.get('method') == 'thread/start'
+                          for tool in frame['params']['dynamicTools'] if tool['name'] == 'run_fit']
+            assert len(offered745) == 1 and type(offered745[0].get('description')) is str and (
+                'unanchored_cw_dilation' in offered745[0]['description']
+            ), 'FIT747: the fixed cause is explained by the actual original code-owned run_fit help, not a wire help object'
+        if original['tool'] != 'run_fit' or case not in {'unanchored-off-fit', 'unanchored-on-fit'}:
+            assert 'fit_reason' not in decoded, (
+                'FIT747: original success/cancel/unrelated action replies never borrow a previous or text-derived cause')
         if original['call_id'].startswith('visible185-action-') and (
             case.startswith(('dirty-', 'unsupported-'))
         ):
@@ -388,6 +410,9 @@ def test_visible187_real_main_native_input_and_owner(case, tmp_path):  # noqa: P
                 and isinstance(decoded.get('message'), str) and decoded['message']
             ), 'VA: actual before-write failure is truthful, bounded and never a success'
 
+    if case in {'unanchored-off-fit', 'unanchored-on-fit'}:
+        assert save211_files(ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project') == source745, (
+            'FIT745: real Main guard/manual/native/Undo leaves every original source scientific file byte-exact')
     if case == 'requested-cell-profile-flags':
         from tests.system.app.test_e11_t5_codex_agent import save211_files
         assert len(responses) == 5 and all(row['response']['result']['success'] is True for row in responses), (

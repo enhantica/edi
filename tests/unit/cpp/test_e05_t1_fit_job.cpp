@@ -218,6 +218,8 @@ TEST_CASE("E05-T1 gates 1 2 4 single and joint fit streams preserve all deliveri
                  CHECK_MESSAGE((std::this_thread::get_id() == owner),
                                " gate 4 atomic final write-back arrives on owner thread");
                  final = result;
+                 CHECK_MESSAGE((result.reason==edi::FitFailureReason::None),
+                     "FIT745 successful original completion has no fabricated dilation cause");
                  ++finishes;
                  CHECK_MESSAGE((result.refusal.empty()),
                                " gate 5 valid single and joint inputs are not refused");
@@ -280,7 +282,8 @@ TEST_CASE("E05-T1 gate 3 engine checkpoint cancel retains partial values and und
                      {},
                      {},
                      [&](const auto& r) {
-                         final = r;
+                         final = r; CHECK_MESSAGE((r.reason==edi::FitFailureReason::None),
+            "FIT745 original unrelated/cancelled/superseded completions never acquire the typed cause");
                          ++finishes;
                      }},
                     {[&](int poll) {
@@ -333,7 +336,8 @@ TEST_CASE("E05-T1 gate 3 joint engine checkpoint cancel retains partial values a
                      {},
                      {},
                      [&](const auto& r) {
-                         final = r;
+                         final = r; CHECK_MESSAGE((r.reason==edi::FitFailureReason::None),
+            "FIT745 original unrelated/cancelled/superseded completions never acquire the typed cause");
                          ++finishes;
                      }},
                     {[&](int poll) {
@@ -373,7 +377,8 @@ TEST_CASE("E05-T1 gate 3 worker token cancellation reaches a running fit") {
     e04_t9::Barrier checkpoint;
     edi::work::Worker worker([&](auto d) { queue.post(std::move(d)); });
     std::optional<edi::FitReport> final;
-    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; }}, {[&](int poll) {
+    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; CHECK_MESSAGE((r.reason==edi::FitFailureReason::None),
+            "FIT745 original unrelated/cancelled/superseded completions never acquire the typed cause"); }}, {[&](int poll) {
                         if (poll == 1) checkpoint.block();
                     }});
     fit.start();
@@ -400,7 +405,8 @@ TEST_CASE("E05-T1 gate 3 joint worker token cancellation reaches a running fit")
     e04_t9::Barrier checkpoint;
     edi::work::Worker worker([&](auto d) { queue.post(std::move(d)); });
     std::optional<edi::FitReport> final;
-    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; }}, {[&](int poll) {
+    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; CHECK_MESSAGE((r.reason==edi::FitFailureReason::None),
+            "FIT745 original unrelated/cancelled/superseded completions never acquire the typed cause"); }}, {[&](int poll) {
                         if (poll == 1) checkpoint.block();
                     }});
     fit.start();
@@ -427,7 +433,8 @@ TEST_CASE("E05-T1 gates 4 6 a hidden fitted-input edit defeats stale publication
         edi::work::Worker worker([&](auto d) { queue.post(std::move(d)); },
                                  {{}, [&](const auto& e) { trace.add(e); }});
         std::optional<edi::FitReport> final;
-        edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; }});
+        edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; CHECK_MESSAGE((r.reason==edi::FitFailureReason::None),
+            "FIT745 original unrelated/cancelled/superseded completions never acquire the typed cause"); }});
         fit.start();
         trace.finished();
         auto& parameter = live.experiment().linked_structure().scale;
@@ -451,28 +458,75 @@ TEST_CASE("E05-T1 gates 4 6 a hidden fitted-input edit defeats stale publication
 
 TEST_CASE("E05-T1 gate 5 scan calculation-only and invalid inputs are unchanged refusals") {
 #if E05_T1_FIT_JOB
-    for (const auto& reason : {"sequential", "independent", "calculation-only", "invalid"}) {
-        auto live = e05_t1::small();
+    CHECK_MESSAGE((edi::FitReport{}.reason==edi::FitFailureReason::None),
+        "FIT745 a default report carries no inferred or stale cause");
+    for (const auto& reason : {"sequential", "independent", "calculation-only", "invalid", "unanchored-single", "unanchored-joint"}) {
+        const bool dilation=std::string(reason).starts_with("unanchored-");
+        auto live = e05_t1::small(std::string(reason)=="unanchored-joint"?"joint":"single");
         if (reason == std::string("calculation-only")) {
             live.experiment().data->write_column(&edi::PdDataBase::intensity_meas, {});
             live.experiment().data->write_column(&edi::PdDataBase::intensity_meas_su, {});
         } else if (reason == std::string("invalid"))
             live.experiment().data->write_column(&edi::PdDataBase::intensity_meas_su,
                                                  std::vector<double>(24, 0.0));
-        else
-            live.fitting_mode = reason;
+        else if(dilation) {
+            // Independent Bragg-ratio invariant: all active wavelengths and all three P1 lengths free.
+            live.structure().cell.length_a.free=true;live.structure().cell.length_b.free=true;live.structure().cell.length_c.free=true;
+            for(const auto& bank:live.experiments)bank->instrument.setup_wavelength->free=true;
+        } else live.fitting_mode = reason;
         const auto before = edi::project_edi_files(live);
+        std::string ordinary_refusal;
+        if(dilation) {
+            auto ordinary=edi::snapshot_for_work(live).project;
+            try {
+                if(live.fitting_mode=="joint")(void)ordinary.fit_joint();else (void)ordinary.fit();
+                FAIL_CHECK("FIT745 the ordinary single/joint adapter must reach its real unanchored scientific guard");
+            }catch(const edi::UnanchoredCellDilationError& error){ordinary_refusal=error.what();}
+            catch(...){FAIL_CHECK("FIT745 the ordinary adapter must preserve the exact public typed origin");}
+            REQUIRE_MESSAGE((!ordinary_refusal.empty()),"FIT745 the real typed ordinary refusal retains its local explanation");
+            CHECK_MESSAGE((edi::project_edi_files(ordinary)==before),"FIT745 guard refusal preserves the full ordinary input before worker admission");
+        }
         e04_t9::OwnerQueue queue;
         edi::work::Worker worker([&](auto d) { queue.post(std::move(d)); });
         std::optional<edi::FitReport> final;
-        edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; }});
-        fit.start();
+        const edi::FitReport* borrowed=nullptr;
+        int finishes=0;const auto owner_thread=std::this_thread::get_id();
+        edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& report) {
+            CHECK_MESSAGE((std::this_thread::get_id()==owner_thread),"FIT745 actual completed report belongs to the original owner thread");
+            final=report;borrowed=&report;++finishes;
+        }});
+        REQUIRE_MESSAGE((fit.start()),"FIT745 real original FitJob admits the independently declared input once");
         while (!final) queue.one();
         queue.drain();
-        CHECK_MESSAGE((!final->refusal.empty()),
-                      " gate 5 each refusal returns the core reason to the GUI");
-        CHECK_MESSAGE((edi::project_edi_files(live) == before),
-                      " gate 5 refused jobs leave the complete saved project byte-identical");
+        CHECK_MESSAGE((!final->refusal.empty())," gate 5 each refusal returns the core reason to the GUI");
+        CHECK_MESSAGE((edi::project_edi_files(live) == before)," gate 5 refused jobs leave the complete saved project byte-identical");
+        CHECK_MESSAGE((finishes==1&&!fit.running()&&final->status==edi::FitStatus::ERROR&&!final->adopted()&&!final->result),
+            "FIT745 genuine failed completion is once-only ERROR with no optimizer result or live adoption");
+        CHECK_MESSAGE((final->reason==(dilation?edi::FitFailureReason::UnanchoredCwDilation:edi::FitFailureReason::None)),
+            "FIT745 only the exact originating scientific guard supplies the closed report cause");
+        REQUIRE_MESSAGE((borrowed!=nullptr),"FIT745 original completed report remains actually owned, never inferred from idle");
+        CHECK_MESSAGE((borrowed->reason==final->reason),"FIT745 completed report borrow retains its actual typed scalar");
+        if(dilation) {
+            CHECK_MESSAGE((final->refusal==ordinary_refusal),"FIT745 worker preserves the ordinary local explanation without deriving its type from text");
+            // SAME FitJob: restore its original fixed-cell/fixed-wave scale-only success control.
+            for(const auto& bank:live.experiments)bank->instrument.setup_wavelength->free=false;
+            live.structure().cell.length_a.free=false;live.structure().cell.length_b.free=false;live.structure().cell.length_c.free=false;
+            final.reset();borrowed=nullptr;
+            REQUIRE_MESSAGE((fit.start()),"FIT745 the next anchored job is genuinely admitted, not an old report replay");
+            while(!final)queue.one();queue.drain();
+            CHECK_MESSAGE((finishes==2&&!fit.running()&&final->adopted()&&final->result.has_value()&&final->reason==edi::FitFailureReason::None),
+                "FIT745 actual next anchored single/joint completion never inherits the preceding typed refusal");
+            REQUIRE_MESSAGE((borrowed!=nullptr),"FIT745 next completion owns its own real report");
+            CHECK_MESSAGE((borrowed->reason==edi::FitFailureReason::None),"FIT745 current completed borrow agrees with the new job, not the old cause");
+            live.experiment().data->write_column(&edi::PdDataBase::intensity_meas_su,std::vector<double>(24,0.0));
+            const auto invalid_before=edi::project_edi_files(live);
+            final.reset();borrowed=nullptr;
+            REQUIRE_MESSAGE((fit.start()),"FIT745 a distinct original invalid-sigma job is actually admitted after the typed failure and anchored result");
+            while(!final)queue.one();queue.drain();
+            CHECK_MESSAGE((finishes==3&&final->status==edi::FitStatus::ERROR&&!final->adopted()&&!final->result&&final->reason==edi::FitFailureReason::None),
+                "FIT745 unrelated ERROR after a known cause remains honestly unknown, with one current completion");
+            CHECK_MESSAGE((edi::project_edi_files(live)==invalid_before),"FIT745 unrelated refusal cannot mutate any current scientific owner/state");
+        }
     }
 #else
     FAIL_CHECK(" gate 5 requires the core FitJob unchanged refusal path");
@@ -545,7 +599,8 @@ void publication_inputs(const std::string& mode, const std::string& terminal,
     edi::work::Worker worker([&](auto d) { queue.post(std::move(d)); },
                              {{}, [&](const auto& e) { trace.add(e); }});
     std::optional<edi::FitReport> final;
-    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; }}, {[&](int poll) {
+    edi::FitJob fit(live, worker, {{}, {}, {}, [&](const auto& r) { final = r; CHECK_MESSAGE((r.reason==edi::FitFailureReason::None),
+            "FIT745 original unrelated/cancelled/superseded completions never acquire the typed cause"); }}, {[&](int poll) {
                         if (poll == 1) checkpoint.block();
                     }});
     REQUIRE_MESSAGE((fit.start()), " gate 6 boundary witness starts an actual fit job");
