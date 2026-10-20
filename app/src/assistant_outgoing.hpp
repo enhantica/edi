@@ -82,7 +82,7 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Skill: { ROWS(T("id"),T("sha256")); }
     case Role::InputScopes: { ROWS(A("sources",InputSource)); }
     case Role::InputSource: { ROWS(T("scope_id"),N("ordinal"),T("source_kind"),B("already_admitted")); }
-    case Role::NativeState: { ROWS(T("selected_structure_id"),T("selected_experiment_id"),T("status"),B("calculating"),B("fitting"),B("show_actions"),A("calculations",Calculation),A("interface_groups",InterfaceGroup)); }
+    case Role::NativeState: { ROWS(T("selected_structure_id"),T("selected_experiment_id"),T("status"),B("calculating"),B("fitting"),B("fit_undo_available"),B("show_actions"),A("calculations",Calculation),A("interface_groups",InterfaceGroup)); }
     case Role::InterfaceGroup: { ROWS(T("page"),T("member_id"),T("category_id"),T("tier"),B("admitted")); }
     case Role::Calculation: { ROWS(T("dataset_id"),B("pattern_available"),B("stale"),N("calculated_points"),B("calculated_available"),B("calculation_error_present"),T("calculation_error"),B("calculation_error_complete")); }
     case Role::Fit: { ROWS(T("status"),B("converged"),N("reduced_chi_square"),N("iterations"),B("objective_unavailable")); }

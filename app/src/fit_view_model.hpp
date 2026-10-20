@@ -124,7 +124,7 @@ class FitViewModel : public QObject {
     bool running() const { return running_; }
     // Internal native adapter: actual worker admission is independent of UI publication.
     bool nativeRunning() const noexcept { return job_ && job_->running(); }
-    void startNative(std::function<void(const edi::FitReport&, bool)> completion);
+    void startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt = 0);
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
     bool scanning() const { return scanning_; }
@@ -234,10 +234,17 @@ class FitViewModel : public QObject {
     void frame(const edi::FitFrame& frame);
     void showFrame();
     void ended(const edi::FitReport& report);
-    void presentEnded(const edi::FitReport& report, bool automatic_results);
-    void startImpl();
+    void presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt);
+    void startImpl(std::uint64_t attempt);
+    friend class ProjectViewModel;
+    // Fixed correlation only: never a history of attempts or a scientific snapshot.
+    std::uint64_t beginAttempt() noexcept;
+    void invalidateFitUndo() noexcept { undo_attempt_ = history_attempt_ = 0; }
+    std::uint64_t attempt_serial_ = 0, latest_attempt_ = 0, submitted_attempt_ = 0;
+    std::uint64_t undo_attempt_ = 0, history_attempt_ = 0, finished_attempt_ = 0, native_attempt_ = 0;
+    bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;
-    std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion);
+    std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
     void discardNativePreparation(std::uint64_t token) noexcept;
     std::uint64_t native_completion_serial_ = 0;
     std::function<void(const edi::FitReport&, bool)> native_completion_;

@@ -216,3 +216,12 @@ automatically disable/drop/rewrite rules. Explicit current ID is not proof that 
 arbitrary default-named row belongs to an old run. add_relations stays append-only
 and unchanged. Actual applied/published/uncertain facts and ordinary Undo survive
 publication failure or interruption; no automatic recovery/replay is implied.
+
+
+## Native fit-only ordinary Undo
+
+FIRST is the original global appbar `Session.project.undo()` → ProjectViewModel::undo → FitViewModel::undo → applyUndo → applyEdit. The original core `Edit::undo_fit` remains the scientific restoration implementation; native delivery never calls the standalone core undo, walks history, copies a checkpoint or fits again. All unrelated manual history variants and loaded-project Undo keep their original behavior.
+
+The narrow native `undo_fit` action additionally requires explicit latest-history monostate and the most recent genuine current-owner single/joint attempt's actual adopted report. Manual/native attempt identity is fixed owner-local scalar state, not a history of attempts. Native preflight and actual Start share one identity. A later busy/availability/preparation/unadopted attempt invalidates old native eligibility even if ordinary manual canUndo still names the earlier good fit. Completion identity follows the actual report through finished/history insertion; an old completion tail cannot place a fit above a nested actual edit. Common edited/report-setting/scan-restore publication invalidates eligibility before notifying observers, with the original editing fence covering earlier trace callbacks. Pending fit presentation cannot admit native Undo.
+
+The scoped fit-only ordinary-input receipt is armed immediately around the same PVM.undo. Exact owner/attempt/top record are checked before the factory/history branch; consumed/started prevent reentry. The original applyEdit applied pointer latches the actual reversal before callbacks; published remains independently factual. Only those two scalar outcomes cross the ordinary wrapper into the receipt, never arbitrary app error text. Retired/native callbacks retain that receipt, so an applied but unconfirmed reversal is spent once rather than repeated against earlier science. Prewrite refusal consumes no history. Native bookkeeping does not alter the original generic manual Undo or add per-history-record instrumentation.

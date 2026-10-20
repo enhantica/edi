@@ -345,6 +345,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
+    // Narrow app-native observation, not generic history access or a QML write door.
+    bool fitUndoAvailable() const;
 
     // , the fit's three owner-thread steps (FitViewModel): the project took a fit's result — every view
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
@@ -468,6 +470,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         bool free = false, consumed = false;
         EditOutcome outcome;
     };
+    struct FitUndoInput {
+        std::uint64_t attempt = 0;
+        bool consumed = false, started = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<FitUndoInput> fit_undo_input_;
+    bool fit_undo_invoking_ = false;
+    std::shared_ptr<FitUndoInput> prepareFitUndo();
+    void finishFitUndo(const std::shared_ptr<FitUndoInput>&) noexcept;
     struct WidgetRelationInput {
         ProjectEditor::RelationAction expected;
         bool consumed = false;

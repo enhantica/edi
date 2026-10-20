@@ -3,6 +3,7 @@
 
 #include <QFileInfo>
 #include <QPointer>
+#include <QScopeGuard>
 #include <exception>
 #include <algorithm>
 #include <cmath>
@@ -298,6 +299,8 @@ void FitViewModel::showScanRefused(const QString& error, const QString& run_outc
 FitViewModel::~FitViewModel() { close(); }
 
 void FitViewModel::close() {
+    invalidateFitUndo();
+    latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     frame_timer_.stop();
     follow_timer_.stop();
     clock_timer_.stop();
@@ -305,26 +308,35 @@ void FitViewModel::close() {
     job_.reset();
 }
 
-std::uint64_t FitViewModel::prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion) {
+std::uint64_t FitViewModel::beginAttempt() noexcept {
+    undo_attempt_ = 0;
+    latest_attempt_ = !owner_.retired_ && attempt_serial_ != UINT64_MAX ? ++attempt_serial_ : 0;
+    return latest_attempt_;
+}
+std::uint64_t FitViewModel::prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt) {
+    if (!attempt || attempt != latest_attempt_) throw std::runtime_error("The original fit attempt is no longer current");
     if (nativeRunning() || native_completion_ || native_completion_serial_ == UINT64_MAX)
         throw std::runtime_error("A native fit is already owned or its completion identity is exhausted");
+    native_attempt_ = attempt;
     native_completion_ = std::move(completion); // Callback ownership precedes either real start entrance.
     return ++native_completion_serial_;
 }
 void FitViewModel::discardNativePreparation(std::uint64_t token) noexcept {
     if (native_completion_serial_ == token && !nativeRunning()) native_completion_ = {};
 }
-void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> completion) {
-    const auto token = prepareNativeCompletion(std::move(completion));
+void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt) {
+    if (!attempt) attempt = beginAttempt();
+    const auto token = prepareNativeCompletion(std::move(completion), attempt);
     const QPointer<FitViewModel> self(this);
-    try { startImpl(); }
+    try { startImpl(attempt); }
     catch (...) { if (self) self->discardNativePreparation(token); throw; }
     if (self) self->discardNativePreparation(token); // A submitted worker keeps its actual completion.
 }
 
 void FitViewModel::start() {
     const QPointer<FitViewModel> self(this);
-    try { startImpl(); }
+    const auto attempt = native_completion_ ? native_attempt_ : beginAttempt();
+    try { startImpl(attempt); }
     catch (...) {
         if (!self) return;
         // Cancellation can throw from Worker tracing after setting its actual
@@ -334,10 +346,10 @@ void FitViewModel::start() {
         // An admitted worker still owns its original real FitReport callback.
     }
 }
-void FitViewModel::startImpl() {
+void FitViewModel::startImpl(std::uint64_t attempt) {
     const ProjectViewModel::PublicationScope publication(owner_);
     if (const QString critical = owner_.criticalEditRefusal(); !critical.isEmpty()) { emit refused(critical); return; }
-    if (!job_ || job_->running() || !available_) {
+    if (!attempt || attempt != latest_attempt_ || !job_ || job_->running() || !available_) {
         return;
     }
     // A chosen dataset still being read: the model still shows the one before, which is not the one to fit. A scan
@@ -364,7 +376,10 @@ void FitViewModel::startImpl() {
         job_->follow(true);
         if (owner_.retired_) return;
     }
+    submitted_single_joint_ = !scan;
+    submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
     const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
+    if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
     if (owner_.retired_) return;
     if (admitted) {
         if (scan_last_ != scan) {
@@ -407,6 +422,10 @@ void FitViewModel::cancel() {
 
 bool FitViewModel::undo() {
     const ProjectViewModel::PublicationScope publication(owner_);
+    const auto input = owner_.fit_undo_input_;
+    if (owner_.fit_undo_invoking_ && !input) return false;
+    if (input && (!owner_.fit_undo_invoking_ || !input->consumed || input->started ||
+                  input->attempt != undo_attempt_ || !owner_.fitUndoAvailable())) return false;
     if (running_ || !can_undo_) {
         return false;
     }
@@ -759,6 +778,15 @@ void FitViewModel::scanEnded(const edi::FitReport& report, bool automatic_result
 
 void FitViewModel::ended(const edi::FitReport& report) {
     const ProjectViewModel::PublicationScope publication(owner_);
+    const auto attempt = submitted_attempt_;
+    submitted_attempt_ = 0;
+    const bool previous_presentation = presenting_;
+    presenting_ = true;
+    // Latch actual adoption before the first Qt notification. A later failed attempt
+    // cannot borrow an older fit start; an edit during presentation retires both facts.
+    const bool adopted = attempt && report.adopted() && submitted_single_joint_;
+    if (adopted) history_attempt_ = attempt;
+    if (attempt == latest_attempt_) undo_attempt_ = adopted ? attempt : 0;
     // Take the callback before any presentation/receiver can throw or replace the
     // model. FitJob owns this report through the entire completion invocation.
     auto completion = std::move(native_completion_);
@@ -766,14 +794,15 @@ void FitViewModel::ended(const edi::FitReport& report) {
     const bool automatic_results = !completion;
     std::exception_ptr failure;
     const bool visible = !owner_.retired_;
-    try { if (visible) presentEnded(report, automatic_results); } catch (...) { failure = std::current_exception(); }
+    try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
+    presenting_ = previous_presentation;
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
     if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
     if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
 }
 
-void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_results) {
+void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt) {
     // The last delivery: a frame still waiting is older than what follows, and is dropped.
     frame_timer_.stop();
     follow_timer_.stop();
@@ -814,6 +843,8 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
         if (owner_.retired_) return;
         sync();
         if (owner_.retired_) return;
+        finished_attempt_ = attempt;
+        const auto finish_identity = qScopeGuard([this, attempt] { if (finished_attempt_ == attempt) finished_attempt_ = 0; });
         emit finished();
         if (owner_.retired_) return;
         if (automatic_results) emit automaticResultsRequested();

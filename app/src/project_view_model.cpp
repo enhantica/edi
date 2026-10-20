@@ -250,6 +250,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     edi::LivePreview::Hooks hooks;
     hooks.edited = [this] {
         if (retired_) return;
+        if (fit_) fit_->invalidateFitUndo(); // Actual edit, before any model/Qt publication.
         try { completeSymmetry(); }
         catch (...) { finishRecordedEdit(); throw; }
         finishRecordedEdit();
@@ -285,7 +286,11 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         }
         syncUndo();
     };
-    connect(fit_, &FitViewModel::finished, this, note_fit);
+    connect(fit_, &FitViewModel::finished, this, [this, note_fit] {
+        // An older completion tail must not put a fit above an edit/new completion
+        // delivered synchronously during its own publication.
+        if (fit_->finished_attempt_ && fit_->history_attempt_ == fit_->finished_attempt_) note_fit();
+    });
     connect(fit_, &FitViewModel::outOfDateChanged, this, [this] { evolution_->setOutOfDate(fit_->outOfDate()); });
     // A single fit on a scan dataset makes its result the template, and that dataset the template dataset
     // (`_sequential_fit.template_file`; edi ADR-0017 §19): the shown state is the template from now on. The
@@ -1697,6 +1702,8 @@ QString ProjectViewModel::pendingRefusal() const { return editReadinessRefusal(f
 QString ProjectViewModel::criticalEditRefusal(bool restoring) const {
     if (retired_) return tr("This project owner has been replaced or closed");
     if (editing_) return tr("The current project edit is still being published");
+    if (fit_undo_invoking_ && (!fit_undo_input_ || fit_undo_input_->started))
+        return tr("The current ordinary fit Undo is still being completed");
     if ((widget_input_ || widget_relation_input_ || widget_background_input_ || widget_file_input_ || widget_creation_input_) && !widget_input_executing_)
         return tr("The current visible native input is still being completed");
     if (edit_publication_failed_ && !restoring)
@@ -2021,6 +2028,7 @@ bool ProjectViewModel::restoreScanRun(const ScanRun& run, bool restoring) {
         if (scan_template_ && records->stash) scan_template_->fit_result = std::move(*records->stash);
     }
     if (projection) { projection->commit(); project_->note_edit(); }
+    if ((records || projection) && fit_) fit_->invalidateFitUndo();
     try {
         if (records) { syncCorrelations(); if (retired_) return true; }
         setModified(true);
@@ -2545,7 +2553,9 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     const auto creation_input = widget_input_executing_ ? widget_creation_input_ : nullptr;
     auto* applied_result = creation_input && creation_input->consumed ? &creation_input->applied_result
         : file_input && file_input->consumed ? &file_input->applied_result : nullptr;
-    bool* applied = creation_input && creation_input->consumed ? &creation_input->outcome.applied
+    const auto fit_undo_input = fit_undo_invoking_ && fit_undo_input_ && fit_undo_input_->consumed && !fit_undo_input_->started ? fit_undo_input_ : nullptr;
+    if (fit_undo_input) fit_undo_input->started = true;
+    bool* applied = fit_undo_input ? &fit_undo_input->outcome.applied : creation_input && creation_input->consumed ? &creation_input->outcome.applied
         : file_input && file_input->consumed ? &file_input->outcome.applied
         : relation_input && relation_input->consumed ? &relation_input->outcome.applied
         : background_input && background_input->consumed ? &background_input->outcome.applied
@@ -2553,6 +2563,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
     try {
         preview_->apply(change, applied, applied_result);
         result.applied = *applied;
+        if (result.applied && fit_) fit_->invalidateFitUndo();
         if (!self || retired_) { result.message = applied_warning; return result; }
         // An admitted edit while a scan dataset is shown (edi ADR-0017 §19): a project-wide setting goes to the
         // template too; an edit of the experiment or the structures makes the shown values the template's, over the
@@ -2595,6 +2606,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
         result.message.clear();
     } catch (...) {
         result.applied = *applied;
+        if (result.applied && fit_) fit_->invalidateFitUndo();
         if (!self || retired_) {
             result.message = result.applied ? applied_warning : result.message;
             return result;
@@ -2619,7 +2631,16 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
 }
 
 QString ProjectViewModel::applyUndo(const edi::Edit& change, bool structural) {
+    const auto input = fit_undo_input_;
+    if (input) {
+        if (!fit_undo_invoking_ || !input->consumed || input->started || !fitUndoAvailable() ||
+            input->attempt != fit_->undo_attempt_) return tr("The latest adopted fit is no longer undoable");
+    }
     const EditOutcome result = applyEdit(change, structural, true);
+    if (input) {
+        input->outcome.applied = result.applied;
+        input->outcome.published = result.published;
+    }
     return result.applied ? QString{} : result.message;
 }
 
@@ -2659,6 +2680,7 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool re
     try {
         preview_->apply_setting(change);
         applied = true;
+        if (fit_) fit_->invalidateFitUndo();
         notifyProjectEdited();
         if (retired_) return {};
         if (scan_template_) edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
@@ -2960,14 +2982,42 @@ QString ProjectViewModel::rename_experiment(edi::Project& project, edi::Experime
     return refusal;
 }
 
+bool ProjectViewModel::fitUndoAvailable() const {
+    return !retired_ && !editing_ && !calculating() && fit_ && !fit_->running() && !fit_->nativeRunning() &&
+        !fit_->presenting_ && fit_->undo_attempt_ && fit_->undo_attempt_ == fit_->latest_attempt_ &&
+        !edi::is_scan_fitting_mode(edi::effective_fitting_mode(*project_)) && can_undo_ && fit_->canUndo() &&
+        !undo_history_.empty() && std::holds_alternative<std::monostate>(undo_history_.back()) &&
+        criticalEditRefusal(true).isEmpty() && editReadinessRefusal(true).isEmpty();
+}
+std::shared_ptr<ProjectViewModel::FitUndoInput> ProjectViewModel::prepareFitUndo() {
+    if (fit_undo_input_ || !fitUndoAvailable()) throw std::runtime_error("The latest adopted fit is not undoable");
+    auto input = std::make_shared<FitUndoInput>();
+    input->attempt = fit_->undo_attempt_;
+    fit_undo_input_ = input;
+    return input;
+}
+void ProjectViewModel::finishFitUndo(const std::shared_ptr<FitUndoInput>& input) noexcept {
+    if (fit_undo_input_ == input) fit_undo_input_.reset();
+}
 void ProjectViewModel::undo() {
     const PublicationScope publication(*this);
+    if (fit_undo_invoking_) return; // A completed/retired prearm never becomes a nested manual Undo.
+    const auto input = fit_undo_input_;
+    if (input) {
+        if (input->consumed || fit_undo_invoking_ || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_) return;
+        input->consumed = true;
+    }
+    const QPointer<ProjectViewModel> self(this);
+    const auto release_input = qScopeGuard([self, input] {
+        if (self && (!self->fit_undo_input_ || self->fit_undo_input_ == input)) self->fit_undo_invoking_ = false;
+    });
     if (const QString critical = criticalEditRefusal(true); !critical.isEmpty()) { setLastError(critical); return; }
     syncUndo();
     if (retired_) return;
     if (!can_undo_) {
         return;
     }
+    if (input && (fit_undo_input_ != input || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_)) return;
     // The newest record is kept until its reversal succeeds: a refused restore (a parameter it names was
     // removed or renamed since) leaves it in place, with the refusal as the message. A fit's undo can drop
     // its own entry on the way (its start state is gone once restored), so only a record still there goes.
@@ -3072,6 +3122,8 @@ void ProjectViewModel::undo() {
             }
             swapped = true;
         }
+        if (input && (fit_undo_input_ != input || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_)) return;
+        fit_undo_invoking_ = bool(input);
         undone = fit_->undo();
         if (retired_) return;
         if (swapped && undone) {
