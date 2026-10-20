@@ -1884,3 +1884,25 @@ precedes allocation, exact member lookup, canonical no-op comparison and both
 visible and normal execution. It does not change validation, ordinary relation
 setters, receipt/Undo ownership or refusal semantics; it removes an unconditional
 type refusal before those original paths can run.
+
+
+### Setup planning and proved-refusal recovery
+
+The common native bootstrap, original code-owned tool help and bundled project/
+refinement strategy distinguish successful returned identities from intended
+renames: refused prerequisites do not establish new IDs, and partial/uncertain
+effects require actual inspection rather than sequence replay. Only the existing
+purpose_too_long/purpose prewrite refusal permits a fresh shorter-purpose call
+with unchanged science/current authority. No automatic retry or resolver is added.
+
+Delegated setup in both modes completes Structure and Experiment before grouped
+Analysis flags/fits. Chosen and imported background anchors are initially planned
+fixed while retaining exact source values/IDs/counts and desired final flags for
+that later stage. Explicit incoming operations and immediate user scope remain
+unchanged; the app does not defer their flags. Known-wavelength sample refinement
+and genuinely anchored wavelength calibration remain distinct objectives; actual
+setup/free sets and earlier failed prerequisites are checked before fitting.
+FullProf only cross-refers to that generic strategy, preserving scientific source
+mappings. Schemas/options, ordinary setters/Undo and identifiability guards stay
+authoritative. No local exception text, new fit-reason code or scientific control
+change is part of this guidance.

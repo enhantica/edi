@@ -5,7 +5,7 @@ description: Interpret selected FullProf text and preserve its scientific meanin
 
 # Inspect a selected FullProf project
 
-Version: 1.0.4. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
+Version: 1.0.5. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
 
 ## Available actions
 
@@ -17,7 +17,7 @@ Keep original files unchanged. A suffix is not proof of dialect, bank identity o
 
 ## Scientific interpretation and mapping
 
-Identify the source dialect/associations and supported app representation before publication; do not call an unsupported mapping equivalent. Preserve observed data, sigma/weighting, range/exclusions and bank weights. Occupancy normalization and B/U/beta tensor units need an independently established mapping; do not clamp occupancy or rename an ADP. Shared refinement codewords describe linked shifts/multipliers and need not mean equal absolute values or independent free parameters. Preserve original values and affine relationships. Background bases/origins/domains and profile/IRF terms are not interchangeable merely because they have equal coefficient counts. Do not silently discard unsupported magnetic, rigid-body, restraint, multiphase or instrument terms.
+Identify the source dialect/associations and supported app representation before publication; do not call an unsupported mapping equivalent. Preserve observed data, sigma/weighting, range/exclusions and bank weights. Occupancy normalization and B/U/beta tensor units need an independently established mapping; do not clamp occupancy or rename an ADP. Shared refinement codewords describe linked shifts/multipliers and need not mean equal absolute values or independent free parameters. Preserve original values and affine relationships. Use project-assistance/refinement-strategy for setup order, retained final source flags, returned-ID/refusal recovery and calibration anchors; preserve explicit user constraints. Background bases/origins/domains and profile/IRF terms are not interchangeable merely because they have equal coefficient counts. Do not silently discard unsupported magnetic, rigid-body, restraint, multiphase or instrument terms.
 
 Completion of this intake means the user can review the selected-input inventory, proven associations, explicit missing/ambiguous/unsupported items and current app-action limits. It is not a fit-quality or scientific-equivalence certificate.
 

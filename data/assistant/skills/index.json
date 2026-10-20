@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.44",
+      "version": "1.5.45",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "9b2949997afe7158909ef1d56fb440c167018f474fa3b869e2f5bab0e7754ef0",
+      "sha256": "e81accf687089abbf4b1e6d84ce73283661637bdf7a6f69c4553c0b8fdd2fbe3",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "title": "Inspect a FullProf project",
       "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "cdc9d6b669a54619dd411902c3901505ff1b803426fdc39999c77ee9b9d324d0",
+      "sha256": "2d2853a038af36717162d9eb5f37bf9e87c61113803b2324af64feb6fc728381",
       "requires": [
         "selected_files"
       ],
@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.2.8",
+      "version": "1.2.9",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "ab4e839048982ba51eb5842211a20cab6d4384fe20764c2668aa63c13ff7576c",
+      "sha256": "65b11502f9d89831eea3788d331f5941984de57fdcb7196c9b1049b27ba0ee48",
       "requires": [],
       "capabilities": [
         "inspect_project",
