@@ -373,10 +373,10 @@ Popup {
                     EaElements.Button {
                         id: connectionButton
                         objectName: "assistant.connection"
-                        text: panel.assistant.connected ? panel.accountInitial : qsTr("Sign in")
+                        text: panel.assistant.connected ? panel.accountInitial : qsTr("Connect ChatGPT")
                         enabled: panel.assistant.connected || panel.assistant.state !== "connecting"
                         contentItem: EaElements.Label {
-                            text: panel.assistant.connected ? (panel.accountInitial.length ? panel.accountInitial : "user") : qsTr("Sign in")
+                            text: panel.assistant.connected ? (panel.accountInitial.length ? panel.accountInitial : "user") : qsTr("Connect ChatGPT")
                             font.family: panel.assistant.connected && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
                             font.pixelSize: EaStyle.Sizes.fontPixelSize
                             horizontalAlignment: Text.AlignHCenter
@@ -747,7 +747,7 @@ Popup {
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
                     width: Math.max(0,parent.width-AppSizes.unit*2)
-                    text: qsTr("Sign in to use the assistant")
+                    text: qsTr("Connect ChatGPT to use the assistant")
                 }
                 EaElements.Button {
                     objectName: "assistant.authCancel"
@@ -755,7 +755,7 @@ Popup {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: AppSizes.unit
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: panel.assistant.state === "connecting" ? qsTr("Cancel sign in") : qsTr("Stop")
+                    text: panel.assistant.state === "connecting" ? qsTr("Cancel connection") : qsTr("Stop")
                     onClicked: panel.assistant.cancel()
                 }
             }

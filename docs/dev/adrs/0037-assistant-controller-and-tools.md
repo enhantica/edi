@@ -1798,3 +1798,18 @@ still-live native/UTF-16/JSON/result owners; no limit or allowance increases.
 No new tool name, optional package identity, parser, selection fallback or
 implicit phase association is introduced. Code-owned schema/help describes
 these finite operations; skills do not duplicate the catalogue.
+
+
+### Connection wording follows the original managed-account flow
+
+The FIRST official-agent connection path already checks the managed ChatGPT
+account before requesting browser sign-in. A deadline, transport or context
+failure can retire local execution readiness without logging out that account.
+The disconnected panel and initial connection dialog therefore use the existing
+neutral “Connect ChatGPT” wording and explain reuse of an available sign-in;
+OpenAI's browser sign-in is conditional on the original account/login branch.
+Cancel still sends no pending message, and the current outgoing-context review,
+owner-bound failure notice, actual browser instructions and explicit Sign out
+remain authoritative. This is presentation only: no authenticated flag, account
+approval, process, deadline, retry or message-delivery behavior changes, and it
+does not establish the cause of an observed disconnection.

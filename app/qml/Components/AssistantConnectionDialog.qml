@@ -74,7 +74,7 @@ AppDialog {
     readonly property var structures: Array.isArray(disclosedContext.structures) ? disclosedContext.structures : []
     readonly property var datasets: Array.isArray(disclosedContext.datasets) ? disclosedContext.datasets : []
     readonly property var relations: disclosedContext.relations || { aliases: [], constraints: [] }
-    title: assistant.connected ? qsTr("Approve outgoing project context") : qsTr("Sign in with ChatGPT")
+    title: assistant.connected ? qsTr("Approve outgoing project context") : qsTr("Connect ChatGPT")
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
     width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
@@ -112,7 +112,7 @@ AppDialog {
     function updateAcceptButton() {
         const acceptButton = standardButton(Dialog.Ok);
         if (acceptButton) {
-            acceptButton.text = assistant.connected ? qsTr("Approve context") : qsTr("Sign in with ChatGPT");
+            acceptButton.text = assistant.connected ? qsTr("Approve context") : qsTr("Connect ChatGPT");
             acceptButton.enabled = !assistant.contextApprovalBlocked;
         }
     }
@@ -233,7 +233,7 @@ AppDialog {
                 textFormat: Text.PlainText
                 text: dialog.assistant.connected
                     ? qsTr("Allow Edi to send the current context for your message.")
-                    : qsTr("Continue to OpenAI to sign in with your ChatGPT account.")
+                    : qsTr("Connect using your existing ChatGPT sign-in when available. If needed, continue to OpenAI to sign in.")
             }
             EaElements.Label {
                 width: parent.width
@@ -319,7 +319,7 @@ AppDialog {
                     textFormat: Text.PlainText
                     text: dialog.assistant.connected
                         ? qsTr("Approval covers the current account, project and input scope. Routine parameter and fit updates do not require repeat consent. Changed account, project or input content requires fresh disclosure. Paths typed in chat do not currently grant runtime file access.")
-                        : qsTr("Sign in opens OpenAI's sign-in page. Cancel returns to Edi without sending a pending message. Review the context before approving its use.")
+                        : qsTr("Edi checks your existing ChatGPT sign-in first and opens OpenAI's sign-in page only if needed. Cancel returns to Edi without sending a pending message. Review the context before approving its use.")
                 }
                 EaElements.Button {
                     id: technicalData
