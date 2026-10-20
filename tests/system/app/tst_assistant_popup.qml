@@ -1065,6 +1065,24 @@ TestCase {
         compare(found.length, 1, "VA SETUP: independent original parameter metadata is unique");
         return found[0];
     }
+    // ADR0019/0024: dependent ADPs remain in their current ordinary page models,
+    // although Analysis deliberately omits them. Both page roles bind ONE native item.
+    function visible743_adp(project, label) {
+        compare(Session.project, project, "OBS743: ordinary ADP read belongs to the current project");
+        const owner=project.currentStructure;
+        verify(owner!==null, "OBS743: the current structure actually exists");
+        const sites=Probe.rows(owner.atomSites).filter(row=>row.label===label);
+        const adps=Probe.rows(owner.atomSiteAdps).filter(row=>row.label===label);
+        compare(sites.length,1,"OBS743: exact current atom-site member is unique");
+        compare(adps.length,1,"OBS743: exact current ordinary ADP member is unique");
+        const parameter=adps[0].adpIso;
+        verify(parameter!==null && parameter!==undefined,"OBS743: ordinary ADP role contains its real ParameterItem");
+        compare(parameter,sites[0].adpIso,"OBS743: both current ordinary pages bind the same physical ADP");
+        compare(parameter.blockKind,"structure");compare(parameter.blockName,owner.name);
+        compare(parameter.rowLabel,label);compare(parameter.name,"adp_iso");
+        compare(parameter.path,"structure.atom_sites["+label+"].adp_iso");
+        return parameter;
+    }
     function visible185_inputs(project) {
         const experiment = project.currentExperiment;
         const observations = Probe.rows(experiment.pattern).map(row => [row.x, row.intensityMeas, row.intensityMeasSu]);
@@ -9920,7 +9938,10 @@ TestCase {
                     && matches[0].free===false && matches[0].value===profileBaselines507[path],
                     "MAIN514: first actual warm-up holds SAME original profile member at literal start");
             }
-            const profileAdps=["La","Ba","Co","O"].map(label => visible185_parameter(original,label,"adp_iso"));
+            const profileAdps=["La","Ba","Co","O"].map(label => visible743_adp(original,label));
+            verify(!profileAdps[1].refinable && !profileAdps[1].free,"MAIN743: constrained Ba remains disabled and never independently free");
+            verify(!visible185_parameters(original).some(parameter=>parameter===profileAdps[1] || parameter.path===profileAdps[1].path),
+                "MAIN743: dependent Ba is absent from Analysis, not absent from its ordinary ADP page");
             verify(profileAdps.every(parameter => parameter.value===.5 && !parameter.free),"MAIN504: actual first-stage ADPs remain the four fixed positive starts");
             compare([delegatedTyped612,freeClicks,scientificHeaderEvents610],[0,0,0],"NATURAL610: no scientific keys/toggle/menu-choice input is dispatched");
             compare(ordinaryValueWrites610.length,plan.adps.length,"NATURAL610: actual ADP app-method effects, not missing text callbacks, prove completion");
@@ -9971,7 +9992,14 @@ TestCase {
                 && fitted.filter(row => row.path===plan.adps[i])[0].value!==baseline[i]),"MAIN504: ADPs genuinely move before Save");
             for(const label of ["La","Co","O"]) { const parameter=visible185_parameter(current,label,"adp_iso");
                 verify(parameter.free && parameter.hasUncertainty && Number.isFinite(parameter.uncertainty) && parameter.uncertainty>0 && parameter.value>=0,"MAIN504: real fitted ADPs retain positive finite native SUs"); }
-            compare(visible185_parameter(current,"La","adp_iso").value,visible185_parameter(current,"Ba","adp_iso").value);
+            const la743=visible743_adp(current,"La"),ba743=visible743_adp(current,"Ba");
+            compare(la743,visible185_parameter(current,"La","adp_iso"));
+            compare(la743.value,ba743.value,"MAIN743: exact identity constraint still binds the current dependent Ba value to La");
+            verify(!ba743.refinable && !ba743.free,"MAIN743: fitted dependent Ba never becomes an independent fit member");
+            compare(ba743.hasUncertainty,la743.hasUncertainty);
+            compare(ba743.uncertainty,la743.uncertainty,"MAIN743: Ba=La carries the same propagated native SU through current Save");
+            verify(!visible185_parameters(current).some(parameter=>parameter===ba743 || parameter.path===ba743.path),
+                "MAIN743: current dependent Ba stays absent from Analysis after fit and Save");
             aliasesCurrent(current);
             const rounded=save349_science(current); verify(Session.openProject(Probe.referenceUrl("current")),"MAIN504: original Session reader genuinely reopens committed current output");
             tryVerify(() => !Session.project.calculating && Probe.computedCurrent(Session.project.currentExperiment),10000);
@@ -10165,7 +10193,22 @@ TestCase {
             }
         }
         function same(){verify(alive313(ownerLife)&&Session.project===owner && assistant===originalAssistant && alive313(assistantLife),"STRUCTURE634: original owner/assistant remains live");}
-        function rows(){same();return Probe.rows(structure.atomSites);}
+        function rows(restoredName){
+            same();
+            const models=Probe.rows(owner.structures),selected=owner.currentStructure;
+            compare(models.length,1,"STRUCTURE744: the original PVM still owns exactly one intended current structure");
+            verify(selected!==null && selected!==undefined,"STRUCTURE744: current selection is a real structure, never a missing model");
+            compare(models[0].structure,selected,"STRUCTURE744: the selected structure is the sole actual current collection member");
+            if(restoredName!==undefined){
+                // ONLY an explicit post-Undo observation may acquire a replacement wrapper.
+                compare(selected.name,restoredName,"STRUCTURE744: ordinary Undo restores the intended semantic structure identity");
+                structure=selected;structureLife=lifetime313(structure);
+            }
+            verify(alive313(structureLife),"STRUCTURE744: the observed structure's current lifetime is real");
+            compare(structure,selected,"STRUCTURE744: forward edits retain original identity; Undo reads use the reacquired current owner");
+            verify(structure.atomSites!==null && structure.atomSites!==undefined,"STRUCTURE744: current owner exposes its real replacement child atom model");
+            return Probe.rows(structure.atomSites);
+        }
         function science634(row){
             const roles=[row.fractX,row.fractY,row.fractZ,row.occupancy,row.adpIso];
             for(const parameter of roles)verify(parameter!==null && typeof parameter.value==="number" && isFinite(parameter.value)
@@ -10349,17 +10392,20 @@ TestCase {
             compare(window.appBarCentralTabs.currentIndex,beforePage);compare(visible185_values(owner),before);compare(owner.canUndo,beforeUndo);
             const removed=send(5,1);compare(removed[0].removed,true);compare(removed[0].atom_id,"Second634");compare(rows().length,1);member634(0,"First634","57Fe",editedScience668);
             verify(cues.some(c=>c.phase===5&&c.name.startsWith("atomSite.remove.")),"STRUCTURE634: explicit removal cues original exact current row");
-            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,2);member634(1,"Second634",addedType,lastEdited674);
-            Ui.click(test,Probe,window,"appBar.button.undo");member634(1,"Second634",addedType,addedScience);restored674=true;
-            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[1].label,addedId,"STRUCTURE634: no-op group adds no phantom Undo between actual remove and preceding rename");
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows("Main634").length,2);
+            member634(0,"First634","57Fe",editedScience668);member634(1,"Second634",addedType,lastEdited674);
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows("Main634").length,2);
+            member634(1,"Second634",addedType,addedScience);restored674=true;
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows("Main634").length,2);
+            compare(rows()[1].label,addedId,"STRUCTURE634: no-op group adds no phantom Undo between actual remove and preceding rename");
             member634(1,addedId,addedType,addedScience);
-            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows().length,1);member634(0,"First634","57Fe",editedScience668);
-            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows()[0].typeSymbol,initialType,
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows("Main634").length,1);member634(0,"First634","57Fe",editedScience668);
+            Ui.click(test,Probe,window,"appBar.button.undo");compare(rows("Main634").length,1);compare(rows()[0].typeSymbol,initialType,
                 "STRUCTURE634: NEXT ordinary Undo is the real preceding first-site type edit, not an equal setter");
             member634(0,"First634",initialType,editedScience668);
             compare(JSON.stringify(JSON.parse(visible185_values(owner))),JSON.stringify(numericExpected668),"STRUCTURE668: original type Undo leaves the actual preceding numeric transaction intact");
             for(const index of numericChanged668.slice().reverse()){
-                Ui.click(test,Probe,window,"appBar.button.undo");
+                Ui.click(test,Probe,window,"appBar.button.undo");compare(rows("Main634").length,1);
                 const entry=numeric668[index];numericExpected668=numericExpected668.map(row=>row[0]===entry.path?[row[0],numericInitialValues668[index],...row.slice(2)]:row);
                 compare(JSON.stringify(JSON.parse(visible185_values(owner))),JSON.stringify(numericExpected668),"STRUCTURE668: each actual changed value owns ONE ordinary Undo in reverse caller order");
             }
@@ -10367,12 +10413,12 @@ TestCase {
             const firstCurrent=member634(0,"First634",initialType,initialScience),numericRestored699=JSON.parse(visible185_values(owner));
             // The new ordinary prerequisite owns ONE real history entry behind
             // the original two metadata edits; no clearing or synthetic history.
-            Ui.click(test,Probe,window,"appBar.button.undo");++metadataUndos699;
+            Ui.click(test,Probe,window,"appBar.button.undo");++metadataUndos699;compare(rows("Main634").length,1);
             member634(0,initialId,initialType,initialScience);
-            Ui.click(test,Probe,window,"appBar.button.undo");++metadataUndos699;
+            Ui.click(test,Probe,window,"appBar.button.undo");++metadataUndos699;compare(rows(created[0].structures[0].id).length,1);
             compare(structure.name,created[0].structures[0].id);compare(structure.spaceGroup.nameHM,"P 1");
             member634(0,initialId,initialType,initialScience);
-            Ui.click(test,Probe,window,"appBar.button.undo");++prerequisiteUndos699;
+            Ui.click(test,Probe,window,"appBar.button.undo");++prerequisiteUndos699;compare(rows(created[0].structures[0].id).length,1);
             compare(JSON.stringify({name:structure.spaceGroup.nameHM,number:structure.spaceGroup.itNumber,hasNumber:structure.spaceGroup.hasItNumber,code:structure.spaceGroup.coordSystemCode}),JSON.stringify(initialGroup699));
             member634(0,initialId,initialType,initialScience);compare(rows()[0].wyckoffLetter,"a");
             verify([rows()[0].fractX,rows()[0].fractY,rows()[0].fractZ].every(parameter=>!parameter.refinable));
@@ -11101,6 +11147,33 @@ TestCase {
         verify(aliases.parameterNames.includes("phase.atom_site.A.adp_iso"),"REL685: real original offered alias target, no guessed name conversion");
         const nativeTarget=visible185_parameters(project).filter(p=>p.path==="structure.atom_sites[A].adp_iso");
         compare(nativeTarget.length,1);compare(nativeTarget[0].value,.3);
+        function dependents743() {
+            verify(current(),"REL743: ordinary dependent reads retain the original live project owner");
+            const b=visible743_adp(project,"B"),owner=project.currentExperiment;
+            verify(owner!==null,"REL743: the current experiment actually exists");
+            const rows=Probe.rows(owner.instrument).filter(row=>row.name==="calib_twotheta_offset");
+            compare(rows.length,1,"REL743: original Instrument model owns the exact dependent zero member");
+            const zero=rows[0].parameter;
+            verify(zero!==null && zero!==undefined,"REL743: dependent zero has a real ordinary ParameterItem");
+            compare(zero.blockKind,"experiment");compare(zero.blockName,owner.name);
+            compare(zero.rowLabel,"");compare(zero.name,"calib_twotheta_offset");
+            compare(zero.path,"experiment.instrument.calib_twotheta_offset");
+            for(const parameter of [b,zero]) {
+                verify(!parameter.refinable && !parameter.free,"REL743: actual constrained members remain disabled and not independently free");
+                verify(!visible185_parameters(project).some(row=>row===parameter || row.path===parameter.path),
+                    "REL743: exact dependent member is absent from Analysis while its ordinary page retains it");
+            }
+            return [b,zero];
+        }
+        const dependentStates743=dependents743().map(parameter=>[parameter.free,parameter.hasUncertainty,parameter.uncertainty]);
+        function affine743(multiplier) {
+            const actual=dependents743();
+            fuzzyCompare(actual[0].value,multiplier*.3+1,1e-12,"REL743: actual ordinary B satisfies the independent affine fixture");
+            fuzzyCompare(actual[1].value,(multiplier*.3+1)/10,1e-12,"REL743: actual ordinary zero satisfies the independent chained fixture");
+            compare(JSON.stringify(actual.map(parameter=>[parameter.free,parameter.hasUncertainty,parameter.uncertainty])),JSON.stringify(dependentStates743),
+                "REL743: manual/native expression edits preserve both original dependent free/SU states");
+        }
+        affine743(2);
         const baseline=RelationUndoObserver.state(project), values=visible185_values(project),
             inputs=visible185_inputs(project), shape=relation246_shape(project), metadata=import265_owner(project);
         toggle();gui392_signIn(false);visible185_ready("relation685");
@@ -11247,10 +11320,12 @@ TestCase {
                     if(pending!==null){undo(baseline);++assistantUndo;pending=null;}
                     compare(state(),baseline);ordinary(row.manual);settled();expected=state();verify(expected!==baseline);
                     if(row.manual.operation==="constraint_expression"){
-                        const b=visible185_parameter(project,"B","adp_iso"),zero=visible185_parameters(project).filter(p=>p.path==="experiment.instrument.calib_twotheta_offset");
-                        compare(zero.length,1);fuzzyCompare(b.value,3*.3+1,1e-12);fuzzyCompare(zero[0].value,(3*.3+1)/10,1e-12);
+                        affine743(3);
                     }
-                    undo(baseline);++manualUndo;row.before=baseline;receive(row);settled();compare(state(),expected,"REL685: native scalar exactly matches same original ordinary app method and full science");
+                    undo(baseline);++manualUndo;
+                    if(row.manual.operation==="constraint_expression")affine743(2);
+                    row.before=baseline;receive(row);settled();compare(state(),expected,"REL685: native scalar exactly matches same original ordinary app method and full science");
+                    if(row.manual.operation==="constraint_expression")affine743(3);
                     preserved();pending=row;
                 }else if(row.kind==="equal"||row.kind==="stale"){
                     const before=state();receive(row);settled();compare(state(),before);preserved();

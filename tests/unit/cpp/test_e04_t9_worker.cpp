@@ -911,15 +911,28 @@ TEST_CASE("E11-T5 ordinary scalar absorption and cutoff weight restore retain sc
     CHECK_MESSAGE((!experiment->absorption.mu_r.has_value()&&!experiment->absorption.abscor1.has_value()&&!experiment->absorption.abscor2.has_value()),
         "SCALAR698 none removes the actual optional coefficient owners");
     const auto empty=edi::project_edi_files(live);
-    CHECK_MESSAGE((shared->value.get()==.375&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
-        "SCALAR698 detached old coefficient retains its last real state");
-    CHECK_THROWS_AS(edi::Edit::value(*shared,.875)(),std::exception);
-    CHECK_MESSAGE(edi::project_edi_files(live)==empty,"SCALAR698 a retired original coefficient cannot write through its historical handle");
+    CHECK_MESSAGE((shared->is_detached()&&!shared->is_attached()&&shared->value.get()==.375&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 retired native storage stays readable, detached and retains its original free/SU state");
+    // Raw Edit::value is a range-checked native assignment, not the guarded Python handle setter.
+    edi::Edit::value(*shared,.875)();
+    CHECK_MESSAGE((shared->is_detached()&&!shared->is_attached()&&shared->value.get()==.875&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 a valid raw write reaches only the still-readable retired native cell");
+    CHECK_MESSAGE((edi::project_edi_files(live)==empty&&!experiment->absorption.mu_r.has_value()&&!experiment->absorption.abscor1.has_value()&&!experiment->absorption.abscor2.has_value()),
+        "SCALAR743 a historical native cell cannot mutate the live project or resurrect any removed coefficient");
     edi::Edit::restore_experiment_controls(live,std::move(removed))();
     REQUIRE(experiment->absorption.mu_r.has_value());
     CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r!=shared),
         "SCALAR698 Undo restores scientific state without resurrecting a detached historical cell");
-    CHECK_THROWS_AS(edi::Edit::value(*shared,.875)(),std::exception);
+    auto* restored=&*experiment->absorption.mu_r;
+    CHECK_MESSAGE((shared->is_detached()&&!shared->is_attached()&&!restored->is_detached()&&restored!=shared),
+        "SCALAR743 Undo creates a distinct live coefficient and leaves the historical native cell detached");
+    REQUIRE_MESSAGE((shared->value.get()==.875&&shared->value.get()!=.625),
+        "SCALAR746 post-Undo escape starts at the established historical value and must actually change it");
+    edi::Edit::value(*shared,.625)();
+    CHECK_MESSAGE((shared->is_detached()&&shared->value.get()==.625&&shared->free.get()&&shared->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 the retired cell remains readable after Undo without acquiring current ownership");
+    CHECK_MESSAGE((edi::project_edi_files(live)==before&&&*experiment->absorption.mu_r==restored&&restored->value.get()==.375&&restored->free.get()&&restored->uncertainty.get()==std::optional<double>{.0125}),
+        "SCALAR743 raw historical writes cannot alter the replacement's identity/value/free/SU or any live scientific byte");
     for(double literal:{0.0,-2.5}) {
         auto cutoff=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::CutoffFwhm);
         edi::Edit::assign(experiment->peak.cutoff_fwhm,literal)();
@@ -931,14 +944,70 @@ TEST_CASE("E11-T5 ordinary scalar absorption and cutoff weight restore retain sc
     auto negative=edi::load_project(e04_t9_fixture::echidna);
     edi::Edit::assign(zero.experiment().peak.cutoff_fwhm,0.0)();
     edi::Edit::assign(negative.experiment().peak.cutoff_fwhm,-2.5)();
+    // ADR0073 section7: published rows retain the original inclusive exclusion union.
+    // Derive expected membership from SOURCE axis/intervals before either calculation, never its output.
+    const auto axis=zero.experiment().data->axis();
+    const auto observations=zero.experiment().data->intensity_meas.get();
+    const auto sigmas=zero.experiment().data->intensity_meas_su.get();
+    std::vector<std::pair<double,double>> intervals;
+    for(const auto& region:zero.experiment().excluded_regions)
+        intervals.emplace_back(region->first.get(),region->second.get());
+    REQUIRE_MESSAGE((!axis.empty()&&observations.size()==axis.size()&&sigmas.size()==axis.size()),
+        "SCALAR743 original complete measured rows and supplied sigmas define the independent mask axis");
+    const auto negative_axis=negative.experiment().data->axis();
+    std::vector<std::pair<double,double>> negative_intervals;
+    for(const auto& region:negative.experiment().excluded_regions)
+        negative_intervals.emplace_back(region->first.get(),region->second.get());
+    REQUIRE_MESSAGE((negative_axis==axis&&negative_intervals==intervals&&negative.experiment().data->intensity_meas.get()==observations&&negative.experiment().data->intensity_meas_su.get()==sigmas),
+        "SCALAR743 both independently loaded original banks have the same complete source rows and literal intervals before calculation");
+    const auto source_mask=[](const auto& source_axis,const auto& source_intervals) {
+        std::vector<bool> mask;
+        for(double x:source_axis) {
+            REQUIRE_MESSAGE(std::isfinite(x),"SCALAR743 every original measured axis coordinate is finite");
+            bool masked=false;
+            for(const auto& bounds:source_intervals)
+                masked=masked||((bounds.first<=x&&x<=bounds.second)||(bounds.second<=x&&x<=bounds.first));
+            mask.push_back(masked);
+        }
+        return mask;
+    };
+    const auto excluded=source_mask(axis,intervals);
+    const auto negative_excluded=source_mask(negative_axis,negative_intervals);
+    REQUIRE_MESSAGE(excluded==negative_excluded,"SCALAR743 both source-derived inclusive masks agree before either calculation");
+    std::size_t included_count=0,excluded_count=0;
+    for(bool masked:excluded) {if(masked)++excluded_count;else ++included_count;}
+    REQUIRE_MESSAGE((included_count>0&&excluded_count>0),
+        "SCALAR743 unchanged original fixture genuinely exercises both included and excluded published rows");
     zero.calculate();negative.calculate();
+    for(const auto* calculated:{&zero,&negative}) {
+        const auto& bank=calculated->experiment();
+        CHECK_MESSAGE((bank.data->axis()==axis&&bank.data->intensity_meas.get()==observations&&bank.data->intensity_meas_su.get()==sigmas),
+            "SCALAR743 calculation retains every original measured row/order/value and supplied sigma");
+        REQUIRE_MESSAGE(bank.excluded_regions.size()==intervals.size(),"SCALAR743 every original exclusion interval remains present");
+        for(std::size_t index=0;index<intervals.size();++index) {
+            CHECK_MESSAGE((bank.excluded_regions[index]->first.get()==intervals[index].first&&bank.excluded_regions[index]->second.get()==intervals[index].second),
+                "SCALAR743 calculation retains original exclusion order and literal endpoints");
+        }
+    }
     const auto& full=zero.experiment().data->intensity_calc;
     const auto& signed_full=negative.experiment().data->intensity_calc;
-    REQUIRE_MESSAGE((!full.empty()&&full.size()==signed_full.size()),"SCALAR698 both ordinary nonpositive windows produce genuine original measured-bank calculated rows");
-    for(std::size_t row=0;row<full.size();++row) {
-        REQUIRE(std::isfinite(full[row]));REQUIRE(std::isfinite(signed_full[row]));
-        CHECK_MESSAGE(std::bit_cast<std::uint64_t>(full[row])==std::bit_cast<std::uint64_t>(signed_full[row]),
-            "SCALAR698 zero and negative cutoff have the same original full-window semantics; no invented optimum or tolerance");
+    const auto& zero_status=zero.experiment().data->calc_status;
+    const auto& negative_status=negative.experiment().data->calc_status;
+    REQUIRE_MESSAGE((full.size()==axis.size()&&signed_full.size()==axis.size()&&zero_status.size()==axis.size()&&negative_status.size()==axis.size()),
+        "SCALAR743 both complete calculated/status columns retain the entire original measured population");
+    for(std::size_t row=0;row<axis.size();++row) {
+        const std::string expected=excluded[row]?"excl":"incl";
+        CHECK_MESSAGE(zero_status[row]==expected,"SCALAR743 zero-cutoff published status matches the independent inclusive source mask");
+        CHECK_MESSAGE(negative_status[row]==(negative_excluded[row]?"excl":"incl"),"SCALAR743 negative-cutoff published status matches its independent inclusive source mask");
+        if(excluded[row]) {
+            CHECK_MESSAGE((std::isnan(full[row])&&std::isnan(signed_full[row])),
+                "SCALAR743 excluded published rows remain explicitly NaN, never infinity/zero/dropped rows");
+        }else {
+            REQUIRE_MESSAGE((std::isfinite(full[row])&&std::isfinite(signed_full[row])),
+                "SCALAR743 every independently included published row is finite in both calculations");
+            CHECK_MESSAGE(std::bit_cast<std::uint64_t>(full[row])==std::bit_cast<std::uint64_t>(signed_full[row]),
+                "SCALAR698 zero and negative cutoff have the same original full-window semantics; no invented optimum or tolerance");
+        }
     }
     auto weight=edi::capture_experiment_scalar(live,*experiment,edi::ExperimentScalarControl::DatasetWeight);
     edi::Edit::assign(experiment->dataset_weight,.625)();
