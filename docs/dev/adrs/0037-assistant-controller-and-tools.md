@@ -1749,3 +1749,10 @@ blocked by an optional package producer. Existing dedicated requested/advertised
 dispatch schema equality and actual package/source-patch proof remain unchanged.
 Ordinary Save, reader, Create/atom Undo, explicit relation edits, deadline accounting,
 immediate text, profile and exclusions remain outside this focused scalar extension.
+
+
+### Existing-member UI selection and actual current IDs
+
+`edit_structure` and `edit_experiment` expose a closed `select` branch requiring only purpose, actual structure/experiment ID and operation. The first ordinary PVM current-index setters own the change; there is no assistant scientific action/history or second selection state. The existing original call/frame/visual-cue lifecycle owns the attempted/confirmed boundary: entry precedes synchronous setter callbacks, exact Session/epoch/project/member/currentness and actual selected-pointer readback confirm success. A changed UI selection with lost confirmation reports incomplete/uncertain without scientific applied/may-have-written or a guessed selected ID. Already-current no-ops skip page/cue/setter. Scan-file selection is explicitly unsupported by these new branches; no existing broader action is restricted.
+
+The original fresh app-owned `native_state` projection adds optional `selected_structure_id` / `selected_experiment_id` from actual current native members, alongside their original interface groups. No core selection cache or scientific revision is invented. Closed projection, escaped result maxima and simultaneous canonical/Qt/JSON owners are admitted before growth under the existing roles and limits. The same code-owned schema/help/validation/dispatch is used in both modes; no tool name, dedicated policy patch, permission or package identity is fabricated. Successful selection reports complete/published and one settled step, scientific applied=false; it makes no rendered-frame claim and omits presentation_complete. Ordinary Save, previous scientific edit/Undo and the three experiment scalars keep their original methods and contracts.

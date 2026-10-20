@@ -1557,3 +1557,10 @@ original experiments model and must still expose the same exact experiment; its
 index alone does not authorize a write. Existing whole-row reveal, selected member,
 manual draft, Stop and lifetime rules remain. No Experiment-page weight control
 or automatic cutoff implementation is invented.
+
+
+### Explicit existing-member selection through the ordinary selectors
+
+The first selection implementation is `ProjectViewModel::setCurrentStructureIndex` / `setCurrentExperimentIndex`, used by the Structure/Experiment page selector and table rows. The assistant's existing `edit_structure` / `edit_experiment` gain only a closed `select` operation with an actual canonical member ID. Both modes call that same setter once; Show actions reveals the original row and gives its visual-only cue first. The preselection guard proves the original list source model, exact native member/view and retained row/window before the scientific editor's already-selected guard would apply. Scientific controls retain that original selected-owner guard.
+
+Selection is UI state: the ordinary setter persists selection preferences and refreshes views, but creates no scientific Edit, Undo, modified flag or fabricated applied receipt. A real already-selected member is a no-op without navigation or cue. Changed selection respects manual drafts and original Stop/current-owner fences. The existing call frame records entry immediately before the void setter, with a preowned uncertain terminal; completion requires the same Session/epoch/project/native call and actual selected member after synchronous callbacks. Unknown UI completion is not replayed or rolled back into a newer user's choice. Scan selection can load data/stop following and is excluded from these new branches. Existing scientific/noncurrent and qualified parameter access is unchanged.
