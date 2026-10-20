@@ -1891,9 +1891,12 @@ type refusal before those original paths can run.
 The common native bootstrap, original code-owned tool help and bundled project/
 refinement strategy distinguish successful returned identities from intended
 renames: refused prerequisites do not establish new IDs, and partial/uncertain
-effects require actual inspection rather than sequence replay. Only the existing
+effects require actual inspection rather than sequence replay. The existing
 purpose_too_long/purpose prewrite refusal permits a fresh shorter-purpose call
-with unchanged science/current authority. No automatic retry or resolver is added.
+with unchanged science/current authority. A known prewrite target_unavailable/
+experiment refusal with explicit no applied/published effects permits inspection
+and a fresh actual-ID correction within that same objective; generic or uncertain
+refusals do not. No automatic retry or resolver is added.
 
 Delegated setup in both modes completes Structure and Experiment before grouped
 Analysis flags/fits. Chosen and imported background anchors are initially planned
@@ -1932,3 +1935,25 @@ outcome, the existing honest uncertain fallback may omit the reason; a retained
 typed outcome is not erased after later presentation/storage failure. No extra
 reply or fabricated success is introduced. SDK/public-source/package proofs
 must advance genuinely; no future package identity is implied by this source.
+
+
+### General source occupancy normalization and construction completion
+
+The FIRST bundled fullprof-intake mapping remains conditional on the actual
+nuclear source convention and site/general multiplicities. Recover the raw
+fraction from general-position-normalized occupancy, then remove only an
+established common positive phase factor from every site/species. Preserve
+partial/shared-site fractions and verify multiplicity-weighted composition and
+actual native readback. The corresponding already-mapped phase scale receives
+the factor squared exactly once; other engine scale conventions remain separate.
+This follows the FullProf July2001 manual physical pages41/102 and the original
+crysta structure-factor/phase-intensity and cell-mass occupancy contracts, without
+a space-group example, per-site clamping or an assumed normalization factor.
+
+Project guidance owns actual returned-ID recovery and required-setting readback;
+data loading can rename an untouched experiment. Supplied source flags/relations
+describe the requested construction, not an implicit fit command. A failed
+required profile edit prevents a completion claim, while a missing format parser
+does not block existing offered app construction methods. Only skill prose and
+matching version/digests change; no schema, mutation, validation, resource,
+currentness, Undo, retry, SDK or runtime behavior is changed by this guidance.

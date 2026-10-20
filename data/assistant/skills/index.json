@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.45",
+      "version": "1.5.46",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "e81accf687089abbf4b1e6d84ce73283661637bdf7a6f69c4553c0b8fdd2fbe3",
+      "sha256": "6630e65cdc8db99739165eedc7c49e38e2bd4ab4de5f99827ad90b74c25959d4",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "title": "Inspect a FullProf project",
       "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "2d2853a038af36717162d9eb5f37bf9e87c61113803b2324af64feb6fc728381",
+      "sha256": "75bb23491550c97c0d11fbd215f31879bcff6d462288ca825e66a08666b6404c",
       "requires": [
         "selected_files"
       ],
