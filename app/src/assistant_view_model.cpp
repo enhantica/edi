@@ -2986,6 +2986,9 @@ struct AssistantViewModel::State {
                            QObject* converted, ParameterItem* parameter, QObject* property_owner) noexcept {
             try {
                 if (!lcAssistantWidgetLookup().isDebugEnabled()) return;
+                // The existing limit bounds diagnostic work as well as output.
+                // Preserve its original one-time omission marker before returning.
+                if (log_records == 256) { diagnostic([] {}); return; }
                 const auto name = item->objectName();
                 const bool relevant = run->tool == "set_free" ? name.startsWith("parameters.free.")
                     : run->tab == "appBar.tab.analysis" ? name.startsWith("parameters.value.")
@@ -3054,14 +3057,22 @@ struct AssistantViewModel::State {
         if (run->tool == "run_fit") target = widget_named("fitting.start");
         else if (action_window && action_window->contentItem()) {
             for (auto* item : widget_items()) {
+                const bool candidate = free_input ? item->objectName().startsWith("parameters.free.")
+                    : item->objectName().startsWith("instrument.") || item->objectName().startsWith("peak.") ||
+                        item->objectName().startsWith("background.") || item->objectName().startsWith("linkedStructure.") ||
+                        item->objectName().startsWith("cell.") || item->objectName().startsWith("atomSite.") ||
+                        item->objectName().startsWith("atomSiteAdp.") || item->objectName().startsWith("parameters.value.");
+                // Uncapped enabled diagnostics retain their original coverage,
+                // including relevant unusable controls outside this input kind.
+                if (!candidate && (!lcAssistantWidgetLookup().isDebugEnabled() || log_omitted)) continue;
                 const bool usable = widget_input && widget_input->usableTarget(*item);
                 if (!usable && run->tab == "appBar.tab.analysis") { observe(item, false, nullptr, nullptr, nullptr, nullptr); continue; }
+                if (!candidate) continue;
                 ParameterItem* parameter = nullptr;
                 QVariant parameter_property;
                 QObject* converted_parameter = nullptr;
                 QObject* property_owner = nullptr;
                 if (free_input) {
-                    if (!item->objectName().startsWith("parameters.free.")) continue;
                     for (auto* row = item->parentItem(); row; row = row->parentItem()) {
                         if (row->objectName().startsWith("parameters.row.")) {
                             property_owner = row;
@@ -3071,10 +3082,6 @@ struct AssistantViewModel::State {
                         }
                     }
                 } else {
-                    if (!item->objectName().startsWith("instrument.") && !item->objectName().startsWith("peak.") &&
-                        !item->objectName().startsWith("background.") && !item->objectName().startsWith("linkedStructure.") &&
-                        !item->objectName().startsWith("cell.") && !item->objectName().startsWith("atomSite.") &&
-                        !item->objectName().startsWith("atomSiteAdp.") && !item->objectName().startsWith("parameters.value.")) continue;
                     property_owner = item;
                     parameter_property = item->property("item");
                     converted_parameter = parameter_property.value<QObject*>();

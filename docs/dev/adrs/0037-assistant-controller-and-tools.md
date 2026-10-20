@@ -1813,3 +1813,18 @@ owner-bound failure notice, actual browser instructions and explicit Sign out
 remain authoritative. This is presentation only: no authenticated flag, account
 approval, process, deadline, retry or message-delivery behavior changes, and it
 does not establish the cause of an observed disconnection.
+
+
+### Bound existing parameter lookup work without changing admission
+
+The FIRST visible parameter lookup uses its same free/numeric object-name
+eligibility before geometry for controls it would discard. When lookup debug
+logging is enabled and uncapped, the original unusable-control coverage and
+record order remain; after the existing per-lookup budget and omission marker,
+diagnostic-only property, conversion and ancestry reads stop. Candidate order,
+canonical member binding, Main/tier, whole-row reveal, current owner, Stop,
+ordinary setters, receipts, Undo and truthful refusals remain authoritative.
+No target cache, traversal/dedup change, timer/settings/pacing adjustment or
+scientific check is introduced or removed. This removes provably discarded
+work; it does not establish a measured CPU improvement or the cause of a
+reported Mac lag, chart warning or disconnection.
