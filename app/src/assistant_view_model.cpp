@@ -379,6 +379,8 @@ quint64 skill_json_text_units(const QJsonValue& value) {
         else return static_cast<quint64>(text.size()); // Latin-1 or UTF-16 storage.
     });
 }
+quint64 skill_json_text_units(const QJsonObject&) = delete;
+quint64 skill_json_text_units(const QJsonArray&) = delete;
 // The app's existing bundled staging path and explicitly selected local sources
 // share this captured, bounded inventory. Source text cannot register a tool.
 struct AssistantSkillInventory {
@@ -4177,7 +4179,11 @@ struct AssistantViewModel::State {
     void native_start_relation_edit(const Object& args) {
         if(!project || !native_call || native_widget)throw ActionRefusal("target_unavailable","relation");
         const auto projection=file_projection();
-        const auto text_units=skill_json_text_units(args);
+        // Only the validated scalar strings acquire decoded text owners.
+        // Enabled has a boolean value; remove has no value string.
+        const auto text_units=skill_json_text_units(args.value(QLatin1StringView{"purpose"}))+
+            skill_json_text_units(args.value(QLatin1StringView{"id"}))+skill_json_text_units(args.value(QLatin1StringView{"operation"}))+
+            (args.value(QLatin1StringView{"value"}).isString()?skill_json_text_units(args.value(QLatin1StringView{"value"})):0);
         const auto role=reserve_disclosure(sizeof(NativeWidget)+sizeof(ProjectViewModel::WidgetRelationInput)+sizeof(AssistantWidgetInput::Request)+
             2*generic_size(args,Limits::context_bytes)+4*text_units*sizeof(QChar)+8*Limits::id_bytes*sizeof(QChar));
         auto run=std::make_shared<NativeWidget>();run->call=*native_call;run->receiver=&owner;run->project=project;

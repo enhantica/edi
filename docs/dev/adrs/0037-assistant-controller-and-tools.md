@@ -1867,3 +1867,20 @@ remain. Existing enabled hover/down/focus foreground accent is retained; the
 neutral Stop ink follows its original themed foreground on the content fill.
 Send/avatar blue-background hover is unrelated and stays exact. No speed
 control, component, backend or lifecycle behavior is introduced.
+
+
+### Scalar string roles in ordinary relation preparation
+
+The FIRST skill_json_text_units helper measures one borrowed JSON string before
+admitting a decoded string owner. It remains strict for nonstrings, and deleted
+object/array overloads prevent an aggregate from implicitly entering that scalar
+contract. Relation preparation measures its already validated purpose, ID and
+operation strings, plus value only when it is a string. Enabled's boolean and
+remove's absent value require no decoded value-string role.
+
+The original encoded argument-object charge, decoded-string temporary factor,
+fixed frame/input roles and all retained-byte ceilings remain. This measurement
+precedes allocation, exact member lookup, canonical no-op comparison and both
+visible and normal execution. It does not change validation, ordinary relation
+setters, receipt/Undo ownership or refusal semantics; it removes an unconditional
+type refusal before those original paths can run.
