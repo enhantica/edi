@@ -2051,3 +2051,21 @@ those labels. No elided/laid-out child width feeds the parent. Middle elision
 remains only when the original available-width cap requires it. The original
 bounded inputFiles validation, IDs, accessibility/copy/archive behavior and
 nonuser/zero-file widths are unchanged. No parser, source copy or cache is added.
+
+
+### Visible text-field cue geometry
+
+The FIRST ParameterField/ParamTextField title is outside its editable TextField
+background, in topInset. AssistantWidgetInput therefore centers that control's
+cue on the actual inset rectangle, using the original Qt TextField scalar
+geometry, not the title-inclusive item center or a font-derived offset. The
+pinned Qt implementation uses those insets for its automatic background bounds;
+its final scalar getters do not instantiate a deferred background item.
+
+Untitled zero-inset fields retain their center; plain TextInput cells, buttons,
+menus and scroll gutters retain their original geometry. Each original target
+revalidation maps current local geometry through the same item transform and
+checks the same window/ancestor visibility and clipping. Invalid or empty inset
+geometry refuses. Target/receiver identity, full-row reveal, draft/currentness,
+ordinary setter/receipt/Undo and Stop behavior are unchanged; no shadow target or
+scientific input protocol is added.

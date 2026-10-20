@@ -219,7 +219,23 @@ bool AssistantWidgetInput::current(std::uint64_t id) const {
 }
 bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter) const {
     if (!window_ || item.window() != window_ || !window_->isVisible() || item.width() <= 0 || item.height() <= 0) return false;
-    center = item.mapToScene(QPointF(scrollGutter ? std::min(1.0, item.width() / 2) : item.width() / 2, item.height() / 2));
+    QPointF localCenter(scrollGutter ? std::min(1.0, item.width() / 2) : item.width() / 2, item.height() / 2);
+    if (!scrollGutter && item.inherits("QQuickTextField")) {
+        // FIRST TextField's editable background uses its actual insets. A
+        // ParamTextField's title occupies topInset, not the editable box.
+        // Read the final scalar properties, not the deferred background item.
+        bool leftOk = false, topOk = false, rightOk = false, bottomOk = false;
+        const auto left = item.property("leftInset").toDouble(&leftOk);
+        const auto top = item.property("topInset").toDouble(&topOk);
+        const auto right = item.property("rightInset").toDouble(&rightOk);
+        const auto bottom = item.property("bottomInset").toDouble(&bottomOk);
+        if (!leftOk || !topOk || !rightOk || !bottomOk || !std::isfinite(left) || !std::isfinite(top) ||
+            !std::isfinite(right) || !std::isfinite(bottom)) return false;
+        const QRectF box(left, top, item.width() - left - right, item.height() - top - bottom);
+        if (!std::isfinite(box.width()) || !std::isfinite(box.height()) || box.width() <= 0 || box.height() <= 0) return false;
+        localCenter = box.center();
+    }
+    center = item.mapToScene(localCenter);
     if (!std::isfinite(center.x()) || !std::isfinite(center.y()) || !QRectF(0, 0, window_->width(), window_->height()).contains(center)) return false;
     for (auto* ancestor = &item; ancestor; ancestor = ancestor->parentItem()) {
         if (!ancestor->isVisible() || !ancestor->isEnabled() || ancestor->opacity() <= 0) return false;
