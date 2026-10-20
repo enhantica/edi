@@ -5,7 +5,9 @@ description: Interpret selected FullProf text and preserve its scientific meanin
 
 # Inspect a selected FullProf project
 
-Version: 1.0.7. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
+Version: 1.0.8. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
+
+After interpretation and chemical-occupancy/scale mapping, prefer the offered complete native setup action when its code-owned scope fits the whole target. It creates no parser/CIF conversion: supply the scientifically mapped target and genuine data ID under its actual schema. Setup completion alone does not verify required source relations or final free flags; apply/read those afterward through ordinary offered actions, and fit only if authorized.
 
 ## Before any occupancy setter
 

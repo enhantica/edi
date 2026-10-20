@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_native_tools.hpp"
+#include "assistant_recipe_refusal.hpp"
 #include "assistant_action_refusal.hpp"
 #include "codex_agent.hpp"
 #include "../../core/src/assistant_json.hpp"
@@ -48,8 +49,16 @@ QJsonArray native_tool_specs(bool include_profiles) {
         {{"flags", Object{{"type", "array"}, {"minItems", 1}, {"maxItems", static_cast<int>(edi::assistant::Limits::stream_items)},
             {"items", object({{"path", text}, {"free", Object{{"type", "boolean"}}}}, {"path", "free"})}}}}, {"flags"});
     add("run_fit", "Run the displayed Edi project's real single/joint native fit only when fitting is authorized, after completing all Structure then all Experiment setup and inspecting actual free flags after any failed prerequisite; await actual publication/outcome. In delegated staged refinement, release one justified Analysis group, fit, then inspect actual status/adopted/converged facts, comparable objective and physical validity before the next group. Retain good stages. Restore an adopted undesired fit only through actually offered ordinary Undo/restore that still targets it, then inspect actual state/free flags; never undo earlier science after an unadopted refusal. If restoration is unavailable, report that limit rather than claim rollback or continue from a rejected state. Unknown/uncertain effects require inspection, not blind retry. For ordinary sample-cell refinement retain the supplied known wavelength fixed; genuine wavelength calibration needs its known cell/anchor and objective. Preserve explicit constraints and resolve conflicts, never silently override flags. This is a live fit, not an isolated accepted-best trial. A returned fit_reason=unanchored_cw_dilation identifies the actual engine guard's refusal of a free uniform wavelength/cell scale direction, not general singularity. Choose the objective-appropriate supported anchor described above; in joint/phase fitting it must anchor the actual effective unanchored group. Zero is not this scale anchor. Ask about genuine objective conflicts and do not automatically retry. Unknown errors do not imply this cause. For the current project's Report preview, offer [Open Report page](edi:report): only the user's click navigates to the existing enabled Report page. Do not discover or select a desktop/CUA app by name for this navigation. The link does not generate or save a report.");
-    add("create_cwl_project", "Create a native single-phase powder CW neutron project from two genuine selected-file IDs and an explicit scientific recipe, or populate the SAME scientifically empty current project with one Undo while preserving its identity/metadata/settings/path. Never replaces a nonempty project. Show actions uses the existing Project Create, Experiment Create/type/instrument/profile/background and Analysis controls with factual per-step partial outcomes and ordinary Undo behavior. File loads show the original Load pointer/click cue without delivering input or opening a dialog, then perform the validated approved-file import; manual Load keeps its system dialog. No duplicate import form or atomic GUI batch is used. Normal mode uses the native preparation directly. recipe project_name/description apply only when no project is open. No fit or save is implied; existing-directory saving is not this operation.",
-        {{"cif_file_id", text}, {"data_file_id", text}, {"recipe", native_cwl_recipe_schema()}}, {"cif_file_id", "data_file_id", "recipe"});
+    { // One offered operation; exactly one admitted Structure input alternative.
+        const auto common=Object{{"purpose",purpose},{"data_file_id",text},{"recipe",native_cwl_recipe_schema(include_profiles)}};
+        auto cif=common;cif["cif_file_id"]=text;
+        auto mapped=common;mapped["mapped_structure"]=native_mapped_structure_schema();
+        tools.append(Object{{"type","function"},{"name","create_cwl_project"},
+            {"description","Prepare a complete single-phase powder CW neutron setup from either a genuine selected CIF ID or a complete scientifically mapped_structure, plus genuine data_file_id and the original recipe. Prefer this complete action for delegated full setup when its scope fits: BOTH inputs validate the final native candidate/initial overrides first, then use the SAME actual sidebar category order: complete Structure, each full site row before the next, all ADPs afterward, then Experiment groups. Map source occupancies/scales BEFORE supplying the target. No new parser, generated CIF, fit, save, aliases/constraints or refinement-flag stage is implied. Required source relations/flags are explicit subsequent ordinary actions; setup completion alone is not complete source reconstruction. Only no project or the SAME scientifically empty current project is accepted; metadata/path/history are preserved. OFF uses one prepared atomic population/Undo. ON uses original app controls/receipts with factual partial outcomes and ordinary Undo, not atomic GUI replay. CIF uses original Load; mapped uses original Create and reuses its actual initial atom. Explicit standalone action arrays remain in caller order. recipe names/description apply only when no project is open."},
+            {"inputSchema",Object{{"oneOf",Array{
+                object(cif,{"purpose","cif_file_id","data_file_id","recipe"}),
+                object(mapped,{"purpose","mapped_structure","data_file_id","recipe"})}}}}});
+    }
     // Public canonical schemas apply only to these four new native actions.
     tools.append(Object{{"type","function"},{"name","load_structure"},{"description","Append one structure to the current project from an admitted immutable file_id through the original Structure Load reader/Undo. Show actions gives only the original Load pointer/click cue, not a dispatched click or file dialog. Original source identity must remain current. No recreation, path grant, fit or save."},
         {"inputSchema",QJsonDocument::fromJson(QByteArrayLiteral(R"schema({"type":"object","properties":{"purpose":{"type":"string","minLength":1,"maxLength":120},"file_id":{"type":"string","minLength":1,"maxLength":256}},"required":["purpose","file_id"],"additionalProperties":false})schema")).object()}});
@@ -173,16 +182,19 @@ quint64 assistant_native_tool_specs_preparation_bytes() {
         edi::visit_supported_peak_profiles(mode,[&](const std::string& token) {
             if(!edi::assistant::detail::utf8(token))throw std::invalid_argument("Native profile option is not UTF-8");
             const auto bytes=edi::json::encoded_string_size(token,Limits::context_bytes);
-            const auto comma=first?0u:1u;
-            if(bytes>Limits::context_bytes-encoded || comma>Limits::context_bytes-encoded-bytes)
+            const quint64 copies=mode==edi::BeamModeEnum::CONSTANT_WAVELENGTH?3:1;
+            // Both closed creation alternatives carry the recipe enum; the
+            // original edit_experiment enum is its third CW wire/owner role.
+            const auto commas=first?0u:copies;
+            if(bytes>(Limits::context_bytes-encoded)/copies || commas>Limits::context_bytes-encoded-copies*bytes)
                 throw std::length_error("Native catalogue exceeds capacity");
-            encoded+=bytes+comma;first=false;
+            encoded+=copies*bytes+commas;first=false;
             // QString conversion and the independent Qt JSON string can overlap.
             // Valid UTF-8 has no more UTF-16 units than input bytes. Admit both
             // before either allocation, plus its enum entry and encoded role.
             if(token.size()>Limits::stream_retained_bytes/(2*sizeof(QChar)))
                 throw std::length_error("Native catalogue exceeds capacity");
-            charge(2*token.size()*sizeof(QChar));charge(sizeof(QJsonValue));
+            charge(copies*2*token.size()*sizeof(QChar));charge(copies*sizeof(QJsonValue));
         });
     // The original pinned SDK creates its finite owning option vectors before
     // Qt conversion; reserve every such scratch owner plus both modes' Qt enums.
@@ -317,7 +329,12 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         else if(args.value("operation")=="add" && !args.contains("id"))shape(args,{"purpose","experiment","operation","position","intensity","free"});
         else if (args.value("operation") == "remove") shape(args,{"purpose","experiment","operation","id"});
         else shape(args,{"purpose","experiment","operation","id","position","intensity","free"});
-    } else if (name == "create_cwl_project") shape(args, {"purpose", "cif_file_id", "data_file_id", "recipe"});
+    } else if (name == "create_cwl_project") {
+        if(args.contains("mapped_structure")) {
+            shape(args,{"purpose","mapped_structure","data_file_id","recipe"});
+            if(!args.value("mapped_structure").isObject())throw RecipeRefusal(RecipeField::MappedStructure,RecipeReason::ObjectRequired);
+        } else shape(args,{"purpose","cif_file_id","data_file_id","recipe"});
+    }
     else if (name == "add_relations") shape(args, {"purpose", "aliases", "constraints"});
     else if(name=="save_project") {
         if (!args.contains("destination")) {

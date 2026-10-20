@@ -8,16 +8,16 @@ namespace edi_app {
 enum class RecipeField { Recipe, ProjectName, Description, ExperimentName, SampleForm,
     BeamMode, RadiationProbe, ScatteringType, PeakProfile, Wavelength, ZeroOffset,
     PhaseScale, Background, Exclusions, InitialParameters, Position, Intensity,
-    First, Second, Path, Value };
+    First, Second, Path, Value, MappedStructure };
 enum class RecipeReason { Fields, TextRequired, TextCapacity, InvalidText, FiniteNumber,
-    ArrayRequired, MinimumItems, MaximumItems, ObjectRequired, SupportedProfile };
-inline constexpr std::array<const char*,21> recipe_fields{{"recipe","project_name","description",
+    ArrayRequired, MinimumItems, MaximumItems, ObjectRequired, SupportedProfile, DependentTarget };
+inline constexpr std::array<const char*,22> recipe_fields{{"recipe","project_name","description",
     "experiment_name","sample_form","beam_mode","radiation_probe","scattering_type",
     "peak_profile","wavelength","zero_offset","phase_scale","background","exclusions",
-    "initial_parameters","position","intensity","first","second","path","value"}};
-inline constexpr std::array<const char*,10> recipe_reasons{{"missing_or_unsupported_fields",
+    "initial_parameters","position","intensity","first","second","path","value","mapped_structure"}};
+inline constexpr std::array<const char*,11> recipe_reasons{{"missing_or_unsupported_fields",
     "nonempty_text_required","text_capacity","invalid_text","finite_number_required",
-    "array_required","minimum_items","maximum_items","object_required","supported_profile_required"}};
+    "array_required","minimum_items","maximum_items","object_required","supported_profile_required","dependent_target_mismatch"}};
 inline RecipeField recipe_field(std::string_view key) {
     for(std::size_t i=0;i<recipe_fields.size();++i)if(key==recipe_fields[i])return static_cast<RecipeField>(i);
     throw std::logic_error("Native recipe field mapping is unavailable");

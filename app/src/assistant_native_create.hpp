@@ -18,7 +18,8 @@ struct NativeCwlRecipe {
 };
 // The generic runtime must supply an explicit typed recipe. No host instrument,
 // wavelength/profile/background/chemical choices are silently invented here.
-QJsonObject native_cwl_recipe_schema();
+QJsonObject native_cwl_recipe_schema(bool include_profiles = true);
+QJsonObject native_mapped_structure_schema();
 NativeCwlRecipe parse_native_cwl_recipe(const QJsonObject& recipe);
 struct NativeCwlCandidate {
     edi::Project project;
@@ -28,5 +29,6 @@ struct NativeCwlCandidate {
 // save, provider action or permission expansion occurs here.
 NativeCwlCandidate prepare_native_cwl_project(const std::string& selected_cif_text,
                                              const std::string& selected_measurement_snapshot,
-                                             const NativeCwlRecipe& recipe);
+                                             const NativeCwlRecipe& recipe,
+                                             const QJsonObject& mapped_structure = {});
 } // namespace edi_app

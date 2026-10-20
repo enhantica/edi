@@ -70,6 +70,8 @@ struct CategoryPresentation {
     bool extras_part = false;
 };
 CategoryPresentation category_presentation(const QString& id);
+// Same original sidebar ordering, also borrowed by complete native setup planning.
+std::vector<const edi::Category*> category_presentation_order(const std::vector<edi::Category>&);
 
 }  // namespace edi_app
 

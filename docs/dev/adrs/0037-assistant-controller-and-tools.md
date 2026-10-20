@@ -2069,3 +2069,92 @@ checks the same window/ancestor visibility and clipping. Invalid or empty inset
 geometry refuses. Target/receiver identity, full-row reveal, draft/currentness,
 ordinary setter/receipt/Undo and Stop behavior are unchanged; no shadow target or
 scientific input protocol is added.
+
+
+### One final-target setup order for CIF and mapped Structure input
+
+The FIRST create_cwl_project/NativeCwlCandidate and NativeCreateWidget path owns
+both original CIF input and the closed scientifically mapped Structure target.
+Native Structure/Cell/AtomSite/tensor constructors and original specs, setting,
+ADP and relation completion prepare the mapped input; no default factory,
+requested CIF, source parser or second executor is copied. Original recipe,
+source and initial_parameters validation order and final override values stand.
+Only after the FINAL candidate is valid does the same CategoryListModel
+presentation order produce the ordinary control plan for either input.
+
+The planner resolves actual UI owners: cell, each complete Atom sites row, then
+ALL Atomic displacement rows, before Experiment creation and its actual groups.
+An isotropic ADP belongs to the original ADP group despite its core atom_site
+parameter category. Background values come from the final candidate and the
+original position-derived IDs action follows all naming inputs. Independent
+one-off arrays retain caller order. Equal canonical values skip scientific
+setters/cues/Undo. Mapped ON invokes ordinary Create, reuses its actual one seed
+and appends only later rows; FIRST Edit::add_structure now additionally returns
+that actual one-atom identity before callbacks, with all prior receipt fields
+and scientific operation unchanged. Ordinary row methods/receipts, partial
+prefix/currentness/Stop/manual draft and original Undo remain the write owners.
+OFF retains the original completely prepared population and one atomic Undo.
+
+The original creation worker's scientific Project/PlainData/candidate graph is
+an ordinary core working graph, as in the existing native readers/population;
+the stream-retention cap is not a global scientific-engine heap/RSS policy.
+The candidate is discarded before ordinary visible writes, never retained as a
+second live scientific snapshot. New assistant-owned request decoding, selected
+captures, metadata/worklist, Qt JSON, callbacks and result/history roles are
+pre-admitted under existing caps and retained through their actual owners. No
+new allocator/parser, arbitrary multiplier, cap increase or silent spare-role
+donation defines scientific memory. This explicit distinction replaces any
+claim that the transport cap measures arbitrary native engine allocations.
+
+The boundary remains one Structure, one powder/CW/neutron/Bragg Experiment,
+no project or the same scientifically empty owner. Source interpretation and
+occupancy/scale mapping precede the target; validation never forces a dependent
+field. Required source aliases/constraints/refinement flags are subsequent
+explicit ordinary actions AFTER setup. Setup alone implies neither complete
+source reconstruction, Analysis release, optimizer execution nor saving.
+Stock default-off dedicated policy remains supported; any opted-in runtime
+catalogue/schema proof must match actual offered bytes, never a fabricated
+package/hash or historical qualification. Source review and a genuine fresh
+producer/class gate are distinct from this implementation.
+
+
+The prepared visible setup handoff also retains the FIRST original visible
+originPaths / standalone pathRole admission. Before new SelectedFile holders
+or original source validation/URL/hash work, it reserves their additional
+headers beside the still-owned old selected vector slots, original path and
+encoding overlap, hash/read scratch and actual snapshot-reader URL preparation.
+The guard is declared before the local frame, so failure destroys that untracked
+frame before releasing the reservation. On successful tracking, existing
+native_bytes owns the actual frame/worker/source/path roles before the same
+reservation transfers. CIF and mapped measurement-only handoffs share this
+boundary; no metadata/plan slack, skipped rehash or new scientific snapshot
+funds it. Original caps and source/currentness/refusal/Stop behavior stand.
+
+
+### Genuine instruction continuity follows fresh-thread identity, not words
+
+The FIRST generic_send/generic_acknowledge continuity path owns the genuine UI
+instruction origin and completed public user rows. Its former continuation-word
+tests missed ordinary attachment follow-ups and could exclude an actual user's
+earlier instruction by spelling. A fresh same-project/generation/account backend
+thread now receives those bounded, ordered completed rows as explicitly
+context-only text using the exact original earlier-user prefix. The current real
+instruction follows prior instructions and takes precedence; the original
+approvedContext DATA item stays last. The existing live thread already has its
+inputs, so it is not reseeded each turn.
+
+Only an actual successful correlated input ACK, its original pending receipt,
+current scope and exact genuine public user row establish the thread-input
+marker and first objective anchor. Failed preflight, refused/retired/older ACK,
+Clear, replacement and account retirement cannot advance them. Original thread
+retirement/new-thread assignment resets the marker. The original exact committed
+empty-owner project handoff retains its existing anchor transfer.
+
+The complete input's encoded size, Qt JSON text/container owners and one largest
+prior decode/concatenation scratch are admitted before history text grows under
+the same original joint caps. The existing borrowed string-size walk accepts an
+explicit cap here while all skill callers keep their prior default. No old
+file/source bytes, grants, input-path capture or provider userMessage/assistant
+text are promoted: capture_input_scopes still reads only the current real draft.
+No phrase classifier, summary, obsolete backend reuse, retry or transport engine
+is introduced. Clear and scope boundaries remain the original owners.

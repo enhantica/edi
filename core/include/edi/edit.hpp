@@ -927,7 +927,9 @@ class Edit {
     static Edit add_structure(Project& project, Structure structure) {
         return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(std::move(structure))] {
             add_loaded_structure(project, *structure);
-            return AppliedResult{project.structures.back().get(), nullptr};
+            const auto* inserted=project.structures.back().get();
+            return AppliedResult{inserted, nullptr,
+                inserted->atom_sites.size()==1?inserted->atom_sites[0].get():nullptr};
         });
     }
     // A structure removed with every experiment's link to it and texture row for it, all or none.
