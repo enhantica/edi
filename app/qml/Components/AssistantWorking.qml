@@ -19,7 +19,7 @@ EaElements.Label {
     Accessible.name: text
     property int variant: 0
     readonly property bool animating: working && EaStyle.Times.translationChange > 0
-    readonly property real iconExtent: EaStyle.Sizes.fontPixelSize * 0.75 * 1.75
+    readonly property real iconExtent: AppSizes.assistantIconExtent
     readonly property real rotationExtent: variant === 2 ? iconExtent * Math.SQRT2 : iconExtent
     leftPadding: rotationExtent + AppSizes.unit * 0.5
     // Use the rendered Label baseline, including its actual padding/alignment.

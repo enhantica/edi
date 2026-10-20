@@ -14,6 +14,8 @@ QtObject {
     readonly property real assistantMinimumWidth: unit * 23
     readonly property real assistantMaximumWidth: unit * 48
     readonly property real assistantMainMinimumWidth: unit * 40
+    // The working logo's physical circle, shared by both original Stop paints.
+    readonly property real assistantIconExtent: unit * 0.75 * 1.75
 
     // The wordmark's mark (Components/Wordmark.qml; its name is 0.4309 of it): easydiffractionbeta's 5 units,
     // the same on Home and in About (WordmarkWithVersion, edi ADR-0017 §1).

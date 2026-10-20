@@ -1849,3 +1849,21 @@ this pair. Both tokens fit the original longest closed-token bounds and direct
 reply admission measures the actual projection, so no response limit, field
 family or allowance grows. This explains only actually overlong requests, not
 shorter control, relation, deadline, rendering or connection failures.
+
+
+### One working-logo diameter for both original Stop paints
+
+The FIRST AssistantWorking physical icon diameter is shared through AppSizes;
+its formula and rotation/visibility behavior are unchanged. StatusBar already
+uses that iconExtent for its centered content-background circle, appBarBorder
+and half-diameter stop glyph. AssistantComposer now paints the same circle and
+proportional glyph, with its original message/content background and border,
+inside the unchanged actionSize hit/layout slot. The circle is centered rather
+than stretching to that larger tool-button slot.
+
+Only paint changes: actual cancellation receivers, visibility/pressed retention,
+steer/draft/send behavior, keyboard/accessibility and all layout reservations
+remain. Existing enabled hover/down/focus foreground accent is retained; the
+neutral Stop ink follows its original themed foreground on the content fill.
+Send/avatar blue-background hover is unrelated and stays exact. No speed
+control, component, backend or lifecycle behavior is introduced.
