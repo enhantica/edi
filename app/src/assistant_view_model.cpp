@@ -10790,7 +10790,8 @@ struct AssistantViewModel::State {
                         if(recipe->reason()==RecipeReason::MaximumItems)outcome["maximum_items"]=recipe->bound();
                     }
                     if(const auto* action=dynamic_cast<const ActionRefusal*>(&failure); action &&
-                        (individual_app_action(params.value("tool").toString()) || params.value("tool")=="read_selected_file" ||
+                        ((std::string_view(action->error)=="purpose_too_long" && std::string_view(action->field)=="purpose") ||
+                         individual_app_action(params.value("tool").toString()) || params.value("tool")=="read_selected_file" ||
                          (params.value("tool")=="create_cwl_project" && std::string_view(action->error)=="input_unavailable" && std::string_view(action->field)=="file_id"))) {
                         typed_refusal=true;
                         outcome["action_error"]=action->error;outcome["action_field"]=action->field;

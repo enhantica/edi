@@ -1828,3 +1828,24 @@ No target cache, traversal/dedup change, timer/settings/pacing adjustment or
 scientific check is introduced or removed. This removes provably discarded
 work; it does not establish a measured CPU improvement or the cause of a
 reported Mac lag, chart warning or disconnection.
+
+
+### Recoverable pre-write purpose-length refusal
+
+The FIRST assistant_native_purpose validator still requires a nonblank string
+of at most120 UTF-16 units and480 UTF-8 bytes, with its original control-character
+refusal. Only its nonblank overlength branch now uses the existing typed
+ActionRefusal pair purpose_too_long/purpose. The original shared pre-admission
+catch exposes that exact pair for every registered native tool through the
+existing closed action_error/action_field result projection; no raw purpose or
+exception message is disclosed. Type, blank, control, schema and scientific
+validation remain unchanged, and no app edit or native work has started there.
+
+On this explicit refusal the caller can shorten only purpose to the declared
+limit and issue a fresh call with the same scientific operands. Edi does not
+normalize, execute or replay it automatically. Existing current-owner and once
+checks still precede or govern the call; other refusals are not diagnosed by
+this pair. Both tokens fit the original longest closed-token bounds and direct
+reply admission measures the actual projection, so no response limit, field
+family or allowance grows. This explains only actually overlong requests, not
+shorter control, relation, deadline, rendering or connection failures.

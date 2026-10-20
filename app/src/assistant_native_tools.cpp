@@ -210,8 +210,10 @@ QString assistant_native_purpose(const Object& args) {
     const auto value = args.value("purpose");
     if (!value.isString()) throw std::invalid_argument("Native action requires its purpose");
     const auto text = value.toString();
-    if (text.trimmed().isEmpty() || text.size() > 120 || text.toUtf8().size() > 480)
+    if (text.trimmed().isEmpty())
         throw std::invalid_argument("Native action purpose exceeds its limit");
+    if (text.size() > 120 || text.toUtf8().size() > 480)
+        throw ActionRefusal("purpose_too_long", "purpose");
     for (const auto c : text) if (c.unicode() < 32 || c.unicode() == 127)
         throw std::invalid_argument("Native action purpose contains control characters");
     return text;
