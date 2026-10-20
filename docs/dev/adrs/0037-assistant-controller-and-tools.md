@@ -2015,3 +2015,26 @@ original app operation. No new optimizer, checkpoint controller, schema, physics
 flag override or runtime stage guard is added. Fill-only scope, explicit caller
 arrays/constraints, anchors, currentness and ordinary history stay authoritative;
 instruction repair is not guaranteed model compliance or fit quality.
+
+
+### Header connection entry, pending cancellation and avatar
+
+The FIRST AssistantPanel connection button owns the connection entry, with the
+original guarded AssistantConnectionDialog offer and the connected account
+avatar. Its painted text pill now shares the avatar's actual 0.75 tool-button
+height, centered inside the unchanged full-height hit/focus area; text width may
+use the available header space. Existing Send-style borderless theme/hover
+colors remain unchanged.
+
+The SAME header receiver shows Connect ChatGPT, then Cancel connection while
+connecting, then the connected avatar. Actual connecting takes precedence even
+when the account is already authenticated (for example, a pending settings
+update); one derived pending/account-view binding owns every header presentation
+and routing choice. Pending cancellation is enabled only by
+the original canCancel and calls that same original assistant.cancel once;
+it cannot start another offer or open the account dialog. Hide only the duplicate
+connecting Cancel in the disconnected body. The original nonconnecting Stop,
+notice owner/overflow, unit spacing and centered No ChatGPT connection empty
+state remain. The body viewport uses authoritative current state/canCancel,
+never a descendant's effective visibility. This is presentation/receiver routing,
+not an authentication, connection-deadline or scientific behavior change.

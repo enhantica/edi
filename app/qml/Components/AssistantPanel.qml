@@ -373,48 +373,56 @@ Popup {
                     EaElements.Button {
                         id: connectionButton
                         objectName: "assistant.connection"
-                        text: panel.assistant.connected ? panel.accountInitial : qsTr("Connect ChatGPT")
-                        enabled: panel.assistant.connected || panel.assistant.state !== "connecting"
-                        leftPadding: panel.assistant.connected ? 0 : AppSizes.unit * 0.75
+                        readonly property bool pendingConnection: panel.assistant.state === "connecting"
+                        readonly property bool accountView: !pendingConnection && panel.assistant.connected
+                        text: pendingConnection ? qsTr("Cancel connection")
+                            : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
+                        enabled: !pendingConnection || panel.assistant.canCancel
+                        leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
                         contentItem: EaElements.Label {
-                            text: panel.assistant.connected ? (panel.accountInitial.length ? panel.accountInitial : "user") : qsTr("Connect ChatGPT")
-                            font.family: panel.assistant.connected && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
+                            text: connectionButton.accountView ? (panel.accountInitial.length ? panel.accountInitial : "user") : connectionButton.text
+                            font.family: connectionButton.accountView && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
                             font.pixelSize: EaStyle.Sizes.fontPixelSize
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                : panel.assistant.connected ? (EaStyle.Colors.isDarkPalette ? "black" : "white")
+                                : connectionButton.accountView ? (EaStyle.Colors.isDarkPalette ? "black" : "white")
                                 : (EaStyle.Colors.isDarkPalette ? "black" : "white")
                         }
-                        Layout.preferredWidth: panel.assistant.connected ? panel.headerActionExtent : implicitWidth
-                        Layout.minimumWidth: panel.assistant.connected ? panel.headerActionExtent : 0
-                        Layout.maximumWidth: panel.assistant.connected ? panel.headerActionExtent : header.width * 0.4
+                        Layout.preferredWidth: connectionButton.accountView ? panel.headerActionExtent : implicitWidth
+                        Layout.minimumWidth: connectionButton.accountView ? panel.headerActionExtent : 0
+                        Layout.maximumWidth: connectionButton.accountView ? panel.headerActionExtent : Math.max(0, header.width - AppSizes.unit)
                         Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
                         background: Item {
-                            implicitWidth: panel.assistant.connected ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
+                            implicitWidth: connectionButton.accountView ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
                             Rectangle {
                                 border.width: 0
                                 objectName: "assistant.avatarCircle"
                                 anchors.centerIn: parent
-                                width: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
-                                height: panel.assistant.connected ? width : parent.height
+                                width: connectionButton.accountView ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
+                                height: EaStyle.Sizes.toolButtonHeight * 0.75
                                 radius: height * 0.5
                                 color: !connectionButton.enabled ? panel.actionBackground
                                     : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
                                     : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
-                        ToolTip.text: panel.assistant.connected ? qsTr("Account") : text
+                        ToolTip.text: connectionButton.accountView ? qsTr("Account") : text
                         Accessible.name: ToolTip.text
                         KeyNavigation.priority: KeyNavigation.BeforeItem
-                        KeyNavigation.backtab: panel.assistant.connected ? usageButton : panel.toggleControl
-                        KeyNavigation.tab: panel.assistant.connected ? composer.firstFocusItem : panel.toggleControl
+                        KeyNavigation.backtab: connectionButton.accountView ? usageButton : panel.toggleControl
+                        KeyNavigation.tab: connectionButton.accountView ? composer.firstFocusItem : panel.toggleControl
                         onClicked: {
-                            if (panel.assistant.connected) accountDialog.open();
+                            if (connectionButton.pendingConnection) {
+                                const component = panel, original = panel.assistant;
+                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
+                                    || original.state !== "connecting" || !original.canCancel) return;
+                                original.cancel();
+                            } else if (connectionButton.accountView) accountDialog.open();
                             else {
                                 const component = panel, original = panel.assistant, dialog = connectionDialog;
                                 const offer = dialog.beginOffer();
@@ -734,7 +742,8 @@ Popup {
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: signedOutNotice.noticeText.length > 0 || panel.assistant.canCancel
+                    visible: signedOutNotice.noticeText.length > 0
+                        || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
                     Column {
                         id: signedOutControls
                         width: parent.width
@@ -749,7 +758,7 @@ Popup {
                         EaElements.Button {
                             id: authCancel
                             objectName: "assistant.authCancel"
-                            visible: panel.assistant.canCancel
+                            visible: panel.assistant.canCancel && panel.assistant.state !== "connecting"
                             anchors.horizontalCenter: parent.horizontalCenter
                             leftPadding: panel.assistant.state === "connecting" ? AppSizes.unit * 0.75 : 0
                             rightPadding: leftPadding
