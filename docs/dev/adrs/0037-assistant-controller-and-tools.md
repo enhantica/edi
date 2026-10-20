@@ -1981,3 +1981,17 @@ factor or engine conversion is added. Tool descriptions and bundled strategies
 express the same order; schemas/options, validation, setters, authority, Undo and
 resource/currentness limits are unchanged. This improves instruction salience,
 not a claim of model compliance or a diagnosed provider/runtime cause.
+
+
+### Disconnected assistant presentation
+
+The FIRST Structure empty-state label and existing EmptyStateLabel own the
+font, disabled colour, wrapping and sidebar-width margins for No ChatGPT
+connection. The disconnected header Connect ChatGPT and pending Cancel
+connection reuse the Composer Send button's borderless theme-contrast fill,
+accent hover/pressed/focus and disabled colours. The empty-state prompt remains
+centered. The retained notice and Cancel control share a bounded top viewport
+with the existing unit gap; both remain scrollable above the prompt when space
+is limited. Connected avatar paint, non-connecting Stop behavior,
+notice ownership, connection offers and cancellation callbacks are unchanged.
+This is presentation only; it changes no authentication or operation lifetime.

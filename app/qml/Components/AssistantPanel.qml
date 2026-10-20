@@ -375,6 +375,8 @@ Popup {
                         objectName: "assistant.connection"
                         text: panel.assistant.connected ? panel.accountInitial : qsTr("Connect ChatGPT")
                         enabled: panel.assistant.connected || panel.assistant.state !== "connecting"
+                        leftPadding: panel.assistant.connected ? 0 : AppSizes.unit * 0.75
+                        rightPadding: leftPadding
                         contentItem: EaElements.Label {
                             text: panel.assistant.connected ? (panel.accountInitial.length ? panel.accountInitial : "user") : qsTr("Connect ChatGPT")
                             font.family: panel.assistant.connected && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
@@ -383,8 +385,7 @@ Popup {
                             verticalAlignment: Text.AlignVCenter
                             color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
                                 : panel.assistant.connected ? (EaStyle.Colors.isDarkPalette ? "black" : "white")
-                                : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
-                                : connectionButton.foregroundColor()
+                                : (EaStyle.Colors.isDarkPalette ? "black" : "white")
                         }
                         Layout.preferredWidth: panel.assistant.connected ? panel.headerActionExtent : implicitWidth
                         Layout.minimumWidth: panel.assistant.connected ? panel.headerActionExtent : 0
@@ -393,18 +394,17 @@ Popup {
                         Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
                         Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
                         background: Item {
-                            visible: panel.assistant.connected
                             implicitWidth: panel.assistant.connected ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
                             implicitHeight: implicitWidth
                             Rectangle {
                                 border.width: 0
                                 objectName: "assistant.avatarCircle"
                                 anchors.centerIn: parent
-                                width: EaStyle.Sizes.toolButtonHeight * 0.75
-                                height: width
-                                radius: width * 0.5
-                                color: panel.assistant.connected && connectionButton.enabled
-                                    && (connectionButton.hovered || connectionButton.down || connectionButton.visualFocus) ? EaStyle.Colors.themeAccent
+                                width: panel.assistant.connected ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
+                                height: panel.assistant.connected ? width : parent.height
+                                radius: height * 0.5
+                                color: !connectionButton.enabled ? panel.actionBackground
+                                    : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
                                     : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
@@ -722,23 +722,57 @@ Popup {
                 anchors.bottom: parent.bottom
                 color: EaStyle.Colors.contentBackground
                 Flickable {
+                    id: signedOutNoticeViewport
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.bottom: signInPrompt.top
                     anchors.margins: AppSizes.unit
+                    height: Math.min(contentHeight, Math.max(0, signInPrompt.y - AppSizes.unit * 2))
                     clip: true
                     contentWidth: width
-                    contentHeight: signedOutNotice.height
+                    contentHeight: signedOutControls.height
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: signedOutNotice.noticeText.length > 0
-                    EdiNotice {
-                        id: signedOutNotice
+                    visible: signedOutNotice.noticeText.length > 0 || panel.assistant.canCancel
+                    Column {
+                        id: signedOutControls
                         width: parent.width
-                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
-                            ? panel.noticeState.text : ""
+                        spacing: AppSizes.unit
+                        EdiNotice {
+                            id: signedOutNotice
+                            width: parent.width
+                            visible: noticeText.length > 0
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
+                                ? panel.noticeState.text : ""
+                        }
+                        EaElements.Button {
+                            id: authCancel
+                            objectName: "assistant.authCancel"
+                            visible: panel.assistant.canCancel
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            leftPadding: panel.assistant.state === "connecting" ? AppSizes.unit * 0.75 : 0
+                            rightPadding: leftPadding
+                            text: panel.assistant.state === "connecting" ? qsTr("Cancel connection") : qsTr("Stop")
+                            background: Rectangle {
+                                visible: panel.assistant.state === "connecting"
+                                implicitHeight: panel.assistant.state === "connecting" ? EaStyle.Sizes.toolButtonHeight * 0.75 : 0
+                                radius: height * 0.5
+                                border.width: 0
+                                color: !authCancel.enabled ? panel.actionBackground
+                                    : authCancel.hovered || authCancel.down || authCancel.visualFocus ? EaStyle.Colors.themeAccent
+                                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                            }
+                            contentItem: EaElements.Label {
+                                text: authCancel.text
+                                font: authCancel.font
+                                color: panel.assistant.state === "connecting" && authCancel.enabled
+                                    ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : authCancel.foregroundColor()
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: panel.assistant.cancel()
+                        }
                     }
                     ScrollBar.vertical: ScrollBar {}
                 }
@@ -747,16 +781,7 @@ Popup {
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
                     width: Math.max(0,parent.width-AppSizes.unit*2)
-                    text: qsTr("Connect ChatGPT to use the assistant")
-                }
-                EaElements.Button {
-                    objectName: "assistant.authCancel"
-                    visible: panel.assistant.canCancel
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: AppSizes.unit
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: panel.assistant.state === "connecting" ? qsTr("Cancel connection") : qsTr("Stop")
-                    onClicked: panel.assistant.cancel()
+                    text: qsTr("No ChatGPT connection")
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
