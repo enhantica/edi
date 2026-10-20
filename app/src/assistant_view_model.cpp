@@ -9350,15 +9350,15 @@ struct AssistantViewModel::State {
         run->epoch=creation->epoch;run->project=project;run->completed_existing=project!=nullptr;
         run->receiver=receiver;run->window=action_window;
         using Kind=AssistantWidgetInput::Kind;using Action=ProjectEditor::CreationAction;
-        bool writing=false;quint64 slots=0,plan_bytes=structure.atom_sites.size()*sizeof(const edi::AtomSite*);
+        bool writing=false;quint64 setup_input_count=0,plan_bytes=structure.atom_sites.size()*sizeof(const edi::AtomSite*);
         const auto number=[](double value){return QString::number(value,'g',std::numeric_limits<double>::max_digits10);};
         const auto add=[&](Kind kind,const QString& target,const QString& text=QString{},int row=-1,
                            std::optional<Action::Kind> action=std::nullopt,const QString& field=QString{}) {
             if(writing) {run->inputs.push_back({kind,target,text,kind==Kind::Choose && target!="peak.type"?0:-1,-1,row,action,field});return;}
             const auto bytes=sizeof(NativeCreateWidget::Input)+generic_size(target,Limits::context_bytes)+
                 static_cast<quint64>(target.capacity())*sizeof(QChar)+4*static_cast<quint64>(text.size()+field.size())*sizeof(QChar);
-            if(bytes>Limits::stream_retained_bytes-plan_bytes || slots==std::numeric_limits<int>::max())throw std::length_error("Original setup plan exceeds capacity");
-            plan_bytes+=bytes;++slots;
+            if(bytes>Limits::stream_retained_bytes-plan_bytes || setup_input_count==std::numeric_limits<int>::max())throw std::length_error("Original setup plan exceeds capacity");
+            plan_bytes+=bytes;++setup_input_count;
         };
         const auto value=[&](const edi::Parameter* member) {
             if(member->dependence!=edi::Dependence::Independent)return; // Expected dependent state was validated on the candidate.
@@ -9433,12 +9433,12 @@ struct AssistantViewModel::State {
         emit_plan();
         // Same pinned Qt QArrayData growth bound already used by the JSON
         // owner. It also covers the plan QVector's header/alignment/capacity.
-        plan_bytes-=slots*sizeof(NativeCreateWidget::Input);
-        const auto vector_bytes=codex_json_capacity(slots*sizeof(NativeCreateWidget::Input));
+        plan_bytes-=setup_input_count*sizeof(NativeCreateWidget::Input);
+        const auto vector_bytes=codex_json_capacity(setup_input_count*sizeof(NativeCreateWidget::Input));
         if(vector_bytes>Limits::stream_retained_bytes-plan_bytes)throw std::length_error("Original setup plan exceeds capacity");
         plan_bytes+=vector_bytes;
         auto plan_role=reserve_disclosure(plan_bytes);
-        run->inputs.reserve(static_cast<qsizetype>(slots));run->setup_sites.resize(structure.atom_sites.size(),nullptr);
+        run->inputs.reserve(static_cast<qsizetype>(setup_input_count));run->setup_sites.resize(structure.atom_sites.size(),nullptr);
         writing=true;emit_plan();
         run->call=*native_call;run->fallback_outcome=run->call.record->outcome;run->fallback_response=run->call.record->response;run->fallback_row=run->call.record->terminal;run->fallback_ready=true;
         const auto cif=args.contains("mapped_structure")?QString{}:generic_id(args.value("cif_file_id"));const auto data=generic_id(args.value("data_file_id"));
