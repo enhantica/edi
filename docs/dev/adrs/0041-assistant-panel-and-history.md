@@ -2059,3 +2059,20 @@ Pointer/click/navigation retain their original fixed presentation durations;
 form/search drafts appear in one replacement and scientific text uses the
 ordinary setter after its control cue. This completes the earlier UI-only
 removal without changing Working animation, Stop, scientific timing or deadlines.
+
+
+### Stop surfaces: separate sizes, shared borderless colors
+
+The message-box Stop follows the FIRST AssistantComposer Send action: the full
+composer.actionSize circle and matching icon size. The status-bar Stop keeps
+the Working logo's physical diameter and its existing proportional square.
+Both Stops use Send's borderless color rules: enabled black/white theme fill,
+accent blue fill on hover/down/visual focus and contrasting icon color. The
+disabled fill uses the original sideBarButtonBackgroundHovered action background
+and each control's disabled foreground. Send itself is unchanged.
+
+This supersedes the earlier common logo-size/border treatment for composer Stop
+and the status-bar outline/content-fill requirement. The two original cancel
+receivers, control identities, enabled/visible and manual-takeover rules, keyboard
+and accessibility, hit/layout slots, spacing/separators and Working animation
+remain unchanged. Only paint differs; no new component or lifecycle is added.

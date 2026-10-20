@@ -849,23 +849,19 @@ Rectangle {
                 implicitHeight: composer.actionSize
                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                 background: Rectangle {
+                    border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
-                    width: AppSizes.assistantIconExtent
-                    height: width
-                    anchors.centerIn: parent
                     radius: width * 0.5
-                    color: composer.color
-                    border.width: EaStyle.Sizes.borderThickness
-                    border.color: EaStyle.Colors.appBarBorder
+                    color: !stopButton.enabled ? composer.actionBackground
+                        : stopButton.hovered || stopButton.down || stopButton.visualFocus ? EaStyle.Colors.themeAccent
+                        : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                 }
                 contentItem: EaElements.Label {
-                    opacity: stopButton.enabled ? 1 : 0.35
                     text: stopButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: AppSizes.assistantIconExtent * 0.5
-                    color: stopButton.enabled && (stopButton.hovered || stopButton.down || stopButton.visualFocus) ? EaStyle.Colors.themeAccent
-                        : stopButton.foregroundColor()
+                    font.pixelSize: stopButton.font.pixelSize * 1.25
+                    color: stopButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : stopButton.foregroundColor()
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }

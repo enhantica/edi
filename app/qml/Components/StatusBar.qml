@@ -196,10 +196,10 @@ EaElements.StatusBar {
                 height: width
                 anchors.centerIn: parent
                 radius: width / 2
-                color: EaStyle.Colors.contentBackground
-                border.width: EaStyle.Sizes.borderThickness
-                border.color: EaStyle.Colors.appBarBorder
-                Behavior on border.color { EaAnimations.ThemeChange {} }
+                color: !visibleStop.enabled ? EaStyle.Colors.sideBarButtonBackgroundHovered
+                    : visibleStop.hovered || visibleStop.down || visibleStop.visualFocus ? EaStyle.Colors.themeAccent
+                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                border.width: 0
             }
             contentItem: EaElements.Label {
                 text: visibleStop.fontIcon
@@ -207,7 +207,7 @@ EaElements.StatusBar {
                 font.pixelSize: assistantGroup.buttonExtent * 0.5
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                color: visibleStop.foregroundColor()
+                color: visibleStop.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : visibleStop.foregroundColor()
             }
             ToolTip.text: bar.assistantManualTakeover && !enabled ? qsTr("Manual control; open assistant to return") : qsTr("Stop assistant action")
             Accessible.name: ToolTip.text
