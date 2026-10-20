@@ -107,13 +107,13 @@ def actions(actor):
 
 
 def truthful_role(actor, *, connected):
-    expected = 'Approve context' if connected else 'Sign in with ChatGPT'
+    expected = 'Approve context' if connected else 'Connect ChatGPT'
     ui = actor.last['ui']
     assert actor.last['vm']['connected'] == connected and ui['accept']['text'] == expected, (
         'I12/Q2: an already open dialog names the current real connected-role action'
     )
     assert ui['dialog']['title'] == (
-        'Approve outgoing project context' if connected else 'Sign in with ChatGPT'
+        'Approve outgoing project context' if connected else 'Connect ChatGPT'
     ), 'I12/Q2: the open dialog title names the same live role as its actual action'
     assert ui['accept']['accessible_name'] == expected, (
         'I12/Q2: the actual standard action accessible name agrees with its current role'

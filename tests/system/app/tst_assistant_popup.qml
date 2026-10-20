@@ -6334,7 +6334,7 @@ TestCase {
     function gui470_standardAction(button, dialog, role) {
         verify(role === "sign-in" || role === "approve-context",
             "GUI472 SETUP: independent original semantic role is sign-in or current-context approval");
-        const labels472 = {"sign-in":"Sign in with ChatGPT","approve-context":"Approve context"};
+        const labels472 = {"sign-in":"Connect ChatGPT","approve-context":"Approve context"};
         const expectedText = labels472[role]; // Independent unchanged PUBLIC original full labels, never button.text as golden.
         const original = {owner:Session.project,controller:Session.assistant,window:window,button:button,dialog:dialog};
         const objects = [original.owner,original.controller,original.window,button,dialog];

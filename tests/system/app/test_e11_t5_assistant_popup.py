@@ -1520,7 +1520,7 @@ def test_ux289_real_main_activity_and_folder_presentation(case, tmp_path):
         actions472 = [json.loads(line.split('GUI470_STANDARD_ACTION ',1)[1]) for line in result.stdout.splitlines()
                       if 'GUI470_STANDARD_ACTION ' in line]
         assert [row['role'] for row in actions472] == ['sign-in','approve-context'] and (
-            [row['text'] for row in actions472] == ['Sign in with ChatGPT','Approve context']
+            [row['text'] for row in actions472] == ['Connect ChatGPT','Approve context']
             and [row['connectedBefore'] for row in actions472] == [False,True]
         ), 'GUI472: actual original busy setup reaches independent FULL sign-in/approval labels and semantic roles once'
         frames471 = [json.loads(line.split('GUI471_WORKING ', 1)[1]) for line in result.stdout.splitlines()

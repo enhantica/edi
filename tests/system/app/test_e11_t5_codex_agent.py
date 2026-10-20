@@ -9756,7 +9756,7 @@ def gui392_run(tmp_path, case):
         actions470 = [json.loads(line.split('GUI470_STANDARD_ACTION ',1)[1]) for line in result.stdout.splitlines()
                       if 'GUI470_STANDARD_ACTION ' in line]
         assert [value['role'] for value in actions470] == ['sign-in','approve-context','approve-context'] and (
-            [value['text'] for value in actions470] == ['Sign in with ChatGPT','Approve context','Approve context']
+            [value['text'] for value in actions470] == ['Connect ChatGPT','Approve context','Approve context']
             and [value['connectedBefore'] for value in actions470] == [False,True,True]
         ), 'GUI470: original disconnected action then BOTH current approvals must reach genuine native input/connection intervals'
         for value in actions470:
