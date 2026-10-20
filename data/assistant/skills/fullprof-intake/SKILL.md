@@ -5,7 +5,13 @@ description: Interpret selected FullProf text and preserve its scientific meanin
 
 # Inspect a selected FullProf project
 
-Version: 1.0.6. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
+Version: 1.0.7. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
+
+## Before any occupancy setter
+
+Establish the nuclear source convention and actual site/general multiplicities `m`/`M`. For general-position normalization, `OccFP = q * m / M`; recover `qraw = OccFP * M / m`. If a common positive phase factor `c` is established from source normalization or explicitly intended full non-shared sites, set `OccEDI = qraw / c` for EVERY species/site in that phase. Preserve genuine partial fractions and shared-site proportions; check the resulting shared-site sums and `sum(m * OccEDI)` by species against supplied composition. Do not infer `c` from the largest occupancy, normalize sites independently, clamp contradictions or set all sites to one. If `c` is unresolved, report that ambiguity before changing occupancies or scale. Removing `c` divides the structure factor by `c`: compensate the corresponding already-mapped phase intensity scale once with `SEDI = mapped(SFP) * c * c`, keeping other engine scale conventions separate. Read back native chemical occupancies and scale before claiming completion. [July2001 manual, physical PDF pages41,102](https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf#page=102).
+
+Map these chemical occupancies before completing each Atom sites row. Complete all site rows before the separate Atomic displacement group; finish ALL requested Structure members before creating/configuring any Experiment, then finish ALL requested Experiment members before Analysis. Follow project-assistance for the full page-first procedure and preserve explicit user scope. Copying raw PCR occupancy unchanged is not a conversion.
 
 ## Available actions
 
@@ -25,7 +31,6 @@ For inspection, report the source inventory, associations and precise unresolved
 
 Apply these only after identifying the selected dialect and the actual app representation; preserve explicit source values and constraints.
 
-- **Occupancy:** establish the nuclear source convention and actual site/general multiplicities `m`/`M`. For general-position normalization, `OccFP = q * m / M`; recover `qraw = OccFP * M / m`. If a common positive phase factor `c` is established from source normalization or explicitly intended full non-shared sites, set `OccEDI = qraw / c` for EVERY species/site in that phase. Preserve genuine partial fractions and shared-site proportions; check the resulting shared-site sums and `sum(m * OccEDI)` by species against supplied composition. Do not infer `c` from the largest occupancy, normalize sites independently, clamp contradictions or set all sites to one. If `c` is unresolved, report that ambiguity before changing occupancies or scale. Removing `c` divides the structure factor by `c`: compensate the corresponding already-mapped phase intensity scale once with `SEDI = mapped(SFP) * c * c`, keeping other engine scale conventions separate. Read back native chemical occupancies and scale before claiming completion. [July2001 manual, physical PDF pages41,102](https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf#page=102).
 - **Profile7:** Npr7 denotes the TCH/FCJ axial-divergence family. Match actual asymmetry terms and offered options, not the selector alone. All-zero/fixed asymmetry needs a checked no-asymmetry representation, not invented nonzero terms. [Pages69,109](https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf#page=69).
 - **Background:** Nba>=2 supplies that many linearly interpolated points. Preserve the supplied positions/count/intensities; special/reserved selectors are not point counts. [Page78](https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf#page=78).
 - **Displacement:** Biso is in squared angstroms; distinguish B/U/tensor conventions. [Page102](https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf#page=102).

@@ -5,7 +5,7 @@ description: Choose adaptive Rietveld refinement stages, checkpoints, ADP models
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.2.9. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
+Version: 1.2.10. Scientific guidance for the available Edi APIs and official runtime, not an implemented autonomous controller or a format converter.
 
 ## Establish scope and evidence
 
@@ -19,7 +19,7 @@ When choosing a NEW measured line-segment background rather than following user-
 
 ## Stage, compare and retain
 
-Before any fit, complete Structure then Experiment setup in both modes and inspect actual free flags, relations and settled calculation; a refused prerequisite is not fulfilled. Release justified Analysis category groups and assess a real fit after each refinement stage. For ordinary sample-cell refinement retain a supplied known wavelength fixed: freeing it with an unanchored uniform cell dilation cannot determine absolute scale. Genuine wavelength calibration instead needs a known cell or other supported anchor; joint problems need their actual connected-group anchors. Preserve explicit user constraints and resolve genuine conflicts rather than silently fixing/freeing flags. Then adapt scale/cell-zero, profile/background and structural groups to misfit and identifiability; releasing correlated groups does not prove they are determined.
+Before any fit in either mode, follow project-assistance: complete Structure cell, each full Atom sites row including mapped chemical occupancy before the next, then ALL ADPs separately; finish ALL requested Structure members before any Experiment, then ALL requested Experiment members in actual interface-group order before Analysis. Keep imported background anchors initially fixed and apply retained final source flags in grouped Analysis after setup. Inspect actual free flags, relations and settled calculation; a refused prerequisite is not fulfilled. Explicit user scope and incoming operation operands remain authoritative. Release justified Analysis category groups and assess a real fit after each refinement stage. For ordinary sample-cell refinement retain a supplied known wavelength fixed: freeing it with an unanchored uniform cell dilation cannot determine absolute scale. Genuine wavelength calibration instead needs a known cell or other supported anchor; joint problems need their actual connected-group anchors. Preserve explicit user constraints and resolve genuine conflicts rather than silently fixing/freeing flags. Then adapt scale/cell-zero, profile/background and structural groups to misfit and identifiability; releasing correlated groups does not prove they are determined.
 
 Use a finite budget: a ceiling of 5–10 adaptive group passes is an owner-selected exploration budget, not a convergence criterion. Stop earlier on stable lack of useful improvement, unreliable steps, physical invalidity, cancellation or exhausted resources. Cycle correlated groups when useful, warming from the last accepted state; do not blindly repeat every group. Compare actual result status, convergence, residual, parameter movement, uncertainty and physical plausibility. MAX_ITER/NO_STEP are not convergence; failed/cancelled/unavailable/superseded fits do not authorize the next stage merely because some metrics look good.
 

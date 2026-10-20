@@ -1957,3 +1957,27 @@ required profile edit prevents a completion claim, while a missing format parser
 does not block existing offered app construction methods. Only skill prose and
 matching version/digests change; no schema, mutation, validation, resource,
 currentness, Undo, retry, SDK or runtime behavior is changed by this guidance.
+
+
+### Page-first delegated setup and prewrite occupancy mapping
+
+The FIRST current Structure cell/site/ADP bindings use the project registry and
+current Structure models without an Experiment prerequisite. Ordinary page
+following reflects the incoming action; it does not enforce a future plan.
+Developer instructions now begin with the delegated procedure: complete cell,
+each full Atom sites row before appending the next, then all Atomic displacement
+rows across ALL requested Structure members before any Experiment, then all
+requested Experiment members/groups in the fresh actual interface order before Analysis
+flags and authorized fit stages. A profile is chosen in its own group before its
+coefficients; only a genuine explained scientific dependency moves a prerequisite.
+Background values enter fixed during planning, retaining source flags for later
+Analysis. Explicit user scope, incoming arrays/operands and atomic edits remain
+authoritative; no dispatcher reordering or scientific override is introduced.
+
+The existing general FullProf occupancy/multiplicity and common-phase-factor
+mapping is moved before occupancy writes, with partial/shared fractions, mapped
+scale compensation and native readback retained. No space-group example, guessed
+factor or engine conversion is added. Tool descriptions and bundled strategies
+express the same order; schemas/options, validation, setters, authority, Undo and
+resource/currentness limits are unchanged. This improves instruction salience,
+not a claim of model compliance or a diagnosed provider/runtime cause.
