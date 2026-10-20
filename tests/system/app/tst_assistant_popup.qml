@@ -1356,7 +1356,11 @@ TestCase {
                 compare(lengths.length,3,"FIT745: independent orthorhombic fixture supplies the complete uniform cell-scale direction");
                 for(const parameter of lengths){verify(parameter.refinable && parameter.fittable);parameter.free=true;}
                 const waves=parameters.filter(parameter=>parameter.path==="experiment.instrument.setup_wavelength");
-                compare(waves.length,1);verify(waves[0].refinable && waves[0].fittable);waves[0].free=true;
+                compare(waves.length,1);verify(waves[0].refinable && waves[0].fittable);
+                compare(waves[0].free,false,"FIT770 SETUP: the final wavelength flag is genuinely false before its recorded change");
+                verify(project.setParametersFree([waves[0]],true),
+                    "FIT770 SETUP: the existing ordinary recorded batch applies the final wavelength free flag");
+                compare(waves[0].free,true,"FIT770 SETUP: the same wavelength flag really changed, not an equal no-op");
                 const expected=lengths.concat([project.currentExperiment.scale,waves[0]]);
                 for(const parameter of parameters)compare(parameter.free,expected.includes(parameter),
                     "FIT745: actual original independent free set has exactly all three lengths, wavelength and phase scale; no invented anchor");
@@ -1410,6 +1414,7 @@ TestCase {
         const science745=fitReason745?RelationUndoObserver.state(project):null;
         let manualRefusal745=null;const beforeRefusalUndo745=project.canUndo,beforeRefusalFitUndo745=project.fit.canUndo;
         if(fitReason745){
+            verify(beforeRefusalUndo745,"FIT770 SETUP: a genuine earlier recorded Undo is available before both failed-fit preservation witnesses");
             visible185_page("analysis");Ui.click(this,Probe,window,"sideBar.tab.basic");Ui.expandGroup(this,Probe,window,"group.fitting");
             const receiver=project.fit,receiverLife=lifetime313(receiver),projectLife=lifetime313(project);
             let refusals=0,starts=0;
