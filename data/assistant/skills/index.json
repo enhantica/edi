@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.5.49",
+      "version": "1.5.50",
       "title": "Work with the displayed Edi project",
       "summary": "Create, refine and save the current native CW project through original Edi controls and app-owned inputs.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "d7600cf74772d897a1d189b5e271bed572fa4d785e2324a875c05cf25f4d73c8",
+      "sha256": "b98e4590102f5c19abb1ce5f87de3b6076b57ec581fd1592919ca0761e59505a",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.2.12",
+      "version": "1.2.13",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "f00db30e4275923c22e4886af28ad00cee65b6a9f4afd310da9d732a6e8be05e",
+      "sha256": "bdc5e5f851c1ad6832ce301c837ce6cb8dd8a6fb917a9897ee765f1514c5c134",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -85,6 +85,10 @@
         "set_free"
       ],
       "references": [
+        {
+          "title": "Young (ed.) The Rietveld Method, chapter 1 strategy and specialist chapters",
+          "url": "https://doi.org/10.1093/oso/9780198555773.001.0001"
+        },
         {
           "title": "IUCr Rietveld refinement guidelines",
           "url": "https://journals.iucr.org/j/issues/1999/01/00/gl0561/"

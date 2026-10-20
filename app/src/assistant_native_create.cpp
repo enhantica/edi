@@ -61,13 +61,18 @@ QJsonObject native_cwl_recipe_schema(bool include_profiles) {
         return Object{{"type", "array"}, {"minItems", minimum}, {"maxItems", static_cast<int>(Limits::stream_items)},
             {"items", shape({{first, num}, {second, num}}, {first, second})}};
     };
+    auto background = pairs("position", "intensity", 2);
+    background["description"] = "Direct array of exact position/intensity rows; no anchors wrapper. Setup intensities start fixed implicitly. Retain desired source refinement flags separately for authorized grouped Analysis after setup.";
+    auto background_point = background.value("items").toObject();
+    background_point["description"] = "Exactly position and intensity numbers. No free, id, uncertainty or other keys; standalone edit_background has a separate explicit free field.";
+    background["items"] = background_point;
     return shape({{"project_name", shortText}, {"description", Object{{"type", "string"}, {"maxLength", static_cast<int>(Limits::context_bytes)}}},
         {"experiment_name", shortText}, {"sample_form", Object{{"type", "string"}, {"enum", Array{"powder"}}}},
         {"beam_mode", Object{{"type", "string"}, {"enum", Array{"constant wavelength"}}}},
         {"radiation_probe", Object{{"type", "string"}, {"enum", Array{"neutron"}}}},
         {"scattering_type", Object{{"type", "string"}, {"enum", Array{"bragg"}}}},
         {"peak_profile", profile}, {"wavelength", num}, {"zero_offset", num}, {"phase_scale", num},
-        {"background", pairs("position", "intensity", 2)}, {"exclusions", pairs("first", "second", 0)},
+        {"background", background}, {"exclusions", pairs("first", "second", 0)},
         {"initial_parameters", Object{{"type", "array"}, {"minItems", 0}, {"maxItems", static_cast<int>(Limits::stream_items)},
             {"items", shape({{"path", shortText}, {"value", num}}, {"path", "value"})}}}},
         {"project_name", "description", "experiment_name", "sample_form", "beam_mode", "radiation_probe", "scattering_type",
