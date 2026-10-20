@@ -2038,3 +2038,16 @@ notice owner/overflow, unit spacing and centered No ChatGPT connection empty
 state remain. The body viewport uses authoritative current state/canCancel,
 never a descendant's effective visibility. This is presentation/receiver routing,
 not an authentication, connection-deadline or scientific behavior change.
+
+
+### Sent attachment bubble natural width
+
+The FIRST AssistantMessage user bubble keeps its original available message
+width, right alignment, copy-button gutter, padding and Flow. Its natural
+content width is the larger of the message text and the widest actual formatted
+sent-file label. One shared formatter includes the byte count and text-export
+suffix; the existing FontMetrics measures the same font explicitly used by
+those labels. No elided/laid-out child width feeds the parent. Middle elision
+remains only when the original available-width cap requires it. The original
+bounded inputFiles validation, IDs, accessibility/copy/archive behavior and
+nonuser/zero-file widths are unchanged. No parser, source copy or cache is added.

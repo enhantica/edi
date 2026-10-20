@@ -301,6 +301,19 @@ Rectangle {
         return icons[payload && payload.type] || "info-circle";
     }
     color: "transparent"
+    function sentFileLabel(file) {
+        return qsTr("%1 (%2 bytes)%3").arg(file.name).arg(file.bytes)
+            .arg(file.textReadable ? "" : qsTr(" · text export required"));
+    }
+    readonly property real widestSentFile: {
+        if (kind !== "user" || status !== "completed") return 0;
+        // advanceWidth is a method: read its actual font to track font/theme changes.
+        const metricsFont = historyCopyMetrics.font;
+        let widest = 0;
+        for (const file of inputFiles)
+            widest = Math.max(widest, Math.ceil(historyCopyMetrics.advanceWidth(sentFileLabel(file))));
+        return widest;
+    }
     readonly property real historyCopyExtent: Math.ceil(historyCopyMetrics.height)
     readonly property real historyCopyGutter: kind === "user" ? historyCopyExtent + AppSizes.unit : 0
     implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5),
@@ -319,7 +332,7 @@ Rectangle {
     Rectangle {
         id: bubble
         x: row.kind === "user" ? Math.max(0, row.width - row.historyCopyGutter - width) : 0
-        width: row.kind === "user" ? Math.min(Math.max(0, row.width - row.historyCopyGutter - AppSizes.unit), Math.max(AppSizes.unit * 3, userTextMetrics.advanceWidth + AppSizes.unit * 2)) : row.width
+        width: row.kind === "user" ? Math.min(Math.max(0, row.width - row.historyCopyGutter - AppSizes.unit), Math.max(AppSizes.unit * 3, Math.max(userTextMetrics.advanceWidth, row.widestSentFile) + AppSizes.unit * 2)) : row.width
         height: row.implicitHeight
         color: row.kind === "user" ? EaStyle.Colors.contentBackground : "transparent"
         radius: row.kind === "user" ? AppSizes.unit * 0.75 : 0
@@ -430,8 +443,8 @@ Rectangle {
                     EaElements.Label {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
-                        text: qsTr("%1 (%2 bytes)%3").arg(modelData.name).arg(modelData.bytes)
-                            .arg(modelData.textReadable ? "" : qsTr(" · text export required"))
+                        text: row.sentFileLabel(modelData)
+                        font: historyCopyMetrics.font
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
                         color: EaStyle.Colors.themeForegroundMinor
