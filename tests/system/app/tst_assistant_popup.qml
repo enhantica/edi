@@ -11272,7 +11272,7 @@ TestCase {
         verify(aliases.parameterNames.includes("phase.atom_site.A.adp_iso"),"REL685: real original offered alias target, no guessed name conversion");
         const nativeTarget=visible185_parameters(project).filter(p=>p.path==="structure.atom_sites[A].adp_iso");
         compare(nativeTarget.length,1);compare(nativeTarget[0].value,.3);
-        function dependents743() {
+        function dependents743(releasedB) {
             verify(current(),"REL743: ordinary dependent reads retain the original live project owner");
             const b=visible743_adp(project,"B"),owner=project.currentExperiment;
             verify(owner!==null,"REL743: the current experiment actually exists");
@@ -11283,16 +11283,19 @@ TestCase {
             compare(zero.blockKind,"experiment");compare(zero.blockName,owner.name);
             compare(zero.rowLabel,"");compare(zero.name,"calib_twotheta_offset");
             compare(zero.path,"experiment.instrument.calib_twotheta_offset");
-            for(const parameter of [b,zero]) {
-                verify(!parameter.refinable && !parameter.free,"REL743: actual constrained members remain disabled and not independently free");
-                verify(!visible185_parameters(project).some(row=>row===parameter || row.path===parameter.path),
-                    "REL743: exact dependent member is absent from Analysis while its ordinary page retains it");
-            }
+            compare(b.refinable,releasedB===true,"REL754: only the declared disabled/removed B constraint restores refinability");
+            compare(b.free,false,"REL754: releasing dependence never silently frees B");
+            verify(!zero.refinable && !zero.free,"REL754: surviving keep685 still constrains zero");
+            const analysis=visible185_parameters(project),matches=analysis.filter(row=>row.path===b.path);
+            compare(matches.length,releasedB===true?1:0,"REL754: only the exact ordinary B member re-enters Analysis");
+            if(releasedB===true)compare(matches[0],b,"REL754: restored Analysis row is the current ordinary B object");
+            verify(!analysis.some(row=>row===zero || row.path===zero.path),
+                "REL754: dependent zero remains absent from Analysis while its ordinary page retains it");
             return [b,zero];
         }
-        const dependentStates743=dependents743().map(parameter=>[parameter.free,parameter.hasUncertainty,parameter.uncertainty]);
-        function affine743(multiplier) {
-            const actual=dependents743();
+        const dependentStates743=dependents743(false).map(parameter=>[parameter.free,parameter.hasUncertainty,parameter.uncertainty]);
+        function affine743(multiplier,releasedB) {
+            const actual=dependents743(releasedB);
             fuzzyCompare(actual[0].value,multiplier*.3+1,1e-12,"REL743: actual ordinary B satisfies the independent affine fixture");
             fuzzyCompare(actual[1].value,(multiplier*.3+1)/10,1e-12,"REL743: actual ordinary zero satisfies the independent chained fixture");
             compare(JSON.stringify(actual.map(parameter=>[parameter.free,parameter.hasUncertainty,parameter.uncertainty])),JSON.stringify(dependentStates743),
@@ -11316,15 +11319,21 @@ TestCase {
         }
         function state(){return RelationUndoObserver.state(project);}
         function settled(){tryVerify(()=>current()&&!project.calculating&&Probe.computedCurrent(project.currentExperiment),10000);}
-        function preserved(){
+        function preserved(releasedB,multiplier){
             verify(current()&&assistant.connected&&!assistant.canCancel);compare(assistant.connectionLabel,originalAccount);compare(JSON.stringify(Probe.rows(assistant.models)),originalModels);compare(visible185_inputs(project),inputs);compare(relation246_shape(project),shape);compare(import265_owner(project),metadata);
             compare(nativeTarget[0].value,.3,"REL685: literal original affine source remains unchanged");
-            const before=JSON.parse(values),after=JSON.parse(visible185_values(project));compare(after.length,before.length);
-            for(let i=0;i<before.length;++i){
-                compare(after[i][0],before[i][0]);
-                if(!["structure.atom_sites[B].adp_iso","experiment.instrument.calib_twotheta_offset"].includes(before[i][0]))
-                    compare(JSON.stringify(after[i]),JSON.stringify(before[i]),"REL685: all unrequested values/free/SUs exact");
-            }
+            affine743(multiplier,releasedB);
+            const ordinary=dependents743(releasedB),b=ordinary[0],zero=ordinary[1];
+            const before=JSON.parse(values),after=JSON.parse(visible185_values(project));
+            verify(!before.some(row=>row[0]===b.path || row[0]===zero.path),"REL754: constrained fixture baseline omits exactly these ordinary dependent members");
+            compare(after.length,before.length+(releasedB===true?1:0),"REL754: the declared B release is the sole Analysis membership delta");
+            compare(after.filter(row=>row[0]===zero.path).length,0,"REL754: no unrelated zero release is credited");
+            const added=after.filter(row=>row[0]===b.path);
+            compare(added.length,releasedB===true?1:0);
+            if(releasedB===true)compare(JSON.stringify(added[0]),JSON.stringify([b.path,b.value,b.free,b.hasUncertainty,b.uncertainty]),
+                "REL754: restored B has exact current ordinary value/free/SU, independently checked against the affine literals");
+            compare(JSON.stringify(after.filter(row=>row[0]!==b.path)),JSON.stringify(before),
+                "REL754: every unrelated baseline member retains exact ordered path/value/free/hasSU/SU");
         }
         function ordinary(entry){
             const alias=entry.operation.startsWith("alias_"),model=alias?aliases:constraints;
@@ -11336,6 +11345,8 @@ TestCase {
         }
         function undo(expected){
             verify(item("appBar.button.undo").enabled);Ui.click(test685,Probe,window,"appBar.button.undo");settled();compare(state(),expected);
+            compare(visible185_values(project),values,"REL754: each existing single Undo restores the full baseline Analysis projection");
+            preserved(false,2);
         }
         function receive(row){
             visible185_ready("relation685-"+row.call.call_id);row.entry=state();
@@ -11438,25 +11449,27 @@ TestCase {
                     ++nativeRemovalSignals;removals.push({id:active.call.arguments.id,alias:active.call.arguments.operation.startsWith("alias_"),aliases:Probe.rows(aliases).map(r=>r.id),constraints:Probe.rows(constraints).map(r=>r.id),sameOwner:current()});
                 }});
             }
-            let expected=baseline,pending=null;
+            let expected=baseline,pending=null,releasedB=false,multiplier=2;
             for(const row of spec.phases){
                 verify(current());settled();
                 if(row.kind==="changed"){
                     if(pending!==null){undo(baseline);++assistantUndo;pending=null;}
+                    releasedB=row.manual.id==="spare685" && (row.manual.operation==="constraint_remove"
+                        || (row.manual.operation==="constraint_enabled" && row.manual.value===false));
+                    multiplier=row.manual.operation==="constraint_expression"?3:2;
                     compare(state(),baseline);ordinary(row.manual);settled();expected=state();verify(expected!==baseline);
-                    if(row.manual.operation==="constraint_expression"){
-                        affine743(3);
-                    }
+                    preserved(releasedB,multiplier);
                     undo(baseline);++manualUndo;
-                    if(row.manual.operation==="constraint_expression")affine743(2);
                     row.before=baseline;receive(row);settled();compare(state(),expected,"REL685: native scalar exactly matches same original ordinary app method and full science");
-                    if(row.manual.operation==="constraint_expression")affine743(3);
-                    preserved();pending=row;
+                    preserved(releasedB,multiplier);pending=row;
                 }else if(row.kind==="equal"||row.kind==="stale"){
-                    const before=state();receive(row);settled();compare(state(),before);preserved();
+                    const before=state(),beforeValues=visible185_values(project);
+                    receive(row);settled();compare(state(),before);
+                    compare(visible185_values(project),beforeValues,"REL754: equal/stale calls preserve their immediate projection, including disabled B membership");
+                    preserved(releasedB,multiplier);
                 }else{
                     if(pending!==null){undo(baseline);++assistantUndo;pending=null;}
-                    compare(state(),baseline);
+                    releasedB=false;multiplier=2;compare(state(),baseline);
                     if(row.kind==="draft"){
                         if(!popup.shown)toggle();closeAssistant388();visible185_page("analysis");Ui.click(test685,Probe,window,"sideBar.tab.extras");Ui.expandGroup(test685,Probe,window,"group.alias");
                         const field=Ui.control(Probe,window,"alias.id.3");verify(field!==null);Ui.scrollIntoView(field);rendered();Ui.click(test685,Probe,window,"alias.id.3");visible185_type("user685_draft");
@@ -11465,11 +11478,11 @@ TestCase {
                         compare(JSON.stringify([field.selectionStart,field.selectionEnd]),JSON.stringify(selection));compare(window.appBarCentralTabs.currentIndex,page);
                         keyClick(Qt.Key_Escape);compare(field.text,"spare685");
                     }else receive(row);
-                    settled();compare(state(),baseline);preserved();
+                    settled();compare(state(),baseline);preserved(false,2);
                 }
             }
             if(pending!==null){undo(baseline);++assistantUndo;}
-            compare(state(),baseline);compare(visible185_values(project),values);preserved();
+            compare(state(),baseline);compare(visible185_values(project),values);preserved(false,2);
             compare(manualUndo,7);compare(assistantUndo,7);compare(nativeRemovalSignals,2);compare(scientificInputSignals,0);
             verify(removals.every(row=>row.sameOwner&&!(row.alias?row.aliases:row.constraints).includes(row.id)),"REL685: original removal callbacks witness erased member before truthful completed removed-ID result");
             if(spec.mode==="on"){compare(stopScheduled,true);compare(stopClicks,1);compare(stopBefore,baseline);}
