@@ -196,6 +196,7 @@ struct ExperimentControlsUndo {
     const ExperimentBase* experiment=nullptr;
     std::optional<PeakBase> peak;
     std::optional<std::vector<ExcludedRegion>> regions;
+    std::optional<std::vector<LinkedStructure>> links;
     std::optional<AbsorptionBase> absorption;
     std::optional<double> cutoff_fwhm, dataset_weight;
     std::optional<RelationsUndo> related;
@@ -214,6 +215,20 @@ inline ExperimentControlsUndo capture_experiment_controls(Project& project,Exper
         before.regions.emplace();
         for(const auto& row:experiment.excluded_regions)before.regions->push_back(*row);
     }
+    return before;
+}
+
+// The original link table's complete narrow history; replaced scales are restored
+// in their owning row images, never through a handle the restore will retire.
+inline ExperimentControlsUndo capture_experiment_links(Project& project,ExperimentBase& experiment) {
+    ExperimentControlsUndo before;before.experiment=&experiment;before.links.emplace();
+    for(const auto& row:experiment.linked_structures)before.links->push_back(*row);
+    before.related=capture_relations(project);before.fit_result=project.fit_result;
+    std::set<const Parameter*> replaced;
+    for(const auto& row:experiment.linked_structures)replaced.insert(&row->scale);
+    std::set<std::string> retained;
+    for(const auto& slot:named_slots(project))if(!replaced.contains(slot.parameter))retained.insert(slot.unique_name);
+    std::erase_if(before.related->parameters,[&](const auto& state){return !retained.contains(state.unique_name);});
     return before;
 }
 
@@ -474,6 +489,7 @@ class Edit {
         const ExperimentBase* experiment = nullptr;
         const AtomSite* atom = nullptr;
         const ExcludedRegion* exclusion = nullptr;
+        const LinkedStructure* linked_structure = nullptr;
     };
     // Executes this same closed operation once. The result is an identity fact,
     // not a getter or a grant to use a row after its owner has retired.
@@ -1032,23 +1048,29 @@ class Edit {
             const auto found=std::find_if(project.experiments.begin(),project.experiments.end(),[&](const auto& member){return member.get()==before->experiment;});
             if(found==project.experiments.end())throw std::invalid_argument("undo: experiment control owner is no longer in the project");
             const int owners=int(before->peak.has_value())+int(before->regions.has_value())+int(before->absorption.has_value())+
-                int(before->cutoff_fwhm.has_value())+int(before->dataset_weight.has_value());
-            const bool family=before->peak.has_value() || before->absorption.has_value();
+                int(before->cutoff_fwhm.has_value())+int(before->dataset_weight.has_value())+int(before->links.has_value());
+            const bool family=before->peak.has_value() || before->absorption.has_value() || before->links.has_value();
             if(owners!=1 || family!=before->related.has_value() || (!before->regions.has_value())!=before->fit_result.has_value())
                 throw std::invalid_argument("undo: incomplete experiment-control footprint");
             auto& experiment=**found;
             std::unique_ptr<detail::PreparedPeakRestore> peak;
             std::unique_ptr<detail::PreparedAbsorptionRestore> absorption;
-            ItemVec<ExcludedRegion> regions;
+            ItemVec<ExcludedRegion> regions;ItemVec<LinkedStructure> links;
             std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
             ItemVec<ParameterAlias> aliases;ItemVec<ParameterConstraint> constraints;
             std::optional<FitResultRecord> fit_result;
             if(family) {
                 if(before->peak)peak=std::make_unique<detail::PreparedPeakRestore>(experiment.peak,*before->peak);
-                else absorption=std::make_unique<detail::PreparedAbsorptionRestore>(experiment.absorption,*before->absorption);
+                else if(before->absorption)absorption=std::make_unique<detail::PreparedAbsorptionRestore>(experiment.absorption,*before->absorption);
+                else {
+                    std::vector<ItemVec<LinkedStructure>::Ptr> rows;rows.reserve(before->links->size());
+                    for(const auto& row:*before->links)rows.push_back(std::make_shared<LinkedStructure>(row));
+                    links=ItemVec<LinkedStructure>(std::move(rows));
+                }
                 std::map<std::string,Parameter*> named;
                 for(const auto& slot:named_slots(project))named.emplace(slot.unique_name,slot.parameter);
-                const auto replaced=before->peak?experiment.peak.parameters():experiment.absorption.parameters();
+                auto replaced=before->peak?experiment.peak.parameters():before->absorption?experiment.absorption.parameters():std::vector<Parameter*>{};
+                if(before->links)for(const auto& row:experiment.linked_structures)replaced.push_back(&row->scale);
                 for(const auto& state:before->related->parameters) {
                     const auto at=named.find(state.unique_name);
                     if(at==named.end() || std::find(replaced.begin(),replaced.end(),at->second)!=replaced.end())
@@ -1064,7 +1086,10 @@ class Edit {
                 regions=ItemVec<ExcludedRegion>(std::move(rows));
             }
             if(family) {
-                if(peak)peak->commit();else absorption->commit();
+                // Every allocation/target validation above precedes these original no-throw transfers.
+                static_assert(std::is_nothrow_move_assignable_v<ItemVec<LinkedStructure>>);
+                static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+                if(peak)peak->commit();else if(absorption)absorption->commit();else experiment.linked_structures=std::move(links);
                 project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
                 for(const auto& [parameter,state]:targets){parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;}
             } else if(before->regions)experiment.excluded_regions=std::move(regions);
@@ -1320,6 +1345,7 @@ class Edit {
             rows.push_back(inserted);
             if constexpr (std::is_same_v<Row,AtomSite>) return AppliedResult{nullptr,nullptr,inserted.get()};
             else if constexpr (std::is_same_v<Row,ExcludedRegion>) return AppliedResult{nullptr,nullptr,nullptr,inserted.get()};
+            else if constexpr (std::is_same_v<Row,LinkedStructure>) return AppliedResult{nullptr,nullptr,nullptr,nullptr,inserted.get()};
             else return AppliedResult{};
         });
     }

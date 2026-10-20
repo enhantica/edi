@@ -2068,6 +2068,10 @@ struct AssistantViewModel::State {
         const edi::AtomSite* result_site = nullptr;
         const edi::ExcludedRegion* operation_region = nullptr;
         const edi::ExcludedRegion* result_region = nullptr;
+        const edi::LinkedStructure* operation_phase = nullptr;
+        const edi::LinkedStructure* result_phase = nullptr;
+        const edi::Structure* append_phase_structure = nullptr;
+        quint64 phase_result_roles = 0;
         QPointer<StructureViewModel> structure_view;
         bool site_removed = false;
         QMetaObject::Connection calculation_wait;
@@ -4822,7 +4826,7 @@ struct AssistantViewModel::State {
             value(frame->arguments); value(frame->id); value(frame->individual_tool);
             if(selection_action(frame))raw(selection_result_bytes());
             if(frame->individual_tool=="edit_experiment") {
-                raw(experiment_profile_preparation_bytes(frame->arguments));
+                raw(experiment_profile_preparation_bytes(frame->arguments));raw(frame->phase_result_roles);
                 // Keep the maximum new scalar Dataset construction/SDK scratch
                 // role owned throughout this exact existing frame, including
                 // refusal and result construction before native_finish transfer.
@@ -7408,8 +7412,23 @@ struct AssistantViewModel::State {
             if(run->operation_member->excluded_regions[i].get()==region)return static_cast<int>(i);
         return -1;
     }
+    int experiment_phase_index(const std::shared_ptr<NativeCreateWidget>& run) const {
+        // Do not recurse through individual_member_current: that checks this bank.
+        if(individual_member_index(run)<0 || !run->operation_member)return -1;
+        const auto* phase=run->result_phase?run->result_phase:run->operation_phase;
+        for(std::size_t i=0;i<run->operation_member->linked_structures.size();++i)
+            if(run->operation_member->linked_structures[i].get()==phase)return static_cast<int>(i);
+        return -1;
+    }
+    static bool experiment_phase(const Object& args) {
+        const auto op=args.value("operation");return op=="phase_append" || op=="phase_retarget" || op=="phase_enabled" || op=="phase_remove";
+    }
     quint64 experiment_profile_preparation_bytes(const Object& args) const {
-        if(args.value("operation")!="peak_profile" && args.value("operation")!="absorption_type")return 0;
+        // Append has no request value: its later original offered ID is bounded
+        // before use. Do not attempt to encode an absent QJsonValue.
+        if(args.value("operation")=="phase_append")
+            return 3*sizeof(QString)+Limits::id_bytes*(3*sizeof(QChar)+2*3);
+        if(args.value("operation")!="peak_profile" && args.value("operation")!="absorption_type" && args.value("operation")!="phase_retarget")return 0;
         const auto text=args.value("value");
         const auto units=skill_json_text_units(text);
         const auto encoded=generic_size(text,Limits::context_bytes);
@@ -7511,6 +7530,10 @@ struct AssistantViewModel::State {
     }
     ProjectEditor::CreationAction experiment_action(const std::shared_ptr<NativeCreateWidget>& run) const {
         using Action=ProjectEditor::CreationAction;const auto op=run->arguments.value("operation");
+        if(op=="phase_append")return {Action::Kind::PhaseAppend,run->operation_member,{},QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(run->append_phase_structure->name.value()))};
+        if(op=="phase_retarget")return {Action::Kind::PhaseRetarget,run->operation_phase,{},run->arguments.value("value").toString()};
+        if(op=="phase_enabled")return {Action::Kind::PhaseEnabled,run->operation_phase,{},{},double(run->arguments.value("value").toBool())};
+        if(op=="phase_remove")return {Action::Kind::PhaseRemove,run->operation_phase};
         if(op=="peak_profile")return {Action::Kind::PeakProfile,run->operation_member,{},run->arguments.value("value").toString()};
         if(op=="absorption_type")return {Action::Kind::AbsorptionType,run->operation_member,{},run->arguments.value("value").toString()};
         if(op=="cutoff_fwhm" || op=="dataset_weight")return {op=="cutoff_fwhm"?Action::Kind::CutoffFwhm:Action::Kind::DatasetWeight,run->operation_member,{},{},run->arguments.value("value").toDouble()};
@@ -7526,6 +7549,12 @@ struct AssistantViewModel::State {
         if(op=="absorption_type")return (run->operation_member->absorption.type?std::string_view(*run->operation_member->absorption.type):std::string_view("none"))==run->arguments.value("value").toString().toStdString();
         if(op=="cutoff_fwhm")return run->operation_member->peak.cutoff_fwhm==run->arguments.value("value").toDouble();
         if(op=="dataset_weight")return run->operation_member->dataset_weight==run->arguments.value("value").toDouble();
+        if(experiment_phase(run->arguments)) {
+            if(experiment_phase_index(run)<0)return false;
+            const auto* phase=run->result_phase?run->result_phase:run->operation_phase;
+            return op=="phase_retarget"?phase->enabled.get() && QString::fromStdString(edi::KeyTraits<edi::LinkedStructure>::canonical(phase->structure_id.value()))==run->arguments.value("value").toString():
+                op=="phase_enabled"?phase->enabled.get()==run->arguments.value("value").toBool():false;
+        }
         if(experiment_region_index(run)<0)return false;
         const auto value=run->arguments.value("value").toDouble();
         return op=="exclusion_start"?run->operation_region->first.get()==value:
@@ -7535,9 +7564,40 @@ struct AssistantViewModel::State {
         if(!individual_member_current(run) || !run->operation_member || !run->operation_view)throw ActionRefusal("target_unavailable","experiment");
         const auto op=run->arguments.value("operation");
         if(op=="select") {if(run->project->scan())throw ActionRefusal("unsupported_input","project");return;}
-        if(experiment_scalar(run->arguments) && run->project->currentExperiment()!=run->operation_view)
+        if((experiment_scalar(run->arguments) || experiment_phase(run->arguments)) && run->project->currentExperiment()!=run->operation_view)
             throw ActionRefusal("target_unavailable","experiment");
-        if(op=="absorption_type") {
+        if(experiment_phase(run->arguments)) {
+            if(run->operation_member->linked_structures.size()>Limits::stream_items)throw ActionRefusal("unsupported_input","phase");
+            if(op=="phase_append") {
+                if(run->operation_member->linked_structures.size()>=Limits::stream_items)throw ActionRefusal("unsupported_input","phase");
+                for(const auto& structure:run->project->assistantProject()->structures) {
+                    const auto& name=structure->name.value();
+                    const std::string_view id=name.empty()?std::string_view("structure"):std::string_view(name);
+                    if(std::none_of(run->operation_member->linked_structures.begin(),run->operation_member->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;})) {
+                        if(id.size()>Limits::id_bytes || !edi::assistant::detail::utf8(id))throw ActionRefusal("unsupported_input","phase");
+                        run->append_phase_structure=structure.get();break;
+                    }
+                }
+                if(!run->append_phase_structure)throw ActionRefusal("target_unavailable","phase");
+            } else {
+                const auto id=run->arguments.value("phase").toString();
+                for(const auto& row:run->operation_member->linked_structures)if(row->structure_id.value().size()<=Limits::id_bytes && QString::fromStdString(edi::KeyTraits<edi::LinkedStructure>::canonical(row->structure_id.value()))==id) {
+                    if(run->operation_phase)throw ActionRefusal("target_unavailable","phase");run->operation_phase=row.get();
+                }
+                if(!run->operation_phase)throw ActionRefusal("target_unavailable","phase");
+                if(op=="phase_remove" && run->operation_member->linked_structures.size()<=1)throw ActionRefusal("control_unavailable","phase");
+                if(op=="phase_retarget") {
+                    if(!run->operation_phase->enabled.get())throw ActionRefusal("control_unavailable","phase");
+                    const auto value=run->arguments.value("value").toString();bool offered=false;
+                    for(const auto& structure:run->project->assistantProject()->structures)
+                        if(structure->name.value().size()<=Limits::id_bytes && QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(structure->name.value()))==value)offered=true;
+                    if(!offered)throw ActionRefusal("target_unavailable","value");
+                    for(const auto& row:run->operation_member->linked_structures)
+                        if(row.get()!=run->operation_phase && row->structure_id.value().size()<=Limits::id_bytes && QString::fromStdString(edi::KeyTraits<edi::LinkedStructure>::canonical(row->structure_id.value()))==value)
+                            throw ActionRefusal("unsupported_input","value");
+                }
+            }
+        } else if(op=="absorption_type") {
             if(run->operation_view->absorptionTypeOptions()->indexOf(run->arguments.value("value").toString())<0)throw ActionRefusal("unsupported_type","value");
         } else if(op=="cutoff_fwhm" || op=="dataset_weight") {
             const auto value=run->arguments.value("value");
@@ -7559,8 +7619,8 @@ struct AssistantViewModel::State {
         const bool applied=run->control_input && run->control_input->outcome.applied;
         Object result{{"status",complete?(applied?"completed":"no_change"):applied?"applied_unconfirmed":"refused"},
             {"applied",applied},{"published",run->operation_published || (complete && !applied)},{"complete",complete},
-            {"steps_completed",complete?1:0},{"calculation_pending",run->project && run->project->calculating()}};
-        if(!complete){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]="experiment";}
+            {"steps_completed",complete || (experiment_phase(run->arguments) && applied)?1:0},{"calculation_pending",run->project && run->project->calculating()}};
+        if(!complete){result["action_error"]=applied?"operation_superseded":"control_unavailable";result["action_field"]=experiment_phase(run->arguments)?"phase":"experiment";}
         if(!individual_member_current(run) || !run->operation_member)return result;
         const auto* member=run->operation_member;
         Object dataset{{"id",QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))}};
@@ -7574,6 +7634,18 @@ struct AssistantViewModel::State {
                 }
                 dataset["absorption_type_options"]=options;
             } else dataset[op.toString()]=op=="cutoff_fwhm"?member->peak.cutoff_fwhm:member->dataset_weight;
+        }
+        if(experiment_phase(run->arguments)) {
+            QJsonArray phases;
+            for(const auto& phase:member->linked_structures)
+                phases.append(Object{{"structure_id",QString::fromStdString(edi::KeyTraits<edi::LinkedStructure>::canonical(phase->structure_id.value()))},{"enabled",phase->enabled.get()}});
+            dataset["phases"]=phases;
+            if(run->arguments.value("operation")=="phase_remove" && applied) {result["phase_id"]=run->arguments.value("phase");result["removed"]=true;}
+            else if(experiment_phase_index(run)>=0) {
+                const auto* phase=run->result_phase?run->result_phase:run->operation_phase;
+                if(phase->structure_id.value().size()>Limits::id_bytes)throw std::length_error("Original phase identity exceeds capacity");
+                result["phase_id"]=QString::fromStdString(edi::KeyTraits<edi::LinkedStructure>::canonical(phase->structure_id.value()));
+            }
         }
         result["datasets"]=QJsonArray{dataset};
         // A refusal can retain a different, arbitrarily registered old token.
@@ -7609,6 +7681,10 @@ struct AssistantViewModel::State {
         else if(op=="absorption_type")run->operation_view->setAbsorptionType(run->arguments.value("value").toString());
         else if(op=="cutoff_fwhm")run->operation_view->setCutoffFwhm(run->arguments.value("value").toDouble());
         else if(op=="dataset_weight")run->operation_view->setDatasetWeight(run->arguments.value("value").toDouble());
+        else if(op=="phase_append")run->operation_view->linkedStructures()->append();
+        else if(op=="phase_retarget")run->operation_view->linkedStructures()->setStructureId(experiment_phase_index(run),run->arguments.value("value").toString());
+        else if(op=="phase_enabled")run->operation_view->linkedStructures()->setEnabled(experiment_phase_index(run),run->arguments.value("value").toBool());
+        else if(op=="phase_remove")run->operation_view->linkedStructures()->remove(experiment_phase_index(run));
         else if(op=="exclusion_append")run->operation_view->excludedRegions()->append();
         else if(op=="exclusion_start")run->operation_view->excludedRegions()->setStart(row,run->arguments.value("value").toDouble());
         else if(op=="exclusion_end")run->operation_view->excludedRegions()->setEnd(row,run->arguments.value("value").toDouble());
@@ -7616,7 +7692,8 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         create_widget_capture_step(run);native_call->may_have_written=run->completed_steps>0;
         const bool confirmed=run->control_input->consumed && run->control_input->outcome.applied && run->control_input->outcome.published &&
-            individual_member_current(run) && (op=="exclusion_append"?run->result_region!=nullptr:op=="exclusion_remove"?experiment_region_index(run)<0:experiment_action_equal(run));
+            individual_member_current(run) && (op=="phase_append"?run->result_phase!=nullptr:op=="phase_remove"?experiment_phase_index(run)<0:
+            op=="exclusion_append"?run->result_region!=nullptr:op=="exclusion_remove"?experiment_region_index(run)<0:experiment_action_equal(run));
         native_finish(confirmed,experiment_progress(run,confirmed));
     }
     void structure_normal(const std::shared_ptr<NativeCreateWidget>& run) {
@@ -7681,16 +7758,30 @@ struct AssistantViewModel::State {
         if(run->individual_tool=="edit_experiment") {
             if(run->project->currentExperiment()!=run->operation_view)return false;
         } else if(run->individual_tool!="create_structure" && run->project->currentStructure()!=run->structure_view)return false;
-        const QPointer<QQuickItem> original(target);
+        const QPointer<QQuickItem> original(target),original_parent(target->parentItem());
         const bool weight=run->individual_tool=="edit_experiment" && run->arguments.value("operation")=="dataset_weight";
+        const bool phase=run->individual_tool=="edit_experiment" && experiment_phase(run->arguments);
+        bool phase_table=phase && run->arguments.value("operation")=="phase_append" && target->objectName()=="linkedStructure.append";
+        if(phase && !phase_table) {
+            const auto op=run->arguments.value("operation");const auto row=experiment_phase_index(run);
+            const auto expected=QString(op=="phase_retarget"?"linkedStructure.structureId.%1":op=="phase_enabled"?"linkedStructure.enabled.%1":"linkedStructure.remove.%1").arg(row);
+            if(row<0 || target->objectName()!=expected)return false;
+        }
         bool weight_member=false;
         for(auto* item=target;item;item=item->parentItem()) {
+            const QPointer<QQuickItem> ancestor(item),parent(item->parentItem());
             if(run->individual_tool=="edit_experiment") {
+                if(phase && item->objectName()=="linkedStructure.list") {
+                    const auto source=item->property("sourceModel").value<QObject*>();
+                    if(!run->receiver || run->receiver->state_.get()!=this || !original || !ancestor || ancestor->parentItem()!=parent || original->parentItem()!=original_parent || !create_widget_current(run) || source!=run->operation_view->linkedStructures())return false;
+                    phase_table=true;
+                }
                 const auto member=item->property("experiment").value<QObject*>();
-                if(!run->receiver || run->receiver->state_.get()!=this || !original || !create_widget_current(run))return false;
+                if(!run->receiver || run->receiver->state_.get()!=this || !original || !create_widget_current(run) ||
+                    (phase && (!ancestor || ancestor->parentItem()!=parent || original->parentItem()!=original_parent)))return false;
                 if(member) {
                     if(member!=run->operation_view)return false;
-                    if(!weight)return true;
+                    if(!weight)return !phase || phase_table;
                     weight_member=true;
                 }
                 if(weight && item->objectName()=="jointFit.list") {
@@ -7818,8 +7909,20 @@ struct AssistantViewModel::State {
         const int index=individual_member_index(run);
         if(index<0)return false;
         if(run->individual_tool=="edit_experiment") {
-            if(experiment_scalar(run->arguments) && run->project->currentExperiment()!=run->operation_view)return false;
+            if((experiment_scalar(run->arguments) || experiment_phase(run->arguments)) && run->project->currentExperiment()!=run->operation_view)return false;
+            if(experiment_phase(run->arguments) && (!run->operation_view || run->operation_view->experiment()!=run->operation_member ||
+                index>=run->project->experiment_models_.size() || run->project->experiment_models_.at(index)!=run->operation_view))return false;
+            if(run->append_phase_structure) {
+                bool found=false;for(const auto& structure:run->project->assistantProject()->structures)if(structure.get()==run->append_phase_structure)found=true;
+                if(!found)return false;
+            }
             const auto* member=run->project->assistantProject()->experiments[static_cast<std::size_t>(index)].get();
+            const auto* phase=run->result_phase?run->result_phase:run->operation_phase;
+            if(phase) {
+                bool found=false;for(const auto& row:member->linked_structures)if(row.get()==phase)found=true;
+                const bool removed=run->arguments.value("operation")=="phase_remove" && run->control_input && run->control_input->outcome.applied;
+                if(removed?found:!found)return false;
+            }
             const auto* region=run->result_region?run->result_region:run->operation_region;
             if(region) {
                 bool found=false;for(const auto& row:member->excluded_regions)if(row.get()==region)found=true;
@@ -8031,26 +8134,46 @@ struct AssistantViewModel::State {
                 for(const auto& member:project->assistantProject()->structures)accept(member->name.value());
             } else if(run->operation_member) {
                 for(const auto& link:run->operation_member->linked_structures)accept(link->structure_id.value());
+                if(run->append_phase_structure)accept(run->append_phase_structure->name.value());
             }
         };
-        quint64 phase_preparation=2;
+        quint64 phase_preparation=sizeof(QJsonArray)+2;
+        const bool phase_action=name=="edit_experiment" && experiment_phase(args);
         phase_names([&](const std::string& value) {
+            if(phase_action && !edi::assistant::detail::utf8(value))throw std::invalid_argument("Original phase identity is not UTF-8");
             // datablock canonicalization can substitute only the named fallback.
             const auto bytes=std::max(value.size(),sizeof("structure")-1);
-            constexpr auto fields=sizeof(R"({"structure_id":"","enabled":false},)")-1;
-            if(bytes>(Limits::stream_retained_bytes-fields)/9)throw std::length_error("Original phase result exceeds capacity");
-            const auto role=fields+9*bytes; // encoded escape bound + simultaneous native/UTF-16 spelling
+            constexpr auto fields=3*(sizeof(R"({"structure_id":"","enabled":false},)")-1)+
+                sizeof(Object)+2*sizeof(QJsonValue)+2*sizeof(QString);
+            if(bytes>(Limits::stream_retained_bytes-fields)/11)throw std::length_error("Original phase result exceeds capacity");
+            const auto role=fields+11*bytes; // encoded escape bound + native spelling + independent QString/Qt JSON text
             if(role>Limits::stream_retained_bytes-phase_preparation)throw std::length_error("Original phase result exceeds capacity");
             phase_preparation+=role;
         });
+        if(phase_action && args.value("operation")=="phase_retarget") {
+            constexpr quint64 replacement=sizeof(Object)+2*sizeof(QJsonValue)+2*sizeof(QString)+
+                3*sizeof(R"({"structure_id":"","enabled":false},)")+11*Limits::id_bytes;
+            if(replacement>Limits::stream_retained_bytes-phase_preparation)throw std::length_error("Original phase replacement exceeds capacity");
+            phase_preparation+=replacement;
+        }
+        if(phase_action) {
+            constexpr quint64 identity=sizeof(Object)+sizeof(QJsonValue)+sizeof(QString)+3*sizeof(R"({"phase_id":""})")+11*Limits::id_bytes;
+            if(identity>Limits::stream_retained_bytes-phase_preparation)throw std::length_error("Original phase identity exceeds capacity");
+            phase_preparation+=identity;
+        }
         const auto phases_role=reserve_disclosure(phase_preparation);
+        if(phase_action)run->phase_result_roles=phase_preparation;
         QJsonArray phases;
         phase_names([&](const std::string& value) {
             phases.append(Object{{"structure_id",QString::fromStdString(edi::KeyTraits<edi::Structure>::canonical(value))},{"enabled",false}});
         });
+        // Finish this unique bank before it is shared into maximum. The real
+        // requested replacement is enough; no detached second maximum bank.
+        if(phase_action && args.value("operation")=="phase_retarget")
+            phases.append(Object{{"structure_id",args.value("value")},{"enabled",false}});
         const auto structure_roles=reserve_disclosure(structure_app_action(name) && !selection_action(run)?structure_metadata_role(run):0);
         const auto experiment_result_role=reserve_disclosure(name=="edit_experiment" && !selection_action(run)?
-            sizeof(R"({"peak_profile":"","exclusion_id":"","removed":true,"excluded_region":{"id":"","first":-1.7976931348623157e308,"second":-1.7976931348623157e308},"steps_completed":2147483647})")+3*9*Limits::id_bytes+10*sizeof(QJsonValue)+2*sizeof(Object)+
+            sizeof(R"({"phase_id":"","peak_profile":"","exclusion_id":"","removed":true,"excluded_region":{"id":"","first":-1.7976931348623157e308,"second":-1.7976931348623157e308},"steps_completed":2147483647})")+4*9*Limits::id_bytes+11*sizeof(QJsonValue)+2*sizeof(Object)+
             (args.value("operation")=="peak_profile"?generic_size(args.value("value"),Limits::context_bytes):0)+experiment_scalar_result_bytes(args):0);
         const auto selected_role=reserve_disclosure(selection_action(run)?selection_result_bytes():0);
         const auto result_role=reserve_disclosure(fixed+18*Limits::id_bytes+6*Limits::error_bytes);
@@ -8075,6 +8198,10 @@ struct AssistantViewModel::State {
         if(name=="edit_experiment" && !selection_action(run)) {
             if(args.value("operation")=="peak_profile")maximum["peak_profile"]=args.value("value");
             maximum["exclusion_id"]=maximum_id;maximum["removed"]=true;
+            if(phase_action) {
+                maximum["phase_id"]=maximum_id;maximum["action_field"]="phase";
+
+            }
             maximum["excluded_region"]=Object{{"id",maximum_id},{"first",-std::numeric_limits<double>::max()},{"second",-std::numeric_limits<double>::max()}};
             maximum["steps_completed"]=std::numeric_limits<int>::max();
             if(experiment_scalar(args)) {
@@ -8167,6 +8294,10 @@ struct AssistantViewModel::State {
                 if(op=="absorption_type" || op=="cutoff_fwhm")run->inputs.push_back({Kind::Navigate,"sideBar.tab.extras"});
                 const auto target=weight?QString("jointFit.weight.%1").arg(individual_member_index(run)):
                     op=="absorption_type"?QStringLiteral("absorption.type"):op=="cutoff_fwhm"?QStringLiteral("peak.cutoff_fwhm"):
+                    op=="phase_append"?QStringLiteral("linkedStructure.append"):
+                    op=="phase_retarget"?QString("linkedStructure.structureId.%1").arg(experiment_phase_index(run)):
+                    op=="phase_enabled"?QString("linkedStructure.enabled.%1").arg(experiment_phase_index(run)):
+                    op=="phase_remove"?QString("linkedStructure.remove.%1").arg(experiment_phase_index(run)):
                     op=="peak_profile"?QStringLiteral("peak.type"):op=="exclusion_append"?QStringLiteral("excludedRegions.append"):
                     QString(op=="exclusion_start"?"excludedRegion.start.%1":op=="exclusion_end"?"excludedRegion.end.%1":"excludedRegion.remove.%1").arg(experiment_region_index(run));
                 run->inputs.push_back({Kind::FileLoadCue,target});
@@ -8215,6 +8346,7 @@ struct AssistantViewModel::State {
         if(run->control_input && run->control_input->outcome.applied && run->individual_tool=="edit_experiment") {
             run->result_member=run->operation_member;
             if(run->control_input->applied_result.exclusion)run->result_region=run->control_input->applied_result.exclusion;
+            if(run->control_input->applied_result.linked_structure)run->result_phase=run->control_input->applied_result.linked_structure;
         }
         if (run->control_input && run->control_input->outcome.applied && run->control_input->applied_result.experiment)
             run->result_member=run->control_input->applied_result.experiment;
@@ -8677,6 +8809,8 @@ struct AssistantViewModel::State {
         if(tableName=="jointFit.list" && source!=run->project->experiments())return false;
         if(!receiver || receiver->state_.get()!=this || !original || !create_widget_current(run))return true;
         if(selection_action(run) && source!=(run->individual_tool=="edit_structure"?static_cast<QObject*>(run->project->structures()):static_cast<QObject*>(run->project->experiments())))return false;
+        if(experiment_phase(run->arguments) && (tableName!="linkedStructure.list" ||
+            source!=run->operation_view->linkedStructures() || index!=experiment_phase_index(run)))return false;
         const int row=static_cast<int>(index);bool revealed=false;
         const bool invoked=QMetaObject::invokeMethod(table,"revealRow",Qt::DirectConnection,Q_RETURN_ARG(bool,revealed),Q_ARG(int,row));
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return true;

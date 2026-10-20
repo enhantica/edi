@@ -1772,3 +1772,29 @@ The FIRST manual AliasListModel/ConstraintListModel methods and existing standal
 Original exact member/offered target, prepared consumed/applied/published receipt, canonical readback, ordinary per-change Undo and actual applied-prefix retention remain. Stored equal fields skip cue/setter/history; explicit false is never replaced by a presentation toggle. Local cleanup captures only its exact input, weak PVM and own-edit scope; old callbacks cannot clear a successor's input/scope or apply a later row/field. Original normal add_relations stays one atomic native batch, unrelated helper choice/form input stays intact, and no new relation executor, scientific setter or allowance exists. This is source consistency with the requested ordinary API design, not proof of the earlier unconfirmed alias failure's actor.
 
 Strategy distinguishes append-only preservation from authorized existing-row changes: inspect exact actual IDs, preserve unrelated/user declarations and composition constraints, reuse/modify only an identified intended row through offered edit_relation, append only missing intended declarations, skip equal values and follow actual returned IDs. Default-looking alias names or a matching target confer no ownership, and invalid dependencies remain a real refusal rather than permission to rewrite them. Project-assistance body/version/index digest advance together; separate stock/GSAS guidance remains exact.
+
+
+### Exact current phase-link controls
+
+Existing edit_experiment adds only phase_append, phase_retarget, phase_enabled
+and phase_remove, through the FIRST ordinary LinkedStructureListModel methods
+and shared app history above. Both modes require the exact current experiment;
+select is the separate existing UI operation. ON reveals/cues the genuine linked
+structure control and then calls the same method as OFF, with no scientific
+keyboard/choice/toggle dispatch. Disabled retarget and final stored-row removal
+refuse before no-op/history. Explicit equal admitted retarget/enabled skips the
+cue, setter and Undo. Append uses the original first unlinked project structure,
+never a guessed name, and captures the actual early append identity.
+
+The exact phase key is the existing dataset phases[].structure_id. A confirmed
+result adds bounded phase_id and complete ordered datasets[0].phases; removal
+returns the admitted old key, without reading an erased row. New IDs must be
+used for later calls. Existing scale parameter actions and read-only derived
+weight fractions remain separate. Actual consumed/applied/published, once,
+owner/Stop/manual draft and truthful partial/uncertainty rules remain mandatory.
+Pre-effect phase-bank sizing includes the actual append candidate or a
+conservative escaped replacement row, false bool, bounded top identity and
+still-live native/UTF-16/JSON/result owners; no limit or allowance increases.
+No new tool name, optional package identity, parser, selection fallback or
+implicit phase association is introduced. Code-owned schema/help describes
+these finite operations; skills do not duplicate the catalogue.

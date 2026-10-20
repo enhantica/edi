@@ -667,13 +667,17 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     if(input){input->consumed=true;widget_input_executing_=true;}
     using Kind=CreationAction::Kind;
     const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
-    const bool experiment_control=scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
+    const bool phase_control=actual.kind==Kind::PhaseAppend || actual.kind==Kind::PhaseRetarget ||
+        actual.kind==Kind::PhaseEnabled || actual.kind==Kind::PhaseRemove;
+    const bool experiment_control=phase_control || scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
         actual.kind==Kind::ExclusionStart || actual.kind==Kind::ExclusionEnd || actual.kind==Kind::ExclusionRemove;
     if(experiment_control) {
-        edi::ExperimentBase* experiment=nullptr;const edi::ExcludedRegion* region=nullptr;
+        edi::ExperimentBase* experiment=nullptr;const edi::ExcludedRegion* region=nullptr;const edi::LinkedStructure* link=nullptr;
         for(const auto& held:project_->experiments) {
-            if((scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend) && held.get()==actual.row)experiment=held.get();
-            for(const auto& row:held->excluded_regions)if(row.get()==actual.row){experiment=held.get();region=row.get();}
+            if((scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend || actual.kind==Kind::PhaseAppend) && held.get()==actual.row)experiment=held.get();
+            if(!phase_control)for(const auto& row:held->excluded_regions)if(row.get()==actual.row){experiment=held.get();region=row.get();}
+            if(phase_control && actual.kind!=Kind::PhaseAppend)
+                for(const auto& row:held->linked_structures)if(row.get()==actual.row){experiment=held.get();link=row.get();}
         }
         if(!experiment) {
             const auto message=tr("The original experiment control member is unavailable");if(input)input->outcome.message=message;return message;
@@ -681,14 +685,44 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         // Cached Qt row counts/keys are not scientific membership authority.
         // Reentrant publication must refuse before even an equal-value result.
         if(const auto pending=editReadinessRefusal(false);!pending.isEmpty()){if(input)input->outcome.message=pending;return pending;}
-        const bool equal=actual.kind==Kind::AbsorptionType?(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))==actual.text.toStdString():
+        if(phase_control) {
+            QString refusal;
+            if(actual.kind==Kind::PhaseRetarget) {
+                const auto id=actual.text.toStdString();bool offered=false;
+                for(const auto& structure:project_->structures) {
+                    const auto& raw=structure->name.value();
+                    if((raw.empty()?std::string_view("structure"):std::string_view(raw))==id)offered=true;
+                }
+                if(!link || !link->enabled.get() || !offered)refusal=tr("The linked structure target is unavailable or disabled");
+            } else if(actual.kind==Kind::PhaseRemove && experiment->linked_structures.size()<=1)
+                refusal=tr("The final linked structure cannot be removed");
+            else if(actual.kind==Kind::PhaseEnabled && actual.number!=0 && actual.number!=1)
+                refusal=tr("The linked structure flag must be boolean");
+            else if(actual.kind==Kind::PhaseAppend) {
+                std::string next;
+                for(const auto& structure:project_->structures) {
+                    const auto& raw=structure->name.value();
+                    const std::string_view id=raw.empty()?std::string_view("structure"):std::string_view(raw);
+                    if(std::none_of(experiment->linked_structures.begin(),experiment->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;})){next=std::string(id);break;}
+                }
+                if(next.empty() || next!=actual.text.toStdString())refusal=tr("The original linked structure append offer changed");
+                if(input && input->bounded_result && !assistant_result_name(next)) {
+                    input->result_identity_refused=true;
+                    refusal=tr("The linked structure identity exceeds the assistant result limit; no edit was made");
+                }
+            }
+            if(!refusal.isEmpty()){if(input)input->outcome.message=refusal;return refusal;}
+        }
+        const bool equal=actual.kind==Kind::PhaseRetarget?link && edi::KeyTraits<edi::LinkedStructure>::canonical(link->structure_id.value())==actual.text.toStdString():
+            actual.kind==Kind::PhaseEnabled?link && link->enabled.get()==bool(actual.number):
+            actual.kind==Kind::AbsorptionType?(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))==actual.text.toStdString():
             actual.kind==Kind::CutoffFwhm?experiment->peak.cutoff_fwhm==actual.number:
             actual.kind==Kind::DatasetWeight?experiment->dataset_weight==actual.number:
             actual.kind==Kind::PeakProfile?edi::effective_peak_type(*experiment)==actual.text.toStdString():
             actual.kind==Kind::ExclusionStart?region && region->first.get()==actual.number:
             actual.kind==Kind::ExclusionEnd?region && region->second.get()==actual.number:false;
         if(equal)return {};
-        auto before=scalar_control?edi::capture_experiment_scalar(*project_,*experiment,
+        auto before=phase_control?edi::capture_experiment_links(*project_,*experiment):scalar_control?edi::capture_experiment_scalar(*project_,*experiment,
             actual.kind==Kind::AbsorptionType?edi::ExperimentScalarControl::Absorption:
             actual.kind==Kind::CutoffFwhm?edi::ExperimentScalarControl::CutoffFwhm:edi::ExperimentScalarControl::DatasetWeight):
             edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);

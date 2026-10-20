@@ -225,7 +225,12 @@ void ExperimentViewModel::setLinkedStructureId(const QString& id) {
                          .arg(experiment.linked_structures.size()));
         return;
     }
-    setLastError(editor_.apply(edi::Edit::link_structure(experiment.linked_structure(), id.toStdString()), false));
+    const QPointer<ExperimentViewModel> self(this);
+    auto& link=experiment.linked_structure();
+    if(!link.enabled.get()){setLastError(tr("The linked structure is disabled"));return;}
+    const auto refusal=editor_.apply_creation_control(edi::Edit::link_structure(link,id.toStdString()),true,
+        {ProjectEditor::CreationAction::Kind::PhaseRetarget,&link,{},id});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setDatasetWeight(double weight) {

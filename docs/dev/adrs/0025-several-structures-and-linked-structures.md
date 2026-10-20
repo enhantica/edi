@@ -54,3 +54,26 @@ core, its files, its Python library and its app.
 | A separate phases collection beside one structure | Rejected: structures and experiments would follow different collection rules. |
 | Dropping a disabled linked structure from the file | Rejected: disabling and enabling again would lose its scale. |
 | One selector per page | Rejected: the three pages would drift apart; one component keeps them alike. |
+
+
+## Ordinary phase-link edits and Undo
+
+The FIRST Linked structures table and single-link convenience setter use the same
+finite CreationAction/ProjectViewModel history seam as the original profile,
+exclusion and scalar controls. Live collection membership precedes cached-row
+use or equality. Retargeting requires an enabled row and an actual offered
+structure, preserves its forward row/scale identity and obeys canonical duplicate
+keys; removing requires another stored row. Append keeps the original first
+currently unlinked structure, scale 1 and enabled defaults. Actual initial links
+are intended links, never placeholders.
+
+Every changed ordinary action prepares one narrow ExperimentControlsUndo before
+the first live Edit. It owns complete linked-row images (including scale state
+and per-phase fit factors), related aliases/constraints and non-replaced parameter
+states, and the fit result. Restore prebuilds rows, validates related live targets,
+and owns all fallible aliases/constraints/result allocation before original
+no-throw collection transfers or numeric assignments. It never writes through a
+scale handle that the row replacement retires. Undo may retire row/Qt parameter
+handles; callers reacquire them. No-op/refusal adds no history. The core append
+result's trailing linked_structure pointer identifies the actual inserted row
+before publication callbacks; it is not permission to use a retired owner.

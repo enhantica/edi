@@ -5,7 +5,7 @@
 #include <stdexcept>
 namespace edi_app {
 inline constexpr std::array<const char*,12> action_errors{{"project_required","input_required","input_unavailable","unsupported_input","target_unavailable","data_already_present","type_locked","unsupported_type","reader_refused","operation_superseded","control_unavailable","invalid_range"}};
-inline constexpr std::array<const char*,13> action_fields{{"project","file_id","experiment","axis","token","offset","max_bytes","structure","atom","field","value","region","relation"}};
+inline constexpr std::array<const char*,14> action_fields{{"project","file_id","experiment","axis","token","offset","max_bytes","structure","atom","field","value","region","relation","phase"}};
 class ActionRefusal final : public std::invalid_argument {
 public:
     ActionRefusal(const char* error,const char* field):std::invalid_argument("The original app action was refused"),error(error),field(field){}

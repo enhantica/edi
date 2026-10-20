@@ -88,7 +88,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
         }
     Object experiment_purpose=purpose;experiment_purpose.remove("description");
     Array experiment_branches;
-    for (const auto* operation : {"select","peak_profile","absorption_type","cutoff_fwhm","dataset_weight","exclusion_append","exclusion_start","exclusion_end","exclusion_remove"}) {
+    for (const auto* operation : {"select","peak_profile","absorption_type","cutoff_fwhm","dataset_weight","exclusion_append","exclusion_start","exclusion_end","exclusion_remove","phase_append","phase_retarget","phase_enabled","phase_remove"}) {
         Object fields{{"purpose",experiment_purpose},{"experiment",text},{"operation",Object{{"const",operation}}}};
         Array required{"purpose","experiment","operation"};
         const auto op=QLatin1StringView(operation);
@@ -99,14 +99,17 @@ QJsonArray native_tool_specs(bool include_profiles) {
             fields["value"]=Object{{"type","string"},{"enum",absorption_tokens}};required.append("value");
         } else if(op==QLatin1StringView("cutoff_fwhm") || op==QLatin1StringView("dataset_weight")) {
             fields["value"]=Object{{"type","number"}};required.append("value");
-        } else if (op!=QLatin1StringView("exclusion_append")) {
+        } else if(op==QLatin1StringView("phase_retarget") || op==QLatin1StringView("phase_enabled") || op==QLatin1StringView("phase_remove")) {
+            fields["phase"]=text;required.append("phase");
+            if(op!=QLatin1StringView("phase_remove")){fields["value"]=op==QLatin1StringView("phase_enabled")?Object{{"type","boolean"}}:text;required.append("value");}
+        } else if (op!=QLatin1StringView("exclusion_append") && op!=QLatin1StringView("phase_append")) {
             fields["region"]=text;required.append("region");
             if (op!=QLatin1StringView("exclusion_remove")) {fields["value"]=Object{{"type","number"}};required.append("value");}
         }
         experiment_branches.append(object(fields,required));
     }
     tools.append(Object{{"type","function"},{"name","edit_experiment"},
-        {"description","Change ONE exact experiment through original app methods, or explicitly select it with operation=select and no value/region/index. Selection uses the ordinary current-index UI setter, no scientific Edit/Undo/dirty, and refuses scan file-selection semantics. Confirm native_state.selected_experiment_id; no-op selection skips navigation/cue. Both modes use the same setter, ON adds original row reveal/visual-only cue. absorption_type, cutoff_fwhm and dataset_weight require the CURRENT selected experiment. Absorption uses actual absorption_type_options and original coefficient family/default rules; cutoff is literal FWHM-window setting (nonpositive retains original full-window semantics); dataset weight is stored in all modes and affects the joint objective, not single-dataset calculated curves. Absorption/cutoff controls are Experiment Extras; weight is Analysis Extras Joint fit. Other operations retain original peak-profile/exclusion routing. Profile value must be an original option for its beam mode; changing profiles can add/drop optional settings at original defaults. Exclusion append keeps the ordinary generated ID/default bounds; use its actual returned region ID for later start/end/remove calls. Bounds are literal dataset-axis units, never automatically sorted/clamped. Equal stored profile/bound values skip setters/cues/Undo. Both modes use the same ordinary method/validation/history; Show actions adds original navigation/reveal and visual-only cues. Inspect actual IDs/settings and partial applied/published facts; do not retry uncertain writes. No parser/converter, implicit noncurrent selection for the three scalars, phase-link edit, auto cutoff or fit is implied."},
+        {"description","Change ONE exact experiment through original app methods, or explicitly select it with operation=select and no value/region/index. Selection uses the ordinary current-index UI setter, no scientific Edit/Undo/dirty, and refuses scan file-selection semantics. Confirm native_state.selected_experiment_id; no-op selection skips navigation/cue. Both modes use the same setter, ON adds original row reveal/visual-only cue. absorption_type, cutoff_fwhm and dataset_weight require the CURRENT selected experiment. Absorption uses actual absorption_type_options and original coefficient family/default rules; cutoff is literal FWHM-window setting (nonpositive retains original full-window semantics); dataset weight is stored in all modes and affects the joint objective, not single-dataset calculated curves. Absorption/cutoff controls are Experiment Extras; weight is Analysis Extras Joint fit. Other operations retain original peak-profile/exclusion routing. Profile value must be an original option for its beam mode; changing profiles can add/drop optional settings at original defaults. Exclusion append keeps the ordinary generated ID/default bounds; use its actual returned region ID for later start/end/remove calls. Bounds are literal dataset-axis units, never automatically sorted/clamped. Equal stored profile/bound values skip setters/cues/Undo. Both modes use the same ordinary method/validation/history; Show actions adds original navigation/reveal and visual-only cues. Inspect actual IDs/settings and partial applied/published facts; do not retry uncertain writes. Phase operations require this CURRENT selected experiment: phase_append uses the original first unlinked current structure and original scale=1/enabled=true defaults, never a placeholder; phase_retarget identifies the exact old phase and offered new structure ID, retains its scale and refuses disabled rows or duplicate keys; phase_enabled assigns the explicit bool, including false; phase_remove requires another stored row and returns the removed old ID. The phase key is datasets[].phases[].structure_id, not a row index. Successful results provide the actual phase_id and complete ordered datasets[0].phases; retarget changes the key for later calls. Equal admitted enabled/retarget values skip setters/cues/Undo. Ordinary shared Undo restores linked rows/scale states and related fit/relations; reacquire row/parameter handles after Undo. Existing initial links are real intended links, never overwrite them as placeholders. Scale already uses parameter actions; weight fraction is read-only. No parser/converter, implicit noncurrent selection for scalars/phases, auto cutoff or fit is implied."},
         {"inputSchema",Object{{"oneOf",experiment_branches}}}});
     add("acquire_inputs", "Capture immutable local input files only from an opaque scope_id in the current genuine user input_scopes. No path, URL, glob or command argument is accepted. Returns file IDs, source ordinal, reader hints and counts; it does not claim scientific import. Use returned IDs with create_cwl_project and inspect the actual native project afterward. Already captured sources are not reread. Stale, changed, protected or oversized sources refuse without replacing the prior selection.",
         {{"scope_id",text}},{"scope_id"});
@@ -262,6 +265,13 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         } else if(op=="cutoff_fwhm" || op=="dataset_weight") {
             shape(args,{"purpose","experiment","operation","value"});
             if(!args.value("value").isDouble() || !std::isfinite(args.value("value").toDouble()))throw ActionRefusal("invalid_range","value");
+        } else if(op=="phase_append")shape(args,{"purpose","experiment","operation"});
+        else if(op=="phase_retarget" || op=="phase_enabled" || op=="phase_remove") {
+            if(op=="phase_remove")shape(args,{"purpose","experiment","operation","phase"});
+            else shape(args,{"purpose","experiment","operation","phase","value"});
+            if(!id_ok(args.value("phase")))throw ActionRefusal("target_unavailable","phase");
+            if(op=="phase_retarget" && !id_ok(args.value("value")))throw ActionRefusal("target_unavailable","value");
+            if(op=="phase_enabled" && !args.value("value").isBool())throw ActionRefusal("unsupported_input","value");
         } else if(op=="exclusion_append")shape(args,{"purpose","experiment","operation"});
         else if(op=="exclusion_start" || op=="exclusion_end") {
             shape(args,{"purpose","experiment","operation","region","value"});
