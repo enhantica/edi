@@ -5,7 +5,7 @@ description: Inspect selected text exports; binary GPX conversion remains unavai
 
 # Inspect selected GSAS/GSAS-II material
 
-Version: 1.0.2. Use actual offered actions for native metadata and bounded selected-text reading. Native GPX conversion and general GSAS-to-Edi project creation are not implemented by this resource.
+Version: 1.0.3. Use actual offered actions for native metadata and bounded selected-text reading. Native GPX conversion and general GSAS-to-Edi project creation are not implemented by this resource.
 
 Use only current opaque selected-file/input-scope IDs and typed metadata actually returned by Edi-owned native readers. When read_selected_file is offered, inspect the already admitted readable export by its opaque ID and follow the descriptor's exact range/identity/EOF/full-source completeness semantics; do not ask to paste it again. Supplying a model path grants no arbitrary read or write. Never unpickle or execute a `.gpx` file. If a selected file is unsupported binary, explain the text-export prerequisite; do not pretend its contents were read. Ask which phase/histogram/project the user intends when several are present.
 
@@ -13,7 +13,7 @@ For GSAS-II, the official Export → Entire project as → Full CIF route can pr
 
 Inventory actual opaque input IDs and proven native phase/histogram/instrument associations. Preserve observed population, axis/range/exclusions, uncertainty/weight convention and declared scale/constraints. Missing or ambiguous companions require a question, never guessed path access or choosing the first histogram. Do not rescale phase fractions or replace a native project's refinable set merely to match a profile.
 
-Finish with the readable evidence, unresolved prerequisites and explicit current import limit. Do not claim a project was created, saved, refined or made equivalent to GSAS-II.
+Intake alone establishes readable evidence, unresolved prerequisites and the current import limit; it does not establish project creation, saving, refinement, conversion or equivalence to GSAS-II. If later actually offered ordinary app actions perform creation, editing, fitting or saving, report only their observed outcomes and remaining limits; do not treat a successful native operation as proof of GSAS-II conversion or scientific equivalence.
 
 Reference:
 - GSAS-II official Full CIF tutorial: https://advancedphotonsource.github.io/GSAS-II-tutorials/CIFtutorial/CIFtutorial.html

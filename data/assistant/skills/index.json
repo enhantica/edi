@@ -50,11 +50,11 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "title": "Inspect GSAS/GSAS-II material",
       "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "dedd24842d3c0d83ef0a079e2b4a51828c7a1af8b5c739adbe79a17de2eef4d7",
+      "sha256": "1be108816c30cb1280651c945e223fab3635e9aa38cb3424dbcb5d97bd403f6f",
       "requires": [
         "selected_files"
       ],
